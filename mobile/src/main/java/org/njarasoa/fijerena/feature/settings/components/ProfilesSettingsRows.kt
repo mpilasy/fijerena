@@ -42,7 +42,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings → Profiles: the profile rows, "Add profile", and the edit / delete dialogs. See
- * `docs/plans/20260929_live-sync-plan.md` → User profiles.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
  */
 @Composable
 fun ProfilesSettingsRows(

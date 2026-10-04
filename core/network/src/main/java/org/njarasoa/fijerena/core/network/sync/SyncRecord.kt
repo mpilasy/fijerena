@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.network.sync
 
 /**
- * Identity of one synced thing — see `docs/plans/20260929_live-sync-plan.md` → Record model.
+ * Identity of one synced thing — see `docs/plans/archive/20260929_live-sync-plan.md` → Record model.
  * [profileKey] is a profile id for per-person kinds and [SyncKind.SHARED] otherwise; [providerKey]
  * is the provider's `providerKey` for provider-scoped kinds and empty otherwise; [itemId] and
  * [contentType] are the item within them (empty where a kind has none: a provider record's own

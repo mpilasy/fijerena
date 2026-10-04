@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Focus memory and landing rules for one pane of a two-pane TV screen (a categories column, an
- * items column). Part II P1/P2 of docs/plans/20261003_ux-overhaul-plan.md.
+ * items column). Part II P1/P2 of docs/plans/archive/20261003_ux-overhaul-plan.md.
  *
  * ```
  * val categoriesPane = rememberPaneFocus()                       // in the screen, one per pane

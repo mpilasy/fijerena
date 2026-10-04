@@ -3,7 +3,7 @@
 Live sync between Fijerena devices: one ordered log of end-to-end encrypted records per account,
 plus a WebSocket that tells connected devices when it grows. The server never sees anything
 readable — record keys are HMACs and payloads ciphertext, both made on the devices. Design:
-[`docs/plans/20260929_live-sync-plan.md`](../docs/plans/20260929_live-sync-plan.md) → Server.
+[`docs/plans/archive/20260929_live-sync-plan.md`](../docs/plans/archive/20260929_live-sync-plan.md) → Server.
 
 One TypeScript codebase, two ways to run it: a Cloudflare Worker with one Durable Object per
 account, or the same worker in Docker under `workerd`, Cloudflare's open-source runtime.

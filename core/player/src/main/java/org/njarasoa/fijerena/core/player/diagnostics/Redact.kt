@@ -9,7 +9,7 @@ package org.njarasoa.fijerena.core.player.diagnostics
  * - URL userinfo `scheme://user:pass@host`.
  *
  * Idempotent, and text without such shapes comes back unchanged. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-16.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-16.
  */
 object Redact {
     const val MASK = "***"

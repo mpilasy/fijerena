@@ -109,7 +109,7 @@ class StreamLoaderViewModel(
     private val appSettings = AppSettings(context)
 
     // Live TV channel list and the position in it, as one snapshot: written from IO coroutines,
-    // read by the D-pad handlers on Main. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-13.
+    // read by the D-pad handlers on Main. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-13.
     private val channels = MutableStateFlow(ChannelCursor())
     private var currentCategoryId: String = categoryId
 
@@ -642,7 +642,7 @@ class StreamLoaderViewModel(
      * outlives it to await from anyway). A caller that back-navigates to a screen reading this
      * write's result — the episode-selection screen's resume anchor — needs
      * [stopPlaybackAwaited] instead: see its kdoc and
-     * docs/plans/20260908_episode-selection-fragility-plan.md.
+     * docs/plans/archive/20260908_episode-selection-fragility-plan.md.
      */
     @kotlin.OptIn(DelicateCoroutinesApi::class) // CoroutineStart.ATOMIC
     fun stopPlayback(
@@ -654,7 +654,7 @@ class StreamLoaderViewModel(
         // ATOMIC: NonCancellable below only protects the write once it has started. Called from
         // a screen's onDispose, this launch can be cancelled with viewModelScope before the IO
         // dispatcher ever runs it — a DEFAULT start then never runs the body at all, and the
-        // final position is lost. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-29.
+        // final position is lost. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-29.
         viewModelScope.launchGuarded("StreamLoaderViewModel.stopPlayback", Dispatchers.IO, CoroutineStart.ATOMIC) {
             // NonCancellable: this coroutine is a child of viewModelScope, which gets cancelled
             // the moment the screen popping back (e.g. Back press) clears this ViewModel —
@@ -673,7 +673,7 @@ class StreamLoaderViewModel(
      * back (the episode-selection screen's watch-history-derived resume anchor) — otherwise the
      * screen's own read can win the race against this write, land on stale watch history, and
      * silently reset to the wrong season/episode. See
-     * docs/plans/20260908_episode-selection-fragility-plan.md.
+     * docs/plans/archive/20260908_episode-selection-fragility-plan.md.
      */
     suspend fun stopPlaybackAwaited(
         position: Long,
@@ -825,7 +825,7 @@ fun finalizeSession(
 
 /**
  * [finalizeSession], but suspends until the write actually commits — see
- * [StreamLoaderViewModel.stopPlaybackAwaited] and docs/plans/20260908_episode-selection-fragility-plan.md.
+ * [StreamLoaderViewModel.stopPlaybackAwaited] and docs/plans/archive/20260908_episode-selection-fragility-plan.md.
  * Use this before navigating back to a screen (episode selection) whose own read of this same
  * data can otherwise win the race against the unawaited version.
  */

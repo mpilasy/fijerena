@@ -33,7 +33,7 @@ private fun playingSessionNow(): String? = StreamingPlaybackService.nowPlaying.v
 /**
  * Applies records received from another device: looks up what this device knows about each key,
  * asks [SyncMerge] what to do, and does it — without queueing the change to be sent back. See
- * `docs/plans/20260929_live-sync-plan.md` → Applying remote records.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Applying remote records.
  *
  * Each applied record also becomes this device's version of its key ([SyncVersionEntity] /
  * [SettingsVersionEntity], not pending), and every received clock value is taken into both sync
@@ -186,7 +186,7 @@ class SyncApplier(
      * pass. Before, the exception aborted the whole pull before the page's cursor was saved, so
      * every later pass refetched the same record and failed on it again: sync stuck for good on
      * that device, with no error shown. Deferred rather than skipped so a newer app version can
-     * still apply it. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-08.
+     * still apply it. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-08.
      */
     private suspend fun applyGuarded(record: SyncRecord): Outcome =
         try {

@@ -2,7 +2,7 @@
   "name": "fijerena-sync",
   "version": "0.1.0",
   "private": true,
-  "description": "Live sync server for Fijerena — see docs/plans/20260929_live-sync-plan.md",
+  "description": "Live sync server for Fijerena — see docs/plans/archive/20260929_live-sync-plan.md",
   "type": "module",
   "scripts": {
     "build": "esbuild src/index.ts --bundle --format=esm --target=es2022 --external:cloudflare:* --outfile=dist/worker.js",

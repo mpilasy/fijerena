@@ -3,7 +3,7 @@ import { Server, nextMessage, record } from "./harness";
 
 /**
  * The sync server end to end, over HTTP and WebSocket, as self-hosting runs it (workerd, Durable
- * Objects on local disk). See docs/plans/20260929_live-sync-plan.md → Server, Endpoints.
+ * Objects on local disk). See docs/plans/archive/20260929_live-sync-plan.md → Server, Endpoints.
  */
 describe("sync server", () => {
   const server = new Server({ TOMBSTONE_RETENTION_MS: String(365 * 24 * 60 * 60 * 1000) });
@@ -117,7 +117,7 @@ describe("sync server", () => {
 
   // F-22: one oversized record used to fail the whole batch with a 400; the device retried the
   // same oldest-first batch every pass and never pushed anything again. See
-  // docs/plans/20261001_rock-solid-stability-resilience-plan.md F-22.
+  // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md F-22.
   it("takes a payload at the size limit, rejects one past it, and the device's next push goes through", async () => {
     const { deviceToken } = await server.createAccount();
     const limit = 64 * 1024;

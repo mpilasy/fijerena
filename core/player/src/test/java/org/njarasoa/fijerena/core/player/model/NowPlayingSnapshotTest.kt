@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** See docs/plans/20261001_live-sync-now-playing-plan.md → Phase 1. */
+/** See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Phase 1. */
 class NowPlayingSnapshotTest {
     private val movie = PlayerMetadata(title = "Malcolm X", streamUrl = "http://h/u/p/1.mkv")
     private val live =

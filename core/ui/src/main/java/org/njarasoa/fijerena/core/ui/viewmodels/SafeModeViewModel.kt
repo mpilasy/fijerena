@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
  * cache and the poster cache — everything the app downloads again on its own. Sources, profiles,
  * favourites and watch history are never touched. Each step runs even if an earlier one failed,
  * since the broken one may be exactly what safe mode is working around. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-10.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-10.
  */
 class SafeModeViewModel(
     application: Application,

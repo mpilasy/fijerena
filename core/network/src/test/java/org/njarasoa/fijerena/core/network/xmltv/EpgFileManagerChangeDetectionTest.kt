@@ -16,7 +16,7 @@ import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 
 /**
- * G-11 (docs/plans/20261003_ux-overhaul-plan.md → III.H): a source must never read "ingested",
+ * G-11 (docs/plans/archive/20261003_ux-overhaul-plan.md → III.H): a source must never read "ingested",
  * validators included, while the live guide holds none of its rows. Two halves: on the staging
  * path the stats are written only after the swap commits, and an empty index never lets a 304 or
  * a hash match skip the download.

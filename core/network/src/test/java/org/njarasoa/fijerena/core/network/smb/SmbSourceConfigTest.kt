@@ -6,7 +6,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-22. */
+/** docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-22. */
 class SmbSourceConfigTest {
     @Test
     fun `quotes and backslashes round-trip`() {

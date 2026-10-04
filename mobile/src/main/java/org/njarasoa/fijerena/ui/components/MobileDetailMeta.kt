@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
  * One plain-text fact in a dot-separated detail meta line — see
- * docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase 4 (3b).
+ * docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase 4 (3b).
  */
 @Composable
 fun MetaText(text: String) {

@@ -28,7 +28,7 @@ user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
 ### Table: `profiles` (added v11)
 The people using the app. Favourites, watch state, Recent Categories and the last-browsed
 bookmarks are per profile; providers, EPG sources and settings are shared. See
-`docs/plans/20260929_live-sync-plan.md` → User profiles.
+`docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -53,7 +53,7 @@ and stay.
 
 ### Table: `sync_tombstone` (added v13)
 Deleted providers and profiles, kept so live sync can tell other devices (see
-`docs/plans/20260929_live-sync-plan.md` → Deletions). Written in the same transaction as the delete
+`docs/plans/archive/20260929_live-sync-plan.md` → Deletions). Written in the same transaction as the delete
 (`ProviderDao.deleteProviderRecordingTombstone`, `ProfileDao.deleteRecordingTombstone`); pruned after
 90 days at startup. Favourite and history deletions have their own `sync_tombstone` in `xtream_v2.db`.
 
@@ -234,11 +234,11 @@ TMDB sibling-dedup joins below, which had no covering index on either table; v19
 the network round trip for its episode list while the stored copy is fresh (see the column below);
 v20 added `profileId` to the primary key of
 `watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
-`default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles; v21 added
+`default` profile — see `docs/plans/archive/20260929_live-sync-plan.md` → User profiles; v21 added
 `sync_tombstone` for live sync; v22 added `sync_outbox` and `sync_clock`, filled by triggers; v23 turned
 `sync_outbox` into `sync_version`; v24 dropped the indexes on the stream and series `excluded` flags,
 which are no longer used — items follow their category's flag at query time, see
-`docs/plans/20261001_fast-profile-switch-plan.md`.)
+`docs/plans/archive/20261001_fast-profile-switch-plan.md`.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -367,7 +367,7 @@ XMLTV index has nothing for a channel. A row is fresh for 6 hours
 ### Table: `watch_state` (added v15)
 Durable playback position and completion state, kept forever. Replaces the `watch_history_v3`
 SharedPreferences blob, which truncated to `providerSettings.watchHistorySize` on every write and
-silently evicted anything older. See `docs/plans/20260828_watch-state-durable-storage-plan.md`.
+silently evicted anything older. See `docs/plans/archive/20260828_watch-state-durable-storage-plan.md`.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -422,7 +422,7 @@ removed from `XtreamContentManager.syncSeries` for the same reason.
 Durable favourites, kept forever. Replaces the `favorites_v2` and `favorite_categories`
 SharedPreferences blobs, which were capped at `providerSettings.favoritesMaxSize` (default 100) and
 truncated on every write, silently evicting the oldest entry. See
-`docs/plans/20260828_favorites-durable-storage-plan.md`.
+`docs/plans/archive/20260828_favorites-durable-storage-plan.md`.
 
 One table serves both blobs; `kind` discriminates. For `CATEGORY` rows, `itemId` **is** the category
 id and `parentCategoryId` is NULL.
@@ -447,7 +447,7 @@ during composition; the snapshot is filled in `setProvider()`, which runs on `Di
 ### Table: `sync_tombstone` (added v21)
 Removed favourites and cleared watch histories, kept so live sync can tell other devices — without
 them the next device to sync would bring the item back. See
-`docs/plans/20260929_live-sync-plan.md` → Deletions (tombstones).
+`docs/plans/archive/20260929_live-sync-plan.md` → Deletions (tombstones).
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -502,7 +502,7 @@ provider or profile are covered by that one's tombstone.
 Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`, and `watch_state`) reside in `xtream_v2.db`, while the provider entities that own them live in `providers.db`. Because SQLite cannot enforce cross-database foreign key cascades, deleting a provider in `providers.db` does not automatically purge its rows in `xtream_v2.db`.
 
 1. **Cascaded Provider Deletion:** `ProviderRepository.deleteProvider(id)` cascades through all catalog tables in `xtream_v2.db` (and the provider's `sync_tombstone` / `sync_version` rows), clears its SharedPreferences (`provider_creds_{id}`, `media_cache_{id}`, `xtream_cache_{id}`) and deletes every profile's `provider_creds_{id}_profile_*` / `media_cache_{id}_profile_*`, and removes its EPG sources with their `epg_index.db` rows. Catalogue rows go 1,000 per commit (`deleteInBatches`), and no `VACUUM` follows: see 6.
-2. **Orphan Pruning (`pruneOrphanedCatalogData`):** Sweeps only the downloaded catalogue (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `xtream_epg_cache`) for `providerId NOT IN (valid ids)`, in the same 1,000-row commits, plus orphaned cache SharedPreferences (`media_cache_*`, `xtream_cache_*`). **Never `favorite_state` or `watch_state`**: "orphaned" is inferred from `providers.db`, and whenever the two files disagree (a reset or restored `providers.db`, a provider synced in between the read and the delete) the inference is wrong — it used to delete every favourite and history row. Those go only with `deleteProvider`. Orphaned credential files (`provider_creds_*`) and EPG sources (without sync tombstones) are removed only by the user's "Shrink Database". The provider list is read again before each step. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-02.
+2. **Orphan Pruning (`pruneOrphanedCatalogData`):** Sweeps only the downloaded catalogue (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `xtream_epg_cache`) for `providerId NOT IN (valid ids)`, in the same 1,000-row commits, plus orphaned cache SharedPreferences (`media_cache_*`, `xtream_cache_*`). **Never `favorite_state` or `watch_state`**: "orphaned" is inferred from `providers.db`, and whenever the two files disagree (a reset or restored `providers.db`, a provider synced in between the read and the delete) the inference is wrong — it used to delete every favourite and history row. Those go only with `deleteProvider`. Orphaned credential files (`provider_creds_*`) and EPG sources (without sync tombstones) are removed only by the user's "Shrink Database". The provider list is read again before each step. See `docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md` → R-02.
 3. **Safety Circuit Breaker:** If `validProviderIds.isEmpty()`, `pruneOrphanedCatalogData()` immediately aborts and returns `(0, 0)`, preventing accidental deletion if provider loading ever returned empty.
 4. **Automatic Background Maintenance:** `sweepOrphanedCatalogData` (never throws; a full disk or locked database is recorded in the crash log and skipped) runs during scheduled `EpgSyncWorker` runs, and at app start only when `orphan_sweep_pending` is set — a provider deletion was interrupted. It used to run unguarded from the nav hosts' composition on every start, a full scan of the catalogue tables competing with Home's first queries, and an exception there crashed every launch (R-03, R-17).
 5. **Manual Maintenance ("Shrink Database"):** Exposed in Settings → Backup & storage → "Shrink Database" (`SettingsViewModel.pruneDatabase()`), passing `userRequested = true` to force compaction and report rows removed and bytes reclaimed.
@@ -564,9 +564,9 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
 | `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `dev_mode` |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
-| `last_provider_<profileId>` | TEXT | `providerKey` of the provider that profile last picked; applied on profile switch. Synced per profile — see `docs/plans/20261002_profile-last-provider-plan.md` |
+| `last_provider_<profileId>` | TEXT | `providerKey` of the provider that profile last picked; applied on profile switch. Synced per profile — see `docs/plans/archive/20261002_profile-last-provider-plan.md` |
 | `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | LONG | Stats of the last orphan prune (`pruneOrphanedCatalogData`, manual "Shrink Database" or the automatic sweep), shown in dev mode. Per device |
-| `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/20261001_live-sync-now-playing-plan.md` |
+| `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/archive/20261001_live-sync-now-playing-plan.md` |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |

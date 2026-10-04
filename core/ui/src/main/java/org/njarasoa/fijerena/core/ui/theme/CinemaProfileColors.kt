@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 /**
  * Avatar colours for user profiles. Fixed across themes: a profile is recognised by its colour,
  * so it must not change when the theme does. `profiles.colorIndex` stores an index into [palette],
- * never a colour value — see `docs/plans/20260929_live-sync-plan.md` → User profiles.
+ * never a colour value — see `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
  */
 object CinemaProfileColors {
     val palette: List<Color> =

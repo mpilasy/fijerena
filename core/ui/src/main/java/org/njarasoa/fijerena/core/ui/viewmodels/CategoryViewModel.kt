@@ -643,7 +643,7 @@ class CategoryViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md), same
+     * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md), same
      * refresh discipline as [toggleFavoriteStream]: [setWatched][org.njarasoa.fijerena.core.network
      * .MediaRepository.setWatched] then [refreshPerItemData] republishes [watchedIds], costing
      * nothing extra since watch state is looked up separately from the catalogue rather than

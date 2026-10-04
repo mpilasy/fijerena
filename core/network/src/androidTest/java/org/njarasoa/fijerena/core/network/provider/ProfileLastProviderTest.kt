@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 
 /**
  * Each profile returns to the provider it last picked — see
- * docs/plans/20261002_profile-last-provider-plan.md.
+ * docs/plans/archive/20261002_profile-last-provider-plan.md.
  *
  * Runs against this test APK's own databases and prefs, never the app's. Uses profiles it creates
  * itself: another test in this APK deletes `default`.

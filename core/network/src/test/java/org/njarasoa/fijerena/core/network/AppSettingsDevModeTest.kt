@@ -10,7 +10,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
-/** Developer mode is per profile — see docs/plans/20260930_profile-scoped-settings-plan.md. */
+/** Developer mode is per profile — see docs/plans/archive/20260930_profile-scoped-settings-plan.md. */
 class AppSettingsDevModeTest {
     private lateinit var prefs: FakeSharedPreferences
     private lateinit var settings: AppSettings

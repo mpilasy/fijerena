@@ -55,7 +55,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * "Who's watching?" — pick the profile this TV uses. See `docs/plans/20260929_live-sync-plan.md`
+ * "Who's watching?" — pick the profile this TV uses. See `docs/plans/archive/20260929_live-sync-plan.md`
  * → User profiles. [onProfileChosen] runs once the switch has happened; the caller rebuilds the
  * back stack from home.
  */

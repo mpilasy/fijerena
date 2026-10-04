@@ -58,8 +58,8 @@ fijerena/
 8. **Service from Compose:** In a `LaunchedEffect`/composition-scoped coroutine use `StreamingPlaybackService.awaitInstanceOrNull()`, never bare `awaitInstance()` — its `ServiceDestroyedException` escaping a composition coroutine crashes the app.
 9. **`xtream_v2.db` holds user data:** every version bump needs a real `Migration`; the destructive fallback covers only pre-v7 files. See `docs/DATABASE_SCHEMA.md` §3 and "Schema changes" below.
 10. **Secrets never fall back to plaintext:** an encrypted store that can't be opened is reset (`CredentialStoreHealth.markLost`) and, if it still can't be created, replaced by `CredentialStoreHealth.InMemoryPrefs` — never `getSharedPreferences`.
-11. **Startup work that could crash sits behind `SafeMode.isActive`** (`core:player/diagnostics`): `FijerenaApplication.startBackgroundWork()` and the nav hosts' `initializeStartup()` don't run in crash-loop safe mode, nor when `ProvidersDbGuard.isBlocked` (a `providers.db` from a newer build, which nothing may open). New startup work goes inside them, not around them. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
-12. **No destructive self-healing:** code that runs by itself (startup, workers, sync) never deletes user data (`watch_state`, `favorite_state`, `sync_*`, providers, profiles, credentials) by inference. Only an explicit user action or a received tombstone may. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-02.
+11. **Startup work that could crash sits behind `SafeMode.isActive`** (`core:player/diagnostics`): `FijerenaApplication.startBackgroundWork()` and the nav hosts' `initializeStartup()` don't run in crash-loop safe mode, nor when `ProvidersDbGuard.isBlocked` (a `providers.db` from a newer build, which nothing may open). New startup work goes inside them, not around them. See `docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
+12. **No destructive self-healing:** code that runs by itself (startup, workers, sync) never deletes user data (`watch_state`, `favorite_state`, `sync_*`, providers, profiles, credentials) by inference. Only an explicit user action or a received tombstone may. See `docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md` → R-02.
 13. **ViewModel coroutines use `launchGuarded`** (`core:ui/utils/LaunchGuarded.kt`), never a bare `viewModelScope.launch`: it rethrows cancellation, records the failure in `CrashLog` and passes it to `onError`, which sets the screen's error state. An init that builds a repository surfaces its failure and is retryable — never a crash or a deferred left hanging. `scripts/check-viewmodel-launch.sh` (CI) enforces it; mark a deliberate bare launch `// launch-ok: <reason>`; its per-file allow-list only shrinks. Values received from live sync (`AppSettings.applyRemoteSetting`) are validated before they're stored.
 
 ---
@@ -118,7 +118,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### 5. Strings and titles
 
 - **Strings:** every user-visible string is a resource in a `core` module (`core/ui`, `core/network` or `core/player`, under `src/main/res/`), added to `values/`, `values-fr/` and `values-mg/` in the same change — the three files of each module carry the same keys. `tv` and `mobile` hold only `app_name`.
-- **Wording:** in the UI content providers are **sources** ("Add Source", "Manage Sources"; French *source*, feminine; Malagasy *loharano*), and EPG/XMLTV feeds are **guide sources** (*source de guide*, *loharanon'ny fitarihana*). Code keeps "provider" (`ProviderEntity`, the `providers` table, `providerId`, string keys such as `provider_add_title`), so new strings use the new words with the old key style. "Provider" stays only where it means the company that sells the IPTV service (`login_footer_text`). See `docs/plans/20261002_provider-to-source-rename-plan.md`.
+- **Wording:** in the UI content providers are **sources** ("Add Source", "Manage Sources"; French *source*, feminine; Malagasy *loharano*), and EPG/XMLTV feeds are **guide sources** (*source de guide*, *loharanon'ny fitarihana*). Code keeps "provider" (`ProviderEntity`, the `providers` table, `providerId`, string keys such as `provider_add_title`), so new strings use the new words with the old key style. "Provider" stays only where it means the company that sells the IPTV service (`login_footer_text`). See `docs/plans/archive/20261002_provider-to-source-rename-plan.md`.
 - **Provider titles:** raw names carry tags (`EN - …`, `4K-NF - …`, `AFR: …`, `… (US)`). Show them through `BadgedTitle` (`core:ui`, `LanguageBadge.kt`) or `parseDisplayTitle` (`core:player/domain/TitleLanguage.kt`): the tag becomes a `LanguageBadge` beside the clean title. Episode names go through `episodeOwnTitle` / `playerEpisodeName` / `episodeTitleWithoutSeries` in the same file. Stats for Nerds shows the raw names on purpose.
 
 ### 6. Coding Style
@@ -310,55 +310,9 @@ A migration means any of: a new `MIGRATION_n_n+1`, a version bump, a new entity,
 
 ### Plans
 
-Multi-phase work is planned in writing before it is built, in `docs/plans/<kebab-case-topic>-plan.md`. Everything else in `docs/` is standing reference material that describes how the app works today; a plan describes work that is proposed, in progress, or deliberately deferred.
+Multi-phase work is planned in writing before it is built, in `docs/plans/YYYYMMDD_<kebab-case-topic>-plan.md`. Everything else in `docs/` is standing reference material that describes how the app works today; a plan describes work that is proposed, in progress, or deliberately deferred.
 
-Each plan states its own status at the top - trust that over any summary here.
-
-| Plan | Status |
-|------|--------|
-| [docs/plans/20260824_codebase-audit-fix-plan.md](docs/plans/20260824_codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
-| [docs/plans/20260826_tv-ui-performance-plan.md](docs/plans/20260826_tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26. Open: Live TV back-out animation tail (6b), mobile `RelatedTitlesRow`, Xtream EPG cache sizing |
-| [docs/plans/20260827_refresh-change-detection-plan.md](docs/plans/20260827_refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 (optional) not started |
-| [docs/plans/20260828_favorites-durable-storage-plan.md](docs/plans/20260828_favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
-| [docs/plans/20260828_secret-store-migration-plan.md](docs/plans/20260828_secret-store-migration-plan.md) | Not started, deferred deliberately |
-| [docs/plans/20260828_watch-state-durable-storage-plan.md](docs/plans/20260828_watch-state-durable-storage-plan.md) | **Complete** - all six phases landed; kept, see below |
-| [docs/plans/20260829_mobile-ui-polish-plan.md](docs/plans/20260829_mobile-ui-polish-plan.md) | **Complete** (2026-08-29) |
-| [docs/plans/20260829_ui-look-feel-uplift-plan.md](docs/plans/20260829_ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |
-| [docs/plans/20260902_tv-detail-hero-ui-plan.md](docs/plans/20260902_tv-detail-hero-ui-plan.md) | **Complete** - all five phases landed (2026-09-11) |
-| [docs/plans/20260908_episode-selection-fragility-plan.md](docs/plans/20260908_episode-selection-fragility-plan.md) | **Complete** - all three phases landed (2026-09-08) |
-| [docs/plans/20260911_provider-copy-duplicate-plan.md](docs/plans/20260911_provider-copy-duplicate-plan.md) | **Landed** (2026-09-11); planned unit tests not written |
-| [docs/plans/20260912_adversarial-codebase-remediation-plan.md](docs/plans/20260912_adversarial-codebase-remediation-plan.md) | **Resolved** - applied, rejected or deferred per finding (U2 spacing literals and C3 timeout guard deferred) |
-| [docs/plans/20260912_adversarial-codebase-review-round2-plan.md](docs/plans/20260912_adversarial-codebase-review-round2-plan.md) | Phases 1-3 landed (2026-09-12); Phase 4 single-return cleanup not started |
-| [docs/plans/20260914_codebase-robustness-plan.md](docs/plans/20260914_codebase-robustness-plan.md) | Phase 1 landed (2026-09-29); Phases 2-5 not started; secret-store part of Phase 6 deferred |
-| [docs/plans/20260918_concurrency-memory-stability-plan.md](docs/plans/20260918_concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
-| [docs/plans/20260918_concurrency-memory-stability-round2-plan.md](docs/plans/20260918_concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); Xtream paths verified on the TV emulator (2026-10-02), SMB/Local/M3U not exercised |
-| [docs/plans/20260918_systemic-concurrency-memory-stability-plan.md](docs/plans/20260918_systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped; Xtream paths verified on the TV emulator (2026-10-02) |
-| [docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md](docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md) | **Complete** - all five phases landed (2026-09-21) |
-| [docs/plans/20260920_xtream-concurrency-fixes-plan.md](docs/plans/20260920_xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
-| [docs/plans/20260921_adversarial-review-findings-plan.md](docs/plans/20260921_adversarial-review-findings-plan.md) | **Complete** - all five phases landed (2026-09-22) |
-| [docs/plans/20260922_codebase-stability-resilience-plan.md](docs/plans/20260922_codebase-stability-resilience-plan.md) | **Complete** - all findings landed except intentionally out-of-scope ones (2026-09-23) |
-| [docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md](docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md) | **Done** - Phases 1-5 and 2a landed (2026-09-23); 6a and 2c held back by the user, not started |
-| [docs/plans/20260925_epg-add-to-calendar-plan.md](docs/plans/20260925_epg-add-to-calendar-plan.md) | **Complete** (2026-09-25) |
-| [docs/plans/20260929_live-sync-plan.md](docs/plans/20260929_live-sync-plan.md) | **Complete** - all nine phases landed (2026-10-01) |
-| [docs/plans/20260930_profile-architecture-adversarial-review-plan.md](docs/plans/20260930_profile-architecture-adversarial-review-plan.md) | **Resolved** - findings 3, 5, 6, 7 fixed; rest not defects, by design or deferred (2026-09-30) |
-| [docs/plans/20260930_profile-scoped-settings-plan.md](docs/plans/20260930_profile-scoped-settings-plan.md) | **Complete** - filters and dev mode per profile, verified on emulators (2026-09-30) |
-| [docs/plans/20261001_fast-profile-switch-plan.md](docs/plans/20261001_fast-profile-switch-plan.md) | **Complete** (2026-10-01) |
-| [docs/plans/20261001_rock-solid-stability-resilience-plan.md](docs/plans/20261001_rock-solid-stability-resilience-plan.md) | **Complete** - all six phases landed, verified on emulators (2026-10-02); F-13 deferred, F-02 not reproduced, `XtreamDatabaseUpgradeTest` (instrumented) not yet run |
-| [docs/plans/20261001_live-sync-now-playing-plan.md](docs/plans/20261001_live-sync-now-playing-plan.md) | **Complete** - Phases 0-4 landed, verified on emulators (2026-10-01) |
-| [docs/plans/20261002_profile-last-provider-plan.md](docs/plans/20261002_profile-last-provider-plan.md) | **Complete** - each profile returns to the provider it last picked (synced), verified on emulators (2026-10-02) |
-| [docs/plans/20261002_epg-search-during-refresh-plan.md](docs/plans/20261002_epg-search-during-refresh-plan.md) | **Complete** - all three phases landed (2026-10-02); emulator verification outstanding |
-| [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
-| [docs/plans/20261002_provider-to-source-rename-plan.md](docs/plans/20261002_provider-to-source-rename-plan.md) | **Complete** - both phases landed (2026-10-02); French and Malagasy reviewed as text only |
-| [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | **Complete** (2026-10-02) - Phases 0-6 done, plus R-27 (4K buffer), R-28 (main-thread reads), R-29 (picker focus), R-30 (Back focus); R-06 step 4 deferred; Phase 5/R-28/R-29/R-30 not yet checked on a device |
-| [docs/plans/20261003_ux-overhaul-plan.md](docs/plans/20261003_ux-overhaul-plan.md) | **Done** (2026-10-03) - Parts I-III (Settings, TV focus & Live TV, TV Guide) landed, verified on the emulators, deployed to both Shields and the Bravia; native-speaker review of a few Malagasy terms deferred |
-
-Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - grep `core`, `tv`, `mobile`, `scripts` and `server` for the file name first (the watch-state and next-level resilience plans are each cited from dozens of files).
-
-**A complete plan is not automatically deletable.** `23d2ced3` set the precedent of dropping finished plans rather than archiving them, and `docs/RELEASE_NOTES.md` is the durable record of what shipped. But a plan that source comments cite is load-bearing documentation: the comments say *which* phase a piece of code implements and the plan says *why* that design was chosen, so deleting it turns those references into dead paths and strands the reasoning.
-
-So before deleting a finished plan, grep for citations of its filename. If any exist, keep the file - the watch-state plan is complete and deliberately retained on exactly these grounds. Prune only plans nothing cites.
-
-A complete plan may also still carry live information. The watch-state plan's "Known adjacent problems, deliberately out of scope" section records four defects found while building it and consciously not fixed. Three were resolved on 2026-08-28 - the `getSeriesWatchProgress()` TMDB dedup gap, `XtreamUserDataManager`'s parallel blob, and the duplicated `last_*` navigation keys that went with it - and are struck through rather than deleted, so the reasoning that deferred them stays legible. All four are now closed - Favorites carried the identical truncation defect and were ported to a `favorite_state` table on 2026-08-28. The last capped blob left anywhere is `recent_categories_<contentType>` (20 entries), kept deliberately: it is a convenience list nobody curates, so eviction is the intended behaviour there rather than data loss.
+Each plan states its own status at the top and keeps it current while the work runs (a Progress table for multi-lane work). [`docs/plans/README.md`](docs/plans/README.md) indexes them: open plans stay in `docs/plans/`; a finished or abandoned plan moves to `docs/plans/archive/` and its index row moves with it. Plans are archived, not deleted: source comments cite them by path and phase (`// Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md`), and a finished plan can still record live information (the watch-state plan's "Known adjacent problems, deliberately out of scope"). Moving or renaming a plan means updating every reference - `git grep` its filename first.
 
 When asked to produce a plan, write the real file under `docs/plans/` - not only an ephemeral plan-mode scratch file.
 
@@ -382,7 +336,7 @@ Hard-won lessons from production debugging. Read these before making changes in 
 
 ### Every catalog sync rewrote most rows and wiped their detail cache
 **Context:** Xtream's `num` is a position in the provider's list; it shifts for tens of thousands of rows whenever the provider adds one (38,888 of 47,513 series between two bears syncs 3h apart). It was in `contentHash`, and a changed row is rewritten with `@Insert(REPLACE)` from a fresh entity, which reset `episodesFetchedAt`, `detailFetchedAt`, `contentRating`, `posterPath` and `containerExtension`.
-**Fix:** `computeHash` leaves `num` out; a stream whose position alone moved gets `updateNums` (lists are ordered by `num`); changed rows go through `insertKeepingDetailCache`, which carries the detail columns over (a changed series still clears `episodesFetchedAt`, the "fetch its episodes again" trigger). **Rule:** a catalog hash covers content only, never list position; never write a catalog row with a bare `insertAll` from sync code. See `docs/plans/20261002_catalog-sync-cache-churn-plan.md`.
+**Fix:** `computeHash` leaves `num` out; a stream whose position alone moved gets `updateNums` (lists are ordered by `num`); changed rows go through `insertKeepingDetailCache`, which carries the detail columns over (a changed series still clears `episodesFetchedAt`, the "fetch its episodes again" trigger). **Rule:** a catalog hash covers content only, never list position; never write a catalog row with a bare `insertAll` from sync code. See `docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md`.
 
 ### Clear All EPG Data takes 10+ minutes with DELETE FROM
 **Context:** 4M+ rows on NVIDIA Shield with low-IOPS flash storage.

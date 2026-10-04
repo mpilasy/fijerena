@@ -6,7 +6,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel.StopRequest
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel.StopState
 
-/** The phone's "Stopping…" / "Couldn't reach" row — see docs/plans/20261001_live-sync-now-playing-plan.md → Phase 4.5. */
+/** The phone's "Stopping…" / "Couldn't reach" row — see docs/plans/archive/20261001_live-sync-now-playing-plan.md → Phase 4.5. */
 class SyncRemoteStopStateTest {
     private val sentAt = 1_000_000L
     private val requests = mapOf("tv" to StopRequest("session-1", sentAt))

@@ -43,7 +43,7 @@ private const val DETAIL_MAX_LINES = 14
 
 /**
  * Settings → Diagnostics on TV (developer mode). Each entry is focusable so the D-pad scrolls
- * through them. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-30.
+ * through them. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-30.
  */
 @Composable
 fun DiagnosticsScreen() {

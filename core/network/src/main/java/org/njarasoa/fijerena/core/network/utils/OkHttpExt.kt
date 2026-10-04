@@ -22,7 +22,7 @@ suspend fun Call.await(): Response {
                 ) {
                     // Cancelled while the response was on its way: nobody will read it, so close
                     // it here or its connection is never returned to the pool. See
-                    // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+                    // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
                     continuation.resume(response) { _, unread, _ -> unread.close() }
                 }
 

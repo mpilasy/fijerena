@@ -8,7 +8,7 @@ import org.junit.Test
  * What the automatic orphan sweep may delete. It decides "orphaned" by comparing against
  * `providers.db`, so whenever that file and `xtream_v2.db` disagree the inference is wrong; user
  * data must never be within its reach. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-02.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-02.
  */
 class OrphanSweepRulesTest {
     @Test

@@ -28,7 +28,7 @@ class SyncAccountStore(
      * the file then can't be decrypted and `create` throws. Read on every app start (SyncManager),
      * that used to crash the app on every launch. The link is unrecoverable either way — reset it,
      * so this device shows as unlinked and can pair again. See
-     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-21.
+     * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-21.
      */
     private fun open(context: Context): SharedPreferences? {
         val prefs =

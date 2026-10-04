@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
 /**
  * Category filters per (provider, profile): each profile has its own complete set for every
- * provider. See docs/plans/20260930_profile-scoped-settings-plan.md.
+ * provider. See docs/plans/archive/20260930_profile-scoped-settings-plan.md.
  *
  * SharedPreferences, not Room: `MediaProviderFactory.create` and the Xtream content code read
  * filters synchronously, some of it on the main thread. One `category_filters` file, one key per

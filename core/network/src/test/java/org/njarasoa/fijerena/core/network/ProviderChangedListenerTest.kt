@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * A provider changed in the app reaches whoever caches it beyond the factory — `AppContainer`'s
- * `MediaRepository`. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
+ * `MediaRepository`. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
  */
 class ProviderChangedListenerTest {
     @After

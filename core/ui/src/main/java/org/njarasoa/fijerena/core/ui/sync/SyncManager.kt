@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Runs live sync while the app is in use — see `docs/plans/20260929_live-sync-plan.md` → Flow.
+ * Runs live sync while the app is in use — see `docs/plans/archive/20260929_live-sync-plan.md` → Flow.
  *
  * - **Foreground**: a WebSocket to the server; its `{"head": n}` messages trigger a pull. A text
  *   `ping` every 30 s keeps reverse proxies from dropping the idle connection (the server answers
@@ -107,7 +107,7 @@ class SyncManager internal constructor(
             override fun onProvidersChanged(providerIds: Set<Long>) {
                 // A password, URL, login or filter changed on another device: the next screen to
                 // ask gets a repository built with it. See R-06 step 2 of
-                // docs/plans/20261002_next-level-rock-solid-resilience-plan.md.
+                // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md.
                 scope.launch { AppContainer.getInstance(app).onProvidersChanged(providerIds) }
             }
 
@@ -269,7 +269,7 @@ class SyncManager internal constructor(
         } catch (e: Exception) {
             // Used to only log: no error on the settings screen, no retry — sync silently stopped
             // until the app next came to the foreground. See
-            // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-23.
+            // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-23.
             Log.e(TAG, "Sync pass crashed", e)
             CrashLog.record("sync pass", e)
             store.lastError = "${e.javaClass.simpleName}: ${e.message}"
@@ -304,7 +304,7 @@ class SyncManager internal constructor(
      * Watch progress written while something plays is held for up to a minute — a save every 10 s
      * used to push every ~13 s, and every other linked device then pulled and reloaded its Recent
      * rows. Anything else goes after the usual debounce. See
-     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-18.
+     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-18.
      */
     internal fun onLocalChange() {
         if (!foreground || !engine.isLinked) return
@@ -342,7 +342,7 @@ class SyncManager internal constructor(
      * WebSocket doesn't (a reverse proxy that doesn't upgrade) used to reconnect every 5 s forever,
      * with a full sync pass each time — the pass succeeded, so the shared delay kept resetting.
      * Doubles per failed attempt; resets only once a socket actually opens. See
-     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-12.
+     * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-12.
      */
     private var socketRetryDelayMs = INITIAL_RETRY_MS
 

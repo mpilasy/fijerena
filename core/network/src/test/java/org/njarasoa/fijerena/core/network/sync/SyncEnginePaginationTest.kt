@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * page failing lost what earlier pages deferred — the cursor had already moved past them.
  * F-08 (engine side): a record this device can't read must not hold the cursor back.
  * F-22 (client side): a record sealed over the server's limit is dropped, not sent with the rest.
- * See docs/plans/20261001_rock-solid-stability-resilience-plan.md.
+ * See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md.
  */
 class SyncEnginePaginationTest {
     private val accountKey = AccountKeyCrypto.newAccountKey()

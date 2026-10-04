@@ -777,7 +777,7 @@
     <string name="provider_error_delete_failed">Failed to delete source</string>
     <string name="provider_error_update_failed">Failed to update source</string>
     <string name="provider_error_save_failed">Failed to save source</string>
-    <!-- Profiles (docs/plans/20260929_live-sync-plan.md → User profiles) -->
+    <!-- Profiles (docs/plans/archive/20260929_live-sync-plan.md → User profiles) -->
     <string name="settings_profiles_title">Profiles</string>
     <string name="settings_profiles_description">Each profile has its own favourites, watch history and recent categories. Sources and settings are shared.</string>
     <string name="settings_profiles_add">Add profile</string>
@@ -799,7 +799,7 @@
     <string name="profile_switch_description">Switch profile (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Sign in to %1$s for this profile</string>
     <string name="profile_jellyfin_sign_in_button">Sign in</string>
-    <!-- Live sync (docs/plans/20260929_live-sync-plan.md, Phase 9) -->
+    <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Live sync</string>
     <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>
     <string name="live_sync_open">Set up</string>
@@ -889,7 +889,7 @@
     <string name="newer_data_reset_confirm_message">Every source, profile and guide source on this device is set aside, and the app restarts with none. Installing the newer version and restoring the backup brings them back.</string>
     <string name="newer_data_reset_confirm">Reset</string>
 
-    <!-- Settings overhaul (docs/plans/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
+    <!-- Settings overhaul (docs/plans/archive/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
     <string name="settings_group_source_guide">Source &amp; guide</string>
     <string name="settings_group_display">Display</string>
     <string name="settings_group_backup_storage">Backup &amp; storage</string>

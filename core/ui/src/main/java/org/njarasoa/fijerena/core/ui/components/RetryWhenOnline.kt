@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 
-// docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-15: an error screen retries by
+// docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-15: an error screen retries by
 // itself, once, when the device comes back online (a TV starting while its network is still coming
 // up after wake is the most common case).
 

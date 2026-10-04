@@ -7,7 +7,7 @@ finished 18-season show like Law & Order is fetched again in full from Xtream, p
 calls, far more often than its content changes. The 24h episode-list cache and the 7-day TMDB
 detail cache that were meant to prevent this are wiped by every catalog sync.
 
-Context: `docs/plans/20260827_refresh-change-detection-plan.md` (the `contentHash` change
+Context: `docs/plans/archive/20260827_refresh-change-detection-plan.md` (the `contentHash` change
 detection this builds on).
 
 ## Findings (2026-10-02, bears, read-only copies of the app databases)

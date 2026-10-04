@@ -2,7 +2,7 @@
 # One "path count" per line, then "# reason": how many bare `viewModelScope.launch` calls the file
 # may still have. Counts only go down: convert a site to `launchGuarded` (or mark a deliberate one
 # `// launch-ok: <reason>`) and lower the count in the same change; a file at 0 leaves the list.
-# A file not listed may have none. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+# A file not listed may have none. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
 #
 # Left after the first pass (2026-10-02, 98 → 60): mostly loads that already catch their own
 # failures or return a Result, and user actions with no init-path impact.

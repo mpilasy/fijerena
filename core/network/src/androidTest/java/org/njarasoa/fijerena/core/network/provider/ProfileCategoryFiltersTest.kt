@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * Category filters per profile and provider — see
- * docs/plans/20260930_profile-scoped-settings-plan.md.
+ * docs/plans/archive/20260930_profile-scoped-settings-plan.md.
  *
  * Runs against this test APK's own databases and prefs, never the app's. Uses profiles it creates
  * itself: another test in this APK deletes `default`.

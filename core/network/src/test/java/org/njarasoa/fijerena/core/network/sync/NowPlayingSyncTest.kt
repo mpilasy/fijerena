@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 
-/** See docs/plans/20261001_live-sync-now-playing-plan.md → Phase 1 and 2. */
+/** See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Phase 1 and 2. */
 class NowPlayingSyncTest {
     private val key = SyncKey(SyncKind.SHARED, "", SyncKind.NOW_PLAYING, "device-1")
     private val episode =

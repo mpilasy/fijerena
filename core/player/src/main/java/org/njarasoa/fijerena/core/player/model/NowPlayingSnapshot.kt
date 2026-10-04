@@ -2,7 +2,7 @@ package org.njarasoa.fijerena.core.player.model
 
 /**
  * What this device is playing, as live sync tells the other devices of the group — see
- * `docs/plans/20261001_live-sync-now-playing-plan.md`. Built from the player's metadata and state
+ * `docs/plans/archive/20261001_live-sync-now-playing-plan.md`. Built from the player's metadata and state
  * by [StreamingPlaybackService][org.njarasoa.fijerena.core.player.service.StreamingPlaybackService];
  * null there means nothing is playing. Never carries the stream URL: it can hold credentials.
  */

@@ -26,7 +26,7 @@ import org.njarasoa.fijerena.core.player.model.PositionSave
  *
  * R-12: one teardown stage throwing must not skip the rest. R-04: saves are published on the
  * process-wide [StreamingPlaybackService.positionSaves], so they reach the player screen whatever
- * instance is playing. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md.
+ * instance is playing. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md.
  */
 @androidx.media3.common.util.UnstableApi
 class StreamingPlaybackServiceTeardownTest {

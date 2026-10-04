@@ -1334,7 +1334,7 @@ class EpgFileManager private constructor(
                                 while (input.read(buffer).also { read = it } != -1) {
                                     // Cancel and Clear all data must stop a 100+ MB download, not
                                     // wait for its end. See R-14 of
-                                    // docs/plans/20261002_next-level-rock-solid-resilience-plan.md.
+                                    // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md.
                                     ensureActive()
                                     output.write(buffer, 0, read)
                                     digest?.update(buffer, 0, read)

@@ -12,7 +12,7 @@ import java.io.File
  * open, which crashed every launch, and the only way out was clearing the app's data. Unlike
  * `XtreamDatabase.setAsideIfNewer`, nothing is moved automatically: sources, profiles and sync
  * state live here, so the app shows the newer-data screen and only an explicit "Reset sources"
- * calls [setAside]. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-01.
+ * calls [setAside]. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-01.
  */
 object ProvidersDbGuard {
     private const val TAG = "ProvidersDbGuard"

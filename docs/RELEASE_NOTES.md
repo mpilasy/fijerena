@@ -34,7 +34,7 @@
 - **TV: Left from the Live TV preview's channel list goes back to browse:** Left on the first tab beside the preview does what Back does — the channel list with focus on the channel playing. → Part II Live TV target item 8.
 - **TV Guide for Favourites drops a removed favourite at once:** removing a favourite from a channel's menu in the Favourites guide takes its row away, with focus on the row that takes its place, instead of leaving it until the guide is reopened. → Part III GD6.
 
-Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+Plan: `docs/plans/archive/20261003_ux-overhaul-plan.md`.
 
 ---
 
@@ -46,7 +46,7 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 - **TV Sources:** each source is a row you can select to edit, with labelled Use, Guide and ⋮ buttons lined up in columns; focus starts on the source in use; the actions menu starts on Edit with Delete last. → Part I T4.
 - **Mobile Edit Source:** login details with Save and Cancel right under them; settings that apply at once, content filters, library data and a red-outlined Danger zone below; leaving with unsaved login changes asks before discarding them. → Part I M4.
 
-Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+Plan: `docs/plans/archive/20261003_ux-overhaul-plan.md`.
 
 ---
 
@@ -58,7 +58,7 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 - **Mobile Sources:** tap a source to edit it; one "Use" button per row and a ⋮ menu for guide sources, duplicate, copy and delete (last, in red) replace six icon buttons. → Part I M3.
 - **TV Guide tells the truth:** the guide for Recent / Favourites shows those channels (it used to show the catalogue's first 50); category separators are no longer listed as channels; the header says how many channels have listings, where they came from (XMLTV guide or the source's own) and when the guide was updated; a guide with nothing for these channels says "No listings" and why instead of showing an empty grid; a freshly refreshed guide appears without pressing Refresh. → Part III GD1.
 
-Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+Plan: `docs/plans/archive/20261003_ux-overhaul-plan.md`.
 
 ---
 
@@ -70,7 +70,7 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 - **Mobile Settings:** rebuilt as a grouped list (Profiles, Source & guide, Playback, Display, Live sync, Backup & storage, About & advanced) with the same scope labels; Theme, Look & feel, Language and the watch delay (presets plus Custom) open pickers; developer tools sit at the bottom and developer-only rows are hidden otherwise; the active profile shows in the bar. → Part I M2.
 - **Guide data can no longer claim to be loaded while empty:** a source's "last refreshed" record is written only after its listings are committed, a refresh skips re-downloading only when the index really holds that source's listings, and clearing the guide (safe mode, "Clear all data") resets the sources' refresh state so the next refresh is a real one. → Part III GD0b.
 
-Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+Plan: `docs/plans/archive/20261003_ux-overhaul-plan.md`.
 
 ---
 
@@ -83,7 +83,7 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 - **Edit Source:** the source type can no longer be changed on an existing source (both platforms); on TV, focus starts on the name field. → Part I A-W6.
 - **Developers:** `scripts/tv-focus-walk.sh` sends D-pad keys to the TV emulator and checks which control has focus after each (`docs/RUN_GUIDE.md` → Focus walks); the dead `EditProvider` route and its strings are gone. → Part II Phase 1, Part I A-W4.
 
-Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+Plan: `docs/plans/archive/20261003_ux-overhaul-plan.md`.
 
 ---
 
@@ -155,7 +155,7 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 ## Version: Resilience guardrails
 **Release Date:** 2026-10-02
 
-- **Crash-loop safe mode:** if the app dies within 30 s of starting three times in 10 minutes, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be causing it (guide set-up, catalogue and live sync, startup clean-ups). From there, Continue restarts the app normally, Clear caches removes downloaded guide, catalogue and poster data (never your sources, profiles, favourites or watch history), and Show diagnostics opens the crash log. Previously the only way out of a crash loop was clearing the app's data over adb. In English, French and Malagasy. From `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
+- **Crash-loop safe mode:** if the app dies within 30 s of starting three times in 10 minutes, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be causing it (guide set-up, catalogue and live sync, startup clean-ups). From there, Continue restarts the app normally, Clear caches removes downloaded guide, catalogue and poster data (never your sources, profiles, favourites or watch history), and Show diagnostics opens the crash log. Previously the only way out of a crash loop was clearing the app's data over adb. In English, French and Malagasy. From `docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
 - **Debug broadcasts can't be sent by other apps (developers):** the EPG and live-sync debug receivers were exported with no permission, and the EPG one was in every build. Any app on a TV running a debug build could link it to another sync account (and receive every source's password) or force guide downloads. Both now require `android.permission.DUMP`, which only adb holds, and the EPG one exists in debug builds only. `adb shell am broadcast …` works as before. → R-07.
 - **CI checks more (developers):** the manual CI build now uses JDK 21 (the modules target Java 21; it set up 17) and runs Android Lint, with a per-module baseline so only new issues fail. The cancellation check now also scans code that only uses coroutine builders (`LaunchedEffect`, `launch`, `collect`…), not just files with a `suspend fun`; it found four places where a cancelled job carried on, now fixed. → R-19.
 
@@ -172,16 +172,16 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 **Release Date:** 2026-10-02
 
 - **Plainer wording on the home screen and favourites:** the mobile home screen's title said "Select Content Type"; it now says "Home". Clearing favourites no longer talks about "favorited streams from all content types": it says "Remove all favourites" and names Live TV, Movies and TV Shows. In English, French and Malagasy.
-- **"Providers" are now "Sources":** the app called everything it plays from a "provider", which sounds like a paid company, though it covers your own Jellyfin server, shared folders and playlists too. Settings, the switch dialog, add/edit and every message now say "source" ("Add Source", "Manage Sources", "Switch Source"), in English, French and Malagasy. EPG feeds, which were already called sources, are now "guide sources" so the two never mix. Only the wording changed: your sources, settings and history are untouched. From `docs/plans/20261002_provider-to-source-rename-plan.md`.
-- **Fewer TMDB lookups when a show's episodes are fetched again:** the synopses TMDB gave for a show's episodes were forgotten each time its episode list was fetched again, so TMDB was asked for every season again. They are now kept, TMDB is asked only for seasons that still lack a synopsis, and the show's own TMDB details are not asked again while less than a week old. From `docs/plans/20261002_catalog-sync-cache-churn-plan.md`.
-- **A show's episode list is fetched again only when the show changed:** opening a show used to download its whole episode list again once a day. Now the stored list is kept until the provider's catalogue shows the series changed (bears updates it when episodes are added), you refresh the show yourself, or 30 days pass, the last as a safety net for providers that never mark changes. From `docs/plans/20261002_catalog-sync-cache-churn-plan.md`.
-- **Catalog sync keeps what the app already fetched:** every provider sync treated most of the catalogue as changed, because Xtream's `num` (a series' or movie's position in the provider's list) shifts whenever the provider adds something. Those rows were rewritten, which threw away each show's saved episode-list date and each show's and movie's saved TMDB details, so a big finished show like Law & Order was downloaded again in full on the next visit. Position changes no longer count as changes (a movie's or channel's new position is still applied, as lists are ordered by it), and a row that really changed keeps its saved TMDB details. On bears a sync went from about 283,000 rewritten rows to 17. The first sync after updating still rewrites everything once. From `docs/plans/20261002_catalog-sync-cache-churn-plan.md`.
+- **"Providers" are now "Sources":** the app called everything it plays from a "provider", which sounds like a paid company, though it covers your own Jellyfin server, shared folders and playlists too. Settings, the switch dialog, add/edit and every message now say "source" ("Add Source", "Manage Sources", "Switch Source"), in English, French and Malagasy. EPG feeds, which were already called sources, are now "guide sources" so the two never mix. Only the wording changed: your sources, settings and history are untouched. From `docs/plans/archive/20261002_provider-to-source-rename-plan.md`.
+- **Fewer TMDB lookups when a show's episodes are fetched again:** the synopses TMDB gave for a show's episodes were forgotten each time its episode list was fetched again, so TMDB was asked for every season again. They are now kept, TMDB is asked only for seasons that still lack a synopsis, and the show's own TMDB details are not asked again while less than a week old. From `docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md`.
+- **A show's episode list is fetched again only when the show changed:** opening a show used to download its whole episode list again once a day. Now the stored list is kept until the provider's catalogue shows the series changed (bears updates it when episodes are added), you refresh the show yourself, or 30 days pass, the last as a safety net for providers that never mark changes. From `docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md`.
+- **Catalog sync keeps what the app already fetched:** every provider sync treated most of the catalogue as changed, because Xtream's `num` (a series' or movie's position in the provider's list) shifts whenever the provider adds something. Those rows were rewritten, which threw away each show's saved episode-list date and each show's and movie's saved TMDB details, so a big finished show like Law & Order was downloaded again in full on the next visit. Position changes no longer count as changes (a movie's or channel's new position is still applied, as lists are ordered by it), and a row that really changed keeps its saved TMDB details. On bears a sync went from about 283,000 rewritten rows to 17. The first sync after updating still rewrites everything once. From `docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md`.
 - **Provider sync no longer reads the encrypted key store on the main thread (developers):** "Sync Data Now", the scheduled refresh and opening the provider edit screen fetched the saved login on the UI thread, which touches the Android Keystore for the first time after launch. That stalls on slow TV hardware and tripped StrictMode; the read now happens on a background thread, as does the Jellyfin session store opened when a manual sync builds its provider.
 - **Background refresh queue: cancelling can no longer hang or leak a task (developers):** cancelling all refreshes left anything waiting on a task that was still queued for a free slot waiting forever, and a task still queued could start right after the cancel. Cancelling now settles every waiter and starts nothing afterwards.
 - **The player describes the episode, not the show:** the on-screen info for an episode showed the series' synopsis whenever the episode had none of its own. It now shows the episode's synopsis or nothing, and an episode that has none yet has its synopsis fetched from TMDB as it starts playing and appears a moment later. The episode synopses themselves were also missing for shows whose provider leaves the TMDB id out of the series info while the listing has it (for example The King of Queens); the stored id is now used, so the series screen enriches those too.
 - **EPG search reaches the end of the guide:** programme search stopped at 6 days ahead; it now covers every programme that hasn't ended yet, as far as the guide goes. The import no longer drops programmes starting more than 7 days out either, so a source that publishes 14 days of guide is now fully kept and searchable (the guide database grows accordingly). The TV channel-search hint said "next 6 hours" while it searched the next 2; it now says 2.
-- **EPG search during a guide refresh:** a search made while the guide was refreshing showed the search hint again, as if nothing had been found. It now says the guide is updating (or that the search index is being rebuilt after an interrupted refresh) and runs the search by itself as soon as the index is ready. Opening the EPG browser mid-refresh no longer says there is no guide. A normal refresh no longer blocks search at all: the new guide and its search index are switched in together in one database transaction, so searches keep using the previous guide until the new one is fully ready. On a low-storage refresh (which writes straight into the guide), search falls back to a slower title-only match, notes that results may be incomplete, and reruns in full when the refresh ends. From `docs/plans/20261002_epg-search-during-refresh-plan.md`.
-- **Each profile returns to its own provider:** picking (or adding) a provider is remembered for the profile in use, and synced to the group. Switching to a profile moves the device to the provider it last picked — profile A on X, profile B moves the TV to Y, picking A again brings it back to X. A profile with no pick yet, or whose provider was deleted, stays on the current provider; another device's pick never moves a device already on that profile mid-session. Older app versions ignore the new setting. From `docs/plans/20261002_profile-last-provider-plan.md`.
+- **EPG search during a guide refresh:** a search made while the guide was refreshing showed the search hint again, as if nothing had been found. It now says the guide is updating (or that the search index is being rebuilt after an interrupted refresh) and runs the search by itself as soon as the index is ready. Opening the EPG browser mid-refresh no longer says there is no guide. A normal refresh no longer blocks search at all: the new guide and its search index are switched in together in one database transaction, so searches keep using the previous guide until the new one is fully ready. On a low-storage refresh (which writes straight into the guide), search falls back to a slower title-only match, notes that results may be incomplete, and reruns in full when the refresh ends. From `docs/plans/archive/20261002_epg-search-during-refresh-plan.md`.
+- **Each profile returns to its own provider:** picking (or adding) a provider is remembered for the profile in use, and synced to the group. Switching to a profile moves the device to the provider it last picked — profile A on X, profile B moves the TV to Y, picking A again brings it back to X. A profile with no pick yet, or whose provider was deleted, stays on the current provider; another device's pick never moves a device already on that profile mid-session. Older app versions ignore the new setting. From `docs/plans/archive/20261002_profile-last-provider-plan.md`.
 - **Live TV: no stray error screen when zapping, and next/previous channel follow the category you picked from:** a stream load that was replaced by a newer one (fast channel changes, the split preview following focus) could still report its own cancellation as an error and show the error screen over the channel that was playing. A superseded load now just stops. Separately, picking a channel from another category cancelled its own refresh of the channel list, so next/previous channel kept walking the old category; the list now refreshes on its own job.
 - **Debug builds run natively on emulators (developers):** debug APKs now include the x86 and x86_64 native libraries (ffmpeg, SQLite, androidx graphics), so x86 emulators no longer run the app's ARM libraries under binary translation — that had made the 32-bit TV emulator several times slower than real hardware. Release builds stay ARM-only.
 - **Search says "Searching…" while it searches:** the spinner used to read "Loading categories…" for the whole search.
@@ -211,7 +211,7 @@ Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 ## Version: Live Sync — Now Playing
 **Release Date:** 2026-10-01
 
-From `docs/plans/20261001_live-sync-now-playing-plan.md`.
+From `docs/plans/archive/20261001_live-sync-now-playing-plan.md`.
 
 - **See what other devices are playing:** Settings → Live sync → Devices shows, for each device of the group, whether it is playing and what — movie, show and episode, or live channel with its current programme — and which profile is watching. Each device opts in with **Share what's playing with my sync group** (off by default, set per device, never synced). A device that stops sending for 3 minutes (switched off at the wall) shows as idle.
 - **Stop playback from the phone:** on a phone, a device that is playing or paused has a **Stop** button in the devices list (never in the TV app). After a confirmation the row shows "Stopping…"; within seconds the other device saves its watch position, closes the player for Home and shows "Playback stopped from <phone>" ("Couldn't reach <device>" after ~90 s without an answer). A Stop only ever applies to the playback it was sent for, so an old command re-read later can't stop a new one.
@@ -233,7 +233,7 @@ From `docs/plans/20261001_live-sync-now-playing-plan.md`.
 ## Version: Stability & Resilience (Phases 0–3)
 **Release Date:** 2026-10-01
 
-From `docs/plans/20261001_rock-solid-stability-resilience-plan.md` — each item verified against the
+From `docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md` — each item verified against the
 code, most reproduced on an emulator before and after the fix.
 
 ### Safety net
@@ -267,10 +267,10 @@ code, most reproduced on an emulator before and after the fix.
 ## Version: User Profiles & Live Sync
 **Release Date:** 2026-10-01
 
-### User Profiles (`docs/plans/20260929_live-sync-plan.md`, Phases 1–2)
+### User Profiles (`docs/plans/archive/20260929_live-sync-plan.md`, Phases 1–2)
 - **"Who's watching?" picker** and header avatar; add, rename, recolour and delete profiles in Settings.
 - **Per profile:** favourites, watch history, category filters per provider, dev mode, Jellyfin login.
-- **Instant switching:** only category rows carry the filter flag now; streams and series follow their category at query time (`xtream_v2.db` v24). A switch went from 32–51 s to 124–225 ms on a Shield (`docs/plans/20261001_fast-profile-switch-plan.md`). The picker shows "Switching to …" and takes only the first pick.
+- **Instant switching:** only category rows carry the filter flag now; streams and series follow their category at query time (`xtream_v2.db` v24). A switch went from 32–51 s to 124–225 ms on a Shield (`docs/plans/archive/20261001_fast-profile-switch-plan.md`). The picker shows "Switching to …" and takes only the first pick.
 
 ### Live Sync (Phases 3–9)
 - **Sync server** in `server/`: Cloudflare Worker or self-hosted workerd Docker image.
@@ -303,7 +303,7 @@ code, most reproduced on an emulator before and after the fix.
 ## Version: UI Look & Feel Uplift (Phases 1–4) & Durable Favorites
 **Release Date:** 2026-08-29
 
-### UI Look & Feel Uplift (`docs/plans/20260829_ui-look-feel-uplift-plan.md`)
+### UI Look & Feel Uplift (`docs/plans/archive/20260829_ui-look-feel-uplift-plan.md`)
 - **Language / Region Badges (Phase 1a):** Cleaned up title rendering by stripping raw provider prefixes (`EN -`, `FR -`, `NP:`) and suffixes (`(US)`, `(GB)`) via `parseDisplayTitle()` into a unified `LanguageBadge` pill.
 - **Thumbnail Scrim & List Row Depth (Phases 1b, 1c):** Added subtle bottom-gradient scrims to protect title legibility on uneven poster art and enhanced list card elevation and contrast tokens across mobile and TV.
 - **Mobile Player Controls Cluster & Scrubber (Phases 2a, 2b):** Modernized touch scrubber and player control overlay buttons with standard glass paneling and cohesive spacing tokens.
@@ -313,7 +313,7 @@ code, most reproduced on an emulator before and after the fix.
 - **Badge & Rating Consistency Pass (Phase 4c):** Introduced `CinemaBadge` and `RatingBadge` standardizing the `"★ ${formatRating(rating)}"` and codec/resolution pill presentation across all screens.
 - **Original Title Presentation:** Updated Movie and Series detail pages to consistently display the original provider stream/series name.
 
-### Durable Favorites Storage (`docs/plans/20260828_favorites-durable-storage-plan.md`)
+### Durable Favorites Storage (`docs/plans/archive/20260828_favorites-durable-storage-plan.md`)
 - **`favorite_state` table (`xtream_v2.db` v16):** Migrated favorite items and categories out of SharedPreferences JSON blobs into durable Room storage.
 
 ---
@@ -321,7 +321,7 @@ code, most reproduced on an emulator before and after the fix.
 ## Version: Durable Watch State, EPG Change Detection & TV Back Fixes
 **Release Date:** 2026-08-28
 
-### Durable Watch State (`docs/plans/20260828_watch-state-durable-storage-plan.md`, Phases 1–6)
+### Durable Watch State (`docs/plans/archive/20260828_watch-state-durable-storage-plan.md`, Phases 1–6)
 - **`watch_state` table (`xtream_v2.db` v15):** Playback position and completion moved out of the `watch_history_v3` SharedPreferences blob, which truncated to `watchHistorySize` on every write and silently evicted anything older. Rows are now kept forever; `watchHistorySize` bounds only the length of the Recent row. On the first `setProvider()` after upgrade, `MediaRepository.backfillAndPurgeWatchState()` copies the blob in, sets a **per-provider** `watch_state_migrated_v1` flag, then removes both legacy keys — backfill always runs before purge, so a provider not opened between the dual-write and purge releases can't lose history.
 - **Eviction bug fixed on read flip:** Reads moved to `watch_state` in Phase 3; `getPlaybackPositions(contentType)` is now one indexed query returning a Map, replacing the per-item linear scan of the blob.
 - **TMDB dedup across catalogue variants:** A title watched under one language/quality variant now reads as watched under all of them. Movies join `xtream_streams` on a shared `tmdbId`.
@@ -329,7 +329,7 @@ code, most reproduced on an emulator before and after the fix.
 - **Manual mark watched/unwatched (Phase 6):** `MediaRepository.setWatched(itemId, contentType, watched)` replaces the dead `clearPlaybackPosition`. A manual mark leaves `lastPlayedAt` null so it never enters the Recent row, and `setWatched` no-ops for server-backed providers (Jellyfin owns that state). `upsertProgress`'s `isCompleted` is now sticky (`MAX(existing, new)`) — only an explicit unmark clears it. Unmarking spreads across TMDB siblings, mirroring the dedup read. UI follows each surface's existing affordance: an icon beside the favorite toggle on movie details, a second action row in the TV favorite/search context menus, long-press on TV episode cards, and the mobile episode watched badge as its own tap target.
 - **Track restoration:** `audioTrackIndex`/`subtitleTrackIndex` persist per row with a series-level fallback, fixing TV never restoring a saved audio/subtitle track.
 
-### EPG Refresh Change Detection (`docs/plans/20260827_refresh-change-detection-plan.md`)
+### EPG Refresh Change Detection (`docs/plans/archive/20260827_refresh-change-detection-plan.md`)
 - **Conditional requests + content hash (`providers.db` v10):** `downloadSource` sends `If-None-Match`/`If-Modified-Since` from the source's stored `etag`/`last_modified_header`; a `304` short-circuits with no body read. Otherwise a SHA-256 of the payload is compared to `last_content_sha256` — computed in the download read pass for plain sources, and after decompression for `.gz` (gzip's mtime header taints the raw bytes even when content is identical).
 - **Skip guards:** An unchanged source skips `ingestFromStream` entirely and is excluded from `executeSwapToMain`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated. Counts carry forward via `EpgSourceDao.markUnchanged` instead of resetting to zero. A hash match only skips within 24h of the last real ingest, because ingestion windows programmes against wall-clock time and a byte-identical static file must still be re-ingested to keep the guide window moving.
 - **Truncated downloads detected:** `read()` returning -1 can't distinguish a clean EOF from a cut connection; a flaky CDN's short read was surfacing much later as an `XmlPullParserException` deep in ingestion. `totalRead` is now checked against `Content-Length` and a mismatch takes the normal retry path.
@@ -389,7 +389,7 @@ code, most reproduced on an emulator before and after the fix.
 - **Service instance published only when ready:** `StreamingPlaybackService`'s singleton instance is now published after the player itself is initialized, not before — callers using `awaitInstance()` could otherwise observe a not-yet-usable service.
 - **`instanceReady` re-armed on recreation:** If Android recreates the service after reclaiming it during long standby, `instanceReady` is now reset to a fresh `CompletableDeferred()` in `onDestroy()` so `awaitInstance()` doesn't hand out a permanently-stale, already-completed deferred — this was the root cause of live TV getting stuck after the device spent hours in standby.
 
-### Bug Sweep Fixes (see `docs/plans/bugs-plan.md` for full trigger/impact analysis)
+### Bug Sweep Fixes (trigger/impact analysis was in the bugs plan, since removed; see git history)
 - **EPG cache invalidation after sync:** `EpgFileManager` now clears `XmltvEpgService`'s per-provider 12h SharedPreferences cache immediately after a successful sync, instead of leaving the player to show a pre-sync now/next snapshot for up to 12h.
 - **AppContainer no longer caches a provider-less repo:** `getMediaRepository()` only caches the resolved `MediaRepository` once a real provider entity is attached — a repo built before any active provider exists is returned but never poisons `mediaRepositories[0L]`.
 - **RefreshQueue de-dups against in-flight tasks:** `submit()` now checks tasks already executing (not just the pending queue), coalescing into the running task's `Deferred` instead of racing a concurrent duplicate run.

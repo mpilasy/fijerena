@@ -9,7 +9,7 @@ import org.junit.Test
  * NAT entry (no FIN) sends kept succeeding into the void and live updates silently stopped. The
  * socket client pings at protocol level instead: OkHttp fails a socket whose pong doesn't come
  * back, and `SyncManager` reconnects it (see SyncManagerSocketTest). See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-26.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-26.
  */
 class SyncApiSocketTest {
     @Test

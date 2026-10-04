@@ -1,5 +1,5 @@
 /**
- * Fijerena live sync server — see docs/plans/20260929_live-sync-plan.md → Server.
+ * Fijerena live sync server — see docs/plans/archive/20260929_live-sync-plan.md → Server.
  *
  * The worker only routes: every account is one Durable Object ([Account]) holding that account's
  * records, devices and WebSockets. It never sees anything readable — keys are HMACs and payloads

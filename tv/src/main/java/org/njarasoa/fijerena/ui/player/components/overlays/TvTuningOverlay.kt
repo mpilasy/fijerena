@@ -29,7 +29,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * Live TV zap feedback (LT5, docs/plans/20261003_ux-overhaul-plan.md → L-7): "Tuning · <channel>"
+ * Live TV zap feedback (LT5, docs/plans/archive/20261003_ux-overhaul-plan.md → L-7): "Tuning · <channel>"
  * with a small spinner, centred over a dimmed picture, from the moment a channel is chosen until
  * it plays. Drawn over whatever the surface shows — the engine's `stop()` + new media source
  * closes PlayerView's shutter, so after the first moment of a zap that is black, not the last

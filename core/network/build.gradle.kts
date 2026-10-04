@@ -8,7 +8,7 @@ plugins {
 
 // Room schema history for the databases that hold user data (xtream_v2.db, providers.db): one JSON
 // per version under schemas/, committed. CI fails when a build regenerates one that wasn't committed.
-// See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-33.
+// See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-33.
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }

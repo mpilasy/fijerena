@@ -5,7 +5,7 @@ package org.njarasoa.fijerena.core.player.model
  * buffering changes, on a track pick, and once more on teardown. A track index is set only on
  * the save that a track pick triggered (-1 for subtitles off). Published on
  * `StreamingPlaybackService.positionSaves`; see
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-04.
  */
 data class PositionSave(
     val positionMs: Long,

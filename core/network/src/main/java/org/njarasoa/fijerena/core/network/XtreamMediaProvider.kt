@@ -1038,7 +1038,7 @@ class XtreamMediaProvider(
         // the TMDB-derived enrichment fields. Only a safety net: new episodes normally show up
         // because the catalogue sync clears the stamp when a series changes, but a provider that
         // never updates `last_modified` (the jellyxtream bridge, for one) would otherwise never
-        // be asked again. See docs/plans/20261002_catalog-sync-cache-churn-plan.md, Phase 2.
+        // be asked again. See docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md, Phase 2.
         private const val EPISODE_LIST_CACHE_TTL_MS = 30 * 24 * 3600 * 1000L // 30 days
         private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
 

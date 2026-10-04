@@ -10,7 +10,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
  * queued only when a synced column actually changes, so sync statistics, activation and EPG
  * ingestion bookkeeping never are. Deleting an EPG source records its tombstone here too, since it
  * has several delete paths. Recreated on every open, like `XtreamSyncTriggers`; nothing fires while
- * [SyncClockEntity.applying] is set. See `docs/plans/20260929_live-sync-plan.md` → Flow.
+ * [SyncClockEntity.applying] is set. See `docs/plans/archive/20260929_live-sync-plan.md` → Flow.
  */
 internal object SettingsSyncTriggers {
     private const val WALL_MS = "CAST(ROUND((julianday('now') - 2440587.5) * 86400000) AS INTEGER)"

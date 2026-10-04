@@ -1,6 +1,6 @@
 #!/bin/bash
-# Gate for docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-27, widened by
-# docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-19.
+# Gate for docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-27, widened by
+# docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-19.
 #
 # In any main-source Kotlin file that contains `suspend fun` or opens a coroutine lambda
 # (`launch`, `async`, `withContext`, `LaunchedEffect`, `produceState`, `flow`/`callbackFlow`,

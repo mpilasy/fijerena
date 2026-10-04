@@ -12,7 +12,7 @@ import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher.Companion.DEBOUNCE_MS
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher.Companion.HEARTBEAT_MS
 
-/** When the publisher sends — see docs/plans/20261001_live-sync-now-playing-plan.md → Publishing. */
+/** When the publisher sends — see docs/plans/archive/20261001_live-sync-now-playing-plan.md → Publishing. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NowPlayingPublisherTest {
     private fun channel(name: String) = NowPlayingSnapshot(title = name, isLive = true, channelName = name)

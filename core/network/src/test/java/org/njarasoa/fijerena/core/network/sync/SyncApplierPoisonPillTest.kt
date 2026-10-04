@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * saved, so every later pass refetched it and failed again: sync stuck for good, no error shown.
  * Now such a record is deferred (retried every pass, so a newer app version can still apply it)
  * and the rest of the batch goes on. See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-08.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-08.
  */
 class SyncApplierPoisonPillTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)

@@ -7,8 +7,8 @@ provider X, profile B moves the device to provider Y; when A is picked again the
 to X. The memory is synced: A picking X on the phone means A lands on X on the TV the next time
 the TV switches to A.
 
-Context: `docs/plans/20260929_live-sync-plan.md` → User profiles,
-`docs/plans/20261001_fast-profile-switch-plan.md`.
+Context: `docs/plans/archive/20260929_live-sync-plan.md` → User profiles,
+`docs/plans/archive/20261001_fast-profile-switch-plan.md`.
 
 ## Decisions (2026-10-02)
 
@@ -148,7 +148,7 @@ No Room migration, no new sync kind, no server change.
 
 - `docs/FEATURES.md` — profiles: each profile returns to the provider it last picked, on every
   device.
-- `docs/plans/20260929_live-sync-plan.md` — synced settings list: `last_provider` per profile.
+- `docs/plans/archive/20260929_live-sync-plan.md` — synced settings list: `last_provider` per profile.
 - `ProfileEntity` KDoc ("providers … shared by all of them") — current provider is remembered per
   profile.
 - `docs/RELEASE_NOTES` entry.

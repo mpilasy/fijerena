@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.network.sync
 /**
  * Decides what a record received from another device does to this one. Pure: the caller looks up
  * the local facts ([Local]) and carries out the [Resolution]. See
- * `docs/plans/20260929_live-sync-plan.md` → Conflicts, Deletions, Jellyfin.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Conflicts, Deletions, Jellyfin.
  *
  * Last writer wins per record, on the hybrid logical clock: a record applies only if its [SyncRecord.hlc]
  * is newer than everything this device knows about the same key — its own version and its

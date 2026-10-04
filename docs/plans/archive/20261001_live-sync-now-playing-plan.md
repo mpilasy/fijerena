@@ -18,7 +18,7 @@ Today the devices list only shows each device's last-seen time.
 
 ## 2. Why today's data can't answer it
 
-- **Watch records don't say which device wrote them.** By design (`docs/plans/20260929_live-sync-plan.md`
+- **Watch records don't say which device wrote them.** By design (`docs/plans/archive/20260929_live-sync-plan.md`
   → Security): records are end-to-end encrypted and keyed by item, not device. The phone's Recent
   row shows what *someone in the group* last played, not *which TV*, and not *now*.
 - **Nothing means "playing now".** Live TV reaches history after 10 s and VOD after 2 %, positions

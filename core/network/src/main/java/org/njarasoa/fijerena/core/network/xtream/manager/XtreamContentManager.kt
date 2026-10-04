@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
- * Data-hygiene guard, demoted from Phase 5 dedup (docs/plans/20260828_watch-state-durable-storage-plan.md) to a
+ * Data-hygiene guard, demoted from Phase 5 dedup (docs/plans/archive/20260828_watch-state-durable-storage-plan.md) to a
  * standalone one after an on-device check showed episode-`tmdbId`-based dedup couldn't work at all
  * — the real duplication lives across separate `xtream_series` rows (see
  * [org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao.getSiblingCompletedEpisodeIds]),
@@ -56,7 +56,7 @@ class XtreamContentManager(
     private val metricsManager: XtreamMetricsManager,
     private val providerId: Long,
     // Read afresh by every sync and load: filters are per profile and the profile can change
-    // under a live instance. See docs/plans/20260930_profile-scoped-settings-plan.md.
+    // under a live instance. See docs/plans/archive/20260930_profile-scoped-settings-plan.md.
     private val categoryFilters: () -> CategoryFilters = { providerSettings.categoryFilters },
 ) {
     private val categoryDao = database.categoryDao()

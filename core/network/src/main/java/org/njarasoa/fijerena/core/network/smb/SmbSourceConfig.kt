@@ -6,7 +6,7 @@ import kotlinx.serialization.json.put
 /**
  * The `config` JSON of an SMB source, as `MediaProviderFactory.createSmb` reads it. Built rather
  * than interpolated, so a `"` or `\` in the host or share stays valid JSON.
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-22.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-22.
  */
 fun smbSourceConfig(
     host: String,

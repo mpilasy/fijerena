@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
  *
  * F-01: a seamless recycle whose fresh source then failed left `isRecycling` set, and the retry
  * path returned early on it — no retry ever ran: a frozen frame, no spinner, no error. See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-01. (F-02, the live HLS recycle
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-01. (F-02, the live HLS recycle
  * position, was not reproduced and changed nothing — there is no fix to lock in.)
  */
 @androidx.media3.common.util.UnstableApi

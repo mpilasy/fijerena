@@ -10,7 +10,7 @@ const MAX_SEALED = 8 * 1024;
  * and shows a QR code with the handoff id and a one-time public key; a device already in the
  * account scans it and fills the handoff with a pairing code and the account key, encrypted to that
  * public key; the joining device collects it, once. The server only ever holds public keys and
- * ciphertext. See docs/plans/20260929_live-sync-plan.md → Security (pairing).
+ * ciphertext. See docs/plans/archive/20260929_live-sync-plan.md → Security (pairing).
  *
  * Stored in memory and storage of its own object, keyed by the handoff id (128 random bits, the
  * only secret needed to collect it — and what it holds is unreadable without the private key).

@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
  * Removing a favourite or clearing history records a tombstone for live sync, and re-adding the
- * favourite drops it — see docs/plans/20260929_live-sync-plan.md → Deletions (tombstones).
+ * favourite drops it — see docs/plans/archive/20260929_live-sync-plan.md → Deletions (tombstones).
  */
 class MediaRepositoryTombstoneTest {
     private lateinit var watchStateDao: FakeWatchStateDao

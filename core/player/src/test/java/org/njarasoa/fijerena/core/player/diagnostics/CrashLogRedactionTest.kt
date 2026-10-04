@@ -17,7 +17,7 @@ import java.io.IOException
 /**
  * An exception's own text — ExoPlayer, OkHttp and Ktor put the request URL in it — is masked before
  * it reaches the file that Diagnostics shares. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-16.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-16.
  */
 class CrashLogRedactionTest {
     @get:Rule

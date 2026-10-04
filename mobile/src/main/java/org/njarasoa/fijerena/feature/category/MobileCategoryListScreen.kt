@@ -271,7 +271,7 @@ fun MobileCategoryListScreen(
     // stream's audio going behind the next screen — and, its ON_STOP observer gone with this
     // screen, even after the app was backgrounded. Stop it on the way out, not on dispose: the
     // player screen shares the same engine and may already be starting its own stream by then.
-    // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-17.
+    // See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-17.
     val stopDockThen: (() -> Unit) -> Unit = { leave ->
         if (isLiveTv && dockTarget != null) {
             dockPlayback?.stop()
@@ -412,7 +412,7 @@ fun MobileCategoryListScreen(
 
         // Another device of the sync group stopped this playback — docked or promoted to full
         // screen alike: finalise, stop the dock as its close button does, then go Home. See
-        // docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+        // docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
         if (dockLoader != null) {
             RemoteStopEffect {
                 finalizeSessionAndAwait(dockPlayback.playbackState.value, dockLoader)

@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Remote Stop commands addressed to this device that match what it is playing — see
- * `docs/plans/20261001_live-sync-now-playing-plan.md` → Remote Stop. Here, not in `core:ui`,
+ * `docs/plans/archive/20261001_live-sync-now-playing-plan.md` → Remote Stop. Here, not in `core:ui`,
  * because [SyncApplier] (this module) decides what fires; the player screens and the app-wide
  * fallback (`core:ui`) collect [stops].
  */

@@ -35,7 +35,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 /**
  * Shown instead of home when `providers.db` was written by a newer build ([ProvidersDbGuard]).
  * Reset sources asks first, sets the file aside and restarts. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-01.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-01.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

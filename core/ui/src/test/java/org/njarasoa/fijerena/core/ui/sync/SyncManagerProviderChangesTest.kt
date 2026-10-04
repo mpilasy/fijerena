@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 /**
  * Providers a sync pass changed reach `AppContainer`, which drops their cached repository. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06.
  */
 class SyncManagerProviderChangesTest {
     private val dispatcher = StandardTestDispatcher()

@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  *
  * [applying] is 1 while changes received from another device are written, which stops the
  * triggers from queueing them to be sent straight back. See
- * `docs/plans/20260929_live-sync-plan.md` → Conflicts, Applying remote records.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Conflicts, Applying remote records.
  */
 @Entity(tableName = "sync_clock")
 data class SyncClockEntity(

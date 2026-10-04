@@ -600,7 +600,7 @@ fun DuplicateProviderDialog(
 
 /**
  * Overflow menu for a source row's actions, in the shared order of
- * docs/plans/20261003_ux-overhaul-plan.md Part I ("Source actions"): Edit, Guide sources,
+ * docs/plans/archive/20261003_ux-overhaul-plan.md Part I ("Source actions"): Edit, Guide sources,
  * Duplicate, Copy to…, then Delete last and set apart. Opens with focus on Edit; Back closes it
  * (the dialog dismisses on Back, so there is no Cancel row) — T-10. Use stays a direct row
  * button; Guide sources is also one, on sources that carry live channels, and [onManageEpg] is

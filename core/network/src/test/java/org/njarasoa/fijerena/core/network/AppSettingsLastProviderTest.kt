@@ -12,7 +12,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
-/** Each profile remembers its last picked provider — see docs/plans/20261002_profile-last-provider-plan.md. */
+/** Each profile remembers its last picked provider — see docs/plans/archive/20261002_profile-last-provider-plan.md. */
 class AppSettingsLastProviderTest {
     private lateinit var settings: AppSettings
 

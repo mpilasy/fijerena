@@ -34,7 +34,7 @@ import org.njarasoa.fijerena.core.ui.sync.SyncManager
 
 /**
  * Settings → Sync on both platforms: linking this device to a sync account and managing it. See
- * `docs/plans/20260929_live-sync-plan.md` → Phase 9.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Phase 9.
  */
 class SyncSettingsViewModel(
     private val app: Application,
@@ -159,7 +159,7 @@ class SyncSettingsViewModel(
      * Asks [deviceId] to stop the playback it is sharing right now: queues a
      * [SyncKind.REMOTE_COMMAND] naming that playback's session and pushes it at once. The device
      * obeys only while that same playback is on. See
-     * docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+     * docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
      */
     fun requestStop(deviceId: String) {
         val sessionId = nowPlaying.value[deviceId]?.sessionId

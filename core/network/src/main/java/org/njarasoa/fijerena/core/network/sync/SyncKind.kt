@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.network.sync
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 
 /**
- * The `kind` of a synced record — see `docs/plans/20260929_live-sync-plan.md` → Record model.
+ * The `kind` of a synced record — see `docs/plans/archive/20260929_live-sync-plan.md` → Record model.
  * Kinds are added as their write paths are queued for sync.
  */
 object SyncKind {
@@ -30,14 +30,14 @@ object SyncKind {
 
     /**
      * What a device is playing right now; keyed by its server device id. Volatile — see [VOLATILE]
-     * and `docs/plans/20261001_live-sync-now-playing-plan.md`.
+     * and `docs/plans/archive/20261001_live-sync-now-playing-plan.md`.
      */
     const val NOW_PLAYING = "now_playing"
 
     /**
      * A command to one device — today only "stop what you are playing"; keyed by the *target's*
      * server device id. Volatile — see [VOLATILE], [RemoteCommands] and
-     * `docs/plans/20261001_live-sync-now-playing-plan.md` → Remote Stop.
+     * `docs/plans/archive/20261001_live-sync-now-playing-plan.md` → Remote Stop.
      */
     const val REMOTE_COMMAND = "remote_command"
 

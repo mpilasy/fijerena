@@ -47,7 +47,7 @@ type Device = {
 
 /**
  * One account: its records (one row per item, not per edit), its devices and pairing codes, and
- * the WebSockets of its connected devices. See docs/plans/20260929_live-sync-plan.md → Storage,
+ * the WebSockets of its connected devices. See docs/plans/archive/20260929_live-sync-plan.md → Storage,
  * Endpoints.
  *
  * WebSockets use the hibernation API, and the 30 s client pings are answered by an auto-response,
@@ -379,7 +379,7 @@ function invalid(r: WireRecord): string | null {
   // receives: one device whose clock ran years ahead (a TV that booted with a bad RTC) would drag
   // every device's clock forward with it, and its writes would beat everyone else's until then.
   // This server's clock is the one that can be trusted. See
-  // docs/plans/20261001_rock-solid-stability-resilience-plan.md F-25.
+  // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md F-25.
   if (r.updatedAt > Date.now() + MAX_CLOCK_AHEAD_MS) return "updatedAt is more than a day ahead of the server's clock";
   if (typeof r.deleted !== "boolean") return "deleted must be a boolean";
   if (typeof r.payload !== "string" || r.payload.length > MAX_PAYLOAD) return `payload must be a string of at most ${MAX_PAYLOAD} characters`;

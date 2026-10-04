@@ -9,7 +9,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-15. */
+/** docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-15. */
 class RetryWhenOnlineTest {
     @Test
     fun `offline then online returns`() =

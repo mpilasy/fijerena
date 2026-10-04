@@ -41,7 +41,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * Home-screen "Jump Back In" row — see docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
+ * Home-screen "Jump Back In" row — see docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md,
  * Phase 3.
  */
 @Composable

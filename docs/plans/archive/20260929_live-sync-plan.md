@@ -136,7 +136,7 @@ resurrected by the next device that syncs.
 | EPG sources | yes | |
 | Theme, EPG auto-refresh | yes | |
 | Dev mode | yes, **per profile** | `setting` record with the profile's `profileKey` |
-| Last picked provider | yes, **per profile** | `setting` `last_provider` (value: `providerKey`); applied on profile switch — `docs/plans/20261002_profile-last-provider-plan.md` |
+| Last picked provider | yes, **per profile** | `setting` `last_provider` (value: `providerKey`); applied on profile switch — `docs/plans/archive/20261002_profile-last-provider-plan.md` |
 | Category filters | yes, **per profile and provider** | `category_filters` record (`profileKey` + `providerKey`) |
 | UI scale, cellular multipliers | **no** | Per-device by nature (TV vs phone) |
 | Caches, EPG programme data | no | Re-downloaded |
@@ -203,7 +203,7 @@ picker and no change.
    a Jellyfin server stores no login for it.
 
 **Category filters and dev mode** are per profile (decided 2026-09-30; design in
-`docs/plans/20260930_profile-scoped-settings-plan.md`). Each profile has its own complete filter
+`docs/plans/archive/20260930_profile-scoped-settings-plan.md`). Each profile has its own complete filter
 set per provider, stored in the `category_filters` prefs (`<providerId>_<profileId>`); Xtream's shared
 `excluded` flags are recomputed for the active profile on switch. Dev mode is a per-profile flag.
 On upgrade both were copied to every existing profile.
@@ -395,7 +395,7 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      sends a profile with no login for the active Jellyfin server to its edit screen, once per
      provider/profile per process so Back still reaches a usable home.
    - *Profile-scoped settings* (planned 2026-09-30): category filters per profile and provider,
-     dev mode per profile. See `docs/plans/20260930_profile-scoped-settings-plan.md`.
+     dev mode per profile. See `docs/plans/archive/20260930_profile-scoped-settings-plan.md`.
 
 **Sync**
 

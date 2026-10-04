@@ -160,7 +160,7 @@ fun MobilePlayerScreen(
     }
 
     // Another device of the sync group stopped this playback: the explicit Back path below, but
-    // landing on Home. See docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    // landing on Home. See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
     RemoteStopEffect {
         finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
         activityScopedViewModel.stop()
@@ -177,7 +177,7 @@ fun MobilePlayerScreen(
             // straight back to the episode-selection screen — its own watch-history read can
             // otherwise win the race against an unawaited write and land on the wrong resume
             // season. See finalizeSessionAndAwait's kdoc and
-            // docs/plans/20260908_episode-selection-fragility-plan.md.
+            // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
             scope.launch {
                 finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
                 activityScopedViewModel.stop()
@@ -290,7 +290,7 @@ fun MobilePlayerContent(
     var showStats by remember { mutableStateOf(false) }
 
     // Back closes an open channel panel first, as on TV; without this it left the player
-    // altogether. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-19.
+    // altogether. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-19.
     BackHandler(enabled = showCategoryOverlay || showLastWatchedOverlay) {
         showCategoryOverlay = false
         showLastWatchedOverlay = false
@@ -471,7 +471,7 @@ fun MobilePlayerContent(
     // Save playback position and track choices. Collected from the service's process-wide flow,
     // not a listener set on one instance: on the first playback after a cold start this screen
     // composes before the service exists. Composition-scoped, not lifecycle-gated, so PiP keeps
-    // saving. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+    // saving. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-04.
     LaunchedEffect(loaderViewModel) {
         StreamingPlaybackService.positionSaves.collect { save ->
             loaderViewModel.recordHistory(save.positionMs, save.durationMs, save.isPaused, save.audioTrackIndex, save.subtitleTrackIndex)
@@ -844,7 +844,7 @@ fun MobilePlayerContent(
                             // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
                             // in its own coroutine, which races an unawaited finalizeSession()'s
                             // position-save read of that same state — see finalizeSessionAndAwait's
-                            // kdoc / docs/plans/20260908_episode-selection-fragility-plan.md.
+                            // kdoc / docs/plans/archive/20260908_episode-selection-fragility-plan.md.
                             scope.launch {
                                 finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
                                 loaderViewModel.playNextEpisode(nextEp)

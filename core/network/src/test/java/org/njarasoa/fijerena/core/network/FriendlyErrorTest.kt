@@ -40,7 +40,7 @@ class FriendlyErrorTest {
         assertEquals("network", friendlyErrorMessage(e, context))
     }
 
-    // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14
+    // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14
     @Test
     fun requestDeadlineExceeded_mapsToTimeout_notNetwork() {
         val e =
@@ -50,7 +50,7 @@ class FriendlyErrorTest {
         assertEquals("timeout", friendlyErrorMessage(e, context))
     }
 
-    // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-28
+    // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-28
     @Test
     fun xtreamInvalidCredentials_isAnAuthFailure() {
         assertEquals("unauthorized", friendlyErrorMessage(Exception("Authentication failed: Invalid credentials"), context))

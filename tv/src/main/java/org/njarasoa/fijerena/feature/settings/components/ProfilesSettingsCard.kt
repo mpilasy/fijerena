@@ -53,7 +53,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * Settings → Profiles: list, add, edit, delete. See `docs/plans/20260929_live-sync-plan.md` →
+ * Settings → Profiles: list, add, edit, delete. See `docs/plans/archive/20260929_live-sync-plan.md` →
  * User profiles.
  */
 @Composable

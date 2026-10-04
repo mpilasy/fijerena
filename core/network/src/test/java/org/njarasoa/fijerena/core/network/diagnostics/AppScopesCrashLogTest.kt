@@ -25,7 +25,7 @@ import java.io.File
 /**
  * Lives in core:network rather than core:player because only this module's unit tests run with
  * `isReturnDefaultValues` (android.util.Log) and mockk. See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-24, F-30.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-24, F-30.
  */
 class AppScopesCrashLogTest {
     @get:Rule

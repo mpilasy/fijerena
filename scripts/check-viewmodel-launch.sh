@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gate for docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+# Gate for docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
 #
 # An exception escaping a bare `viewModelScope.launch` crashes the app (and, in an init block,
 # can leave the screen spinning forever). ViewModel coroutines under core/ui/.../viewmodels use

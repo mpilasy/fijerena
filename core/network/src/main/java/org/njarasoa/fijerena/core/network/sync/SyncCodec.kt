@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.network.sync
 import android.util.Log
 import kotlinx.serialization.json.Json
 
-/** A [SyncRecord] to and from what the server stores — see `docs/plans/20260929_live-sync-plan.md` → Security. */
+/** A [SyncRecord] to and from what the server stores — see `docs/plans/archive/20260929_live-sync-plan.md` → Security. */
 internal object SyncCodec {
     private const val TAG = "SyncCodec"
     private val json = Json { ignoreUnknownKeys = true }
@@ -53,7 +53,7 @@ internal object SyncCodec {
         // travel twice: sealed copies in the envelope, which the server can't alter, must match.
         // Otherwise a server could turn any record into a deletion, or rewrite which write wins.
         // Records sealed before these copies existed carry neither and are taken as they come.
-        // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-07.
+        // See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-07.
         val tampered =
             (envelope.updatedAt != null && envelope.updatedAt != wire.updatedAt) ||
                 (envelope.deleted != null && envelope.deleted != wire.deleted)

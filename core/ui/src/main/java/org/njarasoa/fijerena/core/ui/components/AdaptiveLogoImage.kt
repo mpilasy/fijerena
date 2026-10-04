@@ -41,7 +41,7 @@ fun AdaptiveLogoImage(
     // Null until this logo's tone is known: cached from an earlier showing, or worked out off the
     // main thread once it loads (on the main thread, copying the hardware bitmap's pixels drew a
     // ~250 ms StrictMode disk read on a Shield — see
-    // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-28). Kept invisible until then, a frame or two, so a dark logo never flashes bare on the
+    // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-28). Kept invisible until then, a frame or two, so a dark logo never flashes bare on the
     // dark UI and the plate's padding never shifts the layout after it has shown.
     var isDark by remember(logoUrl) { mutableStateOf(LogoToneCache.get(logoUrl)) }
     val scope = rememberCoroutineScope()

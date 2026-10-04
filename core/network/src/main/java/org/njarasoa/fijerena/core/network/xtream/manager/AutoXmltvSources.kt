@@ -27,7 +27,7 @@ import java.net.URI
  * A user who renames the automatic source turns it into a hand-added one.
  *
  * Every write goes through [EpgSourceDao], so live sync carries it to the group's other devices
- * (the URL update and the deletions included). See docs/plans/20261003_ux-overhaul-plan.md → GD0c.
+ * (the URL update and the deletions included). See docs/plans/archive/20261003_ux-overhaul-plan.md → GD0c.
  */
 object AutoXmltvSources {
     private const val TAG = "AutoXmltvSources"

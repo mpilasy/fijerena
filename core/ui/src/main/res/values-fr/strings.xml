@@ -739,7 +739,7 @@
     <string name="provider_error_delete_failed">Échec de la suppression de la source</string>
     <string name="provider_error_update_failed">Échec de la mise à jour de la source</string>
     <string name="provider_error_save_failed">Échec de l\'enregistrement de la source</string>
-    <!-- Profils (docs/plans/20260929_live-sync-plan.md → User profiles) -->
+    <!-- Profils (docs/plans/archive/20260929_live-sync-plan.md → User profiles) -->
     <string name="settings_profiles_title">Profils</string>
     <string name="settings_profiles_description">Chaque profil a ses propres favoris, historique et catégories récentes. Les sources et les paramètres sont partagés.</string>
     <string name="settings_profiles_add">Ajouter un profil</string>
@@ -762,7 +762,7 @@
     <string name="profile_switch_description">Changer de profil (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Connectez-vous à %1$s pour ce profil</string>
     <string name="profile_jellyfin_sign_in_button">Se connecter</string>
-    <!-- Live sync (docs/plans/20260929_live-sync-plan.md, Phase 9) -->
+    <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
     <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>
     <string name="live_sync_open">Configurer</string>
@@ -851,7 +851,7 @@
     <string name="newer_data_reset_confirm_message">Toutes les sources, tous les profils et toutes les sources de guide de cet appareil sont mis de côté, et l\'application redémarre sans aucune. Installer la version plus récente et restaurer la sauvegarde les fait revenir.</string>
     <string name="newer_data_reset_confirm">Réinitialiser</string>
 
-    <!-- Settings overhaul (docs/plans/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
+    <!-- Settings overhaul (docs/plans/archive/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
     <string name="settings_group_source_guide">Source et guide</string>
     <string name="settings_group_display">Affichage</string>
     <string name="settings_group_backup_storage">Sauvegarde et stockage</string>

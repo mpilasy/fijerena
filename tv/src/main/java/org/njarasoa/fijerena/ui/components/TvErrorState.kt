@@ -35,7 +35,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * button when [backLabel] is set. Retries by itself, once, when the network comes back
  * ([RetryWhenOnline]). [onBack] also takes the Back key, in `onPreviewKeyEvent` — with Retry
  * focused, a `BackHandler` would miss the first press (docs/NAVIGATION_GUIDE.md → "TV Back on Detail
- * Screens"). docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-15.
+ * Screens"). docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-15.
  */
 @Composable
 fun TvErrorState(

@@ -15,7 +15,7 @@ internal const val SQLITE_MAX_VARIABLES = 900
  * the `excluded` flag (see XtreamCategoryExclusionSync). Queries that hide them filter with
  * `categoryId NOT IN (… excluded categories …)`, looked up once per query — measured within ~10%
  * of the old per-row flag on a 180k-movie catalogue. `xtream_streams.excluded` is unused since
- * schema v24. See docs/plans/20261001_fast-profile-switch-plan.md.
+ * schema v24. See docs/plans/archive/20261001_fast-profile-switch-plan.md.
  */
 @Dao
 interface XtreamStreamDao {
@@ -66,7 +66,7 @@ interface XtreamStreamDao {
     ): List<XtreamStreamEntity>
 
     /**
-     * Phase 5 dedup (docs/plans/20260828_watch-state-durable-storage-plan.md): item ids in this content type
+     * Phase 5 dedup (docs/plans/archive/20260828_watch-state-durable-storage-plan.md): item ids in this content type
      * completed by a TMDB sibling — a different catalogue entry for the same title (five language
      * variants, a 4K re-rip) whose own `watch_state` row is completed. `watch_state` never stores
      * a `tmdbId` itself (see "No tmdbId column" in the plan), so this reaches it by joining back

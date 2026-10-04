@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 /**
  * A synced setting this version can't use is dropped, not stored: a malformed refresh time used to
  * crash EPG management on every linked device. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
  */
 class AppSettingsRemoteSettingTest {
     private lateinit var settings: AppSettings

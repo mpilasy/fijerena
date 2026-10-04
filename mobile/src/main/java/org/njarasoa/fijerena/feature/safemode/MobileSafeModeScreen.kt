@@ -38,7 +38,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 /**
  * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Back has
  * nothing to pop here, so it leaves the app as from home. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-10.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-10.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

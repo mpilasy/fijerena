@@ -13,7 +13,7 @@ import java.io.File
  *
  * Plain blocking file I/O on purpose: the uncaught-exception path has no coroutine to suspend in
  * and must finish writing before the process dies. See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-30.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-30.
  */
 object CrashLog {
     private const val TAG = "CrashLog"

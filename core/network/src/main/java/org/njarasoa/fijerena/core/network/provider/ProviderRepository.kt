@@ -54,7 +54,7 @@ class ProviderRepository(
          * (providers.db reset or restored, a provider synced in between the sweep's read and its
          * delete) that inference is wrong — it used to delete every favourite and every history
          * row. Those go only with [deleteProvider]. See
-         * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-02.
+         * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-02.
          */
         internal val ORPHAN_SWEEP_TABLES =
             listOf("xtream_streams", "xtream_series", "xtream_episodes", "xtream_categories", "xtream_epg_cache")
@@ -98,7 +98,7 @@ class ProviderRepository(
          * One for the whole process, shared by every instance: sync, Settings and the import each
          * build their own ProviderRepository, and with a cache per instance a write through one
          * left the others — `AppContainer.providerRepository` among them — serving the old
-         * settings until a restart. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md
+         * settings until a restart. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md
          * → R-06 step 1.
          */
         private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
@@ -269,7 +269,7 @@ class ProviderRepository(
      * If it was the active provider, the first remaining one becomes active — whether the user
      * deleted it here or another device did ([fromRemote]); only the UI path used to, which left a
      * device whose provider was deleted elsewhere on "No provider set". See
-     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
+     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
      */
     suspend fun deleteProvider(
         id: Long,
@@ -324,7 +324,7 @@ class ProviderRepository(
      * there and then: one unbounded `DELETE` of a whole provider's catalogue piles all of that page
      * movement into one transaction's WAL. Bounded commits keep the WAL small, and the file shrinks
      * as it goes — which is also why no `VACUUM` follows any more (see
-     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-35). [where] is built from
+     * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-35). [where] is built from
      * provider ids only, never from user input.
      */
     private fun deleteInBatches(
@@ -350,7 +350,7 @@ class ProviderRepository(
      * history, never sync state. [userRequested] (Settings → Shrink Database) also removes orphaned
      * credential files and EPG sources, and VACUUMs. The provider list is read again for each step,
      * so a provider added meanwhile (by the user or live sync) loses at most a few catalogue rows
-     * it fetches again. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-02.
+     * it fetches again. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-02.
      */
     suspend fun pruneOrphanedCatalogData(userRequested: Boolean = false): OrphanedDataPruneResult {
         val result =
@@ -386,7 +386,7 @@ class ProviderRepository(
                         // a VACUUM here only defragments, and in WAL mode it rewrites the whole
                         // database into the WAL first — a spike as big as the database itself
                         // (measured: 258 MB) that a low-storage TV may not have room for. See
-                        // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-35.
+                        // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-35.
                         try {
                             val sdb = db.openHelper.writableDatabase
                             sdb.execSQL("VACUUM")
@@ -414,7 +414,7 @@ class ProviderRepository(
      * must never fail on its account: a full disk or a locked database is recorded and skipped.
      * [onlyIfPending] (app start) runs it only after an interrupted provider deletion: every other
      * start skipped a full scan of the catalogue tables competing with Home's first queries. See
-     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-03, R-17.
+     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-03, R-17.
      */
     suspend fun sweepOrphanedCatalogData(onlyIfPending: Boolean) {
         val appSettings = AppSettings(context)
@@ -458,7 +458,7 @@ class ProviderRepository(
      * them: a deletion made here must queue a tombstone per source ([recordTombstones]). Applying
      * another device's provider deletion must not — that device already sent them, and queueing
      * them again pushed every one back. See
-     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-11.
+     * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-11.
      */
     private suspend fun deleteProviderEpgSources(
         id: Long,
@@ -545,7 +545,7 @@ class ProviderRepository(
     /**
      * The login this device's profile uses for [entity]. Jellyfin keeps favourites and history per
      * Jellyfin user, so each profile signs in as its own; every other provider has one login
-     * shared by all profiles (docs/plans/20260929_live-sync-plan.md → User profiles). The Default
+     * shared by all profiles (docs/plans/archive/20260929_live-sync-plan.md → User profiles). The Default
      * profile's login is the one providers always had: `providers.username` plus
      * `provider_creds_<id>`.
      */
@@ -863,7 +863,7 @@ class ProviderRepository(
      * One-time upgrade to per-profile category filters: each provider's filters, still in its
      * settings JSON (legacy `prefixes` shape included — the decoder normalises it), are copied to
      * every profile that has none of its own, then removed from the JSON. Safe to call on every
-     * app start: a no-op once migrated. See docs/plans/20260930_profile-scoped-settings-plan.md.
+     * app start: a no-op once migrated. See docs/plans/archive/20260930_profile-scoped-settings-plan.md.
      */
     suspend fun migrateCategoryFiltersToProfiles() {
         val profileIds = db.profileDao().getAll().map { it.id }
@@ -963,11 +963,11 @@ class ProviderRepository(
      * this `providerId`. `media_cache_$providerId` (favorites, favorite categories) is cleared in
      * the same pass — `deleteProvider` never touched it before, leaking that prefs file on every
      * deletion; bounded while history was capped at 25 rows, no longer bounded once storage is.
-     * See docs/plans/20260828_watch-state-durable-storage-plan.md.
+     * See docs/plans/archive/20260828_watch-state-durable-storage-plan.md.
      *
      * Every profile's rows and prefs go with the provider: `watch_state` across all profiles, and
      * each non-Default profile's own `media_cache_<id>_profile_<profileId>` file alongside the
-     * shared one (docs/plans/20260929_live-sync-plan.md → User profiles).
+     * shared one (docs/plans/archive/20260929_live-sync-plan.md → User profiles).
      */
     private suspend fun clearProviderWatchState(providerId: Long) {
         XtreamDatabase.getInstance(context).watchStateDao().deleteAllProfiles(providerId)

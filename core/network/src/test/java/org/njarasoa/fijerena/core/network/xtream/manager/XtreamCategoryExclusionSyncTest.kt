@@ -12,7 +12,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 
 /**
  * Only categories carry the flag, and only those whose flag changes are written — see
- * docs/plans/20261001_fast-profile-switch-plan.md.
+ * docs/plans/archive/20261001_fast-profile-switch-plan.md.
  */
 class XtreamCategoryExclusionSyncTest {
     private val categoryDao = mockk<XtreamCategoryDao>(relaxed = true)

@@ -114,7 +114,7 @@ object MediaProviderFactory {
      * Told the id of each provider whose settings or login changed in the app ([providerChanged]).
      * `AppContainer` sets it to drop its cached `MediaRepository` along with the provider, which
      * otherwise kept the old, disconnected instance and reconnected it with the old login. See
-     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
+     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
      */
     @Volatile
     var providerChangedListener: ((Long) -> Unit)? = null

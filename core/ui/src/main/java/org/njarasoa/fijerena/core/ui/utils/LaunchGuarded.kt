@@ -17,7 +17,7 @@ import kotlin.coroutines.EmptyCoroutineContext
  * in [CrashLog] under [name], and handed to [onError] so the screen can show its error state.
  * Cancellation still propagates. Children launched inside [block] are covered too: a failing
  * child fails [block] instead of reaching the scope. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
  */
 fun CoroutineScope.launchGuarded(
     name: String,

@@ -35,7 +35,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 /**
  * Settings → Diagnostics on mobile (developer mode): recorded crashes and process exit reasons,
- * shareable as plain text. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-30.
+ * shareable as plain text. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-30.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

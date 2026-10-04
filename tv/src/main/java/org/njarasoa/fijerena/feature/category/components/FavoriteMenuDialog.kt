@@ -37,7 +37,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * Themed context menu dialog for a category/stream row (long-press OK or the Menu key — UX
  * overhaul plan Part II P3): favorite toggle always, watched toggle too when [onToggleWatched] is
  * given — `target.isWatched == null` (Live TV, categories) is what keeps callers from passing one.
- * See docs/plans/20260828_watch-state-durable-storage-plan.md Phase 6. Independent actions rather
+ * See docs/plans/archive/20260828_watch-state-durable-storage-plan.md Phase 6. Independent actions rather
  * than an AlertDialog's usual confirm/cancel pair: each row commits immediately, `onDismiss` alone
  * closes the menu. Focus opens on the first row, the favorite toggle (removing a favorite asks
  * first); the destructive Remove from Recent sits last, just above Cancel.

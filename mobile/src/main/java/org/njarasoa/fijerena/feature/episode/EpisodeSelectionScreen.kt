@@ -437,7 +437,7 @@ private fun EpisodeListContent(
     val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
     val hasResume = anchorResumePosMs > 0L
 
-    // Segmented detail sections (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase
+    // Segmented detail sections (docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase
     // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
     // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
     // Episodes is the always-present, always-first tab: it's the reason this screen exists, not
@@ -699,7 +699,7 @@ private fun EpisodeListContent(
                     },
                     onToggleWatched = {
                         // Manual watched/unwatched mark (Phase 6,
-                        // docs/plans/20260828_watch-state-durable-storage-plan.md). Optimistic: flips this
+                        // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic: flips this
                         // episode's own badge immediately rather than waiting on the write;
                         // the full re-read after it lands is what catches a TMDB sibling this
                         // mark just completed too (Phase 5) and restores the resume bar on an
@@ -1254,7 +1254,7 @@ private fun EpisodeCard(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    // Watched toggle (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md): the
+                    // Watched toggle (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md): the
                     // badge itself is the tap target, since CinemaCard's onClick already owns the
                     // rest of the row for playing the episode.
                     CinemaIconButton(

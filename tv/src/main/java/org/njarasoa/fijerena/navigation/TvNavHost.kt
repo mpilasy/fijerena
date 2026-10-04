@@ -111,7 +111,7 @@ fun TvNavHost(
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
     var initializationComplete by remember { mutableStateOf(false) }
     // "Who's watching?" on every launch once a second profile exists — the TV is shared, so the
-    // last person's profile is a poor guess (docs/plans/20260929_live-sync-plan.md → User profiles).
+    // last person's profile is a poor guess (docs/plans/archive/20260929_live-sync-plan.md → User profiles).
     var pickProfileAtLaunch by remember { mutableStateOf(false) }
     var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
@@ -734,7 +734,7 @@ fun TvNavHost(
                                 // From the root, like a profile switch: every screen below holds
                                 // a repository clearAllCaches() just closed, so Back used to walk
                                 // into the old provider's Home, where writes went nowhere. See
-                                // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-18.
+                                // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-18.
                                 navController.navigateOnce(Screen.ContentTypeSelection) {
                                     popUpTo(navController.graph.id) { inclusive = true }
                                 }

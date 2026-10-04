@@ -11,7 +11,7 @@ import org.junit.runner.RunWith
 
 /**
  * Streams and series follow their category's `excluded` flag at query time; their own flag is
- * ignored. See docs/plans/20261001_fast-profile-switch-plan.md.
+ * ignored. See docs/plans/archive/20261001_fast-profile-switch-plan.md.
  */
 @RunWith(AndroidJUnit4::class)
 class CategoryVisibilityTest {

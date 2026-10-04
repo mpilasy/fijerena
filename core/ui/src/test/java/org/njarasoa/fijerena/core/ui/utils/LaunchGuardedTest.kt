@@ -19,7 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
-/** docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09. */
+/** docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09. */
 class LaunchGuardedTest {
     /** Stands in for viewModelScope; anything recorded in [escaped] would have crashed the app. */
     private class Harness(

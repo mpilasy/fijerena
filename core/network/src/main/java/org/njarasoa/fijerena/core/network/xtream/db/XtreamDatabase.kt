@@ -145,7 +145,7 @@ abstract class XtreamDatabase : RoomDatabase() {
         /**
          * Migration 14→15: durable watch state (position + completion), replacing the
          * `watch_history_v3` SharedPreferences blob that truncated on every write.
-         * See `docs/plans/20260828_watch-state-durable-storage-plan.md`. Nothing reads or writes this table
+         * See `docs/plans/archive/20260828_watch-state-durable-storage-plan.md`. Nothing reads or writes this table
          * yet — it ships dark until Phase 2.
          */
 
@@ -153,7 +153,7 @@ abstract class XtreamDatabase : RoomDatabase() {
          * Migration 15→16: durable favourites, replacing the `favorites_v2` and
          * `favorite_categories` SharedPreferences blobs that truncated at
          * `providerSettings.favoritesMaxSize` on every write.
-         * See `docs/plans/20260828_favorites-durable-storage-plan.md`.
+         * See `docs/plans/archive/20260828_favorites-durable-storage-plan.md`.
          */
         private val MIGRATION_15_16 =
             object : Migration(15, 16) {
@@ -248,7 +248,7 @@ abstract class XtreamDatabase : RoomDatabase() {
          * primary key. SQLite can't alter a primary key, so both tables are rebuilt: create the
          * new shape, copy every row across assigned to the Default profile, drop the old table,
          * rename. Indices are recreated with `profileId` after `providerId`.
-         * See `docs/plans/20260929_live-sync-plan.md` → User profiles.
+         * See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
          *
          * Neither table is re-fetchable from any server, and this database falls back to
          * destructive migration — a schema mismatch here wipes them. Every CREATE statement below
@@ -313,7 +313,7 @@ abstract class XtreamDatabase : RoomDatabase() {
 
         /**
          * Migration 20→21, live sync phase 3: the `sync_tombstone` table for favourite and
-         * watch-history deletions. See `docs/plans/20260929_live-sync-plan.md` → Deletions.
+         * watch-history deletions. See `docs/plans/archive/20260929_live-sync-plan.md` → Deletions.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
         internal val MIGRATION_20_21 =
@@ -379,7 +379,7 @@ abstract class XtreamDatabase : RoomDatabase() {
         /**
          * Migration 23→24: streams and series follow their category's `excluded` flag at query
          * time, so a profile switch no longer rewrites the catalogue (see
-         * docs/plans/20261001_fast-profile-switch-plan.md). Their own `excluded` columns stay,
+         * docs/plans/archive/20261001_fast-profile-switch-plan.md). Their own `excluded` columns stay,
          * unused; only the indexes on them go.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
@@ -405,7 +405,7 @@ abstract class XtreamDatabase : RoomDatabase() {
          * destructive fallback this used to have, silently drop every table — watch history and
          * favourites included. Set the newer file aside instead (only the latest one is kept) and
          * start fresh; installing the newer build again and restoring the `.bak` set recovers it.
-         * See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20.
+         * See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-20.
          */
         // internal, with [name], not private: XtreamDatabaseUpgradeTest (androidTest) runs it on a
         // file of its own, never the app's real xtream_v2.db.

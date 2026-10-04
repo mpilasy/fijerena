@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 /**
  * Cinematic 16:9 backdrop header shared by [org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen]
  * and [org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen] — see
- * docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase 4 (3a). Replaces forcing a 2:3
+ * docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase 4 (3a). Replaces forcing a 2:3
  * vertical poster into a horizontal banner (severe cropping) with TMDB's actual landscape art,
  * falling back to the vertical poster — still center-cropped to 16:9, same as before this item —
  * only when no backdrop is available.

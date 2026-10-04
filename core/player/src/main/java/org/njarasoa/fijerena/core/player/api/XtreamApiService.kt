@@ -82,7 +82,7 @@ class XtreamApiService(
             // trickles a byte every few seconds never trips a read timeout and held Login, a
             // category load or a detail screen on a spinner indefinitely. The catalogue downloads
             // opt out ([noDeadline]): a big list on a slow panel legitimately takes minutes. See
-            // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+            // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
             install(HttpTimeout) {
                 requestTimeoutMillis = metadataTimeoutMs
             }

@@ -708,7 +708,7 @@
     <string name="newer_data_reset_confirm_message">Atokana avokoa ny loharano, ny mombamomba ary ny loharanon\'ny fitarihana rehetra amin\'ity fitaovana ity, ary miverina manomboka tsy misy ny fampiharana. Raha apetraka ny dikan-teny vaovao kokoa ary averina ny tahiry dia miverina izy ireo.</string>
     <string name="newer_data_reset_confirm">Avereno</string>
 
-    <!-- Settings overhaul (docs/plans/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
+    <!-- Settings overhaul (docs/plans/archive/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
     <string name="settings_group_source_guide">Loharano sy fitarihana</string>
     <string name="settings_group_display">Fisehoana</string>
     <string name="settings_group_backup_storage">Tahiry sy fitahirizana</string>

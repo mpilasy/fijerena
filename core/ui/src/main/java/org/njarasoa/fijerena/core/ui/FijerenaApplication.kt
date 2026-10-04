@@ -94,7 +94,7 @@ class FijerenaApplication :
         val startupScope = AppScopes.create("FijerenaApplication.startup", Dispatchers.IO)
         // In order, each step guarded on its own: none needs an earlier one, and a failing step
         // (say pruneSyncTombstones) must not skip the rest, credential warm-up included. See
-        // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-24.
+        // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-24.
         startupScope.launch {
             startupStep("migrateCategoryFiltersToProfiles") {
                 ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
@@ -123,13 +123,13 @@ class FijerenaApplication :
         }
         // Its own coroutine, so nothing above can skip it: finishes a provider deletion the app was
         // killed in the middle of. Used to run from the nav hosts' composition on every start,
-        // unguarded — see docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-03.
+        // unguarded — see docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-03.
         startupScope.launch {
             ProviderRepository(this@FijerenaApplication).sweepOrphanedCatalogData(onlyIfPending = true)
         }
         // Its own coroutine, so it is done before the first film starts: the player service checks
         // FFmpeg on the main thread, and the first check loads the native library from disk. See
-        // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-28.
+        // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-28.
         startupScope.launch {
             startupStep("StreamingPlaybackService.warmUp") { StreamingPlaybackService.warmUp() }
         }

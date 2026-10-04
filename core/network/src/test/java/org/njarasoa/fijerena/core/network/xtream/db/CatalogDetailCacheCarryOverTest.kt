@@ -7,7 +7,7 @@ import org.junit.Test
 
 /**
  * A catalogue sync rewrites changed rows with REPLACE; these check that the detail-screen columns
- * survive that rewrite (docs/plans/20261002_catalog-sync-cache-churn-plan.md, Phase 1).
+ * survive that rewrite (docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md, Phase 1).
  */
 class CatalogDetailCacheCarryOverTest {
     private fun stream(tmdbId: String? = null) =

@@ -334,8 +334,8 @@ private fun MovieDetailsContent(
                         }
                     }
 
-                    // Segmented detail sections (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
-                    // Phase 4 3c) — mirrors TV's own tabbed layout (docs/plans/20260902_tv-detail-hero-ui-plan.md
+                    // Segmented detail sections (docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md,
+                    // Phase 4 3c) — mirrors TV's own tabbed layout (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md
                     // Phase 4): built from what this movie actually has, not a fixed list, so a title with no
                     // cast/related-titles/alternate-instances doesn't show an empty tab for it.
                     val hasCast = !movieDetail.metadata.cast.isNullOrBlank()

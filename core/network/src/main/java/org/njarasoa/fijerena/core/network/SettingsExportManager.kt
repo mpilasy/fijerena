@@ -39,12 +39,12 @@ class SettingsExportManager(
     companion object {
         private const val TAG = "SettingsExportManager"
 
-        // 4: added providerWatchState (docs/plans/20260828_watch-state-durable-storage-plan.md, Phase 4). A
+        // 4: added providerWatchState (docs/plans/archive/20260828_watch-state-durable-storage-plan.md, Phase 4). A
         // backup taken before version 4 has no watch state in it at all — SettingsExportManager
         // never exported watch_history_v3 — so there is no older shape to migrate on import;
         // providerWatchState simply decodes to its empty default on an old file.
         // 5: favourites moved from the favorites_v2 / favorite_categories blobs to the
-        // favorite_state table (docs/plans/20260828_favorites-durable-storage-plan.md). The on-the-wire
+        // favorite_state table (docs/plans/archive/20260828_favorites-durable-storage-plan.md). The on-the-wire
         // shape did not change — providerFavorites still carries the same fields, matched by
         // provider name+URL — so a version 4 file restores onto this build unchanged, and a
         // version 5 file restores onto an older build unchanged. Only the storage read from and
@@ -274,10 +274,10 @@ class SettingsExportManager(
                 }
 
             // Favourites and watch state are the active profile's only; the format has no notion of
-            // profiles (docs/plans/20260929_live-sync-plan.md → Decisions).
+            // profiles (docs/plans/archive/20260929_live-sync-plan.md → Decisions).
             val profileId = appSettings.activeProfileId
 
-            // Export favorites per provider. Rows since docs/plans/20260828_favorites-durable-storage-plan.md;
+            // Export favorites per provider. Rows since docs/plans/archive/20260828_favorites-durable-storage-plan.md;
             // the on-disk shape is unchanged, so old backups still import and new ones still restore
             // onto a build that predates the table.
             val favoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao()
@@ -321,7 +321,7 @@ class SettingsExportManager(
                     )
                 }
 
-            // Export watch state per provider (Phase 4, docs/plans/20260828_watch-state-durable-storage-plan.md).
+            // Export watch state per provider (Phase 4, docs/plans/archive/20260828_watch-state-durable-storage-plan.md).
             // Not Xtream-specific: watch_state also carries SMB/Local/Remote M3U rows.
             val watchStateDao = XtreamDatabase.getInstance(context).watchStateDao()
             val providerWatchState =
@@ -630,7 +630,7 @@ class SettingsExportManager(
                 }
 
                 // Favourites and watch state restore into the active profile, whichever profile
-                // the backup was taken from (docs/plans/20260929_live-sync-plan.md → Decisions).
+                // the backup was taken from (docs/plans/archive/20260929_live-sync-plan.md → Decisions).
                 val profileId = AppSettings(context).activeProfileId
 
                 // Import favorites per provider (match by name + URL)
@@ -715,7 +715,7 @@ class SettingsExportManager(
                     }
                 }
 
-                // Import watch state per provider (Phase 4, docs/plans/20260828_watch-state-durable-storage-plan.md).
+                // Import watch state per provider (Phase 4, docs/plans/archive/20260828_watch-state-durable-storage-plan.md).
                 // Rides the same toggle as favorites rather than a checkbox of its own — both are
                 // per-provider local state restored the same way. providerId is never read from
                 // the file: each row is rebuilt under matchingProvider.id, since ProviderEntity.id

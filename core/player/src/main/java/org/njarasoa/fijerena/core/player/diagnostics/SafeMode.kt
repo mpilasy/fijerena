@@ -13,7 +13,7 @@ import java.io.File
  * starts with [isActive] set: `FijerenaApplication` skips its risky startup work, and the nav
  * hosts skip theirs and show the safe-mode screen instead of their start destination. Leaving it
  * ([leave]) resets the counter and restarts the app normally. The counter lives in
- * `files/safemode/launches`; see docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-10.
+ * `files/safemode/launches`; see docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-10.
  */
 object SafeMode {
     /**

@@ -17,7 +17,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 
 /**
- * Remote Stop on the device being stopped — see `docs/plans/20261001_live-sync-now-playing-plan.md`
+ * Remote Stop on the device being stopped — see `docs/plans/archive/20261001_live-sync-now-playing-plan.md`
  * → Remote Stop. Every screen that plays (TV player and split preview, mobile player and Live TV
  * dock) runs this with what its Back does: finalise the session, stop, then leave for Home.
  * "Playback stopped from <device>" is shown first, so it survives the screen leaving.

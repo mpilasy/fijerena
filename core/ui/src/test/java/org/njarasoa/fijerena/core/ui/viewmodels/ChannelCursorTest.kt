@@ -6,7 +6,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 
-/** Channel up/down on the live player. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-13. */
+/** Channel up/down on the live player. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-13. */
 class ChannelCursorTest {
     private fun channels(vararg ids: String) = ids.map { MediaItem(it, it, MediaType.LIVE_CHANNEL, "c") }
 

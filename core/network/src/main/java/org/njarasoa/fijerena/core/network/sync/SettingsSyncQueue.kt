@@ -13,7 +13,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
  * filters, synced settings — which no trigger can see. Not in the same transaction as the change
  * (SharedPreferences has none), so a crash in between loses the entry; the next change to the same
  * value queues it again. Fire-and-forget on its own IO scope: callers include plain property
- * setters on the main thread. See `docs/plans/20260929_live-sync-plan.md` → Flow.
+ * setters on the main thread. See `docs/plans/archive/20260929_live-sync-plan.md` → Flow.
  */
 object SettingsSyncQueue {
     private val scope = AppScopes.create("SettingsSyncQueue", Dispatchers.IO)

@@ -41,7 +41,7 @@ import java.io.IOException
 
 /**
  * A failed catalogue task must reach the caller as a failed sync, never as Success
- * (docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-08).
+ * (docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-08).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatalogSyncFailureTest {

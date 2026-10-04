@@ -141,7 +141,7 @@ fun TvPlayerScreen(
                         // what happened. A short absence leaves it Paused instead: right for VOD
                         // (the viewer resumes), but a paused live stream is a frozen, stale frame,
                         // so live that was playing restarts at the live edge too. See
-                        // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-16.
+                        // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-16.
                         val success = lastSuccessState
                         val state = playbackViewModel.playbackState.value
                         val restart = state is PlaybackState.Idle || (liveWasPlaying && state is PlaybackState.Paused)
@@ -188,7 +188,7 @@ fun TvPlayerScreen(
 
     // Another device of the sync group stopped this playback: the explicit Back path (awaited
     // finalise, so the watch position is saved, then release), but landing on Home. See
-    // docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    // docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
     RemoteStopEffect {
         finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
         playbackViewModel.stopAndRelease()
@@ -208,7 +208,7 @@ fun TvPlayerScreen(
 
     // Save playback position and track choices. Collected from the service's process-wide flow,
     // not a listener set on one instance: Home → return destroys the service (MainActivity.onStop)
-    // and ON_RESUME plays on a new one. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+    // and ON_RESUME plays on a new one. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-04.
     // Keyed on the stream: lastKnownPositionMs is a fresh state per stream, and a collector
     // started for the previous one would keep writing that one's.
     LaunchedEffect(currentStreamId) {
@@ -335,7 +335,7 @@ private fun PlayerContent(
             // straight back to the episode-selection screen — its own watch-history read can
             // otherwise win the race against an unawaited write and land on the wrong resume
             // season. See finalizeSessionAndAwait's kdoc and
-            // docs/plans/20260908_episode-selection-fragility-plan.md.
+            // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
             scope.launch {
                 finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
                 playbackViewModel.stopAndRelease()

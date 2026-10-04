@@ -7,7 +7,7 @@ import org.junit.Test
 /**
  * EPG management's "next refresh" for a stored refresh time it can't parse: no schedule, not a
  * crash every time the screen opens — a value such as "4:00 AM" synced from another device did
- * that on every linked device. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+ * that on every linked device. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
  */
 class EpgNextRefreshTimeTest {
     @Test

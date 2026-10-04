@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * Deleting the active provider moves the device to the first remaining one, whether the user
  * deleted it here or another device did — only the UI path used to, so a device whose provider was
  * deleted elsewhere was left on "No provider set". See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
  */
 class ProviderDeletePromotionTest {
     private val prefsFiles = mutableMapOf<String, SharedPreferences>()

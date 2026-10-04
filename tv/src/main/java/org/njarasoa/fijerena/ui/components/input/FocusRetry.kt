@@ -21,7 +21,7 @@ const val FOCUS_RETRY_MAX_FRAMES = 30
  * attached yet (an item not composed, a parent still laying out) prints a warning and returns false
  * instead of throwing `IllegalStateException`, so `try { requestFocus() } catch (_: IllegalStateException)`
  * retries nothing. Call from a `LaunchedEffect` (a frame clock is needed). See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-05.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-05.
  */
 suspend fun FocusRequester.requestFocusWithRetry(
     maxFrames: Int = FOCUS_RETRY_MAX_FRAMES,

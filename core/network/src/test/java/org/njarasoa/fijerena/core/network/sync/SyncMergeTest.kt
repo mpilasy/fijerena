@@ -9,7 +9,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncMerge.Presence
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Resolution
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.SkipReason
 
-/** Every conflict case of the merge — see docs/plans/20260929_live-sync-plan.md → Conflicts, Deletions. */
+/** Every conflict case of the merge — see docs/plans/archive/20260929_live-sync-plan.md → Conflicts, Deletions. */
 class SyncMergeTest {
     private val watchKey = SyncKey("p1", "prov", SyncKind.WATCH, "m1", "MOVIES")
     private val favoriteKey = SyncKey("p1", "prov", SyncKind.FAVORITE_STREAM, "m1", "MOVIES")

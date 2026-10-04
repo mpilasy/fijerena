@@ -17,7 +17,7 @@ import java.io.File
 
 /**
  * `xtream_v2.db` holds watch history and favourites, so neither an upgrade nor a downgrade may
- * lose them. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
+ * lose them. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
  *
  * - **Every-version upgrade**: for each schema committed under `core/network/schemas/` (history
  *   starts at v24), a file is created at that version by [MigrationTestHelper], given user data,

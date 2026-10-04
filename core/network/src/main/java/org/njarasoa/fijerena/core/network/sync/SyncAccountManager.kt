@@ -10,7 +10,7 @@ import java.security.KeyPair
 /**
  * Linking this device to a sync account: creating one, joining one by scanning a QR code, or —
  * for a device that can't scan — being handed one by a device that can; and leaving it. See
- * `docs/plans/20260929_live-sync-plan.md` → Security (pairing). Phase 9 adds the screens.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Security (pairing). Phase 9 adds the screens.
  */
 class SyncAccountManager(
     private val context: Context,

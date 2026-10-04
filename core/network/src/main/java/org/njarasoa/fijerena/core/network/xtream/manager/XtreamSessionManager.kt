@@ -99,7 +99,7 @@ class XtreamSessionManager(
 
                     // Empty, not only missing: a credentials file reset after a lost Keystore key
                     // seeds an empty password, and logging in with it just earns a server error
-                    // that says nothing about why. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-28.
+                    // that says nothing about why. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-28.
                     val password =
                         credentials.password?.takeIf { it.isNotEmpty() }
                             ?: throw Exception("Password not stored. Please login again.")
@@ -346,7 +346,7 @@ class XtreamSessionManager(
      * Dispatcher and ConnectionPool (not the app-wide shared ones — see its constructor), so
      * closing it here can't affect Jellyfin/TMDB/EPG/playback traffic; without this, every
      * login/reconnect/logout left the previous instance's HttpClient (and the coroutine Ktor
-     * parks on it internally) running forever. See docs/plans/20260920_xtream-concurrency-fixes-plan.md.
+     * parks on it internally) running forever. See docs/plans/archive/20260920_xtream-concurrency-fixes-plan.md.
      *
      * Caller must hold [sessionMutex] — see its kdoc for why an unsynchronized swap here is
      * exactly the race that broke category loading and playback with "executor rejected".

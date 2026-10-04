@@ -29,7 +29,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 /**
  * A provider record, login or category filters received from another device must reach the cached
  * `MediaRepository`: the pass reports the providers it changed, and `SyncManager` evicts them. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
  */
 class SyncApplierProviderChangesTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)

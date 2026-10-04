@@ -264,10 +264,10 @@ private fun MovieDetailsContent(
     // rememberSaveable, not remember: this composable is disposed when Play navigates to the
     // player and recomposed fresh on return, same as EpisodeSelectionScreen's identical signal —
     // a plain remember forgot the switch across that trip and stole focus back to Play. See
-    // docs/plans/20260908_episode-selection-fragility-plan.md.
+    // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
     var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }
 
-    // Phase 4 tab shell (docs/plans/20260902_tv-detail-hero-ui-plan.md): one FocusRequester, attached by
+    // Phase 4 tab shell (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md): one FocusRequester, attached by
     // TvSectionTabs to whichever tab is currently selected, serves both directions — D-pad Down
     // from the action row into the tab row, and Back from inside the open section back to the
     // tab row instead of out of the screen.
@@ -291,7 +291,7 @@ private fun MovieDetailsContent(
         }
     }
 
-    // Tabbed sections (Phase 4, docs/plans/20260902_tv-detail-hero-ui-plan.md): built from what this movie
+    // Tabbed sections (Phase 4, docs/plans/archive/20260902_tv-detail-hero-ui-plan.md): built from what this movie
     // actually has, never a fixed list. Only the selected tab's content composes below — the old
     // single-column screen composed cast, tech rows and up to three related rows on every visit,
     // whether on screen or not.
@@ -516,7 +516,7 @@ private fun MovieDetailsContent(
                         label = stringResource(R.string.details_action_favorite),
                         modifier = downToTabRow.then(upScrollToTop),
                     )
-                    // Watched button (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md)
+                    // Watched button (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md)
                     LabelledActionButton(
                         onClick = onToggleWatched,
                         icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
@@ -708,7 +708,7 @@ private fun LoadingScreen() {
     }
 }
 
-/** Section tabs built from what a movie actually has (docs/plans/20260902_tv-detail-hero-ui-plan.md
+/** Section tabs built from what a movie actually has (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md
  * Phase 4) — [DETAILS] is the only one always present. */
 private enum class MovieDetailTab { CAST, DETAILS, SIMILAR, COLLECTION }
 

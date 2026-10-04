@@ -168,7 +168,7 @@ fun ContentTypeSelectionScreen(
     var allProviders by remember { mutableStateOf<List<org.njarasoa.fijerena.core.network.provider.ProviderEntity>>(emptyList()) }
     var activeProviderId by remember { mutableStateOf(0L) }
     // The active provider is a Jellyfin server this profile hasn't signed in to: home shows a
-    // sign-in panel in place of the library (docs/plans/20260929_live-sync-plan.md → User profiles).
+    // sign-in panel in place of the library (docs/plans/archive/20260929_live-sync-plan.md → User profiles).
     var needsSignIn by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
@@ -213,7 +213,7 @@ fun ContentTypeSelectionScreen(
                     providerType = activeProvider.type
                     activeProviderId = activeProvider.id
                     // A Jellyfin server this profile hasn't signed in to: each profile is its own
-                    // Jellyfin user (docs/plans/20260929_live-sync-plan.md → User profiles). No
+                    // Jellyfin user (docs/plans/archive/20260929_live-sync-plan.md → User profiles). No
                     // repository is built — it could only fail to authenticate — and the first time
                     // per process the sign-in screen opens by itself; after that the panel stays.
                     needsSignIn = !providerRepo.hasLogin(activeProvider)

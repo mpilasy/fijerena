@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 /**
  * A person using the app. Favourites, watch state, Recent Categories and the last-position
  * bookmarks are scoped to one profile; providers, EPG sources and settings are shared by all of
- * them, though each profile remembers the provider it last picked (`AppSettings.lastProviderKey`). See `docs/plans/20260929_live-sync-plan.md` → User profiles.
+ * them, though each profile remembers the provider it last picked (`AppSettings.lastProviderKey`). See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
  *
  * [id] is a random UUID for every profile the user creates, except the one every install starts
  * with, which is [DEFAULT_ID]. A fixed id rather than a per-device UUID so that, once sync lands,

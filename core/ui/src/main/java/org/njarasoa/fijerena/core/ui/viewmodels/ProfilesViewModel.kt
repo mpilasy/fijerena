@@ -24,7 +24,7 @@ data class ProfileUi(
     val isActive: Boolean,
 )
 
-/** Settings → Profiles. See `docs/plans/20260929_live-sync-plan.md` → User profiles. */
+/** Settings → Profiles. See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles. */
 class ProfilesViewModel(
     private val context: Context,
     private val repository: ProfileRepository,

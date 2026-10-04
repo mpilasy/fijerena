@@ -180,7 +180,7 @@ internal fun LiveTvSplitLayout(
     // No setContentType(LIVE_TV) effect here: StreamingPlaybackService.playStream() picks the
     // buffer profile from metadata.isLive itself, so the preview and the promoted player are always
     // on the live profile. (The effect that used to do it could crash the app with an uncaught
-    // ServiceDestroyedException — see docs/plans/20261001_rock-solid-stability-resilience-plan.md F-03.)
+    // ServiceDestroyedException — see docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md F-03.)
 
     // Saveable: Back from the TV Guide opened by the OSD's Guide button returns to full screen.
     var fullScreen by rememberSaveable { mutableStateOf(false) }
@@ -422,7 +422,7 @@ internal fun LiveTvSplitLayout(
 
     // Another device of the sync group stopped this playback — preview or promoted full-screen
     // alike: finalise and release as leaving Live TV does, then go Home. See
-    // docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    // docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
     RemoteStopEffect {
         finalizeSessionAndAwait(playback.playbackState.value, loader)
         playback.stopAndRelease()
@@ -457,7 +457,7 @@ internal fun LiveTvSplitLayout(
     // 30 s away (screensaver, HDMI input switch), stops it — and ON_RESUME used to only cancel that
     // timer, so a short absence came back to a frozen frame and a long one to a black, idle pane.
     // Only when it was playing as the screen paused: a user's own pause in full screen stays put.
-    // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-16.
+    // See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-16.
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentSuccess by rememberUpdatedState(success)
     var resumeOnReturn by remember { mutableStateOf(false) }
@@ -769,7 +769,7 @@ private fun neighborChannel(
 
 /**
  * How long focus must rest on a row before the preview tunes it (LT5, decision 3 of
- * docs/plans/20261003_ux-overhaul-plan.md): long enough that moving through a list does not start
+ * docs/plans/archive/20261003_ux-overhaul-plan.md): long enough that moving through a list does not start
  * a stream at every pause.
  */
 private const val PREVIEW_SETTLE_MS = 800L

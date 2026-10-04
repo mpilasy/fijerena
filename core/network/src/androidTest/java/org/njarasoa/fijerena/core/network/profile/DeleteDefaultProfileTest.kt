@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * Deleting the `default` profile clears what is its own from the provider-level storage it
  * shares with everyone — Jellyfin logins, Recent Categories, bookmarks, legacy blobs — and leaves
  * what is genuinely shared: other providers' logins and migration flags.
- * See docs/plans/20260929_live-sync-plan.md → User profiles.
+ * See docs/plans/archive/20260929_live-sync-plan.md → User profiles.
  *
  * Runs against this test APK's own databases and prefs, never the app's.
  */

@@ -23,7 +23,7 @@ import kotlinx.serialization.json.Json
  * `BuildConfig` constant with no per-provider variation, so there's nothing to gain from a
  * separate instance per [org.njarasoa.fijerena.core.network.XtreamMediaProvider] — only a
  * separate `HttpClient` (and the Ktor-internal `Dispatcher`/coroutine that comes with it, see
- * `docs/plans/20260920_xtream-concurrency-fixes-plan.md`, Finding 2) to leak if it's ever
+ * `docs/plans/archive/20260920_xtream-concurrency-fixes-plan.md`, Finding 2) to leak if it's ever
  * discarded without being closed, which nothing here does.
  */
 class TmdbApiService(
@@ -58,7 +58,7 @@ class TmdbApiService(
             }
             install(ContentNegotiation) { json(json) }
             // An overall deadline per call, not only per read: see
-            // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+            // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
             install(HttpTimeout) { requestTimeoutMillis = REQUEST_TIMEOUT_MS }
             install(ContentEncoding) {
                 gzip()

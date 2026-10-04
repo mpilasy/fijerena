@@ -12,7 +12,7 @@ Code identifiers (`ProviderEntity`, the `providers` table, `providerId`, `Provid
 `Screen.ProviderSelection`, string keys such as `provider_add_title`) stay. Renaming them needs a
 Room migration and touches ~hundreds of call sites for no user benefit.
 
-Context: `docs/plans/20261002_profile-last-provider-plan.md` (uses the word heavily, history —
+Context: `docs/plans/archive/20261002_profile-last-provider-plan.md` (uses the word heavily, history —
 not rewritten).
 
 ## Decisions (2026-10-02)

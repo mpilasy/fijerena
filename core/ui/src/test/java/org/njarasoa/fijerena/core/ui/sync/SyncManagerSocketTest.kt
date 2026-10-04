@@ -30,7 +30,7 @@ import java.io.IOException
  * doesn't upgrade), the socket reconnected every 5 s forever, each time with a full sync pass —
  * the pass succeeded, so the shared retry delay kept resetting. F-26: a half-open socket is failed
  * by OkHttp's protocol pings (SyncApiSocketTest) and must then reconnect through the same backoff.
- * See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-12, F-26.
+ * See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-12, F-26.
  */
 class SyncManagerSocketTest {
     private val dispatcher = StandardTestDispatcher()

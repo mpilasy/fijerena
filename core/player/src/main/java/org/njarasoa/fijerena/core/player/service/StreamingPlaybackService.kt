@@ -745,7 +745,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // reported an error (or a live stream ended), so a recycle in flight is one that just
         // failed. Skipping left isRecycling stuck true forever — nothing else clears it short of
         // reaching Playing — so no retry ever ran again: a frozen frame, no spinner, no error.
-        // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-01.
+        // See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-01.
         // Hard retry should use fast-startup settings
         setRecycling(false)
 
@@ -1144,7 +1144,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // Each stage runs in its own try: one that throws (the native player.release(), say) is
         // recorded and the rest still run, so the wake lock, the scope and the singleton below are
         // never left behind and a teardown never crashes the app on exit. See
-        // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-12.
+        // docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-12.
         releaseStage("cancelRetries") {
             cancelPendingRetry()
             mainHandler.removeCallbacks(recycleHandler)
@@ -1683,7 +1683,7 @@ class StreamingPlaybackService : MediaSessionService() {
          * Loads the FFmpeg native library, which [initializePlayer] checks on the main thread from
          * onCreate. Call it off the main thread at app start: loading it reads disk, and once loaded
          * the check is a cached answer. See
-         * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-28.
+         * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-28.
          */
         fun warmUp() {
             Log.i(TAG, "FFmpeg library warmed up: ${FfmpegLibrary.isAvailable()}")
@@ -1694,7 +1694,7 @@ class StreamingPlaybackService : MediaSessionService() {
         /**
          * What is playing on this device, null when nothing is — process-wide, so it outlives
          * service instances. Live sync's "now playing" publisher (core:ui) collects it: this
-         * module can't depend on sync. See docs/plans/20261001_live-sync-now-playing-plan.md.
+         * module can't depend on sync. See docs/plans/archive/20261001_live-sync-now-playing-plan.md.
          */
         val nowPlaying: StateFlow<NowPlayingSnapshot?> = _nowPlaying.asStateFlow()
 
@@ -1708,7 +1708,7 @@ class StreamingPlaybackService : MediaSessionService() {
          * player screen keeps receiving them after the service is destroyed and started again
          * (TV Home → return, or the first playback after a cold start, when the screen composes
          * before the service exists). The player screen collects it for as long as it's composed.
-         * See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+         * See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-04.
          */
         val positionSaves: SharedFlow<PositionSave> = _positionSaves.asSharedFlow()
 
@@ -1731,7 +1731,7 @@ class StreamingPlaybackService : MediaSessionService() {
          * waiting — for callers with nothing to do in either case. Composition-scoped effects must
          * use this: a [ServiceDestroyedException] escaping a `LaunchedEffect` crashes the app.
          * Genuine cancellation still propagates. See
-         * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-03.
+         * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-03.
          */
         suspend fun awaitInstanceOrNull(): StreamingPlaybackService? =
             try {

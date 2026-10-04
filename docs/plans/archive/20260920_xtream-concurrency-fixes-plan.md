@@ -4,7 +4,7 @@
 **Date:** 2026-09-20
 **Scope:** Xtream-only — `core/network/xtream/*`, `core/network/XtreamMediaProvider.kt`, `core/player/api/XtreamApiService.kt`, `core/ui/viewmodels/ProviderViewModel.kt`
 
-This is a focused follow-up to the systemic audits already landed (`docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md` and predecessors), which covered `core:player`, `core:network`, `core:ui`, `tv`, `mobile` broadly but did not scope `XtreamApiService`'s HTTP client lifecycle or `XtreamSyncWorker` specifically. All four findings below are new — verified against HEAD, not carried over from prior plans.
+This is a focused follow-up to the systemic audits already landed (`docs/plans/archive/20260919_systemic-concurrency-memory-deep-dive-plan.md` and predecessors), which covered `core:player`, `core:network`, `core:ui`, `tv`, `mobile` broadly but did not scope `XtreamApiService`'s HTTP client lifecycle or `XtreamSyncWorker` specifically. All four findings below are new — verified against HEAD, not carried over from prior plans.
 
 ---
 

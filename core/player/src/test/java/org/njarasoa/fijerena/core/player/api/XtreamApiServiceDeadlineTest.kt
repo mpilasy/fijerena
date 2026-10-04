@@ -17,7 +17,7 @@ import kotlin.concurrent.thread
  * its screen on a spinner forever. Metadata calls now have an overall deadline; the catalogue
  * downloads keep only the per-read timeouts. Run against a local server that sends its body one
  * byte every [BYTE_GAP_MS], longer in all than the deadline. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
  */
 class XtreamApiServiceDeadlineTest {
     private val server = ServerSocket(0)

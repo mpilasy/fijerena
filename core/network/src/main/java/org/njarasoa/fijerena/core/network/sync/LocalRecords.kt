@@ -15,7 +15,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 /**
  * Turns this device's pending versions into [SyncRecord]s to send, reading the current row, value
  * or tombstone of each key; and, on linking, queues everything that already exists. See
- * `docs/plans/20260929_live-sync-plan.md` → Flow.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Flow.
  */
 class LocalRecords(
     private val context: Context,

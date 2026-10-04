@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.update
 /**
  * What the other devices of the sync group are playing, by server device id, as last received
  * ([SyncKind.NOW_PLAYING]). In memory only: after a restart the devices' next heartbeat — or the
- * catch-up pull — refills it. See `docs/plans/20261001_live-sync-now-playing-plan.md`.
+ * catch-up pull — refills it. See `docs/plans/archive/20261001_live-sync-now-playing-plan.md`.
  */
 object NowPlayingStore {
     /** How long a playing or paused device stays shown without a newer record: three missed heartbeats. */

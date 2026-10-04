@@ -14,7 +14,7 @@ object FavoriteKind {
  *
  * Replaces the `favorites_v2` and `favorite_categories` SharedPreferences blobs, which were capped
  * at `providerSettings.favoritesMaxSize` and truncated on every write, silently evicting the oldest
- * entry once the cap was reached — see `docs/plans/20260828_favorites-durable-storage-plan.md`. Not
+ * entry once the cap was reached — see `docs/plans/archive/20260828_favorites-durable-storage-plan.md`. Not
  * `xtream_`-prefixed, for the same reason as `watch_state`: `MediaRepository` backs SMB, Local and
  * Remote M3U through it too, not only Xtream.
  *
@@ -25,7 +25,7 @@ object FavoriteKind {
  *
  * [createdAt] carries the blob's ordering — newest first — which the favourites list relies on.
  *
- * [profileId] scopes the row to one person — see `docs/plans/20260929_live-sync-plan.md` → User
+ * [profileId] scopes the row to one person — see `docs/plans/archive/20260929_live-sync-plan.md` → User
  * profiles.
  */
 @Entity(

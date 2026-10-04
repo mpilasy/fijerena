@@ -1,6 +1,6 @@
 # Self-hosted Fijerena sync server: the same worker as on Cloudflare, run by workerd.
 # Durable Objects are stored as SQLite files under /data — mount a volume there and back it up.
-# See docs/plans/20260929_live-sync-plan.md → Self-hosting.
+# See docs/plans/archive/20260929_live-sync-plan.md → Self-hosting.
 using Workerd = import "/workerd/workerd.capnp";
 
 const config :Workerd.Config = (

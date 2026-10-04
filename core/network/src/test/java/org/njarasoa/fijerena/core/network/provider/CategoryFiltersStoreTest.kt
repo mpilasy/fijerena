@@ -10,7 +10,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
-/** Category filters per (provider, profile) — see docs/plans/20260930_profile-scoped-settings-plan.md. */
+/** Category filters per (provider, profile) — see docs/plans/archive/20260930_profile-scoped-settings-plan.md. */
 class CategoryFiltersStoreTest {
     private lateinit var store: CategoryFiltersStore
 

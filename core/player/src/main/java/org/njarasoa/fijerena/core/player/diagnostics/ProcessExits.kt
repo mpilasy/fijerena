@@ -8,7 +8,7 @@ import android.util.Log
 /**
  * Why this app's recent processes ended, as the system recorded it (API 30, this app's `minSdk`).
  * Catches what [CrashLog] can't: ANRs, native crashes, low-memory kills — none of which run any
- * code of ours on the way out. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-30.
+ * code of ours on the way out. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-30.
  */
 object ProcessExits {
     private const val TAG = "ProcessExits"

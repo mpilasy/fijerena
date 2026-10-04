@@ -20,7 +20,7 @@ import java.util.UUID
  * @property isActive Whether this is the currently active provider
  * @property providerKey Random UUID naming this provider in live sync. Unlike [id] (a local
  *   autoincrement) it's the same on every device, and unlike URL + username it survives edits.
- *   See `docs/plans/20260929_live-sync-plan.md` → Record model.
+ *   See `docs/plans/archive/20260929_live-sync-plan.md` → Record model.
  */
 @Entity(tableName = "providers", indices = [Index(value = ["providerKey"], unique = true)])
 data class ProviderEntity(

@@ -153,7 +153,7 @@ class AppContainer(
      * each profile signs in to Jellyfin as its own user. Xtream providers whose category filters
      * differ between the two profiles get their hidden-category flags recomputed. The device moves to
      * the provider the new profile last picked, if it still exists; otherwise it stays on its current
-     * one (see docs/plans/20261002_profile-last-provider-plan.md). Callers must also drop any screen still
+     * one (see docs/plans/archive/20261002_profile-last-provider-plan.md). Callers must also drop any screen still
      * holding a repository, which the nav hosts do by rebuilding the back stack from home.
      */
     suspend fun switchProfile(profileId: String) {
@@ -205,7 +205,7 @@ class AppContainer(
      * Another device deleted the provider this one was using, and `ProviderRepository.deleteProvider`
      * moved it to the first remaining one: every cached repository is dropped, and the switch is
      * announced on [externalSwitches] so no screen stays on the deleted provider. See
-     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
+     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
      */
     suspend fun activeProviderChangedExternally() {
         clearAllCaches()
@@ -228,7 +228,7 @@ class AppContainer(
      * getMediaRepository() builds both from the new values. Before, only the factory's copy was
      * dropped and the repository reconnected its old instance with the old login. A screen still
      * holding the old repository keeps it until it asks again; playback in progress keeps its
-     * stream URL. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
+     * stream URL. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
      */
     suspend fun onProvidersChanged(providerIds: Set<Long>) {
         mutex.withLock {

@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
  * The payload of each [SyncKind], as it travels in [SyncRecord.payload]: only what another device
  * needs to recreate the item — never local ids (they differ per device), sync statistics or
  * per-device state such as which provider is active or a Jellyfin session token. See
- * `docs/plans/20260929_live-sync-plan.md` → What syncs.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → What syncs.
  */
 object SyncPayloads {
     val json = Json { ignoreUnknownKeys = true }

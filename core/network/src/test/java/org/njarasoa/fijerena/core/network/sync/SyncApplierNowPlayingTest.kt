@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * A now-playing record goes to [NowPlayingStore] and nowhere else: no version, no tombstone, no
- * step of either sync clock. See docs/plans/20261001_live-sync-now-playing-plan.md → Phase 2.1.
+ * step of either sync clock. See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Phase 2.1.
  */
 class SyncApplierNowPlayingTest {
     private val settingsSync = mockk<SettingsSyncDao>(relaxed = true)

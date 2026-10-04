@@ -864,7 +864,7 @@ its new data source.
 > [20260929_live-sync-plan.md](20260929_live-sync-plan.md), which has no profiles and keys
 > records by a synced `providerKey`, not `profile_id`. Kept for history.
 
-`docs/plans/20260809_xtream-multi-device-sync-plan.md` specifies a server-side
+The Xtream multi-device sync plan (`20260809_xtream-multi-device-sync-plan.md`, since deleted and replaced by [the live sync plan](20260929_live-sync-plan.md)) specified a server-side
 `watch_history(profile_id, item_id, content_type, position_ms, duration_ms, is_completed, ...)`
 table with `PRIMARY KEY (profile_id, item_id, content_type)`. The local schema above is that shape
 with `providerId` in place of `profile_id`, which makes the eventual outbox a column mapping rather

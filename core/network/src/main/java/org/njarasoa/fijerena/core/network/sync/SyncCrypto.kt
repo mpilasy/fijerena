@@ -10,7 +10,7 @@ import javax.crypto.spec.SecretKeySpec
 
 /**
  * What the server may see of a record: an opaque key, opaque provider/profile tags for its
- * cascades, and a sealed payload. See `docs/plans/20260929_live-sync-plan.md` → Security.
+ * cascades, and a sealed payload. See `docs/plans/archive/20260929_live-sync-plan.md` → Security.
  */
 interface SyncCrypto {
     /** The record's key as the server stores it; the same [SyncKey] always gives the same id. */

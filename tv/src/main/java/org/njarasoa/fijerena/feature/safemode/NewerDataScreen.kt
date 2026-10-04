@@ -39,7 +39,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 /**
  * Shown instead of home when `providers.db` was written by a newer build ([ProvidersDbGuard]).
  * Focus lands on Close, the safe choice; Reset sources asks first, sets the file aside and
- * restarts. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-01.
+ * restarts. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-01.
  */
 @Composable
 fun NewerDataScreen() {

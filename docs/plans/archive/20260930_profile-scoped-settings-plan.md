@@ -9,7 +9,7 @@ Move two settings from device/provider scope to the profile:
 2. **Category filters** — today one set per provider (`ProviderSettings.categoryFilters`: rules,
    include/exclude mode, allowed scripts). Becomes one complete set per (profile, provider).
 
-Context: `docs/plans/20260929_live-sync-plan.md` → User profiles.
+Context: `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
 
 ## Decisions (2026-09-30)
 
@@ -19,7 +19,7 @@ Context: `docs/plans/20260929_live-sync-plan.md` → User profiles.
   filters are copied to every existing profile, so nobody's view changes on upgrade.
 - **Excluded flags: recompute on profile switch** (not a per-profile exclusion table).
   *Superseded 2026-10-01:* rewriting item flags took 30–50 s per switch on a Shield; only
-  categories carry the flag now — see `docs/plans/20261001_fast-profile-switch-plan.md`. Xtream
+  categories carry the flag now — see `docs/plans/archive/20261001_fast-profile-switch-plan.md`. Xtream
   applies filters by setting `excluded` on the shared `xtream_categories` / `xtream_streams` /
   `xtream_series` rows, read by ~34 queries. Keeping that and re-running the existing local
   `XtreamCategoryExclusionSync.recompute` on switch leaves every query untouched. A per-profile

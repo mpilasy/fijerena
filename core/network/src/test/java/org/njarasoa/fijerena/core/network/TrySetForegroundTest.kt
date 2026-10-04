@@ -27,7 +27,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * A refused foreground start must not fail a worker's run
- * (docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-11).
+ * (docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-11).
  */
 class TrySetForegroundTest {
     @get:Rule

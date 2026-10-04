@@ -15,7 +15,7 @@ import kotlinx.coroutines.SupervisorJob
  * one unreadable file, and the app is gone, on every launch if it happens at startup. Scopes from
  * here log the exception and record it in [CrashLog] instead; the failed coroutine ends, the
  * scope and its siblings keep running. See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-24.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-24.
  */
 object AppScopes {
     fun create(

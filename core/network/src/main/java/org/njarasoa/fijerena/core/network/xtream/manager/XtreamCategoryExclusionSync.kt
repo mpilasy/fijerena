@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
  * Only categories carry the flag: a stream or series is hidden when its category is, which the
  * queries check (see XtreamStreamDao / XtreamSeriesDao). So a profile switch or a filter edit
  * writes a few hundred category rows, never the catalogue. See
- * docs/plans/20261001_fast-profile-switch-plan.md.
+ * docs/plans/archive/20261001_fast-profile-switch-plan.md.
  *
  * Kept independent of [XtreamContentManager] so it can be called directly from a
  * settings-save flow (e.g. `ProviderRepository`) without constructing a session manager.

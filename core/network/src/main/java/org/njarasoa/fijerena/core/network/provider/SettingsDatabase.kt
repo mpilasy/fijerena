@@ -194,7 +194,7 @@ abstract class SettingsDatabase : RoomDatabase() {
         /**
          * Migration 10→11: the `profiles` table, seeded with the Default profile every existing
          * favourite and watch-state row is assigned to by `XtreamDatabase`'s 19→20.
-         * See `docs/plans/20260929_live-sync-plan.md` → User profiles.
+         * See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
          */
         val MIGRATION_10_11 =
             object : Migration(10, 11) {
@@ -218,7 +218,7 @@ abstract class SettingsDatabase : RoomDatabase() {
         /**
          * Migration 12→13, live sync phase 3: `providers.providerKey` (a random UUID per existing
          * provider, unique) and the `sync_tombstone` table for provider and profile deletions.
-         * See `docs/plans/20260929_live-sync-plan.md` → Record model, Deletions.
+         * See `docs/plans/archive/20260929_live-sync-plan.md` → Record model, Deletions.
          */
         val MIGRATION_12_13 =
             object : Migration(12, 13) {

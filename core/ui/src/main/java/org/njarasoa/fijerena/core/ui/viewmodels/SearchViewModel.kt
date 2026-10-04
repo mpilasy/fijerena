@@ -460,7 +460,7 @@ class SearchViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md). Unlike
+     * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike
      * [isFavorite], this has no synchronous in-memory cache to read — `watch_state` reads are
      * suspend since Phase 3 — so building the long-press menu target for a search result means an
      * explicit fetch rather than an inline call.

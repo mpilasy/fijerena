@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
  * SQLite: triggers run in the writing transaction, so nothing is changed without being queued, and
  * they catch every write path — including indirect ones such as a TMDB group completion updating
  * sibling rows — without each call site having to remember. See
- * `docs/plans/20260929_live-sync-plan.md` → Flow.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → Flow.
  *
  * Each trigger advances [SyncClockEntity.hlc] and records the key in [SyncVersionEntity] at that
  * value, pending. A new [SyncTombstoneEntity] with `deletedAt = 0` is stamped with the clock too. Nothing

@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
  * Two profiles on the same provider share the tables but never each other's rows — see
- * `docs/plans/20260929_live-sync-plan.md` → User profiles, Phase 1.
+ * `docs/plans/archive/20260929_live-sync-plan.md` → User profiles, Phase 1.
  */
 class MediaRepositoryProfileTest {
     private lateinit var context: Context

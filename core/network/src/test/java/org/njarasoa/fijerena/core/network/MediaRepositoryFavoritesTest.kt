@@ -26,7 +26,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Favourites on `favorite_state` — see `docs/plans/20260828_favorites-durable-storage-plan.md`.
+ * Favourites on `favorite_state` — see `docs/plans/archive/20260828_favorites-durable-storage-plan.md`.
  *
  * The defect these exist for: the old blob did `take(providerSettings.favoritesMaxSize)` on every
  * write, so favouriting past the cap silently evicted the oldest entry.
@@ -76,7 +76,7 @@ class MediaRepositoryFavoritesTest {
             assertEquals(150, repository.getFavoritesForContentType(ContentType.MOVIES).size)
         }
 
-    // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-15: a profile or provider
+    // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-15: a profile or provider
     // switch closes every cached repository; close() used to cancel the write queue, dropping
     // whatever was still in it, and every later write from a screen still holding the repository.
     @Test

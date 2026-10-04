@@ -16,7 +16,7 @@ import java.io.File
  * an unbroken chain of migrations from v7 to [XtreamDatabase.DB_VERSION], and a committed schema
  * for every version since the history starts. The upgrade itself, with data, runs on a device:
  * `XtreamDatabaseUpgradeTest` (androidTest). See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
  */
 class XtreamDatabaseMigrationChainTest {
     private val schemaDir = File("schemas/${XtreamDatabase::class.java.name}")

@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import javax.crypto.spec.SecretKeySpec
 
-/** The end-to-end encryption and pairing pieces — see docs/plans/20260929_live-sync-plan.md → Security. */
+/** The end-to-end encryption and pairing pieces — see docs/plans/archive/20260929_live-sync-plan.md → Security. */
 class SyncCryptoTest {
     private val key = SyncKey("profile", "provider", SyncKind.FAVORITE_STREAM, "m1", "MOVIES")
 
@@ -136,7 +136,7 @@ class SyncCryptoTest {
 
     // F-07 was done without changing the AAD (the planned "AAD v2" would have made every device not
     // yet updated drop the new records), so devices on either side of the update keep reading each
-    // other's records. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-07.
+    // other's records. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-07.
     @Test
     fun `this app reads records sealed by an app from before the sealed metadata`() {
         val crypto = AccountKeyCrypto(AccountKeyCrypto.newAccountKey())

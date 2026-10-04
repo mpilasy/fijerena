@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gate for docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-05.
+# Gate for docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-05.
 #
 # Since Compose UI 1.10 a FocusRequester whose target isn't attached yet prints a warning and
 # returns false; it no longer throws IllegalStateException. So

@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
  * `setProvider()`, which runs on `Dispatchers.IO`.
  *
  * There is no cap and no trim query. That is the point of the table — see
- * `docs/plans/20260828_favorites-durable-storage-plan.md`.
+ * `docs/plans/archive/20260828_favorites-durable-storage-plan.md`.
  */
 @Dao
 interface FavoriteStateDao {

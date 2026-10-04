@@ -146,7 +146,7 @@ class SyncApi(
      * With protocol-level pings, a socket that died without a close (Wi-Fi dropped, a NAT entry
      * expired) fails once a pong is missed and reconnects. Without them, sends kept succeeding into
      * the void and live updates silently stopped until the app next came to the foreground. See
-     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-26.
+     * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-26.
      */
     // internal, not private: SyncApiSocketTest checks the ping interval it is built with.
     internal val socketClient: OkHttpClient by lazy { client.newBuilder().pingInterval(SOCKET_PING_SECONDS, TimeUnit.SECONDS).build() }
@@ -154,7 +154,7 @@ class SyncApi(
     /**
      * The HTTP calls' client: an overall deadline on top of the per-read timeouts, so a server
      * that trickles bytes fails the pass (and is retried) instead of holding it forever. See
-     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
      */
     // internal, not private: SyncApiSocketTest checks the socket client doesn't get it.
     internal val httpClient: OkHttpClient by lazy { client.newBuilder().callTimeout(CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS).build() }
@@ -191,7 +191,7 @@ class SyncApi(
                 }
                 // A captive portal or a proxy can answer 200 with an HTML page: that's a server we
                 // couldn't really reach, retried like one — not a crash of the sync pass. See
-                // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-23.
+                // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-23.
                 try {
                     json.decodeFromString<T>(text)
                 } catch (e: kotlinx.serialization.SerializationException) {

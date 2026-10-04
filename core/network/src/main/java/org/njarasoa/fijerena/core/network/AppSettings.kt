@@ -99,7 +99,7 @@ class AppSettings(
 
     /**
      * The profile using this device. Per device and never synced: the TV and a phone are often in
-     * different hands at the same time. See docs/plans/20260929_live-sync-plan.md → User profiles.
+     * different hands at the same time. See docs/plans/archive/20260929_live-sync-plan.md → User profiles.
      */
     var activeProfileId: String
         get() = prefs.getString(KEY_ACTIVE_PROFILE_ID, null) ?: ProfileEntity.DEFAULT_ID
@@ -108,7 +108,7 @@ class AppSettings(
     /**
      * Whether live sync tells the group what this device is playing. Per device — not per profile
      * and never synced (not in [SYNCED_SETTING_KEYS]): turning it on for the kids' TV must not turn
-     * it on everywhere. Off until turned on. See docs/plans/20261001_live-sync-now-playing-plan.md.
+     * it on everywhere. Off until turned on. See docs/plans/archive/20261001_live-sync-now-playing-plan.md.
      */
     var shareNowPlaying: Boolean
         get() = prefs.getBoolean(KEY_SHARE_NOW_PLAYING, false)
@@ -116,7 +116,7 @@ class AppSettings(
 
     /**
      * Developer mode of the active profile — each profile has its own, off until turned on. See
-     * docs/plans/20260930_profile-scoped-settings-plan.md. Falls back to the install-wide flag
+     * docs/plans/archive/20260930_profile-scoped-settings-plan.md. Falls back to the install-wide flag
      * this replaced until [copyLegacyDevModeToProfiles] has run.
      */
     var isDevMode: Boolean
@@ -153,7 +153,7 @@ class AppSettings(
     /**
      * The `providerKey` of the provider [profileId] last picked, on any device — synced, unlike
      * `providers.isActive`, which is the provider this device is on. A profile switch moves the
-     * device to it. See docs/plans/20261002_profile-last-provider-plan.md.
+     * device to it. See docs/plans/archive/20261002_profile-last-provider-plan.md.
      */
     fun lastProviderKey(profileId: String): String? = prefs.getString(profileKey(KEY_LAST_PROVIDER, profileId), null)
 

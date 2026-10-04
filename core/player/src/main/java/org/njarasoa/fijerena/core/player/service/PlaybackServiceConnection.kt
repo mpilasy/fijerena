@@ -23,7 +23,7 @@ class PlaybackServiceConnection(
      * cleanup ran after the new one had started and released the *new* future through the shared
      * field, leaving the ViewModel holding a released controller (no audio or subtitle tracks, no
      * chapters). Cleanup now releases only its own future, and clears the shared fields only if
-     * they still point at it. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-06.
+     * they still point at it. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-06.
      */
     fun connect(): Flow<MediaController?> =
         callbackFlow {

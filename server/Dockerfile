@@ -1,4 +1,4 @@
-# Self-hosted Fijerena sync server — see docs/plans/20260929_live-sync-plan.md → Self-hosting.
+# Self-hosted Fijerena sync server — see docs/plans/archive/20260929_live-sync-plan.md → Self-hosting.
 # workerd is pinned (package-lock.json): its local Durable Object storage is experimental, so back up
 # /data before upgrading the image.
 FROM node:24-bookworm-slim AS build

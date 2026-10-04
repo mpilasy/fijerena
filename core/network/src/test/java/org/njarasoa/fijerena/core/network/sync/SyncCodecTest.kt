@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-07. */
+/** See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-07. */
 class SyncCodecTest {
     private val crypto = AccountKeyCrypto(AccountKeyCrypto.newAccountKey())
     private val record =

@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 /**
  * One row of the home-screen "Jump Back In" shelf — a genuinely in-progress Movie or TV Shows
  * entry (see `WatchedItem.resumeProgress` in `MediaRepository`), never Live TV. See
- * `docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md`, Phase 3.
+ * `docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md`, Phase 3.
  */
 @Immutable
 data class ContinueWatchingItem(

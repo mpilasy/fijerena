@@ -17,7 +17,7 @@ import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 /**
  * Settings → Diagnostics (developer mode): exceptions this app recorded itself ([CrashLog]) and
  * how its recent processes ended according to the system ([ProcessExits]), newest first. See
- * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-30.
+ * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-30.
  */
 class DiagnosticsViewModel(
     private val context: Context,

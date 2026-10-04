@@ -11,7 +11,7 @@ import java.io.File
  *
  * Never throws: an unreadable or corrupt file counts as no unfinished launches, and a write that
  * fails only loses this launch's entry. See
- * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-10.
+ * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-10.
  */
 class LaunchCounter(
     private val file: File,

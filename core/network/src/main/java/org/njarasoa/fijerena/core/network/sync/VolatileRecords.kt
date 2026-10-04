@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
  * version row: only the latest state of each key matters, so it is held here, in memory, until a
  * push gets it to the server. Each push stamps it with the next tick of the settings sync clock, so
  * every send of a key is newer than the last and the server's last-write-wins takes it. See
- * `docs/plans/20261001_live-sync-now-playing-plan.md`.
+ * `docs/plans/archive/20261001_live-sync-now-playing-plan.md`.
  */
 class VolatileRecords internal constructor() {
     /** One state put for a key; compared by identity, so a newer put is never marked sent by an older push. */

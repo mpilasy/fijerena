@@ -79,7 +79,7 @@ class JellyfinApiService(
             }
             // An overall deadline per call: a server that trickles bytes never trips the per-read
             // timeout. The library listings opt out — a big recursive library legitimately takes
-            // long. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+            // long. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
             install(HttpTimeout) {
                 requestTimeoutMillis = REQUEST_TIMEOUT_MS
             }

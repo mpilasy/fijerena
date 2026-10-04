@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * A remote Stop fires only for this device and the session playing right now, once, and writes to
- * neither database. See docs/plans/20261001_live-sync-now-playing-plan.md → Phase 4.3.
+ * neither database. See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Phase 4.3.
  */
 class SyncApplierRemoteCommandTest {
     private val settingsSync = mockk<SettingsSyncDao>(relaxed = true)

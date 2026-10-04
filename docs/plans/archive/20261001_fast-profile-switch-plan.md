@@ -5,7 +5,7 @@
 Make switching profile near-instant by no longer storing category-filter results on every
 channel, movie and series row.
 
-Context: `docs/plans/20260930_profile-scoped-settings-plan.md` → Decisions, "Excluded flags:
+Context: `docs/plans/archive/20260930_profile-scoped-settings-plan.md` → Decisions, "Excluded flags:
 recompute on profile switch". This plan reverses that decision, with measurements.
 
 ## Problem

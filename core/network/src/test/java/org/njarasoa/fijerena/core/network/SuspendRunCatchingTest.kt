@@ -14,7 +14,7 @@ import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
 
-/** docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-27. */
+/** docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-27. */
 class SuspendRunCatchingTest {
     @Test
     fun `success is wrapped`() =

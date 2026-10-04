@@ -17,7 +17,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * Provider and profile deletions are recorded for live sync, and take their favourite and history
- * tombstones with them. See docs/plans/20260929_live-sync-plan.md → Deletions (tombstones).
+ * tombstones with them. See docs/plans/archive/20260929_live-sync-plan.md → Deletions (tombstones).
  *
  * Runs against this test APK's own databases and prefs, never the app's.
  */

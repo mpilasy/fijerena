@@ -6,7 +6,7 @@ import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 
-/** The devices list's join and staleness rule — see docs/plans/20261001_live-sync-now-playing-plan.md → Phase 2.2. */
+/** The devices list's join and staleness rule — see docs/plans/archive/20261001_live-sync-now-playing-plan.md → Phase 2.2. */
 class SyncNowPlayingJoinTest {
     private val now = 50_000_000L
 

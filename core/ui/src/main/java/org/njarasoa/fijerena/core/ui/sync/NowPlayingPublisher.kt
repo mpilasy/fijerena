@@ -32,7 +32,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 
 /**
  * Tells the sync group what this device is playing, when its owner turned that on — see
- * `docs/plans/20261001_live-sync-now-playing-plan.md` → Publishing. Sends on a change of item or
+ * `docs/plans/archive/20261001_live-sync-now-playing-plan.md` → Publishing. Sends on a change of item or
  * of playing / paused / stopped (debounced, so zapping through channels sends one record), a
  * heartbeat while something is on, and `stopped` once it ends or sharing is turned off. Each send
  * queues one [SyncKind.NOW_PLAYING] record in [VolatileRecords] and asks for a sync pass.

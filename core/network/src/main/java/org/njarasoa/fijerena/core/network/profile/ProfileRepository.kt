@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import java.util.UUID
 
 /**
- * Creating, editing and deleting profiles. See `docs/plans/20260929_live-sync-plan.md` → User
+ * Creating, editing and deleting profiles. See `docs/plans/archive/20260929_live-sync-plan.md` → User
  * profiles.
  */
 class ProfileRepository(
@@ -80,7 +80,7 @@ class ProfileRepository(
                 // delete, and the profile's own row goes last. Killed part-way, the profile is
                 // still listed and deleting it again finishes the job; a deletion received from
                 // another device is re-pulled and re-applied the same way. See
-                // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-14.
+                // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-14.
                 else -> {
                     val xtreamDb = XtreamDatabase.getInstance(context)
                     xtreamDb.withTransaction {
