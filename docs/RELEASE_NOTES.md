@@ -22,6 +22,7 @@
 - **TV search fields don't trap the remote:** the keyboard opens only when you press OK on the field; Back closes it and keeps your place. → Part II Phase 7.
 - **TV: one "current" style:** the selected category and the playing or last-played row show an accent bar and accent text everywhere, not a filled background that looks focused. → Part II Phase 8.
 - **"Search the guide" from a TV Guide finds what the guide shows:** limited to the guide's channels, it now also finds programmes on channels the guide matches by name (several channels often share one guide), and OK plays the guide's channel. → Part III GD5.
+- **TV focus fixes from the final walk-through:** Right on an episode no longer changes season (the season tabs do, one Left away); Left in the TV Guide onto a long programme that started earlier no longer bounces back; in Live sync, Up from Leave reaches the device's Remove button. → regression round.
 
 Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 
