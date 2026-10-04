@@ -7,6 +7,8 @@
 # picked from one · Recent · Favorites, Refresh at its end) above the rows; Left/Right on the
 # tabs switch the list; Left/Right on a row do nothing; an empty tab keeps focus on the tab.
 # OK on a row promotes to full screen and is deliberately not walked.
+# Ends in browse: Left on the first tab leaves the preview as Back does (Live TV target item 8),
+# so nothing after it is in the panel.
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # Up from the first row lands on the selected tab, not on the Refresh icon.
 UP	Recent
@@ -22,7 +24,6 @@ DOWN	Favorites
 # lands back on the selected tab.
 LEFT	Recent
 UP	Recent
-# Left on a tab moves to the previous tab and switches the list back.
-LEFT	Recent
-# Down lands on the current channel row again (text varies).
-DOWN	3 / 3ABN French / Hold OK or press Menu for actions
+# Left on the first tab leaves the preview as Back does: browse, focus on the playing
+# channel's row (the current channel the walk started on).
+LEFT	3 / 3ABN French / Hold OK or press Menu for actions

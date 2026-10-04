@@ -326,6 +326,7 @@ internal fun LiveTvSplitLayout(
                 onStreamPromote = { },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
                 onRefresh = refreshContext,
+                onLeftFromFirstTab = onBack,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
         }
@@ -736,6 +737,7 @@ internal fun LiveTvSplitLayout(
                     fullScreen = true
                 },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
+                onLeftFromFirstTab = onBack,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
         }

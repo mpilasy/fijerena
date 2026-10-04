@@ -26,6 +26,7 @@
 - **TV focus fixes from the final walk-through:** Right on an episode no longer changes season (the season tabs do, one Left away); Left in the TV Guide onto a long programme that started earlier no longer bounces back; in Live sync, Up from Leave reaches the device's Remove button. → regression round.
 - **TV movie with only a Details tab:** Right on the tab stays put instead of jumping up to Play; the same at the end of every details tab row. → follow-up.
 - **TV full-screen channel list never opens on an empty tab:** when the tab you used last has no channels (an empty Favourites), the list opens on the tab with the channel you are watching, on that channel. → follow-up.
+- **TV: Left from the Live TV preview's channel list goes back to browse:** Left on the first tab beside the preview does what Back does — the channel list with focus on the channel playing. → Part II Live TV target item 8.
 
 Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 

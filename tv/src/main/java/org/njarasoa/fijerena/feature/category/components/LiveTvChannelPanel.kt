@@ -15,6 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -44,7 +49,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
  *
  * Keys: Up from the first row lands on the selected tab, whichever node above it Compose's
  * geometric search picked; Left/Right on the tabs switch the list (focus follows selection, as
- * [TvSectionTabs] does everywhere); Left/Right on a row do nothing — the rows are a `tvPane`
+ * [TvSectionTabs] does everywhere), and Left on the first tab of the docked panel is Back
+ * ([onLeftFromFirstTab]); Left/Right on a row do nothing — the rows are a `tvPane`
  * with no neighbours; Down from the tabs enters the rows on the current channel when the list
  * has it, else the first row; OK on a row promotes it to full screen, or tunes it in full
  * screen. The rows take focus on the current channel when they appear, so the overlay opens on
@@ -74,6 +80,12 @@ internal fun LiveTvChannelPanel(
     onRefresh: () -> Unit,
     /** Full screen: the panel has just opened over the video and must hold focus at once. */
     overlay: Boolean = false,
+    /**
+     * Docked in the preview: Left on the first tab leaves the preview as Back does (UX overhaul
+     * plan Part II Live TV target item 8). Null (full screen, where Back closes the panel) keeps
+     * focus on the tab.
+     */
+    onLeftFromFirstTab: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -112,7 +124,18 @@ internal fun LiveTvChannelPanel(
                 onTabSelected = { index -> tabs.getOrNull(index)?.let(onContextSelected) },
                 entryFocusRequester = tabsEntry,
                 endFocusRequester = refreshFocus,
-                modifier = Modifier.weight(1f),
+                // On the tabs only, not Refresh: focus follows selection, so a focused tab is the
+                // selected one.
+                modifier =
+                    Modifier.weight(1f).onPreviewKeyEvent { event ->
+                        val leave =
+                            onLeftFromFirstTab != null &&
+                                selectedIndex == 0 &&
+                                event.type == KeyEventType.KeyDown &&
+                                event.key == Key.DirectionLeft
+                        if (leave) onLeftFromFirstTab?.invoke()
+                        leave
+                    },
             )
             CinemaIconButton(
                 onClick = onRefresh,
