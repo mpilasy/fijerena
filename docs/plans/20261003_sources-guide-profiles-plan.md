@@ -6,7 +6,7 @@
 
 | Lane | Phases, in order | Done | Current | Next |
 |---|---|---|---|---|
-| A TV Live TV | P8 | — | P8 (since 2026-10-03) | — |
+| A TV Live TV | P8 | P8 (2026-10-03, TV) | — | — |
 | B Profile page | P1 → P2 → P9 | — | P1–P9 (since 2026-10-03) | — |
 | C Sources & guide UI | P3 → P4 → P7 | — | P3–P7 (since 2026-10-03) | — |
 | D Guide refresh | P5a backend → P5b UI | — | P5a (since 2026-10-03) | P5b after C's P4 |
@@ -22,7 +22,7 @@
 | P5b Auto-refresh per guide source: guide sources rows, Settings | Todo (after P4) |
 | P6 Section-root button at depth 4 | Todo (last) |
 | P7 Home keeps Search the guide; search → grid; no channel search | In progress (lane C) |
-| P8 Live TV preview plays on OK, not on focus (TV only) | In progress (lane A, since 2026-10-03) |
+| P8 Live TV preview plays on OK, not on focus (TV only) | **Done 2026-10-03** (`6bda98f9`), checked on the TV emulator with bearstv: Down/Up through rows and Right to another tab left the channel alone; OK on another row tuned it ("Tuning · …"), OK again went full screen; Back → preview on that channel → browse on it; new hint line. Playback itself returned HTTP 511 (bearstv's one-connection limit, a Shield was using it). OK on a row with nothing playing yet plays it. Focus walks `live-tv-back.txt` / `live-tv-preview.txt` to re-record on iptv. |
 | P9 Content filters from the profile, not from the source | In progress (lane B) |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
