@@ -33,7 +33,7 @@ core:ui ────── core:network
 core:network ── core:player (domain models only)
 ```
 
-**Critical constraint:** `core:player` cannot depend on `core:network` (circular dependency). When the player needs network settings (e.g., cellular buffer multipliers), it reads directly from `SharedPreferences` via `context.getSharedPreferences("app_settings")`.
+**Critical constraint:** `core:player` cannot depend on `core:network` (circular dependency). When the player needs network settings, it reads directly from `SharedPreferences` via `context.getSharedPreferences("app_settings")`.
 
 ---
 
@@ -146,7 +146,7 @@ Buffers swap dynamically at runtime via `AdaptiveLoadControl` without restarting
 | Cellular Live TV | 50s | 50s | 2.5s | 5s |
 | Cellular VOD | 40s | 100s | 8s | 10s |
 
-Cellular buffers support a user-configurable multiplier (0.5x - 3.0x) persisted in SharedPreferences.
+Cellular buffers use these sizes as they are. The user-configurable multiplier (0.5x - 3.0x) was removed (UX overhaul A-W5): the player no longer reads `cellular_live_multiplier` / `cellular_vod_multiplier`; the keys stay only for settings export / import of older files.
 
 ### Performance Analytics
 
@@ -405,7 +405,6 @@ The stats overlay is `ui/player/components/overlays/TvStatsOverlay.kt` (mobile: 
 | Player | `player/MobilePlayerScreen.kt` | Touch-based playback controls |
 | Search | `search/SearchScreen.kt` | Search input + results |
 | Settings | `settings/SettingsScreen.kt` | App configuration |
-| Cellular Buffer Settings | `settings/MobileCellularBufferSettingsScreen.kt` | Buffer multiplier sliders (dev mode) |
 | Provider Selection | `provider/ProviderSelectionScreen.kt` | Provider list |
 | Add Provider | `provider/MobileAddProviderScreen.kt` | New provider form |
 | EPG Guide | `epg/MobileEpgGuideScreen.kt` + `epg/MobileGuideGrid.kt` | TV guide |
@@ -487,7 +486,7 @@ Client-side filename matching against scanned file list.
 `SettingsExportManager` (`core/network/`) serializes all app configuration to a JSON file via the Storage Access Framework.
 
 **Exported data:**
-- Global `AppSettings`: theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers
+- Global `AppSettings`: theme, UI scale, dev mode, EPG auto-refresh
 - All provider configurations: name, URL, username, type, config JSON, per-provider settings, active flag
 - All EPG sources: URL, label, timezone offset, enabled state
 

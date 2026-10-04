@@ -493,26 +493,10 @@
     <string name="player_stats_health_unstable_format">TSY MARIN-TOERANA (Isa %1$d)</string>
 
     <!-- Mobile Settings Cards -->
-    <string name="settings_cellular_buffer_title">Fanamboarana ny buffer finday</string>
-    <string name="common_warning">Fampitandremana</string>
-    <string name="settings_cellular_buffer_advanced_label">Fandrindrana milalao</string>
-    <string name="settings_cellular_buffer_warning_desc">Miova ny kalitaon\'ny fandehanan-tsary rehefa ovaina ny fampitomboana. Manan-kery amin\'ny fandehanana manaraka ny fiovana.</string>
-    <string name="settings_cellular_live_buffer_title">Buffer TV Mivantana</string>
-    <string name="settings_cellular_live_buffer_desc">Ovay ny haben\'ny buffer ho an\'ny fandefasana TV mivantana amin\'ny finday</string>
-    <string name="settings_cellular_multiplier_format">Fampitomboana: %1$sx</string>
-    <string name="settings_cellular_vod_buffer_title">Buffer VOD</string>
-    <string name="settings_cellular_vod_buffer_desc">Ovay ny haben\'ny buffer ho an\'ny fandefasana VOD amin\'ny finday</string>
-    <string name="settings_apply_changes">Ampihariny ny fiovana</string>
-    <string name="settings_reset_to_defaults">Avereno amin\'ny voalohany</string>
-    <string name="settings_buffer_preview_title">Topi-maso momba ny buffer</string>
-    <string name="common_min">Farafahakeliny</string>
-    <string name="common_max">Farafahabeny</string>
-    <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">Momba</string>
     <string name="settings_about_tagline">Fitaovana filalaovana horonantsary avo lenta ho an\'ny Android</string>
     <string name="settings_developer_mode_title">Fomba mpamorona</string>
     <string name="settings_developer_mode_desc">Alefaso ny antontan\'isa ho an\'ny mpamorona sy ny endri-javatra fanadiovana</string>
-    <string name="settings_configure_cellular_buffers_button">Amboary ny buffer finday</string>
     <string name="settings_export_import_section_title">Alefa / Ampidiro</string>
     <string name="settings_export_import_desc">Alefaso amin\'ny rakitra ny fandrindrana rehetra na ampidiro avy amin\'ny fitaovana hafa</string>
     <string name="common_export">Alefa</string>

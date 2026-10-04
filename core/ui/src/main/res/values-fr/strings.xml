@@ -547,26 +547,10 @@
     <string name="player_stats_health_unstable_format">INSTABLE (Points : %1$d)</string>
 
     <!-- Mobile Settings Cards -->
-    <string name="settings_cellular_buffer_title">Paramètres de mémoire tampon cellulaire</string>
-    <string name="common_warning">Avertissement</string>
-    <string name="settings_cellular_buffer_advanced_label">Paramètres avancés</string>
-    <string name="settings_cellular_buffer_warning_desc">La modification des multiplicateurs de mémoire tampon affecte la qualité de lecture cellulaire. Les changements prennent effet à la prochaine lecture.</string>
-    <string name="settings_cellular_live_buffer_title">Mémoire tampon TV en direct</string>
-    <string name="settings_cellular_live_buffer_desc">Ajuster la taille de la mémoire tampon pour les flux TV en direct cellulaires</string>
-    <string name="settings_cellular_multiplier_format">Multiplicateur : %1$sx</string>
-    <string name="settings_cellular_vod_buffer_title">Mémoire tampon VOD</string>
-    <string name="settings_cellular_vod_buffer_desc">Ajuster la taille de la mémoire tampon pour les flux VOD cellulaires</string>
-    <string name="settings_apply_changes">Appliquer les modifications</string>
-    <string name="settings_reset_to_defaults">Réinitialiser par défaut</string>
-    <string name="settings_buffer_preview_title">Aperçu de la mémoire tampon</string>
-    <string name="common_min">Min</string>
-    <string name="common_max">Max</string>
-    <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">À propos</string>
     <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
     <string name="settings_developer_mode_title">Mode développeur</string>
     <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
-    <string name="settings_configure_cellular_buffers_button">Configurer les mémoires tampons cellulaires</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
     <string name="settings_diagnostics_open">Ouvrir les diagnostics</string>

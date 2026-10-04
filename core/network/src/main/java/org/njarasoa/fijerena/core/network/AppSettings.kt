@@ -387,8 +387,9 @@ class AppSettings(
         }
 
     /**
-     * Get or set the cellular buffer multiplier for Live TV (0.5x - 3.0x).
-     * Default: 1.0x (use baseline values)
+     * The cellular buffer multiplier for Live TV (0.5x - 3.0x) an older build let the user set.
+     * No longer shown or applied (the player always uses 1.0x, UX overhaul A-W5); kept so settings
+     * export / import of older files keeps its field.
      */
     var cellularLiveMultiplier: Float
         get() = prefs.getFloat(KEY_CELLULAR_LIVE_MULTIPLIER, DEFAULT_CELLULAR_MULTIPLIER)
@@ -397,10 +398,7 @@ class AppSettings(
             prefs.edit { putFloat(KEY_CELLULAR_LIVE_MULTIPLIER, clamped) }
         }
 
-    /**
-     * Get or set the cellular buffer multiplier for VOD (0.5x - 3.0x).
-     * Default: 1.0x (use baseline values)
-     */
+    /** As [cellularLiveMultiplier], for VOD: kept for export / import only, never applied. */
     var cellularVodMultiplier: Float
         get() = prefs.getFloat(KEY_CELLULAR_VOD_MULTIPLIER, DEFAULT_CELLULAR_MULTIPLIER)
         set(value) {
@@ -548,14 +546,6 @@ class AppSettings(
         val current = readHistory(key).toMutableList()
         current.removeAll { it.equals(query, ignoreCase = true) }
         prefs.edit { putString(historyKey(key, activeProfileId), current.joinToString("\u001F")) }
-    }
-
-    /**
-     * Reset both cellular buffer multipliers to default (1.0x).
-     */
-    fun resetCellularBuffers() {
-        cellularLiveMultiplier = DEFAULT_CELLULAR_MULTIPLIER
-        cellularVodMultiplier = DEFAULT_CELLULAR_MULTIPLIER
     }
 
     var lastShrinkAtMs: Long

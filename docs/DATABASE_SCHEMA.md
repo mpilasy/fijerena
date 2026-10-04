@@ -579,8 +579,8 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `epg_refresh_interval`| INT | EPG refresh interval hours: 4/8/12/24/48, or -1 (Never) |
 | `content_auto_refresh`| BOOLEAN | Background provider content sync toggle |
 | `content_refresh_time`| TEXT | Content refresh start time `HH:mm` (default `04:00`) |
-| `cellular_live_multiplier` | FLOAT | Live buffer multiplier on cellular (0.5-3.0) |
-| `cellular_vod_multiplier` | FLOAT | VOD buffer multiplier on cellular (0.5-3.0) |
+| `cellular_live_multiplier` | FLOAT | Live buffer multiplier on cellular (0.5-3.0). No longer shown or applied (UX overhaul A-W5); kept for settings export / import |
+| `cellular_vod_multiplier` | FLOAT | VOD buffer multiplier on cellular (0.5-3.0). No longer shown or applied; kept for export / import |
 | `search_history` | TEXT | Last 20 search terms, U+001F-separated |
 | `epg_search_history` | TEXT | Last 20 EPG search terms, U+001F-separated |
 | `favorite_category_rows_purged_v1` | BOOLEAN | One-time flag, per install (never synced): `FavoriteCategoryRowCleanup` has removed the bogus `fav_cat_<categoryId>` stream favourites from `favorite_state` (every provider and profile, each with a `sync_tombstone`). Set only after the purge succeeds |

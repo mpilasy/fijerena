@@ -170,10 +170,8 @@ Before playback, the app POSTs a `DeviceProfile` to Jellyfin's `/Items/{id}/Play
 |---------|-----|-----|-------|
 | WiFi Live TV | 15s | 30s | Playback starts after 0.5s buffered |
 | WiFi VOD | 30s | 60s | Playback starts after 2.5s buffered; 10s back buffer |
-| Cellular Live TV | 50s | 50s | (multiplier-scaled) |
-| Cellular VOD | 40s | 100s | (multiplier-scaled) |
-
-Cellular multipliers are tunable 0.5×–3.0× in dev mode via Settings → Cellular Buffer Settings.
+| Cellular Live TV | 50s | 50s | |
+| Cellular VOD | 40s | 100s | |
 
 ### In-Player EPG (Live TV)
 Current programme title, time range, progress bar, and **video resolution/codec** shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
@@ -360,7 +358,6 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 - **Payload size tracking:** API response sizes shown in category grid
 - **EPG DB stats:** programme and channel counts in EPG Browser header
 - **Source labels:** guide source name shown on each airing in EPG Browser
-- **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
 - **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. Logins are masked (`***`) in the crash log, the system log and the shared text: Xtream user/password in stream paths, `password`/`token`-style parameters, `user:password@` in addresses. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
 - **Error screens recover on their own:** a TV or mobile error shown while the device was offline (default network without `INTERNET` + `VALIDATED`, or lost) retries once when the network comes back, so a TV that starts before its Wi-Fi is up after wake recovers without a key press. An error shown while online is never retried by itself. TV error states land focus on Retry
 - **Crash-loop safe mode** (always on, not a developer setting): when three launches within 10 minutes each end within 30 s of starting, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be the cause — EPG initialisation and auto-refresh, catalogue sync, live sync, the now-playing publisher, the startup migrations, and the nav host's source lookups and orphan sweep. **Continue** restarts the app normally; **Clear caches** (confirmed) removes the EPG index, every source's downloaded catalogue and the poster cache, keeping sources, profiles, favourites and watch history; **Show diagnostics** opens Diagnostics. See `docs/RUN_GUIDE.md` → Crash-loop safe mode
@@ -389,7 +386,6 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | UI Scale | 40%, 60%, 80% (default) or 100%; scales category grid and item cards |
 | Play next episode automatically | (Playback) Per profile and synced, off by default: near the end of an episode the next one is offered and starts when it ends (Xtream TV shows) |
 | Developer Mode | Enables debug overlays and advanced settings |
-| Cellular Buffer Settings | (dev mode) Tune cellular buffer multipliers |
 
 ### Per-Source Settings (in Edit Source)
 

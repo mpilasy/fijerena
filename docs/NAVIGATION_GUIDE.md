@@ -37,7 +37,6 @@ sealed interface Screen {
     @Serializable data class EpgGuide(val categoryId: String, val categoryName: String, val focusChannelId: String? = null) : Screen
     @Serializable data class EpgBrowser(val categoryId: String? = null, val categoryName: String? = null) : Screen
     @Serializable data class EpgManagement(val providerId: Long) : Screen
-    @Serializable data object CellularBufferSettings : Screen  // Dev mode only
     @Serializable data object SyncSettings : Screen  // Settings → Live sync
     @Serializable data object Diagnostics : Screen  // Dev mode: recorded crashes, process exits; also from SafeMode
     @Serializable data object SafeMode : Screen  // Start destination after a crash loop (SafeMode.isActive)
@@ -105,7 +104,6 @@ ContentTypeSelection (Home; ProfilePicker also opens from the header avatar)
       │     └─→ AddProvider(editId) (edit)
       ├─→ EpgManagement(providerId)
       ├─→ SyncSettings (Live sync)
-      ├─→ CellularBufferSettings (dev mode only, mobile)
       └─→ Diagnostics (dev mode only)
 ```
 

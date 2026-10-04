@@ -53,7 +53,6 @@ import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.safemode.MobileNewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
-import org.njarasoa.fijerena.feature.settings.MobileCellularBufferSettingsScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -566,9 +565,6 @@ fun MobileNavHost(
                     onManageProviders = {
                         navController.navigateOnce(Screen.ProviderSelection)
                     },
-                    onCellularBuffers = {
-                        navController.navigateOnce(Screen.CellularBufferSettings)
-                    },
                     onDiagnostics = {
                         navController.navigateOnce(Screen.Diagnostics)
                     },
@@ -628,15 +624,6 @@ fun MobileNavHost(
             composable<Screen.Diagnostics> {
                 org.njarasoa.fijerena.feature.settings
                     .MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
-            }
-
-            // Cellular Buffer Settings Screen
-            composable<Screen.CellularBufferSettings> {
-                MobileCellularBufferSettingsScreen(
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                )
             }
 
             // Search Screen

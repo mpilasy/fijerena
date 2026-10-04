@@ -180,13 +180,6 @@ sealed interface Screen {
         val providerId: Long,
     ) : Screen
 
-    /**
-     * Cellular Buffer Settings screen destination (developer mode only).
-     * Configure cellular buffer multipliers for Live TV and VOD.
-     */
-    @Serializable
-    data object CellularBufferSettings : Screen
-
     /** Settings → Live sync: linking this device to a sync account, pairing, devices. */
     @Serializable
     data object SyncSettings : Screen

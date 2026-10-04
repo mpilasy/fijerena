@@ -69,7 +69,6 @@ fun MobileSettingsScreen(
     onThemeChanged: (String) -> Unit = {},
     onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onCellularBuffers: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onGuideSources: (providerId: Long) -> Unit = {},
@@ -512,10 +511,6 @@ fun MobileSettingsScreen(
                     SettingsListRow(
                         title = stringResource(R.string.settings_diagnostics_open),
                         onClick = onDiagnostics,
-                    )
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_configure_cellular_buffers_button),
-                        onClick = onCellularBuffers,
                     )
                 }
             }

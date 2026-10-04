@@ -412,17 +412,11 @@ class StreamingPlaybackService : MediaSessionService() {
             DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
-        // The application context, as AppSettings uses: the app has loaded this file by now, and
-        // this service's own context would look up the prefs folder on disk again (R-28).
-        val prefs = applicationContext.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
-        val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
-
+        // Cellular buffers always use the profile's own sizes (1.0×): the multiplier setting is gone
+        // (UX overhaul A-W5), and a value saved by an older build must not keep applying unseen.
         val loadControl =
             AdaptiveLoadControl(
                 contentType = contentType,
-                cellularLiveMultiplier = cellularLiveMultiplier,
-                cellularVodMultiplier = cellularVodMultiplier,
                 vodTargetBufferBytes =
                     org.njarasoa.fijerena.core.player.config.NetworkBufferProfile.vodTargetBufferBytes(
                         (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).largeMemoryClass,
