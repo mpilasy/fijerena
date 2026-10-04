@@ -1,6 +1,6 @@
 # Sources, Guide Sources, Profiles and Home Plan — TV + mobile
 
-**Status:** Proposed (2026-10-03), not started. Decisions D1–D6 below are recommendations waiting
+**Status:** Proposed (2026-10-03), not started. Decisions D1–D7 below are recommendations waiting
 for the user's confirmation.
 
 ## Progress
@@ -13,6 +13,7 @@ for the user's confirmation.
 | P4 Guide sources under the source; Settings shows Manage sources only | Todo |
 | P5 Auto-refresh per guide source | Todo |
 | P6 Home button on every page | Todo |
+| P7 Home keeps Search the guide; search ↔ grid; no channel search | Todo |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
@@ -32,6 +33,10 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 7. Settings' "Switch source" should be "Manage sources": editing the current source from Settings
    and from the Sources page is odd and duplicated.
 8. Search the guide should have a button next to its Refresh to edit the guide sources.
+9. Home doesn't need both the TV Guide (calendar) and the Search the guide (book) buttons; keep
+   one, and the search is the one used most.
+10. Search the guide should have a button that opens the TV Guide grid.
+11. Search the guide's channel mode (TV "What's on", mobile "Chan.") is no longer needed.
 
 ## How it works today (checked in the code, `main` at `b905113e`)
 
@@ -56,6 +61,12 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
   M3U, Local with an M3U) and Settings → Source & guide → **Guide Sources** (the active source),
   which reads as a global setting. Edit Source (TV `TvAddProviderScreen`, mobile
   `MobileAddProviderScreen`) doesn't mention guides.
+- **Home's header** (TV and mobile, GD5) has both **TV Guide** (calendar icon, the grid for
+  Recent) and **Search the guide** (book icon, the EPG browser), plus Search All. **Search the
+  guide** has two modes, Programme and channel (TV "What's on", mobile "Chan."; strings
+  `epg_browser_search_mode_channel`, `epg_browser_mode_channel`), `EpgBrowserViewModel.SearchMode`
+  PROGRAM / CHANNEL; the channel mode searches channel names and lists what is on now and next. It
+  has no way to the grid unless it was opened from one (Back).
 - **Settings → Source & guide** has Switch source (opens the Sources list, where each source has
   Use, Edit, Guide and ⋮), **Edit this source** (Edit Source for the active one), Guide Sources and
   Guide auto-refresh; the Profiles group's content-filters row also opens Edit Source on the
@@ -87,6 +98,7 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 | D3 | Keep the Sources list's **Guide** button once guide sources live in Edit Source? | Keep it as a shortcut to the same screen; remove only Settings → Source & guide → Guide Sources. |
 | D4 | Where does the Home button go? | TV: a house icon at the right end of each screen's header row (the same slot everywhere, after the screen's own buttons), reached by Up like the other header buttons; in the full-screen player, a **Home** button in the OSD's ⋮ More group. Mobile: a house icon in each top app bar's actions (and the player's controls). Not on Home, the profile picker, Safe mode or the newer-data screen. |
 | D6 | What stays of the source rows in Settings? | One **Manage sources ›** row (its value: the source in use) opening the Sources list, where switching, editing and guide sources already live. Edit this source, Guide Sources and the content-filters shortcut leave Settings; the Profiles group keeps a one-line note that filters are set per source in Edit Source. |
+| D7 | What does the grid button on Search the guide open? | Opened from a TV Guide (with its "In <list> only" filter): the same as Back, return to that grid. Opened from Home: the TV Guide for Recent, which is what Home's TV Guide button opened. |
 | D5 | What does Home do when there is no source (Home can't show anything)? | Hide the button on those screens — Settings is the start screen then, and Home would only send the viewer back to it. |
 
 ## Target
@@ -112,7 +124,12 @@ nothing (TV) / leaves the app (mobile), as after launch. Anything that stops on 
 TV preview and player) stops as it does on Back. A screen with unsaved edits (mobile Edit Source's
 discard prompt, M4) asks first, the same way Back does.
 
-**Search the guide (both platforms):** next to its Refresh button in the header, a **Guide
+**Home (both platforms):** the header keeps **Search the guide** and Search All; the TV Guide
+button goes (the grid stays reachable from each category's header, the player's Guide button and
+Search the guide).
+
+**Search the guide (both platforms):** one mode, programme search (the mode chips go); a **TV
+Guide** icon button in the header opening the grid (D7); next to its Refresh button, a **Guide
 sources** icon button opening the guide sources screen of the source in use (the guides the search
 runs over). Back returns to it. Shown when that source can have guide sources.
 
@@ -134,10 +151,13 @@ on.
 
 | P6 | **Home button on every page**: one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` when Home is on the stack, else `navigate(Screen.ContentTypeSelection) { popUpTo(0) { inclusive = true } }` — and one button per platform (TV `TvHomeButton` for the header slot, mobile a top-bar action), passed as `onHome` to every screen in D4's list; TV player OSD and mobile player controls get it too; hidden when there is no source (D5). TV focus: a header stop at the row's end, reachable by Up from the content like the existing header buttons. Focus walks updated. Strings ×3 ("Home"). | both nav hosts; TV screens' headers (Settings, Sources, Edit Source, guide sources, Live sync, Diagnostics, Live TV / Movies / TV Shows browse and preview, details, episodes, Search, TV Guide, Search the guide), `TvPlayerControlsOverlay`; mobile top bars and `MobileControlsOverlay`; `scripts/focus-walks/*` | M | Med (touches every screen header; TV focus order in each) |
 
+| P7 | **Home keeps Search the guide; search ↔ grid; no channel search**: Home drops its TV Guide button (TV and mobile; focus walk `home.txt`); Search the guide gets a TV Guide icon button (D7: pop back to the grid it came from, else `EpgGuide` for Recent); the channel mode goes — the mode chips, `SearchMode.CHANNEL`, the channel-search path in `EpgBrowserViewModel` and `XmltvSearchService.searchByChannel` if nothing else calls it, and its strings ×3. | both Home screens (`ContentTypeSelectionScreen`), both Search the guide screens, `EpgBrowserViewModel.kt`, `XmltvSearchService.kt`, both nav hosts, `scripts/focus-walks/home.txt` | S | Low |
+
 Order: P1 and P2 (one lane, the profile dialog), P3 then P4 (one lane, Edit Source), P5 after P4
 (its UI is on the screen P4 links). P1/P2 and P3/P4 can run in parallel. P6 is independent of the
 rest but touches every screen's header and both nav hosts, so it runs alone, after P4 (which also
-edits the nav hosts and Edit Source).
+edits the nav hosts and Edit Source). P7 runs with P4 (both edit Search the guide's header) or
+right after it.
 
 ## Data, sync and safety notes
 
@@ -166,6 +186,9 @@ edits the nav hosts and Edit Source).
   nothing behind it (TV: Back stays on Home; mobile: Back leaves the app); the preview and player
   stop; mobile Edit Source with unsaved edits asks first; hidden on the entry screens and when
   there is no source; TV focus walks: the icon is the header row's last stop on each screen.
+- P7: Home shows Search the guide and Search All, no TV Guide; Search the guide has no mode
+  chips; its TV Guide button returns to the grid it came from, or opens Recent's grid from Home;
+  Back from that grid returns to Search the guide.
 - Phone emulator: the same flows.
 - Upgrade check on the emulators: existing guide sources keep refreshing at the old device-wide
   interval after the update.
