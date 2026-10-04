@@ -223,7 +223,6 @@
     <string name="provider_clear_progress_label">Clear Playback Progress</string>
     <string name="provider_clear_progress_title">Clear All Playback Progress?</string>
     <string name="provider_clear_progress_message">This will remove all saved playback positions. You will start from the beginning when playing any VOD content.</string>
-    <string name="provider_category_filters_title">Category Filters</string>
     <string name="provider_filter_mode_label">Filter mode:</string>
     <string name="provider_filter_exclude">Exclude</string>
     <string name="provider_filter_include">Include Only</string>
@@ -275,10 +274,6 @@
     <string name="provider_playlist_type_desc">Playlist format (m3u_plus = extended with EPG, simple = basic)</string>
     <string name="provider_category_filters_desc">Hide categories by prefix (e.g., \'Adult\', \'XXX\')</string>
     <string name="provider_category_filters_profile">These are %1$s\'s filters. Every profile has its own.</string>
-    <string name="provider_filter_mode_value">Mode: %1$s</string>
-    <string name="provider_no_filters">No filters configured</string>
-    <string name="provider_prefixes_value">%1$d prefix(es): %2$s</string>
-    <string name="provider_scripts_value">Scripts: %1$s</string>
     <string name="provider_enable_caching_label">Enable Caching</string>
     <string name="provider_enable_caching_desc">Enable caching for faster loading</string>
     <string name="provider_data_management_desc">Manage local database and cached data</string>
@@ -340,7 +335,6 @@
     <string name="common_dont_show_again">Don\'t show again</string>
     <string name="common_off">Off</string>
 
-    <string name="provider_manage_filters_button">Manage Filters</string>
 
     <string name="movie_details_title">Movie Details</string>
     <string name="movie_refresh_info">Refresh movie info</string>
@@ -800,6 +794,7 @@
     <string name="profile_jellyfin_sign_in_prompt">Sign in to %1$s for this profile</string>
     <string name="profile_jellyfin_sign_in_button">Sign in</string>
     <string name="profile_switch_to_button">Switch to this profile</string>
+    <string name="profile_content_filters_title">Content filters</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Live sync</string>
     <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>
@@ -903,7 +898,6 @@
     <string name="settings_edit_this_source">Edit this source</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="settings_per_source_playback_hint">Auto-resume, Recent row size and stream format are set per source</string>
-    <string name="settings_filters_hint">Content filters for %1$s are set per source</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>
 

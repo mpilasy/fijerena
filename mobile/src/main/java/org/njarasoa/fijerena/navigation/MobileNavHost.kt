@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
@@ -53,6 +54,7 @@ import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.safemode.MobileNewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
+import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -527,6 +529,25 @@ fun MobileNavHost(
                 )
             }
 
+            composable<Screen.ProfileEdit> { backStackEntry ->
+                val route = backStackEntry.toRoute<Screen.ProfileEdit>()
+                // Settings' ProfilesViewModel (the page only opens from Settings): a save or delete
+                // runs on in its scope after this page is popped.
+                val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
+                MobileProfileEditScreen(
+                    profileId = route.profileId,
+                    viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
+                    onBack = { navController.navigateUp() },
+                    onProfileSwitched = {
+                        // As after the profile picker: every screen below may hold the previous
+                        // profile's repository, so start over from home.
+                        navController.navigate(Screen.ContentTypeSelection) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
             composable<Screen.Settings> {
                 MobileSettingsScreen(
                     onBack = {
@@ -549,12 +570,8 @@ fun MobileNavHost(
                     onEditSource = { id ->
                         navController.navigateOnce(Screen.AddProvider(editId = id))
                     },
-                    onProfileSwitched = {
-                        // As after the profile picker: every screen below may hold the previous
-                        // profile's repository, so start over from home.
-                        navController.navigate(Screen.ContentTypeSelection) {
-                            popUpTo(navController.graph.id) { inclusive = true }
-                        }
+                    onEditProfile = { id ->
+                        navController.navigateOnce(Screen.ProfileEdit(profileId = id))
                     },
                     onProviderChanged = {
                         coroutineScope.launch {

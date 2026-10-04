@@ -41,5 +41,11 @@ UP	Profiles
 UP	Profiles
 # Right lands on the first profile row; its text is the profile's name.
 RIGHT	A / atr
+# OK opens the profile's page in place of the rows (P9), focus on the name's Edit button;
+# Down reaches Colour (re-record: the row's text may read differently). Left leaves the page
+# unsaved, focus back on the profile's row.
+CENTER	Edit Name
+DOWN	Colour
+LEFT	A / atr
 # Back in the pane returns to the rail row, not out of Settings.
 BACK	Profiles

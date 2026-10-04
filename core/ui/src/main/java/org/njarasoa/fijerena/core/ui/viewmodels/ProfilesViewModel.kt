@@ -13,9 +13,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
+import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 data class ProfileUi(
     val id: String,
@@ -28,6 +30,13 @@ data class ProfileUi(
 data class ProfileSettings(
     val devMode: Boolean,
     val autoplayNextEpisode: Boolean,
+)
+
+/** The source this device uses, as a profile's page shows it: only its name heads the filters. */
+data class SourceInUse(
+    val id: Long,
+    val name: String,
+    val type: String,
 )
 
 /** Settings → Profiles. See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles. */
@@ -104,6 +113,43 @@ class ProfilesViewModel(
             appSettings.setAutoplayNextEpisode(id, settings.autoplayNextEpisode)
         }
         viewModelScope.launch { repository.updateProfile(id, name, colorIndex) }
+    }
+
+    // The source in use, for a profile page's Content filters; null until loaded, or with no source.
+    private val _sourceInUse = MutableStateFlow<SourceInUse?>(null)
+    val sourceInUse: StateFlow<SourceInUse?> = _sourceInUse.asStateFlow()
+
+    fun loadSourceInUse() {
+        viewModelScope.launchGuarded("ProfilesViewModel.loadSourceInUse") {
+            _sourceInUse.value =
+                AppContainer
+                    .getInstance(context)
+                    .providerRepository
+                    .getActiveProvider()
+                    ?.let { SourceInUse(it.id, it.name, it.type) }
+        }
+    }
+
+    /** [profileId]'s content filters on [providerId] — any profile, not only the one in use. */
+    fun loadCategoryFilters(
+        providerId: Long,
+        profileId: String,
+        onLoaded: (CategoryFilters) -> Unit,
+    ) {
+        viewModelScope.launchGuarded("ProfilesViewModel.loadCategoryFilters") {
+            onLoaded(AppContainer.getInstance(context).providerRepository.getCategoryFilters(providerId, profileId))
+        }
+    }
+
+    /** Saves [profileId]'s content filters; they apply now only if it is the profile in use. */
+    fun saveCategoryFilters(
+        providerId: Long,
+        profileId: String,
+        filters: CategoryFilters,
+    ) {
+        viewModelScope.launchGuarded("ProfilesViewModel.saveCategoryFilters") {
+            AppContainer.getInstance(context).providerRepository.setCategoryFilters(providerId, profileId, filters)
+        }
     }
 
     /** [id]'s own settings — not necessarily the profile this device uses. */

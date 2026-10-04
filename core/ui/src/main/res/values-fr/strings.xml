@@ -219,7 +219,6 @@
     <string name="provider_clear_progress_label">Effacer la progression de lecture</string>
     <string name="provider_clear_progress_title">Effacer la progression ?</string>
     <string name="provider_clear_progress_message">Ceci supprimera toutes les positions de lecture enregistrées. La lecture reprendra au début.</string>
-    <string name="provider_category_filters_title">Filtres de catégories</string>
     <string name="provider_filter_mode_label">Mode de filtrage :</string>
     <string name="provider_filter_exclude">Exclure</string>
     <string name="provider_filter_include">Inclure uniquement</string>
@@ -271,10 +270,6 @@
     <string name="provider_playlist_type_desc">Format de playlist (m3u_plus = étendu avec EPG, simple = basique)</string>
     <string name="provider_category_filters_desc">Masquer les catégories par préfixe (ex. \'Adulte\', \'XXX\')</string>
     <string name="provider_category_filters_profile">Filtres du profil %1$s. Chaque profil a les siens.</string>
-    <string name="provider_filter_mode_value">Mode : %1$s</string>
-    <string name="provider_no_filters">Aucun filtre configuré</string>
-    <string name="provider_prefixes_value">%1$d préfixe(s) : %2$s</string>
-    <string name="provider_scripts_value">Scripts : %1$s</string>
     <string name="provider_enable_caching_label">Activer le cache</string>
     <string name="provider_enable_caching_desc">Activer la mise en cache pour un chargement plus rapide</string>
     <string name="provider_data_management_desc">Gérer la base de données locale et les données en cache</string>
@@ -334,7 +329,6 @@
     <string name="common_dont_show_again">Ne plus afficher</string>
     <string name="common_off">Désactivé</string>
 
-    <string name="provider_manage_filters_button">Gérer les filtres</string>
 
     <string name="movie_details_title">Détails du film</string>
     <string name="movie_refresh_info">Actualiser les infos</string>
@@ -763,6 +757,7 @@
     <string name="profile_jellyfin_sign_in_prompt">Connectez-vous à %1$s pour ce profil</string>
     <string name="profile_jellyfin_sign_in_button">Se connecter</string>
     <string name="profile_switch_to_button">Passer à ce profil</string>
+    <string name="profile_content_filters_title">Filtres de contenu</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
     <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>
@@ -865,7 +860,6 @@
     <string name="settings_edit_this_source">Modifier cette source</string>
     <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
     <string name="settings_per_source_playback_hint">La reprise automatique, la taille de la ligne Récents et le format de flux se règlent par source</string>
-    <string name="settings_filters_hint">Les filtres de contenu de %1$s se règlent par source</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>
 

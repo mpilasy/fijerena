@@ -47,7 +47,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.feature.settings.components.ProfileEditDialog
+import org.njarasoa.fijerena.feature.settings.components.ProfileAddDialog
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -154,15 +154,12 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     }
 
     if (adding) {
-        ProfileEditDialog(
-            title = stringResource(R.string.profile_dialog_add_title),
-            initialName = "",
+        ProfileAddDialog(
             initialColorIndex = remember { viewModel.nextFreeColorIndex() },
-            onSave = { name, color, _ ->
+            onSave = { name, color ->
                 viewModel.addProfile(name, color)
                 adding = false
             },
-            onDelete = null,
             onDismiss = { adding = false },
             scale = scale,
         )

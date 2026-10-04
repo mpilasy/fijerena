@@ -14,7 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -36,7 +35,6 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -70,7 +68,6 @@ fun SettingsScreen(
     onDiagnostics: () -> Unit = {},
     onGuideSources: (providerId: Long) -> Unit = {},
     onEditSource: (providerId: Long) -> Unit = {},
-    onEditSourceFilters: (providerId: Long) -> Unit = {},
     onProfileSwitched: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -212,6 +209,8 @@ fun SettingsScreen(
     // First open: the rail row of the selected group. A pending hand-back (Back from a child
     // screen, the Language recreate) or an open picker has the last word instead.
     var picker by rememberSaveable { mutableStateOf<SettingPicker?>(null) }
+    // The profile whose page (P9) is open in the pane, as SettingPicker.PROFILE.
+    var editingProfileId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         if (returnFocus.key == null && picker == null) railPane.focusEntry()
     }
@@ -229,6 +228,21 @@ fun SettingsScreen(
         coroutineScope.launch {
             returnFocus.restoreScroll(listState)
             returnFocus.requester.requestFocusWithRetry()
+            returnFocus.clear()
+        }
+    }
+    val openProfile: (ProfileUi) -> Unit = { profile ->
+        returnFocus.leaveFrom(profileReturnKey(profile.id), listState)
+        editingProfileId = profile.id
+        picker = SettingPicker.PROFILE
+    }
+    // A deleted profile has no row to go back to: the group's entry row takes focus instead.
+    val closeProfile: (deleted: Boolean) -> Unit = { deleted ->
+        picker = null
+        editingProfileId = null
+        coroutineScope.launch {
+            returnFocus.restoreScroll(listState)
+            if (deleted || !returnFocus.requester.requestFocusWithRetry()) contentPane.focusEntry()
             returnFocus.clear()
         }
     }
@@ -369,6 +383,28 @@ fun SettingsScreen(
                             GuideMaintenancePane(viewModel = epgViewModel, onBack = closePicker)
                         }
 
+                        SettingPicker.PROFILE -> {
+                            val profile = profiles.firstOrNull { it.id == editingProfileId }
+                            // Gone (deleted on another device): close. An empty list is still loading.
+                            if (profile == null) {
+                                LaunchedEffect(profiles) { if (profiles.isNotEmpty()) closeProfile(true) }
+                            } else {
+                                ProfileEditPane(
+                                    profile = profile,
+                                    viewModel = profilesViewModel,
+                                    canDelete = !profile.isActive && profiles.size > 1,
+                                    onSaved = {
+                                        viewModel.refreshDevMode()
+                                        closeProfile(false)
+                                    },
+                                    onSwitch = { profilesViewModel.switchTo(profile.id, onProfileSwitched) },
+                                    onDeleted = { closeProfile(true) },
+                                    onBack = { closeProfile(false) },
+                                    scale = scale,
+                                )
+                            }
+                        }
+
                         null -> {
                             val entryModifier = Modifier.paneItem(contentPane, contentEntryKey)
                             LazyColumn(
@@ -385,32 +421,15 @@ fun SettingsScreen(
                                                 message = profilesMessage,
                                                 newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                                                 onAdd = profilesViewModel::addProfile,
-                                                onUpdate = { id, name, color, settings ->
-                                                    profilesViewModel.updateProfile(id, name, color, settings)
-                                                    viewModel.refreshDevMode()
-                                                },
-                                                settingsOf = profilesViewModel::settingsOf,
-                                                onDelete = profilesViewModel::deleteProfile,
-                                                onSwitchTo = { id -> profilesViewModel.switchTo(id, onProfileSwitched) },
+                                                onEdit = openProfile,
                                                 onDismissMessage = profilesViewModel::clearMessage,
                                                 scale = scale,
                                                 firstRowModifier = entryModifier,
-                                            )
-                                        }
-                                        // Content filters live on the source: the row opens Edit Source
-                                        // with focus on its filters.
-                                        item {
-                                            FiltersHintRow(
-                                                profileName = profiles.firstOrNull { it.isActive }?.name.orEmpty(),
-                                                enabled = uiState.activeProviderId != null,
-                                                onClick = {
-                                                    uiState.activeProviderId?.let { id ->
-                                                        returnFocus.leaveFrom(RETURN_FILTERS, listState)
-                                                        onEditSourceFilters(id)
-                                                    }
+                                                rowModifier = { profile ->
+                                                    returnFocus.requesterFor(profileReturnKey(profile.id))?.let {
+                                                        Modifier.focusRequester(it)
+                                                    } ?: Modifier
                                                 },
-                                                scale = scale,
-                                                focusRequester = returnFocus.requesterFor(RETURN_FILTERS),
                                             )
                                         }
                                     }
@@ -645,10 +664,11 @@ fun SettingsScreen(
 // Keys for the controls that navigate away from Settings — see rememberNavReturnFocus.
 private const val RETURN_PROVIDERS = "providers"
 private const val RETURN_EDIT_SOURCE = "editSource"
-private const val RETURN_FILTERS = "filters"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
 private const val RETURN_EPG = "epg"
+
+private fun profileReturnKey(profileId: String) = "profile:$profileId"
 
 // Rail ≈ 30 % of the width, pane ≈ 70 % (plan Part I, B).
 private const val RAIL_WEIGHT = 0.3f
@@ -686,6 +706,9 @@ enum class SettingPicker(
     LANGUAGE("picker:language"),
     GUIDE_AUTO_REFRESH("picker:guideAutoRefresh"),
     GUIDE_MAINTENANCE("picker:guideMaintenance"),
+
+    /** A profile's page; its rows return focus by `profileReturnKey`, not by this key. */
+    PROFILE("picker:profile"),
 }
 
 /** Title on the left; the active profile's avatar and name and the active source on the right (T-7). */
@@ -725,32 +748,5 @@ private fun SettingsHeader(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-    }
-}
-
-/** "Content filters for <profile> are set per source" — one row, opens Edit Source on its filters. */
-@Composable
-private fun FiltersHintRow(
-    profileName: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    scale: Float,
-    focusRequester: FocusRequester?,
-) {
-    GlassPanel(modifier = Modifier.fillMaxWidth()) {
-        TvInputListItem(
-            selected = false,
-            onClick = onClick,
-            modifier = Modifier.padding(Spacing.md.scaled(scale)).then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
-            enabled = enabled,
-            trailingContent = {
-                Text(
-                    text = "${stringResource(R.string.settings_edit_this_source)} ›",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                )
-            },
-            headlineContent = { Text(stringResource(R.string.settings_filters_hint, profileName)) },
-        )
     }
 }

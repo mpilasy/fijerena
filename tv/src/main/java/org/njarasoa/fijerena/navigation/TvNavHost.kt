@@ -664,7 +664,6 @@ fun TvNavHost(
                     val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
                     TvAddProviderScreen(
                         editId = addProviderScreen.editId,
-                        focusFilters = addProviderScreen.focusFilters,
                         onBack = {
                             navController.navigateUp()
                         },
@@ -769,9 +768,6 @@ fun TvNavHost(
                         },
                         onEditSource = { id ->
                             navController.navigateOnce(Screen.AddProvider(editId = id))
-                        },
-                        onEditSourceFilters = { id ->
-                            navController.navigateOnce(Screen.AddProvider(editId = id, focusFilters = true))
                         },
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous

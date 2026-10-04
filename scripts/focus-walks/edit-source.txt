@@ -2,7 +2,8 @@
 # (jellyxtream). Start: Settings → Source & guide → Switch source → OK on the source's row (or ⋮
 # → Edit). Focus is on the Name edit button (T-12).
 # Two panes: the Connection column (Name, Server URL, Username, Password, then Cancel / Save
-# connection) and the settings column (Behaviour, Content filters, Library data, Danger zone).
+# connection) and the settings column (Behaviour, Library data, Danger zone; content filters are
+# on each profile's page since P9).
 # Up/Down stay in a column (Up at the top and Down at the end stay put); Right from the
 # Connection column enters the settings column on its remembered row, else Auto-Resume; Left
 # returns to the Connection column on the row it left. Cancel ⇄ Save connection move with

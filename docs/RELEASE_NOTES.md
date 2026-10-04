@@ -7,6 +7,7 @@
 - **Each guide source refreshes on its own schedule:** a guide source now has its own auto-refresh interval instead of one device-wide setting, and there is no refresh time of day any more — the background refresh runs at the shortest interval among your guide sources and stops when all are off. On upgrade every guide source takes the interval you had set, so nothing changes. The interval is kept in sync between linked devices (an older app version leaves it as it is) and in settings exports. (`providers.db` v16.) → P5a.
 - **Switch to a profile from Settings:** a profile's edit dialog in Settings → Profiles has **Switch to this profile** (not for the profile in use); it lands on Home with that profile, as the profile picker does. → P1.
 - **Developer mode and Play next episode on each profile:** both are switched in the profile's edit dialog (Settings → Profiles), for any profile, not only the one in use; they left About & advanced and Playback. About & advanced keeps Diagnostics while the profile in use has developer mode on. → P2.
+- **A page for each profile, with its own content filters:** a profile in Settings → Profiles opens its page (on TV in place of the list; on the phone its own screen) with its name, colour, settings, **Content filters ›** for the source in use, Switch to this profile and Delete. Filters set for a profile not in use apply when it becomes the one in use. Edit Source no longer shows content filters, and the Profiles group's content-filters shortcut is gone. → P9.
 
 ## Version: UX overhaul, day 5
 **Release Date:** 2026-10-03

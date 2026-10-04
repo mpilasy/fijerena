@@ -25,24 +25,16 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
@@ -55,8 +47,6 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
-
-private const val CATEGORY_FILTER_PREVIEW_COUNT = 6
 
 /** Entry row of the Edit Source settings column (its first focus stop). */
 internal const val EDIT_SOURCE_FIRST_SETTING_KEY = "auto_resume"
@@ -179,90 +169,6 @@ fun ProviderSettingsSection(
             modifier = Modifier.paneItem(pane, "caching"),
         )
     }
-}
-
-/**
- * Content filters · <profile>: the active profile's category filters for this source (A-8,
- * Xtream only). [manageFocusRequester] lets the screen land on Manage filters.
- */
-@Composable
-fun ProviderFiltersSection(
-    providerSettings: ProviderSettings,
-    onManageFiltersClick: () -> Unit,
-    pane: PaneFocusState,
-    manageFocusRequester: FocusRequester,
-) {
-    val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val bodyMedium = remember(scale, typography) { typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale)) }
-
-    // Filters are per profile: the title says whose these are.
-    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current))
-    val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
-    ProviderSectionTitle(
-        title =
-            activeProfile?.let { stringResource(R.string.provider_section_content_filters_format, it.name) }
-                ?: stringResource(R.string.provider_category_filters_title),
-        subtitle = stringResource(R.string.provider_category_filters_desc),
-    )
-    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text =
-                stringResource(
-                    R.string.provider_filter_mode_value,
-                    if (providerSettings.categoryFilters.mode == FilterMode.EXCLUDE) {
-                        stringResource(R.string.provider_filter_exclude)
-                    } else {
-                        stringResource(R.string.provider_filter_include)
-                    },
-                ),
-            style = bodyMedium,
-            color = CinemaTextPrimary,
-        )
-        Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-        Text(
-            text =
-                if (providerSettings.categoryFilters.rules.isEmpty()) {
-                    stringResource(R.string.provider_no_filters)
-                } else {
-                    val rules = providerSettings.categoryFilters.rules
-                    val preview = rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
-                    val remaining = rules.size - CATEGORY_FILTER_PREVIEW_COUNT
-                    val suffix = if (remaining > 0) ", +$remaining more" else ""
-                    stringResource(
-                        R.string.provider_prefixes_value,
-                        rules.size,
-                        "$preview$suffix",
-                    )
-                },
-            style = bodyMedium,
-            color = CinemaTextSecondary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-    Text(
-        text =
-            stringResource(
-                R.string.provider_scripts_value,
-                if (providerSettings.categoryFilters.allowedScripts.isEmpty()) {
-                    stringResource(R.string.common_all)
-                } else {
-                    providerSettings.categoryFilters.allowedScripts.joinToString(", ") { it.displayName }
-                },
-            ),
-        style = bodyMedium,
-        color = CinemaTextSecondary,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
-    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-    CinemaPrimaryButton(
-        onClick = onManageFiltersClick,
-        text = stringResource(R.string.provider_manage_filters_button),
-        modifier = Modifier.paneItem(pane, "filters").focusRequester(manageFocusRequester),
-    )
 }
 
 /** A choice between a few values: title, description, then one left-aligned row of options. */

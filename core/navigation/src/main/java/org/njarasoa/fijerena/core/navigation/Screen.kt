@@ -14,13 +14,10 @@ sealed interface Screen {
      * Add/edit provider screen destination.
      *
      * @param editId If > 0, edit the provider with this ID instead of creating new
-     * @param focusFilters Edit mode only: open with focus on the content filters (TV Settings'
-     *   filters hint row). Defaulted, so routes without it stay valid.
      */
     @Serializable
     data class AddProvider(
         val editId: Long = -1L,
-        val focusFilters: Boolean = false,
     ) : Screen
 
     /**
@@ -37,6 +34,16 @@ sealed interface Screen {
      */
     @Serializable
     data object ProfilePicker : Screen
+
+    /**
+     * A profile's page (mobile; TV opens it inside Settings): name, colour, its own settings, its
+     * content filters for the source in use, Switch to this profile, Delete. See
+     * docs/plans/20261003_sources-guide-profiles-plan.md → P9.
+     */
+    @Serializable
+    data class ProfileEdit(
+        val profileId: String,
+    ) : Screen
 
     /**
      * Content type selection screen destination.

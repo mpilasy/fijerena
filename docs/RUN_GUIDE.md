@@ -231,7 +231,7 @@ adb -s <device-id> logcat -c
 Every build records what went wrong on the device itself, so a crash on a TV is still there after
 the fact without logcat having been attached:
 
-- **Diagnostics** (developer mode on for the profile in use, in its edit dialog under Settings →
+- **Diagnostics** (developer mode on for the profile in use, on its page under Settings →
   Profiles; then Settings → About & advanced → Open Diagnostics; mobile's can also Share as
   text) lists, newest
   first, the app's own crash log — uncaught exceptions, and exceptions absorbed by the app-wide

@@ -73,12 +73,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.provider.components.CacheManagementSection
-import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.feature.provider.components.EDIT_SOURCE_FIRST_SETTING_KEY
 import org.njarasoa.fijerena.feature.provider.components.JellyfinForm
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
-import org.njarasoa.fijerena.feature.provider.components.ProviderFiltersSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderTypeDropdown
@@ -113,17 +111,15 @@ private const val KEY_SAVE = "save"
  *
  * Edit Source: the Connection column on the left (read-only type, the login fields, Cancel and
  * Save connection right under them — the only part that needs saving) and a scrolling column on
- * the right with Behaviour (applies immediately), Content filters for the active profile,
- * Library data and the Danger zone. Each column is a `tvPane`: Left/Right move between them,
- * Up/Down stay inside. First focus is the Name edit button, or Manage filters when
- * [focusFilters] is set (the Settings filters hint row, via `Screen.AddProvider.focusFilters`).
+ * the right with Behaviour (applies immediately), Library data and the Danger zone. Each column
+ * is a `tvPane`: Left/Right move between them, Up/Down stay inside. First focus is the Name edit
+ * button. Content filters are edited on each profile's page (D8), not here.
  */
 @Composable
 fun TvAddProviderScreen(
     editId: Long = -1L,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
-    focusFilters: Boolean = false,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -189,7 +185,6 @@ fun TvAddProviderScreen(
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
-    var showCategoryFilterDialog by remember { mutableStateOf(false) }
 
     val repository =
         remember {
@@ -487,19 +482,11 @@ fun TvAddProviderScreen(
                 settingsPane.bind(selectedKey = null, firstKey = EDIT_SOURCE_FIRST_SETTING_KEY, listState = null, indexOf = { -1 })
                 val cancelFocusRequester = remember { FocusRequester() }
                 val saveFocusRequester = remember { FocusRequester() }
-                val manageFiltersFocusRequester = remember { FocusRequester() }
 
-                // First focus once the source has loaded (its type decides whether there are
-                // filters): the Name edit button (T-12), or Manage filters for the filters hint.
+                // First focus once the source has loaded: the Name edit button (T-12).
                 val connectionLoaded = loadedConnection != null
                 LaunchedEffect(connectionLoaded) {
-                    if (connectionLoaded) {
-                        if (focusFilters && selectedType == ProviderType.XTREAM) {
-                            manageFiltersFocusRequester.requestFocusWithRetry(fallback = nameFocusRequester)
-                        } else {
-                            nameFocusRequester.requestFocusWithRetry()
-                        }
-                    }
+                    if (connectionLoaded) nameFocusRequester.requestFocusWithRetry()
                 }
 
                 Column(
@@ -628,16 +615,6 @@ fun TvAddProviderScreen(
                                     },
                                     pane = settingsPane,
                                 )
-
-                                if (selectedType == ProviderType.XTREAM) {
-                                    SectionDivider()
-                                    ProviderFiltersSection(
-                                        providerSettings = providerSettings,
-                                        onManageFiltersClick = { showCategoryFilterDialog = true },
-                                        pane = settingsPane,
-                                        manageFocusRequester = manageFiltersFocusRequester,
-                                    )
-                                }
 
                                 SectionDivider()
                                 CacheManagementSection(
@@ -907,21 +884,6 @@ fun TvAddProviderScreen(
                         showClearProgressDialog = false
                     },
                     onDismiss = { showClearProgressDialog = false },
-                )
-            }
-
-            if (showCategoryFilterDialog) {
-                CategoryFilterDialog(
-                    currentFilters = providerSettings.categoryFilters,
-                    onSave = { newFilters ->
-                        coroutineScope.launch {
-                            val newSettings = providerSettings.copy(categoryFilters = newFilters)
-                            providerRepo.updateProviderSettings(editId, newSettings)
-                            providerSettings = newSettings
-                        }
-                        showCategoryFilterDialog = false
-                    },
-                    onDismiss = { showCategoryFilterDialog = false },
                 )
             }
 

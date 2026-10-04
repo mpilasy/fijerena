@@ -9,9 +9,10 @@ Type-safe navigation with Navigation Compose and kotlinx.serialization routes. T
 ```kotlin
 sealed interface Screen {
     @Serializable data object ProviderSelection : Screen  // "Sources"
-    @Serializable data class AddProvider(val editId: Long = -1L, val focusFilters: Boolean = false) : Screen  // add, or edit when editId > 0
+    @Serializable data class AddProvider(val editId: Long = -1L) : Screen  // add, or edit when editId > 0
     @Serializable data object Login : Screen  // in neither nav graph
     @Serializable data object ProfilePicker : Screen  // "Who's watching?"
+    @Serializable data class ProfileEdit(val profileId: String) : Screen  // a profile's page (mobile; TV shows it inside Settings)
     @Serializable data object ContentTypeSelection : Screen  // Home
     @Serializable data object Settings : Screen
     @Serializable data class CategoryList(
@@ -40,7 +41,7 @@ sealed interface Screen {
 }
 ```
 
-All IDs are `String` so Xtream (numeric), Jellyfin (UUID), SMB and Local (paths) fit the same routes. `focusFilters` is TV only: Settings' content-filters row opens Edit Source on its filters. `showPreviewPane` is read by TV only (see [Live TV preview / dock](#live-tv-preview--dock-back-stack)).
+All IDs are `String` so Xtream (numeric), Jellyfin (UUID), SMB and Local (paths) fit the same routes. `showPreviewPane` is read by TV only (see [Live TV preview / dock](#live-tv-preview--dock-back-stack)).
 
 ## Navigation Flow
 
@@ -85,7 +86,8 @@ EpisodeSelection ─→ Player | CategoryList(TV_SHOWS, category) | EpisodeSelec
 
 Settings
 ├─→ ProviderSelection ─→ AddProvider() | AddProvider(editId) | EpgManagement(id)
-├─→ AddProvider(editId)                  Edit this source (TV filters row: focusFilters = true)
+├─→ AddProvider(editId)                  Edit this source
+├─→ ProfileEdit(profileId)               a profile's row (mobile; TV: a page in the Profiles pane)
 ├─→ EpgManagement(active source)         Guide sources
 ├─→ SyncSettings
 ├─→ Diagnostics                          dev mode
@@ -146,7 +148,7 @@ Both hosts look up the source on start (`initializeStartup()`: provider count, o
 Each TV screen puts focus somewhere visible when it or a panel appears and returns it to where the user was. TV-safe padding: 56dp horizontal, 32dp vertical ([design.md](design.md#safe-margins-tv-overscan)).
 
 - **Back from details** (movie/series) focuses the row that was opened — `StreamList` remembers it per category (`rememberSaveable`), falling back to the last played item; Live TV follows the playing channel. **Back from the Live TV preview** (UX overhaul plan Part II LT6) lands on the channel the preview was playing when it was left — after any retune or zap, not the row that opened it: `LiveTvSplitLayout` reports its channel each time it changes (`onPlayingChannel`), `TvCategoryGridScreen` keeps it, and when Back closes the preview layer (LT7) it hands it to browse as `returnedLiveChannelId` (`TwoColumnLayout`'s `returnedPlayingId`) — a plain `remember`, so a later return from Search or the TV Guide rebuilds browse without it. Closing the layer also refreshes the last-played item and watch state (`refreshLastPlayedItem`, `refreshWatchStateOnResume`) and reloads Recent when that is the browsed list, so a channel the preview recorded is in it. `TwoColumnLayout` then uses it in place of `lastPlayedItemId` (which only moves after the watch delay) as the items pane's selected row — so the pane remembers it and a later Right lands there too, and the row is marked current. When the list on screen does not have it (it was played from another list, or Recent has not recorded it yet), focus goes to the selected category row instead and the list does not take focus later on its own. Search / TV Guide returns use `NavReturnFocus`. `scripts/focus-walks/live-tv-back.txt` walks it.
-- **Back to any other screen** focuses the control that navigated away, at the scroll position its list had — Home's hero cards, header buttons and Continue Watching cards; Settings' Switch source, Edit this source, content-filters, Guide sources, Live sync and Diagnostics rows and its picker rows; Search results; the category screen's Search and TV Guide buttons; a details screen's Start Over / Category button / related title; TV Guide programme and channel cells and its Search button (Back from "Search the guide"); EPG Browser airing rows; Sources' Add / Guide / overflow buttons. Navigation Compose rebuilds a screen on Back with nothing focused, and Compose then focuses the first focusable (the source chip, the top Settings row). The pattern (`tv/ui/components/input/NavReturnFocus.kt`): `val returnFocus = rememberNavReturnFocus()` (saveable, so it survives the round trip); in the control's `onClick`, `returnFocus.leaveFrom(key, listState)` before navigating; `Modifier.navReturnFocusTarget(returnFocus, key)` on the control; `NavReturnFocusEffect(returnFocus, listState, fallback) { key -> /* wait for data, scroll an inner row */ }`. The effect runs when the screen is RESUMED again (after the pop transition and the screen's own first-open effects), restores the list position, then `requestFocusWithRetry` — once: the key is cleared whether or not it landed. A screen's own first-open focus checks `returnFocus.key == null` (or `isReturn`, when it can fire again after the hand-back) so it doesn't fight it. Back from the player lands on Play / the resume card, which those screens already focus.
+- **Back to any other screen** focuses the control that navigated away, at the scroll position its list had — Home's hero cards, header buttons and Continue Watching cards; Settings' Switch source, Edit this source, Guide sources, Live sync and Diagnostics rows and its picker rows; Search results; the category screen's Search and TV Guide buttons; a details screen's Start Over / Category button / related title; TV Guide programme and channel cells and its Search button (Back from "Search the guide"); EPG Browser airing rows; Sources' Add / Guide / overflow buttons. Navigation Compose rebuilds a screen on Back with nothing focused, and Compose then focuses the first focusable (the source chip, the top Settings row). The pattern (`tv/ui/components/input/NavReturnFocus.kt`): `val returnFocus = rememberNavReturnFocus()` (saveable, so it survives the round trip); in the control's `onClick`, `returnFocus.leaveFrom(key, listState)` before navigating; `Modifier.navReturnFocusTarget(returnFocus, key)` on the control; `NavReturnFocusEffect(returnFocus, listState, fallback) { key -> /* wait for data, scroll an inner row */ }`. The effect runs when the screen is RESUMED again (after the pop transition and the screen's own first-open effects), restores the list position, then `requestFocusWithRetry` — once: the key is cleared whether or not it landed. A screen's own first-open focus checks `returnFocus.key == null` (or `isReturn`, when it can fire again after the hand-back) so it doesn't fight it. Back from the player lands on Play / the resume card, which those screens already focus.
 - **Closing the episode detail panel** focuses that episode's card (the tab row if Next/Previous crossed into another season).
 - **Episodes list:** Left from any episode, or Up from the first, goes to the episodes header (the selected season tab, else Play next, else the section tabs); Right on an episode does nothing. Arrows never change season — that is the season tabs' job (UX overhaul plan Part II Phase 6).
 - **TV Guide** opens on the programme on air now in the first channel that has one (separator rows are not channels) — or, opened from the player's Guide button, in the playing channel's row; Up/Down keep the time across rows, Left/Right step by programme, Up from the first row reaches the header buttons, Down from the header returns to the cell you left. OK on a channel opens its preview; OK on a programme opens its details panel (title, channel, day and time, description; Watch channel opens the preview, Close) with focus on Watch channel, and Back or Close returns focus to the cell (GD6). Long-press OK or Menu on either cell opens the channel's row actions (below). `scripts/focus-walks/guide.txt` walks it.
@@ -164,7 +166,7 @@ Two-column TV screens (Live TV browse, Movies, TV Shows: `TwoColumnLayout`) are 
 - Entry focus on open: the selected category while the items load, then the items' entry row once they are there (the last played / opened item when it is in the list, else the first); an empty category keeps the category. OK on a category keeps focus on the category; Right enters its items.
 - Programmatic focus (`requestFocusWithRetry`, `NavReturnFocus`) passes through a pane untouched; only D-pad moves are redirected (`focusProperties { onEnter }` on the group, `onKeyEvent` for Left/Right, `onExit` + `cancelFocusChange()` for Down). `focusRestorer` is not used: it defines the same `onEnter` and the outer definition wins, and it cannot express the selected-row fallback.
 
-The same panes build TV Settings (rail and pane), Edit Source and the TV Guide header.
+The same panes build TV Settings (rail and pane), Edit Source and the TV Guide header. In TV Settings a row can open a page in place of the group's rows — a picker, Guide auto-refresh, Guide data maintenance, or a profile's page (`SettingPicker.PROFILE`, `ProfileEditPane`): Left or Back leaves it (a profile's page unsaved, like Cancel), with focus back on the row that opened it, or on the group's first row after the profile was deleted. The profile page takes Left and Back in `onKeyEvent`, after the focused control, so the name's text field keeps them while it is being edited; its colour opens a picker in the same place.
 
 ### Row actions (long-press OK / Menu)
 

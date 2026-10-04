@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -38,14 +37,13 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSettings
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Settings → Profiles: the profile rows, "Add profile", and the edit / delete dialogs. See
- * `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
+ * Settings → Profiles: the profile rows (a tap opens the profile's page, [onEdit]) and "Add
+ * profile". See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
  */
 @Composable
 fun ProfilesSettingsRows(
@@ -53,15 +51,10 @@ fun ProfilesSettingsRows(
     message: String?,
     newProfileColorIndex: () -> Int,
     onAdd: (name: String, colorIndex: Int) -> Unit,
-    onUpdate: (id: String, name: String, colorIndex: Int, settings: ProfileSettings) -> Unit,
-    settingsOf: (id: String) -> ProfileSettings,
-    onDelete: (id: String) -> Unit,
-    onSwitchTo: (id: String) -> Unit,
+    onEdit: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
 ) {
     var adding by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<ProfileUi?>(null) }
-    var deleting by remember { mutableStateOf<ProfileUi?>(null) }
 
     profiles.forEach { profile ->
         SettingsListRow(
@@ -77,7 +70,7 @@ fun ProfilesSettingsRows(
             },
             onClick = {
                 onDismissMessage()
-                editing = profile
+                onEdit(profile.id)
             },
         )
     }
@@ -100,142 +93,42 @@ fun ProfilesSettingsRows(
     )
 
     if (adding) {
-        ProfileEditDialog(
-            title = stringResource(R.string.profile_dialog_add_title),
-            initialName = "",
+        ProfileAddDialog(
             initialColorIndex = remember { newProfileColorIndex() },
-            onSave = { name, color, _ ->
+            onSave = { name, color ->
                 onAdd(name, color)
                 adding = false
             },
-            onDelete = null,
             onDismiss = { adding = false },
-        )
-    }
-
-    editing?.let { profile ->
-        ProfileEditDialog(
-            title = stringResource(R.string.profile_dialog_edit_title),
-            initialName = profile.name,
-            initialColorIndex = profile.colorIndex,
-            initialSettings = remember(profile.id) { settingsOf(profile.id) },
-            onSave = { name, color, settings ->
-                onUpdate(profile.id, name, color, settings ?: settingsOf(profile.id))
-                editing = null
-            },
-            // The active profile and the last one left can't be deleted (ProfileRepository refuses
-            // both); not offering the button beats offering it and then explaining why not.
-            onDelete =
-                if (!profile.isActive && profiles.size > 1) {
-                    {
-                        editing = null
-                        deleting = profile
-                    }
-                } else {
-                    null
-                },
-            // Switching to the profile already in use would do nothing.
-            onSwitch =
-                if (!profile.isActive) {
-                    {
-                        editing = null
-                        onSwitchTo(profile.id)
-                    }
-                } else {
-                    null
-                },
-            onDismiss = { editing = null },
-        )
-    }
-
-    deleting?.let { profile ->
-        CinemaAlertDialog(
-            onDismissRequest = { deleting = null },
-            title = { Text(stringResource(R.string.profile_delete_confirm_title, profile.name)) },
-            text = { Text(stringResource(R.string.profile_delete_confirm_text)) },
-            confirmButton = {
-                CinemaDialogTextButton(onClick = {
-                    onDelete(profile.id)
-                    deleting = null
-                }) { Text(stringResource(R.string.profile_delete_button), color = CinemaError) }
-            },
-            dismissButton = {
-                CinemaDialogTextButton(onClick = { deleting = null }) { Text(stringResource(R.string.common_cancel)) }
-            },
         )
     }
 }
 
+/** New profile: a name and a colour. Its own settings start off; it's edited on its page afterwards. */
 @Composable
-internal fun ProfileEditDialog(
-    title: String,
-    initialName: String,
+internal fun ProfileAddDialog(
     initialColorIndex: Int,
-    onSave: (name: String, colorIndex: Int, settings: ProfileSettings?) -> Unit,
-    onDelete: (() -> Unit)?,
+    onSave: (name: String, colorIndex: Int) -> Unit,
     onDismiss: () -> Unit,
-    onSwitch: (() -> Unit)? = null,
-    /** The profile's own settings, shown as switches; null (a new profile) shows none. */
-    initialSettings: ProfileSettings? = null,
 ) {
-    var name by remember { mutableStateOf(initialName) }
+    var name by remember { mutableStateOf("") }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
-    var settings by remember { mutableStateOf(initialSettings) }
     var showNameError by remember { mutableStateOf(false) }
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(stringResource(R.string.profile_dialog_add_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = {
+                ProfileNameField(
+                    name = name,
+                    onNameChange = {
                         name = it
                         showNameError = false
                     },
-                    label = { Text(stringResource(R.string.profile_name_label)) },
-                    isError = showNameError,
-                    supportingText =
-                        if (showNameError) {
-                            { Text(stringResource(R.string.profile_error_name_required)) }
-                        } else {
-                            null
-                        },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    showError = showNameError,
                 )
-                Text(stringResource(R.string.profile_color_label), color = CinemaTextSecondary)
-                // Two rows: the whole palette on one line doesn't fit a phone-width dialog.
-                CinemaProfileColors.palette.indices.chunked(SWATCHES_PER_ROW).forEach { rowIndices ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                        rowIndices.forEach { index ->
-                            ColorSwatch(index = index, selected = index == colorIndex, onClick = { colorIndex = index })
-                        }
-                    }
-                }
-                settings?.let { current ->
-                    ProfileSwitchRow(
-                        title = stringResource(R.string.settings_developer_mode_title),
-                        checked = current.devMode,
-                        onCheckedChange = { settings = current.copy(devMode = it) },
-                    )
-                    ProfileSwitchRow(
-                        title = stringResource(R.string.settings_autoplay_next_episode_title),
-                        checked = current.autoplayNextEpisode,
-                        onCheckedChange = { settings = current.copy(autoplayNextEpisode = it) },
-                    )
-                }
-                if (onSwitch != null) {
-                    OutlinedButton(onClick = onSwitch, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.profile_switch_to_button))
-                    }
-                }
-                if (onDelete != null) {
-                    OutlinedButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.profile_delete_button), color = CinemaError)
-                    }
-                }
+                ProfileColourPicker(colorIndex = colorIndex, onPick = { colorIndex = it })
             }
         },
         confirmButton = {
@@ -243,7 +136,7 @@ internal fun ProfileEditDialog(
                 if (name.isBlank()) {
                     showNameError = true
                 } else {
-                    onSave(name, colorIndex, settings)
+                    onSave(name, colorIndex)
                 }
             }) { Text(stringResource(R.string.profile_save_button)) }
         },
@@ -253,9 +146,49 @@ internal fun ProfileEditDialog(
     )
 }
 
-/** A profile setting in the dialog: the title, and the switch on the right; the whole row toggles it. */
+/** A profile's name, with the "Enter a name" error under it. */
 @Composable
-private fun ProfileSwitchRow(
+internal fun ProfileNameField(
+    name: String,
+    onNameChange: (String) -> Unit,
+    showError: Boolean,
+) {
+    OutlinedTextField(
+        value = name,
+        onValueChange = onNameChange,
+        label = { Text(stringResource(R.string.profile_name_label)) },
+        isError = showError,
+        supportingText =
+            if (showError) {
+                { Text(stringResource(R.string.profile_error_name_required)) }
+            } else {
+                null
+            },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** "Colour" and the palette as swatches, the chosen one ringed. */
+@Composable
+internal fun ProfileColourPicker(
+    colorIndex: Int,
+    onPick: (Int) -> Unit,
+) {
+    Text(stringResource(R.string.profile_color_label), color = CinemaTextSecondary)
+    // Two rows: the whole palette on one line doesn't fit a phone-width dialog.
+    CinemaProfileColors.palette.indices.chunked(SWATCHES_PER_ROW).forEach { rowIndices ->
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+            rowIndices.forEach { index ->
+                ColorSwatch(index = index, selected = index == colorIndex, onClick = { onPick(index) })
+            }
+        }
+    }
+}
+
+/** A profile setting on its page: the title, and the switch on the right; the whole row toggles it. */
+@Composable
+internal fun ProfileSwitchRow(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,

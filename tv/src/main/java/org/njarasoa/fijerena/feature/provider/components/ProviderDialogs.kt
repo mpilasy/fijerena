@@ -116,8 +116,10 @@ fun ConfirmActionDialog(
     )
 }
 
+/** The content-filter editor; [title] names whose filters these are (a profile's page: the source). */
 @Composable
 fun CategoryFilterDialog(
+    title: String,
     currentFilters: CategoryFilters,
     onSave: (CategoryFilters) -> Unit,
     onDismiss: () -> Unit,
@@ -181,7 +183,7 @@ fun CategoryFilterDialog(
         // controls in a full-screen panel.
         modifier = Modifier.fillMaxWidth(PANEL_SCREEN_FRACTION * scale).fillMaxHeight(PANEL_SCREEN_FRACTION * scale),
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        title = { Text(stringResource(R.string.provider_category_filters_title), color = CinemaTextPrimary) },
+        title = { Text(title, color = CinemaTextPrimary) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),

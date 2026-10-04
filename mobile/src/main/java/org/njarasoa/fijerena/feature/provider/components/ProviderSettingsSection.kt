@@ -20,15 +20,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.ProviderType
@@ -36,13 +31,9 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
-
-private const val CATEGORY_FILTER_PREVIEW_COUNT = 6
 
 /** Title (and optional dimmed subtitle) of one Edit Source section. */
 @Composable
@@ -287,81 +278,6 @@ fun ColumnScope.ProviderSettingsSection(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-/** Content filters · <profile>: the active profile's category filters for this source (Xtream only). */
-@Composable
-fun ColumnScope.ProviderFiltersSection(
-    isEditMode: Boolean,
-    selectedType: ProviderType,
-    categoryFilters: CategoryFilters,
-    onManageFilters: () -> Unit,
-) {
-    if (isEditMode && selectedType == ProviderType.XTREAM) {
-        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-
-        GlassPanel(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                // Filters are per profile: the title says whose these are.
-                val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current))
-                val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
-                ProviderSectionTitle(
-                    title =
-                        activeProfile?.let { stringResource(R.string.provider_section_content_filters_format, it.name) }
-                            ?: stringResource(R.string.provider_category_filters_title),
-                    subtitle = stringResource(R.string.provider_category_filters_desc),
-                )
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                Text(
-                    text = stringResource(R.string.provider_filter_mode_value, categoryFilters.mode.name),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text =
-                        if (categoryFilters.rules.isEmpty()) {
-                            stringResource(R.string.provider_no_filters)
-                        } else {
-                            val preview =
-                                categoryFilters.rules
-                                    .take(
-                                        CATEGORY_FILTER_PREVIEW_COUNT,
-                                    ).joinToString(", ") { it.value }
-                            val remaining = categoryFilters.rules.size - CATEGORY_FILTER_PREVIEW_COUNT
-                            val suffix = if (remaining > 0) ", +$remaining more" else ""
-                            stringResource(R.string.provider_prefixes_value, categoryFilters.rules.size, "$preview$suffix")
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text =
-                        stringResource(
-                            R.string.provider_scripts_value,
-                            if (categoryFilters.allowedScripts.isEmpty()) {
-                                stringResource(R.string.common_all)
-                            } else {
-                                categoryFilters.allowedScripts
-                                    .joinToString(
-                                        ", ",
-                                    ) { it.displayName }
-                            },
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                CinemaOutlinedButton(
-                    onClick = onManageFilters,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.provider_manage_filters_button)) }
             }
         }
     }

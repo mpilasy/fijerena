@@ -793,6 +793,43 @@ class ProviderRepository(
         }
     }
 
+    /** [profileId]'s category filters on [providerId] — any profile, not only the one in use. */
+    suspend fun getCategoryFilters(
+        providerId: Long,
+        profileId: String,
+    ): CategoryFilters {
+        val entity = dao.getProviderById(providerId) ?: return CategoryFilters()
+        return filtersStore.get(providerId, profileId, parseProviderSettings(entity.providerSettings).categoryFilters)
+    }
+
+    /**
+     * Saves [profileId]'s category filters on [providerId] (from the profile's page). Only the
+     * profile in use has them applied now — Xtream's `excluded` flags follow that profile alone;
+     * another profile's apply when this device switches to it ([applyCategoryFiltersForSwitch]).
+     */
+    suspend fun setCategoryFilters(
+        providerId: Long,
+        profileId: String,
+        filters: CategoryFilters,
+    ) {
+        val entity = dao.getProviderById(providerId) ?: return
+        filtersStore.set(providerId, profileId, filters)
+        settingsCache.keys.removeAll { it.first == providerId }
+        if (profileId != activeProfileId()) return
+        // Same as a filter edit in Edit Source used to do: drop the cached provider and repository,
+        // and recompute the hidden-category flags locally.
+        MediaProviderFactory.providerChanged(providerId)
+        if (entity.type == "XTREAM") {
+            withContext(Dispatchers.IO) {
+                org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
+                    XtreamDatabase.getInstance(context).categoryDao(),
+                    providerId,
+                    filters,
+                )
+            }
+        }
+    }
+
     /**
      * Returns default settings if parsing fails.
      */

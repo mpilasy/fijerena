@@ -73,7 +73,7 @@ fun MobileSettingsScreen(
     onLiveSync: () -> Unit = {},
     onGuideSources: (providerId: Long) -> Unit = {},
     onEditSource: (providerId: Long) -> Unit = {},
-    onProfileSwitched: () -> Unit = {},
+    onEditProfile: (profileId: String) -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -86,6 +86,11 @@ fun MobileSettingsScreen(
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val lifecycleOwner = LocalLifecycleOwner.current
+    // Back from a profile's page: the profile in use may have had its developer mode changed.
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
+    LaunchedEffect(lifecycleState) {
+        if (lifecycleState == Lifecycle.State.RESUMED) viewModel.refreshDevMode()
+    }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             epgViewModel.toastMessage.collect { message ->
@@ -291,20 +296,8 @@ fun MobileSettingsScreen(
                     message = profilesMessage,
                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                     onAdd = profilesViewModel::addProfile,
-                    onUpdate = { id, name, color, settings ->
-                        profilesViewModel.updateProfile(id, name, color, settings)
-                        viewModel.refreshDevMode()
-                    },
-                    settingsOf = profilesViewModel::settingsOf,
-                    onDelete = profilesViewModel::deleteProfile,
-                    onSwitchTo = { id -> profilesViewModel.switchTo(id, onProfileSwitched) },
+                    onEdit = onEditProfile,
                     onDismissMessage = profilesViewModel::clearMessage,
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_filters_hint, activeProfile?.name ?: ""),
-                    scope = SettingsScope.SOURCE,
-                    onClick = { activeProviderId?.let(onEditSource) },
-                    enabled = activeProviderId != null,
                 )
             }
 

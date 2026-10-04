@@ -219,7 +219,6 @@
     <string name="provider_clear_progress_label">Fafao ny fandrosoan\'ny filalaovana</string>
     <string name="provider_clear_progress_title">Hofafana daholo ve ny fandrosoan\'ny filalaovana?</string>
     <string name="provider_clear_progress_message">Hofafana avokoa ny toerana voatahiry amin\'ny filalaovana. Hanomboka hatrany am-piandohana ianao rehefa mijery VOD.</string>
-    <string name="provider_category_filters_title">Sivana sokajy</string>
     <string name="provider_filter_mode_label">Fomba fanivanana:</string>
     <string name="provider_filter_exclude">Afeno</string>
     <string name="provider_filter_include">Ampidiro ihany</string>
@@ -270,10 +269,6 @@
     <string name="provider_playlist_type_label">Karazana lisitra</string>
     <string name="provider_playlist_type_desc">Endriky ny lisitra (m3u_plus = feno miaraka amin\'ny EPG, simple = tsotra)</string>
     <string name="provider_category_filters_desc">Afeno ny sokajy araka ny fiandohany (o.h. \'Adult\', \'XXX\')</string>
-    <string name="provider_filter_mode_value">Fomba: %1$s</string>
-    <string name="provider_no_filters">Tsy misy sivana</string>
-    <string name="provider_prefixes_value">Fiandohana %1$d: %2$s</string>
-    <string name="provider_scripts_value">Soratra: %1$s</string>
     <string name="provider_enable_caching_label">Alefaso ny cache</string>
     <string name="provider_enable_caching_desc">Ampiasao ny cache mba haingana kokoa ny fakana</string>
     <string name="provider_data_management_desc">Tantano ny tahirin-kevitra eto an-toerana sy ny cache</string>
@@ -333,7 +328,6 @@
     <string name="common_dont_show_again">Aza aseho intsony</string>
     <string name="common_off">Tsy mandeha</string>
 
-    <string name="provider_manage_filters_button">Tantano ny sivana</string>
 
     <!-- Movie Details -->
     <string name="movie_details_title">Antsipirian\'ny sarimihetsika</string>
@@ -721,7 +715,6 @@
     <string name="settings_edit_this_source">Hanitsy ity loharano ity</string>
     <string name="settings_applies_immediately">Mihatra avy hatrany ny fanovana eto</string>
     <string name="settings_per_source_playback_hint">Ny famerenana ho azy, ny haben\'ny andalana Vao haingana ary ny endrika fampitana dia apetraka isaky ny loharano</string>
-    <string name="settings_filters_hint">Ny sivana votoaty ho an\'i %1$s dia apetraka isaky ny loharano</string>
     <string name="common_custom">Safidy manokana</string>
     <string name="settings_custom_value_format">%1$s (manokana)</string>
 
@@ -902,6 +895,7 @@
     <string name="profile_jellyfin_sign_in_prompt">Midira amin\'ny %1$s ho an\'ity mombamomba ity</string>
     <string name="profile_jellyfin_sign_in_button">Hiditra</string>
     <string name="profile_switch_to_button">Mifindra amin\'ity mombamomba ity</string>
+    <string name="profile_content_filters_title">Sivana votoaty</string>
     <string name="live_sync_title">Fampifanarahana mivantana</string>
     <string name="live_sync_desc">Ataovy mitovy amin\'ny fitaovanao rehetra ny mombamomba, ny loharano, ny ankafizina ary ny fandrosoan\'ny fijerena, amin\'ny alalan\'ny mpizara fampifanarahana anao manokana. Voaafina eo amin\'ny fitaovana avokoa ny zava-drehetra alohan\'ny hivoahany.</string>
     <string name="live_sync_open">Amboary</string>
