@@ -11,7 +11,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1–M5, M2b + A-W5 (2026-10-03, phone); fr/mg backfill and mg translation pass (2026-10-03) | — | native-speaker review of a few mg terms |
+| 1 Mobile settings | M1–M5, M2b + A-W5 (2026-10-03, phone); fr/mg backfill and mg translation pass (2026-10-03) | — | native-speaker review of a few mg terms (deferred by the user, 2026-10-03) |
 | 2 TV focus + Live TV | LT1–LT7, Phases 1–4, 6 (2026-10-03, TV); final regression walk and its follow-ups (2026-10-03, see below) | — | — |
 | 3 Core + guide | A-W4, A-W6, GD0–GD6, GD0c (2026-10-03, TV; GD0b kill-mid-refresh checked on the TV) | — | — |
 | 4 TV settings | T1–T6, Phases 7–8, follow-ups sweep (2026-10-03, TV; filters deep link verified on bearstv) | — | — |
