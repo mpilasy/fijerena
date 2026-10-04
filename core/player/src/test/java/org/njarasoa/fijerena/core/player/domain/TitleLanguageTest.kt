@@ -44,4 +44,20 @@ class TitleLanguageTest {
     fun `a title starting with 4K- but no tag separator is not badged`() {
         assertEquals(ParsedTitle("4K-Ultra Nature", null), parseDisplayTitle("4K-Ultra Nature"))
     }
+
+    @Test
+    fun `4K colon prefix of live channels becomes a badge`() {
+        assertEquals(ParsedTitle("BEIN SPORTS", "4K"), parseDisplayTitle("4K: BEIN SPORTS"))
+        assertEquals(ParsedTitle("TNT", "4K"), parseDisplayTitle("4k:TNT"))
+    }
+
+    @Test
+    fun `episode title loses its series' raw name`() {
+        assertEquals("S01E25", episodeTitleWithoutSeries("EN - The King of Queens - S01E25", "EN - The King of Queens"))
+        assertEquals(
+            "S03E04 - Whatever You Do",
+            episodeTitleWithoutSeries("4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do", "4K-A+ - Silo (2023) (US)"),
+        )
+        assertEquals("Pilot", episodeTitleWithoutSeries("Pilot", "EN - The King of Queens"))
+    }
 }

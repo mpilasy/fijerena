@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.feature.contentselection.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,14 +19,19 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
+import org.njarasoa.fijerena.core.player.domain.episodeTitleWithoutSeries
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -98,21 +104,31 @@ private fun MobileContinueWatchingCard(
                 )
             }
             Column(modifier = Modifier.padding(CinemaSpacing.sm)) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CinemaTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // The provider's "EN - " / "4K-A+ - " tag as a badge, as in the lists.
+                val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    parsedTitle.badge?.let { LanguageBadge(it) }
+                    Text(
+                        text = parsedTitle.title.ifBlank { item.name },
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CinemaTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                // An episode's title repeats the series' raw name, which the line above already shows.
+                val episode = item.subtitle?.let { episodeTitleWithoutSeries(it, item.name) }
                 val subtitleLine =
                     if (item.upNext) {
                         val upNext = stringResource(R.string.continue_watching_up_next)
-                        item.subtitle?.let { "$upNext • $it" } ?: upNext
+                        episode?.let { "$upNext • $it" } ?: upNext
                     } else {
                         val remainingLabel =
                             stringResource(R.string.series_remaining_format, formatDuration((item.remainingMs / 1000).toString()))
-                        item.subtitle?.let { "$it • $remainingLabel" } ?: remainingLabel
+                        episode?.let { "$it • $remainingLabel" } ?: remainingLabel
                     }
                 Text(
                     text = subtitleLine,
