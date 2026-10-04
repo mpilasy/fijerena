@@ -204,9 +204,11 @@ private fun CategoryGridContent(
     var livePreviewChannelId by rememberSaveable { mutableStateOf(initialStreamId.takeIf { isLiveBrowse }) }
     val showLivePreview = isLiveTv && (showPreviewPane || livePreviewChannelId != null)
     // The channel the preview plays now, after any retune or zap: Back hands it to browse, which
-    // lands on it (LT6). Plain remember, as the nav hand-off it replaces was taken once: a return
-    // from Search or the TV Guide rebuilds browse without it.
-    var livePlayingChannelId by remember { mutableStateOf<String?>(null) }
+    // lands on it (LT6), and a preview rebuilt after process death comes back on it. Cleared when
+    // the preview closes, so the next one starts on the channel it is opened on.
+    var livePlayingChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Plain remember, as the nav hand-off it replaces was taken once: a return from Search or the
+    // TV Guide rebuilds browse without it.
     var returnedLiveChannelId by remember { mutableStateOf<String?>(null) }
     val browseState = rememberSaveableStateHolder()
     // The layer's ViewModels go when it closes — in an effect, so after its own teardown
@@ -217,6 +219,7 @@ private fun CategoryGridContent(
     }
     val closeLivePreview: () -> Unit = {
         returnedLiveChannelId = livePlayingChannelId
+        livePlayingChannelId = null
         livePreviewChannelId = null
         // What resuming the browse entry did on Back from a preview entry, and Recent reloaded as
         // the fresh browse under Home's preview loaded it — after the preview recorded its channels.
@@ -224,6 +227,26 @@ private fun CategoryGridContent(
         catViewModel.refreshWatchStateOnResume()
         val browsed = (catViewModel.uiState.value as? CategoryViewModel.UiState.Success)?.selectedCategoryId
         if (browsed == CategoryViewModel.RECENT_CATEGORY_ID) catViewModel.loadStreams(browsed)
+    }
+
+    // The ViewModel's list is the preview's ChannelContext (LT2), and a ViewModel recreated after
+    // process death starts on its default list (Recent): the preview would come back on a channel
+    // that list doesn't have, with no video. So the list is kept with this screen's saved state and
+    // put back once if the recreated ViewModel lands elsewhere.
+    var savedCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectionChecked by remember { mutableStateOf(false) }
+    val selectedCategoryId = (uiState as? CategoryViewModel.UiState.Success)?.selectedCategoryId
+    LaunchedEffect(selectedCategoryId) {
+        if (!isLiveTv || selectedCategoryId == null) return@LaunchedEffect
+        if (!selectionChecked) {
+            selectionChecked = true
+            val saved = savedCategoryId
+            if (saved != null && saved != selectedCategoryId) {
+                catViewModel.loadStreams(saved)
+                return@LaunchedEffect
+            }
+        }
+        savedCategoryId = selectedCategoryId
     }
 
     // 5% padding for TV overscan safety — applied per-branch rather than around the whole
@@ -290,7 +313,7 @@ private fun CategoryGridContent(
                                 onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
                                 onBack = if (isLiveBrowse) closeLivePreview else onBack,
                                 onHome = onHome,
-                                initialStreamId = if (isLiveBrowse) livePreviewChannelId else initialStreamId,
+                                initialStreamId = if (isLiveBrowse) livePlayingChannelId ?: livePreviewChannelId else initialStreamId,
                                 onPlayingChannel = { streamId -> livePlayingChannelId = streamId },
                                 // The player's Guide button (GD5), only when the source has a guide.
                                 onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },

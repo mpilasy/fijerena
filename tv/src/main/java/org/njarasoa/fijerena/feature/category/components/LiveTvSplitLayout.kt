@@ -163,11 +163,14 @@ internal fun LiveTvSplitLayout(
     LaunchedEffect(streams) {
         if (hasSeeded || previewTarget != null) return@LaunchedEffect
         val list = streams ?: return@LaunchedEffect
-        hasSeeded = true
         val seed =
             guideReturnStreamId?.let { id -> list.firstOrNull { it.id == id } }
                 ?: initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
                 ?: lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
+        // A channel asked for by id and not in this list yet waits for the next one: after process
+        // death the list comes back as Recent first, then the category the preview was on.
+        if (seed == null && (guideReturnStreamId != null || initialStreamId != null)) return@LaunchedEffect
+        hasSeeded = true
         if (seed != null) {
             previewTarget = seed
             focusedItemFlow.value = seed
