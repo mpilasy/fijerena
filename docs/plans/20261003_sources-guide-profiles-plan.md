@@ -14,7 +14,7 @@ for the user's confirmation.
 | P5 Auto-refresh per guide source | Todo |
 | P6 Home button on every page | Todo |
 | P7 Home keeps Search the guide; search ↔ grid; no channel search | Todo |
-| P8 Live TV preview plays on OK, not on focus | Todo |
+| P8 Live TV preview plays on OK, not on focus (TV only) | Todo |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
@@ -38,7 +38,7 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
    one, and the search is the one used most.
 10. Search the guide should have a button that opens the TV Guide grid.
 11. Search the guide's channel mode (TV "What's on", mobile "Chan.") is no longer needed.
-12. The Live TV preview should not change channel by itself as focus moves: OK on a channel plays
+12. (TV only) The Live TV preview should not change channel by itself as focus moves: OK on a channel plays
     it, and only OK on the channel already playing goes full screen.
 
 ## How it works today (checked in the code, `main` at `b905113e`)
@@ -167,7 +167,7 @@ on.
 | P6 | **Home button on every page**: one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` when Home is on the stack, else `navigate(Screen.ContentTypeSelection) { popUpTo(0) { inclusive = true } }` — and one button per platform (TV `TvHomeButton` for the header slot, mobile a top-bar action), passed as `onHome` to every screen in D4's list; TV player OSD and mobile player controls get it too; hidden when there is no source (D5). TV focus: a header stop at the row's end, reachable by Up from the content like the existing header buttons. Focus walks updated. Strings ×3 ("Home"). | both nav hosts; TV screens' headers (Settings, Sources, Edit Source, guide sources, Live sync, Diagnostics, Live TV / Movies / TV Shows browse and preview, details, episodes, Search, TV Guide, Search the guide), `TvPlayerControlsOverlay`; mobile top bars and `MobileControlsOverlay`; `scripts/focus-walks/*` | M | Med (touches every screen header; TV focus order in each) |
 | P7 | **Home keeps Search the guide; search ↔ grid; no channel search**: Home drops its TV Guide button (TV and mobile; focus walk `home.txt`); Search the guide gets a TV Guide icon button (D7: pop back to the grid it came from, else `EpgGuide` for Recent); the channel mode goes — the mode chips, `SearchMode.CHANNEL`, the channel-search path in `EpgBrowserViewModel` and `XmltvSearchService.searchByChannel` if nothing else calls it, and its strings ×3. | both Home screens (`ContentTypeSelectionScreen`), both Search the guide screens, `EpgBrowserViewModel.kt`, `XmltvSearchService.kt`, both nav hosts, `scripts/focus-walks/home.txt` | S | Low |
 
-| P8 | **Live TV preview plays on OK, not on focus**: drop the focus-driven tuning (`focusedItemFlow` / `PREVIEW_SETTLE_MS` / its `collectLatest`; the entry seed still sets `previewTarget` directly); the docked panel's `onStreamPromote` becomes: row ≠ playing → `previewTarget = item` (tune in the preview), row = playing → full screen as today. `live_preview_hint` reworded ×3. `NAVIGATION_GUIDE` / `FEATURES` / `AGENTS` lines on "focus tunes the preview" updated; `live-tv-preview.txt` / `live-tv-back.txt` comments. | `LiveTvSplitLayout.kt`, strings ×3, docs, focus walks | S | Low-Med (LiveTvSplitLayout has ANR history; one engine, one loader — no new player) |
+| P8 | **Live TV preview plays on OK, not on focus (TV only; the phone is unchanged)**: drop the focus-driven tuning (`focusedItemFlow` / `PREVIEW_SETTLE_MS` / its `collectLatest`; the entry seed still sets `previewTarget` directly); the docked panel's `onStreamPromote` becomes: row ≠ playing → `previewTarget = item` (tune in the preview), row = playing → full screen as today. `live_preview_hint` reworded ×3. `NAVIGATION_GUIDE` / `FEATURES` / `AGENTS` lines on "focus tunes the preview" updated; `live-tv-preview.txt` / `live-tv-back.txt` comments. | `LiveTvSplitLayout.kt`, strings ×3, docs, focus walks | S | Low-Med (LiveTvSplitLayout has ANR history; one engine, one loader — no new player) |
 
 Order: P1 and P2 (one lane, the profile dialog), P3 then P4 (one lane, Edit Source), P5 after P4
 (its UI is on the screen P4 links). P1/P2 and P3/P4 can run in parallel. P6 is independent of the
