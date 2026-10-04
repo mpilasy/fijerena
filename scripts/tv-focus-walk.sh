@@ -9,6 +9,8 @@
 # MENU, or `WAIT <seconds>`. `expected` is a substring of the focused node's text; leave it
 # empty to send the key without checking. A first line `@start <substring>` checks focus
 # before any key is sent. `#` comments and blank lines are ignored.
+# CENTER is never sent while focus is on a destructive control (Delete, Clear, Remove, Purge,
+# Shrink, Reset, Leave the sync group): the walk stops there, in check and record mode.
 # After the first mismatch a check run no longer sends CENTER (the walk is off its path and OK
 # would press whatever is focused); record mode replays every key, so record only from a
 # start state the check run has matched.
@@ -103,6 +105,17 @@ for walk in "$@"; do
             CENTER) if [ "$derailed" = true ]; then
                        step=$((step + 1))
                        printf '%-3s %-8s →  %s\n' "$step" "$key" "skipped (after a mismatch)"
+                       continue
+                   fi
+                   # Never press OK on a destructive control, in check or record mode: a walk
+                   # that starts in the wrong place (a pane remembering its last row) once
+                   # pressed a library-data Clear button while recording.
+                   before="$(focused_text)"
+                   if printf '%s' "$before" | grep -qiE 'delete|clear|remove|purge|shrink|reset|leave the sync'; then
+                       step=$((step + 1))
+                       printf '%-3s %-8s →  %s\n' "$step" "$key" "REFUSED: focus is on a destructive control ($before)"
+                       derailed=true
+                       mismatch=$((mismatch + 1))
                        continue
                    fi
                    adb -s "$SERIAL" shell input keyevent "$(keycode "$key")" </dev/null

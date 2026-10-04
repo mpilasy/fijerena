@@ -315,7 +315,10 @@ the script exits 1 if any step mismatched. After the first mismatch in a file it
 `CENTER` (the walk is off its path, and OK would press whatever has focus). With `-r` it is a
 recorder — every key is sent, and the observed text is printed and written back into the file as the
 new expectations (comments kept), which is how a change to focus order updates its walk in the same
-commit. Record only from a start state a check run has matched.
+commit. Record only from a start state a check run has matched. In both modes it never sends `CENTER` while focus
+is on a destructive control (Delete, Clear, Remove, Purge, Shrink, Reset, Leave the sync group): it
+counts a mismatch and stops pressing OK, since a walk started in the wrong place once pressed a
+library-data Clear button while recording.
 
 One driver per emulator: the script, a person with the remote, and any other script sending keys
 must never share a device at the same time, or the focus read after each key belongs to someone

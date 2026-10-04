@@ -8,7 +8,7 @@
 # Connection column enters the settings column on its remembered row, else Auto-Resume; Left
 # returns to the Connection column on the row it left. Cancel ⇄ Save connection move with
 # Left/Right inside their row, as do the stream format / playlist type options.
-# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Written 2026-10-03 from the plan, re-recorded 2026-10-04.
 # Steps marked "re-record" depend on Compose's geometric Down from the Recent row size's Edit
 # button onto the option rows (m3u8 or ts, m3u_plus or simple) and are asserted loosely.
 @start Edit Source Name
@@ -31,10 +31,13 @@ LEFT	Save connection
 # Right comes back to the settings row it left.
 RIGHT	m3u_plus
 # P3/P4 Guide section, after Enable Caching: Provides a guide (Xtream), then Guide sources.
-DOWN	Enable Caching
-DOWN	Provides a guide
+DOWN	Enable Caching / Enable caching for faster loading
+DOWN	Provides a guide / This source's own guide (xmltv.php) is added automatically
 DOWN	Guide Sources
-# OK opens the source's guide sources (entry: its first row, or Add Guide Source when it has
-# none — re-record); Back returns to the Guide sources row.
-CENTER	Not selected
+# OK opens the source's guide sources (entry: its first row's toggle, or Add Guide Source when it
+# has none, as jellyxtream); Back returns to the Guide sources row. Library data follows, with
+# no content filters section in between (they are on each profile's page).
+CENTER	Add Guide Source
 BACK	Guide Sources
+DOWN	Sync Data Now
+UP	Guide Sources

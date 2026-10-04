@@ -1,7 +1,7 @@
-# T6 — EPG Management per source (TvEpgManagementScreen), TV emulator, source iptv with two or
-# more guide sources.
-# Start: Settings → Source & guide → Manage sources → OK on iptv's row (Edit Source) → Guide
-# sources; title "Guide sources · iptv". That is 4 entries above Home, so the title row ends in the
+# T6 — EPG Management per source (TvEpgManagementScreen), TV emulator, source bearstv (Xtream; on
+# the emulator it has one guide source, a weekly "Bulk" one; iptv has none, so it cannot be used).
+# Start: Settings → Source & guide → Manage sources → OK on bearstv's row (Edit Source) → Guide
+# sources; title "Guide sources · bearstv". That is 4 entries above Home, so the title row ends in the
 # section-root button "Settings" (P6). Opened from the Sources list's Guide it is 3 deep: no button,
 # and the walk's last UP stays on Add.
 # Entry focus is the first guide source's selection toggle ("Not selected"); with no guide
@@ -10,8 +10,7 @@
 # Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
 # the third its auto-refresh ("Refreshes daily", "Auto-refresh off").
 # Never press OK on Delete.
-# Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b); re-record with -r on
-# the emulator before relying on it.
+# Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b), re-recorded 2026-10-04.
 @start Not selected
 # Up from the first row reaches Add and the bulk actions above the list.
 UP	Add Guide Source
@@ -21,13 +20,15 @@ RIGHT	Edit
 RIGHT	Auto-refresh
 RIGHT	Delete
 LEFT	Auto-refresh
-# Auto-refresh drills into its picker in place of the list, focus on the current interval (the
-# iptv guide sources refresh daily); Left closes it unchanged, focus back on Auto-refresh.
-CENTER	Daily
+# Auto-refresh drills into its picker in place of the list, focus on the current interval (this
+# guide source refreshes weekly); Left closes it unchanged, focus back on Auto-refresh.
+CENTER	Weekly
 LEFT	Auto-refresh
 LEFT	Edit
 LEFT	Refresh
-DOWN	Not selected
+# One guide source only: Down from its last row stays put, Up goes back to its toggle, then Add.
+DOWN	Refresh
+UP	Not selected
 # Up from Add reaches the section-root button at the end of the title row (P6). OK on it would pop
 # back to Settings, focus on Manage sources; not pressed here.
 UP	Add Guide Source

@@ -5,7 +5,7 @@
 # Backup & storage ends with "Guide data maintenance" (database line as its value); OK drills
 # into Cleanup (entry focus), Purge, then Clear All Data last under Danger zone. Left or Back
 # leaves a sub-pane with focus back on its row. Never press OK on Cleanup / Purge / Clear.
-# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Written 2026-10-03 from the plan, re-recorded 2026-10-04 (source value and database line blanked).
 @start Profiles
 DOWN	Source & guide
 # P4 (D6): Manage sources is the only source row; guide sources are reached from the source.
@@ -18,7 +18,8 @@ DOWN	Display
 DOWN	Live sync
 DOWN	Backup & storage
 RIGHT	Export Settings
-# Developer mode only (the emulator has it on); drop this line without it.
+# Developer mode only (the active profile's Developer Mode, on in the emulator); drop this line
+# without it.
 DOWN	Quick Import from Downloads
 DOWN	Shrink Database
 DOWN	Guide data maintenance

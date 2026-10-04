@@ -1,10 +1,12 @@
-# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile Kid, source iptv.
+# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile atr, source bearstv (Xtream,
+# so a profile's page has its Content filters row; the profiles are atr (in use) and Kid).
 # Start: Settings just opened, focus on the rail row "Profiles" (the first of the seven groups).
 # Rail: Up/Down swap the pane live and never leave the rail; Right (or OK) enters the pane on
 # the group's first row; Left (or Back) from anywhere in the pane returns to the rail row of
 # the group; Back on the rail leaves Settings. A picker opens in the pane on the current value;
 # Left or Back closes it with focus back on its row. Expectations are Part I T3 behaviour.
-# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Written 2026-10-03 from the plan, re-recorded 2026-10-04 (version/build line and source value
+# blanked to the stable prefix).
 @start Profiles
 DOWN	Source & guide
 DOWN	Playback
@@ -14,12 +16,18 @@ DOWN	Backup & storage
 DOWN	About & advanced
 # Down at the end of the rail stays put.
 DOWN	About & advanced
+# About & advanced: the About card (version, build), then Open Diagnostics; no Developer Mode row
+# (it is on each profile's page).
+RIGHT	Fijerena
+DOWN	Open Diagnostics
+DOWN	Open Diagnostics
+LEFT	About & advanced
 UP	Backup & storage
 UP	Live sync
 UP	Display
 UP	Playback
 # Right enters the pane on the group's first row.
-# Playback has one row (Play next episode is on each profile's edit dialog, P2).
+# Playback has one row (Play next episode is on each profile's page, P9).
 RIGHT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
 # Down at the end of the pane stays put.
 DOWN	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
@@ -41,12 +49,30 @@ UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).
 UP	Profiles
 # Right lands on the first profile row; its text is the profile's name.
-RIGHT	A / atr
-# OK opens the profile's page in place of the rows (P9), focus on the name's Edit button;
-# Down reaches Colour (re-record: the row's text may read differently). Left leaves the page
-# unsaved, focus back on the profile's row.
+RIGHT	A / atr / Using on this device
+# OK opens the profile's page in place of the rows (P9), focus on the name's Edit button; Down
+# walks Colour, Developer mode, Play next episode, Content filters (Xtream only). The profile in
+# use has no Switch to this profile row. Left leaves the page unsaved, focus back on the
+# profile's row. Nothing below is pressed except the OK that opens a page.
 CENTER	Edit Name
-DOWN	Colour
-LEFT	A / atr
+DOWN	Colour / ›
+DOWN	Developer Mode / Enable stats for nerds and debug features
+DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
+DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
+LEFT	A / atr / Using on this device
+# Kid's page (not in use): same rows plus Switch to this profile, then Save, Cancel, Delete
+# profile (never pressed). Down at the end stays put.
+DOWN	K / Kid
+CENTER	Edit Name
+DOWN	Colour / ›
+DOWN	Developer Mode / Enable stats for nerds and debug features
+DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
+DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
+DOWN	Switch to this profile
+DOWN	Save
+DOWN	Cancel
+DOWN	Delete profile
+DOWN	Delete profile
+LEFT	K / Kid
 # Back in the pane returns to the rail row, not out of Settings.
 BACK	Profiles
