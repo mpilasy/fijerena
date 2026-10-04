@@ -4,14 +4,14 @@
 
 ![App Icon](mobile/src/main/res/mipmap-xxxhdpi/ic_launcher.webp)
 
-**A feature-rich multi-source media player for Android**
+**A multi-source media player for Android TV and Android phones**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-11+-green.svg)](https://developer.android.com)
-[![Compose](https://img.shields.io/badge/Jetpack%20Compose-100%25-brightgreen.svg)](https://developer.android.com/jetpack/compose)
+[![Compose](https://img.shields.io/badge/Jetpack%20Compose-UI-brightgreen.svg)](https://developer.android.com/jetpack/compose)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)]()
 
-*Supporting Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV)*
+*Android phones and tablets, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV)*
 
 </div>
 
@@ -19,111 +19,38 @@
 
 ## 📖 Overview
 
-Fijerena is a native Android media player built entirely with Kotlin and Jetpack Compose, designed to deliver an exceptional viewing experience across both mobile and TV platforms. With support for multiple media source types, advanced playback features, and a modern Material 3 design, Fijerena provides a unified interface for accessing your media library from various sources.
+Fijerena is a native Android media player written in Kotlin with Jetpack Compose. One codebase builds two apps: a 10-foot TV app driven by the D-pad, and a touch app for phones. Both play Live TV, movies and TV shows from the sources you add, with a TV guide, profiles, and live sync between a household's devices.
 
-The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its adaptive icon, symbolizing a world of content at your fingertips.
+The adaptive icon is the Blue Marble (Earth) wearing red/cyan 3D glasses.
 
 ## ✨ Key Features
 
-### 🎬 Multi-Source Support
-- **Xtream Codes API** - Full IPTV support with Live TV, Movies, TV Shows, and EPG
-- **Jellyfin** - Self-hosted media server integration with playback progress sync and Quick Connect auth
-- **SMB/CIFS** - Direct access to network shares (SMB2/3)
-- **Local Storage** - Local media files and M3U playlist support
-- **Remote M3U** - Live TV from an M3U playlist URL (e.g. iptv-org)
-- Seamlessly switch between multiple sources
-- Per-source encrypted credential storage
-- Automatic session restoration
+The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the short version.
 
-### 📺 Content Types
-- **Live TV** - Live television channels with fast channel switching
-- **Movies (VOD)** - On-demand movie content with resume support
-- **TV Shows** - Series browsing with season/episode selection; enriched with **TMDB synopses** per episode
-- **EPG Guide** - Electronic Program Guide with grid layout and customizable refresh interval (4h–48h)
-
-### 🎮 Playback Features
-- **Media3 (ExoPlayer)** - Industry-leading video playback engine
-- **4K/HDR Support** - Hardware-accelerated rendering on compatible devices
-- **Multi-Audio Tracks** - Language and format selection (Stereo, 5.1, 7.1)
-- **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
-- **Adaptive Quality** - Manual and automatic bitrate selection
-- **Episode Navigation** - Previous / Next episode buttons in the player controls
-- **Content-Type and Network Aware Buffering** (`NetworkBufferProfile`):
-  - Wi-Fi/Ethernet: Live TV 15-30s buffer, VOD 30-60s
-  - Cellular: deeper buffers (Live TV 50s, VOD 40-100s), scaled by the dev-mode multipliers
-- **Codec Prioritization**:
-  - NVIDIA Shield, Chromecast with Google TV: AV1 → HEVC → AVC
-  - Sony Bravia: HEVC → AVC
-  - Generic: AVC (H.264)
-
-### 🎨 Modern UI/UX
-- **100% Jetpack Compose** - Fully declarative UI
-- **4 Dark Themes** - Deep Night (default), AMOLED Black, Amethyst, Teal
-- **Material 3 Design** - Google TV optimized with Electric Blue accents
-- **D-Pad Navigation** - Full remote control support for TV devices
-- **Focus Indicators** - Animated scale, border, and glow effects
-- **Safe Margins** - TV overscan compensation (56dp horizontal, 32dp vertical)
-- **10-Foot UI** - Typography optimized for TV viewing distance (≥18sp body text)
-
-### 🔧 Advanced Features
-- **Virtual Categories**:
-  - Favorites - User-curated collection (configurable size: 10-500 items)
-  - Last Watched - Recent viewing history (Live TV: added after 10s of viewing by default, adjustable in Settings → Playback; configurable size: 1-100 items)
-- **User Profiles** - "Who's watching?" picker; each person has their own favourites, history, category filters and Jellyfin login
-- **Live Sync** - Profiles, favourites, watch progress and settings stay the same across a household's devices, end-to-end encrypted, through a self-hosted or Cloudflare sync server (`server/`); TVs join by QR code from a phone
-- **Continue Watching** - Resume cards, and "Up next" for the episode after a finished one
-- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
-- **Durable Watch State** - Position and watched status stored in SQLite and kept forever; the history-size setting only bounds the Recent row, never what is remembered
-- **Mark Watched / Unwatched** - Manual toggle from movie details, episode lists, content lists, and search
-- **Cross-Variant Dedup** - A title watched under one language/quality variant reads as watched under all of them (matched via TMDB ID)
-- **Track Memory** - Audio and subtitle selections persist per item, falling back to the last choice made in the same series
-- **Stats for Nerds** - Comprehensive playback metrics overlay including:
-  - **Video/Audio**: Codecs, bitrates, resolution, frame rate
-  - **Network**: Speed, bandwidth, buffer health, rebuffer stats
-  - **Build**: Compile time and git hash for version tracking
-- **Channel Switching** - D-pad up/down for live TV channel navigation
-- **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
-- **VOD Seek Controls** - TV: Left/Right (or the remote's REW/FF) moves a scrub cursor, 10s per press and faster while held, and OK seeks there; mobile: −1 min / +5 min buttons
-- **Double-Tap Seek** - Mobile double-tap on the left or right of the video seeks 10s back or forward
-- **VOD Time Display** - Current position, remaining time, estimated end time
-- **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from the Home screen
-- **Developer Mode** - Payload size tracking and debug information
-- **Cache Management** - Per-content-type cache with statistics
-- **Robust EPG Retries** - A failed guide refresh is retried up to 5 times with exponential backoff (1, 2, 4, 8, 16 min); each download inside it is retried 3 times
-- **EPG Change Detection** - Conditional requests (`If-None-Match` / `If-Modified-Since`) plus a content hash; an unchanged source skips download and ingestion entirely and is shown as "Unchanged"
-- **Sync Delta Reporting** - Source screens show what the last catalog sync actually changed ("No changes since last sync", or added/updated/removed counts)
-- **UI Scale Adjustment** - 40%, 60%, 80% (default) or 100% sizing for category and grid views (TV)
-- **Cellular Buffer Tuning** - Adjustable cellular buffer multipliers (0.5x-3.0x) in dev mode
-
-### 📱 Platform-Specific
-- **Mobile**:
-  - Portrait-locked UI (except player)
-  - Touch-optimized controls
-  - Sensor-based orientation in player
-  - Horizontally scrollable control row
-- **TV**:
-  - D-pad/remote navigation throughout
-  - Focus-based interaction model
-  - Glassmorphism effects (translucent backgrounds)
-  - No on-screen back buttons (uses remote back button)
+- **Sources:** Xtream Codes (Live TV, Movies, TV Shows, guide), Jellyfin (Movies, TV Shows, progress sync, Quick Connect), and Remote M3U playlists (Live TV and the playlist's video entries). SMB shares and Local files are offered in developer mode only. Several sources can be configured; logins are stored encrypted per source.
+- **Live TV:** a channel plays beside the list while you browse; one channel panel (category, Recent, Favourites) in the preview and over the video in full screen; channel switching with Up/Down; a TV Guide grid and guide search over multi-source XMLTV, refreshed in the background with change detection and retries.
+- **Movies and TV Shows:** details screens, resume between 2 % and 95 %, Continue Watching and Up next, mark watched/unwatched, watched state shared across language/quality variants of the same title (TMDB ID), and TMDB episode synopses when a TMDB key is configured.
+- **Player:** Media3 (HLS, DASH, MPEG-TS), audio, subtitle and quality selection remembered per item and per series, Stats for Nerds, network-aware buffering, and codec preference per device (AV1 → HEVC → AVC on Shield).
+- **Profiles and Live Sync:** a "Who's watching?" picker with per-profile favourites, history, filters and Jellyfin login; profiles, favourites, progress and settings kept in step across devices, end-to-end encrypted, through a self-hosted or Cloudflare sync server ([server/](server/README.md)); TVs join by QR code from a phone.
+- **Settings:** four dark themes (Deep Night, AMOLED Black, Amethyst, Teal), four looks (Material, Cupertino, Roku, BRAVIA), English, French and Malagasy, UI scale on TV, export/import, developer mode with on-device diagnostics.
+- **TV UI:** D-pad navigation with a consistent focus model, TV-safe margins (56dp / 32dp), body text of at least 18sp. Mobile is portrait-locked outside the player.
 
 ## 🖥️ Supported Devices
 
-### ✅ Tested & Optimized
-- **Android Mobile** - Phones & tablets (Android 11+).
-- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs).
-- **Chromecast with Google TV** - 4K & HD models.
-- **Sony Bravia** - Android TV models (HEVC optimization).
+- **Android phones and tablets** (Android 11+).
+- **NVIDIA Shield** (Shield TV and Shield TV Pro).
+- **Chromecast with Google TV**.
+- **Sony Bravia** Android TV models.
 
-### 🎯 Target Platform
-- **Minimum SDK**: 30 (Android 11)
-- **Target SDK**: 35 (Android 15)
-- **Compile SDK**: 36 (Android 16)
-- **Architectures**: ARM64, ARMv7 (release); debug builds add x86 and x86_64 so emulators run natively
+| | |
+|---|---|
+| Minimum SDK | 30 (Android 11) |
+| Target SDK | 35 (Android 15) |
+| Compile SDK | 36 (Android 16) |
+| ABIs | arm64-v8a, armeabi-v7a; debug builds add x86 and x86_64 so emulators run natively |
 
 ## 🛠️ Tech Stack
 
-### Core Technologies
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Kotlin | 2.3.0 |
@@ -143,259 +70,158 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Navigation | Navigation Compose | 2.8.5 |
 | Coroutines | kotlinx.coroutines | 1.11.0 |
 | SMB Client | smbj (Hierynomus) | 0.15.0 |
+| Sync server | TypeScript on Cloudflare Workers / workerd | see `server/package.json` |
 
-`gradle/libs.versions.toml` is authoritative. The TV app no longer uses `tv-foundation`'s lazy lists
+`gradle/libs.versions.toml` is authoritative. The TV app doesn't use `tv-foundation`'s lazy lists
 (its alpha10 calls a prefetch API removed in Compose 1.9), which is what let the Compose BOM move off
 2025.06.x. Compose 1.11+ needs `compileSdk` 37.
 
-### Architecture
-- **Multi-Module**: Separate modules for mobile, TV, and core functionality
-- **MVVM Pattern**: ViewModel + StateFlow for reactive UI
-- **Clean Architecture**: Domain models abstract provider-specific types
-- **Repository Pattern**: Unified `MediaRepository` delegates to active provider
-- **Dependency Injection**: Manual DI via factory pattern
-- **Type Safety**: Navigation uses String IDs (supports non-numeric identifiers)
+Architecture in one line: multi-module MVVM (ViewModel + StateFlow), provider types mapped to shared
+domain models, one `MediaRepository` over the active source, manual DI through `AppContainer`. See
+[docs/design.md](docs/design.md).
 
 ## 📂 Project Structure
 
 ```
 fijerena/
-├── mobile/                    # Mobile app module (portrait UI)
-├── tv/                        # Android TV app module (10-foot UI)
+├── mobile/                    # Phone app (touch UI)
+├── tv/                        # Android TV app (10-foot UI)
 ├── core/
-│   ├── player/               # Media3 player configuration & domain models
-│   ├── network/              # Multi-provider API implementations
-│   │   ├── XtreamMediaProvider.kt    # Xtream Codes API
-│   │   ├── jellyfin/                 # Jellyfin REST API client
-│   │   ├── smb/                      # SMB network share client
-│   │   └── local/                    # Local media & M3U parser
-│   ├── data/                 # AuthViewModel only (Room databases live in core/network)
-│   ├── ui/                   # Shared Compose components & design tokens
-│   └── navigation/           # Type-safe navigation definitions
+│   ├── player/               # Media3 player, playback service, domain models, diagnostics
+│   ├── network/              # Source implementations, Room databases, EPG pipeline, live sync client
+│   │   ├── XtreamMediaProvider.kt    # Xtream Codes
+│   │   ├── jellyfin/                 # Jellyfin REST client
+│   │   ├── remote/                   # Remote M3U
+│   │   ├── local/                    # Local files and M3U parser
+│   │   └── smb/                      # SMB share client
+│   ├── ui/                   # Shared ViewModels, Compose components, design tokens, strings
+│   ├── navigation/           # Type-safe navigation definitions
+│   └── data/                 # AuthViewModel only
 ├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
-├── docs/                     # In-depth technical documentation
-├── AGENTS.md                 # AI agent guide (single source of truth)
-├── CLAUDE.md                 # → AGENTS.md (Claude)
-├── GEMINI.md                 # → AGENTS.md (Gemini)
-├── CODEX.md                  # → AGENTS.md (Codex)
-├── .cursorrules              # → AGENTS.md (Cursor)
-├── .github/copilot-instructions.md  # → AGENTS.md (Copilot)
+├── scripts/                  # Build, deploy, backup/restore, CI checks, TV focus walks
+├── tools/jellyfin-xtream/    # Test bridge: serves a Jellyfin library as an Xtream panel
+├── docs/                     # Technical documentation
+├── AGENTS.md                 # Guide for AI coding agents (rules and conventions)
 └── README.md                 # This file
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Java Development Kit (JDK)** - Version 21 (sources target Java 21)
-- **Android Studio** - a release that supports AGP 9.4
-- **Android SDK** - API Level 36 (Android 16)
-- **Git** - For version control
+- **JDK 21** (sources target Java 21)
+- **Android Studio** — a release that supports AGP 9.4 — or the Android SDK command-line tools
+- **Android SDK** — API level 36
+- **sqlite3** on the host, for the backup/restore and network-TV deploy scripts
 
-### Clone the Repository
+### Clone and open
 ```bash
 git clone https://github.com/mpilasy/fijerena.git
 cd fijerena
 ```
-
-### Open in Android Studio
-1. Launch Android Studio
-2. Select **File → Open**
-3. Navigate to the cloned `fijerena` directory
-4. Click **OK** and wait for Gradle sync to complete
+Open the folder in Android Studio (**File → Open**) and let Gradle sync, or use `./gradlew` from the
+command line.
 
 ### Configuration
-No additional configuration is required for the initial build. The app will prompt for source setup on first launch.
+Nothing is required to build. For TMDB episode synopses, put a TMDB API key (v3 key or v4 read
+token) in the gitignored `local.properties`:
+
+```properties
+TMDB_API_KEY=<your key>
+```
+
+Without it the build still works and TMDB lookups are skipped. The app asks for a source on first
+launch.
 
 ## 🔨 Building
 
-### Debug Builds
-
-**Build All Modules:**
 ```bash
-./gradlew assembleDebug
+./gradlew assembleDebug            # both apps
+./gradlew :tv:assembleDebug        # TV only   (or scripts/build-tv.sh)
+./gradlew :mobile:assembleDebug    # mobile only (or scripts/build-mobile.sh)
 ```
 
-**Build Mobile Only:**
-```bash
-./gradlew :mobile:assembleDebug
-```
-
-**Build TV Only:**
-```bash
-./gradlew :tv:assembleDebug
-```
-
-**Output Locations:**
-Standard AGP paths, one per module — there is no root-level copy step:
-- `mobile/build/outputs/apk/debug/mobile-debug.apk`
+Outputs, one per module:
 - `tv/build/outputs/apk/debug/tv-debug.apk`
+- `mobile/build/outputs/apk/debug/mobile-debug.apk`
 
-The `scripts/deploy-*.sh` helpers rebuild and install from these paths; prefer them over hand-rolled
-`gradlew` + `adb` sequences.
-
-### Release Builds
-
-**Build Release APKs:**
-```bash
-# Mobile
-./gradlew :mobile:assembleRelease
-
-# TV
-./gradlew :tv:assembleRelease
-```
-
-**Note:** Release builds require signing configuration in `~/.gradle/gradle.properties` or via command-line arguments.
+`./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs. The build has no
+signing configuration, so they come out unsigned and must be signed (e.g. with `apksigner`) before
+they can be installed.
 
 ## 📲 Installation
 
-### Install on Android Device/Emulator
+Use the deploy scripts; each builds the right APK and installs it as an update:
 
-**Via Android Studio:**
-1. Connect your device or start an emulator
-2. Click **Run** (Shift+F10) and select the target device
-
-**Via ADB:**
 ```bash
-# Mobile (phone/tablet)
-adb install -r mobile/build/outputs/apk/debug/mobile-debug.apk
-
-# TV (Android TV device)
-adb install -r tv/build/outputs/apk/debug/tv-debug.apk
-
-# Specific device (when multiple connected)
-adb -s <device-id> install -r <apk-path>
+scripts/deploy-tv-emulator.sh [serial]       # TV emulator
+scripts/deploy-mobile-emulator.sh [serial]   # phone emulator
+scripts/deploy-tv-ip.sh <ip>[:port] ...      # network TVs: Shield, Bravia, Chromecast
+scripts/deploy-mobile-usb.sh [serial]        # phone over USB
 ```
 
-### Install on NVIDIA Shield / Sony Bravia
-
-**Connect via Network:**
-```bash
-# Enable ADB over network on TV (Settings → Developer Options)
-adb connect <TV_IP_ADDRESS>:5555
-
-# Verify connection
-adb devices
-
-# Install TV APK
-./gradlew :tv:installDebug
-```
-
-**Alternative:** Use a USB drive and sideload via file manager on the TV.
+The TV and mobile apps share one `applicationId` (`org.njarasoa.fijerena`), so a device gets one or
+the other. `adb install -r` can wipe the app's data without warning; the real-device scripts back up
+user data first (`scripts/backup-app-data.sh`). Device discovery, backup/restore, logs and debugging
+are in **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
 
 ## 🔍 Development
 
-### Code Style & Linting
 ```bash
-# Check code style
-./gradlew ktlintCheck
-
-# Auto-format code
-./gradlew ktlintFormat
+./gradlew ktlintCheck          # code style (ktlintFormat fixes it)
+./gradlew lintDebug            # Android Lint; each module's lint-baseline.xml holds the old warnings
+./gradlew testDebugUnitTest    # unit tests
+scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
 ```
 
-### Running Tests
-```bash
-# Unit tests
-./gradlew test
+The GitHub Actions workflow (`.github/workflows/android-build.yml`) runs these, the Room schema
+check and the sync server's tests, then builds both debug APKs; it is started by hand
+(`workflow_dispatch`).
 
-# Instrumentation tests (requires connected device/emulator).
+```bash
+# Instrumentation tests (requires a connected device/emulator).
 # WARNING: this uninstalls the app and wipes its data on EVERY connected device;
 # disconnect real devices first, or target one emulator with ANDROID_SERIAL.
 ./gradlew connectedAndroidTest
 ```
 
-### Design Token Standards
-All UI values (colors, spacing, dimensions, animations) **must** come from design token files:
-
-**Shared Tokens (core/ui):**
-- `CinemaColors.kt` - Color tokens (`CinemaAccent`, `CinemaSurface`, …) backed by the active theme
-- `CinemaSpacing.kt` - Padding/margins
-- `CinemaAlpha.kt` - Opacity values
-- `CinemaAnimation.kt` - Animation durations
-- `CinemaCornerRadius.kt` - Border radii
-
-**Platform-Specific:**
-- `TvDimensions.kt` / `MobileDimensions.kt` - Sizes
-- `TvFocusTokens.kt` - Focus scale/border/glow
-
-**Theme System:**
-- `CinemaThemePalette.kt` - Per-theme color definitions
-- `CinemaThemeHolder.current` - Runtime theme state
-
-### Adding a New Provider
-1. Implement `MediaProvider` interface in `core/network/`
-2. Create provider-specific models (API responses)
-3. Implement mapper to convert to domain models (`MediaCategory`, `MediaItem`)
-4. Add provider type to `ProviderType` enum
-5. Register in `MediaProviderFactory`
-6. Add UI form fields in `TvAddProviderScreen` and `MobileAddProviderScreen`
-7. Update `ProviderCapabilities` for feature support
+Coding rules (design tokens, TV focus, strings in English, French and Malagasy, database migrations)
+are in **[AGENTS.md](AGENTS.md)**, which applies to people as much as to agents.
 
 ## 📚 Documentation
 
-### AI Agent Instructions
+- **[docs/FEATURES.md](docs/FEATURES.md)** - Feature reference, settings, themes
+- **[docs/design.md](docs/design.md)** - System design and architecture
+- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - Screens, navigation flow, TV focus handling
+- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Room databases and SharedPreferences
+- **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
+- **[docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md)** - Why the EPG index grew to 87% dead space, and how to read DB state from a file header
+- **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)** - Build, install, deploy, backup/restore, debugging, focus walks
+- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Changelog
+- **[server/README.md](server/README.md)** - Live sync server: develop, deploy, self-host, API
 
-A single **[AGENTS.md](AGENTS.md)** file serves as the canonical guide for all AI coding assistants. Vendor-specific entry points all redirect there:
+### AI agent instructions
+
+**[AGENTS.md](AGENTS.md)** is the guide for all AI coding assistants. The vendor entry points
+redirect there:
 
 | File | Tool |
 |------|------|
-| `CLAUDE.md` | Claude Code, Claude |
+| `CLAUDE.md` | Claude Code |
 | `GEMINI.md` | Gemini CLI, Jules |
 | `CODEX.md` | OpenAI Codex |
 | `.cursorrules` | Cursor |
 | `.github/copilot-instructions.md` | GitHub Copilot |
 
-### Technical Documentation
-
-- **[docs/design.md](docs/design.md)** - System design and architecture
-- **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
-- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema
-- **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
-- **[docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md)** - Why the EPG index grew to 87% dead space, and how to read DB state from a file header
-- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
-- **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)** - Build, install, and deployment guide for TV and mobile
-- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
-
-## 🎨 Theme System
-
-Fijerena supports 4 dark theme variants, selectable at runtime from Settings:
-
-| Theme | Primary Accent | Surfaces | Use Case |
-|-------|---------------|----------|----------|
-| **Deep Night** (default) | Electric Blue `#2979FF` | `#0F1014`, `#161A20` | Balanced contrast |
-| **AMOLED Black** | Near-white `#E0E0E0` | `#000000`, `#0A0A0A` | Battery saving on OLED |
-| **Amethyst** | Purple `#9C6BFF` | `#0F1014`, `#161A20` | Warm, softer accent |
-| **Teal** | Teal `#26C6DA` | `#0F1014`, `#161A20` | Cool, calm accent |
-
-All themes feature:
-- The theme's accent for focus states and CTAs (AMOLED Black uses near-white `#E0E0E0` instead of blue)
-- **Vivid Orange** `#FF6D00` for LIVE badges and destructive actions
-- Consistent status colors (success/warning/error) across themes
-- Dynamic theme switching without app restart
+`.jules/bolt.md` is Jules' performance journal.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
-1. **Read the Documentation** - Familiarize yourself with [AGENTS.md](AGENTS.md) for coding standards
-2. **Create a Feature Branch** - `git checkout -b feature/your-feature-name`
-3. **Follow Design Tokens** - Never use hardcoded UI values (colors, spacing, etc.)
-4. **Maintain D-Pad Navigation** - All UI must be remote-navigable on TV
-5. **Respect Safe Margins** - Apply overscan margins to all TV screens
-6. **Test on Multiple Devices** - Verify on both mobile and TV platforms
-7. **Run Linting** - `./gradlew ktlintCheck` must pass
-8. **Write Clear Commit Messages** - Describe the "why" not just the "what"
-9. **Submit a Pull Request** - Include screenshots/recordings for UI changes
-
-### Code Review Checklist
-- [ ] No hardcoded colors (use the `Cinema*` color tokens or `MaterialTheme.colorScheme`)
-- [ ] No hardcoded dimensions (use `CinemaSpacing`, `TvDimensions`, etc.)
-- [ ] All interactive elements have focus indicators
-- [ ] TV screens respect safe margins (56dp horizontal, 32dp vertical)
-- [ ] Typography uses predefined scales (minimum 18sp for body text)
-- [ ] Navigation works with D-pad on TV
-- [ ] No security vulnerabilities (XSS, SQL injection, command injection)
-- [ ] No unnecessary abstractions or over-engineering
+1. Read [AGENTS.md](AGENTS.md) for the coding rules.
+2. Work on a branch.
+3. Keep TV screens D-pad navigable and inside the safe margins; use the design tokens.
+4. Make ktlint, Android Lint, the unit tests and the `scripts/check-*.sh` gates pass.
+5. Test on both TV and mobile; include screenshots or recordings for UI changes.
+6. Write commit messages that say why, not only what.
 
 ## 📄 License
 
@@ -407,25 +233,8 @@ copyright holder.
 
 ## 🙏 Acknowledgments
 
-- **Jetpack Compose Team** - For the modern declarative UI toolkit
-- **Media3 Team** - For the robust ExoPlayer foundation
-- **Ktor Team** - For the elegant networking library
-- **Hierynomus** - For the smbj SMB client library
-- **Open Source Community** - For the countless libraries that make this possible
-
-## 📞 Support
-
-For issues, questions, or feature requests:
-- Open an issue on GitHub
-- Check existing documentation in the `docs/` directory
-- Review [AGENTS.md](AGENTS.md) for technical details
-
----
-
-<div align="center">
-
-**Built with ❤️ using Kotlin and Jetpack Compose**
-
-*Designed for the big screen, optimized for every screen*
-
-</div>
+- **Jetpack Compose** - declarative UI toolkit
+- **Media3** - the ExoPlayer playback engine
+- **Ktor** - networking
+- **Hierynomus** - the smbj SMB client library
+- The open-source libraries listed in `gradle/libs.versions.toml`

@@ -1,14 +1,14 @@
 # AGENTS.md - AI Agent Guide for Fijerena
 
-This is the single source of truth for AI agents working on this codebase. All LLM tools (Claude, Gemini, Codex, Copilot, Cursor, etc.) should read this file. Vendor-specific entry points (CLAUDE.md, GEMINI.md, CODEX.md, .cursorrules, .github/copilot-instructions.md) all redirect here.
+This is the single source of truth for AI agents working on this codebase. All LLM tools (Claude, Gemini, Codex, Copilot, Cursor, Jules, etc.) should read this file. The vendor entry points (`CLAUDE.md`, `GEMINI.md`, `CODEX.md`, `.cursorrules`, `.github/copilot-instructions.md`) all redirect here; `.jules/bolt.md` is Jules' own performance journal.
 
 ---
 
 ## Project Overview
 
-Fijerena is a premium, native Android media player built with Kotlin and Jetpack Compose. It supports multiple content providers (Xtream IPTV, Jellyfin, SMB, Local files, Remote M3U) and provides a unified experience for TV devices (10-foot UI with D-pad navigation) and mobile (touch-optimized, portrait-locked).
+Fijerena is a native Android media player built with Kotlin and Jetpack Compose. It plays content from several kinds of source (Xtream IPTV, Jellyfin, Remote M3U, and in developer mode SMB and Local files) with one app for TV (10-foot UI, D-pad) and one for mobile (touch, portrait-locked outside the player).
 
-**Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android Mobile (Android 11+).
+**Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android phones/tablets. `minSdk` 30 (Android 11), `targetSdk` 35, `compileSdk` 36.
 
 **App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps.
 
@@ -16,26 +16,14 @@ Fijerena is a premium, native Android media player built with Kotlin and Jetpack
 
 ## Tech Stack
 
-Refer to `gradle/libs.versions.toml` for authoritative versions.
+`gradle/libs.versions.toml` is authoritative; `README.md` has the summary table. What the versions imply:
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Language | Kotlin (compiler/plugin; stdlib resolves 2.4.0) | 2.3.0 |
-| Build System | Gradle | 9.6.0 |
-| Build System | Android Gradle Plugin (AGP) | 9.4.1 |
-| UI Framework | Jetpack Compose | 2026.03.01 BOM (ui/foundation/runtime/animation 1.10.6) |
-| Material Design | Material 3 | 1.4.0 |
-| TV Components | androidx.tv.material3 (tv-foundation only as its transitive dep; the app uses plain LazyColumn/LazyRow) | 1.0.0-alpha10 |
-| Video Player | Media3 (ExoPlayer) | 1.7.1 |
-| Networking | Ktor (OkHttp engine) | 3.5.2 |
-| Serialization | kotlinx.serialization | 1.11.0 |
-| Coroutines | kotlinx.coroutines | 1.11.0 |
-| Database | Room (with FTS4) | 2.8.4 |
-| SQLite | Bundled (FTS5 capable) | 3.49.0 |
-| Image Loading | Coil | 3.5.0 |
-| Navigation | Navigation Compose | 2.8.5 |
-| SMB Client | smbj | 0.15.0 |
-| Theming | CinemaThemeHolder + CinemaThemePalette (color); UiStyleHolder + UiStyle (look and feel) | — |
+- Kotlin 2.3.0 compiler/plugin (the stdlib resolves to 2.4.0 through dependencies), AGP 9.4.1, Gradle 9.6.0, Java 21.
+- Compose BOM 2026.03.01 (ui/foundation/runtime/animation 1.10.6). Compose 1.11+ needs `compileSdk` 37.
+- Material 3 is pinned `strictly` 1.4.0 so the compile and runtime classpaths agree.
+- `androidx.tv:tv-material` 1.0.0-alpha10 is used; `tv-foundation` only arrives as its transitive dependency. Its `TvLazyColumn`/`TvLazyRow` crash on Compose 1.9+ (see Focus below).
+- Room 2.8.4 on a bundled requery SQLite 3.49.0 (FTS5 capable; the app's indexes use FTS4). Media3 1.7.1, Ktor 3.5.2 (OkHttp engine), Coil 3.5.0, Navigation Compose 2.8.5, smbj 0.15.0, WorkManager 2.11.2.
+- Theming: `CinemaThemeHolder` + `CinemaThemePalette` (colour); `UiStyleHolder` + `UiStyle` (look and feel).
 
 ---
 
@@ -43,17 +31,19 @@ Refer to `gradle/libs.versions.toml` for authoritative versions.
 
 ```
 fijerena/
-├── mobile/          # Portrait-locked, touch-optimized app
-├── tv/              # 10-foot UI, D-pad optimized app
+├── mobile/          # Phone app, touch UI
+├── tv/              # TV app, 10-foot UI, D-pad
 ├── core/
-│   ├── player/      # Media3 implementation, playback service, domain models
-│   ├── network/     # Provider implementations, API clients, EPG pipeline, Room DBs
+│   ├── player/      # Media3, playback service, domain models, diagnostics (CrashLog, SafeMode, AppScopes)
+│   ├── network/     # Source implementations, API clients, EPG pipeline, Room DBs, live sync client
 │   ├── navigation/  # Type-safe Screen definitions (shared)
-│   ├── ui/          # Shared ViewModels, design tokens, and components
+│   ├── ui/          # Shared ViewModels, design tokens, components, AppContainer
 │   └── data/        # AuthViewModel only
 ├── server/          # Live sync server (TypeScript; Cloudflare Worker or workerd in Docker) — see server/README.md
-├── docs/            # In-depth technical documentation (see below)
-├── gradle/          # Version catalog (libs.versions.toml)
+├── scripts/         # Build, deploy, backup/restore, CI checks, TV focus walks
+├── tools/           # jellyfin-xtream test bridge
+├── docs/            # Technical documentation (see below)
+└── gradle/          # Version catalog (libs.versions.toml)
 ```
 
 ### Critical Architectural Constraints
@@ -64,9 +54,9 @@ fijerena/
 4. **Dependency Injection:** Always use `AppContainer` (in `core:ui`) to obtain repository singletons (`MediaRepository`, `ProviderRepository`). Never manually instantiate repositories in ViewModels.
 5. **Async Initialization:** ViewModels must initialize repository dependencies asynchronously to prevent UI thread blocking during screen composition.
 6. **Long-lived scopes:** Any scope that outlives a screen (singletons, services, repositories) comes from `AppScopes.create(name, dispatcher)` (`core:player/diagnostics`), never a bare `CoroutineScope(...)` — an exception escaping a bare scope kills the process. `AppScopes` logs it and records it in `CrashLog`.
-7. **Don't swallow cancellation:** In suspend code, a `catch (e: Exception)` needs a `catch (e: CancellationException) { throw e }` before it, and `runCatching` around a suspend call is `suspendRunCatching` (`core:network`) — otherwise a cancelled job carries on and publishes stale state. `scripts/check-cancellation.sh` (run by CI) enforces it; mark a deliberate or non-suspend case with `// cancellation-ok: <reason>`; its file allow-list (legacy files) only shrinks.
+7. **Don't swallow cancellation:** In suspend code, a `catch (e: Exception)` needs a `catch (e: CancellationException) { throw e }` before it, and `runCatching` around a suspend call is `suspendRunCatching` (`core:network`) — otherwise a cancelled job carries on and publishes stale state. `scripts/check-cancellation.sh` (CI) enforces it; mark a deliberate or non-suspend case with `// cancellation-ok: <reason>` on the catch line or the line after it (where ktlint moves it); its file allow-list (legacy files) only shrinks.
 8. **Service from Compose:** In a `LaunchedEffect`/composition-scoped coroutine use `StreamingPlaybackService.awaitInstanceOrNull()`, never bare `awaitInstance()` — its `ServiceDestroyedException` escaping a composition coroutine crashes the app.
-9. **`xtream_v2.db` holds user data:** every version bump needs a real `Migration`; the destructive fallback covers only pre-v7 files. See `docs/DATABASE_SCHEMA.md` §3.
+9. **`xtream_v2.db` holds user data:** every version bump needs a real `Migration`; the destructive fallback covers only pre-v7 files. See `docs/DATABASE_SCHEMA.md` §3 and "Schema changes" below.
 10. **Secrets never fall back to plaintext:** an encrypted store that can't be opened is reset (`CredentialStoreHealth.markLost`) and, if it still can't be created, replaced by `CredentialStoreHealth.InMemoryPrefs` — never `getSharedPreferences`.
 11. **Startup work that could crash sits behind `SafeMode.isActive`** (`core:player/diagnostics`): `FijerenaApplication.startBackgroundWork()` and the nav hosts' `initializeStartup()` don't run in crash-loop safe mode, nor when `ProvidersDbGuard.isBlocked` (a `providers.db` from a newer build, which nothing may open). New startup work goes inside them, not around them. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
 12. **No destructive self-healing:** code that runs by itself (startup, workers, sync) never deletes user data (`watch_state`, `favorite_state`, `sync_*`, providers, profiles, credentials) by inference. Only an explicit user action or a received tombstone may. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-02.
@@ -86,20 +76,32 @@ Every color, dimension, spacing, and animation duration **must** come from desig
 - **Platform re-exports:** TV `CinemaColors.kt`/`Spacing.kt`, mobile `Color.kt`/`Spacing.kt`.
 - **Colors:** Prefer `MaterialTheme.colorScheme.*` or platform re-exports.
 
-### 2. D-Pad & Focus Management (TV)
+### 2. D-Pad & Focus (TV)
 
-Every interactive `@Composable` must be D-pad navigable.
-- Use `focusRestorer()` and `focusable()`.
-- Implement clear focus indicators from `TvFocusTokens`: the focus scale, outline and shadow come from the active look and feel (`LocalUiStyle.current.grid`: scale 1.0-1.09, outline at least `minFocusBorderWidth` 2dp, since the Roku style scales by 1.0 and relies on the outline alone). See `FocusModifiers.kt`.
-- Avoid complex animations on mid-range TV chipsets (e.g., Sony Bravia).
+Every interactive `@Composable` must be D-pad navigable, and every TV screen follows the focus contract (UX overhaul plan, Part I Part B and Part II; the per-screen behaviour is in `docs/NAVIGATION_GUIDE.md` → "TV Navigation"):
+
+1. **One focus stop per row**; OK does the row's one job. Rows that need several visible actions (Settings' Sources, guide sources) use labelled trailing buttons in fixed-width slots, so Up/Down keep the column.
+2. **No 2-D grids in Settings**; options are vertical lists.
+3. **Up/Down never skip content:** a block that shows information is focusable or sits inside a focusable row.
+4. **Left goes back one level** (pane → rail, picker → row); Right only reaches a row's trailing slots. Exception: a tabbed panel (the Live TV channel panel) uses Left/Right for its tabs, and Back leaves it.
+5. **Entry focus is the useful item:** the current value in a picker, the active source on Sources, the first action (never Cancel) in a menu.
+6. **Back restores the exact control** that opened the screen, at the same scroll position.
+7. **Destructive actions are never the first or default focus**, and always confirm.
+
+The primitives (all in `tv/.../ui/components/input/`):
+
+- **Land focus with `requestFocusWithRetry`** (`FocusRetry.kt`) from a `LaunchedEffect`, never `try { requestFocus() } catch (IllegalStateException)` or `runCatching`: since Compose 1.10 an unattached requester returns `false` instead of throwing, so those catches retry nothing. Act on its Boolean result and pass a `fallback` when there is an obvious second target. `scripts/check-focus-retry.sh` (CI) enforces it.
+- **Back returns focus (`NavReturnFocus.kt`):** every control that navigates to another destination records itself — `returnFocus.leaveFrom(key, listState)` before navigating, `Modifier.navReturnFocusTarget(returnFocus, key)` on the control, one `NavReturnFocusEffect` per screen (`val returnFocus = rememberNavReturnFocus()`). A screen's own first-open focus effect skips while `returnFocus.key != null` (or `isReturn`).
+- **Two-column screens use `tvPane`** (`TvPane.kt`): one `rememberPaneFocus()` per column, `pane.bind(...)` in the list, `Modifier.tvPane(pane, exitLeft/exitRight = neighbour)` on the column, `Modifier.paneItem(pane, key)` on each row. Never leave a column switch to Compose's geometric search, and don't add `focusRestorer` to a pane (its `onEnter` overrides the pane's) — see `docs/NAVIGATION_GUIDE.md` → "Panes (`tvPane`)".
+- **Row actions:** a content row (channel, title or category in the lists, the Live TV panel's rows, a TV Guide cell) is one focus stop; **long-press OK or the Menu key** opens its action menu (`FavoriteContextMenuDialog`), and a non-focusable "⋮" on the focused row is the hint. No hidden trailing ★ / ✓ / 🗑 buttons on content rows. Settings' Sources rows keep their visible labelled buttons. See `docs/NAVIGATION_GUIDE.md` → "Row actions".
+- **TV text fields reached by D-pad are `TvSearchField`** (`TvSearchField.kt`): an ordinary focus stop at rest, OK opens the keyboard, Back closes it (`onInterceptKeyBeforeSoftKeyboard`). A bare focused text field would take every D-pad key.
+- **One "current / selected" style:** `Modifier.currentIndicator(active, …)` (`TvInputDefaults.kt`) — an accent bar on the leading edge (bottom edge for tabs, `CurrentIndicatorEdge.Bottom`) plus `TvFocusTokens.currentText` for the title. No tint or outline on a selected row, so it never looks like a second focused one; a focused current row keeps the bar.
+- **Focus look** comes from `TvFocusTokens` and the active look and feel (`LocalUiStyle.current.grid`: scale 1.0-1.09, outline at least `minFocusBorderWidth` 2dp, since the Roku style scales by 1.0 and relies on the outline alone). See `FocusModifiers.kt`. Avoid complex animations on mid-range TV chipsets (e.g., Sony Bravia).
 - **Lists are plain `LazyColumn`/`LazyRow`.** Never `TvLazyColumn`/`TvLazyRow`: `tv-foundation` 1.0.0-alpha10 calls a prefetch API removed in Compose 1.9 and crashes on scroll.
 - **Back on TV:** where a focused `Button`/`Surface` exists, intercept Back in `onPreviewKeyEvent` on the root — `BackHandler` misses the first press. See `docs/NAVIGATION_GUIDE.md` → "TV Back on Detail Screens".
-- **Every screen/panel lands focus somewhere visible on open and returns it to where the user was on Back** — see `docs/NAVIGATION_GUIDE.md` → "D-Pad Focus Handling".
-- **Land focus with `requestFocusWithRetry`** (`ui/components/input/FocusRetry.kt`) from a `LaunchedEffect`, never `try { requestFocus() } catch (IllegalStateException)` or `runCatching`: since Compose 1.10 an unattached requester returns `false` instead of throwing, so those catches retry nothing. Act on its Boolean result and pass a `fallback` when there is an obvious second target. `scripts/check-focus-retry.sh` (CI) enforces it.
-- **Back returns focus:** every control that navigates to another destination records itself — `returnFocus.leaveFrom(key, listState)` before navigating, `Modifier.navReturnFocusTarget(returnFocus, key)` on the control, one `NavReturnFocusEffect` per screen (`ui/components/input/NavReturnFocus.kt`). A screen's own first-open focus effect skips while `returnFocus.key != null` (or `isReturn`).
-- **Two-column TV screens use `tvPane`** (`ui/components/input/TvPane.kt`): one `rememberPaneFocus()` per column, `Modifier.tvPane(pane, exitLeft/exitRight = neighbour)` on the column, `Modifier.paneItem(pane, key)` on each row. Never leave a column switch to Compose's geometric search — see `docs/NAVIGATION_GUIDE.md` → "Panes (`tvPane`)".
 - **In-tree overlays trap focus:** a picker drawn in the screen's own layout (not a `Dialog` window) wraps its content in `.focusProperties { onExit = { cancelFocusChange() } }.focusGroup()` (focusProperties directly before focusGroup) and refocuses its opener on close. Don't trap overlays that animate out while focused. `onExit = { FocusRequester.Cancel }` does nothing.
 - **Error states:** TV uses `TvErrorState` (focus on Retry, auto-retry when back online); mobile error branches call `RetryWhenOnline` (`core:ui`).
+- **Focus walks:** a change to a screen's focus order updates its walk in `scripts/focus-walks/` in the same commit (re-record with `scripts/tv-focus-walk.sh -r`; see `docs/RUN_GUIDE.md` → "Focus walks").
 
 ### 3. Safe Margins (TV Overscan)
 
@@ -109,16 +111,21 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### 4. Typography
 
-- 13-style Roboto scale (48-14sp).
+- TV: 13-style scale (48-14sp) — Manrope for display/headline styles, Roboto (system default) for title/body/label.
 - **Rule:** All body text **>=18sp** for TV readability.
-- UI Scaling (0.4f - 1.0f) is applied globally via `LocalDensity` in `MainActivity.kt`.
+- TV UI scale (40/60/80/100 %, default 80 %; `AppSettings.uiScale`) is applied globally via `LocalDensity` in TV `MainActivity.kt`.
 
-### 5. Coding Style
+### 5. Strings and titles
+
+- **Strings:** every user-visible string is a resource in a `core` module (`core/ui`, `core/network` or `core/player`, under `src/main/res/`), added to `values/`, `values-fr/` and `values-mg/` in the same change — the three files of each module carry the same keys. `tv` and `mobile` hold only `app_name`.
+- **Wording:** in the UI content providers are **sources** ("Add Source", "Manage Sources"; French *source*, feminine; Malagasy *loharano*), and EPG/XMLTV feeds are **guide sources** (*source de guide*, *loharanon'ny fitarihana*). Code keeps "provider" (`ProviderEntity`, the `providers` table, `providerId`, string keys such as `provider_add_title`), so new strings use the new words with the old key style. "Provider" stays only where it means the company that sells the IPTV service (`login_footer_text`). See `docs/plans/20261002_provider-to-source-rename-plan.md`.
+- **Provider titles:** raw names carry tags (`EN - …`, `4K-NF - …`, `AFR: …`, `… (US)`). Show them through `BadgedTitle` (`core:ui`, `LanguageBadge.kt`) or `parseDisplayTitle` (`core:player/domain/TitleLanguage.kt`): the tag becomes a `LanguageBadge` beside the clean title. Episode names go through `episodeOwnTitle` / `playerEpisodeName` / `episodeTitleWithoutSeries` in the same file. Stats for Nerds shows the raw names on purpose.
+
+### 6. Coding Style
 
 - **Single return statement** per function only.
 - **OS:** Ubuntu Linux development environment.
-- **Lint:** Run `./gradlew ktlintCheck` to verify style. Use `./gradlew ktlintFormat` to auto-fix.
-  ktlint-gradle 14.2.0 with ktlint 1.8.0 (ktlint-gradle older than 14.1 lints nothing under AGP 9). Rules are in `.editorconfig`; put a `// cancellation-ok: <reason>` marker on the catch line or the line after it.
+- **Lint:** `./gradlew ktlintCheck` verifies style, `./gradlew ktlintFormat` fixes it. ktlint-gradle 14.2.0 with ktlint 1.8.0 (ktlint-gradle older than 14.1 lints nothing under AGP 9). Rules are in `.editorconfig`.
 
 ---
 
@@ -128,28 +135,28 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 - **Source Creation:** Always use `StreamingMediaSourceFactory.createMediaSource()`.
 - **Formats:** HLS (`.m3u8`), DASH (`.mpd`), MPEG-TS (`.ts`, `.mpeg`).
-- **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime. VOD keeps no back buffer (ExoPlayer counts it against the byte cap; on 4K it starved the forward buffer) and its byte cap scales with the heap (`NetworkBufferProfile.vodTargetBufferBytes`, 64-160 MB).
+- **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime, from the constants in `NetworkBufferProfile` (cellular uses the profile sizes as they are; there is no user multiplier any more). VOD keeps no back buffer (ExoPlayer counts it against the byte cap; on 4K it starved the forward buffer) and its byte cap scales with the heap (`NetworkBufferProfile.vodTargetBufferBytes`, 64-160 MB).
 - **Codec Priority:** Optimized per device (`DeviceCapabilities`: Shield and Chromecast with Google TV: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC; others: AVC).
 
 ### Controls & Navigation
 
 - **State Management:** `PlaybackViewModel` delegates to `StreamingPlaybackService` (a `MediaSessionService`).
-- **OK / Center Key:** **Shows controls only** — it never pauses or resumes playback.
+- **OK / Center Key:** **Shows controls only** — it never pauses or resumes playback. On TV it opens the OSD (`TvPlayerControlsOverlay`): one row of labelled buttons, focus on Channels on live, Play/Pause on VOD.
 - **Double-OK:** Dismisses the stats overlay if visible.
-- **Pause:** Explicit via pause button or `KEYCODE_MEDIA_PLAY_PAUSE`. Mobile double-tap no longer pauses — see Mobile Gestures below.
-- **Seeking / Navigation:** 
+- **Pause:** Explicit via pause button or `KEYCODE_MEDIA_PLAY_PAUSE`. Mobile double-tap seeks, it doesn't pause — see Mobile Gestures below.
+- **Seeking / Navigation:**
   - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
-  - **TV:** with controls hidden, D-pad Left/Right and REW/FF move a scrub cursor (`stepScrubCursor`, `scrubStepMs`); OK commits, Back cancels.
-  - **TV Shows:** ⏮ Previous / Next ⏭ buttons in the player controls (TV and mobile) skip between episodes.
-- **Channel panel (Live TV):** TV: one `LiveTvChannelPanel` — docked in the preview, and over the video in full screen where D-pad Left or Right opens it (tabs Category · Recent · Favorites, focus on the playing channel, Back closes it); the panel's list is the zap order (`ChannelContext`). Mobile: swipe opens `MobileChannelListSheet`.
-- **Preview Pane / Dock (Live TV browse):** Channel plays alongside the list while browsing — TV: focus-driven split (`LiveTvSplitLayout`); Mobile: tap-driven docked mini-player (`MobileCategoryListScreen`). Both promote to full-screen on the same engine connection (no restart). Each platform guarantees Back always has a real stopover before exiting Live TV — see `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
-- **Mobile Gestures:** `detectTapGestures` (tap=controls; double-tap=10s relative seek, VOD only — left 40% of the width rewinds, right 40% seeks forward, center 20% does nothing). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
+  - **TV VOD:** with controls hidden, D-pad Left/Right and REW/FF move a scrub cursor (`stepScrubCursor`, `scrubStepMs`); OK commits, Back cancels.
+  - **TV Shows:** a Next episode button appears in the player controls (TV and mobile) once 80 % of the episode has played, and the "Up next" card offers the next episode at the end. There is no Previous episode button.
+- **Channel panel (Live TV):** TV: one `LiveTvChannelPanel` — docked in the preview, and over the video in full screen where D-pad Left or Right (or the OSD's Channels) opens it (tabs Category · Recent · Favorites, focus on the playing channel, Back closes it); the panel's list is the zap order (`ChannelContext`). Mobile: a horizontal swipe opens `MobileChannelListSheet` (category one way, Last Watched the other).
+- **Live TV is one nav entry (LT7):** on TV, Home → Live TV pushes one `CategoryList(showPreviewPane = false)`. The preview (`LiveTvSplitLayout`) and its in-place full screen are layers over browse inside that entry, open while `livePreviewChannelId` (saveable) is set — never push a nav entry for them. Back steps full screen → preview → browse → Home. Entries that open on one channel (Search, EPG Browser, TV Guide) push their own `CategoryList` with `showPreviewPane = true` (preview only, Back returns to the opener). Mobile has one `CategoryList` entry too; its dock and full screen are local state (`dockTarget`, `fullScreen`). Both promote to full screen on the same engine connection (no restart), and Back always has a real stopover before leaving Live TV — see `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
+- **Mobile Gestures:** `detectTapGestures` (tap=controls; double-tap=10s relative seek, VOD only — left 40% of the width rewinds, right 40% seeks forward, center 20% does nothing). Merged `detectDragGestures` (vertical=channel switch, horizontal=channel sheets).
 
 ### Features
 
-- **Stats Overlay:** Opened from the stats button in the player controls; double-OK or Back dismisses it. Comprehensive diagnostics (codecs, network speed, dropped frames, build info). Non-focusable on TV, so the remote keeps controlling playback.
-- **Stream Info Overlay:** Top-left panel showing resolution and codec underneath the title.
-- **Auto-resume:** Saves position every 10s (Live) or based on progress (VOD); resumes if 2-95% progress.
+- **Stats Overlay:** Opened from Stats in the player controls (on TV behind ⋮ More); double-OK or Back dismisses it. Comprehensive diagnostics (codecs, network speed, dropped frames, build info, the provider's raw names). Non-focusable on TV, so the remote keeps controlling playback.
+- **Stream Info:** the resolution/codec line under the title; on TV only in developer mode (`PlayerScreenState.isDeveloperMode`).
+- **Auto-resume:** position saved every 10 s while playing; VOD resumes if progress is 2-95%.
 - **Position saves:** `StreamingPlaybackService.positionSaves` (process-wide `SharedFlow<PositionSave>`, no replay) carries every periodic, state-change, track-choice and teardown save; the player screen collects it in a composition-scoped `LaunchedEffect` and calls `loaderViewModel.recordHistory`. Never attach a callback to a service instance: it is destroyed and recreated (TV `onStop`, cold start). `releasePlayerAndSession` runs each teardown stage in its own `releaseStage`; keep new stages inside one and the singleton reset last.
 - **Network deadlines:** a new request/response API call gets its client's overall deadline (Xtream metadata, Jellyfin, sync 60 s; TMDB 30 s); a bulk download opts out (`timeout { requestTimeoutMillis = INFINITE_TIMEOUT_MS }`). The player's streaming clients, EPG downloads and the sync WebSocket never get a call timeout.
 - **Logging secrets:** anything that logs a URL or exception text that may hold credentials goes through `Redact.text` (`core:player/diagnostics`); `CrashLog.record` already redacts.
@@ -187,7 +194,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### Flow
 
-1. **Startup:** Always lands on the home screen (`ContentTypeSelection`; titled "Home" on mobile) if a provider is configured; otherwise, navigates to Settings.
+1. **Startup:** `NewerData` / `SafeMode` first when they apply; otherwise the home screen (`ContentTypeSelection`; titled "Home" on mobile) if a provider is configured — on TV through `ProfilePicker` when there is more than one profile — else Settings. See `docs/NAVIGATION_GUIDE.md` → "Navigation Rules".
 2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
 3. **Navigation IDs:** Always use `String` for IDs.
 
@@ -199,10 +206,10 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
   - **Xtream:** Local FTS4 prefix search over the synced catalogue (`xtream_streams_fts` / `xtream_series_fts`), no network call; a second FTS query counts matches hidden by category filters.
   - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
-- **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content lists and search (`FavoriteContextMenuDialog` on TV, `MobileSearchFavoriteDialog` on mobile, second action row), TV episode cards (long-press), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one.
+- **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content rows and search (the row action menu, `FavoriteContextMenuDialog`), mobile search (`MobileSearchFavoriteDialog`, second action row), TV episode cards (long-press OK toggles it), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one.
 - **Sync Feedback:** Provider screens show the last sync's catalog delta ("No changes since last sync", or "N added • N updated • N removed"), gated on Xtream and on `lastSyncError` being null. EPG management shows "Unchanged" in place of durations for a source the last run confirmed unchanged.
 - **Jellyfin Quick Connect:** Supported for easy auth.
-- **Settings:** Source (provider) management, color theme, look and feel (Material, Cupertino, Roku, BRAVIA), language (English, French, Malagasy), EPG management, cache management, database maintenance ("Shrink Database"), UI scale, export/import (JSON).
+- **Settings:** profiles, sources and guide sources, live sync, playback, color theme, look and feel (Material, Cupertino, Roku, BRAVIA), language (English, French, Malagasy), UI scale (TV), EPG and cache management, database maintenance ("Shrink Database"), export/import (JSON), developer mode (Diagnostics). On TV, Settings is a rail of groups beside the selected group's rows.
 - **Database Maintenance & Compaction:** When providers are deleted, `ProviderRepository.deleteProvider` cascades through all catalog tables in `xtream_v2.db` (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`), clears orphaned SharedPreferences (`provider_creds_*`, `media_cache_*`, `xtream_cache_*`), deleting catalogue rows 1,000 per commit; no automatic `VACUUM` (`auto_vacuum = FULL` already returns space, and a WAL-mode `VACUUM` needs room for the whole database — see `docs/DATABASE_SCHEMA.md` §3). A background sweep (`sweepOrphanedCatalogData`) runs during `EpgSyncWorker`, and at app start only after an interrupted deletion (`orphan_sweep_pending`); it removes downloaded catalogue only, never favourites or watch history, and never throws. The "Shrink Database" button in Settings is the only place a `VACUUM` runs, and the only path that removes orphaned credential files and EPG sources. A circuit breaker prevents deletions if the valid provider list is empty.
 
 ---
@@ -211,69 +218,54 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 | Provider | Live TV | Movies | TV Shows | EPG | Search | Progress Sync |
 |----------|---------|--------|----------|-----|--------|---------------|
-| **Xtream** | Yes | Yes | Yes | Yes | Client-side | No |
+| **Xtream** | Yes | Yes | Yes | Yes | Client-side (FTS) | No |
 | **Jellyfin** | No | Yes | Yes | No | Server-side | Yes |
-| **SMB** | No | Yes | No | No | Filename | No |
-| **Local** | M3U only | Yes | No | No | Filename | No |
-| **Remote M3U** | Yes | No | No | No | Yes | No |
+| **Remote M3U** | Yes | Playlist video entries | No | No | Title match | No |
+| **SMB** (dev mode) | No | Yes | No | No | Filename | No |
+| **Local** (dev mode) | M3U only | Yes | No | No | Title match | No |
 
-**Wording:** in the UI these are **sources** ("Add Source", "Manage Sources"; French *source*, feminine; Malagasy *loharano*), and EPG/XMLTV feeds are **guide sources** (*source de guide*, *loharanon'ny fitarihana*). Code keeps "provider" (`ProviderEntity`, the `providers` table, `providerId`, string keys such as `provider_add_title`), so new strings use the new words with the old key style. "Provider" stays only where it means the company that sells the IPTV service (`login_footer_text`). See `docs/plans/20261002_provider-to-source-rename-plan.md`.
+SMB and Local are offered in Add Source only in developer mode (`addSourceTypes`, `core:ui`; SMB has no playback data source yet, Local has no folder picker); an existing one stays editable. Capabilities per type are in each provider's `ProviderCapabilities`.
 
 ---
 
 ## Development Workflow
 
-### Build & Install
+### Commands
 
 ```bash
-./gradlew assembleDebug              # Build both targets
-scripts/deploy-tv-emulator.sh         # Build + install on the TV emulator
-scripts/deploy-tv-ip.sh <ip>          # Build + install on a network TV (playback check, backup)
-scripts/deploy-mobile-usb.sh          # Build + install on a USB phone
+./gradlew assembleDebug                 # Build both apps
+./gradlew testDebugUnitTest             # Unit tests (what CI runs)
+./gradlew ktlintCheck                   # Code style (ktlintFormat fixes it)
+./gradlew lintDebug                     # Android Lint (per-module lint-baseline.xml; only new issues fail)
+scripts/check-cancellation.sh           # CI gates, run them before committing
+scripts/check-viewmodel-launch.sh
+scripts/check-focus-retry.sh
+scripts/deploy-tv-emulator.sh           # Build + install on the TV emulator
+scripts/deploy-mobile-emulator.sh       # Build + install on the phone emulator
+scripts/deploy-tv-ip.sh <ip> [<ip>...]  # Build + install on network TVs (playback check, backup)
+scripts/deploy-mobile-usb.sh [serial]   # Build + install on a USB phone (backup)
 ```
 
-### Quality Control
+CI (`.github/workflows/android-build.yml`) runs on manual dispatch only: unit tests, ktlint, Android Lint, the destructive-fallback grep, the three `scripts/check-*.sh` gates, the Room schema check, the sync server's tests, then `assembleDebug`. Build, deploy and debugging details are in `docs/RUN_GUIDE.md`.
 
-```bash
-./gradlew ktlintCheck                 # Check code style
-./gradlew ktlintFormat                # Auto-format code
-./gradlew lintDebug                   # Run Android Lint (per-module lint-baseline.xml; only new issues fail)
-./gradlew check                       # Run all tests and lint
-```
+### Deployment Rules
 
-### APK Outputs
-
-Standard AGP outputs generated per module:
-- `tv/build/outputs/apk/debug/tv-debug.apk`
-- `mobile/build/outputs/apk/debug/mobile-debug.apk`
-
-### Deployment
-
-TV and Mobile share the same `applicationId` (`org.njarasoa.fijerena`). Use `adb -s <device_id>` when multiple devices are connected.
-
-**Strict Deployment Rules:**
-- **Always Use Official Deploy Scripts:** Whenever deploying to network TVs or USB hardware, always use `scripts/deploy-tv-ip.sh <ip>` or `scripts/deploy-mobile-usb.sh`. Never run raw `adb install` commands manually. The deploy scripts check `dumpsys media_session` for active playback (`state=PlaybackState {state=3}`) to prevent interrupting someone streaming in the household and confirm with the user before deploying. `deploy-tv-ip.sh` and `deploy-mobile-usb.sh` back up first, via `scripts/backup-app-data.sh` (user data only: `shared_prefs`, `providers.db*`, and the `watch_state`, `favorite_state` and `sync_*` tables of `xtream_v2.db`; not the catalogue), into `backups/`, deleting backups older than 7 days; `scripts/restore-app-data.sh` puts one back.
-- **Incremental deploys:** the deploy scripts no longer run `clean` (2026-10-02). If an install crashes with `NoClassDefFoundError` after changes across modules (`core:*` consumed by `:tv`/`:mobile`), that is a stale DEX shard: run `./gradlew clean` and deploy again.
-- **No Auto-Launch on Install:** Never automatically launch the app or inject monkey/activity launch intents after installing via `adb install -r` unless explicitly instructed by the user. Let the user launch the app manually when ready.
-- **NEVER install to real hardware without backing up app data first.** `adb install -r` is *not* guaranteed to preserve app data — a signing-key mismatch (or other cause) can make it install-fresh with no warning, silently wiping providers/favorites/watch history. This happened for real on 2026-09-08: a deploy to all three household TVs (2 Shields + 1 Bravia, all daily-use, real config) came back "Success" on every device but had actually wiped every one (`firstInstallTime == lastUpdateTime == the deploy timestamp` — a fresh install, not an update). No backup existed. Nothing was recoverable. Before *any* `adb install`/`gradle install*` targeting a device that isn't a disposable emulator, back up first — `scripts/backup-app-data.sh <serial> <out.tar.gz>` (see `docs/RUN_GUIDE.md` or ask if unsure of the exact command). Explicit permission to deploy is not permission to skip this — do it every time, unprompted, or say why you can't and ask before installing.
-
-### Device-Specific Tips
-
-- **NVIDIA Shield:** Best for 4K/HDR and AV1 testing.
-- **Sony Bravia:** Test for UI performance and overscan compliance.
-- **Emulator:** HEVC testing is limited; Jellyfin content will trigger transcoding.
+- **Use the deploy scripts**, never hand-run `gradlew` + `adb install`. They build incrementally and install with `install -r`. `deploy-tv-emulator.sh` and `deploy-tv-ip.sh` check `dumpsys media_session` for active playback (`state=PlaybackState {state=3}`) and ask before interrupting it; `deploy-tv-ip.sh` skips a device that doesn't report `tv` in `ro.build.characteristics`. TV and mobile share the `applicationId` `org.njarasoa.fijerena`, so installing the wrong APK silently replaces the other app.
+- **NEVER install to real hardware without backing up app data first.** `adb install -r` is *not* guaranteed to preserve app data — a signing-key mismatch (or other cause) can make it install fresh with no warning. On 2026-09-08 a deploy to all three household TVs (2 Shields + 1 Bravia) reported "Success" on every device and had wiped every one (`firstInstallTime == lastUpdateTime`); no backup existed. `deploy-tv-ip.sh` and `deploy-mobile-usb.sh` back up each device with `scripts/backup-app-data.sh` (user data only: `shared_prefs`, `providers.db*`, and the `watch_state`, `favorite_state` and `sync_*` tables of `xtream_v2.db`) into `backups/`, deleting backups older than 7 days, and don't install on a device whose backup failed; `scripts/restore-app-data.sh` puts one back. Any other install to a real device runs `scripts/backup-app-data.sh <serial> <out.tar.gz>` first. Permission to deploy is not permission to skip this.
+- **Never uninstall or clear app data** (`adb uninstall`, `pm clear`) to fix a deploy, and ask before installing, uninstalling or clearing data on any device, emulators included. `scripts/uninstall-app.sh` is the only sanctioned uninstall and asks for confirmation. `./gradlew connectedAndroidTest` uninstalls the app on every connected device: run it only when asked, on one emulator (`ANDROID_SERIAL`).
+- **No auto-launch on install:** never launch the app (`am start`, monkey) after installing unless the user asks.
+- **Incremental deploys:** the deploy scripts don't run `clean`. A `NoClassDefFoundError` after changes across modules (`core:*` consumed by `:tv`/`:mobile`) is a stale DEX shard: `./gradlew clean`, then deploy again.
+- **Finding devices:** network TV IPs drift (DHCP, `192.168.68.0/24`). Run `adb mdns services` first; fall back to `arp -a | grep 192.168.68.` only if it finds nothing. Identify a device by `getprop ro.build.characteristics` (`tv` vs `default`/`nosdcard`) or `product:`/`model:` in `adb devices -l`, never by IP or port — emulator serials follow launch order.
 
 ---
 
 ## Agent Workflow Rules
 
-1. **Read first.** Start every session by reading this file and relevant docs.
-2. **Verify every UI change:** "Is this D-pad friendly?"
-3. **Never** hardcode dimensions or colors.
-4. **Use design tokens** for all visual attributes.
-5. **Only modify when explicitly instructed.** Do not make speculative changes.
-6. **Lint check:** Run `./gradlew lintDebug` after changes to verify no regressions.
-7. **Build verification:** Changes are not done until a build succeeds.
+1. **Read first.** Start every session by reading this file and the relevant docs in `docs/`.
+2. **Verify every UI change:** "Is this D-pad friendly?" and does it follow the focus contract above.
+3. **Use design tokens** for every visual attribute; never hardcode dimensions or colors.
+4. **Only modify when explicitly instructed.** Do not make speculative changes.
+5. **Checks:** run `./gradlew ktlintCheck`, `./gradlew lintDebug` and the `scripts/check-*.sh` gates after changes; a change is not done until a build succeeds.
 
 ### Investigation Strategy
 
@@ -281,7 +273,7 @@ When investigating issues:
 1. Read this file and relevant docs in `docs/` for technical context.
 2. Verify module dependencies in `build.gradle.kts` files.
 3. Run `./gradlew ktlintCheck` to ensure style compliance before suggesting changes.
-4. Prefer reproducing bugs on a connected device via `adb` logs.
+4. Prefer reproducing bugs on a connected device via `adb` logs; the on-device crash log and Diagnostics screen are described in `docs/RUN_GUIDE.md`.
 
 ---
 
@@ -295,9 +287,9 @@ For deep-dives, see the `docs/` directory:
 | [docs/FEATURES.md](docs/FEATURES.md) | Comprehensive feature reference with API details |
 | [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences. **Update it in the same commit as any migration** - see below |
 | [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline implementation guide with data models and file inventory |
-| [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation system, screen definitions, and flow diagrams |
+| [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation, screen definitions, flow diagrams, TV focus handling |
 | [docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md) | Why the EPG index grew to 87% dead space, the PRAGMA/Requery traps behind it, and how to read DB state from a file header |
-| [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) | Unified build, install, and deployment guide for TV and mobile |
+| [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) | Build, install, deploy, backup/restore, debugging and focus walks for TV and mobile |
 | [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Version history and changelog |
 
 ### Schema changes
@@ -345,7 +337,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20260920_xtream-concurrency-fixes-plan.md](docs/plans/20260920_xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
 | [docs/plans/20260921_adversarial-review-findings-plan.md](docs/plans/20260921_adversarial-review-findings-plan.md) | **Complete** - all five phases landed (2026-09-22) |
 | [docs/plans/20260922_codebase-stability-resilience-plan.md](docs/plans/20260922_codebase-stability-resilience-plan.md) | **Complete** - all findings landed except intentionally out-of-scope ones (2026-09-23) |
-| [docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md](docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md) | In Progress (Phases 1-5 complete, Phase 6 item 2a complete 2026-09-23; 6a/2c held back by user) |
+| [docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md](docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md) | **Done** - Phases 1-5 and 2a landed (2026-09-23); 6a and 2c held back by the user, not started |
 | [docs/plans/20260925_epg-add-to-calendar-plan.md](docs/plans/20260925_epg-add-to-calendar-plan.md) | **Complete** (2026-09-25) |
 | [docs/plans/20260929_live-sync-plan.md](docs/plans/20260929_live-sync-plan.md) | **Complete** - all nine phases landed (2026-10-01) |
 | [docs/plans/20260930_profile-architecture-adversarial-review-plan.md](docs/plans/20260930_profile-architecture-adversarial-review-plan.md) | **Resolved** - findings 3, 5, 6, 7 fixed; rest not defects, by design or deferred (2026-09-30) |
@@ -358,8 +350,9 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
 | [docs/plans/20261002_provider-to-source-rename-plan.md](docs/plans/20261002_provider-to-source-rename-plan.md) | **Complete** - both phases landed (2026-10-02); French and Malagasy reviewed as text only |
 | [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | **Complete** (2026-10-02) - Phases 0-6 done, plus R-27 (4K buffer), R-28 (main-thread reads), R-29 (picker focus), R-30 (Back focus); R-06 step 4 deferred; Phase 5/R-28/R-29/R-30 not yet checked on a device |
+| [docs/plans/20261003_ux-overhaul-plan.md](docs/plans/20261003_ux-overhaul-plan.md) | **Done** (2026-10-03) - Parts I-III (Settings, TV focus & Live TV, TV Guide) landed, verified on the emulators, deployed to both Shields and the Bravia; native-speaker review of a few Malagasy terms deferred |
 
-Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
+Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - grep `core`, `tv`, `mobile`, `scripts` and `server` for the file name first (the watch-state and next-level resilience plans are each cited from dozens of files).
 
 **A complete plan is not automatically deletable.** `23d2ced3` set the precedent of dropping finished plans rather than archiving them, and `docs/RELEASE_NOTES.md` is the durable record of what shipped. But a plan that source comments cite is load-bearing documentation: the comments say *which* phase a piece of code implements and the plan says *why* that design was chosen, so deleting it turns those references into dead paths and strands the reasoning.
 
@@ -375,9 +368,9 @@ When asked to produce a plan, write the real file under `docs/plans/` - not only
 
 Hard-won lessons from production debugging. Read these before making changes in related areas.
 
-### SharedPreferences JSON deserialization is the #1 hotspot
-**Context:** `getFavoriteCategoryItems()`, `getFavoriteItems()`, and `getFavoriteShowItems()` all deserialize JSON from SharedPreferences on every call with no in-memory cache. Called per-chip inside `LazyRow items {}` — 500+ deserializations per recompose for large providers.
-**Fix:** Apply in-memory cache + dirty-flag + debounced-write pattern (same as `cachedWatchHistory`). Since 2026-08-28 favourites and watch state live in Room (`favorite_state`, `watch_state`), so these blobs are gone; the rule still applies to any SharedPreferences JSON read in a hot path.
+### SharedPreferences JSON deserialization was the #1 hotspot
+**Context:** The favourites getters deserialized JSON from SharedPreferences on every call with no in-memory cache, and were called per-chip inside `LazyRow items {}` — 500+ deserializations per recompose for large providers.
+**Fix:** In-memory cache + dirty-flag + debounced write (the pattern `cachedWatchHistory` uses). Since 2026-08-28 favourites and watch state live in Room (`favorite_state`, `watch_state`), read through `MediaRepository`'s in-memory snapshots, so those blobs are gone; the rule still applies to any SharedPreferences JSON read in a hot path.
 
 ### Watch history lookups were O(n*m) in refreshPerItemData
 **Context:** `MediaRepository.getPlaybackPosition()` did a linear scan of the watch-history blob per call, and `refreshPerItemData()` called it in a loop over every stream.

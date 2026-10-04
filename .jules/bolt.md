@@ -1,3 +1,5 @@
+Jules' performance journal. The project rules are in [AGENTS.md](../AGENTS.md); read it first. Entries are dated and describe the code as it was then.
+
 ## 2024-05-20 - Optimize SearchUtils string manipulations in hot loops
 **Learning:** Performing `String.substring` and `String.startsWith` inside hot loops for every item during text filtering causes extreme redundant object allocations and GC thrashing. Using `ParsedQuery` to categorize prefix and exact matches outside the loop dramatically reduces allocations in search.
 **Action:** When filtering across thousands of elements (like EPG or search views), always extract string manipulation out of the iteration bounds and pre-parse criteria into lightweight lookup structures.
@@ -11,7 +13,7 @@
 **Learning:** In a previous pass, attempting multiple small optimizations at once led to a regression. I incorrectly assumed runBlocking removal on Room queries was safe without considering main-thread exceptions, and falsely assumed array lookup length was faster than the JVM-optimized .length on String arrays. Also learned mapNotNullTo is inline and compiles exactly like an explicit loop, so rewriting it manually is useless noise.
 **Action:** Stick to ONE single, highly measurable optimization (like removing .flatMap{} allocations in a hot render loop) as requested by the persona rules. Do not attempt unproven micro-optimizations.
 ## 2026-05-28 - [Memoize expensive EPG filtering in Compose]
-**Learning:** The `MobileEpgBrowserScreen` and `EpgBrowserScreen` were executing a chained functional pipeline (`mapNotNull`, `filter`, and `.copy()`) over large `dateGroups` datasets directly inside the `@Composable` function body. Since `matchedOnly` is a derived state or parameter, this meant the entire heavy computation was blocking the UI thread on *every* recomposition (e.g., when scrolling or when minor UI state changes).
+**Learning:** The `MobileEpgBrowserScreen` and `EpgBrowserScreen` (now `TvEpgBrowserScreen`) were executing a chained functional pipeline (`mapNotNull`, `filter`, and `.copy()`) over large `dateGroups` datasets directly inside the `@Composable` function body. Since `matchedOnly` is a derived state or parameter, this meant the entire heavy computation was blocking the UI thread on *every* recomposition (e.g., when scrolling or when minor UI state changes).
 **Action:** Wrapped the entire `displayDateGroups` computation in a `remember(results.dateGroups, matchedOnly) { ... }` block to memoize the result, ensuring the expensive O(N) nested filtering is only evaluated when the underlying search results or filter toggle state actually changes.
 
 ## 2024-05-18 - Avoid dynamic evaluation in `sortedWith(compareBy { ... })` for expensive operations
