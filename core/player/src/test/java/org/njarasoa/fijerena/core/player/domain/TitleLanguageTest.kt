@@ -60,4 +60,16 @@ class TitleLanguageTest {
         )
         assertEquals("Pilot", episodeTitleWithoutSeries("Pilot", "EN - The King of Queens"))
     }
+
+    @Test
+    fun `episode own title drops the show and the number`() {
+        assertEquals("", episodeOwnTitle("EN - The King of Queens - S01E22"))
+        assertEquals(
+            "Whatever You Do, Don't Go Home",
+            episodeOwnTitle("4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do, Don't Go Home"),
+        )
+        assertEquals("", episodeOwnTitle("S01E22"))
+        assertEquals("The Body in the Library", episodeOwnTitle("The Body in the Library"))
+        assertEquals("Pilot", episodeOwnTitle("Pilot"))
+    }
 }

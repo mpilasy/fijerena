@@ -59,3 +59,19 @@ fun episodeTitleWithoutSeries(
     episodeTitle: String,
     seriesName: String,
 ): String = episodeTitle.removePrefix("$seriesName - ").ifBlank { episodeTitle }
+
+// "EN - The King of Queens - S01E22", "4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do":
+// anything before the episode number, the number, then the episode's own title if there is one.
+private val NUMBERED_EPISODE_TITLE = Regex("""^(?:.*?\s-\s)?S\d{1,3}\s?E\d{1,4}(?:\s-\s(.*))?$""", RegexOption.IGNORE_CASE)
+
+/**
+ * The episode's own title out of a provider's episode title: "Whatever You Do" from
+ * "4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do", and "" from
+ * "EN - The King of Queens - S01E22", which only repeats the show and the number the screen
+ * already shows. A title without an "S01E22" number ("The Body in the Library") is returned as is.
+ */
+fun episodeOwnTitle(raw: String): String {
+    val text = raw.trim()
+    val match = NUMBERED_EPISODE_TITLE.matchEntire(text) ?: return text
+    return match.groupValues[1].trim()
+}

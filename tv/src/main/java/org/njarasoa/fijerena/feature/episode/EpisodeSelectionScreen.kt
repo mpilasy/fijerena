@@ -110,6 +110,7 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.episodeIdMatchingName
+import org.njarasoa.fijerena.core.player.domain.episodeOwnTitle
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
@@ -716,7 +717,7 @@ internal fun EpisodeListContent(
     // The hero's Play and the compact header's Play next: one label, one action. The label names
     // the episode by its title ("▶ Play: Getting Into Cirque du Soleil", F-E-5) — the S:E numbers
     // say nothing when a provider numbers everything 0 — and falls back to them without a title.
-    val anchorTitle = anchorEpisode?.title?.takeIf { it.isNotBlank() }?.let(::shortEpisodeTitle)
+    val anchorTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }?.let(::shortEpisodeTitle)
     val playNextLabel =
         when {
             anchorEpisode == null -> {
@@ -1491,9 +1492,10 @@ private fun NextUpCard(
                 stringResource(R.string.series_episode_label, episode.episodeNumber),
             ).joinToString(" · ")
         Text(text = label, style = typography.titleSmall.copy(shadow = shadow), color = CinemaTextPrimary)
-        if (episode.title.isNotBlank()) {
+        val ownTitle = episodeOwnTitle(episode.title)
+        if (ownTitle.isNotBlank()) {
             Text(
-                text = episode.title,
+                text = ownTitle,
                 style = typography.bodySmall.copy(shadow = shadow),
                 color = CinemaTextPrimary,
                 maxLines = 2,
@@ -1774,13 +1776,15 @@ private fun EpisodeDetailPanel(
     ) {
         // Full-bleed, edge to edge — the series' own backdrop, since an episode has no backdrop
         // art of its own (docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 5: "no new screen").
+        // The provider's title often only repeats the show and the number ("EN - Show - S01E22").
+        val heroTitle = episodeOwnTitle(episode.title).ifBlank { stringResource(R.string.series_episode_label, episode.episodeNumber) }
         TvDetailHero(
-            title = episode.title,
+            title = heroTitle,
             backdropUrl = backdropUrl,
             logoUrl = null,
             titleFallback = {
                 Text(
-                    text = episode.title,
+                    text = heroTitle,
                     style = MaterialTheme.typography.displayLarge,
                     color = CinemaTextPrimary,
                 )
@@ -2266,13 +2270,17 @@ private fun EpisodeCard(
                             color = CinemaAccent,
                         )
                     }
-                    Text(
-                        text = episode.title,
-                        style = cardScaledStyles.titleMedium,
-                        color = if (isContinueWatching) TvFocusTokens.currentText else CinemaTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // Nothing when the provider's title only repeats the show and the number.
+                    val ownTitle = remember(episode.title) { episodeOwnTitle(episode.title) }
+                    if (ownTitle.isNotBlank()) {
+                        Text(
+                            text = ownTitle,
+                            style = cardScaledStyles.titleMedium,
+                            color = if (isContinueWatching) TvFocusTokens.currentText else CinemaTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     episode.metadata.plot?.let { plotText ->
                         Text(
                             text = plotText,

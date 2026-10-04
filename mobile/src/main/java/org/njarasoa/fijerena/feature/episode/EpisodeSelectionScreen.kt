@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.episodeOwnTitle
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
@@ -941,9 +943,9 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Episode title
+        // Episode title — the provider's often only repeats the show and the number ("EN - Show - S01E22")
         Text(
-            text = episode.title,
+            text = episodeOwnTitle(episode.title).ifBlank { stringResource(R.string.series_episode_label, episode.episodeNumber) },
             style = MaterialTheme.typography.headlineLarge,
         )
 
@@ -1271,13 +1273,16 @@ private fun EpisodeCard(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
 
-                // Episode title
-                Text(
-                    text = episode.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // Episode title: nothing when the provider's only repeats the show and the number
+                val ownTitle = remember(episode.title) { episodeOwnTitle(episode.title) }
+                if (ownTitle.isNotBlank()) {
+                    Text(
+                        text = ownTitle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
                 // Episode plot/summary
                 episode.metadata.plot?.let { plotText ->
