@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -77,6 +78,7 @@ internal fun LiveTvChannelPanel(
 ) {
     val scale = LocalUiScale.current
     val tabsEntry = remember { FocusRequester() }
+    val refreshFocus = remember { FocusRequester() }
     val rowsPane = rememberPaneFocus()
     val selectedIndex = tabs.indexOfFirst { it.id == context.id }.coerceAtLeast(0)
     val labels = tabs.map { it.label() }
@@ -109,12 +111,14 @@ internal fun LiveTvChannelPanel(
                 selectedIndex = selectedIndex,
                 onTabSelected = { index -> tabs.getOrNull(index)?.let(onContextSelected) },
                 entryFocusRequester = tabsEntry,
+                endFocusRequester = refreshFocus,
                 modifier = Modifier.weight(1f),
             )
             CinemaIconButton(
                 onClick = onRefresh,
                 enabled = !streamsLoading,
                 size = TvDimensions.iconLarge,
+                modifier = Modifier.focusRequester(refreshFocus),
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Refresh,

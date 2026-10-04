@@ -52,6 +52,10 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * requester a caller uses both to send D-pad Down from above into this row (landing on the
  * selected tab, not whichever one default geometry search prefers) and, later, to send Back from
  * inside the open section back to this row rather than out of the screen.
+ *
+ * Right on the last tab goes to [endFocusRequester] when given (a control at the end of the
+ * row), else stays put: left to geometric search it escaped the row — on a movie with only a
+ * Details tab it jumped up to Play.
  */
 @Composable
 fun TvSectionTabs(
@@ -60,6 +64,7 @@ fun TvSectionTabs(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
     entryFocusRequester: FocusRequester? = null,
+    endFocusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
     // One FocusRequester per tab, explicitly wired to its left/right neighbor below — Compose's
@@ -86,7 +91,7 @@ fun TvSectionTabs(
                 onSelected = { onTabSelected(index) },
                 focusRequester = focusRequesters[index],
                 previousTabFocusRequester = focusRequesters.getOrNull(index - 1),
-                nextTabFocusRequester = focusRequesters.getOrNull(index + 1),
+                nextTabFocusRequester = focusRequesters.getOrNull(index + 1) ?: endFocusRequester ?: FocusRequester.Cancel,
                 // Second requester on the same node, alongside `focusRequester` above — only the
                 // selected tab gets it, and it moves with selection as `selectedIndex` changes.
                 entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
@@ -102,7 +107,7 @@ private fun SectionTab(
     onSelected: () -> Unit,
     focusRequester: FocusRequester,
     previousTabFocusRequester: FocusRequester?,
-    nextTabFocusRequester: FocusRequester?,
+    nextTabFocusRequester: FocusRequester,
     entryFocusRequester: FocusRequester?,
 ) {
     val scale = LocalUiScale.current
@@ -139,7 +144,7 @@ private fun SectionTab(
                 .then(entryFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
                 .focusProperties {
                     previousTabFocusRequester?.let { left = it }
-                    nextTabFocusRequester?.let { right = it }
+                    right = nextTabFocusRequester
                 }.graphicsLayer {
                     scaleX = focusScale
                     scaleY = focusScale
