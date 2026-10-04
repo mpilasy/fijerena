@@ -74,10 +74,12 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
@@ -1106,13 +1108,21 @@ private fun SearchResultItem(
             Column(
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    text = result.streamName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CinemaTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tag as a badge.
+                val parsedTitle = remember(result.streamName) { parseDisplayTitle(result.streamName) }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    parsedTitle.badge?.let { LanguageBadge(it) }
+                    Text(
+                        text = parsedTitle.title.ifBlank { result.streamName },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CinemaTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = stringResource(R.string.search_result_category_format, result.categoryName),
                     style = MaterialTheme.typography.bodyMedium,

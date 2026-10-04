@@ -20,8 +20,13 @@ private const val CODE = "[A-Z]{2,4}|[DdAa]\\+"
 private val PREFIX_CODE = Regex("^($CODE)\\s*[:\\-]\\s*")
 private val SUFFIX_CODE = Regex("\\s*\\(($CODE)\\)\\s*$")
 
+// The 4K catalogues stack a quality tag on the code: "4K-NF - …", "4K-D+ - …", "4K-FR-HDR - …",
+// "4K-OSN+ - …" (a few in lower case, some with a space before the dash). The whole tag is the
+// badge. Only before " - ", so a title that merely starts with "4K-" keeps it.
+private val PREFIX_4K = Regex("^(4K(?:-[A-Z]{1,4}\\+?)+)\\s*-\\s+", RegexOption.IGNORE_CASE)
+
 /**
- * Strips a leading `EN -`/`NP:` style prefix or a trailing `(US)` style suffix off [raw] and
+ * Strips a leading `EN -`/`NP:`/`4K-NF -` style prefix or a trailing `(US)` style suffix off [raw] and
  * returns the cleaned title plus the code as a badge. When both are present, the prefix wins —
  * it is the more common shape and carries the language, the more useful of the two. Returns
  * [raw] verbatim (trimmed) with a null badge when neither pattern matches.
@@ -30,7 +35,7 @@ fun parseDisplayTitle(raw: String): ParsedTitle {
     var text = raw
     var badge: String? = null
 
-    PREFIX_CODE.find(text)?.let { match ->
+    (PREFIX_4K.find(text) ?: PREFIX_CODE.find(text))?.let { match ->
         badge = match.groupValues[1].uppercase()
         text = text.substring(match.range.last + 1)
     }
