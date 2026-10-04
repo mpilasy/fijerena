@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -50,8 +53,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * Keys: Up from the first row lands on the selected tab, whichever node above it Compose's
  * geometric search picked; Left/Right on the tabs switch the list (focus follows selection, as
  * [TvSectionTabs] does everywhere), and Left on the first tab of the docked panel is Back
- * ([onLeftFromFirstTab]); Left/Right on a row do nothing — the rows are a `tvPane`
- * with no neighbours; Down from the tabs enters the rows on the current channel when the list
+ * ([onLeftFromFirstTab]); Left/Right on a row switch to the previous / next tab too, focus staying
+ * in the rows (on the current channel when the new list has it) — Recent ↔ Favourites in one press
+ * from anywhere in the list, without climbing to the tabs; Down from the tabs enters the rows on the current channel when the list
  * has it, else the first row; OK on a row promotes it to full screen, or tunes it in full
  * screen. The rows take focus on the current channel when they appear, so the overlay opens on
  * it. An empty list is a line of text, not a Refresh button, so focus stays on the tabs (L-10).
@@ -103,6 +107,34 @@ internal fun LiveTvChannelPanel(
     val focusTabs = isEmpty || (overlay && streamsLoading)
     LaunchedEffect(context, focusTabs) {
         if (focusTabs) tabsEntry.requestFocusWithRetry()
+    }
+
+    // Left/Right on a row: the previous / next tab. Its rows take focus once the new list is
+    // there — not the list still on screen when the tab changed, whose rows are about to go and
+    // would leave focus on the list's container.
+    var rowsFocusPendingFrom by remember { mutableStateOf<ImmutableMediaList?>(null) }
+    var rowsFocusPending by remember { mutableStateOf(false) }
+    LaunchedEffect(streams, streamsLoading, rowsFocusPending) {
+        if (!rowsFocusPending || streamsLoading || streams == null || streams === rowsFocusPendingFrom) return@LaunchedEffect
+        rowsFocusPending = false
+        rowsFocusPendingFrom = null
+        if (streams.isNotEmpty()) rowsPane.focusEntryInNewList()
+    }
+    val switchTabFromRow: (Key) -> Boolean = { key ->
+        val target = if (key == Key.DirectionRight) selectedIndex + 1 else selectedIndex - 1
+        val next = tabs.getOrNull(target)
+        when {
+            next != null -> {
+                rowsFocusPendingFrom = streams
+                rowsFocusPending = true
+                onContextSelected(next)
+            }
+
+            key == Key.DirectionLeft -> {
+                onLeftFromFirstTab?.invoke()
+            }
+        }
+        true
     }
 
     Column(modifier = modifier) {
@@ -182,7 +214,14 @@ internal fun LiveTvChannelPanel(
             },
             onStreamFocused = onStreamFocused,
             onRefreshStreams = { onRefresh() },
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.DirectionLeft, Key.DirectionRight -> switchTabFromRow(event.key)
+                        else -> false
+                    }
+                },
             thumbnailScale = 0.5f,
             paneFocus = rowsPane,
             showHeader = false,

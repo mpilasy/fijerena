@@ -5,7 +5,8 @@
 # Recent is newest-first. Its text varies, so there is no @start.
 # Covers L-2, L-4, L-10, L-13 as LT2 leaves them: a tab row (Category when the channel was
 # picked from one · Recent · Favorites, Refresh at its end) above the rows; Left/Right on the
-# tabs switch the list; Left/Right on a row do nothing; an empty tab keeps focus on the tab.
+# tabs switch the list, and so do Left/Right on a row (focus stays in the rows: the current
+# channel when the new list has it, else its first row); an empty tab keeps focus on the tab.
 # OK on a row promotes to full screen and is deliberately not walked.
 # Ends in browse: Left on the first tab leaves the preview as Back does (Live TV target item 8),
 # so nothing after it is in the panel.
@@ -20,9 +21,14 @@ LEFT	Favorites
 # Down enters the rows: the current channel when Favorites has it, else the first row (text
 # varies, not asserted). With no favourites nothing below is focusable and focus stays here.
 DOWN	Favorites
-# Left on a row does nothing — no list toggle any more. Up from the first row proves it: it
-# lands back on the selected tab.
-LEFT	Recent
+# Left (on a row, or on the tab when Favorites is empty) switches back to Recent.
+LEFT
+# Down into Recent's rows, then Right on a row: Favorites, focus on its first row — or on its
+# tab when it is empty. Left on a row: back to Recent, on the current channel. Texts vary.
+DOWN
+RIGHT
+LEFT
+# Up from the first row lands on the selected tab.
 UP	Recent
 # Left on the first tab leaves the preview as Back does: browse, focus on the playing
 # channel's row (the current channel the walk started on).

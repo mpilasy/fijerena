@@ -4,8 +4,8 @@
 # last played channel with context Recent), OK on the current row, then wait for the stream-info
 # banner to hide. Focus is on the player root, which has no text, so there is no @start.
 # Covers L-3 / L-4 as LT3 leaves them: Left and Right both open the one channel panel (the
-# preview's, same tabs and rows); inside it Left/Right on the tab row switch tabs, Up/Down move
-# rows; Back closes it and focus returns to the player. OK on a row tunes and closes the panel,
+# preview's, same tabs and rows); inside it Left/Right switch tabs (on the tab row or on a row),
+# Up/Down move rows; Back closes it and focus returns to the player. OK on a row tunes and closes the panel,
 # deliberately not walked (it changes the channel).
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # Right opens the panel on the playing channel's row — the first row of Recent, which is

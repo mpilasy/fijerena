@@ -118,6 +118,18 @@ class PaneFocusState internal constructor(
         return requester?.requestFocusWithRetry() ?: false
     }
 
+    /**
+     * [focusEntry] after the rows under the pane were replaced (another list in the same list
+     * state): scrolls the entry row to the top first, since the scroll position belongs to the old
+     * rows and could leave the focused row clipped out of view.
+     */
+    suspend fun focusEntryInNewList(): Boolean {
+        val entry = entryKey() ?: return false
+        val index = indexOf(entry)
+        if (index >= 0) listState?.scrollToItem(index)
+        return focusEntry()
+    }
+
     /** Focuses [entryKey], falling back to the first row. Returns whether focus landed. */
     suspend fun focusEntry(): Boolean {
         val entry = entryKey() ?: return false
