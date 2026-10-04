@@ -1,6 +1,6 @@
-# Sources, Guide Sources and Profiles Plan — TV + mobile
+# Sources, Guide Sources, Profiles and Home Plan — TV + mobile
 
-**Status:** Proposed (2026-10-03), not started. Decisions D1–D3 below are recommendations waiting
+**Status:** Proposed (2026-10-03), not started. Decisions D1–D5 below are recommendations waiting
 for the user's confirmation.
 
 ## Progress
@@ -12,6 +12,7 @@ for the user's confirmation.
 | P3 "Provides a guide" per source | Todo |
 | P4 Guide sources under the source | Todo |
 | P5 Auto-refresh per guide source | Todo |
+| P6 Home button on every page | Todo |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
@@ -26,6 +27,8 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
    global-looking Settings row.
 4. The profile edit dialog has no way to switch to that profile.
 5. Auto-refresh is a property of each guide source, not one device-wide setting.
+6. Every page except Home should have a Home button that goes straight to Home and discards the
+   back stack.
 
 ## How it works today (checked in the code, `main` at `b905113e`)
 
@@ -60,6 +63,12 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
   `SyncPayloads.EpgSource(url, label, timezoneOffsetHours, enabled)` and exported as
   `ExportedEpgSource`. Per-source options live in `ProviderEntity.providerSettings`, a JSON
   `ProviderSettings` that is synced and exported whole — new fields there need no migration.
+- **Going Home**: there is no Home button. Home is `Screen.ContentTypeSelection`; Back walks the
+  stack one screen at a time (on TV, Back on Home does nothing). The only "go Home" path is the
+  Live TV preview's remote Stop, `navController.popBackStack(Screen.ContentTypeSelection,
+  inclusive = false)` in `TvNavHost`. Home is not always on the stack: the start destination is
+  Settings when there is no source, and the profile picker when profiles ask for it. 17
+  destinations per nav host; Home, ProfilePicker, SafeMode and NewerData are entry screens.
 
 ## Decisions
 
@@ -68,6 +77,8 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 | D1 | Is "Provides a guide" a switch the viewer flips, or set by detection only? | A switch on Xtream sources, preset by detection (on when the source has live channels), plus automatic off when the source's own guide comes back empty (P3). Not shown for other types: they never get an automatic guide. |
 | D2 | Per-source auto-refresh: its own time of day too, or only its own interval? | Own interval (Off / every 6 h / 12 h / daily / weekly) per guide source; one device-wide time of day ("Guide refresh time") for when the daily run starts. |
 | D3 | Keep the Sources list's **Guide** button once guide sources live in Edit Source? | Keep it as a shortcut to the same screen; remove only Settings → Source & guide → Guide Sources. |
+| D4 | Where does the Home button go? | TV: a house icon at the right end of each screen's header row (the same slot everywhere, after the screen's own buttons), reached by Up like the other header buttons; in the full-screen player, a **Home** button in the OSD's ⋮ More group. Mobile: a house icon in each top app bar's actions (and the player's controls). Not on Home, the profile picker, Safe mode or the newer-data screen. |
+| D5 | What does Home do when there is no source (Home can't show anything)? | Hide the button on those screens — Settings is the start screen then, and Home would only send the viewer back to it. |
 
 ## Target
 
@@ -86,6 +97,12 @@ default).
 and changes it from the row's action menu (TV: long-press OK / Menu, a picker; mobile: the row's
 ⋮). New guide sources start at the default (daily).
 
+**Home button (both platforms, D4):** on every screen but Home and the entry screens. It
+leaves for Home and clears the back stack: Home becomes the only entry, so Back on Home does
+nothing (TV) / leaves the app (mobile), as after launch. Anything that stops on leaving (the Live
+TV preview and player) stops as it does on Back. A screen with unsaved edits (mobile Edit Source's
+discard prompt, M4) asks first, the same way Back does.
+
 **Settings → Source & guide:** Switch source, Edit this source; **Guide refresh time** (device,
 when daily refreshes start). No Guide Sources row, no device-wide auto-refresh switch or
 interval. Backup & storage keeps Guide data maintenance (the guide index is one database per
@@ -102,8 +119,12 @@ on.
 | P4 | **Guide sources under the source**: "Guide sources ›" row in Edit Source (sources with live channels) opening `EpgManagement(providerId)`; Settings → Source & guide loses its Guide Sources row; the Sources list's Guide button stays (D3). Back from the guide sources screen returns to the row it opened from (`NavReturnFocus`). Focus walks updated. | both Edit Source screens, both Settings screens, both nav hosts, `scripts/focus-walks/settings*.txt`, `edit-source.txt` | M | Low |
 | P5 | **Auto-refresh per guide source**: `epg_source.refresh_interval_hours` (`SettingsDatabase` 15 → 16, `NOT NULL DEFAULT 24`, `-1` = off), a one-time startup step copying today's device-wide interval into every row (so nothing changes for anyone on upgrade), then the device-wide interval and switch retire (`epgRefreshTime` stays as "Guide refresh time"). `getStaleSources` uses each row's own interval (stale after half of it, as today); the periodic `EpgSyncWorker` runs at the shortest interval among enabled guide sources, first run at the refresh time, cancelled when all are off. Sync payload and export carry the field (optional, default keeps the local value, so older app versions keep working). Guide sources screen: interval in the row and a picker in the row actions. Room migration test, `docs/DATABASE_SCHEMA.md` updated in the same commit. | `EpgSourceEntity.kt`, `SettingsDatabase.kt` (+ schema JSON 16), `EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgSyncWorker.kt`, `AppSettings.kt`, `SyncPayloads.kt` / sync applier, `SettingsExportManager.kt`, both guide sources screens, both Settings screens (`GuideSettingsRows`), strings ×3 | L | Med-High (schema migration on every device, sync format, worker scheduling) |
 
+| P6 | **Home button on every page**: one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` when Home is on the stack, else `navigate(Screen.ContentTypeSelection) { popUpTo(0) { inclusive = true } }` — and one button per platform (TV `TvHomeButton` for the header slot, mobile a top-bar action), passed as `onHome` to every screen in D4's list; TV player OSD and mobile player controls get it too; hidden when there is no source (D5). TV focus: a header stop at the row's end, reachable by Up from the content like the existing header buttons. Focus walks updated. Strings ×3 ("Home"). | both nav hosts; TV screens' headers (Settings, Sources, Edit Source, guide sources, Live sync, Diagnostics, Live TV / Movies / TV Shows browse and preview, details, episodes, Search, TV Guide, Search the guide), `TvPlayerControlsOverlay`; mobile top bars and `MobileControlsOverlay`; `scripts/focus-walks/*` | M | Med (touches every screen header; TV focus order in each) |
+
 Order: P1 and P2 (one lane, the profile dialog), P3 then P4 (one lane, Edit Source), P5 after P4
-(its UI is on the screen P4 links). P1/P2 and P3/P4 can run in parallel.
+(its UI is on the screen P4 links). P1/P2 and P3/P4 can run in parallel. P6 is independent of the
+rest but touches every screen's header and both nav hosts, so it runs alone, after P4 (which also
+edits the nav hosts and Edit Source).
 
 ## Data, sync and safety notes
 
@@ -127,13 +148,19 @@ Order: P1 and P2 (one lane, the profile dialog), P3 then P4 (one lane, Edit Sour
   checked after switching); Edit Source shows Provides a guide (Xtream) and Guide sources ›;
   turning Provides a guide off removes the automatic guide source and it stays gone after a
   re-login; per-source interval shown and changed; focus walks re-recorded.
+- Home button: from a deep stack (Home → Live TV → category → preview → full screen → OSD →
+  Home; Home → Settings → Sources → Edit Source → Guide sources → Home) lands on Home with
+  nothing behind it (TV: Back stays on Home; mobile: Back leaves the app); the preview and player
+  stop; mobile Edit Source with unsaved edits asks first; hidden on the entry screens and when
+  there is no source; TV focus walks: the icon is the header row's last stop on each screen.
 - Phone emulator: the same flows.
 - Upgrade check on the emulators: existing guide sources keep refreshing at the old device-wide
   interval after the update.
 
 ## Docs to update with the code
 
-`docs/FEATURES.md` (Settings reference, guide sources, profiles), `docs/NAVIGATION_GUIDE.md`
-(Edit Source → Guide sources, Settings rows), `docs/epg_guide.md` (automatic guide sources,
+`docs/FEATURES.md` (Settings reference, guide sources, profiles, Home button),
+`docs/NAVIGATION_GUIDE.md` (Edit Source → Guide sources, Settings rows, the Home button and its
+back-stack rule), `AGENTS.md` (every new screen gets the Home button), `docs/epg_guide.md` (automatic guide sources,
 refresh scheduling), `docs/DATABASE_SCHEMA.md` (P5), `docs/RELEASE_NOTES.md`, this plan's Progress
 table and `docs/plans/README.md`.
