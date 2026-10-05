@@ -16,7 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-04 | [Playback capability errors](./20261004_playback-capability-errors-plan.md) | An undecodable stream stops at once with a clear, translated message; a slow connection says so | All four phases; P4 needs a slow-network test and a warn-or-stop decision |
+| 2026-10-04 | [Playback capability errors](./20261004_playback-capability-errors-plan.md) | An undecodable stream stops at once with a clear, translated message; a slow connection says so | All four phases; P1 in progress; P4 waits on a slow-network test |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
 

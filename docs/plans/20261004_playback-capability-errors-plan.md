@@ -1,7 +1,13 @@
 # Playback Capability Errors Plan
 
-**Status:** Planned (2026-10-04). P1–P3 ready to build; P4 needs a slow-network test and a
-decision first.
+**Status:** In progress (2026-10-04). P1 in progress; P4 waits on its slow-network test.
+
+## Decisions (2026-10-04)
+
+1. **Slow connection: warn, don't stop.** A banner says the connection is too slow; playback goes
+   on and the user stops it if they want.
+2. **Slow-network test before building P4**, on darcy and the Xperia.
+3. **P1–P3 built now**, one commit each.
 
 A stream the device can't decode should stop at once with a clear message, not play a black
 screen or retry for 19 seconds. A slow connection should say so instead of stop-starting in
@@ -49,10 +55,16 @@ player and show an error naming the format. Audio-only streams (no video group) 
 **Today:** decoder errors go through `onStreamEndedOrError` → `attemptStreamRetry`, so an 8K
 stream fails 4 times over ~19 s before the error shows.
 
-**Change:** in `onPlayerError`, skip the retry and show the error at once for
-`DECODER_INIT_FAILED`, `DECODING_FORMAT_UNSUPPORTED`, `DECODING_FORMAT_EXCEEDS_CAPABILITIES`,
-and `DECODING_FAILED` **before the first frame**. `DECODING_FAILED` after frames were rendered
-keeps today's retry (a corrupt packet mid-stream, mostly live, can recover).
+**Change:** in `onPlayerError`, skip the retry and show the error at once when all three hold:
+
+- the error is a codec one (`DECODER_INIT_FAILED`, `DECODING_FAILED`,
+  `DECODING_FORMAT_UNSUPPORTED`, `DECODING_FORMAT_EXCEEDS_CAPABILITIES`);
+- no frame was rendered since the stream (or its last retry) started — a failure after frames
+  played is a corrupt packet mid-stream, mostly live, which can recover;
+- the renderer did not report the format as fully supported
+  (`ExoPlaybackException.rendererFormatSupport != C.FORMAT_HANDLED`). A decoder that fails to start
+  on a format it claims to handle is more likely busy (a second player holding the hardware
+  decoder) than incapable, so that case keeps today's retry.
 
 - **Test:** unit test of the retry decision (error code × first-frame-rendered); device check
   with the 8K clip on darcy: error in under 2 s, no "Stream retry" log lines.
@@ -95,13 +107,13 @@ bandwidth (keep them for read timeouts and stalls).
 1. **Test:** the 4K 60 Mbps clip over a throttled link (host `tc` shaping on the test server, or
    the Xperia's ~17 Mbps Wi-Fi path) and a stalled one (server pauses mid-file), on darcy and the
    Xperia, to confirm the table above.
-2. **Decision (user):** warn only, or stop after N minutes of stop-start?
+2. ~~Decision: warn only, or stop?~~ Warn only (2026-10-04).
 
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
-| P1 Unplayable video track | Planned | |
+| P1 Unplayable video track | In progress | |
 | P2 Codec errors final | Planned | |
 | P3 Error text | Planned | |
-| P4 Slow connection | Needs test + decision | |
+| P4 Slow connection | Needs test (decision: warn only) | |
