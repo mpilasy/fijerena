@@ -130,7 +130,8 @@ chooser, no secret on screen or in the shared text, no crash. Findings, none fix
    "Main10" (as the plan's rule says; Settings writes the source type the same way).
 3. Sizes say MB/GB in French too (`NumberUtils.formatBytes`, as everywhere else in the app).
 4. A failed sync reads "failed: Catalog sync failed. Login failed. …": the stored error repeats
-   "failed" and stays in the language it was recorded in.
+   "failed" and stays in the language it was recorded in. **Fixed 2026-10-05:** the row shows the
+   stored error after the time and duration, without its own "failed:".
 5. "Next catalog sync: —" while the catalogue sync runs (WorkManager has no next time then).
 
 ## Shield check (2026-10-05, build `35ceaaef`)
@@ -144,6 +145,10 @@ showed bears' last catalogue sync failed at 08:00 with "Can't reach the server".
 
 6. **Charging: Yes** (`BatteryManager.isCharging`) while `dumpsys deviceidle` on darcy says
    `mCharging=false` — the flag that lets the Shield doze. The row doesn't show what Doze sees.
+   **Fixed 2026-10-05:** `dumpsys battery` on darcy says `AC powered: true`, `present: false`;
+   `DeviceIdleController` counts a device as charging only with a battery present and power
+   plugged in. The rows are now Power source, Battery present, and "Charging, as Doze sees it"
+   (present and plugged); `BatteryManager.isCharging` is no longer shown.
 7. A source named "sm2.njarasoa.org" shows that name in Sync and in the shared text: it is the
    user's own name for the source, not a value read from its server settings.
 

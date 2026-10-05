@@ -55,12 +55,12 @@ internal data class NetworkFacts(
     val downstreamKbps: Int?,
 )
 
-/** [plugged] is `BatteryManager.EXTRA_PLUGGED`. */
+/** [plugged] is `BatteryManager.EXTRA_PLUGGED`, [batteryPresent] `BatteryManager.EXTRA_PRESENT`. */
 internal data class PowerFacts(
     val batteryOptimizationExempt: Boolean?,
     val standbyBucket: Int?,
     val backgroundRestricted: Boolean?,
-    val charging: Boolean?,
+    val batteryPresent: Boolean?,
     val plugged: Int?,
     val deviceIdle: Boolean?,
     val powerSave: Boolean?,
@@ -156,7 +156,7 @@ private fun readPower(context: Context): PowerFacts {
         batteryOptimizationExempt = orNull { power?.isIgnoringBatteryOptimizations(context.packageName) },
         standbyBucket = orNull { context.getSystemService(UsageStatsManager::class.java)?.appStandbyBucket },
         backgroundRestricted = orNull { context.getSystemService(ActivityManager::class.java)?.isBackgroundRestricted },
-        charging = orNull { context.getSystemService(BatteryManager::class.java)?.isCharging },
+        batteryPresent = battery?.takeIf { it.hasExtra(BatteryManager.EXTRA_PRESENT) }?.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true),
         plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)?.takeIf { it >= 0 },
         deviceIdle = orNull { power?.isDeviceIdleMode },
         powerSave = orNull { power?.isPowerSaveMode },
@@ -270,11 +270,24 @@ internal fun powerRows(facts: PowerFacts): List<DeviceInfoRow> =
         infoRow(R.string.device_info_battery_exempt, yesNo(facts.batteryOptimizationExempt)),
         infoRow(R.string.device_info_standby_bucket, facts.standbyBucket?.let(::standbyBucketValue) ?: missingValue()),
         infoRow(R.string.device_info_background_restricted, yesNo(facts.backgroundRestricted)),
-        infoRow(R.string.device_info_charging, yesNo(facts.charging)),
         infoRow(R.string.device_info_power_source, facts.plugged?.let(::powerSourceValue) ?: missingValue()),
+        infoRow(R.string.device_info_battery_present, yesNo(facts.batteryPresent)),
+        infoRow(R.string.device_info_charging, yesNo(chargingForDoze(facts.batteryPresent, facts.plugged))),
         infoRow(R.string.device_info_device_idle, yesNo(facts.deviceIdle)),
         infoRow(R.string.device_info_battery_saver, yesNo(facts.powerSave)),
     )
+
+/**
+ * Whether Doze counts the device as charging: a battery present and a power source plugged in
+ * (`DeviceIdleController` reads both from `ACTION_BATTERY_CHANGED`). A Shield has no battery, so
+ * it never counts as charging and dozes on mains power (`dumpsys deviceidle` `mCharging=false`
+ * beside `dumpsys battery` `AC powered: true`, `present: false` on darcy, 2026-10-05).
+ * `BatteryManager.isCharging` said yes there, so it isn't used.
+ */
+internal fun chargingForDoze(
+    batteryPresent: Boolean?,
+    plugged: Int?,
+): Boolean? = if (batteryPresent == null || plugged == null) null else batteryPresent && plugged != 0
 
 /** Null for a bucket Android added after this was written; the row then shows the number. */
 @StringRes

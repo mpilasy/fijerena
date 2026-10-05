@@ -1048,7 +1048,8 @@
     <string name="device_info_bucket_restricted">Voafetra</string>
     <string name="device_info_bucket_never">Mbola tsy nampiasaina</string>
     <string name="device_info_background_restricted">Voafetra ao ambadika</string>
-    <string name="device_info_charging">Eo am-pamenoana bateria</string>
+    <string name="device_info_charging">Eo am-pamenoana, araka ny Doze</string>
+    <string name="device_info_battery_present">Misy bateria</string>
     <string name="device_info_power_source">Loharanon-kerinaratra</string>
     <string name="device_info_power_battery">Bateria (tsy mifandray amin\'ny herinaratra)</string>
     <string name="device_info_power_ac">Herinaratra (AC)</string>
@@ -1062,7 +1063,7 @@
     <string name="device_info_sync_never">Mbola tsy nampifanarahana</string>
     <string name="device_info_sync_not_applicable">Tsy misy fampifanarahana katalaogy ho an\'ity karazana loharano ity</string>
     <string name="device_info_sync_ok">%1$s · naharitra %2$d s · OK</string>
-    <string name="device_info_sync_failed">%1$s · naharitra %2$d s · tsy nahomby: %3$s</string>
+    <string name="device_info_sync_failed">%1$s · naharitra %2$d s · %3$s</string>
     <string name="device_info_guide_last_refresh">Fanavaozana farany ny fitarihana</string>
     <string name="device_info_guide_never">Mbola tsy nohavaozina</string>
     <string name="device_info_guide_ok">%1$s · naharitra %2$d s · loharanon\'ny fitarihana: %3$d · OK</string>

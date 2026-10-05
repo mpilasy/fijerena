@@ -191,4 +191,13 @@ class NetworkPowerInfoTest {
         assertMissing(rows[5].value)
         assertMissing(syncRows(facts.copy(sources = null))[0].value)
     }
+
+    @Test
+    fun `doze counts as charging only with a battery present and power plugged in`() {
+        assertEquals(false, chargingForDoze(batteryPresent = false, plugged = 1))
+        assertEquals(true, chargingForDoze(batteryPresent = true, plugged = 1))
+        assertEquals(false, chargingForDoze(batteryPresent = true, plugged = 0))
+        assertEquals(null, chargingForDoze(batteryPresent = null, plugged = 1))
+        assertEquals(null, chargingForDoze(batteryPresent = true, plugged = null))
+    }
 }

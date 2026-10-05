@@ -1053,7 +1053,8 @@
     <string name="device_info_bucket_restricted">Restricted</string>
     <string name="device_info_bucket_never">Never used</string>
     <string name="device_info_background_restricted">Background restricted</string>
-    <string name="device_info_charging">Charging</string>
+    <string name="device_info_charging">Charging, as Doze sees it</string>
+    <string name="device_info_battery_present">Battery present</string>
     <string name="device_info_power_source">Power source</string>
     <string name="device_info_power_battery">Battery (not plugged in)</string>
     <string name="device_info_power_ac">Mains (AC)</string>
@@ -1067,7 +1068,7 @@
     <string name="device_info_sync_never">Never synced</string>
     <string name="device_info_sync_not_applicable">No catalog sync for this source type</string>
     <string name="device_info_sync_ok">%1$s · took %2$d s · OK</string>
-    <string name="device_info_sync_failed">%1$s · took %2$d s · failed: %3$s</string>
+    <string name="device_info_sync_failed">%1$s · took %2$d s · %3$s</string>
     <string name="device_info_guide_last_refresh">Last guide refresh</string>
     <string name="device_info_guide_never">Never refreshed</string>
     <string name="device_info_guide_ok">%1$s · took %2$d s · guide sources: %3$d · OK</string>

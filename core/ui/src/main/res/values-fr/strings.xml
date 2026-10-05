@@ -1056,7 +1056,8 @@
     <string name="device_info_bucket_restricted">Restreint</string>
     <string name="device_info_bucket_never">Jamais utilisé</string>
     <string name="device_info_background_restricted">Restreinte en arrière-plan</string>
-    <string name="device_info_charging">En charge</string>
+    <string name="device_info_charging">En charge, selon Doze</string>
+    <string name="device_info_battery_present">Batterie présente</string>
     <string name="device_info_power_source">Source d\'alimentation</string>
     <string name="device_info_power_battery">Batterie (non branché)</string>
     <string name="device_info_power_ac">Secteur (CA)</string>
@@ -1070,7 +1071,7 @@
     <string name="device_info_sync_never">Jamais synchronisée</string>
     <string name="device_info_sync_not_applicable">Pas de synchronisation du catalogue pour ce type de source</string>
     <string name="device_info_sync_ok">%1$s · durée %2$d s · OK</string>
-    <string name="device_info_sync_failed">%1$s · durée %2$d s · échec : %3$s</string>
+    <string name="device_info_sync_failed">%1$s · durée %2$d s · %3$s</string>
     <string name="device_info_guide_last_refresh">Dernière actualisation du guide</string>
     <string name="device_info_guide_never">Jamais actualisé</string>
     <string name="device_info_guide_ok">%1$s · durée %2$d s · sources de guide : %3$d · OK</string>
