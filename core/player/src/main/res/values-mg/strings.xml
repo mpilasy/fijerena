@@ -11,6 +11,7 @@
     <string name="player_format_dolby_vision_profile">Dolby Vision profil %1$d</string>
     <string name="player_error_format_unsupported">Tsy raisin\'ity fitaovana ity ny endriky ny sarimihetsika</string>
     <string name="player_error_network_failed">Tsy nahomby ny tambajotra. Jereo ny fifandraisanao amin\'ny internet.</string>
+    <string name="player_error_connection_lost">Tapaka ny fifandraisana: tsy nisy angona nandritra ny iray minitra. Hamarino ny fifandraisanao dia andramo indray.</string>
     <string name="player_error_http_401">HTTP 401 — Tsy nahomby ny fidirana. Jereo ny fangatahanao.</string>
     <string name="player_error_http_403">HTTP 403 — Voarara ny fidirana. Angamba tapitra ny fandraisanao anjara.</string>
     <string name="player_error_http_404">HTTP 404 — Tsy hita ny fantsakana. Angamba tsy mandeha ny fandaharana.</string>

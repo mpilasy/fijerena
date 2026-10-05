@@ -1,6 +1,6 @@
 # Playback Capability Errors Plan
 
-**Status:** In progress (2026-10-04). P1–P3 done (device check pending); P4 in progress.
+**Status:** Complete (2026-10-04). All four phases built and checked on darcy and the Xperia XZ2 Compact.
 
 ## Decisions (2026-10-04)
 
@@ -118,10 +118,23 @@ giving up.
    this video (needs ~60 Mbps, getting ~45 Mbps)". When the bitrate is unknown (most TS/MKV), the
    same banner without numbers on the second rebuffer within 2 minutes. It hides after 60 s of
    playback without a rebuffer. It replaces the "Excessive buffering" toast. Not focusable on TV.
+   *Built with a `ThroughputMeter` (bytes received over the last 10 s) instead of
+   `DefaultBandwidthMeter`'s estimate: that only updates when a transfer ends, and a progressive
+   stream is one long transfer — on a 20 Mbit/s link it said 2 Mbit/s and nothing at the first
+   rebuffer.*
 
 - **Test:** unit tests for `StallWatchdog` and the banner decision; device check with the
   throttling proxy on darcy and the Xperia (cap 20 → banner with numbers; stall → error about a
   minute after the buffer runs dry).
+
+## Device check (2026-10-04)
+
+| Check | darcy | Xperia (French UI) |
+|---|---|---|
+| P1: DV profile 5 | "…not supported on this device: Dolby Vision profile 5" in 0.4 s, no retry | same, in French |
+| P2+P3: 8K HEVC | "…: HEVC 7680×4320" in 0.55 s, no retry, dev details shown | same, in French, raw error beneath |
+| P4: cap 20 Mbit/s | Banner "needs ~60 Mbps, getting ~20 Mbps" at the first rebuffer | same, in French |
+| P4: stall | "Connection lost…" 62 s after the buffer ran dry (80 s after the cut) | same, 63 s, in French |
 
 ## Progress
 
@@ -129,5 +142,5 @@ giving up.
 |---|---|---|
 | P1 Unplayable video track | Done | `47da9f12` |
 | P2 Codec errors final | Done | `5830a0dd` |
-| P3 Error text | Done | (this commit) |
-| P4 Slow connection and stalls | In progress | |
+| P3 Error text | Done | `8f67be1a` |
+| P4 Slow connection and stalls | Done | (this commit) |

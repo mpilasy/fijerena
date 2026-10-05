@@ -44,7 +44,11 @@ import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.PositionSave
+import org.njarasoa.fijerena.core.player.model.SlowConnection
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import org.njarasoa.fijerena.core.player.network.SlowConnectionDetector
+import org.njarasoa.fijerena.core.player.network.StallWatchdog
+import org.njarasoa.fijerena.core.player.network.ThroughputMeter
 import org.njarasoa.fijerena.core.player.source.AccountBusy
 import org.njarasoa.fijerena.core.player.source.AccountBusyWait
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
@@ -107,8 +111,13 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _rebufferCount = MutableStateFlow(0)
     val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
 
-    private val _exhaustionRebufferCount = MutableStateFlow(0)
-    val exhaustionRebufferCount: StateFlow<Int> = _exhaustionRebufferCount.asStateFlow()
+    // P4 (docs/plans/20261004_playback-capability-errors-plan.md): the slow-connection banner,
+    // and the 60 s limit on buffering with no data arriving.
+    private val _slowConnection = MutableStateFlow<SlowConnection?>(null)
+    val slowConnection: StateFlow<SlowConnection?> = _slowConnection.asStateFlow()
+    private val slowConnectionDetector = SlowConnectionDetector()
+    private val stallWatchdog = StallWatchdog()
+    private val throughputMeter = ThroughputMeter()
 
     private val _totalRebufferTimeMs = MutableStateFlow(0L)
     val totalRebufferTimeMs: StateFlow<Long> = _totalRebufferTimeMs.asStateFlow()
@@ -153,6 +162,9 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
     private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
+
+    // The bandwidth meter, behind a note of what data arrives when (stallWatchdog, throughputMeter).
+    private var dataTransferListener: androidx.media3.datasource.TransferListener? = null
     private var serviceScope: CoroutineScope? = null
     private var healthMonitor: org.njarasoa.fijerena.core.player.network.StreamHealthMonitor? = null
     private var lastHealthCheckPosition: Long = -1L
@@ -234,7 +246,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 headers = metadata.headers,
                 isLive = metadata.isLive,
                 onRetry = { _streamRetryCount.update { it + 1 } },
-                transferListener = bandwidthMeter,
+                transferListener = dataTransferListener,
                 metadata = metadata,
             ) ?: run {
                 Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
@@ -394,6 +406,13 @@ class StreamingPlaybackService : MediaSessionService() {
                 delay(healthMonitor?.config?.evaluationIntervalMs ?: 5000L)
                 val player = getPlayer()
                 val metadata = _currentMetadata.value
+                val now = SystemClock.elapsedRealtime()
+                _slowConnection.value = slowConnectionDetector.onTick(now)
+                val isBuffering = player?.playbackState == Player.STATE_BUFFERING && player.playWhenReady
+                if (stallWatchdog.isStalled(isBuffering, now)) {
+                    handleStall()
+                    continue
+                }
                 if (player != null && metadata.streamUrl.isNotEmpty() && metadata.isLive && !isWithinSeekGrace()) {
                     val state = player.playbackState
                     if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
@@ -441,6 +460,12 @@ class StreamingPlaybackService : MediaSessionService() {
             androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
                 .getSingletonInstance(this)
         bandwidthMeter = bm
+        dataTransferListener =
+            DataArrivalTransferListener(bm) { bytes ->
+                val now = SystemClock.elapsedRealtime()
+                stallWatchdog.onData(now)
+                throughputMeter.onBytes(now, bytes)
+            }
 
         val playerBuilder =
             androidx.media3.exoplayer.ExoPlayer
@@ -550,8 +575,12 @@ class StreamingPlaybackService : MediaSessionService() {
                     _rebufferCount.value = count
                     _totalRebufferTimeMs.value = totalTimeMs
                 },
-                onExhaustionRebuffer = { count ->
-                    _exhaustionRebufferCount.value = count
+                onExhaustionRebuffer = {
+                    val bitrate = (getPlayer() as? androidx.media3.exoplayer.ExoPlayer)?.videoFormat?.bitrate ?: Format.NO_VALUE
+                    val now = SystemClock.elapsedRealtime()
+                    val measured = throughputMeter.bitsPerSecond(now)
+                    _slowConnection.value = slowConnectionDetector.onRebuffer(now, bitrate, measured)
+                    Log.i(TAG, "Rebuffer: stream $bitrate bps, receiving $measured bps — slow connection: ${_slowConnection.value}")
                 },
                 onBandwidthUpdate = { bitrateEstimate ->
                     _bandwidthEstimate.value = bitrateEstimate
@@ -624,7 +653,7 @@ class StreamingPlaybackService : MediaSessionService() {
         lastHealthCheckPosition = -1L
         _streamRetryCount.value = 0
         _rebufferCount.value = 0
-        _exhaustionRebufferCount.value = 0
+        resetNetworkWatch()
         _totalRebufferTimeMs.value = 0L
         _bandwidthEstimate.value = 0L
         _qualitySwitchCount.value = 0
@@ -647,7 +676,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // DIAGNOSTIC (temporary): split startup latency into
         // request-init -> first-byte -> STATE_READY so a slow provider/DNS can be told
         // apart from a slow buffer gate. Remove once the 30s VOD startup is root-caused.
-        val startupTiming = StartupTimingTransferListener(bandwidthMeter, _streamStartTimeMs.value)
+        val startupTiming = StartupTimingTransferListener(dataTransferListener, _streamStartTimeMs.value)
 
         val mediaSource =
             mediaSourceFactory?.createMediaSource(
@@ -682,6 +711,23 @@ class StreamingPlaybackService : MediaSessionService() {
     // Guarded so only the very first segment/manifest transfer of a playStream() call is
     // logged — later transfers (subsequent segments) would otherwise spam this every few
     // seconds for the life of the stream.
+
+    /** Passes transfers to [delegate] (the bandwidth meter) and calls [onData] whenever bytes arrive. */
+    private class DataArrivalTransferListener(
+        private val delegate: androidx.media3.datasource.TransferListener,
+        private val onData: (bytes: Int) -> Unit,
+    ) : androidx.media3.datasource.TransferListener by delegate {
+        override fun onBytesTransferred(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+            bytesTransferred: Int,
+        ) {
+            delegate.onBytesTransferred(source, dataSpec, isNetwork, bytesTransferred)
+            if (isNetwork && bytesTransferred > 0) onData(bytesTransferred)
+        }
+    }
+
     private class StartupTimingTransferListener(
         private val delegate: androidx.media3.datasource.TransferListener?,
         private val startTimeMs: Long,
@@ -805,7 +851,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 headers = metadata.headers,
                 isLive = metadata.isLive,
                 onRetry = { _streamRetryCount.update { it + 1 } },
-                transferListener = bandwidthMeter,
+                transferListener = dataTransferListener,
                 metadata = metadata,
             ) ?: return
 
@@ -877,6 +923,24 @@ class StreamingPlaybackService : MediaSessionService() {
         mainHandler.post { getPlayer()?.stop() }
     }
 
+    /** Buffering with no data for [StallWatchdog.LIMIT_MS]: stop with Retry, no automatic retry. → P4. */
+    private fun handleStall() {
+        Log.w(TAG, "No data for ${StallWatchdog.LIMIT_MS} ms while buffering — giving up.")
+        mainHandler.removeCallbacks(recycleHandler)
+        setRecycling(false)
+        healthMonitor?.reset()
+        resetNetworkWatch()
+        playerListener?.enterErrorState()
+        handleFinalError(getString(R.string.player_error_connection_lost))
+    }
+
+    private fun resetNetworkWatch() {
+        stallWatchdog.reset()
+        throughputMeter.reset()
+        slowConnectionDetector.reset()
+        _slowConnection.value = null
+    }
+
     fun pause() {
         pausedInApp = true
         mediaSession?.player?.pause()
@@ -911,6 +975,7 @@ class StreamingPlaybackService : MediaSessionService() {
         mainHandler.removeCallbacks(recycleHandler)
         setRecycling(false)
         healthMonitor?.reset()
+        resetNetworkWatch()
         mediaSession?.player?.stop()
         _playbackState.value = PlaybackState.Idle
         // The stopped player keeps its media item, so a headset Play resumes it: that is a new
@@ -1320,6 +1385,12 @@ class StreamingPlaybackService : MediaSessionService() {
             isInErrorState = false
             errorHeldUntilReady = false
             renderedFirstFrame = false
+        }
+
+        /** Holds an error the service set itself, so the player's IDLE after the stop doesn't replace it. */
+        fun enterErrorState() {
+            isInErrorState = true
+            errorHeldUntilReady = false
         }
 
         /** Keeps the error on screen through a retry until the stream actually plays. */

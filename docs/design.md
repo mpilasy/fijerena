@@ -120,7 +120,8 @@ Watch position, completion and favourites are durable Room rows that are never t
 service/
   StreamingPlaybackService     MediaSessionService: ExoPlayer lifecycle, wake locks, analytics, position saves
   PlaybackServiceConnection    binds the UI to the service
-  ExhaustionToastWatcher       decides when rebuffers are frequent enough for the "excessive buffering" toast
+  PlaybackCapability           unplayable video track, final codec errors, codec names for error messages
+  PlaybackServiceLocale        hook that gives the service the in-app language
 config/
   AdaptiveLoadControl          network- and content-aware buffers, swapped at runtime
   NetworkBufferProfile         buffer, retry, timeout and byte-cap constants
@@ -128,6 +129,9 @@ config/
 network/
   NetworkMonitor               ConnectivityManager callback → StateFlow<NetworkType>
   StreamHealthMonitor          live stream health (healthy / unstable / degraded)
+  StallWatchdog                buffering with no data for 60 s → "Connection lost" (VOD and live)
+  ThroughputMeter              bits per second actually received over the last 10 s
+  SlowConnectionDetector       when to show the "connection too slow" banner
 source/
   StreamingMediaSourceFactory  HLS / DASH / progressive detection, timeouts, auth headers
   AdaptiveLoadErrorPolicy      retries: Wi-Fi 5, cellular 8, exponential backoff 0.5–5 s

@@ -11,6 +11,7 @@
     <string name="player_format_dolby_vision_profile">Dolby Vision profil %1$d</string>
     <string name="player_error_format_unsupported">Format vidéo non pris en charge sur cet appareil</string>
     <string name="player_error_network_failed">Échec de la connexion réseau. Vérifiez votre connexion internet.</string>
+    <string name="player_error_connection_lost">Connexion perdue : aucune donnée depuis une minute. Vérifiez votre connexion et réessayez.</string>
     <string name="player_error_http_401">HTTP 401 — Échec de l\'authentification. Vérifiez vos identifiants.</string>
     <string name="player_error_http_403">HTTP 403 — Accès refusé. Votre abonnement a peut-être expiré.</string>
     <string name="player_error_http_404">HTTP 404 — Flux introuvable. La chaîne est peut-être hors ligne.</string>

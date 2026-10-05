@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Playback -->
-    <string name="buffering_excessive_toast">Somary mikatso ity fa mahareta aza fady</string>
+    <string name="slow_connection_banner_format">Miadana loatra ny fifandraisana ho an\'ity sarimihetsika ity (mila ~%1$d Mbps, ~%2$d Mbps no azo)</string>
+    <string name="slow_connection_banner">Miadana loatra ny fifandraisana ho an\'ity sarimihetsika ity</string>
 
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Efa manandrana...</string>

@@ -133,7 +133,9 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 - **In-player EPG (Live TV):** current programme with time range and progress, and the next one, fetched on start and on every zap; nothing shown without guide data.
 - **Track selection:** audio, subtitle and video-quality pickers. The chosen audio and subtitle tracks are saved per item; a new episode with no choice of its own takes the last choice made in the same series.
 - **Resume:** VOD position is saved every 10 s while playing, on pause and buffering changes, on a track pick and on exit; a title resumes when it is 2–95 % watched (per-source Auto-Resume). Live TV positions are not saved.
-- **Excessive buffering:** a toast ("Excessive buffering is happening") when rebuffers come too often, instead of opening the stats.
+- **Slow connection:** a banner over the video — "Connection too slow for this video (needs ~60 Mbps, getting ~20 Mbps)" — when playback stops to buffer and the connection delivers less than the stream needs; without numbers when the stream doesn't state its bitrate (on the second stop within 2 minutes). Playback goes on; the banner goes after a minute without a stop.
+- **Stalled connection:** buffering with no data at all for a minute stops with "Connection lost: no data for a minute…" and Retry, instead of retrying for 13 minutes.
+- **Formats the device can't play:** a video with no decoder on the device (Dolby Vision profile 5 on most devices) or beyond it (8K on a 4K device) stops at once with "Video codec not supported on this device: <codec>", without retrying.
 - **Buffering** adapts to Wi-Fi or cellular and live or VOD at runtime without restarting the player; profiles in [design.md](design.md#buffer-strategy).
 
 ### Stats for Nerds

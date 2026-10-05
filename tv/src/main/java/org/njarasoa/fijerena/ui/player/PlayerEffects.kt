@@ -6,7 +6,6 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
-import org.njarasoa.fijerena.core.player.service.watchExhaustionToasts
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import java.util.Calendar
@@ -20,23 +19,6 @@ fun PlayerEffects(
     onNextChannel: () -> Unit = {},
     onPreviousChannel: () -> Unit = {},
 ) {
-    val isDeveloperMode = state.isDeveloperMode
-
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val resources = androidx.compose.ui.platform.LocalResources.current
-
-    // Auto-show toast on repeated buffer exhaustion
-    LaunchedEffect(isDeveloperMode, currentMetadata.streamUrl) {
-        watchExhaustionToasts {
-            android.widget.Toast
-                .makeText(
-                    context,
-                    resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
-                    android.widget.Toast.LENGTH_LONG,
-                ).show()
-        }
-    }
-
     // Live position polling for smooth VOD timer updates
     LaunchedEffect(playbackState::class) {
         if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {

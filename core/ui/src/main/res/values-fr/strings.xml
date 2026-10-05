@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Playback -->
-    <string name="buffering_excessive_toast">Mise en mémoire tampon excessive</string>
+    <string name="slow_connection_banner_format">Connexion trop lente pour cette vidéo (il faut ~%1$d Mb/s, reçu ~%2$d Mb/s)</string>
+    <string name="slow_connection_banner">Connexion trop lente pour cette vidéo</string>
 
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Mise à jour déjà en file d\'attente...</string>

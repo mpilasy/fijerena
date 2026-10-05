@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
@@ -72,6 +73,7 @@ import org.njarasoa.fijerena.ui.player.components.dialogs.ChapterSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvSlowConnectionBanner
 import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvTuningOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvUpNextOverlay
@@ -401,6 +403,9 @@ fun PlayerScreen(
 
         // Zap feedback (LT5): under the banner and the panel, over the picture.
         tuningChannelName?.let { TvTuningOverlay(channelName = it) }
+
+        // P4: the connection can't keep up with the stream.
+        rememberSlowConnectionText()?.let { TvSlowConnectionBanner(text = it) }
 
         // Stats overlay (double-click to show)
         // Visible whenever showStats is true, regardless of playbackState (survives channel switches)

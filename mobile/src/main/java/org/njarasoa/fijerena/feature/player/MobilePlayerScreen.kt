@@ -55,7 +55,6 @@ import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
-import org.njarasoa.fijerena.core.player.service.watchExhaustionToasts
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -63,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
@@ -85,6 +85,7 @@ import org.njarasoa.fijerena.feature.player.components.MobileControlsOverlay
 import org.njarasoa.fijerena.feature.player.components.MobileStatsOverlay
 import org.njarasoa.fijerena.feature.player.components.MobileUpNextOverlay
 import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
+import org.njarasoa.fijerena.feature.player.components.SlowConnectionBanner
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
 
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
@@ -323,18 +324,6 @@ fun MobilePlayerContent(
                     .setAutoEnterEnabled(isPlaying && currentMetadata.isLive)
                     .build(),
             )
-        }
-    }
-
-    // Auto-show toast on repeated buffer exhaustion
-    LaunchedEffect(appSettings.isDevMode, currentMetadata.streamUrl) {
-        watchExhaustionToasts {
-            android.widget.Toast
-                .makeText(
-                    context,
-                    resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
-                    android.widget.Toast.LENGTH_LONG,
-                ).show()
         }
     }
 
@@ -756,6 +745,9 @@ fun MobilePlayerContent(
                         }
                     }
                 }
+
+                // P4: the connection can't keep up with the stream.
+                if (!isInPipMode) rememberSlowConnectionText()?.let { SlowConnectionBanner(text = it) }
 
                 // Loading/Error overlays
                 Box(

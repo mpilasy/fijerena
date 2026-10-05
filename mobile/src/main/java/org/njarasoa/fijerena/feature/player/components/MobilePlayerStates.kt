@@ -128,3 +128,28 @@ fun ErrorOverlay(
         }
     }
 }
+
+/**
+ * "Connection too slow for this video (needs ~60 Mbps, getting ~20 Mbps)" at the top of the
+ * picture while the stream starves (P4, docs/plans/20261004_playback-capability-errors-plan.md).
+ */
+@Composable
+fun SlowConnectionBanner(text: String) {
+    Box(
+        modifier = Modifier.fillMaxSize().padding(top = Spacing.xl),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Surface(
+            modifier = Modifier.padding(horizontal = Spacing.md),
+            color = CinemaBackground.copy(alpha = CinemaAlpha.overlayMedium),
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextPrimary,
+                modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            )
+        }
+    }
+}

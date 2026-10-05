@@ -11,6 +11,7 @@
     <string name="player_format_dolby_vision_profile">Dolby Vision profile %1$d</string>
     <string name="player_error_format_unsupported">Video format not supported on this device</string>
     <string name="player_error_network_failed">Network connection failed. Check your internet connection.</string>
+    <string name="player_error_connection_lost">Connection lost: no data for a minute. Check your connection and try again.</string>
     <string name="player_error_http_401">HTTP 401 — Authentication failed. Check your credentials.</string>
     <string name="player_error_http_403">HTTP 403 — Access denied. Your subscription may have expired.</string>
     <string name="player_error_http_404">HTTP 404 — Stream not found. The channel may be offline.</string>

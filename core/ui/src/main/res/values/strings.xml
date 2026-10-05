@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Playback -->
-    <string name="buffering_excessive_toast">Excessive buffering is happening</string>
+    <string name="slow_connection_banner_format">Connection too slow for this video (needs ~%1$d Mbps, getting ~%2$d Mbps)</string>
+    <string name="slow_connection_banner">Connection too slow for this video</string>
 
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Refresh already in queue...</string>
