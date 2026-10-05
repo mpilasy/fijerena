@@ -13,7 +13,12 @@ object XtreamStreamUrl {
     private val loginPath = Regex("""(/(?:live|movie|series|timeshift)/)([^/?#]+)/([^/?#]+)/""", RegexOption.IGNORE_CASE)
 
     /** The username in [url], decoded, or null when [url] isn't an Xtream stream URL. */
-    fun username(url: String): String? = loginPath.find(url)?.groupValues?.get(2)?.let { URLDecoder.decode(it, "UTF-8") }
+    fun username(url: String): String? =
+        loginPath
+            .find(url)
+            ?.groupValues
+            ?.get(2)
+            ?.let { URLDecoder.decode(it, "UTF-8") }
 
     /** [url] with [username] and [password] in place of its login, or null when it has none. */
     fun withLogin(
