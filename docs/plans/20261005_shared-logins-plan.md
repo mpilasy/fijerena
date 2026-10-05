@@ -177,7 +177,7 @@ Phase 2 with a single login must behave exactly like today: no extra requests, s
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Done, built and unit-tested; not yet run on a device; `scripts/focus-walks/edit-source.txt` needs re-recording (Down from Enable Caching now reaches the Logins rows before Provides a guide) | see below |
+| 1 | Done, built and unit-tested; not yet run on a device; `scripts/focus-walks/edit-source.txt` needs re-recording (Down from Enable Caching now reaches the Logins rows before Provides a guide) | db5f1c9c |
 | 2 | Not started | |
 | 3 | Not started | |
 | 4 | Not started | |
