@@ -79,12 +79,12 @@ class NetworkPowerInfoTest {
     }
 
     @Test
-    fun `private DNS off, automatic, or strict with its server`() {
+    fun `private DNS off, automatic, or strict without naming its server`() {
         assertEquals(R.string.device_info_private_dns_off, privateDnsValue(false, null).res())
         assertEquals(R.string.device_info_private_dns_auto, privateDnsValue(true, null).res())
         val strict = privateDnsValue(true, "dns.example")
         assertEquals(R.string.device_info_private_dns_strict, strict.res())
-        assertEquals(listOf<Any>("dns.example"), strict.argList())
+        assertEquals(emptyList<Any>(), strict.argList())
         assertMissing(privateDnsValue(null, null))
     }
 

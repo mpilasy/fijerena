@@ -549,6 +549,7 @@
     <string name="device_info_yes">Oui</string>
     <string name="device_info_no">Non</string>
     <string name="device_info_missing">—</string>
+    <string name="device_info_load_failed">Impossible de lire les infos sur l\'appareil</string>
     <string name="device_info_section_app">Application</string>
     <string name="device_info_section_device">Appareil</string>
     <string name="device_info_section_memory">Mémoire</string>
@@ -1012,7 +1013,6 @@
     <string name="device_info_decoder_none">Aucun décodeur</string>
     <string name="device_info_audio_passthrough">Sortie directe (passthrough)</string>
     <string name="device_info_audio_passthrough_none">Aucun</string>
-    <string name="device_info_audio_max_channels">Canaux max</string>
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">Dans %1$s uniquement</string>
@@ -1035,7 +1035,7 @@
     <string name="device_info_private_dns">DNS privé</string>
     <string name="device_info_private_dns_off">Non utilisé</string>
     <string name="device_info_private_dns_auto">Activé (automatique)</string>
-    <string name="device_info_private_dns_strict">Activé (%1$s)</string>
+    <string name="device_info_private_dns_strict">Activé (strict)</string>
     <string name="device_info_wifi_link_speed">Débit de la liaison Wi-Fi</string>
     <string name="device_info_wifi_band">Bande Wi-Fi</string>
     <string name="device_info_band_2_4_ghz">2,4 GHz</string>
@@ -1064,7 +1064,8 @@
     <string name="device_info_power_usb">USB</string>
     <string name="device_info_power_wireless">Sans fil</string>
     <string name="device_info_power_dock">Station d\'accueil</string>
-    <string name="device_info_device_idle">Appareil en veille (Doze) maintenant</string>
+    <string name="device_info_device_idle">Veille profonde (Doze) maintenant</string>
+    <string name="device_info_light_idle">Veille légère (Doze) maintenant</string>
     <string name="device_info_battery_saver">Économiseur de batterie activé</string>
     <string name="device_info_sources">Sources</string>
     <string name="device_info_no_sources">Aucune</string>

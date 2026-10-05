@@ -147,13 +147,12 @@ class MediaInfoTest {
     }
 
     @Test
-    fun `audio rows list the passthrough formats and the channel count`() {
-        val rows = audioRows(AudioOutputInfo(listOf("AC3", "EAC3", "EAC3-JOC"), 8)).map { it.text() }
+    fun `audio rows list the passthrough formats, with no channel count`() {
+        val rows = audioRows(AudioOutputInfo(listOf("AC3", "EAC3", "EAC3-JOC"))).map { it.text() }
 
         assertEquals(
             listOf(
                 res(R.string.device_info_audio_passthrough) to "AC3, EAC3, EAC3-JOC",
-                res(R.string.device_info_audio_max_channels) to "8",
             ),
             rows,
         )
@@ -163,10 +162,10 @@ class MediaInfoTest {
     fun `audio rows say none without passthrough and dash when unreadable`() {
         assertEquals(
             res(R.string.device_info_audio_passthrough_none),
-            audioRows(AudioOutputInfo(emptyList(), 2))[0].value.text(),
+            audioRows(AudioOutputInfo(emptyList()))[0].value.text(),
         )
         assertEquals(
-            listOf(missingValue().text(), missingValue().text()),
+            listOf(missingValue().text()),
             audioRows(null).map { it.value.text() },
         )
     }

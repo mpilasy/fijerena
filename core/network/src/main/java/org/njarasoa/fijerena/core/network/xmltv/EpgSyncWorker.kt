@@ -133,5 +133,8 @@ class EpgSyncWorker(
         private const val CHANNEL_ID = "epg_sync"
         private const val NOTIFICATION_ID = 0x4570_0001
         const val MAX_RETRIES = 5
+
+        /** The periodic guide refresh's unique work name (`EpgFileManager` schedules it). */
+        const val WORK_NAME = "epg_sync"
     }
 }

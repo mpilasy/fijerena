@@ -859,6 +859,7 @@
     <string name="device_info_yes">Eny</string>
     <string name="device_info_no">Tsia</string>
     <string name="device_info_missing">—</string>
+    <string name="device_info_load_failed">Tsy voavaky ny momba ny fitaovana</string>
     <string name="device_info_section_app">Rindranasa</string>
     <string name="device_info_section_device">Fitaovana</string>
     <string name="device_info_section_memory">Fitadidiana</string>
@@ -1004,7 +1005,6 @@
     <string name="device_info_decoder_none">Tsy misy decoder</string>
     <string name="device_info_audio_passthrough">Alefa mivantana (passthrough)</string>
     <string name="device_info_audio_passthrough_none">Tsy misy</string>
-    <string name="device_info_audio_max_channels">Fantsona farany ambony</string>
     <!-- GD5 -->
     <string name="player_osd_guide">Fandaharana</string>
     <string name="epg_browser_in_category_only_format">Ao amin\'ny %1$s ihany</string>
@@ -1027,7 +1027,7 @@
     <string name="device_info_private_dns">DNS manokana</string>
     <string name="device_info_private_dns_off">Tsy ampiasaina</string>
     <string name="device_info_private_dns_auto">Mandeha (ho azy)</string>
-    <string name="device_info_private_dns_strict">Mandeha (%1$s)</string>
+    <string name="device_info_private_dns_strict">Mandeha (hentitra)</string>
     <string name="device_info_wifi_link_speed">Hafainganan\'ny rohy Wi-Fi</string>
     <string name="device_info_wifi_band">Tarika Wi-Fi</string>
     <string name="device_info_band_2_4_ghz">2,4 GHz</string>
@@ -1056,7 +1056,8 @@
     <string name="device_info_power_usb">USB</string>
     <string name="device_info_power_wireless">Tsy misy tariby</string>
     <string name="device_info_power_dock">Fipetrahana (dock)</string>
-    <string name="device_info_device_idle">Matory ny fitaovana (Doze) izao</string>
+    <string name="device_info_device_idle">Doze lalina izao</string>
+    <string name="device_info_light_idle">Doze maivana izao</string>
     <string name="device_info_battery_saver">Mandeha ny fitsitsiana bateria</string>
     <string name="device_info_sources">Loharano</string>
     <string name="device_info_no_sources">Tsy misy</string>

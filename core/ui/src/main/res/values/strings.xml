@@ -579,6 +579,7 @@
     <string name="device_info_yes">Yes</string>
     <string name="device_info_no">No</string>
     <string name="device_info_missing">—</string>
+    <string name="device_info_load_failed">Couldn\'t read the device info</string>
     <string name="device_info_section_app">App</string>
     <string name="device_info_section_device">Device</string>
     <string name="device_info_section_memory">Memory</string>
@@ -1009,7 +1010,6 @@
     <string name="device_info_decoder_none">No decoder</string>
     <string name="device_info_audio_passthrough">Passthrough</string>
     <string name="device_info_audio_passthrough_none">None</string>
-    <string name="device_info_audio_max_channels">Max channels</string>
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">In %1$s only</string>
@@ -1032,7 +1032,7 @@
     <string name="device_info_private_dns">Private DNS</string>
     <string name="device_info_private_dns_off">Not in use</string>
     <string name="device_info_private_dns_auto">On (automatic)</string>
-    <string name="device_info_private_dns_strict">On (%1$s)</string>
+    <string name="device_info_private_dns_strict">On (strict)</string>
     <string name="device_info_wifi_link_speed">Wi-Fi link speed</string>
     <string name="device_info_wifi_band">Wi-Fi band</string>
     <string name="device_info_band_2_4_ghz">2.4 GHz</string>
@@ -1061,7 +1061,8 @@
     <string name="device_info_power_usb">USB</string>
     <string name="device_info_power_wireless">Wireless</string>
     <string name="device_info_power_dock">Dock</string>
-    <string name="device_info_device_idle">Device idle (Doze) now</string>
+    <string name="device_info_device_idle">Deep Doze now</string>
+    <string name="device_info_light_idle">Light Doze now</string>
     <string name="device_info_battery_saver">Battery saver on</string>
     <string name="device_info_sources">Sources</string>
     <string name="device_info_no_sources">None</string>

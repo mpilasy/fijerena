@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
@@ -46,6 +47,7 @@ fun DeviceInfoScreen() {
     val viewModel: DeviceInfoViewModel =
         viewModel { DeviceInfoViewModel(context.applicationContext, BuildConfig.GIT_HASH, BuildConfig.BUILD_TIME) }
     val sections by viewModel.sections.collectAsStateWithLifecycle()
+    val failed by viewModel.failed.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
 
     LazyColumn(
@@ -68,6 +70,11 @@ fun DeviceInfoScreen() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = CinemaTextSecondary,
             )
+        }
+        if (failed) {
+            item {
+                Text(stringResource(R.string.device_info_load_failed), style = MaterialTheme.typography.bodyMedium, color = CinemaError)
+            }
         }
         item {
             CinemaSecondaryButton(onClick = viewModel::reload, text = stringResource(R.string.common_refresh))

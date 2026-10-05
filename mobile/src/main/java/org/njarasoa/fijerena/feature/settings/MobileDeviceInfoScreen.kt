@@ -43,6 +43,7 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
     val viewModel: DeviceInfoViewModel =
         viewModel { DeviceInfoViewModel(context.applicationContext, BuildConfig.GIT_HASH, BuildConfig.BUILD_TIME) }
     val sections by viewModel.sections.collectAsStateWithLifecycle()
+    val failed by viewModel.failed.collectAsStateWithLifecycle()
     val shareTitle = stringResource(R.string.settings_diagnostics_share)
 
     Scaffold(
@@ -71,6 +72,15 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
+            }
+            if (failed) {
+                item {
+                    Text(
+                        stringResource(R.string.device_info_load_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {

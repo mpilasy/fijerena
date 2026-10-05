@@ -63,6 +63,7 @@ internal data class PowerFacts(
     val batteryPresent: Boolean?,
     val plugged: Int?,
     val deviceIdle: Boolean?,
+    val lightIdle: Boolean?,
     val powerSave: Boolean?,
 )
 
@@ -159,6 +160,8 @@ private fun readPower(context: Context): PowerFacts {
         batteryPresent = battery?.takeIf { it.hasExtra(BatteryManager.EXTRA_PRESENT) }?.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true),
         plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)?.takeIf { it >= 0 },
         deviceIdle = orNull { power?.isDeviceIdleMode },
+        // Light Doze also cuts background jobs off the network; readable from API 33 only (review R1).
+        lightIdle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) orNull { power?.isDeviceLightIdleMode } else null,
         powerSave = orNull { power?.isPowerSaveMode },
     )
 }
@@ -244,7 +247,10 @@ internal fun wifiBandValue(frequencyMhz: Int?): UiText =
         }
     }
 
-/** Strict mode names its server; automatic mode has none. */
+/**
+ * Strict mode has a server name, automatic mode none; the name itself is never shown (a
+ * NextDNS-style name carries a personal ID). Review R3.
+ */
 internal fun privateDnsValue(
     active: Boolean?,
     server: String?,
@@ -253,7 +259,7 @@ internal fun privateDnsValue(
         active == null -> missingValue()
         !active -> UiText.StringResource(R.string.device_info_private_dns_off)
         server.isNullOrBlank() -> UiText.StringResource(R.string.device_info_private_dns_auto)
-        else -> UiText.StringResource(R.string.device_info_private_dns_strict, server)
+        else -> UiText.StringResource(R.string.device_info_private_dns_strict)
     }
 
 internal fun bandwidthValue(kbps: Int?): UiText =
@@ -274,12 +280,14 @@ internal fun powerRows(facts: PowerFacts): List<DeviceInfoRow> =
         infoRow(R.string.device_info_battery_present, yesNo(facts.batteryPresent)),
         infoRow(R.string.device_info_charging, yesNo(chargingForDoze(facts.batteryPresent, facts.plugged))),
         infoRow(R.string.device_info_device_idle, yesNo(facts.deviceIdle)),
+        infoRow(R.string.device_info_light_idle, yesNo(facts.lightIdle)),
         infoRow(R.string.device_info_battery_saver, yesNo(facts.powerSave)),
     )
 
 /**
  * Whether Doze counts the device as charging: a battery present and a power source plugged in
- * (`DeviceIdleController` reads both from `ACTION_BATTERY_CHANGED`). A Shield has no battery, so
+ * (`DeviceIdleController` reads both from `ACTION_BATTERY_CHANGED`: `updateChargingLocked(present &&
+ * plugged)` in the android11-release and android15-release sources). A Shield has no battery, so
  * it never counts as charging and dozes on mains power (`dumpsys deviceidle` `mCharging=false`
  * beside `dumpsys battery` `AC powered: true`, `present: false` on darcy, 2026-10-05).
  * `BatteryManager.isCharging` said yes there, so it isn't used.

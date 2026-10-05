@@ -101,10 +101,12 @@ internal data class DecoderInfo(
     val profiles: List<String>,
 )
 
-/** What the current audio output takes without decoding: format names from [PASSTHROUGH_ENCODINGS]. */
+/**
+ * What the current audio output takes without decoding: format names from [PASSTHROUGH_ENCODINGS].
+ * No channel count: Media3 reports 10 whenever the output doesn't say (review R2).
+ */
 internal data class AudioOutputInfo(
     val passthrough: List<String>,
-    val maxChannels: Int,
 )
 
 /** A row per decoder under its type's short name; "No decoder" for a type without one, "—" per type if the list couldn't be read. */
@@ -168,7 +170,6 @@ internal fun hdrProfiles(
 internal fun audioRows(audio: AudioOutputInfo?): List<DeviceInfoRow> =
     listOf(
         infoRow(R.string.device_info_audio_passthrough, passthroughValue(audio)),
-        infoRow(R.string.device_info_audio_max_channels, audio?.maxChannels?.toString()),
     )
 
 private fun passthroughValue(audio: AudioOutputInfo?): UiText =
@@ -226,6 +227,5 @@ private fun readAudioOutput(context: Context): AudioOutputInfo {
     val capabilities = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
     return AudioOutputInfo(
         passthrough = PASSTHROUGH_ENCODINGS.filter { capabilities.supportsEncoding(it.second) }.map { it.first },
-        maxChannels = capabilities.maxChannelCount,
     )
 }

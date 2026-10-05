@@ -1712,7 +1712,7 @@ class EpgFileManager private constructor(
     private fun scheduleAutoRefresh(intervalHours: Int?) {
         val workManager = WorkManager.getInstance(context)
         if (intervalHours == null) {
-            workManager.cancelUniqueWork("epg_sync")
+            workManager.cancelUniqueWork(EpgSyncWorker.WORK_NAME)
         } else {
             val constraints =
                 Constraints
@@ -1724,7 +1724,7 @@ class EpgFileManager private constructor(
                     .setConstraints(constraints)
                     .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
                     .build()
-            workManager.enqueueUniquePeriodicWork("epg_sync", ExistingPeriodicWorkPolicy.UPDATE, request)
+            workManager.enqueueUniquePeriodicWork(EpgSyncWorker.WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
     }
 

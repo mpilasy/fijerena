@@ -23,7 +23,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
-| 2026-10-04 | [Device info screen](./archive/20261004_device-info-screen-plan.md) | Settings → About → Device info for everyone: app, device, memory, storage, display, decoders, audio passthrough, network, power (charging as Doze sees it), sync health; Share on the phone | Done; review findings R1–R8 open |
+| 2026-10-04 | [Device info screen](./archive/20261004_device-info-screen-plan.md) | Settings → About → Device info for everyone: app, device, memory, storage, display, decoders, audio passthrough, network, power (charging as Doze sees it), sync health; Share on the phone | Done; review findings R1–R8 fixed |
 | 2026-10-04 | [Playback capability errors](./archive/20261004_playback-capability-errors-plan.md) | Undecodable streams (Dolby Vision profile 5, 8K) stop at once with the codec named, in the app language; slow-connection banner with measured throughput; 60 s stall limit | Done |
 | 2026-10-03 | [Sources, guide sources, profiles and section root](./archive/20261003_sources-guide-profiles-plan.md) | Profile page (switch to, developer mode, play next, content filters); "Provides a guide" per source; guide sources under Edit Source and Search the guide; auto-refresh per guide source (providers.db 16); section-root button from 4 deep; Home keeps Search the guide; TV preview plays on OK | Done |
 | 2026-10-03 | [UX overhaul](./archive/20261003_ux-overhaul-plan.md) | Settings rebuilt on TV and mobile, app-wide TV focus rules, Live TV flows, rebuilt TV Guide | Done; native-speaker review of a few mg terms deferred |

@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.xmltv.EpgSyncWorker
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
@@ -66,7 +67,7 @@ class ProviderSyncManager private constructor(
                     .first()
                     .let { infos -> infos.firstOrNull { !it.state.isFinished } ?: infos.firstOrNull() }
                     ?.let { ScheduledWork(it.state.name, it.nextScheduleTimeMillis.takeIf { ms -> ms != Long.MAX_VALUE }) }
-            return read(WORK_NAME) to read("epg_sync")
+            return read(WORK_NAME) to read(EpgSyncWorker.WORK_NAME)
         }
     }
 
