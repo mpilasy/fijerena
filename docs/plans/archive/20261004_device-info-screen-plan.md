@@ -1,6 +1,6 @@
 # Device Info Screen Plan
 
-**Status:** Complete (2026-10-05). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model); checked on both emulators, darcy, mdarcy and the Xperia; findings 4 and 6 fixed (`307850a3`), the rest left as they are.
+**Status:** Complete (2026-10-05). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model); checked on both emulators, darcy, mdarcy and the Xperia; findings 4 and 6 fixed (`307850a3`), the rest left as they are. Adversarial review findings R1–R8 open (below).
 
 ## Decisions (2026-10-04)
 
@@ -162,6 +162,43 @@ no Dolby Vision; passthrough none. Power matches the system: `dumpsys battery` p
 sees it Yes, Doze No; battery-optimisation exempt Yes, bucket Exempted. No source had a failed sync,
 so the "failed" wording fix is covered by its unit test only. The Shields still run `35ceaaef`,
 from before the Charging fix.
+
+## Adversarial review (2026-10-05, `07eaa449`..`d81f8d03`)
+
+No crash or data risk found. Open findings, none fixed yet:
+
+- **R1. "Device idle (Doze) now" misses light Doze** (`NetworkPowerInfo.kt`, `readPower`).
+  `PowerManager.isDeviceIdleMode` is deep Doze only; darcy showed `mLightState=IDLE` in `dumpsys
+  deviceidle` on 2026-10-05, where the row would say No. Light Doze also cuts background jobs off
+  the network — the Shield failure this section is for. `isDeviceLightIdleMode` is API 33, the
+  Shields are API 30: there the row can only be relabelled "Deep Doze now".
+- **R2. "Max channels" isn't measured** (`MediaInfo.kt`, `readAudioOutput`). Media3 1.7.1 fills
+  `AudioCapabilities` with `DEFAULT_MAX_CHANNEL_COUNT = 10` when the output doesn't report one, hence
+  10 on darcy (AC3 only), the phone emulator and the Xperia (no passthrough). Hide the row when it is
+  that default, or drop it.
+- **R3. Private DNS shows the server name** (`NetworkPowerInfo.kt`, `privateDnsValue`), against the
+  plan's "no server addresses" rule, on a screen everyone sees and in the shared text; a NextDNS-style
+  name carries a personal ID. Show "On (strict)" without the name.
+- **R4. Refresh doesn't cancel the previous load** (`DeviceInfoViewModel.reload`). Each press starts
+  another full read (decoder list, a walk of the up-to-512 MB image cache); OK auto-repeat on TV piles
+  them up on the Shield's slow flash, and an older load that finishes last overwrites a newer one.
+  Keep the job and cancel it on reload.
+- **R5. A failed load shows an empty screen** (header and Refresh, Share disabled), not an error
+  state (AGENTS rule 13).
+- **R6. The Doze charging rule rests on `dumpsys` on two devices** (darcy Android 11, the Xperia
+  Android 15), not on the platform source; "a battery present and plugged in" is from memory of
+  `DeviceIdleController`.
+- **R7. `"epg_sync"` is a literal twice** (`ProviderSyncManager.scheduledSyncWork` and
+  `EpgFileManager`); a rename of one makes the guide job rows say "Not scheduled". Share one constant.
+- **R8. The focus walk's Device info line was written by hand** (`scripts/focus-walks/settings.txt`),
+  not re-recorded; its exact text is unconfirmed.
+
+Checked and fine: sync errors (the first line is always the app's own message; the developer-mode
+part is dropped), the WorkManager job names, cancellation in both read helpers, line breaks in shared
+values, the lint fix, plan references after archiving.
+
+Not code: both Shields report "Exempt from battery optimization: No"; with no battery they never count
+as charging for Doze, so background syncs there are left to Doze.
 
 ## Progress
 
