@@ -66,6 +66,7 @@ fun MobileSettingsScreen(
     onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
+    onDeviceInfo: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onEditSource: (providerId: Long) -> Unit = {},
     onEditProfile: (profileId: String) -> Unit = {},
@@ -467,6 +468,11 @@ fun MobileSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
                 }
+                SettingsListRow(
+                    title = stringResource(R.string.device_info_open),
+                    summary = stringResource(R.string.device_info_desc),
+                    onClick = onDeviceInfo,
+                )
                 // Developer mode is switched on each profile's page; Diagnostics stays here for the
                 // profile in use.
                 if (uiState.isDevMode) {

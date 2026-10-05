@@ -16,9 +16,10 @@ DOWN	Backup & storage
 DOWN	About & advanced
 # Down at the end of the rail stays put.
 DOWN	About & advanced
-# About & advanced: the About card (version, build), then Open Diagnostics; no Developer Mode row
-# (it is on each profile's page).
+# About & advanced: the About card (version, build), Device info (everyone), then Open
+# Diagnostics; no Developer Mode row (it is on each profile's page).
 RIGHT	Fijerena
+DOWN	Device info / This app and device: versions, memory, storage, screen, media decoders, network and background state / ›
 DOWN	Open Diagnostics
 DOWN	Open Diagnostics
 LEFT	About & advanced

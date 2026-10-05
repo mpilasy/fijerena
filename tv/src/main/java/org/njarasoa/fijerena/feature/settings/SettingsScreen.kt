@@ -66,6 +66,7 @@ fun SettingsScreen(
     onManageProviders: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
+    onDeviceInfo: () -> Unit = {},
     onProfileSwitched: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -554,7 +555,15 @@ fun SettingsScreen(
 
                                     SettingsGroup.ABOUT_ADVANCED -> {
                                         item {
-                                            AboutSettingsCard(scale = scale, rowModifier = entryModifier)
+                                            AboutSettingsCard(
+                                                scale = scale,
+                                                onDeviceInfo = {
+                                                    returnFocus.leaveFrom(RETURN_DEVICE_INFO, listState)
+                                                    onDeviceInfo()
+                                                },
+                                                rowModifier = entryModifier,
+                                                deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
+                                            )
                                         }
                                         // Developer mode is switched on each profile's page; Diagnostics
                                         // stays here for the profile in use.
@@ -630,6 +639,7 @@ fun SettingsScreen(
 private const val RETURN_PROVIDERS = "providers"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
+private const val RETURN_DEVICE_INFO = "deviceInfo"
 
 private fun profileReturnKey(profileId: String) = "profile:$profileId"
 

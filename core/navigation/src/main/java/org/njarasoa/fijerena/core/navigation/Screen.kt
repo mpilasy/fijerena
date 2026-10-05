@@ -163,6 +163,10 @@ sealed interface Screen {
     @Serializable
     data object Diagnostics : Screen
 
+    /** Settings → About → Device info (everyone): app, device, memory, storage, display, media, network and power. */
+    @Serializable
+    data object DeviceInfo : Screen
+
     /** Start destination in crash-loop safe mode (`SafeMode.isActive`), in place of home. */
     @Serializable
     data object SafeMode : Screen

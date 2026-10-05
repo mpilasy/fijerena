@@ -349,6 +349,10 @@ fun TvNavHost(
                     org.njarasoa.fijerena.feature.settings
                         .DiagnosticsScreen()
                 }
+                composable<Screen.DeviceInfo> {
+                    org.njarasoa.fijerena.feature.settings
+                        .DeviceInfoScreen()
+                }
 
                 composable<Screen.EpgBrowser> { backStackEntry ->
                     val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
@@ -779,6 +783,9 @@ fun TvNavHost(
                         },
                         onDiagnostics = {
                             navController.navigateOnce(Screen.Diagnostics)
+                        },
+                        onDeviceInfo = {
+                            navController.navigateOnce(Screen.DeviceInfo)
                         },
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous

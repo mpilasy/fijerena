@@ -573,6 +573,9 @@ fun MobileNavHost(
                     onDiagnostics = {
                         navController.navigateOnce(Screen.Diagnostics)
                     },
+                    onDeviceInfo = {
+                        navController.navigateOnce(Screen.DeviceInfo)
+                    },
                     onLiveSync = {
                         navController.navigateOnce(Screen.SyncSettings)
                     },
@@ -629,6 +632,11 @@ fun MobileNavHost(
             composable<Screen.Diagnostics> {
                 org.njarasoa.fijerena.feature.settings
                     .MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
+            }
+
+            composable<Screen.DeviceInfo> {
+                org.njarasoa.fijerena.feature.settings
+                    .MobileDeviceInfoScreen(onBack = { navController.navigateUp() })
             }
 
             composable<Screen.Search> { backStackEntry ->

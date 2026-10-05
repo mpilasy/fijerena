@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Device info
+**Release Date:** 2026-10-04
+
+- **Device info, for everyone:** Settings → About & advanced → Device info shows the app's version and build, the device's model, Android version and processor, memory, storage (including how much each of the app's databases and caches takes) and the screen's modes and HDR types. On the phone, Share sends it as text — handy alongside Diagnostics when something goes wrong. → P1.
+
 ## Version: Remote M3U refresh
 **Release Date:** 2026-10-04
 

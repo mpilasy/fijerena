@@ -62,6 +62,15 @@ in the player stats overlays, and `DeviceDetector` (device type, HEVC/AV1 yes/no
   (Android 15): every row filled or "—", no crash, D-pad reaches every section on TV.
 - **Docs:** FEATURES (Device info), NAVIGATION_GUIDE (Settings → About → Device info), RELEASE_NOTES.
 
+**Done (2026-10-04):** `core/ui/.../deviceinfo/CoreInfo.kt` (`coreSections`), `DeviceInfoModel.kt`
+(the row model P2 and P3 build on), `DeviceInfoViewModel`, `DeviceInfoScreen` (TV: one focus stop per
+section) and `MobileDeviceInfoScreen` (Refresh, Share), `Screen.DeviceInfo`. The entry is a row under
+the version row in About & advanced on TV (focus walk `settings.txt` updated by hand, not re-recorded)
+and a row in the About group on mobile; Back returns focus to it on TV. The git hash and build time
+come from each app's `BuildConfig`, so the view model is built by the screen, not
+`SettingsViewModelFactory`. Unit tests: `CoreInfoTest` (mode text, HDR names, database sizes with
+their WAL, free-of-total, yes/no). Device check: not yet done.
+
 ### P2 — Media
 
 - **Video decoders** for AVC, HEVC, AV1 and VP9: each decoder's name, hardware or software
@@ -94,6 +103,6 @@ in the player stats overlays, and `DeviceDetector` (device type, HEVC/AV1 yes/no
 
 | Phase | Status | Commit |
 |---|---|---|
-| P1 Screen and core sections | In progress | |
+| P1 Screen and core sections | Done; device check pending | P1 commit |
 | P2 Media | In progress | |
 | P3 Network and power | In progress | |

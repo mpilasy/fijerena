@@ -324,6 +324,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | `ProfilesViewModel` | Profiles and the "Who's watching?" picker |
 | `SyncSettingsViewModel` | Live sync setup, pairing, devices |
 | `DiagnosticsViewModel` | Crash log and process-exit history |
+| `DeviceInfoViewModel` | Device info sections (`core/ui/.../deviceinfo/`), Share text |
 | `SafeModeViewModel` | Safe mode's Clear caches |
 | `PlaybackViewModel` (core:player) | Playback control over `StreamingPlaybackService` |
 
@@ -352,6 +353,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | Profile picker | `feature/profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live sync | `feature/settings/SyncSettingsScreen.kt` | Sync group setup, pairing, devices |
 | Diagnostics | `feature/settings/DiagnosticsScreen.kt` | Crash log and exit history |
+| Device info | `feature/settings/DeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts |
 | Safe mode | `feature/safemode/SafeModeScreen.kt` | Continue, Clear caches, Show diagnostics |
 | Newer data | `feature/safemode/NewerDataScreen.kt` | Close, Reset sources |
 
@@ -378,6 +380,7 @@ Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEff
 | Profile picker | `feature/profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live sync | `feature/settings/MobileSyncSettingsScreen.kt` (+ `components/QrScanner.kt`) | Sync group setup, pairing, devices, Remote Stop |
 | Diagnostics | `feature/settings/MobileDiagnosticsScreen.kt` | Crash log and exit history, Share |
+| Device info | `feature/settings/MobileDeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts, Share |
 | Safe mode | `feature/safemode/MobileSafeModeScreen.kt` | Continue, Clear caches, Show diagnostics |
 | Newer data | `feature/safemode/MobileNewerDataScreen.kt` | Close, Reset sources |
 
