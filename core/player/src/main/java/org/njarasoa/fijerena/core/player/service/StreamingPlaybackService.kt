@@ -8,10 +8,13 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
@@ -499,6 +502,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 onStreamEndedOrError = { errorMessage ->
                     handleStreamEndedOrError(errorMessage)
                 },
+                onFinalError = ::handleFinalError,
                 onAccountBusy = ::handleAccountBusy,
                 streamStartTimeMs = { _streamStartTimeMs.value },
             )
@@ -562,7 +566,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // Debug builds log every track's codecs string, format support and chosen decoder
         // (logcat tag "EventLogger") — how codec fallback, e.g. Dolby Vision → HEVC, is diagnosed.
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
-            player.addAnalyticsListener(androidx.media3.exoplayer.util.EventLogger())
+            player.addAnalyticsListener(EventLogger())
         }
     }
 
@@ -849,6 +853,21 @@ class StreamingPlaybackService : MediaSessionService() {
         lastErrorMessage = errorMessage
         pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
         attemptStreamRetry(metadata)
+    }
+
+    /**
+     * A fault no retry can fix — the device can't decode the stream: shown at once, never retried.
+     * See docs/plans/20261004_playback-capability-errors-plan.md.
+     */
+    internal fun handleFinalError(
+        message: String,
+        exception: Exception? = null,
+    ) {
+        cancelPendingRetry()
+        lastErrorMessage = message
+        _playbackState.value = PlaybackState.Error(message, exception)
+        // Posted: this runs inside a player callback, and stop() calls back into the player.
+        mainHandler.post { getPlayer()?.stop() }
     }
 
     fun pause() {
@@ -1277,6 +1296,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val player: Player,
         private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
+        private val onFinalError: (message: String, exception: Exception?) -> Unit = { _, _ -> },
         private val onAccountBusy: (httpStatus: Int) -> Unit = {},
         // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
         // after a new stream can log total prepare-to-ready latency.
@@ -1346,6 +1366,20 @@ class StreamingPlaybackService : MediaSessionService() {
             }
             updatePlaybackState()
         }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            val format = unplayableVideoFormat(tracks) ?: return
+            Log.w(TAG, "No decoder for any video track (${format.codecs ?: format.sampleMimeType}) — stopping.")
+            // Held like any error, so the player's IDLE after the stop doesn't replace it.
+            isInErrorState = true
+            errorHeldUntilReady = false
+            onFinalError(context.getString(R.string.player_error_codec_unsupported_format, formatLabel(format)), null)
+        }
+
+        /** "Dolby Vision profile 5", or the codec and resolution ("HEVC 7680×4320"). */
+        private fun formatLabel(format: Format): String =
+            dolbyVisionProfile(format.codecs)?.let { context.getString(R.string.player_format_dolby_vision_profile, it) }
+                ?: codecLabel(format)
 
         override fun onPlayerError(error: PlaybackException) {
             isInErrorState = true

@@ -1,6 +1,6 @@
 # Playback Capability Errors Plan
 
-**Status:** In progress (2026-10-04). P1 in progress; P4 waits on its slow-network test.
+**Status:** In progress (2026-10-04). P1 done; P2 in progress; P4 waits on its slow-network test.
 
 ## Decisions (2026-10-04)
 
@@ -113,7 +113,7 @@ bandwidth (keep them for read timeouts and stalls).
 
 | Phase | Status | Commit |
 |---|---|---|
-| P1 Unplayable video track | In progress | |
-| P2 Codec errors final | Planned | |
+| P1 Unplayable video track | Done | (this commit) |
+| P2 Codec errors final | In progress | |
 | P3 Error text | Planned | |
 | P4 Slow connection | Needs test (decision: warn only) | |

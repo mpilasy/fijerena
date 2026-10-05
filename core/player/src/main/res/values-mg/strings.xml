@@ -8,6 +8,7 @@
     <string name="player_error_channel_offline">Angamba tsy mandeha ny fandaharana.</string>
     <string name="player_error_check_connection">Jereo ny fifandraisanao ary andramo indray.</string>
     <string name="player_error_codec_unsupported_format">Tsy raisin\'ity fitaovana ity ny codec: %1$s</string>
+    <string name="player_format_dolby_vision_profile">Dolby Vision profil %1$d</string>
     <string name="player_error_format_unsupported">Tsy raisin\'ity fitaovana ity ny endriky ny sarimihetsika</string>
     <string name="player_error_network_failed">Tsy nahomby ny tambajotra. Jereo ny fifandraisanao amin\'ny internet.</string>
     <string name="player_error_http_401">HTTP 401 — Tsy nahomby ny fidirana. Jereo ny fangatahanao.</string>

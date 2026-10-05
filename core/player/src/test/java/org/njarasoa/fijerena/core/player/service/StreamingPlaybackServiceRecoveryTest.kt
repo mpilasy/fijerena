@@ -117,6 +117,22 @@ class StreamingPlaybackServiceRecoveryTest {
     }
 
     @Test
+    fun `a final error shows at once and cancels any scheduled retry`() {
+        service.playStream(vod)
+        service.handleStreamEndedOrError("Network failed")
+        val scheduled = posted.single().first
+
+        service.handleFinalError("Video codec not supported on this device: Dolby Vision profile 5")
+
+        assertTrue(scheduled in removed)
+        assertEquals(1, posted.size)
+        assertEquals(
+            PlaybackState.Error("Video codec not supported on this device: Dolby Vision profile 5"),
+            service.playbackState.value,
+        )
+    }
+
+    @Test
     fun `a VOD retry resumes where the fault happened`() {
         service.playStream(vod)
         every { player.currentPosition } returns 42_000L

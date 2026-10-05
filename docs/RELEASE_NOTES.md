@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Playback capability errors
+**Release Date:** 2026-10-04
+
+- **A video this device can't decode stops with a message:** a stream whose only video track has no decoder on the device (Dolby Vision profile 5 on a Shield 2017 or most phones) used to "play" with a black screen — audio only, or nothing — and no error. It now stops at once with "Video codec not supported on this device: Dolby Vision profile 5" (or the codec and resolution), without retrying. → P1.
+
 ## Version: Account in use
 **Release Date:** 2026-10-04
 
