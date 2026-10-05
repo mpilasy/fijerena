@@ -1,6 +1,6 @@
 # Icon Buttons Plan
 
-**Status:** Not started (written 2026-10-05). Waiting on the scope question in Decisions.
+**Status:** In progress (written 2026-10-05). Phase 1 under way.
 
 ## Goal
 
@@ -75,14 +75,14 @@ NAVIGATION_GUIDE, AGENTS.md rule replacing "labelled slots") updated in the same
 ## Decisions (2026-10-05)
 
 1. **Icons with the label on focus (TV) / tooltip (mobile), app-wide** — user, option 2.
-2. **Open — what stays text:** the list above (dialog buttons, a screen's main action and form
-   submits, setting value rows). Confirm or name exceptions.
+2. **What stays text** (user accepted the proposal, 2026-10-05): dialog buttons, a screen's single
+   main action and form submits, setting value rows — the "Stays text" list above.
 
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Not started | |
+| 1 | In progress | |
 | 2 | Not started | |
 | 3 | Not started | |
 | 4 | Not started | |
