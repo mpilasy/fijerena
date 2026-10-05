@@ -1,6 +1,6 @@
 # Shared Logins Plan
 
-**Status:** Not started (written 2026-10-05). Decisions made; Phase 4 needs a second bears login.
+**Status:** In progress (written 2026-10-05). Phase 1 under way: storage, sync and same-panel check first, then the TV and mobile Edit Source sections in parallel. Phase 4 needs a second bears login.
 
 ## Goal
 
@@ -157,7 +157,7 @@ Phase 2 with a single login must behave exactly like today: no extra requests, s
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Not started | |
+| 1 | In progress: storage + sync (main), then TV and mobile screens (two lanes) | |
 | 2 | Not started | |
 | 3 | Not started | |
 | 4 | Not started | |
