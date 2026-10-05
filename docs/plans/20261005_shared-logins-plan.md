@@ -182,6 +182,18 @@ redirects, so it can't see a stream stop), a stream over the limit gets HTTP 458
 so the refusal path runs. What it can't show: bears' 5-minute lock for a different public address
 (460) and its real timings — Phase 4.
 
+## bears measurements for Phase 4 (2026-10-05, darcy, one login)
+
+- A movie stream stops counting ~20 s after it stops (Xperia, morning). A **live HLS** stream
+  (`m3u8`) keeps the login counted **~46 s to ~1 min** after the player stops; **live MPEG-TS**
+  (`.ts`) frees it at once (two runs). A `.ts` stream also takes ~10 s to start counting.
+- Start time to first picture: HLS channel changes 0.8–1.8 s; `.ts` measured only as two first
+  starts (3.1 s, 7.8 s after three "unexpected end of stream" retries) — not compared like for
+  like. Decided: keep m3u8; revisit with the second login if logins sitting busy matters.
+- A `player_api.php` check takes ~0.5 s from the host (0.22 s connect). Checks now reuse one
+  connection per login, an answer is reused for 5 s, and a channel change keeps this device's
+  login without asking (`3921cde9`) — the zap path is still untested with two logins.
+
 ## Progress
 
 | Phase | Status | Commit |
