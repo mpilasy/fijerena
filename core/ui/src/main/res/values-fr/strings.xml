@@ -1004,6 +1004,15 @@
     <string name="details_action_more">Plus</string>
     <string name="series_play_next_format">▶ Lire : %1$s</string>
     <string name="series_resume_next_format">▶ Reprendre : %1$s (%2$s)</string>
+    <!-- Device info: media (P2) -->
+    <string name="device_info_section_video_decoders">Décodeurs vidéo</string>
+    <string name="device_info_section_audio">Sortie audio</string>
+    <string name="device_info_decoder_hardware_format">%1$s · matériel · %2$s</string>
+    <string name="device_info_decoder_software_format">%1$s · logiciel · %2$s</string>
+    <string name="device_info_decoder_none">Aucun décodeur</string>
+    <string name="device_info_audio_passthrough">Sortie directe (passthrough)</string>
+    <string name="device_info_audio_passthrough_none">Aucun</string>
+    <string name="device_info_audio_max_channels">Canaux max</string>
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">Dans %1$s uniquement</string>

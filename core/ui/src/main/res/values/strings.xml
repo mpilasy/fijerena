@@ -1001,6 +1001,15 @@
     <!-- GD4 -->
     <string name="epg_guide_status_partial_format">%1$d of %2$d loaded channels have listings · %3$d in all · %4$s · updated %5$s</string>
     <string name="epg_guide_listings_end_format">Listings end at %1$s</string>
+    <!-- Device info: media (P2) -->
+    <string name="device_info_section_video_decoders">Video decoders</string>
+    <string name="device_info_section_audio">Audio output</string>
+    <string name="device_info_decoder_hardware_format">%1$s · hardware · %2$s</string>
+    <string name="device_info_decoder_software_format">%1$s · software · %2$s</string>
+    <string name="device_info_decoder_none">No decoder</string>
+    <string name="device_info_audio_passthrough">Passthrough</string>
+    <string name="device_info_audio_passthrough_none">None</string>
+    <string name="device_info_audio_max_channels">Max channels</string>
     <!-- GD5 -->
     <string name="player_osd_guide">Guide</string>
     <string name="epg_browser_in_category_only_format">In %1$s only</string>

@@ -85,6 +85,13 @@ their WAL, free-of-total, yes/no). Device check: not yet done.
   resolution text, Dolby Vision row). Device check: darcy shows `OMX.Nvidia.h265.decode` as
   hardware and no Dolby Vision decoder; mdarcy shows `OMX.Nvidia.DOVI.decode`.
 
+**Done (2026-10-04):** `core/ui/.../deviceinfo/MediaInfo.kt` (`mediaSections`), built on its own
+branch and cherry-picked. Decoders come from `MediaCodecList(REGULAR_CODECS)`, aliases left out; a
+decoder that reports the same upper bound for width and height (it takes portrait video too) shows
+the tallest height at its widest width. Audio uses Media3's `AudioCapabilities` (what the player
+uses to pick passthrough), so a phone with no HDMI output shows Media3's default. Unit tests:
+`MediaInfoTest` (9). Device check: not yet done.
+
 ### P3 — Network and power
 
 - **Network:** active transport (Wi-Fi, Ethernet, cellular), validated or not, metered, VPN on,
@@ -104,5 +111,5 @@ their WAL, free-of-total, yes/no). Device check: not yet done.
 | Phase | Status | Commit |
 |---|---|---|
 | P1 Screen and core sections | Done; device check pending | P1 commit |
-| P2 Media | In progress | |
+| P2 Media | Done; device check pending | P2 commit |
 | P3 Network and power | In progress | |

@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-04
 
 - **Device info, for everyone:** Settings → About & advanced → Device info shows the app's version and build, the device's model, Android version and processor, memory, storage (including how much each of the app's databases and caches takes) and the screen's modes and HDR types. On the phone, Share sends it as text — handy alongside Diagnostics when something goes wrong. → P1.
+- **Which videos this device can decode:** Device info lists every video decoder for AVC, HEVC, AV1, VP9 and Dolby Vision — hardware or software, the largest picture and frame rate it takes, and its HDR and Dolby Vision profiles — and which surround formats (AC3, EAC3, DTS, TrueHD…) the audio output passes through. → P2.
 
 ## Version: Remote M3U refresh
 **Release Date:** 2026-10-04
