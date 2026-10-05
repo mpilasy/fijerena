@@ -560,9 +560,25 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
+                // The episode by code and title, as on TV ("S01E04 · title"); no code when the
+                // provider numbers episodes 0, and the numbers alone without a title.
+                val anchorOwnTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }
+                val anchorTitle =
+                    if (anchorEpisode != null && anchorOwnTitle != null && anchorEpisode.episodeNumber > 0) {
+                        stringResource(
+                            R.string.series_episode_code_title_format,
+                            anchorEpisode.seasonNumber ?: 1,
+                            anchorEpisode.episodeNumber,
+                            anchorOwnTitle,
+                        )
+                    } else {
+                        anchorOwnTitle
+                    }
                 if (hasResume) {
                     val resumeButtonText =
-                        if (anchorEpisode != null) {
+                        if (anchorTitle != null) {
+                            stringResource(R.string.series_resume_next_format, anchorTitle, formatTime(anchorResumePosMs))
+                        } else if (anchorEpisode != null) {
                             stringResource(
                                 R.string.series_resume_episode_time_format,
                                 anchorEpisode.seasonNumber ?: 1,
@@ -580,11 +596,13 @@ private fun EpisodeListContent(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(resumeButtonText)
+                        Text(resumeButtonText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 } else {
                     val playButtonText =
-                        if (anchorEpisode != null) {
+                        if (anchorTitle != null) {
+                            stringResource(R.string.series_play_next_format, anchorTitle)
+                        } else if (anchorEpisode != null) {
                             stringResource(
                                 R.string.series_play_episode_format,
                                 anchorEpisode.seasonNumber ?: 1,
@@ -601,7 +619,7 @@ private fun EpisodeListContent(
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(playButtonText)
+                        Text(playButtonText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
