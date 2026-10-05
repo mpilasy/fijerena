@@ -36,6 +36,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.R
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -621,7 +622,8 @@ class StreamingPlaybackService : MediaSessionService() {
         update: (PlayerMetadata) -> PlayerMetadata,
     ) {
         val current = _currentMetadata.value
-        if (current.streamUrl == streamUrl) {
+        // Same stream even after a refusal moved it to another login (shared logins).
+        if (XtreamStreamUrl.sameStream(current.streamUrl, streamUrl)) {
             _currentMetadata.value = update(current)
         }
     }

@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.core.player.api
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class XtreamStreamUrlTest {
@@ -24,6 +26,14 @@ class XtreamStreamUrlTest {
             "http://h:8080/movie/two/p%26w/12.mkv?x=1",
             XtreamStreamUrl.withLogin("http://h:8080/movie/main/pw/12.mkv?x=1", "two", "p&w"),
         )
+    }
+
+    @Test
+    fun `the same stream on another login is the same stream`() {
+        assertTrue(XtreamStreamUrl.sameStream("http://h/movie/main/pw/12.mkv", "http://h/movie/two/x/12.mkv"))
+        assertFalse(XtreamStreamUrl.sameStream("http://h/movie/main/pw/12.mkv", "http://h/movie/main/pw/13.mkv"))
+        assertTrue(XtreamStreamUrl.sameStream("https://j/Videos/a", "https://j/Videos/a"))
+        assertFalse(XtreamStreamUrl.sameStream("https://j/Videos/a", "https://j/Videos/b"))
     }
 
     @Test

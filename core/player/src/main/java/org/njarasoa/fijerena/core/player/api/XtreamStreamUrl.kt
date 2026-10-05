@@ -30,5 +30,11 @@ object XtreamStreamUrl {
             url.replaceRange(match.range, match.groupValues[1] + encode(username) + "/" + encode(password) + "/")
         }
 
+    /** Whether [a] and [b] are the same stream, perhaps on different logins of one panel. */
+    fun sameStream(
+        a: String,
+        b: String,
+    ): Boolean = a == b || withLogin(a, "", "")?.let { it == withLogin(b, "", "") } == true
+
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
 }
