@@ -3,14 +3,17 @@ package org.njarasoa.fijerena.core.player.service
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.TrackGroup
 import androidx.media3.common.Tracks
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * docs/plans/20261004_playback-capability-errors-plan.md → P1. The track and codecs values are
+ * docs/plans/20261004_playback-capability-errors-plan.md → P1, P2. The track and codecs values are
  * the ones Media3 reported on darcy and the Xperia XZ2 Compact for the 2026-10-04 test clips.
  */
 @androidx.media3.common.util.UnstableApi
@@ -86,5 +89,25 @@ class PlaybackCapabilityTest {
         assertEquals("MPEG-2", codecLabel(Format.Builder().setSampleMimeType("video/mpeg2").build()))
         assertEquals("X-UNKNOWN", codecLabel(Format.Builder().setSampleMimeType("video/x-unknown").build()))
         assertEquals("?", codecLabel(Format.Builder().build()))
+    }
+
+    @Test
+    fun `a codec error before the first frame on a format the decoder doesn't handle is final`() {
+        // 8K HEVC: DECODING_FAILED on darcy, DECODER_INIT_FAILED on the Xperia, both EXCEEDS.
+        assertTrue(isFinalCodecError(PlaybackException.ERROR_CODE_DECODING_FAILED, C.FORMAT_EXCEEDS_CAPABILITIES, false))
+        assertTrue(isFinalCodecError(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED, C.FORMAT_EXCEEDS_CAPABILITIES, false))
+        assertTrue(isFinalCodecError(PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED, C.FORMAT_UNSUPPORTED_SUBTYPE, false))
+    }
+
+    @Test
+    fun `a codec error after frames played, or on a handled format, keeps the retry`() {
+        assertFalse(isFinalCodecError(PlaybackException.ERROR_CODE_DECODING_FAILED, C.FORMAT_EXCEEDS_CAPABILITIES, true))
+        assertFalse(isFinalCodecError(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED, C.FORMAT_HANDLED, false))
+    }
+
+    @Test
+    fun `network errors are never final`() {
+        assertFalse(isFinalCodecError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, C.FORMAT_HANDLED, false))
+        assertFalse(isFinalCodecError(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, C.FORMAT_EXCEEDS_CAPABILITIES, false))
     }
 }

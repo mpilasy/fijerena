@@ -14,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -1304,6 +1305,7 @@ class StreamingPlaybackService : MediaSessionService() {
     ) : Player.Listener {
         private var isInErrorState = false
         private var errorHeldUntilReady = false
+        private var renderedFirstFrame = false
         private val saveIntervalMs = POSITION_SAVE_INTERVAL_MS
         private var lastSavedPosition = -saveIntervalMs
         private var loggedFirstReady = false
@@ -1311,6 +1313,7 @@ class StreamingPlaybackService : MediaSessionService() {
         fun resetErrorState() {
             isInErrorState = false
             errorHeldUntilReady = false
+            renderedFirstFrame = false
         }
 
         /** Keeps the error on screen through a retry until the stream actually plays. */
@@ -1367,6 +1370,10 @@ class StreamingPlaybackService : MediaSessionService() {
             updatePlaybackState()
         }
 
+        override fun onRenderedFirstFrame() {
+            renderedFirstFrame = true
+        }
+
         override fun onTracksChanged(tracks: Tracks) {
             val format = unplayableVideoFormat(tracks) ?: return
             Log.w(TAG, "No decoder for any video track (${format.codecs ?: format.sampleMimeType}) — stopping.")
@@ -1391,6 +1398,12 @@ class StreamingPlaybackService : MediaSessionService() {
                 return
             }
             val errorMessage = parsePlaybackError(error)
+            val formatSupport = (error as? ExoPlaybackException)?.rendererFormatSupport ?: C.FORMAT_HANDLED
+            if (isFinalCodecError(error.errorCode, formatSupport, renderedFirstFrame)) {
+                Log.w(TAG, "${error.errorCodeName} before the first frame, format support $formatSupport — not retrying.")
+                onFinalError(errorMessage, error)
+                return
+            }
             onStreamEndedOrError(errorMessage)
         }
 
