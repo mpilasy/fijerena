@@ -68,10 +68,14 @@ object ProviderSyncRunner {
                 if (mediaProvider !is XtreamMediaProvider) return Outcome.Success()
 
                 if (!mediaProvider.isConnected()) {
-                    mediaProvider.connect()
+                    // A failed connect says why: a network failure (server down, no connection)
+                    // is retried and reported as such below, not taken for a refused login.
+                    mediaProvider.connect().exceptionOrNull()?.let { failure ->
+                        throw (failure.cause as? Exception) ?: (failure as? Exception) ?: Exception(failure)
+                    }
                 }
                 if (!mediaProvider.isConnected()) {
-                    // No exception thrown — connect() simply refused. Almost always credentials.
+                    // connect() succeeded yet no session: nothing better to say than the login.
                     val devSuffix =
                         if (AppSettings(context).isDevMode) "\n\n[dev] connect() returned not-connected" else ""
                     return Outcome.Permanent(context.getString(R.string.error_unauthorized) + devSuffix)
