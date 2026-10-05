@@ -5,7 +5,7 @@ package org.njarasoa.fijerena.core.player.network
  * Without it a stalled connection kept the spinner up for 13 minutes: each attempt waited out
  * Media3's own read-timeout retries, four attempts in all. Any byte restarts the minute, so a
  * slow connection, a recycle or a retry that gets data keeps going. Times are elapsed-realtime ms.
- * See docs/plans/20261004_playback-capability-errors-plan.md → P4.
+ * See docs/plans/archive/20261004_playback-capability-errors-plan.md → P4.
  */
 class StallWatchdog(
     private val limitMs: Long = LIMIT_MS,

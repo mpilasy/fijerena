@@ -111,7 +111,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _rebufferCount = MutableStateFlow(0)
     val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
 
-    // P4 (docs/plans/20261004_playback-capability-errors-plan.md): the slow-connection banner,
+    // P4 (docs/plans/archive/20261004_playback-capability-errors-plan.md): the slow-connection banner,
     // and the 60 s limit on buffering with no data arriving.
     private val _slowConnection = MutableStateFlow<SlowConnection?>(null)
     val slowConnection: StateFlow<SlowConnection?> = _slowConnection.asStateFlow()
@@ -910,7 +910,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
     /**
      * A fault no retry can fix — the device can't decode the stream: shown at once, never retried.
-     * See docs/plans/20261004_playback-capability-errors-plan.md.
+     * See docs/plans/archive/20261004_playback-capability-errors-plan.md.
      */
     internal fun handleFinalError(
         message: String,

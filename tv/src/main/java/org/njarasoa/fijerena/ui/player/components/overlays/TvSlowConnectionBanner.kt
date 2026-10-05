@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * "Connection too slow for this video (needs ~60 Mbps, getting ~20 Mbps)" at the top of the
- * picture while the stream starves (P4, docs/plans/20261004_playback-capability-errors-plan.md).
+ * picture while the stream starves (P4, docs/plans/archive/20261004_playback-capability-errors-plan.md).
  * Not focusable; the remote keeps working.
  */
 @Composable

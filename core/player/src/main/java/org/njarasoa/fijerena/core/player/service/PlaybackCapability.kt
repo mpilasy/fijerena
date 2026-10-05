@@ -12,7 +12,7 @@ import androidx.media3.common.util.UnstableApi
  * Vision profile 5 on a device without a Dolby Vision decoder): Media3 then selects no video
  * track and "plays" audio only, or nothing, without an error. Null when the stream has no video
  * (radio), when a video track is selected, or when one is merely deselected but playable.
- * See docs/plans/20261004_playback-capability-errors-plan.md → P1.
+ * See docs/plans/archive/20261004_playback-capability-errors-plan.md → P1.
  */
 @OptIn(UnstableApi::class)
 internal fun unplayableVideoFormat(tracks: Tracks): Format? {

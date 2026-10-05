@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.SlowConnection
 
-/** docs/plans/20261004_playback-capability-errors-plan.md → P4. */
+/** docs/plans/archive/20261004_playback-capability-errors-plan.md → P4. */
 class SlowConnectionDetectorTest {
     private val detector = SlowConnectionDetector(unknownBitrateWindowMs = 120_000L, clearAfterMs = 60_000L)
 

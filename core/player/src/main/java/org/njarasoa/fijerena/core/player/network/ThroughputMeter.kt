@@ -5,7 +5,7 @@ package org.njarasoa.fijerena.core.player.network
  * Media3's bandwidth estimate only updates when a transfer ends, and a progressive stream is one
  * long transfer, so on a 20 Mbit/s link it still said 2 Mbit/s. Bytes come from the loader
  * thread, reads from the main thread. Times are elapsed-realtime ms.
- * See docs/plans/20261004_playback-capability-errors-plan.md → P4.
+ * See docs/plans/archive/20261004_playback-capability-errors-plan.md → P4.
  */
 class ThroughputMeter(
     private val windowMs: Long = 10_000L,

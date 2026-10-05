@@ -143,4 +143,4 @@ giving up.
 | P1 Unplayable video track | Done | `47da9f12` |
 | P2 Codec errors final | Done | `5830a0dd` |
 | P3 Error text | Done | `8f67be1a` |
-| P4 Slow connection and stalls | Done | (this commit) |
+| P4 Slow connection and stalls | Done | `c208dd98` |

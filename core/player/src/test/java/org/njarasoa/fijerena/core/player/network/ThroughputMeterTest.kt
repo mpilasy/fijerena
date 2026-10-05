@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.player.network
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** docs/plans/20261004_playback-capability-errors-plan.md → P4. */
+/** docs/plans/archive/20261004_playback-capability-errors-plan.md → P4. */
 class ThroughputMeterTest {
     private val meter = ThroughputMeter(windowMs = 10_000L)
 

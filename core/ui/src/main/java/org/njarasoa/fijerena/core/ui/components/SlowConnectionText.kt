@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
 /**
  * The slow-connection banner's text while the playing stream gets less bandwidth than it needs,
  * else null. Polled, like the player's other service readings, so a recreated service is picked
- * up. See docs/plans/20261004_playback-capability-errors-plan.md → P4.
+ * up. See docs/plans/archive/20261004_playback-capability-errors-plan.md → P4.
  */
 @Composable
 fun rememberSlowConnectionText(): String? {

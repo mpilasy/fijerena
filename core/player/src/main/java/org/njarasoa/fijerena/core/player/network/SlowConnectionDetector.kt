@@ -7,7 +7,7 @@ import org.njarasoa.fijerena.core.player.model.SlowConnection
  * seek: at once when the stream's bitrate is known and the measured throughput is below it; without
  * numbers on the second rebuffer within [unknownBitrateWindowMs] when it isn't. The banner goes
  * after [clearAfterMs] without a rebuffer. Times are elapsed-realtime ms.
- * See docs/plans/20261004_playback-capability-errors-plan.md → P4.
+ * See docs/plans/archive/20261004_playback-capability-errors-plan.md → P4.
  */
 class SlowConnectionDetector(
     private val unknownBitrateWindowMs: Long = 120_000L,

@@ -13,7 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * docs/plans/20261004_playback-capability-errors-plan.md → P1, P2. The track and codecs values are
+ * docs/plans/archive/20261004_playback-capability-errors-plan.md → P1, P2. The track and codecs values are
  * the ones Media3 reported on darcy and the Xperia XZ2 Compact for the 2026-10-04 test clips.
  */
 @androidx.media3.common.util.UnstableApi

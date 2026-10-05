@@ -4,7 +4,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** docs/plans/20261004_playback-capability-errors-plan.md → P4. */
+/** docs/plans/archive/20261004_playback-capability-errors-plan.md → P4. */
 class StallWatchdogTest {
     private val watchdog = StallWatchdog(limitMs = 60_000L)
 
