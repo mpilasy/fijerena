@@ -51,6 +51,9 @@ TEST_PASSWORD = os.environ.get("BRIDGE_TEST_PASSWORD")
 MAX_CONNECTIONS = int(os.environ.get("BRIDGE_MAX_CONNECTIONS", "0"))
 HOLD_SECONDS = int(os.environ.get("BRIDGE_HOLD_SECONDS", "90"))
 HIDE_CONS = os.environ.get("BRIDGE_HIDE_CONS") == "1"
+# A player opens one stream more than once (an mkv's index at the end, a resume's seek): a request
+# this soon after the username's last one is the same playback, not a second stream.
+REOPEN_SECONDS = 5
 
 AUTH_BASE = 'MediaBrowser Client="xtream-bridge", Device="xtream-bridge", DeviceId="xtream-bridge", Version="1.0"'
 LIST_FIELDS = "Overview,Genres,ProviderIds,DateCreated,DateLastMediaAdded,PremiereDate"
@@ -138,6 +141,7 @@ def session(username, password):
 
 
 _holds = {}  # Xtream username -> expiry times of the streams it holds (test mode)
+_last_take = {}  # Xtream username -> when its last stream request was let through
 _holds_lock = threading.Lock()
 
 
@@ -152,10 +156,17 @@ def take_connection(username):
     """False when the username already holds BRIDGE_MAX_CONNECTIONS streams."""
     if MAX_CONNECTIONS <= 0:
         return True
-    if active_cons(username) >= MAX_CONNECTIONS:
-        return False
+    now = time.time()
+    held = active_cons(username)
     with _holds_lock:
-        _holds[username].append(time.time() + HOLD_SECONDS)
+        if held and now - _last_take.get(username, 0) < REOPEN_SECONDS:
+            _holds[username][-1] = now + HOLD_SECONDS
+            _last_take[username] = now
+            return True
+        if held >= MAX_CONNECTIONS:
+            return False
+        _holds[username].append(now + HOLD_SECONDS)
+        _last_take[username] = now
     return True
 
 

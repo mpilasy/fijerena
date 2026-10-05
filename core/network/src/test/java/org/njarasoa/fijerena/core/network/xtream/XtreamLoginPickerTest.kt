@@ -22,7 +22,8 @@ class XtreamLoginPickerTest {
         vararg candidates: Candidate,
         mine: String? = null,
         lastUsed: String? = null,
-    ) = XtreamLoginPicker.choose(candidates.toList(), mine, lastUsed)
+        busy: Set<String> = emptySet(),
+    ) = XtreamLoginPicker.choose(candidates.toList(), mine, lastUsed, busy)
 
     @Test
     fun `takes the first free login, main first`() {
@@ -68,5 +69,15 @@ class XtreamLoginPickerTest {
     @Test
     fun `none free gives none`() {
         assertNull(pick(Candidate(main, status(activeCons = 1)), Candidate(two, status(activeCons = 1))))
+    }
+
+    @Test
+    fun `a login refused lately comes after every other free one`() {
+        assertEquals(two, pick(Candidate(main, status()), Candidate(two, status()), busy = setOf("main")))
+    }
+
+    @Test
+    fun `a login refused lately is still taken when it is the only free one`() {
+        assertEquals(main, pick(Candidate(main, status()), Candidate(two, status(activeCons = 1)), busy = setOf("main")))
     }
 }

@@ -59,25 +59,32 @@ object XtreamLoginPicker : AlternateLogin {
 
     /**
      * The first free login among [candidates]: the one this device plays on now ([mine]; free when
-     * the panel counts no more than its own stream), then [lastUsed], then list order (main first).
-     * A login is free when the panel says it is active and has a connection left; unknown counts
-     * count as free. Null when none is.
+     * the panel counts no more than its own stream), then [lastUsed], then list order (main first);
+     * a login refused on this device lately ([busy]) only after every other. A login is free when
+     * the panel says it is active and has a connection left; unknown counts count as free. Null
+     * when none is.
      */
     fun choose(
         candidates: List<Candidate>,
         mine: String?,
         lastUsed: String?,
+        busy: Set<String> = emptySet(),
     ): ProviderRepository.Login? {
         val ordered =
-            candidates.sortedBy {
-                if (it.login.username == mine) {
-                    0
-                } else if (it.login.username == lastUsed) {
-                    1
-                } else {
-                    2
-                }
-            }
+            candidates.sortedWith(
+                compareBy(
+                    { it.login.username in busy },
+                    {
+                        if (it.login.username == mine) {
+                            0
+                        } else if (it.login.username == lastUsed) {
+                            1
+                        } else {
+                            2
+                        }
+                    },
+                ),
+            )
         return ordered
             .firstOrNull { candidate ->
                 val status = candidate.status
@@ -100,7 +107,7 @@ object XtreamLoginPicker : AlternateLogin {
             if (entity == null || logins == null || logins.extras.isEmpty()) {
                 null
             } else {
-                choose(statuses(entity, logins), playingUsername(), lastUsed[entity.id])
+                choose(statuses(entity, logins, skipBusy = false), playingUsername(), lastUsed[entity.id], busyUsernames(entity.id))
             }
         val login = chosen ?: logins?.main
         val result = if (entity != null && login != null) swap(entity, logins, url, login) else url
@@ -130,13 +137,24 @@ object XtreamLoginPicker : AlternateLogin {
     /** "Login 2 of 3" for developer mode: [uri]'s login's place among its source's, or null. */
     fun describe(uri: String): Pair<Int, Int>? = picks[uri]?.takeIf { it.count > 1 }?.let { it.index + 1 to it.count }
 
-    /** Every login with a password that isn't marked busy, with what the panel says, in parallel. */
+    /** The logins of source [providerId] refused on this device within [BUSY_MS]. */
+    private fun busyUsernames(providerId: Long): Set<String> {
+        val now = System.currentTimeMillis()
+        return busyUntil.filter { (key, until) -> key.first == providerId && until > now }.keys.mapTo(HashSet()) { it.second }
+    }
+
+    /**
+     * Every login with a password, with what the panel says, in parallel. A refusal looking for
+     * another login skips the ones marked busy; a new playback ([skipBusy] false) asks them all,
+     * since a login refused earlier may be free again, and [choose] puts them last.
+     */
     private suspend fun statuses(
         entity: ProviderEntity,
         logins: SourceLogins,
+        skipBusy: Boolean = true,
     ): List<Candidate> {
-        val now = System.currentTimeMillis()
-        val usable = logins.all.filter { it.password.isNotEmpty() && (busyUntil[entity.id to it.username] ?: 0L) <= now }
+        val busy = if (skipBusy) busyUsernames(entity.id) else emptySet()
+        val usable = logins.all.filter { it.password.isNotEmpty() && it.username !in busy }
         return coroutineScope {
             usable
                 .map { login ->
