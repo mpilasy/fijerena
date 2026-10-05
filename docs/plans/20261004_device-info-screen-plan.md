@@ -133,7 +133,21 @@ chooser, no secret on screen or in the shared text, no crash. Findings, none fix
    "failed" and stays in the language it was recorded in.
 5. "Next catalog sync: —" while the catalogue sync runs (WorkManager has no next time then).
 
-Real devices (darcy, the Xperia): not yet checked.
+## Shield check (2026-10-05, build `35ceaaef`)
+
+darcy (Shield 2017) and mdarcy (Shield 2019 Pro), both Android 11, Ethernet: every section reads,
+no crash. "Detected as: NVIDIA_SHIELD" on both (finding 1 is the emulator image only). darcy:
+`OMX.Nvidia.h265.decode` hardware, 3840×2176 @ 61 fps, Main10/HDR10; Dolby Vision and AV1 "No
+decoder"; passthrough AC3 only; HDR None. mdarcy: `OMX.Nvidia.DOVI.decode` hardware, "DV 4, 5, 8,
+9"; passthrough AC3, EAC3, EAC3-JOC, DTS, TrueHD; HDR Dolby Vision, HDR10; 24 display modes. Both
+showed bears' last catalogue sync failed at 08:00 with "Can't reach the server". Findings:
+
+6. **Charging: Yes** (`BatteryManager.isCharging`) while `dumpsys deviceidle` on darcy says
+   `mCharging=false` — the flag that lets the Shield doze. The row doesn't show what Doze sees.
+7. A source named "sm2.njarasoa.org" shows that name in Sync and in the shared text: it is the
+   user's own name for the source, not a value read from its server settings.
+
+The Xperia: not checked.
 
 ## Progress
 
