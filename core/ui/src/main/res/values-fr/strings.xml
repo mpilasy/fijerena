@@ -542,7 +542,7 @@
     <string name="settings_diagnostics_empty">Rien d\'enregistré</string>
     <string name="settings_diagnostics_clear">Effacer le journal</string>
     <string name="settings_diagnostics_share">Partager</string>
-    <!-- Device info (docs/plans/20261004_device-info-screen-plan.md) -->
+    <!-- Device info (docs/plans/archive/20261004_device-info-screen-plan.md) -->
     <string name="device_info_title">Infos sur l\'appareil</string>
     <string name="device_info_desc">Cette application et cet appareil : versions, mémoire, stockage, écran, décodeurs, réseau et activité en arrière-plan</string>
     <string name="device_info_open">Infos sur l\'appareil</string>

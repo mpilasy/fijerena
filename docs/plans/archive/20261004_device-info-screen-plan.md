@@ -1,6 +1,6 @@
 # Device Info Screen Plan
 
-**Status:** Built (2026-10-04). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model) and committed; device checks pending.
+**Status:** Complete (2026-10-05). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model); checked on both emulators, darcy, mdarcy and the Xperia; findings 4 and 6 fixed (`307850a3`), the rest left as they are.
 
 ## Decisions (2026-10-04)
 
@@ -152,12 +152,21 @@ showed bears' last catalogue sync failed at 08:00 with "Can't reach the server".
 7. A source named "sm2.njarasoa.org" shows that name in Sync and in the shared text: it is the
    user's own name for the source, not a value read from its server settings.
 
-The Xperia: not checked.
+## Xperia check (2026-10-05, build `307850a3`)
+
+Xperia XZ2 Compact (LineageOS, Android 15, Wi-Fi), app in French: every section reads, no crash,
+Share opens the chooser. Wi-Fi link speed (468 Mbit/s) and band (5 GHz) filled on Android 15, no
+SSID or IP. Qualcomm hardware decoders for AVC, HEVC (Main10, HDR10) and VP9; AV1 software only;
+no Dolby Vision; passthrough none. Power matches the system: `dumpsys battery` present and AC,
+`dumpsys deviceidle` `mCharging=true`, and the screen says Battery present Yes, Charging as Doze
+sees it Yes, Doze No; battery-optimisation exempt Yes, bucket Exempted. No source had a failed sync,
+so the "failed" wording fix is covered by its unit test only. The Shields still run `35ceaaef`,
+from before the Charging fix.
 
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
-| P1 Screen and core sections | Done; device check pending | P1 commit |
-| P2 Media | Done; device check pending | P2 commit |
-| P3 Network and power | Done; device check pending | P3 commit |
+| P1 Screen and core sections | Done | `5124ca62` |
+| P2 Media | Done | `f9e43251` |
+| P3 Network and power | Done; fixes `307850a3` | `25aa8a20` |

@@ -24,7 +24,7 @@ import java.util.Locale
 
 /**
  * P1's sections: app, device, memory, storage, display. See
- * docs/plans/20261004_device-info-screen-plan.md → P1.
+ * docs/plans/archive/20261004_device-info-screen-plan.md → P1.
  */
 suspend fun coreSections(
     context: Context,

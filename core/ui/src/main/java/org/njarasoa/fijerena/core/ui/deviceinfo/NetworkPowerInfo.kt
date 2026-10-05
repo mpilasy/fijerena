@@ -29,7 +29,7 @@ import java.util.Locale
  * The Network, Power and background, and Sync sections of Device info: the active connection
  * (never its name or addresses), what Android allows this app in the background, and how the
  * catalog and guide syncs last ran. A value that can't be read shows "—". Call off the main
- * thread. See docs/plans/20261004_device-info-screen-plan.md → P3.
+ * thread. See docs/plans/archive/20261004_device-info-screen-plan.md → P3.
  */
 suspend fun networkPowerSections(context: Context): List<DeviceInfoSection> {
     val network = readNetwork(context)

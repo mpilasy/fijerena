@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.ui.utils.UiText
  * Settings → About → Device info: facts about the app, the device and its media, network and power
  * state, read from local APIs only. Labels and words such as "Yes" are string resources, resolved
  * where they are shown (the view model holds the application context, which doesn't follow the
- * in-app language). See docs/plans/20261004_device-info-screen-plan.md.
+ * in-app language). See docs/plans/archive/20261004_device-info-screen-plan.md.
  */
 data class DeviceInfoRow(
     val label: UiText,

@@ -572,7 +572,7 @@
     <string name="settings_diagnostics_empty">Nothing recorded</string>
     <string name="settings_diagnostics_clear">Clear log</string>
     <string name="settings_diagnostics_share">Share</string>
-    <!-- Device info (docs/plans/20261004_device-info-screen-plan.md) -->
+    <!-- Device info (docs/plans/archive/20261004_device-info-screen-plan.md) -->
     <string name="device_info_title">Device info</string>
     <string name="device_info_desc">This app and device: versions, memory, storage, screen, media decoders, network and background state</string>
     <string name="device_info_open">Device info</string>

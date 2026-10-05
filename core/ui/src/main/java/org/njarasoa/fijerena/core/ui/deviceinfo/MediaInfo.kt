@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
 
 /**
  * The Video decoders and Audio output sections of Device info
- * (docs/plans/20261004_device-info-screen-plan.md → P2). Call it off the main thread; a value the
+ * (docs/plans/archive/20261004_device-info-screen-plan.md → P2). Call it off the main thread; a value the
  * device won't give shows "—".
  */
 suspend fun mediaSections(context: Context): List<DeviceInfoSection> {

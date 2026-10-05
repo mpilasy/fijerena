@@ -55,7 +55,7 @@ class ProviderSyncManager private constructor(
         /**
          * The periodic catalog sync and the periodic guide refresh (`epg_sync`, scheduled by
          * `EpgFileManager`) as WorkManager holds them, each null when not enqueued. Read-only, for
-         * Settings → Device info (docs/plans/20261004_device-info-screen-plan.md → P3).
+         * Settings → Device info (docs/plans/archive/20261004_device-info-screen-plan.md → P3).
          */
         suspend fun scheduledSyncWork(context: Context): Pair<ScheduledWork?, ScheduledWork?> {
             val workManager = WorkManager.getInstance(context)

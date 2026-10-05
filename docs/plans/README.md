@@ -16,7 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-04 | [Device info screen](./20261004_device-info-screen-plan.md) | Settings → About → Device info for everyone: app, device, memory, storage, display, decoders, audio passthrough, network, power, sync health | Device checks on TV and phone |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
 
@@ -24,6 +23,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-04 | [Device info screen](./archive/20261004_device-info-screen-plan.md) | Settings → About → Device info for everyone: app, device, memory, storage, display, decoders, audio passthrough, network, power (charging as Doze sees it), sync health; Share on the phone | Done |
 | 2026-10-04 | [Playback capability errors](./archive/20261004_playback-capability-errors-plan.md) | Undecodable streams (Dolby Vision profile 5, 8K) stop at once with the codec named, in the app language; slow-connection banner with measured throughput; 60 s stall limit | Done |
 | 2026-10-03 | [Sources, guide sources, profiles and section root](./archive/20261003_sources-guide-profiles-plan.md) | Profile page (switch to, developer mode, play next, content filters); "Provides a guide" per source; guide sources under Edit Source and Search the guide; auto-refresh per guide source (providers.db 16); section-root button from 4 deep; Home keeps Search the guide; TV preview plays on OK | Done |
 | 2026-10-03 | [UX overhaul](./archive/20261003_ux-overhaul-plan.md) | Settings rebuilt on TV and mobile, app-wide TV focus rules, Live TV flows, rebuilt TV Guide | Done; native-speaker review of a few mg terms deferred |

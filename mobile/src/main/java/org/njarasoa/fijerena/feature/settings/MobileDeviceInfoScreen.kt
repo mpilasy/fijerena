@@ -34,7 +34,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 /**
  * Settings → About → Device info on mobile, shareable as plain text. See
- * docs/plans/20261004_device-info-screen-plan.md.
+ * docs/plans/archive/20261004_device-info-screen-plan.md.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

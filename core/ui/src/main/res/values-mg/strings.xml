@@ -852,7 +852,7 @@
     <string name="settings_diagnostics_empty">Tsy misy voarakitra</string>
     <string name="settings_diagnostics_clear">Fafao ny tatitra</string>
     <string name="settings_diagnostics_share">Zarao</string>
-    <!-- Device info (docs/plans/20261004_device-info-screen-plan.md) -->
+    <!-- Device info (docs/plans/archive/20261004_device-info-screen-plan.md) -->
     <string name="device_info_title">Momba ny fitaovana</string>
     <string name="device_info_desc">Ity rindranasa sy fitaovana ity: dikan-teny, fitadidiana, toerana fitehirizana, efijery, decoder, tambajotra ary asa ao ambadika</string>
     <string name="device_info_open">Momba ny fitaovana</string>

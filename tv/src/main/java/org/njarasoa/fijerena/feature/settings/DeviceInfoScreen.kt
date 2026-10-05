@@ -38,7 +38,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Settings → About → Device info on TV. Each section is one focus stop so the D-pad scrolls
- * through them, as on Diagnostics. See docs/plans/20261004_device-info-screen-plan.md.
+ * through them, as on Diagnostics. See docs/plans/archive/20261004_device-info-screen-plan.md.
  */
 @Composable
 fun DeviceInfoScreen() {

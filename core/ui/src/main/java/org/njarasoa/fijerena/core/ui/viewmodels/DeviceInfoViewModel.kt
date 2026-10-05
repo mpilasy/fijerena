@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 /**
  * Settings → About → Device info: facts read once per open and on Refresh. [context] is the
  * application context; labels are resolved where they are shown. See
- * docs/plans/20261004_device-info-screen-plan.md.
+ * docs/plans/archive/20261004_device-info-screen-plan.md.
  */
 class DeviceInfoViewModel(
     private val context: Context,
