@@ -1,11 +1,12 @@
 # Playback Capability Errors Plan
 
-**Status:** In progress (2026-10-04). P1–P3 done (device check pending); P4 waits on its slow-network test.
+**Status:** In progress (2026-10-04). P1–P3 done (device check pending); P4 in progress.
 
 ## Decisions (2026-10-04)
 
 1. **Slow connection: warn, don't stop.** A banner says the connection is too slow; playback goes
-   on and the user stops it if they want.
+   on and the user stops it if they want. **A stalled one (no data for 60 s) stops** with Retry —
+   added after the test showed a 13-minute spinner.
 2. **Slow-network test before building P4**, on darcy and the Xperia.
 3. **P1–P3 built now**, one commit each.
 
@@ -86,28 +87,41 @@ stream fails 4 times over ~19 s before the error shows.
 - **Test:** unit test for the format-name helper (DV profile 5, HEVC 8K, null format); device
   check of the French text on the Xperia.
 
-### P4 — Slow connection (needs a test and a decision)
+### P4 — Slow connection and stalls
 
-**Today, from reading the code (not yet tested):**
+**Tested 2026-10-04** (darcy and Xperia, same results on both): the 4K 60 Mbps clip through a
+throttling proxy on the host.
 
-| Situation | VOD (Xtream progressive, one bitrate) | Live |
-|---|---|---|
-| Link slower than the stream, still flowing | Stop-start: plays until the buffer runs out, waits for 10 s of buffer (`WIFI_VOD_REBUFFER_MS`), repeats. Toast "Excessive buffering is happening" only if 3 rebuffers fall within 30 s, which long stop-start cycles may never reach. No error, no quality step-down (nothing to step down to). | `StreamHealthMonitor` sees buffer < 8 s for 20 s and recycles the connection: 3 fast + 5 slow (30 s apart), then "unavailable after repeated recovery attempts", about 4+ min in. Recycling doesn't help a link that's simply too slow. |
-| Link stalled (no bytes) | 30 s read timeout → error → 3 retries, each waiting out the timeout → about 2 min to the error | Read timeout → immediate recycle |
+| Link | What happens today |
+|---|---|
+| Capped at 45 Mbps | Plays 9.5 s, buffers 13 s, plays to the end: 30 s of video in 46 s. No message. |
+| Capped at 20 Mbps | Buffers about 30 s twice: 30 s of video in 96 s. No message — the "Excessive buffering" toast needs 3 rebuffers within 30 s; there were 2, 44 s apart. |
+| Stalled (no bytes) | Spinner for **13 min**, then "Video unavailable after 3 retries. Network connection failed." Each attempt waits out Media3's own read-timeout retries (about 3.3 min), times the app's 4 attempts. |
 
-**Proposal:** the stream's bitrate (when the container gives it) and `DefaultBandwidthMeter`'s
-estimate are both already known. When a rebuffer happens and the estimate stays under the
-bitrate, show a persistent banner — "Connection too slow for this video (needs ~60 Mbps, getting
-~17 Mbps)" — instead of the 30 s toast heuristic. Don't stop: connections recover, and the user
-can stop themselves. For live, show the same banner and skip recycles while the cause is plain
-bandwidth (keep them for read timeouts and stalls).
+Live wasn't tested (the test source has no live channels); from the code, `StreamHealthMonitor`
+recycles a live stream with a low buffer — 3 fast + 5 slow attempts, about 4+ min — before
+giving up.
 
-**Before building:**
+**Decisions:** warn about a slow link without stopping; stop a stalled one after 60 s (both
+2026-10-04).
 
-1. **Test:** the 4K 60 Mbps clip over a throttled link (host `tc` shaping on the test server, or
-   the Xperia's ~17 Mbps Wi-Fi path) and a stalled one (server pauses mid-file), on darcy and the
-   Xperia, to confirm the table above.
-2. ~~Decision: warn only, or stop?~~ Warn only (2026-10-04).
+**Change:**
+
+1. **Stall limit (VOD and live).** A `TransferListener` in front of the bandwidth meter notes when
+   data last arrived. The service's 5 s loop asks a `StallWatchdog`: player buffering with
+   `playWhenReady`, and no data for 60 s since buffering began → stop and show "Connection lost:
+   no data for a minute. Check your connection and try again." with Retry; no automatic retry
+   (each takes minutes). Any byte resets the minute, so a recycle or retry that gets data keeps
+   going. Paused, idle (between retries) and account-busy waits don't count.
+2. **Slow-connection banner.** On a rebuffer that isn't a seek, when the stream's bitrate is known
+   and the bandwidth estimate is below it, show a banner over the video: "Connection too slow for
+   this video (needs ~60 Mbps, getting ~45 Mbps)". When the bitrate is unknown (most TS/MKV), the
+   same banner without numbers on the second rebuffer within 2 minutes. It hides after 60 s of
+   playback without a rebuffer. It replaces the "Excessive buffering" toast. Not focusable on TV.
+
+- **Test:** unit tests for `StallWatchdog` and the banner decision; device check with the
+  throttling proxy on darcy and the Xperia (cap 20 → banner with numbers; stall → error about a
+  minute after the buffer runs dry).
 
 ## Progress
 
@@ -116,4 +130,4 @@ bandwidth (keep them for read timeouts and stalls).
 | P1 Unplayable video track | Done | `47da9f12` |
 | P2 Codec errors final | Done | `5830a0dd` |
 | P3 Error text | Done | (this commit) |
-| P4 Slow connection | Needs test (decision: warn only) | |
+| P4 Slow connection and stalls | In progress | |
