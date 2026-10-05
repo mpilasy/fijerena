@@ -1015,6 +1015,7 @@
     <string name="details_action_watched">Watched</string>
     <string name="details_action_more">More</string>
     <string name="series_play_next_format">▶ Play: %1$s</string>
+    <string name="series_episode_code_title_format">S%1$02dE%2$02d · %3$s</string>
     <string name="series_resume_next_format">▶ Resume: %1$s (%2$s)</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Channels</string>

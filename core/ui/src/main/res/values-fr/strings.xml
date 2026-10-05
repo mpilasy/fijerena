@@ -1030,6 +1030,7 @@
     <string name="details_action_watched">Vu</string>
     <string name="details_action_more">Plus</string>
     <string name="series_play_next_format">▶ Lire : %1$s</string>
+    <string name="series_episode_code_title_format">S%1$02dE%2$02d · %3$s</string>
     <string name="series_resume_next_format">▶ Reprendre : %1$s (%2$s)</string>
     <!-- Device info: media (P2) -->
     <string name="device_info_section_video_decoders">Décodeurs vidéo</string>

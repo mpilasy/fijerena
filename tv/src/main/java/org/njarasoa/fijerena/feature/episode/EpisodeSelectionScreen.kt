@@ -711,9 +711,21 @@ internal fun EpisodeListContent(
     val hasResume = anchorResumePosMs > 0L
 
     // The hero's Play and the compact header's Play next: one label, one action. The label names
-    // the episode by its title ("▶ Play: Getting Into Cirque du Soleil", F-E-5) — the S:E numbers
-    // say nothing when a provider numbers everything 0 — and falls back to them without a title.
-    val anchorTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }?.let(::shortEpisodeTitle)
+    // the episode by its code and title ("▶ Play: S01E04 · Getting Into Cirque du Soleil", F-E-5);
+    // the code is left out when the provider numbers everything 0, and the numbers alone stand in
+    // without a title.
+    val anchorOwnTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }?.let(::shortEpisodeTitle)
+    val anchorTitle =
+        if (anchorOwnTitle != null && anchorEpisode.episodeNumber > 0) {
+            stringResource(
+                R.string.series_episode_code_title_format,
+                anchorEpisode.seasonNumber ?: 1,
+                anchorEpisode.episodeNumber,
+                anchorOwnTitle,
+            )
+        } else {
+            anchorOwnTitle
+        }
     val playNextLabel =
         when {
             anchorEpisode == null -> {
