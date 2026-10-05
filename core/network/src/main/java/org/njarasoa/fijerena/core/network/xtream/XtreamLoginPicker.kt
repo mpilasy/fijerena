@@ -10,6 +10,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SourceLogins
+import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.source.AlternateLogin
@@ -33,6 +34,16 @@ object XtreamLoginPicker : AlternateLogin {
     /** Picks remembered by URL, for [loginCount], [describe] and [next]; only the latest few. */
     private const val PICKS_KEPT = 16
 
+    /**
+     * How long a panel's answer about a login is reused by a new playback (Back, then play again).
+     * Short: at home bears hands a busy login to the newest device instead of refusing it, so a
+     * stale "free" could take another TV's stream.
+     */
+    private const val STATUS_TTL_MS = 5_000L
+
+    /** Open services kept for the checks, so each reuses its connection; the latest few. */
+    private const val SERVICES_KEPT = 8
+
     /** What the panel said about one login; [status] null when it didn't answer in time. */
     data class Candidate(
         val login: ProviderRepository.Login,
@@ -50,6 +61,8 @@ object XtreamLoginPicker : AlternateLogin {
     private val lastUsed = ConcurrentHashMap<Long, String>()
     private val busyUntil = ConcurrentHashMap<Pair<Long, String>, Long>()
     private val picks = java.util.Collections.synchronizedMap(LinkedHashMap<String, Pick>())
+    private val statusCache = ConcurrentHashMap<Pair<Long, String>, Pair<Long, XtreamLoginCheck.Status>>()
+    private val services = java.util.Collections.synchronizedMap(LinkedHashMap<Triple<String, String, String>, XtreamApiService>())
 
     /** Called once at app start: from then on the player can switch logins on a refusal. */
     fun install(context: Context) {
@@ -107,7 +120,15 @@ object XtreamLoginPicker : AlternateLogin {
             if (entity == null || logins == null || logins.extras.isEmpty()) {
                 null
             } else {
-                choose(statuses(entity, logins, skipBusy = false), playingUsername(), lastUsed[entity.id], busyUsernames(entity.id))
+                // A channel change or replay while this device plays on one of the source's
+                // logins keeps it, unasked: it is this device's own stream, so nothing to check.
+                playingLogin(entity.id, logins)
+                    ?: choose(
+                        statuses(entity, logins, skipBusy = false, useCache = true),
+                        null,
+                        lastUsed[entity.id],
+                        busyUsernames(entity.id),
+                    )
             }
         val login = chosen ?: logins?.main
         val result = if (entity != null && login != null) swap(entity, logins, url, login) else url
@@ -144,27 +165,69 @@ object XtreamLoginPicker : AlternateLogin {
     }
 
     /**
+     * The login of the stream this device plays now, when that stream is one this picker gave
+     * source [providerId] and the login still has a password and isn't marked busy.
+     */
+    private fun playingLogin(
+        providerId: Long,
+        logins: SourceLogins,
+    ): ProviderRepository.Login? {
+        val url =
+            StreamingPlaybackService.nowPlaying.value?.let {
+                StreamingPlaybackService
+                    .getInstance()
+                    ?.currentMetadata
+                    ?.value
+                    ?.streamUrl
+            }
+        val username = url?.takeIf { picks[it]?.providerId == providerId }?.let(XtreamStreamUrl::username)
+        return username
+            ?.takeIf { it !in busyUsernames(providerId) }
+            ?.let { name -> logins.all.firstOrNull { it.username == name && it.password.isNotEmpty() } }
+    }
+
+    /**
      * Every login with a password, with what the panel says, in parallel. A refusal looking for
-     * another login skips the ones marked busy; a new playback ([skipBusy] false) asks them all,
-     * since a login refused earlier may be free again, and [choose] puts them last.
+     * another login skips the ones marked busy and always asks afresh; a new playback ([skipBusy]
+     * false) asks them all, since a login refused earlier may be free again ([choose] puts them
+     * last), and may reuse an answer younger than [STATUS_TTL_MS] ([useCache]).
      */
     private suspend fun statuses(
         entity: ProviderEntity,
         logins: SourceLogins,
         skipBusy: Boolean = true,
+        useCache: Boolean = false,
     ): List<Candidate> {
         val busy = if (skipBusy) busyUsernames(entity.id) else emptySet()
         val usable = logins.all.filter { it.password.isNotEmpty() && it.username !in busy }
+        val now = System.currentTimeMillis()
         return coroutineScope {
             usable
                 .map { login ->
                     async {
-                        val status = withTimeoutOrNull(CHECK_TIMEOUT_MS) { XtreamLoginCheck.status(entity.url, login).getOrNull() }
+                        val key = entity.id to login.username
+                        val cached = statusCache[key]?.takeIf { useCache && now - it.first < STATUS_TTL_MS }?.second
+                        val status =
+                            cached ?: withTimeoutOrNull(CHECK_TIMEOUT_MS) {
+                                XtreamLoginCheck.status(service(entity.url, login)).getOrNull()
+                            }
+                        status?.let { statusCache[key] = System.currentTimeMillis() to it }
                         Candidate(login, status)
                     }
                 }.awaitAll()
         }
     }
+
+    /** An open service for [login] at [url], kept so the next check reuses its connection. */
+    private fun service(
+        url: String,
+        login: ProviderRepository.Login,
+    ): XtreamApiService =
+        synchronized(services) {
+            services.getOrPut(Triple(url, login.username, login.password)) { XtreamApiService(url, login.username, login.password) }.also {
+                while (services.size > SERVICES_KEPT) services.remove(services.keys.first())?.close()
+            }
+        }
 
     /** [url] on [login], remembered as this device's pick for its source. */
     private fun swap(
@@ -176,21 +239,12 @@ object XtreamLoginPicker : AlternateLogin {
         val swapped = XtreamStreamUrl.withLogin(url, login.username, login.password) ?: url
         val all = logins?.all.orEmpty()
         lastUsed[entity.id] = login.username
+        // Taken now: a cached "free" for it no longer holds.
+        statusCache.remove(entity.id to login.username)
         synchronized(picks) {
             picks[swapped] = Pick(entity.id, all.indexOfFirst { it.username == login.username }.coerceAtLeast(0), all.size.coerceAtLeast(1))
             while (picks.size > PICKS_KEPT) picks.remove(picks.keys.first())
         }
         return swapped
     }
-
-    /** The login of the stream this device is playing now, if any. */
-    private fun playingUsername(): String? =
-        StreamingPlaybackService.nowPlaying.value?.let {
-            StreamingPlaybackService
-                .getInstance()
-                ?.currentMetadata
-                ?.value
-                ?.streamUrl
-                ?.let(XtreamStreamUrl::username)
-        }
 }

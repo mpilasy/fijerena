@@ -59,10 +59,10 @@ object XtreamLoginCheck {
     suspend fun status(
         url: String,
         login: ProviderRepository.Login,
-    ): Result<Status> =
-        withService(url, login) { service ->
-            suspendRunCatching { statusOf(service.authenticate().userInfo) }
-        }
+    ): Result<Status> = withService(url, login) { service -> status(service) }
+
+    /** The status of [service]'s login, on a service kept open between checks (its connection is reused). */
+    suspend fun status(service: XtreamApiService): Result<Status> = suspendRunCatching { statusOf(service.authenticate().userInfo) }
 
     /**
      * Whether [extra] can share [main]'s source at [url]: it signs in, and the first live and the
