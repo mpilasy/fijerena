@@ -116,6 +116,25 @@ Android 12+ (`NetworkCapabilities.transportInfo`); on Android 11 they would need
 (AC, USB, dock…) beside Charging, for the Shield's `mCharging=false` case. Unit tests:
 `NetworkPowerInfoTest` (13). Device check: not yet done.
 
+## Emulator check (2026-10-04, commit `25aa8a20`)
+
+TV emulator (AOSP TV x86, Android 16) and phone emulator (Pixel_10, Android 17): every section
+shows, values match `adb` (version, install times, Android/API, RAM, `/data`, database files with
+their WAL), TV focus walk and Back-to-row work, French labels complete, Share on the phone opens the
+chooser, no secret on screen or in the shared text, no crash. Findings, none fixed yet:
+
+1. **"Detected as: GENERIC_MOBILE" beside "Kind of device: TV"** on the TV emulator:
+   `DeviceDetector` doesn't see the AOSP TV image as a TV. A detector gap the screen exposes, not a
+   Device info bug; it also picks the player's codec order.
+2. Raw names as values: "Source in use: REMOTE_M3U", "Detected as: GENERIC_MOBILE", "Profile2",
+   "Main10" (as the plan's rule says; Settings writes the source type the same way).
+3. Sizes say MB/GB in French too (`NumberUtils.formatBytes`, as everywhere else in the app).
+4. A failed sync reads "failed: Catalog sync failed. Login failed. …": the stored error repeats
+   "failed" and stays in the language it was recorded in.
+5. "Next catalog sync: —" while the catalogue sync runs (WorkManager has no next time then).
+
+Real devices (darcy, the Xperia): not yet checked.
+
 ## Progress
 
 | Phase | Status | Commit |
