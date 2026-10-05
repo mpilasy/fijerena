@@ -224,6 +224,9 @@ adb -s <device-id> logcat *:E
 
 # Clear logcat buffer
 adb -s <device-id> logcat -c
+
+# Debug builds: every track's codecs string, format support and chosen decoder (Media3 EventLogger)
+adb -s <device-id> logcat -s EventLogger
 ```
 
 ### Crash log and Diagnostics

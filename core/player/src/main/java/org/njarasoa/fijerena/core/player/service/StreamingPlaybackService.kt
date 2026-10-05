@@ -559,6 +559,11 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
             )
         player.addAnalyticsListener(analyticsListener!!)
+        // Debug builds log every track's codecs string, format support and chosen decoder
+        // (logcat tag "EventLogger") — how codec fallback, e.g. Dolby Vision → HEVC, is diagnosed.
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            player.addAnalyticsListener(androidx.media3.exoplayer.util.EventLogger())
+        }
     }
 
     /**
