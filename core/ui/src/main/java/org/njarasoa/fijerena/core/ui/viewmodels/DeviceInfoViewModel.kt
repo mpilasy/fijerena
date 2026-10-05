@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.deviceinfo.DeviceInfoSection
 import org.njarasoa.fijerena.core.ui.deviceinfo.coreSections
 import org.njarasoa.fijerena.core.ui.deviceinfo.mediaSections
+import org.njarasoa.fijerena.core.ui.deviceinfo.networkPowerSections
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
@@ -34,7 +35,11 @@ class DeviceInfoViewModel(
 
     fun reload() {
         viewModelScope.launchGuarded("DeviceInfoViewModel.reload", onError = { _sections.value = emptyList() }) {
-            _sections.value = withContext(Dispatchers.IO) { coreSections(context, gitHash, buildTime) + mediaSections(context) }
+            _sections.value =
+                withContext(Dispatchers.IO) {
+                    coreSections(context, gitHash, buildTime) + mediaSections(context) +
+                        networkPowerSections(context)
+                }
         }
     }
 

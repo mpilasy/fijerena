@@ -1,6 +1,6 @@
 # Device Info Screen Plan
 
-**Status:** In progress (2026-10-04). P1, P2 and P3 built in parallel: P2 and P3 on their own branches against a shared row model, wired into the screen when P1 lands.
+**Status:** Built (2026-10-04). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model) and committed; device checks pending.
 
 ## Decisions (2026-10-04)
 
@@ -106,10 +106,20 @@ uses to pick passthrough), so a phone with no HDMI output shows Media3's default
 - **Test:** unit test of the standby bucket and transport names. Device check on darcy and the
   Xperia, plus one emulator with Wi-Fi off (Ethernet/cellular transport shown).
 
+**Done (2026-10-04):** `core/ui/.../deviceinfo/NetworkPowerInfo.kt` (`networkPowerSections`), built on
+its own branch and cherry-picked. WorkManager is internal to `core:network`, so
+`ProviderSyncManager.scheduledSyncWork` (read-only) gives the catalogue (`provider_content_sync`) and
+guide (`epg_sync`) jobs' state and next run. A sync error shows its first line only, through
+`Redact.text` (the developer-mode `[dev]` part can name the server). Wi-Fi link speed and band need
+Android 12+ (`NetworkCapabilities.transportInfo`); on Android 11 they would need
+`ACCESS_WIFI_STATE`, which the app doesn't have, so they show "—" there. Added a Power source row
+(AC, USB, dock…) beside Charging, for the Shield's `mCharging=false` case. Unit tests:
+`NetworkPowerInfoTest` (13). Device check: not yet done.
+
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
 | P1 Screen and core sections | Done; device check pending | P1 commit |
 | P2 Media | Done; device check pending | P2 commit |
-| P3 Network and power | In progress | |
+| P3 Network and power | Done; device check pending | P3 commit |

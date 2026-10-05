@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
@@ -50,7 +51,30 @@ class ProviderSyncManager private constructor(
             instance ?: synchronized(this) {
                 instance ?: ProviderSyncManager(context.applicationContext).also { instance = it }
             }
+
+        /**
+         * The periodic catalog sync and the periodic guide refresh (`epg_sync`, scheduled by
+         * `EpgFileManager`) as WorkManager holds them, each null when not enqueued. Read-only, for
+         * Settings → Device info (docs/plans/20261004_device-info-screen-plan.md → P3).
+         */
+        suspend fun scheduledSyncWork(context: Context): Pair<ScheduledWork?, ScheduledWork?> {
+            val workManager = WorkManager.getInstance(context)
+
+            suspend fun read(name: String): ScheduledWork? =
+                workManager
+                    .getWorkInfosForUniqueWorkFlow(name)
+                    .first()
+                    .let { infos -> infos.firstOrNull { !it.state.isFinished } ?: infos.firstOrNull() }
+                    ?.let { ScheduledWork(it.state.name, it.nextScheduleTimeMillis.takeIf { ms -> ms != Long.MAX_VALUE }) }
+            return read(WORK_NAME) to read("epg_sync")
+        }
     }
+
+    /** A periodic job's WorkManager state (`ENQUEUED`, `RUNNING`…) and next run, null when none is planned. */
+    data class ScheduledWork(
+        val state: String,
+        val nextRunAtMs: Long?,
+    )
 
     /**
      * Initialize sync management. Call on app startup.
