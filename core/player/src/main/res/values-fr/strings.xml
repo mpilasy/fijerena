@@ -18,6 +18,8 @@
     <string name="player_error_http_connection_limit_format">HTTP %1$d — Limite de connexions atteinte. Fermez les autres flux actifs sur ce compte.</string>
     <string name="player_error_account_busy_waiting_format">Ce compte diffuse déjà sur un autre appareil (HTTP %1$d). Après l\'arrêt d\'un flux, le fournisseur peut le compter encore quelques minutes. Nouvel essai toutes les 20 secondes — la lecture démarre d\'elle-même.</string>
     <string name="player_error_account_busy_gave_up_format">Ce compte diffuse toujours sur un autre appareil (HTTP %1$d). Arrêtez la lecture là-bas, patientez quelques minutes, puis appuyez sur Réessayer.</string>
+    <string name="player_error_account_busy_all_logins_waiting_format">Les %1$d identifiants de cette source diffusent déjà sur d\'autres appareils (HTTP %2$d). Après l\'arrêt d\'un flux, le fournisseur peut le compter encore quelques minutes. Nouvel essai toutes les 20 secondes — la lecture démarre d\'elle-même.</string>
+    <string name="player_error_account_busy_all_logins_gave_up_format">Les %1$d identifiants de cette source diffusent toujours sur d\'autres appareils (HTTP %2$d). Arrêtez la lecture sur l\'un d\'eux, patientez quelques minutes, puis appuyez sur Réessayer.</string>
     <string name="player_error_http_server_unavailable_format">HTTP %1$d — Serveur indisponible. Réessayez sous peu.</string>
     <string name="player_error_http_server_error_format">HTTP %1$d — Erreur serveur. Réessayez plus tard.</string>
     <string name="player_error_http_access_denied_format">HTTP %1$d — Accès au flux refusé.</string>
