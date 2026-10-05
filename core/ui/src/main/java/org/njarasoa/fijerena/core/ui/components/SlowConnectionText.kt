@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.components
 
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -7,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.SlowConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -18,6 +20,7 @@ import kotlin.math.roundToInt
  * else null. Polled, like the player's other service readings, so a recreated service is picked
  * up. See docs/plans/archive/20261004_playback-capability-errors-plan.md → P4.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun rememberSlowConnectionText(): String? {
     var slow by remember { mutableStateOf<SlowConnection?>(null) }
