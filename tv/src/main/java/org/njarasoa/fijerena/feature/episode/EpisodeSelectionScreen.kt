@@ -146,7 +146,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
-import org.njarasoa.fijerena.ui.components.LabelledActionButton
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.TvDetailHero
@@ -155,6 +154,7 @@ import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
@@ -1028,7 +1028,7 @@ internal fun EpisodeListContent(
                         // Refresh info is maintenance, not something to watch: it lives behind
                         // "More" at the end of the row, as on the movie hero (Phase 6). While a
                         // refresh runs the button shows a spinning Refresh glyph instead.
-                        LabelledActionButton(
+                        TvIconAction(
                             onClick = { showMoreMenu = true },
                             icon = if (isRefreshing) CinemaIcons.Refresh else CinemaIcons.MoreVert,
                             label = stringResource(R.string.details_action_more),

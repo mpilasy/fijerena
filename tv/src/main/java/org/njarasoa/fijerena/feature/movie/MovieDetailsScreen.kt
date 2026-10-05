@@ -93,7 +93,6 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
-import org.njarasoa.fijerena.ui.components.LabelledActionButton
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.TvDetailHero
@@ -102,6 +101,7 @@ import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
@@ -507,7 +507,7 @@ private fun MovieDetailsContent(
                     }
                     // Labelled, not bare icons (UX overhaul Part II Phase 6, F-MD-2): the icon carries
                     // the state (filled star, check), the word says what the button is.
-                    LabelledActionButton(
+                    TvIconAction(
                         onClick = onToggleFavorite,
                         icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                         iconTint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
@@ -515,7 +515,7 @@ private fun MovieDetailsContent(
                         modifier = downToTabRow.then(upScrollToTop),
                     )
                     // Watched button (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md)
-                    LabelledActionButton(
+                    TvIconAction(
                         onClick = onToggleWatched,
                         icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
                         iconTint = if (isWatched) CinemaAccent else CinemaTextPrimary,
@@ -539,7 +539,7 @@ private fun MovieDetailsContent(
                     }
                     // Refresh info is maintenance, not something to watch: it lives behind "More" at
                     // the end of the row, out of the path between Play and the tabs (F-MD-2, R5).
-                    LabelledActionButton(
+                    TvIconAction(
                         onClick = { showMoreMenu = true },
                         icon = CinemaIcons.MoreVert,
                         label = stringResource(R.string.details_action_more),

@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -49,6 +50,7 @@ import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -318,9 +320,11 @@ private fun DevicesPanel(
                     }
                     if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))
-                        CinemaSecondaryButton(
+                        TvIconAction(
                             onClick = { onRemove(device) },
-                            text = stringResource(R.string.live_sync_device_remove),
+                            icon = CinemaIcons.Delete,
+                            label = stringResource(R.string.live_sync_device_remove),
+                            danger = true,
                             modifier = if (device == lastRemovable) Modifier.focusRequester(lastRemoveFocus) else Modifier,
                         )
                     }

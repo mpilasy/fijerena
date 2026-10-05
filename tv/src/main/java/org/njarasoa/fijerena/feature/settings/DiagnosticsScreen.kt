@@ -27,11 +27,13 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -75,8 +77,13 @@ fun DiagnosticsScreen() {
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                CinemaSecondaryButton(onClick = viewModel::reload, text = stringResource(R.string.common_refresh))
-                CinemaSecondaryButton(onClick = viewModel::clear, text = stringResource(R.string.settings_diagnostics_clear))
+                TvIconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
+                TvIconAction(
+                    onClick = viewModel::clear,
+                    icon = CinemaIcons.Delete,
+                    label = stringResource(R.string.settings_diagnostics_clear),
+                    danger = true,
+                )
             }
         }
         val loaded = entries

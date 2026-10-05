@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -57,6 +59,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.settings.components.QrScanner
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
  * Settings → Live sync on a phone. A phone joins by scanning an invite, adds a phone by showing
@@ -374,12 +377,20 @@ private fun DevicesPanel(
                     // playback, once it says which session it is. Hidden while a Stop is on its way.
                     val canStop = !device.current && nowPlaying[device.id]?.sessionId != null
                     if (canStop && stopStates[device.id] != SyncSettingsViewModel.StopState.STOPPING) {
-                        TextButton(onClick = { onStop(device) }) { Text(stringResource(R.string.live_sync_stop), color = CinemaError) }
+                        IconAction(
+                            onClick = { onStop(device) },
+                            icon = Icons.Filled.Stop,
+                            label = stringResource(R.string.live_sync_stop),
+                            tint = CinemaError,
+                        )
                     }
                     if (!device.current) {
-                        TextButton(
+                        IconAction(
                             onClick = { onRemove(device) },
-                        ) { Text(stringResource(R.string.live_sync_device_remove), color = CinemaError) }
+                            icon = CinemaIcons.Delete,
+                            label = stringResource(R.string.live_sync_device_remove),
+                            tint = CinemaError,
+                        )
                     }
                 }
             }

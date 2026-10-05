@@ -36,29 +36,6 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * An action-row button: the icon shows the state (filled star, check), the label — shown while
- * focused — says what the button is. Now a [TvIconAction] (docs/plans/20261005_icon-buttons-plan.md).
- */
-@Composable
-internal fun LabelledActionButton(
-    onClick: () -> Unit,
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    iconTint: Color = CinemaTextPrimary,
-    iconModifier: Modifier = Modifier,
-) {
-    TvIconAction(
-        onClick = onClick,
-        icon = icon,
-        label = label,
-        modifier = modifier,
-        iconTint = iconTint,
-        iconModifier = iconModifier,
-    )
-}
-
-/**
  * What a details screen's "More" opens (movie and series heroes): Refresh info, then Cancel.
  * Focus opens on Refresh; Back or Cancel closes.
  */

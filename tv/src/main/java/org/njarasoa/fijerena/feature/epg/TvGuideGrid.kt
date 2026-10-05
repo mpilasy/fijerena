@@ -3,6 +3,11 @@
 package org.njarasoa.fijerena.feature.epg
 
 import android.text.format.DateUtils
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
@@ -28,6 +33,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -54,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -110,6 +118,7 @@ import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -124,6 +133,7 @@ import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -427,8 +437,6 @@ private fun GuideHeader(
     val typography = MaterialTheme.typography
     val titleStyle = remember(scale, typography) { typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale)) }
     val lineStyle = remember(scale, typography) { typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale)) }
-    val buttonColors = guideButtonColors()
-
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -471,46 +479,48 @@ private fun GuideHeader(
                             }
                         }.tvPane(headerPane, exitUp = false),
             ) {
-                CinemaButton(onClick = onPreviousDay, colors = buttonColors, modifier = Modifier.paneItem(headerPane, HEADER_PREV)) {
-                    Icon(imageVector = CinemaIcons.KeyboardArrowLeft, contentDescription = null)
-                    Text(stringResource(R.string.epg_prev_day))
-                }
-                CinemaButton(onClick = onJumpToNow, colors = buttonColors, modifier = Modifier.paneItem(headerPane, HEADER_NOW)) {
-                    Text(stringResource(R.string.epg_jump_to_now))
-                }
-                CinemaButton(onClick = onNextDay, colors = buttonColors, modifier = Modifier.paneItem(headerPane, HEADER_NEXT)) {
-                    Text(stringResource(R.string.epg_next_day))
-                    Icon(imageVector = CinemaIcons.KeyboardArrowRight, contentDescription = null)
-                }
+                // Icons, each naming itself while focused (icon-buttons plan).
+                TvIconAction(
+                    onClick = onPreviousDay,
+                    icon = CinemaIcons.KeyboardArrowLeft,
+                    label = stringResource(R.string.epg_prev_day),
+                    modifier = Modifier.paneItem(headerPane, HEADER_PREV),
+                )
+                TvIconAction(
+                    onClick = onJumpToNow,
+                    icon = Icons.Outlined.Schedule,
+                    label = stringResource(R.string.epg_jump_to_now),
+                    modifier = Modifier.paneItem(headerPane, HEADER_NOW),
+                )
+                TvIconAction(
+                    onClick = onNextDay,
+                    icon = CinemaIcons.KeyboardArrowRight,
+                    label = stringResource(R.string.epg_next_day),
+                    modifier = Modifier.paneItem(headerPane, HEADER_NEXT),
+                )
                 // Opens "Search the guide" (the EPG Browser) on this guide's channels (GD5).
-                CinemaButton(
+                TvIconAction(
                     onClick = onSearch,
-                    colors = buttonColors,
+                    icon = CinemaIcons.Search,
+                    label = stringResource(R.string.common_search),
                     modifier = Modifier.paneItem(headerPane, HEADER_SEARCH).navReturnFocusTarget(returnFocus, HEADER_SEARCH),
-                ) {
-                    Icon(imageVector = CinemaIcons.Search, contentDescription = null)
-                    Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                    Text(stringResource(R.string.common_search))
-                }
+                )
                 // Never disabled: a disabled button drops the focus it holds. A press while
-                // refreshing does nothing.
-                CinemaButton(
+                // refreshing does nothing; the icon turns meanwhile.
+                val refreshTurn = rememberInfiniteTransition(label = "guideRefresh")
+                val refreshAngle by refreshTurn.animateFloat(
+                    initialValue = 0f,
+                    targetValue = FULL_TURN_DEGREES,
+                    animationSpec = infiniteRepeatable(tween(CinemaAnimation.fadeInDurationMs * 2, easing = LinearEasing)),
+                    label = "guideRefreshAngle",
+                )
+                TvIconAction(
                     onClick = { if (!isRefreshing) onRefresh() },
-                    colors = buttonColors,
+                    icon = CinemaIcons.Refresh,
+                    label = stringResource(R.string.common_refresh),
                     modifier = Modifier.paneItem(headerPane, HEADER_REFRESH),
-                ) {
-                    if (isRefreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            strokeWidth = TvDimensions.borderDefault,
-                            color = CinemaTextPrimary,
-                        )
-                    } else {
-                        Icon(imageVector = CinemaIcons.Refresh, contentDescription = null)
-                    }
-                    Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                    Text(stringResource(R.string.common_refresh))
-                }
+                    iconModifier = if (isRefreshing) Modifier.rotate(refreshAngle) else Modifier,
+                )
                 SectionRootButton(sectionRoot, modifier = Modifier.paneItem(headerPane, HEADER_SECTION_ROOT))
             }
         }
@@ -630,24 +640,6 @@ private fun GuideFocusLine(
     }
 }
 
-/**
- * Resting container, lifted container on focus, accent text on focus — the secondary-button look.
- * The glyphs take `LocalContentColor`, so they follow the text and never vanish into the container
- * the way the white-on-white icon buttons did (G-T4). So do the labels, being tv-material `Text`: the
- * material3 one ignores the button's content colour, which left them dim, reading as disabled (GD6).
- */
-@Composable
-private fun guideButtonColors(): ButtonColors =
-    ButtonDefaults.colors(
-        containerColor = TvFocusTokens.restingContainer,
-        contentColor = CinemaTextPrimary,
-        focusedContainerColor = TvFocusTokens.focusedContainer,
-        focusedContentColor = CinemaAccentLight,
-        pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
-        disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-        disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
-    )
-
 @Composable
 private fun sourceLabel(source: GuideSource): String =
     when (source) {
@@ -738,6 +730,8 @@ private fun NoListingsBody(
         }
     }
 }
+
+private const val FULL_TURN_DEGREES = 360f
 
 // ---------------------------------------------------------------------------------------------
 // The grid: ruler + rows on one time axis, and its focus controller

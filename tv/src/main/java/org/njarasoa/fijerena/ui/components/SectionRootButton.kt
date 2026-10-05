@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 
 /**
  * The section-root button (D4, docs/plans/archive/20261003_sources-guide-profiles-plan.md → P6): back to
@@ -18,7 +19,7 @@ internal fun SectionRootButton(
     modifier: Modifier = Modifier,
 ) {
     if (sectionRoot != null) {
-        LabelledActionButton(
+        TvIconAction(
             onClick = sectionRoot.onClick,
             icon = CinemaIcons.VerticalAlignTop,
             label = sectionRoot.label,

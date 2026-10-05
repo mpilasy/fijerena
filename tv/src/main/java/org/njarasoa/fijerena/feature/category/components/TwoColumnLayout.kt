@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
@@ -171,12 +172,13 @@ internal fun TwoColumnLayout(
                 if (contentType == ContentType.LIVE_TV && selectedCategoryId != null && hasEpgData) {
                     val selectedCategoryName = categoryMap[selectedCategoryId]?.name
                     if (selectedCategoryName != null) {
-                        CinemaSecondaryButton(
+                        TvIconAction(
                             onClick = {
                                 returnFocus.leaveFrom(RETURN_TV_GUIDE)
                                 onEpgClick(selectedCategoryId, selectedCategoryName)
                             },
-                            text = stringResource(R.string.common_tv_guide),
+                            icon = CinemaIcons.DateRange,
+                            label = stringResource(R.string.common_tv_guide),
                             modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_TV_GUIDE),
                         )
                     }
