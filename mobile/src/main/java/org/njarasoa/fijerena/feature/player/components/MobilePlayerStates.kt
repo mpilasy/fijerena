@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -81,6 +82,7 @@ fun ErrorScreen(
 @Composable
 fun ErrorOverlay(
     error: PlaybackState.Error,
+    isDevMode: Boolean,
     onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -104,6 +106,16 @@ fun ErrorOverlay(
                 style = MaterialTheme.typography.bodyMedium,
                 color = CinemaTextPrimary,
             )
+            // Developer mode: the raw error beneath the friendly one.
+            val rawMessage = error.exception?.message
+            if (isDevMode && rawMessage != null) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Text(
+                    text = rawMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CinemaTextSecondary,
+                )
+            }
             Spacer(modifier = Modifier.height(Spacing.lg))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 CinemaButton(onClick = onRetry) {

@@ -252,6 +252,12 @@ class StreamingPlaybackService : MediaSessionService() {
         player.playWhenReady = true
     }
 
+    // In the app's language, not the device's: the error messages are built here. A language
+    // changed while the service is alive applies from its next start.
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(PlaybackServiceLocale.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         NetworkMonitor.init(this)
@@ -1414,9 +1420,9 @@ class StreamingPlaybackService : MediaSessionService() {
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
                 -> {
-                    val codecInfo = extractCodecInfo(error.message ?: "")
-                    if (codecInfo.isNotEmpty()) {
-                        context.getString(R.string.player_error_codec_unsupported_format, codecInfo)
+                    val format = (error as? ExoPlaybackException)?.rendererFormat
+                    if (format != null) {
+                        context.getString(R.string.player_error_codec_unsupported_format, formatLabel(format))
                     } else {
                         context.getString(R.string.player_error_format_unsupported)
                     }
@@ -1502,15 +1508,9 @@ class StreamingPlaybackService : MediaSessionService() {
             return null
         }
 
-        private fun extractCodecInfo(message: String): String {
-            val match = CODEC_REGEX.find(message)
-            return match?.value?.replace("video/", "")?.uppercase() ?: ""
-        }
-
         companion object {
             // Pre-compiled regexes — avoid recompiling on every error event
             private val HTTP_STATUS_REGEX = Regex("Response code: (\\d{3})")
-            private val CODEC_REGEX = Regex("video/(\\w+)|format=(\\w+)")
         }
 
         private fun updatePlaybackState() {

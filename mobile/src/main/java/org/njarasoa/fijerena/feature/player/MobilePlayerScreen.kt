@@ -775,6 +775,7 @@ fun MobilePlayerContent(
                         is PlaybackState.Error -> {
                             ErrorOverlay(
                                 error = currentPs,
+                                isDevMode = appSettings.isDevMode,
                                 onRetry = { viewModel.playStream(currentMeta) },
                                 onBack = onBack,
                             )

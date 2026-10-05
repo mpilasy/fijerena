@@ -5,6 +5,7 @@
 
 - **A video this device can't decode stops with a message:** a stream whose only video track has no decoder on the device (Dolby Vision profile 5 on a Shield 2017 or most phones) used to "play" with a black screen — audio only, or nothing — and no error. It now stops at once with "Video codec not supported on this device: Dolby Vision profile 5" (or the codec and resolution), without retrying. → P1.
 - **A stream the decoder can't handle fails at once:** an 8K video on a 4K device used to fail, retry three times and show its error after about 19 seconds. A codec error before the first picture, on a format the decoder doesn't fully support, is now shown straight away. A decoder error after the video has been playing, or on a format the decoder supports (it may just be busy), is still retried. → P2.
+- **Player errors name the codec, in your language:** "Video codec not supported on this device" now ends with the codec and resolution ("HEVC 7680×4320") instead of "FORMAT=FORMAT", and player errors follow the app's language rather than the phone's (a French app on an English phone showed them in English). With developer mode on, the phone's error screen shows the raw error beneath the message, as the TV's already did. → P3.
 
 ## Version: Account in use
 **Release Date:** 2026-10-04

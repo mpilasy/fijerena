@@ -33,11 +33,13 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
+import org.njarasoa.fijerena.core.player.service.PlaybackServiceLocale
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopFallback
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 
 class FijerenaApplication :
     Application(),
@@ -47,6 +49,9 @@ class FijerenaApplication :
         // First, so anything that goes wrong from here on — startup included — is recorded.
         // Settings → Diagnostics (developer mode) shows it.
         CrashLog.install(this)
+        // Before anything can start the playback service, which builds its error messages in the
+        // app's language only through this.
+        PlaybackServiceLocale.wrap = LocaleManager::wrap
         // Next, before anything that could be what keeps crashing: counts this launch and decides
         // whether it starts in safe mode — see SafeMode.
         SafeMode.init(this)
