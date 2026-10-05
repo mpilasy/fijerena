@@ -51,3 +51,34 @@ class AccountBusyWait {
         const val NONE = Long.MIN_VALUE
     }
 }
+
+/**
+ * What to do with [AlternateLogin.next]'s answer to a refusal once it arrives (it can take a few
+ * seconds): play the other login's URL, wait on the refused one ([AccountBusyWait]), or drop the
+ * answer because the playback it was asked for is gone (a new stream, Stop, the service released).
+ */
+object LoginSwitch {
+    sealed class Decision {
+        data class Switch(
+            val url: String,
+        ) : Decision()
+
+        data object Wait : Decision()
+
+        data object Drop : Decision()
+    }
+
+    fun decide(
+        nextUrl: String?,
+        askedSession: String,
+        currentSession: String,
+        refusedUrl: String,
+        currentUrl: String,
+        released: Boolean,
+    ): Decision =
+        when {
+            released || askedSession != currentSession || refusedUrl != currentUrl -> Decision.Drop
+            nextUrl == null -> Decision.Wait
+            else -> Decision.Switch(nextUrl)
+        }
+}

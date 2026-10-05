@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Playback error messages (StreamingPlaybackService) -->
     <string name="player_error_stream_type_live">Live stream</string>
     <string name="player_error_stream_type_video">Video</string>
@@ -18,6 +18,9 @@
     <string name="player_error_http_connection_limit_format">HTTP %1$d — Connection limit reached. Close other active streams on this account.</string>
     <string name="player_error_account_busy_waiting_format">This account is already streaming on another device (HTTP %1$d). After a stream stops, the provider can keep it counted for a few minutes. Trying again every 20 seconds — playback starts by itself.</string>
     <string name="player_error_account_busy_gave_up_format">This account is still streaming on another device (HTTP %1$d). Stop playback there, wait a few minutes, then press Retry.</string>
+    <!-- Only shown for 2 logins or more, so never singular. -->
+    <string name="player_error_account_busy_all_logins_waiting_format" tools:ignore="PluralsCandidate">All %1$d logins of this source are already streaming on other devices (HTTP %2$d). After a stream stops, the provider can keep it counted for a few minutes. Trying again every 20 seconds — playback starts by itself.</string>
+    <string name="player_error_account_busy_all_logins_gave_up_format" tools:ignore="PluralsCandidate">All %1$d logins of this source are still streaming on other devices (HTTP %2$d). Stop playback on one of them, wait a few minutes, then press Retry.</string>
     <string name="player_error_http_server_unavailable_format">HTTP %1$d — Server unavailable. Try again shortly.</string>
     <string name="player_error_http_server_error_format">HTTP %1$d — Server error. Try again later.</string>
     <string name="player_error_http_access_denied_format">HTTP %1$d — Stream access denied.</string>

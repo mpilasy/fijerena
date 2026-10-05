@@ -62,6 +62,30 @@ class AccountBusyTest {
         assertNotEquals(C.TIME_UNSET, policy.getRetryDelayMsFor(errorInfo(IOException("reset"))))
     }
 
+    @Test
+    fun `another login's URL is played at once`() {
+        assertEquals(
+            LoginSwitch.Decision.Switch(OTHER),
+            LoginSwitch.decide(OTHER, "s1", "s1", REFUSED, REFUSED, released = false),
+        )
+    }
+
+    @Test
+    fun `no other login hands over to the wait on the refused URL`() {
+        assertEquals(LoginSwitch.Decision.Wait, LoginSwitch.decide(null, "s1", "s1", REFUSED, REFUSED, released = false))
+    }
+
+    @Test
+    fun `an answer for a playback that is gone is dropped`() {
+        // A new playStream (or Stop) started while the other login was looked up.
+        assertEquals(LoginSwitch.Decision.Drop, LoginSwitch.decide(OTHER, "s1", "s2", REFUSED, REFUSED, released = false))
+        assertEquals(LoginSwitch.Decision.Drop, LoginSwitch.decide(null, "s1", "s2", REFUSED, REFUSED, released = false))
+        // The player was released.
+        assertEquals(LoginSwitch.Decision.Drop, LoginSwitch.decide(OTHER, "s1", "s1", REFUSED, REFUSED, released = true))
+        // Something else already moved the stream to another URL.
+        assertEquals(LoginSwitch.Decision.Drop, LoginSwitch.decide(OTHER, "s1", "s1", REFUSED, OTHER, released = false))
+    }
+
     private fun httpError(code: Int) =
         HttpDataSource.InvalidResponseCodeException(
             code,
@@ -79,4 +103,9 @@ class AccountBusyTest {
             exception,
             1,
         )
+
+    private companion object {
+        const val REFUSED = "http://panel.test/movie/user/pass/7.mkv"
+        const val OTHER = "http://panel.test/movie/user2/pass2/7.mkv"
+    }
 }

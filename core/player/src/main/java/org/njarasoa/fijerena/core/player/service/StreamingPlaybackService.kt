@@ -18,6 +18,7 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.R
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
@@ -51,6 +53,8 @@ import org.njarasoa.fijerena.core.player.network.StallWatchdog
 import org.njarasoa.fijerena.core.player.network.ThroughputMeter
 import org.njarasoa.fijerena.core.player.source.AccountBusy
 import org.njarasoa.fijerena.core.player.source.AccountBusyWait
+import org.njarasoa.fijerena.core.player.source.AlternateLogin
+import org.njarasoa.fijerena.core.player.source.LoginSwitch
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import java.util.UUID
 
@@ -866,19 +870,86 @@ class StreamingPlaybackService : MediaSessionService() {
 
     /**
      * The provider refused the stream because the account is streaming elsewhere ([AccountBusy]).
-     * Retrying at once can't help, so the message stays up — saying playback starts by itself —
-     * while the stream is tried again every [AccountBusy.RETRY_INTERVAL_MS], for longer than the
-     * ~5 minutes some providers keep a stopped stream counted. Retry and Back work as usual.
+     * A source with several logins plays the same stream on a free one at once ([AlternateLogin]).
+     * Otherwise retrying at once can't help, so the message stays up — saying playback starts by
+     * itself — while the stream is tried again every [AccountBusy.RETRY_INTERVAL_MS], for longer
+     * than the ~5 minutes some providers keep a stopped stream counted. Retry and Back work as usual.
      */
     private fun handleAccountBusy(httpStatus: Int) {
         val metadata = _currentMetadata.value
         cancelPendingRetry()
         pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
-        if (accountBusyWait.next(SystemClock.elapsedRealtime()) == AccountBusyWait.Decision.GiveUp) {
-            _playbackState.value = PlaybackState.Error(getString(R.string.player_error_account_busy_gave_up_format, httpStatus))
+        val alternate = AlternateLogin.installed
+        val scope = serviceScope
+        if (alternate == null || scope == null) {
+            waitForAccount(metadata, httpStatus)
             return
         }
-        _playbackState.value = PlaybackState.Error(getString(R.string.player_error_account_busy_waiting_format, httpStatus))
+        // Not over the busy message a wait already shows: only the first refusal's blank IDLE.
+        if (_playbackState.value !is PlaybackState.Error) _playbackState.value = PlaybackState.Buffering
+        val session = playSessionId.value
+        val resumePosition = pendingResumePositionMs
+        scope.launch {
+            val nextUrl =
+                try {
+                    withContext(Dispatchers.IO) { alternate.next(metadata.streamUrl) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Another login failed: ${Redact.text(e.toString())}")
+                    null
+                }
+            val current = _currentMetadata.value
+            when (
+                val decision =
+                    LoginSwitch.decide(nextUrl, session, playSessionId.value, metadata.streamUrl, current.streamUrl, isReleased)
+            ) {
+                LoginSwitch.Decision.Drop -> {
+                    Unit
+                }
+
+                LoginSwitch.Decision.Wait -> {
+                    waitForAccount(current, httpStatus)
+                }
+
+                is LoginSwitch.Decision.Switch -> {
+                    Log.i(TAG, "Account busy (HTTP $httpStatus): playing on another login.")
+                    // Later reconnects and position saves use the new login.
+                    val switched = current.copy(streamUrl = decision.url)
+                    _currentMetadata.value = switched
+                    _playbackState.value = PlaybackState.Buffering
+                    playerListener?.resetErrorState()
+                    reprepare(switched, resumePosition)
+                }
+            }
+        }
+    }
+
+    /** All logins busy: the message, and the refused stream tried again later (see [handleAccountBusy]). */
+    private fun waitForAccount(
+        metadata: PlayerMetadata,
+        httpStatus: Int,
+    ) {
+        val logins = AlternateLogin.installed?.loginCount(metadata.streamUrl) ?: 1
+        if (accountBusyWait.next(SystemClock.elapsedRealtime()) == AccountBusyWait.Decision.GiveUp) {
+            _playbackState.value =
+                PlaybackState.Error(
+                    if (logins > 1) {
+                        getString(R.string.player_error_account_busy_all_logins_gave_up_format, logins, httpStatus)
+                    } else {
+                        getString(R.string.player_error_account_busy_gave_up_format, httpStatus)
+                    },
+                )
+            return
+        }
+        _playbackState.value =
+            PlaybackState.Error(
+                if (logins > 1) {
+                    getString(R.string.player_error_account_busy_all_logins_waiting_format, logins, httpStatus)
+                } else {
+                    getString(R.string.player_error_account_busy_waiting_format, httpStatus)
+                },
+            )
         val resumePosition = pendingResumePositionMs
         val retryRunnable =
             Runnable {

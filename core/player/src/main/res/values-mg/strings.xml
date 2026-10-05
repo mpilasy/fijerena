@@ -18,6 +18,8 @@
     <string name="player_error_http_connection_limit_format">HTTP %1$d — Tratra ny fetran\'ny fifandraisana. Akatony ny fantsakana hafa mandeha amin\'ity kaonty ity.</string>
     <string name="player_error_account_busy_waiting_format">Efa mandeha amin\'ny fitaovana hafa ity kaonty ity (HTTP %1$d). Rehefa mijanona ny fantsakana dia mety mbola isain\'ny mpamatsy minitra vitsivitsy. Manandrana indray isaky ny 20 segondra — hiantomboka ho azy ny famakiana.</string>
     <string name="player_error_account_busy_gave_up_format">Mbola mandeha amin\'ny fitaovana hafa ity kaonty ity (HTTP %1$d). Ajanony any ny famakiana, miandrasa minitra vitsivitsy, dia tsindrio ny Andramo indray.</string>
+    <string name="player_error_account_busy_all_logins_waiting_format">Efa mandeha amin\'ny fitaovana hafa avokoa ireo fidirana %1$d an\'ity loharano ity (HTTP %2$d). Rehefa mijanona ny fantsakana dia mety mbola isain\'ny mpamatsy minitra vitsivitsy. Manandrana indray isaky ny 20 segondra — hiantomboka ho azy ny famakiana.</string>
+    <string name="player_error_account_busy_all_logins_gave_up_format">Mbola mandeha amin\'ny fitaovana hafa avokoa ireo fidirana %1$d an\'ity loharano ity (HTTP %2$d). Ajanony amin\'ny iray amin\'ireo ny famakiana, miandrasa minitra vitsivitsy, dia tsindrio ny Andramo indray.</string>
     <string name="player_error_http_server_unavailable_format">HTTP %1$d — Tsy azo idirana ny mpizara. Andramo aorian\'izay fotsiny.</string>
     <string name="player_error_http_server_error_format">HTTP %1$d — Nisy olana tamin\'ny mpizara. Andramo indray aoriana.</string>
     <string name="player_error_http_access_denied_format">HTTP %1$d — Voarara ny fidirana amin\'ny fantsakana.</string>
