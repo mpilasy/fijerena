@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.formatBitrate
@@ -369,6 +370,10 @@ fun MobileStatsOverlay(
                 // badge, an episode's own name only).
                 StatNameRow(stringResource(R.string.player_stats_raw_name), metadata.title)
                 metadata.showTitle?.let { StatNameRow(stringResource(R.string.player_stats_raw_series), it) }
+                // Shared logins: which of the source's logins this stream plays on.
+                XtreamLoginPicker.describe(metadata.streamUrl)?.let { (n, of) ->
+                    StatNameRow(stringResource(R.string.player_stats_login), stringResource(R.string.player_stats_login_format, n, of))
+                }
 
                 SectionHeader(stringResource(R.string.player_stats_video))
                 StatRow(stringResource(R.string.player_stats_codec), videoCodec)

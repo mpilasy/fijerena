@@ -55,6 +55,8 @@
     <string name="player_stats_title">Statistiques détaillées</string>
     <string name="player_stats_raw_name">Nom</string>
     <string name="player_stats_raw_series">Série</string>
+    <string name="player_stats_login">Identifiant</string>
+    <string name="player_stats_login_format">%1$d sur %2$d</string>
     <string name="player_now_playing">Lecture en cours</string>
     <string name="player_no_channels">Aucune chaîne disponible</string>
 

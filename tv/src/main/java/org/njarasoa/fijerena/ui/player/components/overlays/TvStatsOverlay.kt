@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.formatBitrate
@@ -383,6 +384,10 @@ fun TvStatsOverlay(
                         if (metadata.isLive) metadata.channelName.ifBlank { metadata.title } else metadata.title,
                     )
                     metadata.showTitle?.let { StatNameRow(stringResource(R.string.player_stats_raw_series), it) }
+                    // Shared logins: which of the source's logins this stream plays on.
+                    XtreamLoginPicker.describe(metadata.streamUrl)?.let { (n, of) ->
+                        StatNameRow(stringResource(R.string.player_stats_login), stringResource(R.string.player_stats_login_format, n, of))
+                    }
 
                     // Live-polled (stats.position, updated every tick by the LaunchedEffect above)
                     // rather than read off playbackState itself: PlaybackState.Playing.position is

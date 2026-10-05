@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.xtream.CatalogSyncException
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
+import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
 import org.njarasoa.fijerena.core.network.xtream.awaitCatalogTasks
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
@@ -621,7 +622,7 @@ class XtreamMediaProvider(
                 is Result.Success -> {
                     kotlin.Result.success(
                         PlayableStream(
-                            uri = result.data,
+                            uri = XtreamLoginPicker.forPlayback(providerId, result.data),
                             isLive = false,
                             title = "",
                         ),
@@ -643,7 +644,7 @@ class XtreamMediaProvider(
             is Result.Success -> {
                 kotlin.Result.success(
                     PlayableStream(
-                        uri = result.data,
+                        uri = XtreamLoginPicker.forPlayback(providerId, result.data),
                         isLive = isLive,
                         title = streamName,
                     ),

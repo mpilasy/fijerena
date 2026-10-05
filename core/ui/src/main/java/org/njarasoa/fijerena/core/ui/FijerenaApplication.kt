@@ -52,6 +52,9 @@ class FijerenaApplication :
         // Before anything can start the playback service, which builds its error messages in the
         // app's language only through this.
         PlaybackServiceLocale.wrap = LocaleManager::wrap
+        // Lets the player move a refused stream to another of its source's logins (shared logins).
+        org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
+            .install(this)
         // Next, before anything that could be what keeps crashing: counts this launch and decides
         // whether it starts in safe mode — see SafeMode.
         SafeMode.init(this)
