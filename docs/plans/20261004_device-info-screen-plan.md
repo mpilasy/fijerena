@@ -1,6 +1,6 @@
 # Device Info Screen Plan
 
-**Status:** Planned (2026-10-04). Not started.
+**Status:** In progress (2026-10-04). P1, P2 and P3 built in parallel: P2 and P3 on their own branches against a shared row model, wired into the screen when P1 lands.
 
 ## Decisions (2026-10-04)
 
@@ -94,6 +94,6 @@ in the player stats overlays, and `DeviceDetector` (device type, HEVC/AV1 yes/no
 
 | Phase | Status | Commit |
 |---|---|---|
-| P1 Screen and core sections | Not started | |
-| P2 Media | Not started | |
-| P3 Network and power | Not started | |
+| P1 Screen and core sections | In progress | |
+| P2 Media | In progress | |
+| P3 Network and power | In progress | |
