@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -376,23 +377,28 @@ fun TvEpgManagementScreen(
                             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                CinemaSecondaryButton(
+                                TvIconAction(
                                     onClick = { viewModel.refreshSource(source.id) },
-                                    text = stringResource(R.string.common_refresh),
+                                    icon = CinemaIcons.Refresh,
+                                    label = stringResource(R.string.common_refresh),
                                 )
-                                CinemaSecondaryButton(
+                                TvIconAction(
                                     onClick = { editingSource = source },
-                                    text = stringResource(R.string.provider_edit_button),
+                                    icon = CinemaIcons.Edit,
+                                    label = stringResource(R.string.provider_edit_button),
                                 )
-                                CinemaSecondaryButton(
+                                TvIconAction(
                                     onClick = { intervalSource = source },
-                                    text = stringResource(R.string.epg_auto_refresh_title),
+                                    icon = CinemaIcons.Sync,
+                                    label = stringResource(R.string.epg_auto_refresh_title),
                                     modifier =
                                         if (source.id == intervalReturnId) Modifier.focusRequester(intervalButtonFocus) else Modifier,
                                 )
-                                ProviderDangerButton(
+                                TvIconAction(
                                     onClick = { deletingSource = source },
-                                    text = stringResource(R.string.provider_delete_button),
+                                    icon = CinemaIcons.Delete,
+                                    label = stringResource(R.string.provider_delete_button),
+                                    danger = true,
                                 )
                             }
 

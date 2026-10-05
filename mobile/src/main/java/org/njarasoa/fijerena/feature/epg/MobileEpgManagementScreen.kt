@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
  * One source's guide sources (A-9, M5): the list first, its bulk actions, an empty state that
@@ -488,18 +489,22 @@ private fun EpgSourceCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CinemaTextButton(onClick = onAutoRefresh) {
-                    Text(stringResource(R.string.epg_auto_refresh_title))
-                }
-                CinemaTextButton(onClick = onEdit) {
-                    Text(stringResource(R.string.provider_edit_button))
-                }
-                CinemaTextButton(
+                IconAction(
+                    onClick = onAutoRefresh,
+                    icon = CinemaIcons.Sync,
+                    label = stringResource(R.string.epg_auto_refresh_title),
+                )
+                IconAction(
+                    onClick = onEdit,
+                    icon = CinemaIcons.Edit,
+                    label = stringResource(R.string.provider_edit_button),
+                )
+                IconAction(
                     onClick = { showDeleteConfirm = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = CinemaError),
-                ) {
-                    Text(stringResource(R.string.provider_delete_button))
-                }
+                    icon = CinemaIcons.Delete,
+                    label = stringResource(R.string.provider_delete_button),
+                    tint = CinemaError,
+                )
             }
         }
     }

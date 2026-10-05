@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -322,9 +323,11 @@ private fun MobileProviderRow(
                 )
             }
             if (!provider.isActive) {
-                TextButton(onClick = { onSelect(provider) }) {
-                    Text(stringResource(R.string.provider_use_button))
-                }
+                IconAction(
+                    onClick = { onSelect(provider) },
+                    icon = CinemaIcons.SwapHoriz,
+                    label = stringResource(R.string.provider_use_button),
+                )
             }
             Box {
                 IconButton(onClick = { menuOpen = true }) {

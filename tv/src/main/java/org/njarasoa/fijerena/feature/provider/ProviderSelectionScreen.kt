@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDial
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -431,22 +432,25 @@ private fun ProviderList(
                         }
                     },
                 )
-                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale))) {
+                // Icons at the slot's end: the focused one's name grows into the slot, so nothing
+                // beside it moves (icon-buttons plan).
+                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale)), contentAlignment = Alignment.CenterEnd) {
                     if (!provider.isActive) {
-                        CinemaSecondaryButton(
+                        TvIconAction(
                             onClick = { onSelect(provider) },
-                            text = stringResource(R.string.provider_use_button),
-                            modifier = Modifier.fillMaxWidth(),
+                            icon = CinemaIcons.SwapHoriz,
+                            label = stringResource(R.string.provider_use_button),
                         )
                     }
                 }
-                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale))) {
+                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale)), contentAlignment = Alignment.CenterEnd) {
                     // Guide sources only apply to sources that carry live channels
                     if (MediaProviderFactory.hasLiveTv(provider)) {
-                        CinemaSecondaryButton(
+                        TvIconAction(
                             onClick = { onManageEpg(provider.id) },
-                            text = stringResource(R.string.provider_guide_button),
-                            modifier = Modifier.fillMaxWidth().navReturnFocusTarget(returnFocus, RETURN_EPG_PREFIX + provider.id),
+                            icon = CinemaIcons.DateRange,
+                            label = stringResource(R.string.provider_guide_button),
+                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_PREFIX + provider.id),
                         )
                     }
                 }
