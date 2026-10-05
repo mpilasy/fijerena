@@ -16,6 +16,17 @@ Config (env):
   BRIDGE_PORT        listen port                      (default: 8080)
   BRIDGE_DB          id map file                      (default: ./xtream_ids_<jellyfin host>.db)
   CACHE_TTL          seconds to cache catalog lists   (default: 300)
+
+Test mode for shared logins (docs/plans/20261005_shared-logins-plan.md), all off by default:
+  BRIDGE_TEST_PASSWORD   extra logins: username "<jellyfin user>+<anything>" (e.g. "tahiry+2") with
+                         this password signs in as that Jellyfin user, once the user itself has
+                         signed in through the bridge since it started. Same catalogue, same ids,
+                         counted as its own account.
+  BRIDGE_MAX_CONNECTIONS streams one Xtream username may hold (reported as max_connections); a
+                         stream request over it gets HTTP 458, as IPTV panels answer.
+  BRIDGE_HOLD_SECONDS    how long a stream request holds its connection (default: 90): the bridge
+                         only redirects, so it can't see a stream stop. Like a panel's stale count.
+  BRIDGE_HIDE_CONS       1: always report active_cons 0, so a client must handle the 458 itself.
 """
 
 import base64
@@ -36,6 +47,10 @@ JF_URL = os.environ["JELLYFIN_URL"].rstrip("/")
 PORT = int(os.environ.get("BRIDGE_PORT", "8080"))
 DB_PATH = os.environ.get("BRIDGE_DB", f"xtream_ids_{urllib.parse.urlparse(JF_URL).hostname}.db")
 CACHE_TTL = int(os.environ.get("CACHE_TTL", "300"))
+TEST_PASSWORD = os.environ.get("BRIDGE_TEST_PASSWORD")
+MAX_CONNECTIONS = int(os.environ.get("BRIDGE_MAX_CONNECTIONS", "0"))
+HOLD_SECONDS = int(os.environ.get("BRIDGE_HOLD_SECONDS", "90"))
+HIDE_CONS = os.environ.get("BRIDGE_HIDE_CONS") == "1"
 
 AUTH_BASE = 'MediaBrowser Client="xtream-bridge", Device="xtream-bridge", DeviceId="xtream-bridge", Version="1.0"'
 LIST_FIELDS = "Overview,Genres,ProviderIds,DateCreated,DateLastMediaAdded,PremiereDate"
@@ -102,6 +117,10 @@ _sessions_lock = threading.Lock()
 
 def session(username, password):
     """The logged-in Jellyfin session for these credentials, or None if Jellyfin rejects them."""
+    if TEST_PASSWORD and "+" in username and password == TEST_PASSWORD:
+        base = username.split("+", 1)[0]
+        with _sessions_lock:
+            return next((v for (u, _), v in _sessions.items() if u == base), None)
     key = (username, password)
     with _sessions_lock:
         if key in _sessions:
@@ -116,6 +135,28 @@ def session(username, password):
     with _sessions_lock:
         _sessions[key] = s
     return s
+
+
+_holds = {}  # Xtream username -> expiry times of the streams it holds (test mode)
+_holds_lock = threading.Lock()
+
+
+def active_cons(username):
+    now = time.time()
+    with _holds_lock:
+        _holds[username] = [t for t in _holds.get(username, []) if t > now]
+        return len(_holds[username])
+
+
+def take_connection(username):
+    """False when the username already holds BRIDGE_MAX_CONNECTIONS streams."""
+    if MAX_CONNECTIONS <= 0:
+        return True
+    if active_cons(username) >= MAX_CONNECTIONS:
+        return False
+    with _holds_lock:
+        _holds[username].append(time.time() + HOLD_SECONDS)
+    return True
 
 
 class _Current(threading.local):
@@ -557,11 +598,12 @@ def live_redirect(guid):
 def server_info(host, username, password):
     hostname, _, port = host.partition(":")
     now = int(time.time())
+    cons = 0 if HIDE_CONS else active_cons(username)
     return {
         "user_info": {
             "username": username, "password": password, "message": "", "auth": 1, "status": "Active",
-            "exp_date": str(now + 365 * 86400), "is_trial": "0", "active_cons": "0",
-            "created_at": str(now), "max_connections": "5",
+            "exp_date": str(now + 365 * 86400), "is_trial": "0", "active_cons": str(cons),
+            "created_at": str(now), "max_connections": str(MAX_CONNECTIONS or 5),
             "allowed_output_formats": ["m3u8", "ts"],
         },
         "server_info": {
@@ -631,12 +673,14 @@ class Handler(BaseHTTPRequestHandler):
         guid = ids.guid(num)
         if not guid:
             return self.send(404, {"error": "unknown id"})
+        if not take_connection(urllib.parse.unquote(user)):
+            return self.send(458, {"error": "max connections reached"})
         return self.redirect(live_redirect(guid) if kind == "live" else jf.stream_url(guid))
 
     def api(self, action, q):
         cat = q.get("category_id")
         if action is None:
-            return server_info(self.headers.get("Host", f"localhost:{PORT}"), jf.username, jf.password)
+            return server_info(self.headers.get("Host", f"localhost:{PORT}"), q.get("username"), q.get("password"))
         if action == "get_live_categories":
             return live_categories()
         if action == "get_live_streams":
