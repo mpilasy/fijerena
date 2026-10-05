@@ -39,6 +39,13 @@ data class ProviderSettings(
     val providesGuide: Boolean? = null,
     /** The viewer set [providesGuide]: detection no longer changes it. */
     val providesGuideSetByUser: Boolean = false,
+    /**
+     * Xtream: usernames of the source's extra logins on the same panel, which playback shares with
+     * the main one. Passwords live in `provider_creds_<id>`. Changed only through
+     * [ProviderRepository]'s login functions, never by a settings save. See
+     * docs/plans/20261005_shared-logins-plan.md.
+     */
+    val extraLogins: List<String> = emptyList(),
 ) {
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000
 

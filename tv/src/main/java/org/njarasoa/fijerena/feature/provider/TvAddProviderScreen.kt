@@ -71,6 +71,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
@@ -81,6 +82,7 @@ import org.njarasoa.fijerena.feature.provider.components.EDIT_SOURCE_FIRST_SETTI
 import org.njarasoa.fijerena.feature.provider.components.JellyfinForm
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderGuideSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderLoginsSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderTypeDropdown
@@ -121,8 +123,9 @@ private const val KEY_SAVE = "save"
  *
  * Edit Source: the Connection column on the left (read-only type, the login fields, Cancel and
  * Save connection right under them — the only part that needs saving) and a scrolling column on
- * the right with Behaviour (applies immediately), Guide (sources with live channels: Provides a
- * guide for Xtream, Guide sources › opening [onGuideSources]), Library data and the Danger zone.
+ * the right with Behaviour (applies immediately), Logins (Xtream: the main and extra logins,
+ * changed at once), Guide (sources with live channels: Provides a guide for Xtream, Guide
+ * sources › opening [onGuideSources]), Library data and the Danger zone.
  * Each column is a `tvPane`: Left/Right move between them, Up/Down stay inside. First focus is the
  * Name edit button; Back from the guide sources returns to Guide sources. Content filters are
  * edited on each profile's page (D8), not here.
@@ -262,6 +265,18 @@ fun TvAddProviderScreen(
                 }
             }
             loadedConnection = listOf(name, url, username, password, host, shareName)
+        }
+    }
+
+    // The main login as stored now (Edit Source → Logins can change it): into the login fields and
+    // the loaded values, leaving the other connection edits as they are.
+    suspend fun reloadMainLogin() {
+        val provider = providerRepo.getProviderById(editId)
+        if (provider != null) {
+            val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
+            username = login.username
+            password = login.password
+            loadedConnection = loadedConnection?.let { listOf(it[0], it[1], login.username, login.password, it[4], it[5]) }
         }
     }
 
@@ -633,6 +648,27 @@ fun TvAddProviderScreen(
                                     },
                                     pane = settingsPane,
                                 )
+
+                                if (editedType == ProviderType.XTREAM) {
+                                    val loginsViewModel: ExtraLoginsViewModel =
+                                        viewModel(
+                                            key = "extraLogins-$editId",
+                                            factory = ExtraLoginsViewModel.Factory(context, editId),
+                                        )
+                                    SectionDivider()
+                                    ProviderLoginsSection(
+                                        viewModel = loginsViewModel,
+                                        pane = settingsPane,
+                                        onMainLoginChanged = { mainUsername ->
+                                            // Make main / Remove changed the main login: take it
+                                            // into the login fields and their loaded values, so
+                                            // Save connection doesn't write the old one back.
+                                            if (loadedConnection?.getOrNull(2)?.let { it != mainUsername } == true) {
+                                                coroutineScope.launch { reloadMainLogin() }
+                                            }
+                                        },
+                                    )
+                                }
 
                                 if (currentProvider?.let { MediaProviderFactory.hasLiveTv(it) } == true) {
                                     SectionDivider()

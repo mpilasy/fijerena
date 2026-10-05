@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Shared logins
+**Release Date:** 2026-10-05
+
+- **More than one login per source:** Edit Source → Logins on an Xtream source lists its login and lets you add more logins from the same provider, so several devices can share 2 or 3 single-stream accounts. Each login shows its expiry date, or that it has expired. A login on a different server is refused, since only logins on the same server have the same channels and films. Make main swaps a login with the main one, which does the catalogue and the guide; removing the main login hands that role to the next one. Logins added on one device reach your other linked devices. **Update the app on every device before adding logins:** an older version that saves the source's settings removes them. Playback doesn't use the extra logins yet. → Phase 1.
+
 ## Version: Device info
 **Release Date:** 2026-10-04
 

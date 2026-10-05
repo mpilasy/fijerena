@@ -108,6 +108,9 @@ class ProviderRepository(
         private const val KEY_JELLYFIN_TOKEN = "jellyfin_token"
         private const val KEY_JELLYFIN_USER_ID = "jellyfin_user_id"
 
+        /** `extra_password_<username>`: an Xtream extra login's password, see [getSourceLogins]. */
+        private const val KEY_EXTRA_PASSWORD_PREFIX = "extra_password_"
+
         /**
          * The encrypted credentials file for [providerId] as used by [profileId]. The Default
          * profile keeps `provider_creds_<id>`, where credentials always lived, so nothing moves on
@@ -552,6 +555,66 @@ class ProviderRepository(
     }
 
     /**
+     * An Xtream source's main login and its extra ones, in order. An extra login whose password
+     * this device doesn't have (an import, a duplicate) comes with an empty password.
+     */
+    fun getSourceLogins(entity: ProviderEntity): SourceLogins {
+        val prefs = getProviderPrefs(entity.id, ProfileEntity.DEFAULT_ID)
+        val extras =
+            parseProviderSettings(entity.providerSettings).extraLogins.map { username ->
+                Login(username, prefs.getString(extraPasswordKey(username), null).orEmpty())
+            }
+        return SourceLogins(Login(entity.username, prefs.getString(KEY_PASSWORD, null).orEmpty()), extras)
+    }
+
+    /** The extra logins' passwords this device has, by username — for live sync. */
+    fun getExtraPasswords(entity: ProviderEntity): Map<String, String> =
+        getSourceLogins(entity).extras.filter { it.password.isNotEmpty() }.associate { it.username to it.password }
+
+    /**
+     * Stores [logins] as [providerId]'s: the main one in the row and `provider_creds_<id>`, the
+     * extra usernames in the settings JSON, their passwords beside the main one. Queued for live
+     * sync; the cached provider is dropped so the next use connects with the new main login (the
+     * automatic guide source follows it on that login, see `reconcileAutoXmltvSource`).
+     */
+    suspend fun saveSourceLogins(
+        providerId: Long,
+        logins: SourceLogins,
+    ) {
+        val entity = dao.getProviderById(providerId) ?: return
+        val stored = parseProviderSettings(entity.providerSettings)
+        val settingsJson = json.encodeToString(stored.copy(extraLogins = logins.extras.map { it.username }))
+        dao.updateProvider(entity.copy(username = logins.main.username, providerSettings = settingsJson))
+        writeExtraPasswords(providerId, logins.main.password, logins.extras.associate { it.username to it.password })
+        SettingsSyncQueue.provider(context, providerId)
+        settingsCache.keys.removeAll { it.first == providerId }
+        MediaProviderFactory.providerChanged(providerId)
+    }
+
+    /**
+     * The main password plus exactly [extras] as the extra passwords: any other extra password
+     * in the file is removed. A blank password isn't stored.
+     */
+    private fun writeExtraPasswords(
+        providerId: Long,
+        mainPassword: String,
+        extras: Map<String, String>,
+    ) {
+        val prefs = getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID)
+        prefs.edit {
+            putString(KEY_PASSWORD, mainPassword)
+            prefs.all.keys
+                .filter { it.startsWith(KEY_EXTRA_PASSWORD_PREFIX) }
+                .forEach { remove(it) }
+            extras.filterValues { it.isNotEmpty() }.forEach { (username, password) -> putString(extraPasswordKey(username), password) }
+        }
+        org.njarasoa.fijerena.core.network.CredentialStoreHealth
+            .clear(context)
+    }
+
+    private fun extraPasswordKey(username: String) = KEY_EXTRA_PASSWORD_PREFIX + username
+
+    /**
      * Whether this device's profile can connect to [entity] without signing in first: always,
      * except a Jellyfin server this profile has neither a username nor a saved session for.
      */
@@ -683,6 +746,11 @@ class ProviderRepository(
                 )
             }
         remote.password?.let { savePassword(id, it) }
+        // Null: a record from a version without extra logins — keep what this device has.
+        remote.extraPasswords?.takeIf { remote.type == "XTREAM" }?.let { extras ->
+            val mainPassword = getPassword(id).orEmpty()
+            writeExtraPasswords(id, mainPassword, extras.filterKeys { it in parseProviderSettings(remote.providerSettings).extraLogins })
+        }
         settingsCache.keys.removeAll { it.first == id }
         MediaProviderFactory.clearCache(id)
         return id
@@ -769,9 +837,12 @@ class ProviderRepository(
         val entity = dao.getProviderById(providerId) ?: return
         val profileId = activeProfileId()
         // Leave whatever filters the JSON still holds: until migrateCategoryFiltersToProfiles has
-        // run they are the other profiles' fallback.
+        // run they are the other profiles' fallback. The extra logins change only through
+        // saveSourceLogins: a screen holding settings read before a login was added (here or by
+        // live sync) must not drop it.
         val stored = parseProviderSettings(entity.providerSettings)
-        val settingsJson = json.encodeToString(settings.copy(categoryFilters = stored.categoryFilters))
+        val settingsJson =
+            json.encodeToString(settings.copy(categoryFilters = stored.categoryFilters, extraLogins = stored.extraLogins))
         dao.updateProvider(entity.copy(providerSettings = settingsJson))
         filtersStore.set(providerId, profileId, settings.categoryFilters)
         settingsCache.keys.removeAll { it.first == providerId }

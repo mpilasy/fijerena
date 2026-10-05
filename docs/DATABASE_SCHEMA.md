@@ -75,7 +75,7 @@ Deleted providers and profiles, kept so live sync can tell other devices (see
 | `username` | TEXT | Username for authentication |
 | `type` | TEXT | Provider type: `XTREAM`, `JELLYFIN`, `SMB`, `LOCAL`, `REMOTE_M3U` |
 | `config` | TEXT | JSON blob for type-specific config (e.g., SMB share) |
-| `providerSettings` | TEXT | JSON blob for per-provider preferences. Category filters are no longer kept here but per profile in `category_filters` (section 6); on upgrade they were copied to every profile and stripped from this JSON |
+| `providerSettings` | TEXT | JSON blob for per-provider preferences. Category filters are no longer kept here but per profile in `category_filters` (section 6); on upgrade they were copied to every profile and stripped from this JSON. Xtream: `extraLogins` lists the usernames of the source's extra logins (shared logins plan), written only by `ProviderRepository.saveSourceLogins`; a settings save keeps the stored list |
 | `createdAt` | INTEGER | Timestamp when created |
 | `lastUsedAt` | INTEGER | Timestamp of last access |
 | `isActive` | INTEGER | Boolean (0/1) if currently selected |
@@ -610,7 +610,7 @@ The application uses several specialized SharedPreferences files for internal st
 | `xmltv_cache_{providerId}` | `xmltv_epg_data_v2`, `xmltv_cache_timestamp_v2`, `xmltv_cache_index_generation_v2` | `XmltvEpgService`'s parsed-EPG cache (JSON), valid 12 h and only for the index build it was read from (`epg_index_metadata.indexed_at_ms`). Cleared after a sync that ingested one of the provider's sources, and by the guide's Refresh. |
 | `xtream_cache_{providerId}` | timestamps | Xtream catalogue fetch timestamps (`XtreamCacheKeys`, `XtreamContentManager`); `xtream_epg_prefs_purged` marks the one-time purge of the per-stream EPG blobs older builds kept here. `xtream_cache` (no id) is the legacy single-provider file. |
 | `category_filters` | `{providerId}_{profileId}` | Category filters (`CategoryFilters` JSON) of one profile on one provider, via `CategoryFiltersStore`. No key = no filters. A new profile copies the creating profile's keys; provider and profile deletion remove theirs. |
-| `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. |
+| `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. Xtream extra logins' passwords as `extra_password_<username>` beside the main `password`. |
 | `provider_creds_{id}_profile_{profileId}` | per-provider, per-profile | (Encrypted) A non-Default profile's own Jellyfin login: `username`, `password`, `jellyfin_token`, `jellyfin_user_id`. The Default profile uses `provider_creds_{id}` and `providers.username`. Only Jellyfin logins are per profile. |
 | `xtream_secure_credentials_{providerId}` | `url`, `username`, `password`, `auth_response`, `remember_me` | (Encrypted) Xtream login credentials and cached auth response, held by `AccountManager`, one file per provider. `xtream_secure_credentials` (no id) is the legacy pre-multi-provider file. |
 | `credential_store_health` | one key per encrypted file name | Plain flags, never secrets: an encrypted file that could not be decrypted (lost Keystore key) was reset, so a failing login can say why. Cleared when a login is saved again. |

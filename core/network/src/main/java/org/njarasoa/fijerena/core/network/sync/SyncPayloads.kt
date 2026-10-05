@@ -91,7 +91,11 @@ object SyncPayloads {
         }
     }
 
-    /** A provider. [password] is the shared login — for Jellyfin, the Default profile's. Phase 8 encrypts it. */
+    /**
+     * A provider. [password] is the shared login — for Jellyfin, the Default profile's. Phase 8
+     * encrypts it. [extraPasswords]: an Xtream source's extra logins' passwords by username (the
+     * usernames are in [providerSettings]); null from a version without extra logins.
+     */
     @Serializable
     data class Provider(
         val name: String,
@@ -101,12 +105,14 @@ object SyncPayloads {
         val config: String,
         val providerSettings: String,
         val password: String? = null,
+        val extraPasswords: Map<String, String>? = null,
     ) {
         companion object {
             fun of(
                 e: ProviderEntity,
                 password: String?,
-            ) = Provider(e.name, e.url, e.username, e.type, e.config, e.providerSettings, password)
+                extraPasswords: Map<String, String>,
+            ) = Provider(e.name, e.url, e.username, e.type, e.config, e.providerSettings, password, extraPasswords)
         }
     }
 

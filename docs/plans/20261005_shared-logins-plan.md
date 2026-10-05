@@ -1,6 +1,6 @@
 # Shared Logins Plan
 
-**Status:** In progress (written 2026-10-05). Phase 1 under way: storage, sync and same-panel check first, then the TV and mobile Edit Source sections in parallel. Phase 4 needs a second bears login.
+**Status:** In progress (written 2026-10-05). Phase 1 done (logins stored, synced and edited; not yet tried on a device, and the TV Edit Source focus walk needs re-recording). Phases 2–3 next; Phase 4 needs a second bears login.
 
 ## Goal
 
@@ -153,11 +153,31 @@ Phase 2 with a single login must behave exactly like today: no extra requests, s
    removing any login including the first, must just work. Hence per-login expiry, the picker
    skipping expired logins, Make main and removing the main login, all above.
 
+## Phase 1 notes (2026-10-05)
+
+- `SourceLogins` (`core:network/.../provider/SourceLogins.kt`): add, remove, make main as pure
+  functions. Also refuses a main login without a password on this device (`PasswordNeeded`):
+  removing the main login promotes the first extra login that has one, and Make main is refused
+  on one that doesn't (an imported login). Remove it and add it again to give it its password.
+- `ProviderRepository.getSourceLogins` / `saveSourceLogins` / `getExtraPasswords`;
+  `updateProviderSettings` keeps the stored `extraLogins`; `applyRemoteProvider` applies
+  `extraPasswords` (Xtream only, null keeps this device's). Copy To with the connection copies the
+  extra logins too.
+- `XtreamLoginCheck` (`core:network/.../xtream/`): `status` (`player_api.php` → active, expiry,
+  connections) for Phase 2 to reuse, and `samePanel`, which compares the stream ids of the first live
+  and the first VOD category, not the server name (bears answers under two domains).
+- `ExtraLoginsViewModel` (`core:ui`) serves both screens; `statusText` words a login's line the
+  same on TV and mobile. TV: `tv/.../provider/components/ProviderLoginsSection.kt`, between
+  Behaviour and Guide, buttons on a line under each row. Mobile:
+  `mobile/.../provider/components/ProviderLoginsSection.kt`, after the connection form. Both
+  reload the screen's username and password fields when the main login changes, so Save connection
+  can't write the old one back.
+
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | In progress: storage + sync (main), then TV and mobile screens (two lanes) | |
+| 1 | Done, built and unit-tested; not yet run on a device; `scripts/focus-walks/edit-source.txt` needs re-recording (Down from Enable Caching now reaches the Logins rows before Provides a guide) | see below |
 | 2 | Not started | |
 | 3 | Not started | |
 | 4 | Not started | |

@@ -27,6 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -80,6 +82,7 @@ import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderFormSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderGuideSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderLoginsSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
@@ -141,6 +144,7 @@ fun MobileAddProviderScreen(
     // Cache management state (edit mode only)
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
 
@@ -227,6 +231,23 @@ fun MobileAddProviderScreen(
                     }
                 }
                 loadedConnection = listOf(name, url, username, password, host, shareName)
+            }
+        }
+    }
+
+    // Make main / Remove in Logins changed the main login: reload the fields so Save doesn't put
+    // the old one back. Other unsaved edits (name, URL) stay.
+    val reloadMainLogin: () -> Unit = {
+        coroutineScope.launch {
+            providerRepo.getProviderById(editId)?.let { provider ->
+                val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
+                username = login.username
+                password = login.password
+                loadedConnection =
+                    loadedConnection.toMutableList().also {
+                        it[2] = login.username
+                        it[3] = login.password
+                    }
             }
         }
     }
@@ -332,6 +353,7 @@ fun MobileAddProviderScreen(
         }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -473,6 +495,14 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.weight(1f),
                     ) { Text(submitLabel) }
                 }
+            }
+
+            if (isEditMode && editedType == ProviderType.XTREAM) {
+                ProviderLoginsSection(
+                    providerId = editId,
+                    snackbarHostState = snackbarHostState,
+                    onMainLoginChanged = reloadMainLogin,
+                )
             }
 
             ProviderSettingsSection(

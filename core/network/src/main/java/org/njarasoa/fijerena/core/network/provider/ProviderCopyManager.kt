@@ -77,6 +77,8 @@ class ProviderCopyManager(
                     type = source.type,
                     config = source.config,
                 )
+                // The extra logins are part of the connection; a settings copy keeps the target's.
+                if (source.type == "XTREAM") providerRepo.saveSourceLogins(target.id, providerRepo.getSourceLogins(source))
                 connectionCopied = true
             }
 

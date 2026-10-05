@@ -122,7 +122,10 @@ class LocalRecords(
                     SyncRecord(
                         key,
                         v.hlc,
-                        payload = SyncPayloads.encode(SyncPayloads.Provider.of(entity, providers.getPassword(entity.id))),
+                        payload =
+                            SyncPayloads.encode(
+                                SyncPayloads.Provider.of(entity, providers.getPassword(entity.id), providers.getExtraPasswords(entity)),
+                            ),
                     )
                 }
             }
