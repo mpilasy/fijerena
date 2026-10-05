@@ -1,6 +1,6 @@
 # Icon Buttons Plan
 
-**Status:** In progress (written 2026-10-05). All four phases built; not yet seen on a device (focus walks and the look to check on the TV emulator).
+**Status:** Done on the emulators (2026-10-05) except three places not reached: live sync device rows (no other devices), the section-root button, the phone's guide-source rows. Walks `sources`, `edit-source`, `guide` and `details` (walk 1) pass; `live-tv-osd` differs only where its stream has no subtitles; `epg-management` not run (needs bearstv). Row icons push their neighbours when the label opens (no overlap); the Sources slots don't move.
 
 ## Goal
 
