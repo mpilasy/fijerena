@@ -16,6 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-10-04 | [Device info screen](./20261004_device-info-screen-plan.md) | Settings → About → Device info for everyone: app, device, memory, storage, display, decoders, audio passthrough, network, power, sync health | All three phases; not started |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
 
