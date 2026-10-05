@@ -2,6 +2,12 @@
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
@@ -56,6 +62,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,6 +90,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
@@ -765,7 +774,10 @@ fun TvPlayerControlsOverlay(
     }
 }
 
-/** One OSD button: icon and its label, always shown (LT4). */
+/**
+ * One OSD button: an icon, its label shown beside it while focused (icon-buttons plan; LT4 had it
+ * always on). [active] (subtitles on, a favourite) tints the resting container.
+ */
 @Composable
 private fun OsdButton(
     icon: ImageVector,
@@ -775,9 +787,10 @@ private fun OsdButton(
     active: Boolean = false,
     iconTint: Color = Color.Unspecified,
 ) {
+    var focused by remember { mutableStateOf(false) }
     CinemaButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.onFocusChanged { focused = it.isFocused }.semantics { contentDescription = label },
         colors =
             ButtonDefaults.colors(
                 containerColor =
@@ -791,10 +804,17 @@ private fun OsdButton(
                 focusedContentColor = CinemaBackground,
             ),
     ) {
-        // The label says what the button is; the icon needs no description of its own.
         Icon(imageVector = icon, contentDescription = null, tint = iconTint)
-        Spacer(modifier = Modifier.width(Spacing.xs))
-        Text(text = label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        AnimatedVisibility(
+            visible = focused,
+            enter = expandHorizontally(tween(CinemaAnimation.focusDurationMs)) + fadeIn(tween(CinemaAnimation.focusDurationMs)),
+            exit = shrinkHorizontally(tween(CinemaAnimation.focusDurationMs)) + fadeOut(tween(CinemaAnimation.focusDurationMs)),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(text = label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            }
+        }
     }
 }
 

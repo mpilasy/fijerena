@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -35,10 +36,8 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * An action-row button with an icon and a word (UX overhaul Part II Phase 6, F-MD-2): the icon
- * shows the state (filled star, check), the label says what the button is, so the row reads
- * without guessing at glyphs. Resting and focused colours match
- * [org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton].
+ * An action-row button: the icon shows the state (filled star, check), the label — shown while
+ * focused — says what the button is. Now a [TvIconAction] (docs/plans/20261005_icon-buttons-plan.md).
  */
 @Composable
 internal fun LabelledActionButton(
@@ -49,27 +48,14 @@ internal fun LabelledActionButton(
     iconTint: Color = CinemaTextPrimary,
     iconModifier: Modifier = Modifier,
 ) {
-    val scale = LocalUiScale.current
-    CinemaButton(
+    TvIconAction(
         onClick = onClick,
+        icon = icon,
+        label = label,
         modifier = modifier,
-        colors =
-            ButtonDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaAccentLight,
-            ),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)).then(iconModifier),
-        )
-        Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-        Text(text = label)
-    }
+        iconTint = iconTint,
+        iconModifier = iconModifier,
+    )
 }
 
 /**

@@ -1,6 +1,6 @@
 # Icon Buttons Plan
 
-**Status:** In progress (written 2026-10-05). Phase 1 under way.
+**Status:** In progress (written 2026-10-05). Phases 1–2 built, not yet seen on a device; Phases 3–4 next.
 
 ## Goal
 
@@ -82,7 +82,7 @@ NAVIGATION_GUIDE, AGENTS.md rule replacing "labelled slots") updated in the same
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | In progress | |
-| 2 | Not started | |
+| 1 | Done: `TvIconAction`, mobile `IconAction`, Edit Source Logins rows on both; focus walk `edit-source.txt` updated by hand; not yet seen on a device | 696bab1d (branch) |
+| 2 | Done: TV OSD buttons and details actions (`LabelledActionButton` now delegates to `TvIconAction`) show their label on focus; mobile player and details were already icons (Play and Category stay text, main actions); not yet seen on a device | |
 | 3 | Not started | |
 | 4 | Not started | |

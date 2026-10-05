@@ -112,7 +112,7 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 
 ### TV controls (D-pad)
 
-- **OK** opens the controls (never pauses): one row of labelled buttons. Live: Channels, Guide, Favorite, Subtitles, Audio, Quality (each when available), More → Stats. VOD: Play/Pause in the centre and the progress bar, then Chapters, Favorite, Subtitles, Audio, Quality, Next episode, More → Stats. They hide 15 s after the last key. Focus details: [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md#live-tv-preview--dock-back-stack) (the OSD).
+- **OK** opens the controls (never pauses): one row of icon buttons; the focused one shows its name. Live: Channels, Guide, Favorite, Subtitles, Audio, Quality (each when available), More → Stats. VOD: Play/Pause in the centre and the progress bar, then Chapters, Favorite, Subtitles, Audio, Quality, Next episode, More → Stats. They hide 15 s after the last key. Focus details: [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md#live-tv-preview--dock-back-stack) (the OSD).
 - **Up/Down** (Live TV) zap through the channel panel's list, with the controls up or not.
 - **Left/Right** (Live TV, controls hidden) open the channel panel: the preview's tabs and rows over the video; inside it Left/Right switch tabs (Recent ↔ Favourites in one press), OK on a row tunes it, Back closes it.
 - **Left/Right** (VOD, controls hidden) and **Rewind / Fast-forward** move a scrub cursor: 10 s per press, speeding up to about 1, 3, then 10 min per second while held; OK commits, Back cancels.

@@ -62,6 +62,7 @@ fun TvIconAction(
     enabled: Boolean = true,
     danger: Boolean = false,
     iconTint: Color? = null,
+    iconModifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     var focused by remember { mutableStateOf(false) }
@@ -112,7 +113,7 @@ fun TvIconAction(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (!enabled) CinemaTextDisabled else iconTint ?: androidx.tv.material3.LocalContentColor.current,
-                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)).then(iconModifier),
             )
             AnimatedVisibility(
                 visible = focused,
