@@ -1,6 +1,6 @@
 # Icon Buttons Plan
 
-**Status:** In progress (written 2026-10-05). Phases 1–2 built, not yet seen on a device; Phases 3–4 next.
+**Status:** In progress (written 2026-10-05). All four phases built; not yet seen on a device (focus walks and the look to check on the TV emulator).
 
 ## Goal
 
@@ -84,5 +84,5 @@ NAVIGATION_GUIDE, AGENTS.md rule replacing "labelled slots") updated in the same
 |---|---|---|
 | 1 | Done: `TvIconAction`, mobile `IconAction`, Edit Source Logins rows on both; focus walk `edit-source.txt` updated by hand; not yet seen on a device | 696bab1d (branch) |
 | 2 | Done: TV OSD buttons and details actions (`LabelledActionButton` now delegates to `TvIconAction`) show their label on focus; mobile player and details were already icons (Play and Category stay text, main actions); not yet seen on a device | |
-| 3 | Not started | |
-| 4 | Not started | |
+| 3 | Done: TV and mobile Sources rows (Use, Guide; icons at the end of fixed slots, so the focused name grows into the slot and nothing moves) and guide-source rows (Refresh, Edit, Auto-refresh, Delete); not yet seen on a device | 4058c3a1 (branch) |
+| 4 | Done: TV Guide header (Previous day, Now, Next day, Search, Refresh, whose icon turns while refreshing), category screen's TV Guide, Device info and Diagnostics headers, live sync device rows (TV Remove; mobile Stop, Remove); `LabelledActionButton` removed. Kept as text on purpose: EPG Management's toolbar with counts ("Refresh stale (3)"), Settings page actions (Export, Sync now, guide maintenance), the profile page footer, "Category: …" links, empty and error-state Refresh. Not yet seen on a device; focus walks read the label from the content description, to check on the emulator | 0e2ef944 (branch) |
