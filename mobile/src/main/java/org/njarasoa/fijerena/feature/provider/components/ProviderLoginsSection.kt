@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
 
 /**
@@ -132,17 +136,22 @@ fun ColumnScope.ProviderLoginsSection(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         )
                     }
-                    if (!row.isMain) {
-                        CinemaTextButton(
+                    if (!row.isMain && row.hasPassword) {
+                        IconAction(
                             onClick = { loginsViewModel.makeMain(row.username) },
+                            icon = Icons.Outlined.StarOutline,
+                            label = stringResource(R.string.provider_logins_make_main),
                             enabled = !busy,
-                        ) { Text(stringResource(R.string.provider_logins_make_main)) }
+                        )
                     }
                     if (rows.size > 1) {
-                        CinemaTextButton(
+                        IconAction(
                             onClick = { removeUsername = row.username },
+                            icon = Icons.Outlined.Delete,
+                            label = stringResource(R.string.provider_logins_remove),
                             enabled = !busy,
-                        ) { Text(stringResource(R.string.provider_logins_remove), color = CinemaError) }
+                            tint = CinemaError,
+                        )
                     }
                 }
             }

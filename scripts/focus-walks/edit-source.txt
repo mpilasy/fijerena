@@ -30,8 +30,12 @@ DOWN	m3u_plus
 LEFT	Save connection
 # Right comes back to the settings row it left.
 RIGHT	m3u_plus
-# P3/P4 Guide section, after Enable Caching: Provides a guide (Xtream), then Guide sources.
+# P3/P4 Guide section, after Enable Caching and the Logins section: Provides a guide (Xtream), then Guide sources.
 DOWN	Enable Caching / Enable caching for faster loading
+# Shared logins: the Logins section. With only the main login it is one focusable row (no
+# buttons), then Add login. With extra logins the rows' icons are the stops instead.
+DOWN	Main login
+DOWN	Add login
 DOWN	Provides a guide / This source's own guide (xmltv.php) is added automatically
 DOWN	Guide Sources
 # OK opens the source's guide sources (entry: its first row's toggle, or Add Guide Source when it

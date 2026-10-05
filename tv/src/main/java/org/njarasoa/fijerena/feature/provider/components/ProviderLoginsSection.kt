@@ -1,11 +1,17 @@
 package org.njarasoa.fijerena.feature.provider.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,6 +19,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -20,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -35,20 +43,23 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
+import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Logins, for an Xtream source being edited (docs/plans/20261005_shared-logins-plan.md, Phase 1):
- * the main login first (marked as current), then the extra ones playback shares, each a focusable
- * row with what the panel says about it. Under a row sit its labelled buttons, Make main (an extra
- * login with a password) and Remove (when the source has more than one login, after a
- * confirmation); then Add login, which opens a dialog and runs the same-panel check. Every change
+ * the main login first (marked as current), then the extra ones playback shares, each a row with
+ * what the panel says about it and its actions as icons on the right (docs/plans/20261005_icon-buttons-plan.md):
+ * Make main (an extra login with a password) and Remove (when the source has more than one login,
+ * after a confirmation); a lone login is a focusable row of its own. Then Add login, which opens a dialog and runs the same-panel check. Every change
  * applies at once. [onMainLoginChanged] gets the main username whenever it is known or changes, so
  * the screen's own login fields can follow it. Rows of [pane], the settings column of Edit Source.
  */
@@ -138,57 +149,91 @@ fun ProviderLoginsSection(
                 }
             }
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            // A no-op row so the login and its status take D-pad focus (Up/Down never skip content).
-            TvInputListItem(
-                selected = row.isMain,
-                onClick = {},
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .then(if (index == 0) Modifier.focusRequester(mainRowRequester) else Modifier)
-                        .paneItem(pane, "login:${row.username}"),
-                headlineContent = { Text(row.username) },
-                supportingContent = {
+            val showMakeMain = !row.isMain && row.hasPassword
+            val showRemove = rows.size > 1
+            val makeMainRequester = remember { FocusRequester() }
+            val loginText: @Composable () -> Unit = {
+                Column {
+                    Text(
+                        text = row.username,
+                        color = if (row.isMain) TvFocusTokens.currentText else CinemaTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Text(
                         text = ExtraLoginsViewModel.statusText(context, row),
                         style = bodySmall,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                },
-            )
-            val showMakeMain = !row.isMain && row.hasPassword
-            val showRemove = rows.size > 1
-            if (showMakeMain || showRemove) {
-                val makeMainRequester = remember { FocusRequester() }
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
+                }
+            }
+            if (!showMakeMain && !showRemove) {
+                // The only login: no buttons, so the row itself is the focus stop (Up/Down never
+                // skip content).
+                TvInputListItem(
+                    selected = row.isMain,
+                    onClick = {},
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (index == 0) Modifier.focusRequester(mainRowRequester) else Modifier)
+                            .paneItem(pane, "login:${row.username}"),
+                    headlineContent = { Text(row.username) },
+                    supportingContent = {
+                        Text(
+                            text = ExtraLoginsViewModel.statusText(context, row),
+                            style = bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    },
+                )
+            } else {
+                // The login on the left, its actions as icons on the right; the icons are the
+                // focus stops, the label shows on the focused one.
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .currentIndicator(active = row.isMain)
+                            .padding(start = Spacing.md.scaled(scale)),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(modifier = Modifier.weight(1f)) { loginText() }
+                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     if (showMakeMain) {
-                        CinemaSecondaryButton(
+                        TvIconAction(
                             onClick = {
                                 shownMessage = null
                                 expectMain = row.username
                                 expectGone = null
                                 viewModel.makeMain(row.username)
                             },
+                            icon = Icons.Outlined.StarOutline,
+                            label = stringResource(R.string.provider_logins_make_main),
                             enabled = !busy,
-                            text = stringResource(R.string.provider_logins_make_main),
                             modifier =
                                 Modifier
                                     .focusRequester(makeMainRequester)
                                     .paneItem(pane, "login_make_main:${row.username}")
                                     .rowNeighbours(right = if (showRemove) removeRequester else null),
                         )
+                        Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     }
                     if (showRemove) {
-                        ProviderDangerButton(
+                        TvIconAction(
                             onClick = {
                                 shownMessage = null
                                 removeTarget = row.username
                             },
-                            text = stringResource(R.string.provider_logins_remove),
+                            icon = Icons.Outlined.Delete,
+                            label = stringResource(R.string.provider_logins_remove),
+                            danger = true,
                             modifier =
                                 Modifier
                                     .focusRequester(removeRequester)
+                                    .then(if (index == 0) Modifier.focusRequester(mainRowRequester) else Modifier)
                                     .paneItem(pane, "login_remove:${row.username}")
                                     .rowNeighbours(left = if (showMakeMain) makeMainRequester else null),
                         )
