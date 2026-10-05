@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Remote M3U refresh
+**Release Date:** 2026-10-04
+
+- **A Remote M3U source follows its new URL at once, and Refresh re-downloads it:** changing a playlist's URL (here, or on another linked device) kept serving the old playlist for up to 6 hours, and Refresh categories / Refresh streams only re-read that copy. The cached playlist is now kept per URL, so a new URL is fetched straight away and the old copy deleted, and both Refresh buttons download the playlist again.
+
 ## Version: Playback capability errors
 **Release Date:** 2026-10-04
 

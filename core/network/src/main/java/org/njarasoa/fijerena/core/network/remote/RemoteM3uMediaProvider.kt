@@ -39,15 +39,28 @@ class RemoteM3uMediaProvider(
             supportsProgressSync = false,
         )
 
-    private val cacheFile = File(context.cacheDir, "remote_m3u_$providerId.m3u")
+    // Named after the URL too: a source whose URL changed (edited here or on another device) must
+    // not keep serving the old playlist for the rest of CACHE_TTL_MS.
+    private val cacheFile = File(context.cacheDir, "remote_m3u_${providerId}_${m3uUrl.hashCode()}.m3u")
 
     // Callers (e.g. CategoryViewModel.init via viewModelScope.launch, no dispatcher of its own)
     // don't reliably run this on a background thread, and the raw HttpURLConnection I/O below
     // would otherwise throw NetworkOnMainThreadException on Main.
-    override suspend fun connect(): Result<Unit> =
+    override suspend fun connect(): Result<Unit> = load(forceDownload = false)
+
+    /** Refresh: download the playlist again even when the cached copy is fresh. */
+    override suspend fun refreshCatalog(): Result<Unit> = load(forceDownload = true)
+
+    private suspend fun load(forceDownload: Boolean): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                val file = loadM3uContent()
+                val file =
+                    if (forceDownload) {
+                        downloadWithRetries()
+                        cacheFile
+                    } else {
+                        loadM3uContent()
+                    }
                 val (cats, its) =
                     file.bufferedReader().use { reader ->
                         M3uParser.processEntries(reader, ID_PREFIX)
@@ -133,6 +146,7 @@ class RemoteM3uMediaProvider(
                         tmpFile.copyTo(cacheFile, overwrite = true)
                         tmpFile.delete()
                     }
+                    deleteOtherCachedPlaylists()
                     return
                 } finally {
                     if (tmpFile.exists()) tmpFile.delete()
@@ -157,5 +171,15 @@ class RemoteM3uMediaProvider(
         }
 
         throw lastError ?: Exception("Failed to download M3U playlist")
+    }
+
+    /** This source's playlists cached under an earlier URL, and the pre-URL-keyed name. */
+    private fun deleteOtherCachedPlaylists() {
+        val legacy = "remote_m3u_$providerId.m3u"
+        val sameSource = "remote_m3u_${providerId}_"
+        context.cacheDir
+            .listFiles { file ->
+                file != cacheFile && file.name.endsWith(".m3u") && (file.name == legacy || file.name.startsWith(sameSource))
+            }?.forEach { it.delete() }
     }
 }

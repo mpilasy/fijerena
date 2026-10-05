@@ -49,6 +49,13 @@ interface MediaProvider {
      */
     suspend fun invalidateCachedDetail(itemId: String) {}
 
+    /**
+     * Fetches the whole catalogue again, bypassing any local copy — for providers that load it in
+     * one piece (a remote M3U playlist), where Refresh would otherwise re-serve the copy. No-op
+     * for providers whose lists are fetched per call.
+     */
+    suspend fun refreshCatalog(): Result<Unit> = Result.success(Unit)
+
     suspend fun resolvePlayableStream(
         itemId: String,
         contentType: String,

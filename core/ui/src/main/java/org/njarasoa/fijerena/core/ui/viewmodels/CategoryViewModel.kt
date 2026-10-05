@@ -799,6 +799,8 @@ class CategoryViewModel(
         // Also refresh from network in the background
         viewModelScope.launchGuarded("CategoryViewModel.refreshCategories") {
             val repo = awaitRepository()
+            // A remote M3U loads its playlist once; without this Refresh re-served that copy.
+            repo.refreshCatalog()
             val result = repo.getFilteredCategories(contentType)
             result.onSuccess { fetchedCategories ->
                 categories = rebuildVirtualCategories(repo, fetchedCategories)
@@ -823,6 +825,7 @@ class CategoryViewModel(
         nowPlayingJob?.cancel()
         loadStreamsJob =
             viewModelScope.launchGuarded("CategoryViewModel.refreshStreams") {
+                awaitRepository().refreshCatalog()
                 loadStreamsInternal(categoryId, isRetryEnabled = false)
             }
     }

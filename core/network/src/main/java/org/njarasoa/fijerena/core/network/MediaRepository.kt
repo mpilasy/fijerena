@@ -593,6 +593,9 @@ class MediaRepository(
         provider?.getAllItems(contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
 
+    /** Re-fetches a catalogue the provider loads in one piece (remote M3U) — see MediaProvider. */
+    suspend fun refreshCatalog(): kotlin.Result<Unit> = provider?.refreshCatalog() ?: kotlin.Result.success(Unit)
+
     /** Forces the next detail read for [itemId] to go back to the provider — see MediaProvider. */
     suspend fun invalidateCachedDetail(itemId: String) {
         provider?.invalidateCachedDetail(itemId)
