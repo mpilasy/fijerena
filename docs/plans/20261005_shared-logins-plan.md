@@ -1,6 +1,6 @@
 # Shared Logins Plan
 
-**Status:** In progress (written 2026-10-05). Phase 1 done (logins stored, synced and edited; not yet tried on a device, and the TV Edit Source focus walk needs re-recording). Phases 2–3 next; Phase 4 needs a second bears login.
+**Status:** In progress (written 2026-10-05). Phases 1–3 done and checked on the emulators against the jellyxtream bridge's one-stream test mode (`tools/jellyfin-xtream/xtream_bridge.py`, `BRIDGE_TEST_PASSWORD`, `BRIDGE_MAX_CONNECTIONS`). Phase 4 (real bears, two devices) waits for the second bears login.
 
 ## Goal
 
@@ -173,11 +173,20 @@ Phase 2 with a single login must behave exactly like today: no extra requests, s
   reload the screen's username and password fields when the main login changes, so Save connection
   can't write the old one back.
 
+## Testing without a second account (2026-10-05)
+
+The bridge's test mode stands in for a one-stream panel: `<user>+N` / the test password is an extra
+login on the same catalogue, each username holds one stream for `BRIDGE_HOLD_SECONDS` (it only
+redirects, so it can't see a stream stop), a stream over the limit gets HTTP 458, a reopen within
+5 s counts as the same stream (mkv index, resume seek), and `BRIDGE_HIDE_CONS=1` hides the counts
+so the refusal path runs. What it can't show: bears' 5-minute lock for a different public address
+(460) and its real timings — Phase 4.
+
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 | Done, built and unit-tested; not yet run on a device; `scripts/focus-walks/edit-source.txt` needs re-recording (Down from Enable Caching now reaches the Logins rows before Provides a guide) | db5f1c9c |
-| 2 | Not started | |
-| 3 | Not started | |
+| 1 | Done; checked on both emulators 2026-10-05 (add, duplicate and wrong-password refusals, Make main, Remove); focus walk updated by hand for the Logins rows | db5f1c9c |
+| 2 | Done; checked on both emulators against the bridge's test mode: with `tahiry` held, the phone played on `tahiry+2`, Stats "Login 2 of 3" | (branch) |
+| 3 | Done; checked: a 458 moved the stream to the next login in ~0.3 s with no message; all three held gave "All 3 logins … in use". Found and fixed: after an all-busy moment the refused logins were skipped for 6 min even once free; a new playback now asks every login and only puts those last | (branch) |
 | 4 | Not started | |
