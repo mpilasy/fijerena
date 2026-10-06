@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.components
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 
 // Autoplay next episode ("Play next episode automatically", per profile). Near the end of an
@@ -66,6 +67,15 @@ fun upNextOnEnd(
 
 /** "S2:E3" for the compact up-next card; "E3" when the season is unknown. */
 fun upNextCode(episode: EpisodeItem): String = episode.seasonNumber?.let { "S$it:E${episode.episodeNumber}" } ?: "E${episode.episodeNumber}"
+
+/** The episode's own title for the card's details panel ([playerEpisodeName]); null when it has none. */
+fun upNextTitle(episode: EpisodeItem): String? = playerEpisodeName(episode.title).takeIf { it.isNotBlank() }
+
+/** The episode's synopsis for the card's details panel; null when the provider gave none. */
+fun upNextPlot(episode: EpisodeItem): String? =
+    episode.metadata.plot
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
 
 /** Suspends until the screen is at least STARTED — the next episode never starts unseen. */
 suspend fun Lifecycle.awaitStarted() {

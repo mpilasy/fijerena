@@ -6,6 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 
 /** Autoplay next episode: when the "Up next" card shows, and what an episode's end does. */
 class UpNextTest {
@@ -82,5 +83,14 @@ class UpNextTest {
     fun `the card names season and episode`() {
         assertEquals("S1:E2", upNextCode(next))
         assertEquals("E2", upNextCode(next.copy(seasonNumber = null)))
+    }
+
+    @Test
+    fun `details panel - the episode's own title and synopsis, null when missing`() {
+        assertEquals("The Pilot", upNextTitle(next.copy(title = "EN - Some Show - S01E02 - The Pilot")))
+        assertNull(upNextTitle(next.copy(title = "EN - Some Show - S01E02")))
+        assertNull(upNextPlot(next))
+        assertNull(upNextPlot(next.copy(metadata = MediaMetadata(plot = "  "))))
+        assertEquals("A plot.", upNextPlot(next.copy(metadata = MediaMetadata(plot = " A plot. "))))
     }
 }
