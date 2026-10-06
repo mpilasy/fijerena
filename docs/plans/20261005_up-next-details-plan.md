@@ -29,5 +29,5 @@ few seconds.
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | `upNextTitle` / `upNextPlot` in `UpNext.kt` with tests; details panel in `TvUpNextOverlay` and `MobileUpNextOverlay`; FEATURES and RELEASE_NOTES | Done |
+| 1 | `upNextTitle` / `upNextPlot` in `UpNext.kt` with tests; details panel in `TvUpNextOverlay` and `MobileUpNextOverlay`; FEATURES and RELEASE_NOTES | Done (`3bc48b18`) |
 | 2 | Check on the emulators: TV (focus on/off the card), mobile (portrait and landscape), an episode with and without a synopsis | Not started — needs the user's go-ahead to install on the emulators |
