@@ -1,6 +1,6 @@
 # Up next details panel
 
-**Status:** Done — checked on both emulators 2026-10-06 (phone in landscape only).
+**Status:** Done — checked on both emulators and on bears 2026-10-06.
 
 ## Goal
 
@@ -43,7 +43,9 @@ few seconds.
   that case was not reached.
 - **Phone (jellyxtream, atr), landscape:** Breaking Bad S1E2 with the controls up: the card below
   the clock, the panel under it with "...And the Bag's in the River" and two lines of synopsis
-  cut with an ellipsis. S1E1 ended into S1E2 by itself. Portrait not checked.
+  cut with an ellipsis. S1E1 ended into S1E2 by itself. No portrait case: the full-screen player
+  is locked to landscape (`SCREEN_ORIENTATION_SENSOR_LANDSCAPE`, MobilePlayerScreen), and the
+  portrait dock is Live TV only, which never has a next episode.
 - The bridge was still in its shared-logins test mode (1 connection, held 90 s), which counts
   every stream request, a seek included, as a new connection: every seek hit HTTP 458 for
   about 90 s. Once on the phone the retry resumed from the old position rather than the seek
