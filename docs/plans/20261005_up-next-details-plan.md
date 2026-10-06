@@ -44,6 +44,12 @@ few seconds.
 - **Phone (jellyxtream, atr), landscape:** Breaking Bad S1E2 with the controls up: the card below
   the clock, the panel under it with "...And the Bag's in the River" and two lines of synopsis
   cut with an ellipsis. S1E1 ended into S1E2 by itself. Portrait not checked.
-- The bridge was in its shared-logins test mode (1 connection, held 90 s), so every seek hit
-  HTTP 458 for about 90 s first. Once on the phone the retry resumed from the old position
-  rather than the seek target; not looked into, test-mode only so far.
+- The bridge was still in its shared-logins test mode (1 connection, held 90 s), which counts
+  every stream request, a seek included, as a new connection: every seek hit HTTP 458 for
+  about 90 s. Once on the phone the retry resumed from the old position rather than the seek
+  target; not looked into, test-mode only. The bridge was restarted in normal mode afterwards.
+- **TV on bears (Kid, "DE - Breaking Bad (2008)"):** three seeks of +5 min, 12 s apart, all
+  played on with no refusal (a real panel sees the old connection close). At the end of S1E1
+  the panel gave "Cat's in the Bag..." and three lines of synopsis cut with an ellipsis; S1E2
+  then started by itself. With the controls up when the card appeared, Down and Left from
+  Play now stayed in the card and the controls hid, so the focus-off case is still not reached.
