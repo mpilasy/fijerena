@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-06
 
 - **One empty guide download no longer turns a source's guide off:** a source's own guide (`xmltv.php`) that came back with no channels once — bears throttling, a cut-off reply — switched "Provides a guide" off for good, and the guide quietly stopped showing and refreshing. Now that only happens to a guide that never had channels; otherwise the old guide stays, the guide source shows "The guide came back empty (no channels)", and the next refresh tries again. → Phase 1.
+- **Guide sources have an on/off switch:** each guide source's card has a switch where the checkbox was. The checkbox only selected the source for "Refresh (n)" / "Delete (n)" and was easy to take for an on/off control; it is gone, with those two buttons. For a source's own guide the switch is the same as Provides a guide in Edit Source. → Phase 2.
 
 ## Version: Shared logins
 **Release Date:** 2026-10-05

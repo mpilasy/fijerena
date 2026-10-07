@@ -93,7 +93,7 @@ Programme-title search across the indexed XMLTV guide, from Home's book icon (wh
 
 ## Guide Sources (EPG management)
 
-Each source has its own XMLTV guide sources: Edit Source → Guide sources, Sources → a source's Guide button, or Search the guide's Guide sources button (the source in use). Add, edit and delete XMLTV URLs; refresh all, the selected, stale or failed ones; cancel a running or queued refresh.
+Each source has its own XMLTV guide sources: Edit Source → Guide sources, Sources → a source's Guide button, or Search the guide's Guide sources button (the source in use). Add, edit and delete XMLTV URLs; turn each one on or off with the switch on its card (a guide source that is off is kept with its data but not used, searched or refreshed; for a source's own guide, `<host> (Bulk)`, the switch is the same setting as Provides a guide in Edit Source, set as the viewer's choice); refresh one, the stale or the failed ones; cancel a running or queued refresh.
 
 - Per guide source: label and timezone offset (applied while parsing); its auto-refresh ("Refreshes daily", "Auto-refresh off"); status dot — green fresh, yellow older than the refresh interval, red error, grey disabled; download % and ingest % with channel/programme counts.
 - Download → parse into SQLite → delete: TV and other fixed devices stream from the network straight into the database; phones download to the cache directory first. Up to 3 downloads at once on mobile, 2 on TV; 2 parallel ingest workers.

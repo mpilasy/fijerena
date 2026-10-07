@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.epg
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -65,7 +66,6 @@ fun MobileEpgManagementScreen(
 
     // null until the first emission, so the empty state doesn't flash while the list loads.
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = null)
-    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
@@ -94,7 +94,6 @@ fun MobileEpgManagementScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
-    var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
     var intervalSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
 
     Scaffold(
@@ -128,58 +127,27 @@ fun MobileEpgManagementScreen(
                 contentPadding = PaddingValues(CinemaSpacing.md),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
-                // Bulk actions over this list
-                if (staleSourceCount > 0 || failedSourceCount > 0 || selectedIds.isNotEmpty()) {
+                // Refresh the stale or failed sources of this list
+                if (staleSourceCount > 0 || failedSourceCount > 0) {
                     item {
-                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                            if (selectedIds.isNotEmpty()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                        ) {
+                            if (staleSourceCount > 0) {
+                                CinemaButton(
+                                    onClick = { viewModel.refreshStale() },
+                                    modifier = Modifier.weight(1f),
                                 ) {
-                                    CinemaButton(
-                                        onClick = {
-                                            viewModel.refreshSelected(selectedIds)
-                                            viewModel.clearSelection()
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        Icon(CinemaIcons.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                        Text(stringResource(R.string.epg_refresh_selected_btn, selectedIds.size))
-                                    }
-
-                                    CinemaButton(
-                                        onClick = { deleteSelectedIds = selectedIds },
-                                        modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                                    ) {
-                                        Icon(CinemaIcons.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                        Text(stringResource(R.string.epg_delete_selected_btn, selectedIds.size))
-                                    }
+                                    Text(stringResource(R.string.epg_refresh_stale_btn, staleSourceCount))
                                 }
                             }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                            ) {
-                                if (staleSourceCount > 0) {
-                                    CinemaButton(
-                                        onClick = { viewModel.refreshStale() },
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        Text(stringResource(R.string.epg_refresh_stale_btn, staleSourceCount))
-                                    }
-                                }
-                                if (failedSourceCount > 0) {
-                                    CinemaButton(
-                                        onClick = { viewModel.refreshFailed() },
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        Text(stringResource(R.string.epg_retry_failed_btn, failedSourceCount))
-                                    }
+                            if (failedSourceCount > 0) {
+                                CinemaButton(
+                                    onClick = { viewModel.refreshFailed() },
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(stringResource(R.string.epg_retry_failed_btn, failedSourceCount))
                                 }
                             }
                         }
@@ -208,7 +176,6 @@ fun MobileEpgManagementScreen(
                 }
 
                 items(sources.orEmpty(), key = { it.id }) { source ->
-                    val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
                     val activeProgress =
@@ -225,11 +192,10 @@ fun MobileEpgManagementScreen(
 
                     EpgSourceCard(
                         source = source,
-                        isSelected = isSelected,
                         latestProgrammeTime = latestTime,
                         activeProgress = activeProgress,
                         wasUnchanged = wasUnchanged,
-                        isOwnGuideOff = !source.enabled && provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true,
+                        isOwnGuide = provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs(source),
                         refreshSummary = EpgManagementViewModel.refreshIntervalSummary(viewModel.refreshIntervalHours(source)).asString(),
@@ -237,7 +203,7 @@ fun MobileEpgManagementScreen(
                         onAutoRefresh = { intervalSource = source },
                         onEdit = { editingSource = source },
                         onDelete = { viewModel.deleteSource(source.id) },
-                        onToggleSelection = { viewModel.toggleSelection(source.id) },
+                        onEnabledChange = { viewModel.setSourceEnabled(source, it) },
                     )
                 }
             }
@@ -282,26 +248,6 @@ fun MobileEpgManagementScreen(
             onDismiss = { intervalSource = null },
         )
     }
-
-    deleteSelectedIds?.let { idsToDelete ->
-        CinemaAlertDialog(
-            onDismissRequest = { deleteSelectedIds = null },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        viewModel.deleteSelected(idsToDelete)
-                        deleteSelectedIds = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                ) { Text(stringResource(R.string.epg_delete_sources_count_btn, idsToDelete.size)) }
-            },
-            dismissButton = {
-                CinemaDialogTextButton(onClick = { deleteSelectedIds = null }) { Text(stringResource(R.string.common_cancel)) }
-            },
-            title = { Text(stringResource(R.string.epg_delete_selected_confirm_title)) },
-            text = { Text(stringResource(R.string.epg_delete_selected_confirm_message, idsToDelete.size)) },
-        )
-    }
 }
 
 @Composable
@@ -319,12 +265,11 @@ internal fun localizedEpgPhase(phase: String): String =
 @Composable
 private fun EpgSourceCard(
     source: EpgSourceEntity,
-    isSelected: Boolean,
     latestProgrammeTime: Long,
     activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
     wasUnchanged: Boolean,
-    /** The source's own guide, disabled by "Provides a guide" (Edit Source). */
-    isOwnGuideOff: Boolean,
+    /** The source's own guide, whose switch is "Provides a guide" (Edit Source). */
+    isOwnGuide: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
     refreshSummary: String,
@@ -332,11 +277,11 @@ private fun EpgSourceCard(
     onAutoRefresh: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggleSelection: () -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    GlassPanel(modifier = Modifier.clickable { onToggleSelection() }) {
+    GlassPanel {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -348,9 +293,11 @@ private fun EpgSourceCard(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = { onToggleSelection() },
+                    val useLabel = stringResource(R.string.epg_source_use_label)
+                    Switch(
+                        checked = source.enabled,
+                        onCheckedChange = onEnabledChange,
+                        modifier = Modifier.semantics { contentDescription = useLabel },
                     )
 
                     StatusIndicator(source, nowMs, staleThresholdMs)
@@ -367,9 +314,9 @@ private fun EpgSourceCard(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        if (isOwnGuideOff) {
+                        if (isOwnGuide) {
                             Text(
-                                text = stringResource(R.string.epg_source_own_guide_off),
+                                text = stringResource(R.string.epg_source_own_guide_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             )

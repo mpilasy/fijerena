@@ -24,6 +24,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
@@ -31,6 +32,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.UiText
@@ -88,9 +90,6 @@ class EpgManagementViewModel(
             .getLatestStats()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
-    val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
-
     // Flow that emits latest programme end times for all sources. Keyed off the set of source
     // IDs, not the full `sources` list: during an active sync, `sources` re-emits on every
     // progress field update (lastIngestedAtMs, lastError, ...), which used to restart this
@@ -122,17 +121,27 @@ class EpgManagementViewModel(
     fun refreshIntervalHours(source: EpgSourceEntity): Int =
         EpgRefreshSchedule.intervalHours(source, EpgRefreshSchedule.legacyIntervalHours(appSettings))
 
-    fun toggleSelection(id: Long) {
-        _selectedIds.value =
-            if (_selectedIds.value.contains(id)) {
-                _selectedIds.value - id
-            } else {
-                _selectedIds.value + id
+    /**
+     * The card's on/off switch. A source's own guide ([AutoXmltvSources.isAutoXmltvSource]) follows
+     * "Provides a guide", so the switch sets that, as the viewer's choice, exactly as Edit Source
+     * does; any other guide source is turned on or off by itself.
+     */
+    fun setSourceEnabled(
+        source: EpgSourceEntity,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.setSourceEnabled") {
+            withContext(Dispatchers.IO) {
+                val repository = ProviderRepository(context)
+                val provider = repository.getProviderById(source.providerId)
+                if (provider != null && AutoXmltvSources.isAutoXmltvSource(source, provider.url)) {
+                    repository.setProvidesGuide(provider.id, enabled, byUser = true)
+                    AutoXmltvSources.reconcileStored(context, provider.id)
+                } else {
+                    settingsDb().epgSourceDao().updateSource(source.copy(enabled = enabled))
+                }
             }
-    }
-
-    fun clearSelection() {
-        _selectedIds.value = emptySet()
+        }
     }
 
     /**
@@ -293,20 +302,6 @@ class EpgManagementViewModel(
         }
     }
 
-    fun deleteSelected(selectedIds: Set<Long>) {
-        if (selectedIds.isEmpty()) return
-        viewModelScope.launchGuarded("EpgManagementViewModel.deleteSelected") {
-            withContext(Dispatchers.IO) {
-                val ids = selectedIds.toList()
-                settingsDb().epgSourceDao().deleteSources(ids)
-                indexDb().epgIndexDao().deleteBySourceIds(ids)
-                refreshDbStats()
-            }
-            _selectedIds.value = emptySet()
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_deleted_sources, selectedIds.size))
-        }
-    }
-
     fun refreshStale() {
         val taskId = EpgFileManager.refreshStaleTaskId(providerId)
         val queued = RefreshQueue.queuedTaskIds.value
@@ -398,44 +393,6 @@ class EpgManagementViewModel(
                 },
             )
         }
-    }
-
-    fun refreshSelected(selectedIds: Set<Long>) {
-        val taskId = EpgFileManager.refreshSelectedTaskId(providerId)
-        val queued = RefreshQueue.queuedTaskIds.value
-        if (queued.contains(taskId)) {
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
-            return
-        }
-
-        // Copy set to avoid concurrent modification issues
-        val idsToRefresh = selectedIds.toSet()
-        _taskSourceIds.value += (taskId to idsToRefresh)
-
-        epgFileManager.launchRefreshSelected(
-            providerId = providerId,
-            selectedIds = idsToRefresh,
-            onComplete = {
-                refreshDbStats()
-                _taskSourceIds.value -= taskId
-            },
-            onCellularConfirm = {
-                suspendCancellableCoroutine { cont ->
-                    _cellularDialog.value =
-                        CellularConfirmDialog.RefreshStale(
-                            onConfirm = {
-                                _cellularDialog.value = CellularConfirmDialog.Hidden
-                                if (cont.isActive) cont.resume(true)
-                            },
-                            onDismiss = {
-                                _cellularDialog.value = CellularConfirmDialog.Hidden
-                                _taskSourceIds.value -= taskId
-                                if (cont.isActive) cont.resume(false)
-                            },
-                        )
-                }
-            },
-        )
     }
 
     fun refreshSource(sourceId: Long) {

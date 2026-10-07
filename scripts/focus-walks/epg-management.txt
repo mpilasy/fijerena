@@ -4,17 +4,18 @@
 # sources; title "Guide sources · bearstv". That is 4 entries above Home, so the title row ends in the
 # section-root button "Settings" (P6). Opened from the Sources list's Guide it is 3 deep: no button,
 # and the walk's last UP stays on Add.
-# Entry focus is the first guide source's selection toggle ("Not selected"); with no guide
+# Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
 # source it is "Add Guide Source" under "No guide sources configured". No System Status or
-# Maintenance here (they are in Settings). Each row: the toggle, then Refresh / Edit /
+# Maintenance here (they are in Settings). Each row: the switch, then Refresh / Edit /
 # Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
 # the third its auto-refresh ("Refreshes daily", "Auto-refresh off").
 # Never press OK on Delete.
-# Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b), re-recorded 2026-10-04.
-@start Not selected
-# Up from the first row reaches Add and the bulk actions above the list.
+# Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b), re-recorded 2026-10-04;
+# selection toggle replaced by the on/off switch 2026-10-06 (guide on/off clarity, Phase 2).
+@start Use this guide
+# Up from the first row reaches Add and the stale/failed refresh buttons above the list.
 UP	Add Guide Source
-DOWN	Not selected
+DOWN	Use this guide
 DOWN	Refresh
 RIGHT	Edit
 RIGHT	Auto-refresh
@@ -26,9 +27,9 @@ CENTER	Weekly
 LEFT	Auto-refresh
 LEFT	Edit
 LEFT	Refresh
-# One guide source only: Down from its last row stays put, Up goes back to its toggle, then Add.
+# One guide source only: Down from its last row stays put, Up goes back to its switch, then Add.
 DOWN	Refresh
-UP	Not selected
+UP	Use this guide
 # Up from Add reaches the section-root button at the end of the title row (P6). OK on it would pop
 # back to Settings, focus on Manage sources; not pressed here.
 UP	Add Guide Source

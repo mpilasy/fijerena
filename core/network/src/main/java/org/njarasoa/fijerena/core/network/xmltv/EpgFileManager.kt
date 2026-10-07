@@ -94,8 +94,6 @@ class EpgFileManager private constructor(
 
         fun refreshFailedTaskId(providerId: Long): String = "epg_refresh_failed_$providerId"
 
-        fun refreshSelectedTaskId(providerId: Long): String = "epg_refresh_selected_$providerId"
-
         private const val RETRY_DELAY_MS = 5000L
 
         // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
@@ -611,26 +609,6 @@ class EpgFileManager private constructor(
             val failedSources = sourceDao.getFailedSources(providerId)
             if (failedSources.isNotEmpty()) {
                 processAllSourcesInternal(failedSources)
-            } else {
-                if (_state.value is MultiSourceState.Pending) {
-                    _state.value = MultiSourceState.Idle
-                }
-            }
-        }
-    }
-
-    fun launchRefreshSelected(
-        providerId: Long,
-        selectedIds: Set<Long>,
-        onComplete: (suspend () -> Unit)? = null,
-        onCellularConfirm: (suspend () -> Boolean)? = null,
-    ) {
-        launchGenericTask(refreshSelectedTaskId(providerId), providerId, onComplete, onCellularConfirm) {
-            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val selectedSources =
-                sourceDao.getAllSourcesOnce().filter { it.id in selectedIds && it.providerId == providerId }
-            if (selectedSources.isNotEmpty()) {
-                processAllSourcesInternal(selectedSources)
             } else {
                 if (_state.value is MultiSourceState.Pending) {
                     _state.value = MultiSourceState.Idle

@@ -16,12 +16,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Switch
+import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.ToggleableSurfaceDefaults
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
@@ -33,9 +37,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -83,7 +89,6 @@ fun TvEpgManagementScreen(
     // null until the first emission, so the empty state doesn't flash (or take focus) while the
     // list loads.
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = null)
-    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
@@ -110,7 +115,6 @@ fun TvEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
-    var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     val scale = LocalUiScale.current
     val sourceList = sources.orEmpty()
@@ -214,7 +218,7 @@ fun TvEpgManagementScreen(
                         }
                     }
                 } else if (sources != null) {
-                    // Add, and the bulk actions over this list.
+                    // Add, and refreshing the stale or failed sources of this list.
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -225,21 +229,6 @@ fun TvEpgManagementScreen(
                                 text = stringResource(R.string.epg_add_source),
                                 modifier = Modifier.focusRequester(addFocus),
                             )
-
-                            if (selectedIds.isNotEmpty()) {
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        viewModel.refreshSelected(selectedIds)
-                                        viewModel.clearSelection()
-                                    },
-                                    text = stringResource(R.string.epg_refresh_selected_btn, selectedIds.size),
-                                )
-
-                                CinemaDangerButton(
-                                    onClick = { deleteSelectedIds = selectedIds },
-                                    text = stringResource(R.string.epg_delete_selected_btn, selectedIds.size),
-                                )
-                            }
 
                             if (staleSourceCount > 0) {
                                 CinemaSecondaryButton(
@@ -259,7 +248,6 @@ fun TvEpgManagementScreen(
                 }
 
                 items(sourceList, key = { it.id }, contentType = { "source" }) { source ->
-                    val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
                     val activeProgress =
@@ -284,11 +272,14 @@ fun TvEpgManagementScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                             ) {
+                                // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
+                                val useLabel = stringResource(R.string.epg_source_use_label)
                                 androidx.tv.material3.Surface(
-                                    checked = isSelected,
-                                    onCheckedChange = { viewModel.toggleSelection(source.id) },
+                                    checked = source.enabled,
+                                    onCheckedChange = { viewModel.setSourceEnabled(source, it) },
                                     modifier =
-                                        if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier,
+                                        (if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier)
+                                            .semantics { contentDescription = useLabel },
                                     // P5: checked keeps the resting container and shows the
                                     // check glyph in the current colour; only focus lifts it.
                                     colors =
@@ -322,20 +313,19 @@ fun TvEpgManagementScreen(
                                     shape = ToggleableSurfaceDefaults.shape(shape = CircleShape),
                                 ) {
                                     Box(
-                                        modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
+                                        modifier = Modifier.padding(Spacing.xs.scaled(scale)),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        Icon(
-                                            imageVector = if (isSelected) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                            contentDescription =
-                                                if (isSelected) {
-                                                    stringResource(
-                                                        R.string.epg_source_selected_description,
-                                                    )
-                                                } else {
-                                                    stringResource(R.string.epg_source_not_selected_description)
-                                                },
-                                            modifier = Modifier.size(Spacing.lg.scaled(scale)),
+                                        Switch(
+                                            checked = source.enabled,
+                                            onCheckedChange = null,
+                                            colors =
+                                                SwitchDefaults.colors(
+                                                    checkedThumbColor = CinemaAccent,
+                                                    checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                                                    uncheckedThumbColor = CinemaTextSecondary,
+                                                    uncheckedTrackColor = CinemaSurfaceVariant,
+                                                ),
                                         )
                                     }
                                 }
@@ -354,10 +344,10 @@ fun TvEpgManagementScreen(
                                         maxLines = 1,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
-                                    // The source's own guide, disabled by "Provides a guide" (Edit Source).
-                                    if (!source.enabled && provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true) {
+                                    // The source's own guide, whose switch is "Provides a guide" (Edit Source).
+                                    if (provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true) {
                                         Text(
-                                            text = stringResource(R.string.epg_source_own_guide_off),
+                                            text = stringResource(R.string.epg_source_own_guide_hint),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                         )
@@ -565,40 +555,6 @@ fun TvEpgManagementScreen(
                             source.url
                         },
                     ),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                )
-            },
-            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
-        )
-    }
-
-    deleteSelectedIds?.let { idsToDelete ->
-        CinemaAlertDialog(
-            onDismissRequest = { deleteSelectedIds = null },
-            confirmButton = {
-                CinemaDangerButton(
-                    onClick = {
-                        viewModel.deleteSelected(idsToDelete)
-                        deleteSelectedIds = null
-                    },
-                    text = stringResource(R.string.epg_delete_sources_count_btn, idsToDelete.size),
-                )
-            },
-            dismissButton = {
-                CinemaSecondaryButton(
-                    onClick = { deleteSelectedIds = null },
-                    text = stringResource(R.string.common_cancel),
-                )
-            },
-            title = {
-                Text(
-                    stringResource(R.string.epg_delete_selected_confirm_title),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                )
-            },
-            text = {
-                Text(
-                    stringResource(R.string.epg_delete_selected_confirm_message, idsToDelete.size),
                     color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
                 )
             },
