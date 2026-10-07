@@ -8,6 +8,7 @@
 - **Home opens on Continue Watching:** with something to resume, TV home starts on its first card. Moving up to the tiles and back down returns to the card you were on, and up from the cards returns to the tile you were on. → Phase 3.
 - **Your channels on TV home:** a Channels row under Continue Watching holds the last channel you watched, your favourite channels and recent ones, with what's on now and how far in when the guide has the channel. OK opens the channel straight away; changing channel in full screen goes through your favourites (from a favourite) or your recent channels (from the others). → Phase 4.
 - **Favourite movies and shows on TV home:** two rows under Channels hold your favourite films and shows; OK opens the film's details or the show's episodes. → Phase 5.
+- **The TV home backdrop follows what you're on:** the blurred background takes the art of the card in focus. → Phase 6.
 
 ## Version: Guide on/off clarity
 **Release Date:** 2026-10-06

@@ -205,6 +205,13 @@ fun ContentTypeSelectionScreen(
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
     var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
+
+    // Art of the row card focused last (Phase 6). Read only inside HomeBackdrop, so a focus move
+    // recomposes the backdrop, not the page; focus on a tile or the header keeps it.
+    var focusedArtUrl by remember { mutableStateOf<String?>(null) }
+    val artOnFocus: (String?) -> Modifier = { url ->
+        Modifier.onFocusChanged { if (it.hasFocus && !url.isNullOrBlank()) focusedArtUrl = url }
+    }
     var continueWatchingItems by remember { mutableStateOf<List<ContinueWatchingItem>>(emptyList()) }
 
     // False until the shelf's first load for this repository, so entry focus can wait for it.
@@ -483,7 +490,7 @@ fun ContentTypeSelectionScreen(
         val scale = LocalUiScale.current
 
         Box(modifier = Modifier.fillMaxSize()) {
-            AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
+            HomeBackdrop(fallbackUrl = backdropImageUrl, focusedUrl = { focusedArtUrl })
             Box(
                 modifier =
                     Modifier
@@ -767,7 +774,9 @@ fun ContentTypeSelectionScreen(
                                     },
                                     listState = shelfListState,
                                     itemModifier = { item ->
-                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
+                                            .then(artOnFocus(item.thumbnailUrl))
                                     },
                                     modifier =
                                         Modifier
@@ -792,7 +801,9 @@ fun ContentTypeSelectionScreen(
                                     firstItemFocus = liveRowFirstFocus,
                                     listState = liveRowListState,
                                     itemModifier = { entry ->
-                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
+                                            .then(artOnFocus(entry.item.thumbnailUrl))
                                     },
                                     modifier =
                                         Modifier
@@ -812,10 +823,9 @@ fun ContentTypeSelectionScreen(
                                     firstItemFocus = favoriteMoviesFirstFocus,
                                     listState = favoriteMoviesListState,
                                     itemModifier = { item ->
-                                        Modifier.navReturnFocusTarget(
-                                            returnFocus,
-                                            RETURN_FAVORITE_MOVIES_PREFIX + item.id,
-                                        )
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
+                                            .then(artOnFocus(item.thumbnailUrl))
                                     },
                                     modifier =
                                         Modifier
@@ -835,10 +845,9 @@ fun ContentTypeSelectionScreen(
                                     firstItemFocus = favoriteShowsFirstFocus,
                                     listState = favoriteShowsListState,
                                     itemModifier = { item ->
-                                        Modifier.navReturnFocusTarget(
-                                            returnFocus,
-                                            RETURN_FAVORITE_SHOWS_PREFIX + item.id,
-                                        )
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
+                                            .then(artOnFocus(item.thumbnailUrl))
                                     },
                                     modifier =
                                         Modifier
@@ -1114,6 +1123,28 @@ private fun SectionTile(
         }
     }
 }
+
+/**
+ * Home's backdrop: the focused card's art once focus has rested on it for [BACKDROP_SETTLE_MS]
+ * (so scrolling along a row doesn't flash every card's art), else [fallbackUrl]. [focusedUrl] is
+ * read here, not by the caller, so only this recomposes when focus moves.
+ */
+@Composable
+private fun HomeBackdrop(
+    fallbackUrl: String?,
+    focusedUrl: () -> String?,
+) {
+    val target = focusedUrl()
+    var shown by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(target) {
+        delay(BACKDROP_SETTLE_MS)
+        shown = target
+    }
+    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = shown ?: fallbackUrl)
+}
+
+/** How long focus rests on a card before the backdrop switches to its art. */
+private const val BACKDROP_SETTLE_MS = 250L
 
 /** In place of the library while this profile has no login for the active Jellyfin server. */
 @Composable
