@@ -659,6 +659,8 @@
     <string name="home_source_update_failed_detail">Last update failed: %1$s</string>
     <string name="home_live_row_title">Channels</string>
     <string name="home_live_last_watched">Last watched</string>
+    <string name="home_favorite_movies">Favorite movies</string>
+    <string name="home_favorite_shows">Favorite shows</string>
     <string name="content_type_live_tv_description">Watch live television channels</string>
     <string name="content_type_movies_description">Browse on-demand movies</string>
     <string name="content_type_tv_shows_description">Watch series and episodes</string>

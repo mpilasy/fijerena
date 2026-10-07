@@ -98,6 +98,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -105,7 +106,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
-import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -130,6 +131,7 @@ import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
 import org.njarasoa.fijerena.feature.contentselection.components.LiveRowEntry
 import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
+import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
 import org.njarasoa.fijerena.feature.contentselection.components.mergeLiveRow
 import org.njarasoa.fijerena.feature.contentselection.components.sourceSyncStatus
@@ -161,6 +163,8 @@ fun ContentTypeSelectionScreen(
     // A channel from the Live row, and the list it zaps through (CategoryViewModel's virtual
     // "favorites" or "recent" category id).
     onLiveChannelSelected: (streamId: String, contextCategoryId: String) -> Unit = { _, _ -> },
+    // A favourite movie (ContentType.MOVIES) or show (ContentType.TV_SHOWS) from its Home row.
+    onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
     onChooseProfile: () -> Unit = {},
     onSignInRequired: (providerId: Long) -> Unit = {},
 ) {
@@ -210,6 +214,10 @@ fun ContentTypeSelectionScreen(
     var liveRowEntries by remember { mutableStateOf<List<LiveRowEntry>>(emptyList()) }
     var liveRowLoaded by remember { mutableStateOf(false) }
     var liveNowPlaying by remember { mutableStateOf<Map<String, EpgProgram>>(emptyMap()) }
+
+    // Favourite movies and shows rows (Phase 5), loaded with the Live row.
+    var favoriteMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var favoriteShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
 
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
@@ -340,6 +348,8 @@ fun ContentTypeSelectionScreen(
     LaunchedEffect(mediaRepositoryRef, supportedContentTypes) {
         val repo = mediaRepositoryRef ?: return@LaunchedEffect
         liveRowEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadLiveRow(repo) else emptyList()
+        favoriteMovies = loadFavorites(repo, ContentType.MOVIES, supportedContentTypes)
+        favoriteShows = loadFavorites(repo, ContentType.TV_SHOWS, supportedContentTypes)
         liveRowLoaded = true
     }
     LaunchedEffect(mediaRepositoryRef, liveRowEntries) {
@@ -364,6 +374,10 @@ fun ContentTypeSelectionScreen(
                     }
                     if (ContentType.LIVE_TV in supportedContentTypes) {
                         coroutineScope.launch { liveRowEntries = loadLiveRow(repo) }
+                    }
+                    coroutineScope.launch {
+                        favoriteMovies = loadFavorites(repo, ContentType.MOVIES, supportedContentTypes)
+                        favoriteShows = loadFavorites(repo, ContentType.TV_SHOWS, supportedContentTypes)
                     }
                 }
             }
@@ -398,6 +412,10 @@ fun ContentTypeSelectionScreen(
     val shelfFirstFocus = remember { FocusRequester() }
     val liveRowFirstFocus = remember { FocusRequester() }
     val liveRowListState = rememberLazyListState()
+    val favoriteMoviesFirstFocus = remember { FocusRequester() }
+    val favoriteMoviesListState = rememberLazyListState()
+    val favoriteShowsFirstFocus = remember { FocusRequester() }
+    val favoriteShowsListState = rememberLazyListState()
     LaunchedEffect(Unit) {
         // Back hands focus to the control that was left (NavReturnFocusEffect below).
         if (returnFocus.isReturn) return@LaunchedEffect
@@ -417,6 +435,8 @@ fun ContentTypeSelectionScreen(
         when {
             continueWatchingItems.isNotEmpty() -> shelfFirstFocus.requestFocusWithRetry(fallback = firstTile)
             liveRowEntries.isNotEmpty() -> liveRowFirstFocus.requestFocusWithRetry(fallback = firstTile)
+            favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus.requestFocusWithRetry(fallback = firstTile)
+            favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus.requestFocusWithRetry(fallback = firstTile)
             else -> firstTile?.requestFocusWithRetry()
         }
     }
@@ -438,6 +458,20 @@ fun ContentTypeSelectionScreen(
                 }
             val index = entries?.indexOfFirst { it.item.id == itemId } ?: -1
             if (index >= 0) liveRowListState.scrollToItem(index)
+        }
+        for ((prefix, row) in listOf(
+            RETURN_FAVORITE_MOVIES_PREFIX to favoriteMoviesListState,
+            RETURN_FAVORITE_SHOWS_PREFIX to favoriteShowsListState,
+        )) {
+            if (!key.startsWith(prefix)) continue
+            val itemId = key.removePrefix(prefix)
+            val items =
+                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                    snapshotFlow { if (prefix == RETURN_FAVORITE_MOVIES_PREFIX) favoriteMovies else favoriteShows }
+                        .first { items -> items.any { it.id == itemId } }
+                }
+            val index = items?.indexOfFirst { it.id == itemId } ?: -1
+            if (index >= 0) row.scrollToItem(index)
         }
     }
     val leaveTo: (String, () -> Unit) -> Unit = { key, navigate ->
@@ -766,6 +800,52 @@ fun ContentTypeSelectionScreen(
                                             .padding(top = Spacing.xl.scaled(scale)),
                                 )
                             }
+
+                            if (favoriteMovies.isNotEmpty()) {
+                                TvFavoritesRow(
+                                    title = stringResource(R.string.home_favorite_movies),
+                                    items = favoriteMovies,
+                                    thumbnailType = ThumbnailContentType.MOVIE,
+                                    onItemSelected = { item ->
+                                        leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
+                                    },
+                                    firstItemFocus = favoriteMoviesFirstFocus,
+                                    listState = favoriteMoviesListState,
+                                    itemModifier = { item ->
+                                        Modifier.navReturnFocusTarget(
+                                            returnFocus,
+                                            RETURN_FAVORITE_MOVIES_PREFIX + item.id,
+                                        )
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
+
+                            if (favoriteShows.isNotEmpty()) {
+                                TvFavoritesRow(
+                                    title = stringResource(R.string.home_favorite_shows),
+                                    items = favoriteShows,
+                                    thumbnailType = ThumbnailContentType.TV_SHOW,
+                                    onItemSelected = { item ->
+                                        leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
+                                    },
+                                    firstItemFocus = favoriteShowsFirstFocus,
+                                    listState = favoriteShowsListState,
+                                    itemModifier = { item ->
+                                        Modifier.navReturnFocusTarget(
+                                            returnFocus,
+                                            RETURN_FAVORITE_SHOWS_PREFIX + item.id,
+                                        )
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
                         }
                     }
                 }
@@ -858,6 +938,15 @@ private const val RETURN_SETTINGS = "settings"
 private const val RETURN_SIGN_IN = "signIn"
 private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
 private const val RETURN_LIVE_ROW_PREFIX = "live:"
+private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
+private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
+
+/** The active profile's favourites of [contentType], none when the source doesn't have that type. */
+private suspend fun loadFavorites(
+    repo: MediaRepository,
+    contentType: String,
+    supportedContentTypes: Set<String>,
+): List<MediaItem> = if (contentType in supportedContentTypes) repo.getFavoritesForContentTypeSuspend(contentType) else emptyList()
 
 /** The Live row's channels for the active profile: last watched, favourites, recent. */
 private suspend fun loadLiveRow(repo: MediaRepository): List<LiveRowEntry> =

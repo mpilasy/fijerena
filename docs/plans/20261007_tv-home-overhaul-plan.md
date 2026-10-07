@@ -1,6 +1,6 @@
 # TV home overhaul
 
-**Status:** Phases 1–4 done. Design agreed with the user 2026-10-07 (direction A, all four extras, two
+**Status:** Phases 1–5 done. Design agreed with the user 2026-10-07 (direction A, all four extras, two
 favourites rows, Live row = last + favourites + recent, no "See all" card, "Updating…" kept, zap
 list = the card's list). User said start 2026-10-07. TV only; mobile home unchanged.
 
@@ -150,6 +150,6 @@ device without asking.
 | 2 Section tiles | Done: `SectionTile` (64 dp, icon + name, count developer-only, subtitles and their strings removed); tiles at the top, shelf right under them; Left/Right pinned at the row's ends (Left from Movies with Live TV dimmed fell into the shelf); checked on the TV emulator (iptv: home walk 0 mismatches; jellyxtream: dimmed Live TV skipped, shelf fully visible). Down from a tile still lands geometrically on the shelf (Phase 3) | |
 | 3 Rows scaffold + focus | Done: `HomeRow` (title + `LazyRow`, `focusRestorer` with first-card fallback, ends cancel) carries Continue Watching; tile row `focusRestorer` + `focusGroup` (without `focusGroup` the restorer never ran on a plain `Row`); entry focus on the first Continue Watching card (waits for the shelf's first load); page stays a scrolling `Column`, not a lazy list: at most five rows, and every row stays composed for Back's hand-back. Checked on the TV emulator (jellyxtream: entry, Up/Down memory both ways, Back to the opened card; iptv: home walk 0 mismatches) | |
 | 4 Live row | Done: `mergeLiveRow` (tested: order, dedupe as favourite, last watched found among favourites, cap 20), `TvLiveRow` card on `HomeRow`, Now lines refreshed on the minute, reload on resume, `onLiveChannelSelected` → `CategoryList(initialCategoryId = favorites/recent)`, return key `live:<id>`, entry focus falls back to it. Row title "Channels" (the tile already says Live TV). Checked on the TV emulator, iptv: last watched first, reload on resume, Recent vs Favorites list on open, Back to the card, home walk 0 mismatches (new start). Now line not seen: iptv's channels aren't in the guide index and bears is off-limits | |
-| 5 Favourites rows | Not started | |
+| 5 Favourites rows | Done: `TvFavoritesRow` on `HomeRow` (16:9 art, title with badge, year • genre), loaded with the Live row and on resume, `onFavoriteSelected` → `MovieDetails` / `EpisodeSelection` as the lists route them, return keys `favMovie:` / `favShow:`, entry focus falls through to them. Checked on the TV emulator, jellyxtream: Favorite movies (The Godfather) and Favorite shows (Agatha Christie's Marple, favourited for the check — left in place) open details / episodes, Back to the card, Up returns to Continue Watching's last card | |
 | 6 Backdrop follows focus | Not started | |
 | 7 Focus walk + checks | Not started | |

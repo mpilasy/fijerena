@@ -297,6 +297,18 @@ fun TvNavHost(
                                 ),
                             )
                         },
+                        // Same routes as the lists' onStreamSelected (item.id is the movie or series id).
+                        onFavoriteSelected = { item, favoriteType ->
+                            if (favoriteType == ContentType.TV_SHOWS) {
+                                navController.navigateOnce(
+                                    Screen.EpisodeSelection(seriesId = item.id, seriesName = item.name, categoryId = item.categoryId),
+                                )
+                            } else {
+                                navController.navigateOnce(
+                                    Screen.MovieDetails(movieId = item.id, movieName = item.name, categoryId = item.categoryId),
+                                )
+                            }
+                        },
                         onContinueWatchingSelected = { item ->
                             // Same dispatch as CategoryList's Recent row (below) — a shelf card is
                             // just another resumable entry, and should route exactly like one.

@@ -513,6 +513,8 @@
     <string name="home_source_update_failed_detail">Tsy nahomby ny fanavaozana farany: %1$s</string>
     <string name="home_live_row_title">Fantsona</string>
     <string name="home_live_last_watched">Vao nojerena farany</string>
+    <string name="home_favorite_movies">Sarimihetsika ankafizina</string>
+    <string name="home_favorite_shows">Andian-tantara ankafizina</string>
     <string name="content_type_live_tv_description">Jereo ny fantsona TV mivantana</string>
     <string name="content_type_movies_description">Jereo ireo sarimihetsika</string>
     <string name="content_type_tv_shows_description">Jereo ireo tantara an-tsary</string>

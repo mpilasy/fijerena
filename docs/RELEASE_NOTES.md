@@ -7,6 +7,7 @@
 - **Slimmer section tiles:** Live TV, Movies and TV Shows are a row of slim tiles instead of three big cards, so Continue Watching sits fully on screen under them. The category count shows only in developer mode. Left and Right at either end of the tiles stay put instead of dropping into Continue Watching. → Phase 2.
 - **Home opens on Continue Watching:** with something to resume, TV home starts on its first card. Moving up to the tiles and back down returns to the card you were on, and up from the cards returns to the tile you were on. → Phase 3.
 - **Your channels on TV home:** a Channels row under Continue Watching holds the last channel you watched, your favourite channels and recent ones, with what's on now and how far in when the guide has the channel. OK opens the channel straight away; changing channel in full screen goes through your favourites (from a favourite) or your recent channels (from the others). → Phase 4.
+- **Favourite movies and shows on TV home:** two rows under Channels hold your favourite films and shows; OK opens the film's details or the show's episodes. → Phase 5.
 
 ## Version: Guide on/off clarity
 **Release Date:** 2026-10-06
