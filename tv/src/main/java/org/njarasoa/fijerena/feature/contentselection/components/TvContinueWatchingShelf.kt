@@ -61,37 +61,24 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 fun TvContinueWatchingShelf(
     items: List<ContinueWatchingItem>,
     onItemSelected: (ContinueWatchingItem) -> Unit,
+    firstItemFocus: FocusRequester,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
     itemModifier: (ContinueWatchingItem) -> Modifier = { Modifier },
 ) {
-    if (items.isNotEmpty()) {
-        Column(modifier = modifier) {
-            Text(
-                text = stringResource(R.string.series_continue_watching_badge),
-                style = MaterialTheme.typography.titleLarge,
-                color = CinemaTextPrimary,
-                modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
-            )
-            LazyRow(
-                state = listState,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                contentPadding = PaddingValues(horizontal = Spacing.xxs),
-            ) {
-                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                    TvContinueWatchingCard(
-                        item = item,
-                        onClick = { onItemSelected(item) },
-                        // Right on the last card stays put: without this the focus search leaves
-                        // the row and lands on the top bar (Settings).
-                        modifier =
-                            itemModifier(item).focusProperties {
-                                if (index == items.lastIndex) right = FocusRequester.Cancel
-                            },
-                    )
-                }
-            }
-        }
+    HomeRow(
+        title = stringResource(R.string.series_continue_watching_badge),
+        items = items,
+        key = { it.id },
+        listState = listState,
+        firstItemFocus = firstItemFocus,
+        modifier = modifier,
+    ) { item, rowModifier ->
+        TvContinueWatchingCard(
+            item = item,
+            onClick = { onItemSelected(item) },
+            modifier = itemModifier(item).then(rowModifier),
+        )
     }
 }
 

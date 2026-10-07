@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -191,6 +193,9 @@ fun ContentTypeSelectionScreen(
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
     var continueWatchingItems by remember { mutableStateOf<List<ContinueWatchingItem>>(emptyList()) }
 
+    // False until the shelf's first load for this repository, so entry focus can wait for it.
+    var continueWatchingLoaded by remember { mutableStateOf(false) }
+
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
     // icon immediately, instead of waiting for the composable to be torn down and rebuilt.
@@ -313,7 +318,9 @@ fun ContentTypeSelectionScreen(
     // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
     // on every ON_RESUME, so returning from playback immediately reflects updated progress.
     LaunchedEffect(mediaRepositoryRef) {
-        continueWatchingItems = mediaRepositoryRef?.getContinueWatchingItems() ?: emptyList()
+        val repo = mediaRepositoryRef ?: return@LaunchedEffect
+        continueWatchingItems = repo.getContinueWatchingItems()
+        continueWatchingLoaded = true
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, mediaRepositoryRef) {
@@ -354,18 +361,29 @@ fun ContentTypeSelectionScreen(
     val heroCards = focusableHeroCards(supportedContentTypes, liveTvCounts)
     val headerDownCard = lastHeroCard?.takeIf { it in heroCards } ?: heroCards.firstOrNull()
     val heroFallbackFocus = heroCards.firstOrNull()?.let(heroCardFocus::getValue)
+    // The first card of each row: where focus enters a row it has not been in yet (HomeRow).
+    val shelfFirstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         // Back hands focus to the control that was left (NavReturnFocusEffect below).
         if (returnFocus.isReturn) return@LaunchedEffect
-        // Wait for the Live TV count, so an empty Live TV card is not the one focused.
+        // Wait for the Live TV count, so an empty Live TV card is not the one focused, and for the
+        // shelf, which takes entry focus when it has something (TV home overhaul plan, Phase 3).
         withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
-            snapshotFlow { needsSignIn || ContentType.LIVE_TV !in supportedContentTypes || liveTvCounts != null }
-                .first { it }
+            snapshotFlow {
+                needsSignIn ||
+                    ((ContentType.LIVE_TV !in supportedContentTypes || liveTvCounts != null) && continueWatchingLoaded)
+            }.first { it }
         }
         if (needsSignIn) return@LaunchedEffect
-        focusableHeroCards(supportedContentTypes, liveTvCounts)
-            .firstOrNull()
-            ?.let { heroCardFocus.getValue(it).requestFocusWithRetry() }
+        val firstTile =
+            focusableHeroCards(supportedContentTypes, liveTvCounts)
+                .firstOrNull()
+                ?.let(heroCardFocus::getValue)
+        if (continueWatchingItems.isNotEmpty()) {
+            shelfFirstFocus.requestFocusWithRetry(fallback = firstTile)
+        } else {
+            firstTile?.requestFocusWithRetry()
+        }
     }
     NavReturnFocusEffect(returnFocus, fallback = heroFallbackFocus) { key ->
         if (key.startsWith(RETURN_CONTINUE_WATCHING_PREFIX)) {
@@ -586,7 +604,13 @@ fun ContentTypeSelectionScreen(
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth(),
+                                // Up from a row comes back to the tile focused last, not the one
+                                // geometrically above the card.
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .focusRestorer(headerDownCard?.let(heroCardFocus::getValue) ?: FocusRequester.Default)
+                                        .focusGroup(),
                             ) {
                                 val isDevMode = appSettings.isDevMode
                                 var cardIndex = 1
@@ -659,6 +683,7 @@ fun ContentTypeSelectionScreen(
                             if (continueWatchingItems.isNotEmpty()) {
                                 TvContinueWatchingShelf(
                                     items = continueWatchingItems,
+                                    firstItemFocus = shelfFirstFocus,
                                     onItemSelected = { item ->
                                         leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
                                     },
