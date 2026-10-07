@@ -1,6 +1,6 @@
 # Guide on/off clarity
 
-**Status:** In progress: all five phases built; emulator check next. User said proceed 2026-10-06; bulk select dropped entirely (default taken, user didn't choose a menu).
+**Status:** All five phases done and checked on the emulators 2026-10-06, except Phase 1 (not forced on a device). Left: the OnePlus. User said proceed 2026-10-06; bulk select dropped entirely (default taken, user didn't choose a menu).
 
 ## Problem
 
@@ -60,7 +60,20 @@ returns an empty `<tv/>` to force it). Then the OnePlus, the device where it was
 | 2 Switch on the card | Done: `EpgManagementViewModel.setSourceEnabled` (own guide: `setProvidesGuide(byUser = true)` + `reconcileStored`; others: the row's `enabled`); mobile `Switch`, TV the same focusable toggle surface with an inert `Switch` ("Use this guide"); selection, Refresh (n) / Delete (n), `refreshSelected`, `deleteSelected`, `launchRefreshSelected` and their strings removed; the own-guide line now says its switch is Provides a guide; focus walk updated by hand (not re-run yet) | bc5c1728 |
 | 3 Refresh line | Done: `EpgManagementViewModel.refreshSummary(enabled, hours)` ("Off: not used, not refreshed"), both cards, test | ac09ff9c |
 | 4 Search header | Done: `freshnessLabel(hasOffSources)` → "Guide off: turn it on in Guide sources" (warning colour), `EpgBrowserViewModel.hasOffSources`, both browser screens, test | 759a01c0 |
-| 5 Unknown size | Done: progress -1 shows `NumberUtils.formatBytes(downloadedBytes)` and an indeterminate bar, both cards | (this commit) |
+| 5 Unknown size | Done: progress -1 shows `NumberUtils.formatBytes(downloadedBytes)` and an indeterminate bar, both cards | de8da86f |
+
+## Emulator check (2026-10-06)
+
+- **Phone (bears):** the card's switch is on with "Refreshes daily" and the own-guide line; off gives
+  "Off: not used, not refreshed", and bears' Edit Source then shows Provides a guide off (same
+  setting); it stays off after leaving and coming back. With bears in use, Search the guide's
+  header reads "Guide off: turn it on in Guide sources" in the warning colour. Back on, then
+  Refresh: "Downloading… 30.2 MB", "Ingesting… 68.8 MB", then "29%"; no "-1%".
+- **TV (bearstv):** `scripts/tv-focus-walk.sh` on `epg-management.txt`: 16 steps, 0 mismatches
+  (entry focus "Use this guide"). OK on the switch turns it off ("Off: not used, not refreshed",
+  status dot grey) and on again ("Refreshes weekly").
+- **Not checked:** Phase 1 (an empty download of a guide that had channels) was not forced on a
+  device; covered by `FailedEmptyIngestTest` only.
 
 ## Found on the way
 
