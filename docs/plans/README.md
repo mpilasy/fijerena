@@ -16,7 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-07 | [Phone home overhaul](./20261007_phone-home-overhaul-plan.md) | Phone home as on TV, for touch: bottom navigation bar (tabs keep their place), sync status, Channels and favourites rows, long-press sheet, pull to refresh | Phases 1–2 done; 3–6 in progress |
+| 2026-10-07 | [Phone home overhaul](./20261007_phone-home-overhaul-plan.md) | Phone home as on TV, for touch: bottom navigation bar (tabs keep their place), sync status, Channels and favourites rows, long-press sheet, pull to refresh | Phases 1–3 done; Home dropped (Phase 8 next), 4–6 dropped |
 | 2026-10-07 | [TV home overhaul](./20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Done on the TV emulator, Now line and Updating… checked on bears; Shield check left |
 | 2026-10-06 | [Guide on/off clarity](./20261006_guide-on-off-clarity-plan.md) | One empty download no longer turns a source's guide off; guide sources get a real on/off switch instead of bulk-select checkboxes; refresh line, search header and "-1%" tell the truth | Done on the emulators; Phase 1 not forced on a device; OnePlus check left |
 | 2026-10-05 | [Icon buttons](./20261005_icon-buttons-plan.md) | Action buttons back to icons app-wide; TV shows the name on focus, mobile on long-press | Done on the emulators; live sync rows, section-root button, phone guide rows not reached |

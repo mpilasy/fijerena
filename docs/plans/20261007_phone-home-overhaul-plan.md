@@ -1,6 +1,6 @@
 # Phone home overhaul and bottom navigation
 
-**Status:** In progress (user said go 2026-10-07, built by agents in worktrees, merged and checked phase by phase): Phases 1–2 done; 3 and 4–6 in progress. Design agreed with the user 2026-10-07: the TV home overhaul
+**Status:** In progress (user said go 2026-10-07, built by agents in worktrees, merged and checked phase by phase): Phases 1–3 done; Home dropped (see Redesign), Phases 4–6 dropped; Phase 8 next. Design agreed with the user 2026-10-07: the TV home overhaul
 (`20261007_tv-home-overhaul-plan.md`) adapted for touch, with a bottom navigation bar in place of
 the section cards. Implementation waits for the user's go-ahead.
 
@@ -107,6 +107,33 @@ back-stack rules and the section-root rule, RELEASE_NOTES) and this plan's Progr
 | 6 | Pull to refresh (sync + reload) | phone home |
 | 7 | Checks on the phone emulator; NAVIGATION_GUIDE's phone rules rewritten for tabs | docs |
 
+## Redesign: no Home on the phone (user, 2026-10-07, after Phase 3)
+
+Seen on the emulator with the bar in place, the user asked whether Home needs to exist at all if
+the header is on every tab. Decided: **drop Home and its tab**; **nothing extra on the tabs** —
+each section already opens on its Recent list (in progress first) with Favorites one tap away,
+and Live TV opens docked on the last channel, so rows would repeat them. **The app opens on the
+last tab used** (per profile; first launch Live TV, else Movies, else TV Shows). This supersedes
+the Target sketch, the Home tab, the Rows / long-press / pull-to-refresh sections and Phases 4–6
+(built on a branch, not merged, dropped).
+
+Phase 8 — drop Home (defaults, not asked; the user can change them):
+- **Tabs:** Live TV, Movies, TV Shows — only the types the source has; with a single type, no
+  bar. Back on a tab root leaves the app.
+- **Header on every tab root:** no back arrow; title = the source name (a picker with two or
+  more sources) with the sync status line under it (`MobileSourceStatusLine`, Phase 2); actions:
+  the section's own Search and, on Live TV, its TV Guide (as today), then Search the guide (when
+  the index is ready), the profile avatar and Settings. If that is more than fits, Search the
+  guide moves to Live TV only.
+- **What Home did moves to the nav host / tab roots:** resolving the source's content types (the
+  tabs), the Jellyfin sign-in prompt and panel (shown in the tab root while sign-in is pending),
+  the source picker dialog.
+- **Last tab** stored per profile; source, profile and live-sync switches clear every tab's
+  stack and open the new profile's last tab (or the first the source has); Remote Stop's
+  `onHome` goes to the Live TV tab root.
+- **Removed:** the phone home screen and its components (Continue Watching shelf included —
+  Continue Watching lives in each section's Recent list).
+
 ## Decisions taken (user, 2026-10-07)
 
 Bottom navigation bar (not tiles); each tab keeps its place; labels always shown; section-root
@@ -142,8 +169,9 @@ clear data without asking.
 |---|---|---|
 | 1 Shared code to core | Done: `core.ui.home` `LiveRow.kt` / `SourceSyncStatus.kt`, tests moved + `SourceSyncStatusTest`; TV only re-imports (compile + unit tests; TV emulator not re-run, no behaviour change) | 52438b1b |
 | 2 Top bar status | Done: `MobileSourceStatusLine` under the source name (own minute tick, pulse at draw time), "Update failed" opens a dialog with the reason; the bar grows to 84 dp (`homeTopBarHeight`) while a status shows, so the line keeps a 48 dp touch target. Checked on the phone emulator: bears shows "● Updated 1 hour ago". "Updating…" to check with Phase 6's pull to refresh | 71b8efe4 |
-| 3 Bottom navigation bar | In progress | |
-| 4 Rows | In progress | |
-| 5 Long-press sheet | In progress | |
-| 6 Pull to refresh | In progress | |
-| 7 Checks + nav docs | Not started | |
+| 3 Bottom navigation bar | Done: one route per tab root (`Screen.LiveTvTab` / `MoviesTab` / `TvShowsTab` — saved stacks are keyed by destination, and the three `CategoryList(type)` entries share one); `MobileBottomBar.kt` + test; dock reports full screen / PiP / landscape split to hide the bar and is stopped on a tab change; switches `clearBackStack` the tabs; `SectionRootAction` deleted. Checked on the phone emulator: tab state kept (Movies → BG ФИЛМ category → TV Shows → Movies back on it), Back → Home, ANT1 docked above the bar and stopped (Idle) on switching to Movies, full screen hides the bar, after switching bears → jellyxtream the Movies tab opens on jellyxtream. The bar is hidden on details, so a tab keeps its root only | 567338c0 |
+| 4 Rows | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
+| 5 Long-press sheet | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
+| 6 Pull to refresh | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
+| 7 Checks + nav docs | Not started (after Phase 8) | |
+| 8 Drop Home | Not started | |
