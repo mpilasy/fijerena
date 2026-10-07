@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.ui.R
@@ -62,6 +63,8 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
+import org.njarasoa.fijerena.core.ui.home.sourceSyncStatus
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -70,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileContinueWatchingShelf
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceStatusLine
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -116,6 +120,16 @@ fun MobileContentTypeSelectionScreen(
     var needsSignIn by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
+    // The top bar's status line (phone home overhaul plan, Phase 2): the active source's last
+    // catalogue sync, re-read when a sync of it ends and on every ON_RESUME.
+    var lastSyncedAtMs by remember { mutableLongStateOf(0L) }
+    var lastSyncError by remember { mutableStateOf<String?>(null) }
+    var syncStatsReload by remember { mutableIntStateOf(0) }
+    var showSyncError by remember { mutableStateOf(false) }
+    val runningSyncs by ProviderSyncRunner.running.collectAsStateWithLifecycle(initialValue = emptySet())
+    val syncing = activeProviderId in runningSyncs
+    val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
+
     // Category counts per content type: Pair(filtered, total) — null while loading
     var liveTvCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -149,6 +163,8 @@ fun MobileContentTypeSelectionScreen(
                     providerName = activeProvider.name
                     providerType = activeProvider.type
                     activeProviderId = activeProvider.id
+                    lastSyncedAtMs = activeProvider.lastSyncedAtMs
+                    lastSyncError = activeProvider.lastSyncError
                     // A Jellyfin server this profile hasn't signed in to: each profile is its own
                     // Jellyfin user (docs/plans/archive/20260929_live-sync-plan.md → User profiles). No
                     // repository is built — it could only fail to authenticate — and the first time
@@ -187,6 +203,15 @@ fun MobileContentTypeSelectionScreen(
                 }
             }
         resolvedTypes?.let(onCapabilitiesResolved)
+    }
+
+    LaunchedEffect(activeProviderId, syncing, syncStatsReload) {
+        if (activeProviderId == 0L || syncing) return@LaunchedEffect
+        val provider = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).getProviderById(activeProviderId) }
+        if (provider != null) {
+            lastSyncedAtMs = provider.lastSyncedAtMs
+            lastSyncError = provider.lastSyncError
+        }
     }
 
     // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
@@ -244,6 +269,7 @@ fun MobileContentTypeSelectionScreen(
         val repo = mediaRepositoryRef
         val observer =
             LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) syncStatsReload++
                 if (event == Lifecycle.Event.ON_RESUME && repo != null) {
                     coroutineScope.launch {
                         continueWatchingItems = repo.getContinueWatchingItems()
@@ -270,36 +296,50 @@ fun MobileContentTypeSelectionScreen(
                 val switchProviderDescription = stringResource(R.string.content_switch_provider_description_format, displayName)
                 TopAppBar(
                     title = {
-                        // Only render as a dropdown when there's actually something to switch to —
-                        // otherwise this is a dead tap: the picker dialog below only ever opens when
-                        // allProviders.size > 1.
-                        if (allProviders.size > 1) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier =
-                                    Modifier
-                                        .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                        .semantics {
-                                            contentDescription = switchProviderDescription
-                                        }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
-                            ) {
+                        Column {
+                            // Only render as a dropdown when there's actually something to switch to —
+                            // otherwise this is a dead tap: the picker dialog below only ever opens when
+                            // allProviders.size > 1.
+                            if (allProviders.size > 1) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier =
+                                        Modifier
+                                            .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                            .semantics {
+                                                contentDescription = switchProviderDescription
+                                            }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
+                                ) {
+                                    Text(
+                                        text = displayName,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Icon(
+                                        imageVector = CinemaIcons.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            } else {
                                 Text(
                                     text = displayName,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
-                                Icon(
-                                    imageVector = CinemaIcons.ArrowDropDown,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
                             }
-                        } else {
-                            Text(
-                                text = displayName,
-                                color = MaterialTheme.colorScheme.primary,
+                            MobileSourceStatusLine(
+                                status = syncStatus,
+                                lastSyncedAtMs = lastSyncedAtMs,
+                                onFailedClick = { showSyncError = true },
                             )
                         }
                     },
+                    // Taller while the status line shows, so it fits under the name.
+                    expandedHeight =
+                        if (syncStatus == SourceSyncStatus.NONE) {
+                            TopAppBarDefaults.TopAppBarExpandedHeight
+                        } else {
+                            MobileDimensions.homeTopBarHeight
+                        },
                     actions = {
                         if (hasEpgData) {
                             CinemaIconButton(
@@ -422,6 +462,21 @@ fun MobileContentTypeSelectionScreen(
                 }
             }
         }
+    }
+
+    if (showSyncError) {
+        // The line only says "Update failed"; the reason is here. It already carries the raw detail
+        // in developer mode (ProviderSyncRunner).
+        CinemaAlertDialog(
+            onDismissRequest = { showSyncError = false },
+            title = { Text(stringResource(R.string.home_source_update_failed)) },
+            text = { Text(lastSyncError.orEmpty()) },
+            confirmButton = {
+                CinemaDialogTextButton(onClick = { showSyncError = false }) {
+                    Text(stringResource(R.string.common_close))
+                }
+            },
+        )
     }
 
     if (showProviderPicker && allProviders.size > 1) {

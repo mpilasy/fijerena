@@ -61,6 +61,9 @@ object MobileDimensions {
     /** "Jump Back In" shelf card — a touch-sized 16:9 thumbnail card, narrower than TV's. */
     val continueWatchingCardWidth: Dp = 160.dp
 
+    /** Home's top bar with the status line under the source name: the name plus a 48 dp touch row. */
+    val homeTopBarHeight: Dp = 84.dp
+
     /** Avatar on the "Who's watching?" profile picker. */
     val profilePickerAvatar: Dp = 88.dp
 }
