@@ -574,22 +574,17 @@ fun ContentTypeSelectionScreen(
                             signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
                         )
                     } else {
-                        // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
-                        // the "Jump Back In" shelf below it can exceed a lower-density TV's viewport
-                        // height, and an unscrollable Center-arranged Column clips whatever doesn't fit
-                        // off both edges instead of making it reachable. Arrangement.Center still centers
-                        // this content when it's shorter than the viewport, same as before — verticalScroll
-                        // only takes over once content is taller than the space it's given.
+                        // Section tiles, then the shelf (TV home overhaul plan, Phase 2). Scrollable: on a
+                        // lower-density TV the shelf can still run past the bottom edge.
                         Column(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
                                     .verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -599,14 +594,20 @@ fun ContentTypeSelectionScreen(
                                     Modifier
                                         .focusRequester(heroCardFocus.getValue(key))
                                         .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
+                                        // Left on the first focusable tile and Right on the last stay
+                                        // put: with Live TV dimmed, the search left from Movies fell
+                                        // through to the shelf below.
+                                        .focusProperties {
+                                            if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
+                                            if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
+                                        }
                                 }
                                 if (ContentType.LIVE_TV in supportedContentTypes) {
-                                    ContentTypeHeroCard(
+                                    SectionTile(
                                         title = stringResource(R.string.provider_live_tv_label),
-                                        subtitle = stringResource(R.string.content_type_live_tv_subtitle_short),
                                         icon = CinemaIcons.LiveTv,
                                         categoryCounts = liveTvCounts,
-                                        showTotal = isDevMode,
+                                        showCount = isDevMode,
                                         showLivePulse = !liveTvEmpty,
                                         emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
                                         gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
@@ -621,12 +622,11 @@ fun ContentTypeSelectionScreen(
                                 }
 
                                 if (ContentType.MOVIES in supportedContentTypes) {
-                                    ContentTypeHeroCard(
+                                    SectionTile(
                                         title = stringResource(R.string.provider_movies_label),
-                                        subtitle = stringResource(R.string.content_type_movies_subtitle_short),
                                         icon = CinemaIcons.Movie,
                                         categoryCounts = moviesCounts,
-                                        showTotal = isDevMode,
+                                        showCount = isDevMode,
                                         gradientColors = listOf(CinemaAccent, CinemaAccentDark),
                                         onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
                                         modifier =
@@ -639,12 +639,11 @@ fun ContentTypeSelectionScreen(
                                 }
 
                                 if (ContentType.TV_SHOWS in supportedContentTypes) {
-                                    ContentTypeHeroCard(
+                                    SectionTile(
                                         title = stringResource(R.string.provider_tv_shows_label),
-                                        subtitle = stringResource(R.string.content_type_tv_shows_subtitle_short),
                                         icon = CinemaIcons.Tv,
                                         categoryCounts = tvShowsCounts,
-                                        showTotal = isDevMode,
+                                        showCount = isDevMode,
                                         gradientColors = listOf(CinemaAccentLight, CinemaAccent),
                                         onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
                                         modifier =
@@ -782,28 +781,32 @@ private fun focusableHeroCards(
         if (ContentType.TV_SHOWS in supportedContentTypes) add(RETURN_TV_SHOWS)
     }
 
+/**
+ * A section tile on Home: Live TV, Movies or TV Shows (TV home overhaul plan, Phase 2). The category
+ * count is developer information, shown only in developer mode.
+ */
 @Composable
-private fun ContentTypeHeroCard(
+private fun SectionTile(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     categoryCounts: Pair<Int, Int>?,
-    showTotal: Boolean = false,
+    showCount: Boolean = false,
     showLivePulse: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    // Non-null: nothing to open (Live TV with no channels). The card is dimmed, shows this in
+    // Non-null: nothing to open (Live TV with no channels). The tile is dimmed, shows this in
     // place of the count and cannot take focus.
     emptyLabel: String? = null,
 ) {
     val scale = LocalUiScale.current
+    val shape = RoundedCornerShape(CinemaCornerRadius.large)
     Card(
         onClick = onClick,
         modifier =
             modifier
                 .then(if (emptyLabel != null) Modifier.focusProperties { canFocus = false }.alpha(CinemaAlpha.textFaint) else Modifier)
-                .height(TvDimensions.contentTypeCardHeight.scaled(scale)),
+                .height(TvDimensions.homeSectionTileHeight.scaled(scale)),
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
@@ -817,163 +820,104 @@ private fun ContentTypeHeroCard(
                 focusedScale = TvFocusTokens.focusedScaleSubtle,
                 pressedScale = TvFocusTokens.pressedScaleSubtle,
             ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
+        shape = CardDefaults.shape(shape = shape),
         border =
             CardDefaults.border(
-                border =
-                    Border(
-                        border = BorderStroke(TvFocusTokens.borderThin, CinemaGlassBorder),
-                        shape = RoundedCornerShape(CinemaCornerRadius.xLarge),
-                    ),
-                focusedBorder =
-                    Border(
-                        border =
-                            BorderStroke(
-                                TvFocusTokens.focusBorderWidth,
-                                CinemaTextPrimary,
-                            ),
-                        shape = RoundedCornerShape(CinemaCornerRadius.xLarge),
-                    ),
+                border = Border(border = BorderStroke(TvFocusTokens.borderThin, CinemaGlassBorder), shape = shape),
+                focusedBorder = Border(border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTextPrimary), shape = shape),
             ),
         glow = CardDefaults.glow(glow = TvFocusTokens.restingGlow, focusedGlow = TvFocusTokens.focusedGlow),
     ) {
-        val brush = remember(gradientColors) { Brush.verticalGradient(colors = gradientColors) }
-        // Diagonal gloss over the flat gradient fill — same "raised glass" cue as GlassPanel, so
-        // the card reads as a lit surface rather than a solid block of color.
-        val sheenBrush =
-            remember {
-                Brush.linearGradient(
-                    colors = listOf(CinemaTextPrimary.copy(alpha = CinemaAlpha.heroSheen), Color.Transparent),
-                )
-            }
-        Box(
+        val brush = remember(gradientColors) { Brush.horizontalGradient(colors = gradientColors) }
+        Row(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        brush = brush,
-                        shape = RoundedCornerShape(CinemaCornerRadius.xLarge),
-                    ),
-            contentAlignment = Alignment.Center,
+                    .background(brush = brush, shape = shape)
+                    .padding(horizontal = Spacing.md.scaled(scale)),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
+            Box(contentAlignment = Alignment.TopEnd) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = CinemaTextPrimary,
+                    modifier = Modifier.size(TvDimensions.homeSectionTileIconSize.scaled(scale)),
+                )
+                if (showLivePulse) {
+                    val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
+                    val pulseAlpha by pulseTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.3f,
+                        animationSpec =
+                            infiniteRepeatable(
+                                animation = tween(CinemaAnimation.shimmerDurationMs),
+                                repeatMode = RepeatMode.Reverse,
+                            ),
+                        label = "live_pulse_alpha",
+                    )
+                    // pulseAlpha is read inside graphicsLayer's lambda, never in the composable
+                    // body. Read from the body it invalidates *composition* every animation frame —
+                    // and since this runs forever, Home recomposed at 60fps with nothing on screen
+                    // changing: 242 recompositions per 4 idle seconds, measured on a Shield, versus
+                    // 0 on every other screen. In the lambda the read is deferred to draw.
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(TvDimensions.liveDotSmall.scaled(scale))
+                                .graphicsLayer { alpha = pulseAlpha }
+                                .border(TvDimensions.borderThin, CinemaTextPrimary, CircleShape)
+                                .background(CinemaLive, shape = CircleShape),
+                    )
+                }
+            }
+            Text(
+                text = title,
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextPrimary,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
                 modifier =
                     Modifier
-                        .fillMaxSize()
-                        .background(sheenBrush, shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
+                        .weight(1f)
+                        .padding(start = Spacing.sm.scaled(scale)),
             )
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(Spacing.md),
-            ) {
-                Box(contentAlignment = Alignment.TopEnd) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(TvDimensions.contentTypeIconSize.scaled(scale) + Spacing.sm.scaled(scale))
-                                .background(
-                                    CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
-                                    shape = CircleShape,
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.contentTypeIconSize.scaled(scale)),
-                        )
+            val countText =
+                when {
+                    emptyLabel != null -> {
+                        emptyLabel
                     }
-                    if (showLivePulse) {
-                        val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
-                        val pulseAlpha by pulseTransition.animateFloat(
-                            initialValue = 1f,
-                            targetValue = 0.3f,
-                            animationSpec =
-                                infiniteRepeatable(
-                                    animation = tween(CinemaAnimation.shimmerDurationMs),
-                                    repeatMode = RepeatMode.Reverse,
-                                ),
-                            label = "live_pulse_alpha",
-                        )
-                        // pulseAlpha is read inside graphicsLayer's lambda, never in the composable
-                        // body. Read from the body (as `color.copy(alpha = pulseAlpha)` did) it
-                        // invalidates *composition* every animation frame — and since this runs
-                        // forever, Home recomposed at 60fps with nothing on screen changing:
-                        // 242 recompositions per 4 idle seconds, measured on a Shield, versus 0 on
-                        // every other screen. Every navigation out of Home therefore started with
-                        // the main thread already saturated. In the lambda the read is deferred to
-                        // draw, so the animation costs a layer redraw and no recomposition, and the
-                        // colors stay constant instead of allocating two Color objects per frame.
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(TvDimensions.liveDotSize.scaled(scale))
-                                    .graphicsLayer { alpha = pulseAlpha }
-                                    .border(TvDimensions.borderThin, CinemaTextPrimary, CircleShape)
-                                    .background(CinemaLive, shape = CircleShape),
-                        )
+
+                    !showCount || categoryCounts == null -> {
+                        null
+                    }
+
+                    categoryCounts.first < categoryCounts.second -> {
+                        stringResource(R.string.category_filtered_of_total_format, categoryCounts.first, categoryCounts.second)
+                    }
+
+                    else -> {
+                        stringResource(R.string.category_count_format, categoryCounts.first)
                     }
                 }
-                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+            if (countText != null) {
                 Text(
-                    text = title,
-                    style =
-                        MaterialTheme.typography.headlineMedium.copy(
-                            fontSize =
-                                MaterialTheme.typography.headlineMedium.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
+                    text = countText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                    maxLines = 1,
+                    modifier =
+                        Modifier
+                            .background(
+                                CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
+                                shape = RoundedCornerShape(CinemaCornerRadius.small),
+                            ).padding(horizontal = Spacing.sm, vertical = Spacing.xxs),
                 )
-                Text(
-                    text = subtitle,
-                    style =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodyLarge.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = Spacing.xxs.scaled(scale)),
-                )
-                if (categoryCounts == null) {
-                    ShimmerPlaceholder(
-                        modifier =
-                            Modifier
-                                .padding(top = Spacing.xs)
-                                .size(width = TvDimensions.contentTypeIconSize.scaled(scale), height = Spacing.md)
-                                .clip(RoundedCornerShape(CinemaCornerRadius.small)),
-                    )
-                } else {
-                    val (filtered, total) = categoryCounts
-                    val countText =
-                        emptyLabel ?: if (showTotal && filtered < total) {
-                            stringResource(R.string.category_filtered_of_total_format, filtered, total)
-                        } else {
-                            stringResource(R.string.category_count_format, filtered)
-                        }
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(top = Spacing.xs)
-                                .background(
-                                    CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
-                                ).padding(horizontal = Spacing.sm, vertical = Spacing.xxs),
-                    ) {
-                        Text(
-                            text = countText,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
             }
         }
     }

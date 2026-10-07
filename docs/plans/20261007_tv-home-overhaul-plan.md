@@ -1,6 +1,6 @@
 # TV home overhaul
 
-**Status:** Phase 1 done. Design agreed with the user 2026-10-07 (direction A, all four extras, two
+**Status:** Phases 1–2 done. Design agreed with the user 2026-10-07 (direction A, all four extras, two
 favourites rows, Live row = last + favourites + recent, no "See all" card, "Updating…" kept, zap
 list = the card's list). User said start 2026-10-07. TV only; mobile home unchanged.
 
@@ -146,7 +146,7 @@ device without asking.
 | Phase | Status | Commit |
 |---|---|---|
 | 1 Header | Done: `ProviderSyncRunner.running` (count per source, tested); pill status + clock + smaller title; "just now" under a minute (reuses `live_sync_just_now`); checked on the TV emulator (Updated / just now / none for M3U, picker, home walk 0 mismatches). "Updating…" and "Update failed" not seen live: a jellyxtream sync takes 0.6 s, failure not forced | |
-| 2 Section tiles | Not started | |
+| 2 Section tiles | Done: `SectionTile` (64 dp, icon + name, count developer-only, subtitles and their strings removed); tiles at the top, shelf right under them; Left/Right pinned at the row's ends (Left from Movies with Live TV dimmed fell into the shelf); checked on the TV emulator (iptv: home walk 0 mismatches; jellyxtream: dimmed Live TV skipped, shelf fully visible). Down from a tile still lands geometrically on the shelf (Phase 3) | |
 | 3 Rows scaffold + focus | Not started | |
 | 4 Live row | Not started | |
 | 5 Favourites rows | Not started | |

@@ -572,14 +572,11 @@
     <string name="category_refresh_description">Havaozy ny sokajy</string>
     <string name="category_refresh_streams_description">Havaozy ny fantsakana</string>
     <string name="content_search_all_description">Tadiavo daholo</string>
-    <string name="content_type_live_tv_subtitle_short">Jereo ny fantsona mivantana</string>
     <string name="common_edit_field_description_format">Ovay %1$s</string>
     <string name="common_loading">Eo am-panentanana…</string>
     <string name="search_stream_name_placeholder">Ampidiro ny anaran\'ny fantsakana…</string>
     <string name="search_result_category_format">Sokajy: %1$s</string>
     <string name="details_category_format">Sokajy: %1$s</string>
-    <string name="content_type_movies_subtitle_short">Jereo ny tolotra</string>
-    <string name="content_type_tv_shows_subtitle_short">Andiany sy fizarany</string>
 
     <!-- EPG phase labels -->
     <string name="epg_phase_downloading">Alaina</string>

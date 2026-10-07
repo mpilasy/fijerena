@@ -718,14 +718,11 @@
     <string name="category_refresh_description">Refresh categories</string>
     <string name="category_refresh_streams_description">Refresh streams</string>
     <string name="content_search_all_description">Search All</string>
-    <string name="content_type_live_tv_subtitle_short">Watch live channels</string>
     <string name="common_edit_field_description_format">Edit %1$s</string>
     <string name="common_loading">Loading…</string>
     <string name="search_stream_name_placeholder">Enter stream name…</string>
     <string name="search_result_category_format">Category: %1$s</string>
     <string name="details_category_format">Category: %1$s</string>
-    <string name="content_type_movies_subtitle_short">Browse on-demand</string>
-    <string name="content_type_tv_shows_subtitle_short">Series &amp; episodes</string>
 
     <!-- EPG phase labels (dynamic phase words from EpgFileManager) -->
     <string name="epg_phase_downloading">Downloading</string>

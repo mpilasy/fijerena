@@ -3,7 +3,7 @@
 # the card focused last, default the leftmost (F-H-2, R8); Up from a card still goes to the header.
 # Recorded on the emulator 2026-10-04 (category counts blanked).
 # Phase 4: start on the first card, not the Switch Source chip.
-@start Live TV / Watch live channels
+@start Live TV
 UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
 # P7: Search the guide (needs iptv's guide index) then Search All; the TV Guide button is gone
 # (the grid opens from Search the guide's header).
@@ -13,9 +13,9 @@ RIGHT	Switch profile (atr) / A
 RIGHT	Settings
 LEFT	Switch profile (atr) / A
 # Phase 4: the card focused last (Live TV), not the rightmost.
-DOWN	Live TV / Watch live channels
-RIGHT	Movies / Browse on-demand
+DOWN	Live TV
+RIGHT	Movies
 # Up from Movies: whichever header button is above it (geometric) — not asserted.
 UP	
 # Phase 4: back down to the card focused last (Movies).
-DOWN	Movies / Browse on-demand
+DOWN	Movies

@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-07
 
 - **TV home shows how fresh the source is:** the source pill says "Updating…" while its catalogue syncs, "Updated 2 hours ago" after, or "Update failed" — the source picker gives the reason. With a single source the pill still shows, for the status. The app name is smaller and the clock sits next to it. → Phase 1.
+- **Slimmer section tiles:** Live TV, Movies and TV Shows are a row of slim tiles instead of three big cards, so Continue Watching sits fully on screen under them. The category count shows only in developer mode. Left and Right at either end of the tiles stay put instead of dropping into Continue Watching. → Phase 2.
 
 ## Version: Guide on/off clarity
 **Release Date:** 2026-10-06

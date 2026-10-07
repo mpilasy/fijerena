@@ -680,14 +680,11 @@
     <string name="category_refresh_description">Actualiser les catégories</string>
     <string name="category_refresh_streams_description">Actualiser les flux</string>
     <string name="content_search_all_description">Tout rechercher</string>
-    <string name="content_type_live_tv_subtitle_short">Regarder des chaînes en direct</string>
     <string name="common_edit_field_description_format">Modifier %1$s</string>
     <string name="common_loading">Chargement…</string>
     <string name="search_stream_name_placeholder">Entrez le nom du flux…</string>
     <string name="search_result_category_format">Catégorie : %1$s</string>
     <string name="details_category_format">Catégorie : %1$s</string>
-    <string name="content_type_movies_subtitle_short">Parcourir à la demande</string>
-    <string name="content_type_tv_shows_subtitle_short">Séries et épisodes</string>
 
     <!-- EPG phase labels -->
     <string name="epg_phase_downloading">Téléchargement</string>

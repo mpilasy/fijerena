@@ -77,8 +77,10 @@ object TvDimensions {
     val posterHeight: Dp = 90.dp
     val posterHeightLarge: Dp = 240.dp
     val contentTypeCardWidth: Dp = 340.dp
-    val contentTypeCardHeight: Dp = 240.dp
-    val contentTypeIconSize: Dp = 56.dp
+
+    /** Home's Live TV / Movies / TV Shows tiles (TV home overhaul plan, Phase 2). */
+    val homeSectionTileHeight: Dp = 64.dp
+    val homeSectionTileIconSize: Dp = 28.dp
 
     /** "Jump Back In" shelf card — wide enough for a legible 16:9 thumbnail at 10-foot viewing. */
     val continueWatchingCardWidth: Dp = 280.dp
