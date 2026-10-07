@@ -1,6 +1,6 @@
 # Search the guide: Watch plays the wrong channel
 
-**Status:** In progress. Found while testing the TV home overhaul on bears 2026-10-07; user said do
+**Status:** Done 2026-10-07, all three fixes checked on the TV emulator (atr on bears). Found while testing the TV home overhaul on bears 2026-10-07; user said do
 all three fixes, hidden-category results hidden (2026-10-07).
 
 ## Problem
@@ -40,4 +40,4 @@ no result from a hidden category; a sync then a search still matches by guide id
 |---|---|---|
 | 1 Preview seed | Done: the last channel seeds only an entry with no channel asked for (guide return, then the requested channel, keep their order). Checked on the TV emulator, atr on bears: Watch on AL: SUPER SPORT 1 (matched to SAT: SUPERSPORT 1, category hidden) opens the Recent list with nothing playing | |
 | 2 Matcher cache + separators | Done: `warmCache` gets `getAllStreamsIncludingExcluded`; rows whose name starts with `#` skip the name levels (3–5) of `EpgChannelMatcher`, guide-id levels unchanged; test `a separator row never matches by name`. Checked on the TV emulator, atr on bears: sync, then Search the guide used the warmed cache (no "new matcher" log) and Watch played no separator | |
-| 3 Hidden categories | In progress | |
+| 3 Hidden categories | Done: `EpgBrowserViewModel` reads the profile's hidden live categories with each search (`ensureChannelMatcherCurrent`) and drops airings matched into them in both result paths, as for excluded streams; phone and TV share it. Checked on the TV emulator, atr on bears: "news" went from 330 programmes to 1 (GR: EPSILON TV, visible); Watch played it (stream 1473962). The header's airing count still counts before the filter ("1 programs (498 airings)"), as it did for excluded streams — left | |

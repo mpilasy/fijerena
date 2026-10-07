@@ -145,7 +145,7 @@ internal fun LiveTvSplitLayout(
         val list = streams ?: return@LaunchedEffect
         // The last channel only when no channel was asked for: a requested one this list doesn't have
         // (its category hidden by the profile, so the list is Recent) must not play the last channel
-        // watched instead (docs/plans/20261007_guide-watch-wrong-channel-plan.md, fix 1).
+        // watched instead (docs/plans/archive/20261007_guide-watch-wrong-channel-plan.md, fix 1).
         val seed =
             if (guideReturnStreamId != null || initialStreamId != null) {
                 guideReturnStreamId?.let { id -> list.firstOrNull { it.id == id } }

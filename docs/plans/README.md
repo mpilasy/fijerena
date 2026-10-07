@@ -16,7 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-07 | [Guide Watch wrong channel](./20261007_guide-watch-wrong-channel-plan.md) | Search the guide's Watch plays the channel asked for: no last-channel fallback, a matcher with every stream and no separator matches, results in hidden categories dropped | In progress |
 | 2026-10-07 | [TV home overhaul](./20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Done on the TV emulator, Now line and Updating… checked on bears; Shield check left |
 | 2026-10-06 | [Guide on/off clarity](./20261006_guide-on-off-clarity-plan.md) | One empty download no longer turns a source's guide off; guide sources get a real on/off switch instead of bulk-select checkboxes; refresh line, search header and "-1%" tell the truth | Done on the emulators; Phase 1 not forced on a device; OnePlus check left |
 | 2026-10-05 | [Icon buttons](./20261005_icon-buttons-plan.md) | Action buttons back to icons app-wide; TV shows the name on focus, mobile on long-press | Done on the emulators; live sync rows, section-root button, phone guide rows not reached |
@@ -28,6 +27,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-07 | [Guide Watch wrong channel](./archive/20261007_guide-watch-wrong-channel-plan.md) | Search the guide's Watch plays the channel asked for: no last-channel fallback in the TV preview, a matcher cache with every stream and no separator matches by name, results in hidden categories dropped | Done; checked on the TV emulator (atr on bears) |
 | 2026-10-05 | [Up next details](./archive/20261005_up-next-details-plan.md) | Next episode's title and synopsis in a panel under the "Up next" strip (TV: while the card has focus, in practice whenever it shows; mobile: always) | Done; checked on the emulators and bears |
 | 2026-10-04 | [Device info screen](./archive/20261004_device-info-screen-plan.md) | Settings → About → Device info for everyone: app, device, memory, storage, display, decoders, audio passthrough, network, power (charging as Doze sees it), sync health; Share on the phone | Done; review findings R1–R8 fixed |
 | 2026-10-04 | [Playback capability errors](./archive/20261004_playback-capability-errors-plan.md) | Undecodable streams (Dolby Vision profile 5, 8K) stop at once with the codec named, in the app language; slow-connection banner with measured throughput; 60 s stall limit | Done |

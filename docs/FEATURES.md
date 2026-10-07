@@ -82,7 +82,7 @@ Search across Live TV, Movies and TV Shows ("ALL", from Home) or one content typ
 
 ## Search the guide (EPG Browser)
 
-Programme-title search across the indexed XMLTV guide, from Home's book icon (when the index is ready) or a TV Guide's Search — then with an "In <category> only" toggle (on by default) that keeps results on that guide's channels.
+Programme-title search across the indexed XMLTV guide, from Home's book icon (when the index is ready) or a TV Guide's Search — then with an "In <category> only" toggle (on by default) that keeps results on that guide's channels. Airings on channels the profile can't open — excluded ones, or in a category it hides — are left out.
 
 - One search, by programme title (there is no channel-name mode). A **Matched only** toggle keeps channels the active source has.
 - Results grouped by date (Today, Tomorrow, weekday, then "EEEE, MMM d"), then by programme. Every programme that hasn't ended, with no upper limit; at most 500 results per query.

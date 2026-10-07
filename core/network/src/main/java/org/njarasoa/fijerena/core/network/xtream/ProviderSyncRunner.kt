@@ -117,7 +117,7 @@ object ProviderSyncRunner {
                 // Proactively warm the EPG-match cache for the provider just synced — with every live
                 // stream, as EpgBrowserViewModel builds it: getAllStreams leaves out hidden categories,
                 // and a matcher without the real channel matched a separator row by name instead
-                // (docs/plans/20261007_guide-watch-wrong-channel-plan.md, fix 2).
+                // (docs/plans/archive/20261007_guide-watch-wrong-channel-plan.md, fix 2).
                 val streams =
                     withContext(Dispatchers.IO) {
                         XtreamDatabase

@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -163,6 +164,14 @@ class EpgBrowserViewModel(
     private val searchService = XmltvSearchService(context)
 
     @Volatile private var channelMatcher: EpgChannelMatcher? = null
+
+    // Live categories the active profile hides, re-read with each search: an airing matched to a
+    // stream in one is dropped like an excluded stream — it can't be opened, and a filter (a Kid
+    // profile's) must not be bypassed through the guide. Kept out of the matcher, which is cached
+    // across profiles (docs/plans/archive/20261007_guide-watch-wrong-channel-plan.md, fix 3).
+    @Volatile private var hiddenLiveCategoryIds: Set<String> = emptySet()
+
+    private fun isHidden(matched: EpgBrowserMatchedStream): Boolean = matched.excluded || matched.categoryId in hiddenLiveCategoryIds
 
     @Volatile private var lastMatcherProviderId: Long? = null
 
@@ -408,6 +417,13 @@ class EpgBrowserViewModel(
                         .providerDao()
                         .getActiveProvider() ?: return@withContext
 
+                hiddenLiveCategoryIds =
+                    XtreamDatabase
+                        .getInstance(context)
+                        .categoryDao()
+                        .getAllCategoriesIncludingExcluded(provider.id, XtreamCategoryEntity.TYPE_LIVE)
+                        .filter { it.excluded }
+                        .mapTo(HashSet()) { it.categoryId }
                 channelMatcher =
                     EpgChannelMatcher.getOrCreate(provider.id) {
                         val t0 = System.currentTimeMillis()
@@ -635,7 +651,7 @@ class EpgBrowserViewModel(
                         .map { pagingData ->
                             pagingData.filter { row ->
                                 val matched = matcher?.match(row.channelId, row.channelDisplayName)
-                                matched == null || !matched.excluded
+                                matched == null || !isHidden(matched)
                             }
                         }.cachedIn(viewModelScope)
             }
@@ -673,8 +689,8 @@ class EpgBrowserViewModel(
                                     for (airing in program.airings) {
                                         val matched = matcher.match(airing.channelId, airing.channelName)
                                         when {
-                                            // excluded channel: drop from search results
-                                            matched != null && matched.excluded -> Unit
+                                            // excluded channel, or one in a hidden category: drop from search results
+                                            matched != null && isHidden(matched) -> Unit
 
                                             matched != null -> matchedList.add(airing.copy(matchedStream = matched))
 
