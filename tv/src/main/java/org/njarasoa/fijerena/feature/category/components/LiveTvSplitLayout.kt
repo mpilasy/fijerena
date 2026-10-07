@@ -143,10 +143,16 @@ internal fun LiveTvSplitLayout(
     LaunchedEffect(streams) {
         if (hasSeeded || previewTarget != null) return@LaunchedEffect
         val list = streams ?: return@LaunchedEffect
+        // The last channel only when no channel was asked for: a requested one this list doesn't have
+        // (its category hidden by the profile, so the list is Recent) must not play the last channel
+        // watched instead (docs/plans/20261007_guide-watch-wrong-channel-plan.md, fix 1).
         val seed =
-            guideReturnStreamId?.let { id -> list.firstOrNull { it.id == id } }
-                ?: initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
-                ?: lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
+            if (guideReturnStreamId != null || initialStreamId != null) {
+                guideReturnStreamId?.let { id -> list.firstOrNull { it.id == id } }
+                    ?: initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
+            } else {
+                lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
+            }
         // A channel asked for by id and not in this list yet waits for the next one: after process
         // death the list comes back as Recent first, then the category the preview was on.
         if (seed == null && (guideReturnStreamId != null || initialStreamId != null)) return@LaunchedEffect
