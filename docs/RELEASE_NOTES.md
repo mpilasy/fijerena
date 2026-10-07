@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-07
 
 - **Watch in Search the guide no longer plays the last channel instead:** when the channel asked for wasn't in the list Live TV opened on (its category hidden for the profile), the preview played the last channel watched. It now plays only the channel asked for. → Guide Watch plan, fix 1.
+- **Search the guide no longer matches category separators:** after a catalogue sync, a guide channel whose stream was in a hidden category could be matched by name to a separator row such as "#### SPORTS ####", and Watch played that empty "channel". The match now uses every channel, and separator rows only ever match by guide id. → Fix 2.
 - **TV home shows how fresh the source is:** the source pill says "Updating…" while its catalogue syncs, "Updated 2 hours ago" after, or "Update failed" — the source picker gives the reason. With a single source the pill still shows, for the status. The app name is smaller and the clock sits next to it. → Phase 1.
 - **Slimmer section tiles:** Live TV, Movies and TV Shows are a row of slim tiles instead of three big cards, so Continue Watching sits fully on screen under them. The category count shows only in developer mode. Left and Right at either end of the tiles stay put instead of dropping into Continue Watching. → Phase 2.
 - **Home opens on Continue Watching:** with something to resume, TV home starts on its first card. Moving up to the tiles and back down returns to the card you were on, and up from the cards returns to the tile you were on. → Phase 3.

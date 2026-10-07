@@ -82,4 +82,25 @@ class EpgChannelMatcherTest {
         val match = matcher.match("epg_unknown", "ABC Extra")
         assertNull(match)
     }
+
+    @Test
+    fun `a separator row never matches by name`() {
+        val streams =
+            listOf(
+                createStream(1, "#### ΑΘΛΗΤΙΚΑ/SPORTS ⱽᴵᴾ ####"),
+                createStream(2, "NOW: SKY SPORTS RACING ᴿᴬᵂ", "skysportsracing.uk"),
+            )
+        val matcher = EpgChannelMatcher(streams)
+
+        // By guide id: the channel.
+        assertEquals(2, matcher.match("skysportsracing.uk", "NOW: SKY SPORTS RACING ᴿᴬᵂ")?.streamId)
+        // By name: the real channel, never the separator, whose normalized name "sports" is
+        // contained in "skysportsracing" and equals "Sports".
+        assertEquals(2, matcher.match("unknown.id", "UK: SKY SPORTS RACING SD")?.streamId)
+
+        // With the channel left out (a hidden category, before the cache held every stream), nothing.
+        val separatorOnly = EpgChannelMatcher(listOf(createStream(1, "#### ΑΘΛΗΤΙΚΑ/SPORTS ⱽᴵᴾ ####")))
+        assertNull(separatorOnly.match("skysportsracing.uk", "NOW: SKY SPORTS RACING ᴿᴬᵂ"))
+        assertNull(separatorOnly.match("unknown.id", "Sports"))
+    }
 }

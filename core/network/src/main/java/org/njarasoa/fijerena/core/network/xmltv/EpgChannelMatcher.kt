@@ -103,6 +103,9 @@ class EpgChannelMatcher(
                 byEpgId.putIfAbsent(epgId, stream)
                 byEpgIdLower.putIfAbsent(epgId.lowercase(), stream)
             }
+            // A separator row ("#### ΑΘΛΗΤΙΚΑ/SPORTS ####") is no channel: by name its normalized
+            // "sports" was contained in "skysportsracing". It still matches by guide id above.
+            if (stream.name.trimStart().startsWith("#")) continue
             byName.putIfAbsent(stream.name, stream)
             val norm = ChannelNameNormalizer.normalize(stream.name)
             if (norm.isNotEmpty()) {

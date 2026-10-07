@@ -39,5 +39,5 @@ no result from a hidden category; a sync then a search still matches by guide id
 | Fix | Status | Commit |
 |---|---|---|
 | 1 Preview seed | Done: the last channel seeds only an entry with no channel asked for (guide return, then the requested channel, keep their order). Checked on the TV emulator, atr on bears: Watch on AL: SUPER SPORT 1 (matched to SAT: SUPERSPORT 1, category hidden) opens the Recent list with nothing playing | |
-| 2 Matcher cache + separators | In progress | |
-| 3 Hidden categories | Not started | |
+| 2 Matcher cache + separators | Done: `warmCache` gets `getAllStreamsIncludingExcluded`; rows whose name starts with `#` skip the name levels (3–5) of `EpgChannelMatcher`, guide-id levels unchanged; test `a separator row never matches by name`. Checked on the TV emulator, atr on bears: sync, then Search the guide used the warmed cache (no "new matcher" log) and Watch played no separator | |
+| 3 Hidden categories | In progress | |
