@@ -5,6 +5,11 @@ import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
@@ -28,6 +33,16 @@ import java.net.UnknownHostException
 object ProviderSyncRunner {
     private const val TAG = "ProviderSyncRunner"
     private const val MAX_ATTEMPTS = 3
+
+    /** Syncs running in this process per source id; a count, as the worker and a manual sync can overlap. */
+    private val runningCounts = MutableStateFlow<Map<Long, Int>>(emptyMap())
+
+    /**
+     * Ids of the sources whose catalogue sync is running now, whichever caller started it (manual,
+     * TV's in-process refresh, [XtreamSyncWorker]). Home's source pill shows "Updating…" from it
+     * (docs/plans/20261007_tv-home-overhaul-plan.md → Phase 1).
+     */
+    val running: Flow<Set<Long>> = runningCounts.map { it.keys }.distinctUntilChanged()
 
     sealed interface Outcome {
         /**
@@ -55,6 +70,22 @@ object ProviderSyncRunner {
      * Developer Mode is on), ready to persist via `updateSyncStats` / show in the UI.
      */
     suspend fun syncProvider(
+        context: Context,
+        provider: ProviderEntity,
+        password: String,
+    ): Outcome {
+        runningCounts.update { it + (provider.id to (it[provider.id] ?: 0) + 1) }
+        try {
+            return syncWithRetries(context, provider, password)
+        } finally {
+            runningCounts.update { counts ->
+                val left = (counts[provider.id] ?: 1) - 1
+                if (left > 0) counts + (provider.id to left) else counts - provider.id
+            }
+        }
+    }
+
+    private suspend fun syncWithRetries(
         context: Context,
         provider: ProviderEntity,
         password: String,

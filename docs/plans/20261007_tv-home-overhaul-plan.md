@@ -1,6 +1,6 @@
 # TV home overhaul
 
-**Status:** Phase 1 in progress. Design agreed with the user 2026-10-07 (direction A, all four extras, two
+**Status:** Phase 1 done. Design agreed with the user 2026-10-07 (direction A, all four extras, two
 favourites rows, Live row = last + favourites + recent, no "See all" card, "Updating…" kept, zap
 list = the card's list). User said start 2026-10-07. TV only; mobile home unchanged.
 
@@ -137,7 +137,7 @@ columns and `MediaRepository` / `EpgIndex` APIs. Core touched only for new strin
 
 ## Checks
 
-TV emulator first (jellyxtream for VOD rows, iptv for the Live row and guide Now lines), scripted
+User OK'd installing on the TV emulator after every phase (2026-10-07). TV emulator first (jellyxtream for VOD rows, iptv for the Live row and guide Now lines), scripted
 focus walk + text checks. Then a Shield for performance. Never install, uninstall or clear data on a
 device without asking.
 
@@ -145,7 +145,7 @@ device without asking.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 Header | In progress | |
+| 1 Header | Done: `ProviderSyncRunner.running` (count per source, tested); pill status + clock + smaller title; "just now" under a minute (reuses `live_sync_just_now`); checked on the TV emulator (Updated / just now / none for M3U, picker, home walk 0 mismatches). "Updating…" and "Update failed" not seen live: a jellyxtream sync takes 0.6 s, failure not forced | |
 | 2 Section tiles | Not started | |
 | 3 Rows scaffold + focus | Not started | |
 | 4 Live row | Not started | |

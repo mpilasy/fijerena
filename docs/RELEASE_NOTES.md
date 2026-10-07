@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV home overhaul
+**Release Date:** 2026-10-07
+
+- **TV home shows how fresh the source is:** the source pill says "Updating…" while its catalogue syncs, "Updated 2 hours ago" after, or "Update failed" — the source picker gives the reason. With a single source the pill still shows, for the status. The app name is smaller and the clock sits next to it. → Phase 1.
+
 ## Version: Guide on/off clarity
 **Release Date:** 2026-10-06
 

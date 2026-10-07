@@ -507,6 +507,10 @@
     <string name="content_select_type_title">Fandraisana</string>
     <string name="content_switch_provider_title">Ovao ny loharano</string>
     <string name="content_switch_provider_description_format">Ovao ny loharano, loharano ampiasaina izao: %1$s</string>
+    <string name="home_source_updating">Manavao…</string>
+    <string name="home_source_updated">Nohavaozina %1$s</string>
+    <string name="home_source_update_failed">Tsy nahomby ny fanavaozana</string>
+    <string name="home_source_update_failed_detail">Tsy nahomby ny fanavaozana farany: %1$s</string>
     <string name="content_type_live_tv_description">Jereo ny fantsona TV mivantana</string>
     <string name="content_type_movies_description">Jereo ireo sarimihetsika</string>
     <string name="content_type_tv_shows_description">Jereo ireo tantara an-tsary</string>

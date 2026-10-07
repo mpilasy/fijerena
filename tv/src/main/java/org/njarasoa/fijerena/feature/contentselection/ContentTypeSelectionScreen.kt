@@ -41,6 +41,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,6 +91,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -105,6 +108,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaLive
@@ -116,7 +120,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
+import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
+import org.njarasoa.fijerena.feature.contentselection.components.sourceSyncStatus
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -166,6 +173,14 @@ fun ContentTypeSelectionScreen(
     var needsSignIn by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
+    // The source pill's status (TV home overhaul plan, Phase 1): the active source's last catalogue
+    // sync, re-read when a sync of it ends and on every ON_RESUME.
+    var lastSyncedAtMs by remember { mutableLongStateOf(0L) }
+    var lastSyncError by remember { mutableStateOf<String?>(null) }
+    var syncStatsReload by remember { mutableIntStateOf(0) }
+    val runningSyncs by ProviderSyncRunner.running.collectAsStateWithLifecycle(initialValue = emptySet())
+    val syncing = activeProviderId in runningSyncs
+
     // Category counts per content type: Pair(filtered, total) — null while loading
     var liveTvCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -200,6 +215,8 @@ fun ContentTypeSelectionScreen(
                     providerName = activeProvider.name
                     providerType = activeProvider.type
                     activeProviderId = activeProvider.id
+                    lastSyncedAtMs = activeProvider.lastSyncedAtMs
+                    lastSyncError = activeProvider.lastSyncError
                     // A Jellyfin server this profile hasn't signed in to: each profile is its own
                     // Jellyfin user (docs/plans/archive/20260929_live-sync-plan.md → User profiles). No
                     // repository is built — it could only fail to authenticate — and the first time
@@ -238,6 +255,15 @@ fun ContentTypeSelectionScreen(
                 }
             }
         resolvedTypes?.let(onCapabilitiesResolved)
+    }
+
+    LaunchedEffect(activeProviderId, syncing, syncStatsReload) {
+        if (activeProviderId == 0L || syncing) return@LaunchedEffect
+        val provider = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).getProviderById(activeProviderId) }
+        if (provider != null) {
+            lastSyncedAtMs = provider.lastSyncedAtMs
+            lastSyncError = provider.lastSyncError
+        }
     }
 
     // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
@@ -294,6 +320,7 @@ fun ContentTypeSelectionScreen(
         val repo = mediaRepositoryRef
         val observer =
             LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) syncStatsReload++
                 if (event == Lifecycle.Event.ON_RESUME && repo != null) {
                     coroutineScope.launch {
                         continueWatchingItems = repo.getContinueWatchingItems()
@@ -375,21 +402,27 @@ fun ContentTypeSelectionScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = Spacing.xxl.scaled(scale)),
+                                .padding(bottom = Spacing.lg.scaled(scale)),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.login_app_name),
-                            style =
-                                MaterialTheme.typography.displayMedium.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.displayMedium.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = MaterialTheme.colorScheme.onSurface,
+                        Row(
                             modifier = Modifier.staggeredEntrance(0),
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.login_app_name),
+                                style =
+                                    MaterialTheme.typography.headlineSmall.copy(
+                                        fontSize =
+                                            MaterialTheme.typography.headlineSmall.fontSize
+                                                .scaled(scale),
+                                    ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            HomeClock()
+                        }
                         Row(
                             // Applies to every button in the row (none is a focus group).
                             modifier =
@@ -401,7 +434,11 @@ fun ContentTypeSelectionScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            if (allProviders.size > 1) {
+                            // Shown with one source too, for its sync status; only a picker (and
+                            // focusable) with two or more.
+                            if (providerName.isNotEmpty()) {
+                                val canPick = allProviders.size > 1
+                                val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
                                 val displayName =
                                     if (appSettings.isDevMode && providerType.isNotEmpty()) {
                                         "$providerName ($providerType)"
@@ -432,11 +469,16 @@ fun ContentTypeSelectionScreen(
                                                         androidx.compose.ui.graphics.Color.Transparent
                                                     },
                                                 shape = RoundedCornerShape(CinemaCornerRadius.large),
-                                            ).onFocusChanged { providerPillFocused = it.isFocused }
-                                            .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                            .semantics {
-                                                contentDescription = switchProviderDescription
-                                            },
+                                            ).then(
+                                                if (canPick) {
+                                                    Modifier
+                                                        .onFocusChanged { providerPillFocused = it.isFocused }
+                                                        .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                                        .semantics { contentDescription = switchProviderDescription }
+                                                } else {
+                                                    Modifier
+                                                },
+                                            ),
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -451,12 +493,19 @@ fun ContentTypeSelectionScreen(
                                             style = MaterialTheme.typography.titleSmall,
                                             color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                         )
-                                        Icon(
-                                            imageVector = CinemaIcons.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                            modifier = Modifier.padding(start = Spacing.xs),
+                                        SourceSyncStatusLine(
+                                            status = syncStatus,
+                                            lastSyncedAtMs = lastSyncedAtMs,
+                                            modifier = Modifier.padding(start = Spacing.sm),
                                         )
+                                        if (canPick) {
+                                            Icon(
+                                                imageVector = CinemaIcons.ArrowDropDown,
+                                                contentDescription = null,
+                                                tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                                                modifier = Modifier.padding(start = Spacing.xs),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -646,6 +695,16 @@ fun ContentTypeSelectionScreen(
                                 modifier = Modifier.verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                             ) {
+                                // The pill only says "Update failed"; the reason is here. It already
+                                // carries the raw detail in developer mode (ProviderSyncRunner).
+                                lastSyncError?.takeIf { !syncing }?.let { error ->
+                                    androidx.compose.material3.Text(
+                                        text = stringResource(R.string.home_source_update_failed_detail, error),
+                                        color = CinemaError,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(bottom = Spacing.sm),
+                                    )
+                                }
                                 allProviders.forEach { provider ->
                                     val isActive = provider.id == activeProviderId
                                     val label =
