@@ -1,6 +1,6 @@
 # TV home overhaul
 
-**Status:** All seven phases done on the TV emulator. Left: a Shield check (recomposition, time to first focus) and seeing the Now line on a guide-matched source. Design agreed with the user 2026-10-07 (direction A, all four extras, two
+**Status:** All seven phases done on the TV emulator. Checked on bears 2026-10-07 (user asked): Channels row "Last watched • Now: <programme>" with its progress bar (ANT1+ SPORTS 1), pill "Updating…" during a 15 s manual sync, then "Updated just now" on its own. Left: a Shield check (recomposition, time to first focus); "Update failed" not forced. Design agreed with the user 2026-10-07 (direction A, all four extras, two
 favourites rows, Live row = last + favourites + recent, no "See all" card, "Updating…" kept, zap
 list = the card's list). User said start 2026-10-07. TV only; mobile home unchanged.
 
