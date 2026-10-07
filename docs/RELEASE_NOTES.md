@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Guide on/off clarity
+**Release Date:** 2026-10-06
+
+- **One empty guide download no longer turns a source's guide off:** a source's own guide (`xmltv.php`) that came back with no channels once — bears throttling, a cut-off reply — switched "Provides a guide" off for good, and the guide quietly stopped showing and refreshing. Now that only happens to a guide that never had channels; otherwise the old guide stays, the guide source shows "The guide came back empty (no channels)", and the next refresh tries again. → Phase 1.
+
 ## Version: Shared logins
 **Release Date:** 2026-10-05
 

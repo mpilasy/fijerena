@@ -59,5 +59,6 @@
     <string name="epg_error_task_failed_retries_format">Échec après %1$d tentatives</string>
     <string name="epg_error_no_sources">Aucune source de guide à traiter</string>
     <string name="epg_error_processing_failed">Échec du traitement</string>
+    <string name="epg_error_came_back_empty">Le guide est revenu vide (aucune chaîne). La prochaine actualisation réessaiera.</string>
     <string name="epg_error_source_not_found">Source de guide introuvable</string>
 </resources>

@@ -994,8 +994,9 @@ class EpgFileManager private constructor(
         }
 
     /**
-     * Sources this run downloaded and ingested with no channels: an Xtream source's automatic guide
-     * source among them turns its "Provides a guide" off ([AutoXmltvSources.onEmptyIngest]).
+     * Sources this run downloaded and ingested with no channels, and that never had any (one that
+     * had is an error instead, [isFailedEmptyIngest]): an Xtream source's automatic guide source
+     * among them turns its "Provides a guide" off ([AutoXmltvSources.onEmptyIngest]).
      */
     private suspend fun detectEmptyOwnGuides(stats: List<SourceStats>) {
         val emptyIds = stats.filter { it.error == null && !it.unchanged && it.channelsIngested == 0 }.map { it.sourceId }
@@ -1589,6 +1590,12 @@ class EpgFileManager private constructor(
                     }
                 }
 
+            if (isFailedEmptyIngest(ingestionStats.channelsIngested, source.lastChannels)) {
+                Log.w(TAG, "EPG source $label came back empty after ${source.lastChannels} channels — keeping its old guide")
+                val display = context.getString(R.string.epg_error_came_back_empty)
+                sourceDao.markError(source.id, display)
+                return IngestOutcome(SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display))
+            }
             Log.i(TAG, "EPG source $label fully ingested, content hash ${contentSha256?.take(12)}")
             val record =
                 IngestRecord(
@@ -1810,3 +1817,13 @@ class EpgFileManager private constructor(
         }
     }
 }
+
+/**
+ * A download that parsed to no channels for a guide source that had some ([previousChannels], its
+ * `lastChannels`): a throttled or cut-off reply, not a server without a guide. It counts as that
+ * source's error, so the swap leaves its old guide in place and the next refresh tries again.
+ */
+internal fun isFailedEmptyIngest(
+    channelsIngested: Int,
+    previousChannels: Int,
+): Boolean = channelsIngested == 0 && previousChannels > 0

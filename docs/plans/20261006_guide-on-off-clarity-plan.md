@@ -1,6 +1,6 @@
 # Guide on/off clarity
 
-**Status:** Proposed (written 2026-10-06), waiting for the user's go-ahead. Nothing built yet.
+**Status:** In progress. User said proceed 2026-10-06; bulk select dropped entirely (default taken, user didn't choose a menu).
 
 ## Problem
 
@@ -56,7 +56,7 @@ returns an empty `<tv/>` to force it). Then the OnePlus, the device where it was
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 Detection | Not started | |
+| 1 Detection | Done: in the ingest, a download with no channels for a source whose `lastChannels` > 0 (`isFailedEmptyIngest`, tested) is that source's error "came back empty" — no `markIngested`, and the staging swap leaves its old programmes in place (it skips errored sources). Detection only sees sources that never had channels | (this commit) |
 | 2 Switch on the card | Not started | |
 | 3 Refresh line | Not started | |
 | 4 Search header | Not started | |

@@ -59,5 +59,6 @@
     <string name="epg_error_task_failed_retries_format">Task failed after %1$d retries</string>
     <string name="epg_error_no_sources">No guide sources to process</string>
     <string name="epg_error_processing_failed">Processing failed</string>
+    <string name="epg_error_came_back_empty">The guide came back empty (no channels). The next refresh tries again.</string>
     <string name="epg_error_source_not_found">Guide source not found</string>
 </resources>
