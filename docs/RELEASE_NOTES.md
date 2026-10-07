@@ -7,6 +7,7 @@
 - **Guide sources have an on/off switch:** each guide source's card has a switch where the checkbox was. The checkbox only selected the source for "Refresh (n)" / "Delete (n)" and was easy to take for an on/off control; it is gone, with those two buttons. For a source's own guide the switch is the same as Provides a guide in Edit Source. → Phase 2.
 - **A guide source that is off says so:** its card said "Refreshes every 6 hours" although a guide source that is off is never refreshed in the background; it now says "Off: not used, not refreshed". → Phase 3.
 - **Search the guide says when the guide is off:** with the source's guide switched off, the header said "No guide sources configured"; it now says "Guide off: turn it on in Guide sources". → Phase 4.
+- **No more "-1%":** a guide download whose size the server doesn't give (bears never does) showed "-1%" and an empty bar; it now shows a moving bar and the amount downloaded so far. → Phase 5.
 
 ## Version: Shared logins
 **Release Date:** 2026-10-05

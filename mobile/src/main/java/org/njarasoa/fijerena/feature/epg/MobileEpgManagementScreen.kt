@@ -352,17 +352,31 @@ private fun EpgSourceCard(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent),
+                            // No size from the server (bears sends none): the bytes so far instead of a percentage.
+                            text =
+                                if (activeProgress.progressPercent >= 0) {
+                                    stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent)
+                                } else {
+                                    NumberUtils.formatBytes(activeProgress.downloadedBytes)
+                                },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    LinearProgressIndicator(
-                        progress = { activeProgress.progressPercent / 100f },
-                        modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                    )
+                    if (activeProgress.progressPercent >= 0) {
+                        LinearProgressIndicator(
+                            progress = { activeProgress.progressPercent / 100f },
+                            modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                        )
+                    }
                 }
             } else {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
