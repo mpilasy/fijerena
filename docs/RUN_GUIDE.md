@@ -330,7 +330,8 @@ there. Each file's header comments name the start screen, the source it expects 
 
 | Walk | Screen |
 |------|--------|
-| `home.txt` | Home: first card, header buttons, Down back to the last card |
+| `home.txt` | Home (atr, iptv): opens on the last channel watched, tiles, header buttons, Down back to the last tile |
+| `home-rows.txt` | Home (atr, jellyxtream): Continue Watching and favourites rows — ends stay put, Up/Down keep each row's card and the tile focused last |
 | `live-tv-browse.txt` | Live TV browse: categories and channels as two panes |
 | `live-tv-preview.txt` | Live TV preview: the docked channel panel's tabs and rows |
 | `live-tv-fullscreen.txt` | Live TV full screen: the channel panel over the video |

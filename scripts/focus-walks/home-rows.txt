@@ -1,0 +1,31 @@
+# Home's rows (TV home overhaul plan, Phase 7), TV emulator, profile atr, source jellyxtream:
+# Continue Watching (101 Dalmatians II, The Godfather ×2), Favorite movies (The Godfather),
+# Favorite shows (Agatha Christie's Marple); Live TV has no channels, so its tile is dimmed and
+# there is no Channels row. Start: a fresh launch, atr picked.
+# Entry focus: the first Continue Watching card.
+@start 101 Dalmatians II: Patch's London Adventure / 1h 5m remaining
+# Left on a row's first card stays put; Right walks the row and stays put on its last card.
+LEFT	101 Dalmatians II: Patch's London Adventure / 1h 5m remaining
+RIGHT	The Godfather / 2h 46m remaining
+RIGHT	The Godfather / 2h 42m remaining
+RIGHT	The Godfather / 2h 42m remaining
+# Up from the row: the first focusable tile (Live TV is dimmed), not the tile above the card.
+UP	Movies / 4 categories
+RIGHT	TV Shows / 2 categories
+# Right on the last tile stays put.
+RIGHT	TV Shows / 2 categories
+# Down: back to the card the row had last (the third), not the one under TV Shows.
+DOWN	The Godfather / 2h 42m remaining
+# Down through the favourites rows and back up: each row keeps its card.
+DOWN	The Godfather
+DOWN	Agatha Christie's Marple
+UP	The Godfather
+UP	The Godfather / 2h 42m remaining
+# Up from the row: the tile focused last (TV Shows).
+UP	TV Shows / 2 categories
+LEFT	Movies / 4 categories
+# Left on the first focusable tile stays put.
+LEFT	Movies / 4 categories
+UP	Switch Source, current source: jellyxtream (XTREAM)
+# Down from the header: the tile focused last (Movies).
+DOWN	Movies / 4 categories

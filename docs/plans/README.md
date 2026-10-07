@@ -16,7 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-07 | [TV home overhaul](./20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Phases 1–6 done; Phase 7 (focus walk, checks) to do |
+| 2026-10-07 | [TV home overhaul](./20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Done on the TV emulator; Shield check and Now line on a guide-matched source left |
 | 2026-10-06 | [Guide on/off clarity](./20261006_guide-on-off-clarity-plan.md) | One empty download no longer turns a source's guide off; guide sources get a real on/off switch instead of bulk-select checkboxes; refresh line, search header and "-1%" tell the truth | Done on the emulators; Phase 1 not forced on a device; OnePlus check left |
 | 2026-10-05 | [Icon buttons](./20261005_icon-buttons-plan.md) | Action buttons back to icons app-wide; TV shows the name on focus, mobile on long-press | Done on the emulators; live sync rows, section-root button, phone guide rows not reached |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real bears) needs a second bears login |

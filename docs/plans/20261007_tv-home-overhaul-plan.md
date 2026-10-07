@@ -1,6 +1,6 @@
 # TV home overhaul
 
-**Status:** Phases 1–6 done. Design agreed with the user 2026-10-07 (direction A, all four extras, two
+**Status:** All seven phases done on the TV emulator. Left: a Shield check (recomposition, time to first focus) and seeing the Now line on a guide-matched source. Design agreed with the user 2026-10-07 (direction A, all four extras, two
 favourites rows, Live row = last + favourites + recent, no "See all" card, "Updating…" kept, zap
 list = the card's list). User said start 2026-10-07. TV only; mobile home unchanged.
 
@@ -152,4 +152,4 @@ device without asking.
 | 4 Live row | Done: `mergeLiveRow` (tested: order, dedupe as favourite, last watched found among favourites, cap 20), `TvLiveRow` card on `HomeRow`, Now lines refreshed on the minute, reload on resume, `onLiveChannelSelected` → `CategoryList(initialCategoryId = favorites/recent)`, return key `live:<id>`, entry focus falls back to it. Row title "Channels" (the tile already says Live TV). Checked on the TV emulator, iptv: last watched first, reload on resume, Recent vs Favorites list on open, Back to the card, home walk 0 mismatches (new start). Now line not seen: iptv's channels aren't in the guide index and bears is off-limits | |
 | 5 Favourites rows | Done: `TvFavoritesRow` on `HomeRow` (16:9 art, title with badge, year • genre), loaded with the Live row and on resume, `onFavoriteSelected` → `MovieDetails` / `EpisodeSelection` as the lists route them, return keys `favMovie:` / `favShow:`, entry focus falls through to them. Checked on the TV emulator, jellyxtream: Favorite movies (The Godfather) and Favorite shows (Agatha Christie's Marple, favourited for the check — left in place) open details / episodes, Back to the card, Up returns to Continue Watching's last card | |
 | 6 Backdrop follows focus | Done: rows' `itemModifier` records the focused card's art (`onFocusChanged`, blank art ignored); `HomeBackdrop` reads it in its own scope, waits 250 ms, hands it to `AmbientBackdrop` (which already blurs and crossfades); tiles/header keep the last one. Checked on the TV emulator (API 36), jellyxtream: 101 Dalmatians → Marple art on focus. Shield recomposition count not measured (no Shield in this round) | |
-| 7 Focus walk + checks | Not started | |
+| 7 Focus walk + checks | Done: new `home-rows.txt` (jellyxtream: row ends, Up/Down memory across three rows and the tiles, header Down), recorded then checked, 17 steps 0 mismatches; `home.txt` (iptv, Channels row first) 11 steps 0 mismatches. Left: Shield (recomposition count, time to first focus) and the Now line on a source whose channels are in the guide | |
