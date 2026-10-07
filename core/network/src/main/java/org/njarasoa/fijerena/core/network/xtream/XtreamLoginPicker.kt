@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xtream
 
 import android.content.Context
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -168,6 +169,7 @@ object XtreamLoginPicker : AlternateLogin {
      * The login of the stream this device plays now, when that stream is one this picker gave
      * source [providerId] and the login still has a password and isn't marked busy.
      */
+    @androidx.annotation.OptIn(UnstableApi::class)
     private fun playingLogin(
         providerId: Long,
         logins: SourceLogins,
