@@ -109,6 +109,9 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
+import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
+import org.njarasoa.fijerena.core.ui.home.sourceSyncStatus
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -128,13 +131,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
-import org.njarasoa.fijerena.feature.contentselection.components.LiveRowEntry
 import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
-import org.njarasoa.fijerena.feature.contentselection.components.mergeLiveRow
-import org.njarasoa.fijerena.feature.contentselection.components.sourceSyncStatus
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton

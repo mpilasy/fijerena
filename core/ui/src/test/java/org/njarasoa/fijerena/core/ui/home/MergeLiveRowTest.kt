@@ -1,10 +1,9 @@
-package org.njarasoa.fijerena.feature.contentselection
+package org.njarasoa.fijerena.core.ui.home
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
-import org.njarasoa.fijerena.feature.contentselection.components.mergeLiveRow
 
 class MergeLiveRowTest {
     private fun channel(id: String) = MediaItem(id = id, name = "ch$id", mediaType = MediaType.LIVE_CHANNEL, categoryId = "c")

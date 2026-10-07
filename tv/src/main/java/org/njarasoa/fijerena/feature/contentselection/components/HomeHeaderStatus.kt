@@ -30,6 +30,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
@@ -40,21 +41,6 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.util.Date
-
-/** What the source pill on Home says about the active source's catalogue sync. */
-internal enum class SourceSyncStatus { UPDATING, FAILED, UPDATED, NONE }
-
-internal fun sourceSyncStatus(
-    syncing: Boolean,
-    lastSyncedAtMs: Long,
-    lastSyncError: String?,
-): SourceSyncStatus =
-    when {
-        syncing -> SourceSyncStatus.UPDATING
-        lastSyncError != null -> SourceSyncStatus.FAILED
-        lastSyncedAtMs > 0L -> SourceSyncStatus.UPDATED
-        else -> SourceSyncStatus.NONE
-    }
 
 /**
  * The wall clock, re-read on each minute boundary. Only the composable reading it recomposes, once
