@@ -651,6 +651,7 @@
 
     <!-- Content Type Selection -->
     <string name="content_select_type_title">Home</string>
+    <string name="home_tab_label">Home</string>
     <string name="content_switch_provider_title">Switch Source</string>
     <string name="content_switch_provider_description_format">Switch Source, current source: %1$s</string>
     <string name="home_source_updating">Updating…</string>

@@ -50,7 +50,6 @@ import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
-import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -63,7 +62,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
-import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
@@ -89,8 +87,6 @@ fun MobileSearchScreen(
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
     initialQuery: String? = null,
-    /** The section-root button (P6), a top-bar action; null hides it. */
-    sectionRoot: SectionRoot? = null,
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -186,7 +182,6 @@ fun MobileSearchScreen(
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
                 },
-                actions = { SectionRootAction(sectionRoot) },
             )
         },
     ) { paddingValues ->

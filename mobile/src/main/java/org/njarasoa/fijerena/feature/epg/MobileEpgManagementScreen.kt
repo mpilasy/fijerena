@@ -30,14 +30,12 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
-import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
-import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -52,8 +50,6 @@ import org.njarasoa.fijerena.ui.components.buttons.IconAction
 fun MobileEpgManagementScreen(
     providerId: Long,
     onBack: () -> Unit,
-    /** The section-root button (P6), the top bar's last action; null hides it. */
-    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val viewModel: EpgManagementViewModel =
@@ -116,7 +112,6 @@ fun MobileEpgManagementScreen(
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.epg_add_source))
                     }
-                    SectionRootAction(sectionRoot)
                 },
             )
         },

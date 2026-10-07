@@ -613,6 +613,7 @@
 
     <!-- Content Type Selection -->
     <string name="content_select_type_title">Accueil</string>
+    <string name="home_tab_label">Accueil</string>
     <string name="content_switch_provider_title">Changer de source</string>
     <string name="content_switch_provider_description_format">Changer de source, source actuelle : %1$s</string>
     <string name="home_source_updating">Mise à jour…</string>

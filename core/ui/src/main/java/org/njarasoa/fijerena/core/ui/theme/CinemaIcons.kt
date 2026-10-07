@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.FastRewind
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -79,6 +80,7 @@ import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -122,6 +124,7 @@ import androidx.compose.material.icons.sharp.FastRewind
 import androidx.compose.material.icons.sharp.Favorite
 import androidx.compose.material.icons.sharp.FavoriteBorder
 import androidx.compose.material.icons.sharp.Folder
+import androidx.compose.material.icons.sharp.Home
 import androidx.compose.material.icons.sharp.Info
 import androidx.compose.material.icons.sharp.KeyboardArrowDown
 import androidx.compose.material.icons.sharp.KeyboardArrowUp
@@ -275,6 +278,10 @@ object CinemaIcons {
         @Composable @ReadOnlyComposable
         get() =
             pick(Icons.AutoMirrored.Rounded.VolumeUp, Icons.AutoMirrored.Outlined.VolumeUp, Icons.AutoMirrored.Sharp.VolumeUp)
+
+    val Home: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Home, Icons.Outlined.Home, Icons.Sharp.Home)
 
     val Tv: ImageVector
         @Composable @ReadOnlyComposable

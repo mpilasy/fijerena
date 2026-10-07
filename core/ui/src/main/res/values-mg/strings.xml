@@ -505,6 +505,7 @@
 
     <!-- Content Type Selection -->
     <string name="content_select_type_title">Fandraisana</string>
+    <string name="home_tab_label">Fandraisana</string>
     <string name="content_switch_provider_title">Ovao ny loharano</string>
     <string name="content_switch_provider_description_format">Ovao ny loharano, loharano ampiasaina izao: %1$s</string>
     <string name="home_source_updating">Manavao…</string>

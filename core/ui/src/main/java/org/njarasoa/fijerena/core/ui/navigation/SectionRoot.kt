@@ -31,9 +31,10 @@ data class SectionRoot(
 /**
  * The section-root button for the screen in [entry]: shown when it is
  * [org.njarasoa.fijerena.core.navigation.HOME_BUTTON_MIN_DEPTH] or more entries above Home, leading
- * to the first entry above Home. Nav hosts pass it to every screen that can sit that deep: details,
- * episodes, category lists, Search, TV Guide, Search the guide, guide sources. Never to the player;
- * the Live TV preview layer (TV) and full screen (mobile) don't draw it.
+ * to the first entry above Home. The TV nav host passes it to every screen that can sit that deep:
+ * details, episodes, category lists, Search, TV Guide, Search the guide, guide sources. Never to the
+ * player; the Live TV preview layer doesn't draw it. The phone has none: tapping the current
+ * bottom-bar tab does the same.
  */
 @SuppressLint("RestrictedApi") // currentBackStack: see popUpToEntry.
 @Composable

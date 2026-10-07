@@ -54,7 +54,6 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
-import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
@@ -62,7 +61,6 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
-import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
@@ -100,8 +98,6 @@ fun MobileEpgGuideScreen(
     onSearch: () -> Unit,
     onBack: () -> Unit,
     focusChannelId: String? = null,
-    /** The section-root button (P6), the top bar's last action; null hides it. */
-    sectionRoot: SectionRoot? = null,
     viewModel: EpgViewModel =
         viewModel(
             factory =
@@ -190,7 +186,6 @@ fun MobileEpgGuideScreen(
                             Icon(CinemaIcons.Refresh, stringResource(R.string.provider_refresh_button))
                         }
                     }
-                    SectionRootAction(sectionRoot)
                 },
             )
         },

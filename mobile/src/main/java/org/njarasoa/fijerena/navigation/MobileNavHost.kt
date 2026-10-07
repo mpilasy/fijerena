@@ -2,8 +2,12 @@ package org.njarasoa.fijerena.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,6 +25,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.delay
@@ -38,7 +43,6 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
-import org.njarasoa.fijerena.core.ui.navigation.sectionRootFor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
@@ -68,6 +72,45 @@ fun MobileNavHost(
 ) {
     val context = LocalContext.current
 
+    // The bottom bar (docs/plans/20261007_phone-home-overhaul-plan.md → Bottom navigation bar).
+    // The section types the active source has, as Home reports them: null until it has, and while
+    // a Jellyfin source waits for its sign-in (Home reports nothing then), so the bar shows Home alone.
+    var supportedTypes by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    // The Live TV tab's dock as its screen reports it: stopped before the bar leaves the tab (the
+    // engine is Activity-scoped), and the bar hides while the video takes the screen.
+    var stopLiveDock by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var liveDockCoversScreen by remember { mutableStateOf(false) }
+
+    // Back-Stack Rule 4's switches also drop every tab's saved back stack: a later tab tap would
+    // otherwise restore a screen holding the previous source's (closed) repository.
+    fun clearTabStacks() {
+        supportedTypes = null
+        navController.clearBackStack<Screen.LiveTvTab>()
+        navController.clearBackStack<Screen.MoviesTab>()
+        navController.clearBackStack<Screen.TvShowsTab>()
+    }
+
+    // Each tab keeps its place: leaving one saves its back stack, coming back restores it. Tapping
+    // the tab you're on pops back to its root. The bar only shows on a tab's root, so the tab
+    // being left is the current destination's.
+    fun selectTab(tab: MobileTab) {
+        val current = MobileTab.rootedAt(navController.currentDestination)
+        if (tab == current) {
+            navController.popBackStack(tab.route, inclusive = false)
+        } else {
+            if (current == MobileTab.LIVE_TV) stopLiveDock?.invoke()
+            if (tab == MobileTab.HOME) {
+                navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
+            } else {
+                navController.navigate(tab.route) {
+                    popUpTo(Screen.ContentTypeSelection) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+    }
+
     // Live sync moved this device off a profile or a provider another device deleted: every screen
     // may hold the old one's repository, so start over from home — what the profile picker does.
     LaunchedEffect(Unit) {
@@ -80,6 +123,7 @@ fun MobileNavHost(
                 navController.navigate(Screen.ContentTypeSelection) {
                     popUpTo(navController.graph.id) { inclusive = true }
                 }
+                clearTabStacks()
             }
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -169,10 +213,25 @@ fun MobileNavHost(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    // The bar shows on Home and on a section tab's root, nowhere else.
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentTab = MobileTab.rootedAt(currentEntry?.destination)
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        // Screens keep handling the system bars themselves; with the bar up, its height (which
+        // takes in the navigation bar) is padded off and consumed below.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (currentTab != null && !(currentTab == MobileTab.LIVE_TV && liveDockCoversScreen)) {
+                MobileBottomBar(tabs = visibleTabs(supportedTypes), selected = currentTab, onSelect = ::selectTab)
+            }
+        },
+    ) { barPadding ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
+            modifier = Modifier.padding(barPadding).consumeWindowInsets(barPadding),
             // Screen.Player defines its own vertical slide (below) — these NavHost-wide defaults
             // apply to the *other* screen in a Player transition too (the one that didn't define
             // its own transitions), so without the Player check here that screen independently
@@ -220,16 +279,15 @@ fun MobileNavHost(
                 }
             },
         ) {
-            // sectionRoot: the button back to the section's first screen, shown 4 or more entries
-            // above Home (sectionRootFor, D4). Passed to every screen that can sit that deep; not to
-            // the player, and Live TV's full screen has no top bar to show it.
             composable<Screen.ContentTypeSelection> {
+                // A section opens as its tab, so Home's own shortcuts land where the bar would.
                 val navigateToContentType: (String) -> Unit = { contentType ->
-                    navController.navigateOnce(Screen.CategoryList(contentType))
+                    MobileTab.forContentType(contentType)?.let(::selectTab)
                 }
                 MobileContentTypeSelectionScreen(
                     onContentTypeSelected = navigateToContentType,
-                    onCapabilitiesResolved = { supportedTypes ->
+                    onCapabilitiesResolved = { types ->
+                        supportedTypes = types.toList()
                         // Skip the picker tap entirely when the active provider only supports
                         // one content type — but only on the very first resolve per NavHost
                         // lifetime, so Back-navigation into this screen later still lands on a
@@ -237,11 +295,14 @@ fun MobileNavHost(
                         // here and nowhere else).
                         if (!hasAutoSkippedSingleContentType) {
                             hasAutoSkippedSingleContentType = true
-                            if (supportedTypes.size == 1) {
-                                navigateToContentType(supportedTypes.first())
+                            if (types.size == 1) {
+                                navigateToContentType(types.first())
                             }
                         }
                     },
+                    // Home's own source picker switched source in place: no screen of the old one
+                    // is on the stack, but the tabs' saved ones are.
+                    onProviderChanged = { clearTabStacks() },
                     onSettings = {
                         navController.navigateOnce(Screen.Settings)
                     },
@@ -312,7 +373,6 @@ fun MobileNavHost(
             composable<Screen.EpgBrowser> { backStackEntry ->
                 val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                 MobileEpgBrowserScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     categoryId = browserScreen.categoryId,
                     categoryName = browserScreen.categoryName,
                     onBack = { navController.navigateUp() },
@@ -338,85 +398,24 @@ fun MobileNavHost(
             }
 
             composable<Screen.CategoryList> { backStackEntry ->
-                val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
-                MobileCategoryListScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
-                    contentType = categoryListScreen.contentType,
-                    initialCategoryId = categoryListScreen.initialCategoryId,
-                    initialStreamId = categoryListScreen.initialStreamId,
-                    onStreamSelected = { itemId, itemName, categoryId, contentType, target ->
-                        when (target) {
-                            // Continue Watching: the card stands for the show, so open episode
-                            // selection with the last-watched episode's panel already up.
-                            is BrowseTarget.Series -> {
-                                navController.navigateOnce(
-                                    Screen.EpisodeSelection(
-                                        seriesId = target.seriesId.raw,
-                                        seriesName = itemName,
-                                        categoryId = categoryId,
-                                        initialEpisodeId = target.resumeEpisodeId?.raw,
-                                    ),
-                                )
-                            }
+                CategoryListDestination(navController, backStackEntry.toRoute<Screen.CategoryList>())
+            }
 
-                            // The card stands for one episode — play it, whether or not it can
-                            // name the show it belongs to.
-                            is BrowseTarget.Episode -> {
-                                navController.navigateOnce(
-                                    Screen.Player(
-                                        streamId = target.episodeId.raw,
-                                        streamName = itemName,
-                                        categoryId = categoryId,
-                                        contentType = ContentType.TV_SHOWS,
-                                        episodeId = target.episodeId.raw,
-                                        episodeExtension = target.extension,
-                                        seriesId = target.seriesId?.raw,
-                                        seriesName = target.seriesName,
-                                    ),
-                                )
-                            }
+            // The section tabs' roots: the section's list as Home opened it before the bar. Live
+            // TV's reports its dock, which the bar stops on leaving the tab and hides under.
+            composable<Screen.LiveTvTab> {
+                CategoryListDestination(navController, Screen.CategoryList(ContentType.LIVE_TV)) { stopDock, coversScreen ->
+                    stopLiveDock = stopDock
+                    liveDockCoversScreen = coversScreen
+                }
+            }
 
-                            is BrowseTarget.Movie -> {
-                                navController.navigateOnce(
-                                    Screen.MovieDetails(
-                                        movieId = target.movieId,
-                                        movieName = itemName,
-                                        categoryId = categoryId,
-                                    ),
-                                )
-                            }
+            composable<Screen.MoviesTab> {
+                CategoryListDestination(navController, Screen.CategoryList(ContentType.MOVIES))
+            }
 
-                            // Live TV: unreachable in practice for a genuine stream tap —
-                            // MobileCategoryListScreen docks it locally instead of calling this
-                            // callback (mirrors TV's LiveTvChannelList.onStreamPromote
-                            // interception). Kept for the "not resolvable from the current list"
-                            // case, same as TV.
-                            is BrowseTarget.Channel -> {
-                                navController.navigateOnce(Screen.Player(target.streamId, itemName, categoryId, contentType))
-                            }
-
-                            // Browsed into by the list screen itself; it never reaches nav.
-                            is BrowseTarget.CategoryRef -> {
-                                Unit
-                            }
-                        }
-                    },
-                    onSearchClick = {
-                        navController.navigateOnce(Screen.Search(categoryListScreen.contentType))
-                    },
-                    onEpgClick = { categoryId, categoryName ->
-                        navController.navigateOnce(
-                            Screen.EpgGuide(
-                                categoryId = categoryId,
-                                categoryName = categoryName,
-                            ),
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
-                )
+            composable<Screen.TvShowsTab> {
+                CategoryListDestination(navController, Screen.CategoryList(ContentType.TV_SHOWS))
             }
 
             // Player Screen — vertical slide, not the lateral push used by list/detail screens:
@@ -512,6 +511,7 @@ fun MobileNavHost(
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                 launchSingleTop = true
                             }
+                            clearTabStacks()
                         }
                     },
                     onAddProvider = {
@@ -537,6 +537,7 @@ fun MobileNavHost(
                         navController.navigate(Screen.ContentTypeSelection) {
                             popUpTo(navController.graph.id) { inclusive = true }
                         }
+                        clearTabStacks()
                     },
                 )
             }
@@ -556,6 +557,7 @@ fun MobileNavHost(
                         navController.navigate(Screen.ContentTypeSelection) {
                             popUpTo(navController.graph.id) { inclusive = true }
                         }
+                        clearTabStacks()
                     },
                 )
             }
@@ -611,6 +613,7 @@ fun MobileNavHost(
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                 launchSingleTop = true
                             }
+                            clearTabStacks()
                         }
                     },
                 )
@@ -642,7 +645,6 @@ fun MobileNavHost(
             composable<Screen.Search> { backStackEntry ->
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 MobileSearchScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     contentType = searchScreen.contentType,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         when (contentType) {
@@ -693,7 +695,6 @@ fun MobileNavHost(
             composable<Screen.MovieDetails> { backStackEntry ->
                 val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
                 MobileMovieDetailsScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     movieId = movieDetailsScreen.movieId,
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
@@ -735,7 +736,6 @@ fun MobileNavHost(
             composable<Screen.EpisodeSelection> { backStackEntry ->
                 val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
                 MobileEpisodeSelectionScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     seriesId = episodeSelectionScreen.seriesId,
                     seriesName = episodeSelectionScreen.seriesName,
                     categoryId = episodeSelectionScreen.categoryId,
@@ -781,7 +781,6 @@ fun MobileNavHost(
             composable<Screen.EpgManagement> { backStackEntry ->
                 val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                 MobileEpgManagementScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     providerId = epgScreen.providerId,
                     onBack = { navController.navigateUp() },
                 )
@@ -790,7 +789,6 @@ fun MobileNavHost(
             composable<Screen.EpgGuide> { backStackEntry ->
                 val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
                 MobileEpgGuideScreen(
-                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     categoryId = epgScreen.categoryId,
                     categoryName = epgScreen.categoryName,
                     focusChannelId = epgScreen.focusChannelId,
@@ -826,6 +824,97 @@ fun MobileNavHost(
             }
         }
     }
+}
+
+/**
+ * A section's category list: a [Screen.CategoryList] entry, or a bottom-bar tab's root
+ * ([Screen.LiveTvTab]…) with [route] built from its section. [onDockChanged]: see
+ * [MobileCategoryListScreen].
+ */
+@Composable
+private fun CategoryListDestination(
+    navController: NavHostController,
+    route: Screen.CategoryList,
+    onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
+) {
+    MobileCategoryListScreen(
+        contentType = route.contentType,
+        initialCategoryId = route.initialCategoryId,
+        initialStreamId = route.initialStreamId,
+        onStreamSelected = { itemId, itemName, categoryId, contentType, target ->
+            when (target) {
+                // Continue Watching: the card stands for the show, so open episode
+                // selection with the last-watched episode's panel already up.
+                is BrowseTarget.Series -> {
+                    navController.navigateOnce(
+                        Screen.EpisodeSelection(
+                            seriesId = target.seriesId.raw,
+                            seriesName = itemName,
+                            categoryId = categoryId,
+                            initialEpisodeId = target.resumeEpisodeId?.raw,
+                        ),
+                    )
+                }
+
+                // The card stands for one episode — play it, whether or not it can
+                // name the show it belongs to.
+                is BrowseTarget.Episode -> {
+                    navController.navigateOnce(
+                        Screen.Player(
+                            streamId = target.episodeId.raw,
+                            streamName = itemName,
+                            categoryId = categoryId,
+                            contentType = ContentType.TV_SHOWS,
+                            episodeId = target.episodeId.raw,
+                            episodeExtension = target.extension,
+                            seriesId = target.seriesId?.raw,
+                            seriesName = target.seriesName,
+                        ),
+                    )
+                }
+
+                is BrowseTarget.Movie -> {
+                    navController.navigateOnce(
+                        Screen.MovieDetails(
+                            movieId = target.movieId,
+                            movieName = itemName,
+                            categoryId = categoryId,
+                        ),
+                    )
+                }
+
+                // Live TV: unreachable in practice for a genuine stream tap —
+                // MobileCategoryListScreen docks it locally instead of calling this
+                // callback (mirrors TV's LiveTvChannelList.onStreamPromote
+                // interception). Kept for the "not resolvable from the current list"
+                // case, same as TV.
+                is BrowseTarget.Channel -> {
+                    navController.navigateOnce(Screen.Player(target.streamId, itemName, categoryId, contentType))
+                }
+
+                // Browsed into by the list screen itself; it never reaches nav.
+                is BrowseTarget.CategoryRef -> {
+                    Unit
+                }
+            }
+        },
+        onSearchClick = {
+            navController.navigateOnce(Screen.Search(route.contentType))
+        },
+        onEpgClick = { categoryId, categoryName ->
+            navController.navigateOnce(
+                Screen.EpgGuide(
+                    categoryId = categoryId,
+                    categoryName = categoryName,
+                ),
+            )
+        },
+        onBack = {
+            navController.navigateUp()
+        },
+        onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
+        onDockChanged = onDockChanged,
+    )
 }
 
 /** Either side of this transition is [Screen.Player] — see the NavHost default transitions above. */

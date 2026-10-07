@@ -127,7 +127,6 @@ import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
-import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -153,7 +152,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
-import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -181,8 +179,12 @@ fun MobileCategoryListScreen(
     onBack: () -> Unit,
     /** Leaves for Home — after a remote Stop of the Live TV dock. */
     onHome: () -> Unit = {},
-    /** The section-root button (P6), the top bar's last action; null hides it. */
-    sectionRoot: SectionRoot? = null,
+    /**
+     * Reports the Live TV dock to the phone's bottom bar: [stopDock] stops it (null while nothing is
+     * docked), [coversScreen] is true while the video takes the screen (full screen,
+     * picture-in-picture, the landscape split).
+     */
+    onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -481,6 +483,16 @@ fun MobileCategoryListScreen(
         }
     }
 
+    val isInPip = dockPlayback?.isInPictureInPictureMode?.collectAsStateWithLifecycle()?.value == true
+    // Before the full-screen return below, so the bar hears about full screen too. The bar stops
+    // the dock when it leaves the Live TV tab, as the toolbar's Back does (stopDockThen above),
+    // and hides where the top bar does too: the landscape split gives the video the full height.
+    val dockCoversScreen = fullScreen || isInPip || (target != null && isLandscape)
+    DisposableEffect(dockPlayback, dockCoversScreen) {
+        onDockChanged(dockPlayback?.let { playback -> { playback.stop() } }, dockCoversScreen)
+        onDispose { onDockChanged(null, false) }
+    }
+
     if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
         // Refresh the favorites list on demote (fullScreen leaving composition) so it reflects
         // what was just (un)favorited — promoting/demoting never leaves this screen, so nothing
@@ -507,7 +519,6 @@ fun MobileCategoryListScreen(
     // screen (preview card, Recent list) got squeezed into the PiP window. The promoted
     // full-screen branch above needs no equivalent — MobilePlayerContent already hides its own
     // chrome in PiP.
-    val isInPip = dockPlayback?.isInPictureInPictureMode?.collectAsStateWithLifecycle()?.value == true
     if (isInPip) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
             EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
@@ -583,8 +594,6 @@ fun MobileCategoryListScreen(
                                     Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                                 },
                             )
-                            // Stops the dock first, as Back does.
-                            SectionRootAction(sectionRoot?.let { root -> root.copy(onClick = { stopDockThen(root.onClick) }) })
                         },
                     )
                 }
