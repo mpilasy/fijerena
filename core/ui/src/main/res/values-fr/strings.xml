@@ -116,6 +116,7 @@
     <string name="epg_automation_freq_hours">Toutes les %1$d heures</string>
     <string name="epg_automation_freq_weekly">Hebdomadaire</string>
     <string name="epg_source_refresh_off">Mise à jour auto désactivée</string>
+    <string name="epg_source_off_summary">Désactivé : ni utilisé, ni actualisé</string>
     <string name="epg_source_refresh_daily">Mise à jour quotidienne</string>
     <string name="epg_source_refresh_weekly">Mise à jour hebdomadaire</string>
     <string name="epg_source_refresh_hours">Mise à jour toutes les %1$d heures</string>

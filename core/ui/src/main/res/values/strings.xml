@@ -120,6 +120,7 @@
     <string name="epg_automation_freq_hours">Every %1$d hours</string>
     <string name="epg_automation_freq_weekly">Weekly</string>
     <string name="epg_source_refresh_off">Auto-refresh off</string>
+    <string name="epg_source_off_summary">Off: not used, not refreshed</string>
     <string name="epg_source_refresh_daily">Refreshes daily</string>
     <string name="epg_source_refresh_weekly">Refreshes weekly</string>
     <string name="epg_source_refresh_hours">Refreshes every %1$d hours</string>

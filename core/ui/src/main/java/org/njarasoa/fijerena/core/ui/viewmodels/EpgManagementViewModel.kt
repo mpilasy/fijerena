@@ -512,6 +512,13 @@ class EpgManagementViewModel(
             }
 
         /** The interval as a source's row shows it: "Refreshes daily", "Auto-refresh off". */
+
+        /** A guide source's refresh line: "Off" while it is switched off, whatever its interval, as nothing refreshes it then. */
+        fun refreshSummary(
+            enabled: Boolean,
+            hours: Int,
+        ): UiText = if (enabled) refreshIntervalSummary(hours) else UiText.StringResource(R.string.epg_source_off_summary)
+
         fun refreshIntervalSummary(hours: Int): UiText =
             when (hours) {
                 EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.epg_source_refresh_off)

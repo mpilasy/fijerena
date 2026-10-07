@@ -107,6 +107,12 @@ class EpgManagementRefreshIntervalTest {
         coVerify(timeout = 5_000) { fileManager.setRefreshInterval(7, REFRESH_OFF) }
     }
 
+    @Test
+    fun `refresh line says off for a guide source that is off, whatever its interval`() {
+        assertText(R.string.epg_source_off_summary, EpgManagementViewModel.refreshSummary(enabled = false, hours = 6))
+        assertText(R.string.epg_source_refresh_hours, EpgManagementViewModel.refreshSummary(enabled = true, hours = 6), 6)
+    }
+
     private fun assertText(
         resId: Int,
         text: UiText,

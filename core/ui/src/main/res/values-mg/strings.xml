@@ -116,6 +116,7 @@
     <string name="epg_automation_freq_hours">Isaky ny %1$d ora</string>
     <string name="epg_automation_freq_weekly">Isan-kerinandro</string>
     <string name="epg_source_refresh_off">Tsy misy fanavaozana ho azy</string>
+    <string name="epg_source_off_summary">Tsy mandeha: tsy ampiasaina, tsy havaozina</string>
     <string name="epg_source_refresh_daily">Havaozina isan\'andro</string>
     <string name="epg_source_refresh_weekly">Havaozina isan-kerinandro</string>
     <string name="epg_source_refresh_hours">Havaozina isaky ny %1$d ora</string>

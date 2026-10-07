@@ -355,7 +355,8 @@ fun TvEpgManagementScreen(
                                     Text(
                                         text =
                                             EpgManagementViewModel
-                                                .refreshIntervalSummary(
+                                                .refreshSummary(
+                                                    source.enabled,
                                                     viewModel.refreshIntervalHours(source),
                                                 ).asString(),
                                         style = MaterialTheme.typography.bodySmall,

@@ -198,7 +198,12 @@ fun MobileEpgManagementScreen(
                         isOwnGuide = provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs(source),
-                        refreshSummary = EpgManagementViewModel.refreshIntervalSummary(viewModel.refreshIntervalHours(source)).asString(),
+                        refreshSummary =
+                            EpgManagementViewModel
+                                .refreshSummary(
+                                    source.enabled,
+                                    viewModel.refreshIntervalHours(source),
+                                ).asString(),
                         onRefresh = { viewModel.refreshSource(source.id) },
                         onAutoRefresh = { intervalSource = source },
                         onEdit = { editingSource = source },
