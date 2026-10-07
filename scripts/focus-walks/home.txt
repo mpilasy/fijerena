@@ -3,7 +3,10 @@
 # the card focused last, default the leftmost (F-H-2, R8); Up from a card still goes to the header.
 # Recorded on the emulator 2026-10-04 (category counts blanked).
 # Phase 4: start on the first card, not the Switch Source chip.
-@start Live TV
+# TV home overhaul Phase 4: home opens on the first card of the first row (Continue Watching, else
+# the Live row); atr on iptv has no Continue Watching, so the last channel watched. Up reaches the tiles.
+@start Last watched
+UP	Live TV
 UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
 # P7: Search the guide (needs iptv's guide index) then Search All; the TV Guide button is gone
 # (the grid opens from Search the guide's header).

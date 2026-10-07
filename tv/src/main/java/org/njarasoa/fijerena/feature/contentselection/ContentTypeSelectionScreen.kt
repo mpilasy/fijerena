@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.contentselection
 
+import android.text.format.DateUtils
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -86,6 +87,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,6 +99,7 @@ import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
@@ -120,11 +123,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
+import org.njarasoa.fijerena.feature.contentselection.components.LiveRowEntry
 import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
+import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
+import org.njarasoa.fijerena.feature.contentselection.components.mergeLiveRow
 import org.njarasoa.fijerena.feature.contentselection.components.sourceSyncStatus
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -151,6 +158,9 @@ fun ContentTypeSelectionScreen(
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
+    // A channel from the Live row, and the list it zaps through (CategoryViewModel's virtual
+    // "favorites" or "recent" category id).
+    onLiveChannelSelected: (streamId: String, contextCategoryId: String) -> Unit = { _, _ -> },
     onChooseProfile: () -> Unit = {},
     onSignInRequired: (providerId: Long) -> Unit = {},
 ) {
@@ -195,6 +205,11 @@ fun ContentTypeSelectionScreen(
 
     // False until the shelf's first load for this repository, so entry focus can wait for it.
     var continueWatchingLoaded by remember { mutableStateOf(false) }
+
+    // The Live row (TV home overhaul plan, Phase 4): loaded like the shelf, its Now lines each minute.
+    var liveRowEntries by remember { mutableStateOf<List<LiveRowEntry>>(emptyList()) }
+    var liveRowLoaded by remember { mutableStateOf(false) }
+    var liveNowPlaying by remember { mutableStateOf<Map<String, EpgProgram>>(emptyMap()) }
 
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
@@ -322,6 +337,21 @@ fun ContentTypeSelectionScreen(
         continueWatchingItems = repo.getContinueWatchingItems()
         continueWatchingLoaded = true
     }
+    LaunchedEffect(mediaRepositoryRef, supportedContentTypes) {
+        val repo = mediaRepositoryRef ?: return@LaunchedEffect
+        liveRowEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadLiveRow(repo) else emptyList()
+        liveRowLoaded = true
+    }
+    LaunchedEffect(mediaRepositoryRef, liveRowEntries) {
+        val repo = mediaRepositoryRef ?: return@LaunchedEffect
+        if (liveRowEntries.isEmpty()) return@LaunchedEffect
+        val items = liveRowEntries.map { it.item }
+        while (true) {
+            liveNowPlaying = repo.getNowPlayingFromIndex(items)
+            val nowMs = System.currentTimeMillis()
+            delay(DateUtils.MINUTE_IN_MILLIS - nowMs % DateUtils.MINUTE_IN_MILLIS)
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, mediaRepositoryRef) {
         val repo = mediaRepositoryRef
@@ -331,6 +361,9 @@ fun ContentTypeSelectionScreen(
                 if (event == Lifecycle.Event.ON_RESUME && repo != null) {
                     coroutineScope.launch {
                         continueWatchingItems = repo.getContinueWatchingItems()
+                    }
+                    if (ContentType.LIVE_TV in supportedContentTypes) {
+                        coroutineScope.launch { liveRowEntries = loadLiveRow(repo) }
                     }
                 }
             }
@@ -363,6 +396,8 @@ fun ContentTypeSelectionScreen(
     val heroFallbackFocus = heroCards.firstOrNull()?.let(heroCardFocus::getValue)
     // The first card of each row: where focus enters a row it has not been in yet (HomeRow).
     val shelfFirstFocus = remember { FocusRequester() }
+    val liveRowFirstFocus = remember { FocusRequester() }
+    val liveRowListState = rememberLazyListState()
     LaunchedEffect(Unit) {
         // Back hands focus to the control that was left (NavReturnFocusEffect below).
         if (returnFocus.isReturn) return@LaunchedEffect
@@ -371,7 +406,7 @@ fun ContentTypeSelectionScreen(
         withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
             snapshotFlow {
                 needsSignIn ||
-                    ((ContentType.LIVE_TV !in supportedContentTypes || liveTvCounts != null) && continueWatchingLoaded)
+                    ((ContentType.LIVE_TV !in supportedContentTypes || liveTvCounts != null) && continueWatchingLoaded && liveRowLoaded)
             }.first { it }
         }
         if (needsSignIn) return@LaunchedEffect
@@ -379,10 +414,10 @@ fun ContentTypeSelectionScreen(
             focusableHeroCards(supportedContentTypes, liveTvCounts)
                 .firstOrNull()
                 ?.let(heroCardFocus::getValue)
-        if (continueWatchingItems.isNotEmpty()) {
-            shelfFirstFocus.requestFocusWithRetry(fallback = firstTile)
-        } else {
-            firstTile?.requestFocusWithRetry()
+        when {
+            continueWatchingItems.isNotEmpty() -> shelfFirstFocus.requestFocusWithRetry(fallback = firstTile)
+            liveRowEntries.isNotEmpty() -> liveRowFirstFocus.requestFocusWithRetry(fallback = firstTile)
+            else -> firstTile?.requestFocusWithRetry()
         }
     }
     NavReturnFocusEffect(returnFocus, fallback = heroFallbackFocus) { key ->
@@ -394,6 +429,15 @@ fun ContentTypeSelectionScreen(
                 }
             val index = items?.indexOfFirst { it.id == itemId } ?: -1
             if (index >= 0) shelfListState.scrollToItem(index)
+        }
+        if (key.startsWith(RETURN_LIVE_ROW_PREFIX)) {
+            val itemId = key.removePrefix(RETURN_LIVE_ROW_PREFIX)
+            val entries =
+                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                    snapshotFlow { liveRowEntries }.first { entries -> entries.any { it.item.id == itemId } }
+                }
+            val index = entries?.indexOfFirst { it.item.id == itemId } ?: -1
+            if (index >= 0) liveRowListState.scrollToItem(index)
         }
     }
     val leaveTo: (String, () -> Unit) -> Unit = { key, navigate ->
@@ -697,6 +741,31 @@ fun ContentTypeSelectionScreen(
                                             .padding(top = Spacing.xl.scaled(scale)),
                                 )
                             }
+
+                            if (liveRowEntries.isNotEmpty()) {
+                                TvLiveRow(
+                                    entries = liveRowEntries,
+                                    nowPlaying = liveNowPlaying,
+                                    onEntrySelected = { entry ->
+                                        val listId =
+                                            if (entry.fromFavorites) {
+                                                CategoryViewModel.FAVORITES_CATEGORY_ID
+                                            } else {
+                                                CategoryViewModel.RECENT_CATEGORY_ID
+                                            }
+                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.id) { onLiveChannelSelected(entry.item.id, listId) }
+                                    },
+                                    firstItemFocus = liveRowFirstFocus,
+                                    listState = liveRowListState,
+                                    itemModifier = { entry ->
+                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
                         }
                     }
                 }
@@ -788,6 +857,15 @@ private const val RETURN_PROFILE = "profile"
 private const val RETURN_SETTINGS = "settings"
 private const val RETURN_SIGN_IN = "signIn"
 private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
+private const val RETURN_LIVE_ROW_PREFIX = "live:"
+
+/** The Live row's channels for the active profile: last watched, favourites, recent. */
+private suspend fun loadLiveRow(repo: MediaRepository): List<LiveRowEntry> =
+    mergeLiveRow(
+        lastItemId = repo.getLastItemId(ContentType.LIVE_TV),
+        recent = repo.getRecentItemsSuspend(ContentType.LIVE_TV),
+        favorites = repo.getFavoritesForContentTypeSuspend(ContentType.LIVE_TV),
+    )
 
 /** How long Back waits for the Continue Watching shelf to reload before giving up on its card. */
 private const val RETURN_SHELF_WAIT_MS = 2_000L

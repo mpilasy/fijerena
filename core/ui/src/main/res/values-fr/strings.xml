@@ -619,6 +619,8 @@
     <string name="home_source_updated">Mis à jour %1$s</string>
     <string name="home_source_update_failed">Échec de la mise à jour</string>
     <string name="home_source_update_failed_detail">Échec de la dernière mise à jour : %1$s</string>
+    <string name="home_live_row_title">Chaînes</string>
+    <string name="home_live_last_watched">Dernière regardée</string>
     <string name="content_type_live_tv_description">Regarder des chaînes de télévision en direct</string>
     <string name="content_type_movies_description">Parcourir les films à la demande</string>
     <string name="content_type_tv_shows_description">Regarder des séries et des épisodes</string>

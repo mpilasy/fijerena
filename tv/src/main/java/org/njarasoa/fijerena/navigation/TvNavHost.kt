@@ -286,6 +286,17 @@ fun TvNavHost(
                         onEpgBrowser = {
                             navController.navigateOnce(Screen.EpgBrowser())
                         },
+                        // A Live row channel opens its preview, zapping through the list the card
+                        // came from (TV home overhaul plan, Phase 4); Back pops back to Home.
+                        onLiveChannelSelected = { streamId, listId ->
+                            navController.navigateOnce(
+                                Screen.CategoryList(
+                                    contentType = ContentType.LIVE_TV,
+                                    initialCategoryId = listId,
+                                    initialStreamId = streamId,
+                                ),
+                            )
+                        },
                         onContinueWatchingSelected = { item ->
                             // Same dispatch as CategoryList's Recent row (below) — a shelf card is
                             // just another resumable entry, and should route exactly like one.
