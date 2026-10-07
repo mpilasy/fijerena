@@ -45,6 +45,7 @@
 
     <!-- EPG freshness label -->
     <string name="epg_freshness_no_sources">Aucune source de guide</string>
+    <string name="epg_freshness_all_off">Guide désactivé : activez-le dans Sources de guide</string>
     <string name="epg_freshness_never_refreshed">Jamais actualisé</string>
     <string name="epg_freshness_just_now">à l\'instant</string>
     <string name="epg_freshness_minutes_ago_format">il y a %1$dm</string>

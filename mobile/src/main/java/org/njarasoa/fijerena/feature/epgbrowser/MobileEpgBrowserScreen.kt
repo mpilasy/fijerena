@@ -140,6 +140,7 @@ fun MobileEpgBrowserScreen(
     val isDevMode = viewModel.isDevMode
     val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
     val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
+    val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
     val epgDbStats =
@@ -179,9 +180,11 @@ fun MobileEpgBrowserScreen(
                             style = MaterialTheme.typography.titleMedium,
                         )
                         val freshnessText =
-                            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount)
+                            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
                         val freshnessColor =
-                            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L) {
+                            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
+                                (oldestIngestedAtMs == null && hasOffSources)
+                            ) {
                                 CinemaWarning
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant

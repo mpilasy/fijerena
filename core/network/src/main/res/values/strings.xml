@@ -45,6 +45,7 @@
 
     <!-- EPG freshness label (EpgBrowserModels) -->
     <string name="epg_freshness_no_sources">No guide sources</string>
+    <string name="epg_freshness_all_off">Guide off: turn it on in Guide sources</string>
     <string name="epg_freshness_never_refreshed">Never refreshed</string>
     <string name="epg_freshness_just_now">just now</string>
     <string name="epg_freshness_minutes_ago_format">%1$dm ago</string>

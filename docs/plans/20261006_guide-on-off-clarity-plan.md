@@ -58,6 +58,6 @@ returns an empty `<tv/>` to force it). Then the OnePlus, the device where it was
 |---|---|---|
 | 1 Detection | Done: in the ingest, a download with no channels for a source whose `lastChannels` > 0 (`isFailedEmptyIngest`, tested) is that source's error "came back empty" — no `markIngested`, and the staging swap leaves its old programmes in place (it skips errored sources). Detection only sees sources that never had channels | 09ff5fd3 |
 | 2 Switch on the card | Done: `EpgManagementViewModel.setSourceEnabled` (own guide: `setProvidesGuide(byUser = true)` + `reconcileStored`; others: the row's `enabled`); mobile `Switch`, TV the same focusable toggle surface with an inert `Switch` ("Use this guide"); selection, Refresh (n) / Delete (n), `refreshSelected`, `deleteSelected`, `launchRefreshSelected` and their strings removed; the own-guide line now says its switch is Provides a guide; focus walk updated by hand (not re-run yet) | bc5c1728 |
-| 3 Refresh line | Done: `EpgManagementViewModel.refreshSummary(enabled, hours)` ("Off: not used, not refreshed"), both cards, test | (this commit) |
-| 4 Search header | Not started | |
+| 3 Refresh line | Done: `EpgManagementViewModel.refreshSummary(enabled, hours)` ("Off: not used, not refreshed"), both cards, test | ac09ff9c |
+| 4 Search header | Done: `freshnessLabel(hasOffSources)` → "Guide off: turn it on in Guide sources" (warning colour), `EpgBrowserViewModel.hasOffSources`, both browser screens, test | (this commit) |
 | 5 Unknown size | Not started | |

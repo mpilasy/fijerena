@@ -261,6 +261,12 @@ class EpgBrowserViewModel(
         unsetHours: Int,
     ): Boolean = nowMs - source.lastIngestedAtMs > EpgRefreshSchedule.intervalMs(EpgRefreshSchedule.intervalHours(source, unsetHours))
 
+    /** Whether any guide source is switched off — with none on, the header says the guide is off rather than missing. */
+    val hasOffSources: StateFlow<Boolean> =
+        sourcesFlow
+            .map { list -> list.any { !it.enabled } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     /** Enabled sources that have never run at all — counted, not aged. */
     val neverRunSourceCount: StateFlow<Int> =
         sourcesFlow

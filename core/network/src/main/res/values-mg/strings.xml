@@ -44,6 +44,7 @@
 
     <!-- EPG freshness label -->
     <string name="epg_freshness_no_sources">Tsy misy loharanon\'ny fitarihana</string>
+    <string name="epg_freshness_all_off">Tsy mandeha ny fitarihana: alefaso ao amin\'ny Loharanon\'ny fitarihana</string>
     <string name="epg_freshness_never_refreshed">Mbola tsy navaozina</string>
     <string name="epg_freshness_just_now">vao haingana</string>
     <string name="epg_freshness_minutes_ago_format">%1$dm lasa</string>

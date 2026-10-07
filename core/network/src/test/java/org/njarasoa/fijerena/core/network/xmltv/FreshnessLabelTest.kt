@@ -18,6 +18,7 @@ class FreshnessLabelTest {
     private val context =
         mockk<Context>().apply {
             every { getString(R.string.epg_freshness_no_sources) } returns "No EPG sources"
+            every { getString(R.string.epg_freshness_all_off) } returns "Guide off"
             every { getString(R.string.epg_freshness_never_refreshed) } returns "Never refreshed"
             every { getString(R.string.epg_freshness_just_now) } returns "just now"
             every { getString(R.string.epg_freshness_minutes_ago_format, any()) } answers
@@ -43,6 +44,11 @@ class FreshnessLabelTest {
     @Test
     fun noEnabledSourcesSaysSo() {
         assertEquals("No EPG sources", label(null))
+    }
+
+    @Test
+    fun guideSourcesThatAreAllOffSayTheGuideIsOffNotMissing() {
+        assertEquals("Guide off", freshnessLabel(context, null, now, 0, 0, hasOffSources = true))
     }
 
     @Test

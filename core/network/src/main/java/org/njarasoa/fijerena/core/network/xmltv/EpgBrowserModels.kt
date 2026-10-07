@@ -113,6 +113,8 @@ fun formatCount(count: Int): String =
  * [oldestIngestedAtMs] is the stalest source that has actually run; a source that has never run
  * is not a freshness figure but a count, and arrives in [neverRunSourceCount]. Collapsing the two
  * meant one never-run source read as "Never refreshed" while everything else was minutes old.
+ * [hasOffSources]: with no source on ([oldestIngestedAtMs] null), whether there are guide sources
+ * that are switched off, which is not the same as having none.
  */
 fun freshnessLabel(
     context: Context,
@@ -120,8 +122,11 @@ fun freshnessLabel(
     nowEpoch: Long,
     staleSourceCount: Int,
     neverRunSourceCount: Int = 0,
+    hasOffSources: Boolean = false,
 ): String {
-    if (oldestIngestedAtMs == null) return context.getString(R.string.epg_freshness_no_sources)
+    if (oldestIngestedAtMs == null) {
+        return context.getString(if (hasOffSources) R.string.epg_freshness_all_off else R.string.epg_freshness_no_sources)
+    }
     if (oldestIngestedAtMs == 0L) return context.getString(R.string.epg_freshness_never_refreshed)
     val ageSec = nowEpoch - oldestIngestedAtMs / 1000L
     val ageLabel =
