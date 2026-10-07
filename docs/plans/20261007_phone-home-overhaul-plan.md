@@ -1,6 +1,6 @@
 # Phone home overhaul and bottom navigation
 
-**Status:** Not started. Design agreed with the user 2026-10-07: the TV home overhaul
+**Status:** In progress (user said go 2026-10-07, built by agents in worktrees, merged and checked phase by phase): Phases 1–2 done; 3 and 4–6 in progress. Design agreed with the user 2026-10-07: the TV home overhaul
 (`20261007_tv-home-overhaul-plan.md`) adapted for touch, with a bottom navigation bar in place of
 the section cards. Implementation waits for the user's go-ahead.
 
@@ -140,10 +140,10 @@ clear data without asking.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1 Shared code to core | Not started | |
-| 2 Top bar status | Not started | |
-| 3 Bottom navigation bar | Not started | |
-| 4 Rows | Not started | |
-| 5 Long-press sheet | Not started | |
-| 6 Pull to refresh | Not started | |
+| 1 Shared code to core | Done: `core.ui.home` `LiveRow.kt` / `SourceSyncStatus.kt`, tests moved + `SourceSyncStatusTest`; TV only re-imports (compile + unit tests; TV emulator not re-run, no behaviour change) | 52438b1b |
+| 2 Top bar status | Done: `MobileSourceStatusLine` under the source name (own minute tick, pulse at draw time), "Update failed" opens a dialog with the reason; the bar grows to 84 dp (`homeTopBarHeight`) while a status shows, so the line keeps a 48 dp touch target. Checked on the phone emulator: bears shows "● Updated 1 hour ago". "Updating…" to check with Phase 6's pull to refresh | 71b8efe4 |
+| 3 Bottom navigation bar | In progress | |
+| 4 Rows | In progress | |
+| 5 Long-press sheet | In progress | |
+| 6 Pull to refresh | In progress | |
 | 7 Checks + nav docs | Not started | |

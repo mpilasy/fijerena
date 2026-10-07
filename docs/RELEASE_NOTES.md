@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Phone home overhaul
+**Release Date:** 2026-10-07
+
+- **The phone shows how fresh the source is:** under the source name, "Updating…", "Updated 2 hours ago" or "Update failed" — tap it for the reason. → Phase 2.
+
 ## Version: TV home overhaul
 **Release Date:** 2026-10-07
 
