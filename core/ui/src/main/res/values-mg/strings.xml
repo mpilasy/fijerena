@@ -603,7 +603,7 @@
     <string name="epg_browser_index_stats_format">Fanondroana EPG: %1$s</string>
     <string name="category_now_playing_badge">▶ Mandeha</string>
     <string name="settings_ui_scale_section_title">Haben\'ny soratra sy ny tabilao</string>
-    <string name="settings_ui_scale_desc">Ovay ny endri-tsoratra, ny elanelana, ary ny haben\'ny singa ho an\'ny sokajy/tabilao</string>
+    <string name="settings_ui_scale_desc">Ny haben\'ny soratra sy ny zavatra rehetra eo amin\'ny efijery, amin\'ny efijery rehetra</string>
 
     <!-- Connection test error messages -->
     <string name="provider_error_invalid_credentials">Diso ny fangatahana fidirana</string>

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -117,6 +118,7 @@ internal fun SourceSyncStatusLine(
             style = MaterialTheme.typography.labelMedium,
             color = CinemaTextPrimary,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = Spacing.xs),
         )
     }

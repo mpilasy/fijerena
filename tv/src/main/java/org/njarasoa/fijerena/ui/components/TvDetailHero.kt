@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -181,7 +182,11 @@ fun TvDetailHero(
                 }
 
                 Spacer(Modifier.height(Spacing.lg))
+                // The text keeps to the column; the buttons may run past it — at a large Text &
+                // grid size the column was narrower than Play plus four icon buttons, and More was
+                // cut off (TV UI audit, spot check at 100 %).
                 Row(
+                    modifier = Modifier.wrapContentWidth(align = Alignment.Start, unbounded = true),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

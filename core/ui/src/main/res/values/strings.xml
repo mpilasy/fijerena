@@ -749,7 +749,7 @@
     <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
     <string name="category_now_playing_badge">▶ Playing</string>
     <string name="settings_ui_scale_section_title">Text &amp; grid size</string>
-    <string name="settings_ui_scale_desc">Adjust font, spacing, and element sizes for category/grid views</string>
+    <string name="settings_ui_scale_desc">Size of text and everything on screen, on every screen</string>
 
     <!-- Connection test error messages (ProviderViewModel) -->
     <string name="provider_error_invalid_credentials">Invalid credentials</string>

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -73,6 +74,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -523,15 +525,22 @@ fun ContentTypeSelectionScreen(
                         HomeClock()
                     }
                     Row(
-                        // Applies to every button in the row (none is a focus group).
+                        // Applies to every button in the row (none is a focus group). The leftover
+                        // width, end-aligned: at a large Text & grid size the source pill gives way
+                        // (ellipsised) and the icon buttons always stay on screen.
                         modifier =
-                            if (needsSignIn || headerDownCard == null) {
-                                Modifier
-                            } else {
-                                Modifier.focusProperties { down = heroCardFocus.getValue(headerDownCard) }
-                            },
+                            Modifier
+                                .weight(1f)
+                                .padding(start = Spacing.md)
+                                .then(
+                                    if (needsSignIn || headerDownCard == null) {
+                                        Modifier
+                                    } else {
+                                        Modifier.focusProperties { down = heroCardFocus.getValue(headerDownCard) }
+                                    },
+                                ),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                     ) {
                         // Shown with one source too, for its sync status; only a picker (and
                         // focusable) with two or more.
@@ -558,6 +567,7 @@ fun ContentTypeSelectionScreen(
                             GlassPanel(
                                 modifier =
                                     Modifier
+                                        .weight(1f, fill = false)
                                         .scale(pillScale)
                                         .border(
                                             width = TvFocusTokens.focusBorderWidth,
@@ -591,11 +601,14 @@ fun ContentTypeSelectionScreen(
                                         text = displayName,
                                         style = MaterialTheme.typography.titleSmall,
                                         color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
                                     )
                                     SourceSyncStatusLine(
                                         status = syncStatus,
                                         lastSyncedAtMs = lastSyncedAtMs,
-                                        modifier = Modifier.padding(start = Spacing.sm),
+                                        modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.sm),
                                     )
                                     if (canPick) {
                                         Icon(
@@ -1088,7 +1101,6 @@ private fun SectionTile(
                             .background(CinemaTextPrimary, shape = CircleShape),
                 )
             }
-            Spacer(modifier = Modifier.weight(1f))
             val countText =
                 when {
                     emptyLabel != null -> {
@@ -1107,14 +1119,20 @@ private fun SectionTile(
                         stringResource(R.string.category_count_format, categoryCounts.first)
                     }
                 }
+            // The rest of the tile, the chip at its end: cut with "…" when the tile is too narrow
+            // for it (a large Text & grid size squeezed it to "No").
             if (countText != null) {
                 Text(
                     text = countText,
                     style = MaterialTheme.typography.labelMedium,
                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier =
                         Modifier
+                            .weight(1f)
+                            .padding(start = Spacing.sm)
+                            .wrapContentWidth(Alignment.End)
                             .background(
                                 CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
                                 shape = RoundedCornerShape(CinemaCornerRadius.small),
