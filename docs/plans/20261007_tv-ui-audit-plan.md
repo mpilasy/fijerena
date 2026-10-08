@@ -1,6 +1,6 @@
 # TV UI audit and polish
 
-**Status:** Findings reviewed with the user (decisions recorded); Phase 1 in progress. Plan written 2026-10-07 at the user's request ("the UI still looks like
+**Status:** Phase 1 done; Phase 2a–2e in progress. User said proceed until done (2026-10-07). Plan written 2026-10-07 at the user's request ("the UI still looks like
 crap on the TV … walk through the whole app and audit every single section and every single
 widget … and make it better"; then "first make a plan"). Waits for the user's go-ahead.
 
@@ -193,6 +193,6 @@ Phase 2 agents start from Phase 1 merged on main; I merge them one at a time and
 | Capture | Done 2026-10-07: 45 shots (see Findings for what wasn't captured) | |
 | Findings | Done 2026-10-07: 10 shared causes, 21 per-screen rows | |
 | Review with the user | Done 2026-10-07: decisions above | |
-| Phase 1 — tokens + shared components | In progress | |
-| Phase 2a–2e — per area | Not started | |
+| Phase 1 — tokens + shared components | Done: X1 turned out already app-wide (MainActivity scales LocalDensity; `.scaled()` is a no-op) — the uneven sizes are per-screen type choices, moved to Phase 2; seven stale per-screen scale providers removed; X2 `TvListRowDefaults` on StreamList / CategoryList (browse, channel panels); X3 logos `Fit` on a tile (TV lists, Search, Home, phone guide); `TvScreenHeader`, `TvEmptyState`, TV Guide no-channels empty state. Checked on the TV emulator: Home Channels and Live TV browse show whole logos and the white-outline focused row | 90347565, 85cea555, 5e2d4131, fbea290d |
+| Phase 2a–2e — per area | In progress (five agents) | |
 | Verify + spot checks | Not started | |
