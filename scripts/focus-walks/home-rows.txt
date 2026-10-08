@@ -1,11 +1,12 @@
 # Home's rows (TV home overhaul plan, Phase 7), TV emulator, profile atr, source jellyxtream:
-# Continue Watching (101 Dalmatians II, The Godfather ×2), Favorite movies (The Godfather),
+# Continue Watching (The Matrix, 101 Dalmatians II, The Godfather ×2), Favorite movies (The Godfather),
 # Favorite shows (Agatha Christie's Marple); Live TV has no channels, so its tile is dimmed and
 # there is no Channels row. Start: a fresh launch, atr picked.
 # Entry focus: the first Continue Watching card.
-@start 101 Dalmatians II: Patch's London Adventure / 1h 5m remaining
+@start The Matrix / 2h 12m remaining
 # Left on a row's first card stays put; Right walks the row and stays put on its last card.
-LEFT	101 Dalmatians II: Patch's London Adventure / 1h 5m remaining
+LEFT	The Matrix / 2h 12m remaining
+RIGHT	101 Dalmatians II: Patch's London Adventure / 1h 5m remaining
 RIGHT	The Godfather / 2h 46m remaining
 RIGHT	The Godfather / 2h 42m remaining
 RIGHT	The Godfather / 2h 42m remaining
@@ -14,7 +15,7 @@ UP	Movies / 4 categories
 RIGHT	TV Shows / 2 categories
 # Right on the last tile stays put.
 RIGHT	TV Shows / 2 categories
-# Down: back to the card the row had last (the third), not the one under TV Shows.
+# Down: back to the card the row had last (the fourth), not the one under TV Shows.
 DOWN	The Godfather / 2h 42m remaining
 # Down through the favourites rows and back up: each row keeps its card.
 DOWN	The Godfather

@@ -9,17 +9,23 @@
 # deliberately not walked (it changes the channel).
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # Right opens the panel on the playing channel's row — the first row of Recent, which is
-# newest-first. Its text varies, so it is not asserted.
-RIGHT	Favorites
-# Up from the first row lands on the selected tab.
-UP	Favorites
+# newest-first. Its text varies, so only "a row" (its hint) is asserted.
+RIGHT	Hold OK or press Menu for actions
+# Up from the first row lands on the selected tab (Recent: the panel opens on the playing
+# channel's context).
+UP	Recent
 # Right on a tab moves to the next tab and switches the list to it (the zap order follows).
-RIGHT	Refresh streams
+RIGHT	Favorites
 # Down enters the rows: the playing channel when it is a favourite, else the first row (text
 # varies). With no favourites nothing below is focusable and focus stays on the tab.
-DOWN	Refresh streams
+# (Favorites' tab is the one the walk leaves selected; the player root and its banner text vary.)
+DOWN	Hold OK or press Menu for actions
 # Back closes the panel; focus goes back to the player root (no text, not asserted).
-BACK	(nothing focused)
+BACK	
 # Left opens the same panel again, on the tab it was left on (Favorites): on the playing
 # channel's row when the list has it, else the first row (text varies).
-LEFT	Favorites
+LEFT	Hold OK or press Menu for actions
+# Leave the panel on Recent so the walk can be run again from the same state (it reopens on the
+# tab it was left on).
+LEFT	Hold OK or press Menu for actions
+BACK	

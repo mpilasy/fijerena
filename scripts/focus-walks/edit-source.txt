@@ -9,8 +9,8 @@
 # returns to the Connection column on the row it left. Cancel ⇄ Save connection move with
 # Left/Right inside their row, as do the stream format / playlist type options.
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04.
-# Steps marked "re-record" depend on Compose's geometric Down from the Recent row size's Edit
-# button onto the option rows (m3u8 or ts, m3u_plus or simple) and are asserted loosely.
+# Recent row size, stream format and playlist type are settings rows (title, description, value ›)
+# like Settings'; OK opens the same picker. Re-recorded as text only, 2026-10-07.
 @start Edit Source Name
 DOWN	Edit Server URL
 DOWN	Edit Username
@@ -20,16 +20,16 @@ DOWN	Cancel
 RIGHT	Save connection
 # Right from Save connection enters the settings column on its first control.
 RIGHT	Auto-Resume / Resume VOD content from where you left off
-# Recent row size ("Last Watched Queue Size"): its Edit button.
-DOWN	Edit
-# Stream format: m3u8 (re-record: may land on ts).
-DOWN	m3u8
-# Playlist type: m3u_plus (re-record: may land on simple).
-DOWN	m3u_plus
+# Recent row size: the "Last Watched Queue Size" row (opens Settings' picker; no Edit button).
+DOWN	Last Watched Queue Size
+# Stream format: the "Stream Output Format" row (value m3u8 or ts).
+DOWN	Stream Output Format
+# Playlist type: the "Playlist Type" row (value m3u_plus or simple).
+DOWN	Playlist Type
 # Left goes back to the Connection column, on the row it left.
 LEFT	Save connection
 # Right comes back to the settings row it left.
-RIGHT	m3u_plus
+RIGHT	Playlist Type
 # P3/P4 Guide section, after Enable Caching and the Logins section: Provides a guide (Xtream), then Guide sources.
 DOWN	Enable Caching / Enable caching for faster loading
 # Shared logins: the Logins section. With only the main login it is one focusable row (no

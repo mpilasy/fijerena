@@ -5,7 +5,7 @@
 # The recent-search chip shows the term only, so its line is left unchecked until recorded.
 @start Search films, shows and channels
 # Down from the field → the first recent search, not the "Clear all" icon (F-S-2).
-DOWN	news
+DOWN	the
 UP	Search films, shows and channels
 # No search button beside the field (TV UI audit #14): the field searches on its own, and the
 # clear × only shows with text.

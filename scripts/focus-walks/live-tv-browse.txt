@@ -7,23 +7,22 @@
 # the two columns are panes, Left/Right move between them, Up/Down stay in a column — and
 # Phase 3 (P3): rows have no hidden trailing buttons; long-press OK / Menu opens a row's menu.
 # Updated 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
-# Up from the first stream reaches the refresh icon above the list (F-C-6, unchanged in Phase 2).
-UP	Refresh streams
-# Up from there reaches a header button — TV Guide or Search, whichever is nearest; not asserted.
-UP	TV Guide
-DOWN	Refresh categories
-# Changed (F-C-1, R2): Down from the header enters the categories pane on the *selected*
-# category, not the top one — "Recent" is the selected category when the screen opened on it.
-DOWN	Recent
-# Changed (F-C-5, R2): Right from a category enters the item pane on the remembered row — the
-# row focus started on, not the row level with the category. Text varies, so not asserted.
+# Up from the first stream reaches the header (the browse header has one Refresh, with Search and
+# TV Guide; Up goes to the nearest button, Search). Nothing is above the header.
+UP	Search
+UP	Search
+# Down from the header returns to the item pane's first row; Left from there lands on the
+# selected category ("Recent" is selected when the screen opened on it).
+DOWN	Arena Sport 1
+LEFT	Recent
+# Right from a category enters the item pane on the remembered row. Text varies, so not asserted.
 # Phase 3: a regular category has no ★ stop any more either; Right goes straight to the items.
-RIGHT	3 / 3ABN Latino / Hold OK or press Menu for actions
+RIGHT	A / Arena Sport 1 / Hold OK or press Menu for actions
 # Changed in Phase 3 (F-C-5, R3): the hidden "Add to Favorites" star is gone. Right from a
 # stream goes nowhere (the item pane has no right neighbour); focus stays on the row.
-RIGHT	3 / 3ABN Latino / Hold OK or press Menu for actions
+RIGHT	A / Arena Sport 1 / Hold OK or press Menu for actions
 # Down goes to the next row.
-DOWN	3 / 3Cat Exclusiu 1 (1080p) [Geo-blocked] / Hold OK or press Menu for actions
+DOWN	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 # Changed (F-C-3, R1/R2): Left from an item lands on the selected category, not the one level
 # with it ("Recent Categories" before).
 LEFT	Recent

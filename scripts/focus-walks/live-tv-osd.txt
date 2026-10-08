@@ -12,7 +12,7 @@ CENTER	Channels
 RIGHT	Guide
 RIGHT	Favorite
 # Next: Subtitles, Audio, Quality or More, depending on the stream's tracks — not asserted.
-RIGHT	Subtitles
+RIGHT	
 LEFT	Favorite
 LEFT	Guide
 LEFT	Channels
@@ -20,6 +20,6 @@ LEFT	Channels
 LEFT	Channels
 # OK on Channels hides the OSD and opens the channel panel on the playing channel's row (text
 # varies, not asserted).
-CENTER	Favorites
+CENTER	Hold OK or press Menu for actions
 # Back closes the panel; focus goes back to the player root (no text, not asserted).
-BACK	(nothing focused)
+BACK	
