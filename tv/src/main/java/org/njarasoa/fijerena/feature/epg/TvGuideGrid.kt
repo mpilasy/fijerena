@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.epg
 
+import android.text.format.DateFormat
 import android.text.format.DateUtils
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -77,6 +79,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -110,6 +113,8 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
@@ -131,6 +136,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.components.SectionRootButton
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -236,6 +242,13 @@ private val CanvasBringIntoView =
 
 /** Where the viewport's left edge lands relative to the time being revealed (a third in). */
 private const val REVEAL_FRACTION = 0.35f
+
+/**
+ * "Now" (first open, the Now button) puts the viewport's left edge this long before now, so the
+ * guide reads forward from the current time instead of opening on the hours already gone (TV UI
+ * audit #22).
+ */
+private const val NOW_LEAD_SEC = 30 * 60L
 
 @Composable
 fun TvGuideGrid(
@@ -432,30 +445,20 @@ private fun GuideHeader(
     onDownIntoGrid: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scale = LocalUiScale.current
     val scope = rememberCoroutineScope()
-    val typography = MaterialTheme.typography
-    val titleStyle = remember(scale, typography) { typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale)) }
-    val lineStyle = remember(scale, typography) { typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale)) }
+    val lineStyle = MaterialTheme.typography.bodyMedium
+    val dateLabel = selectedDate.format(EPG_DATE_FORMATTER)
     Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        // The shared TV header (TV UI audit #22): "TV Guide", the list and the day as its subtitle.
+        TvScreenHeader(
+            title = stringResource(R.string.common_tv_guide),
+            subtitle = "$categoryName · $dateLabel",
         ) {
-            Text(
-                text = stringResource(R.string.epg_guide_title_format, categoryName),
-                style = titleStyle,
-                color = CinemaTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(end = Spacing.md.scaled(scale)),
-            )
             // Left/Right walk the buttons in order and stop at the ends; Down enters the grid on
             // the cell it last had; Up stays (tvPane, exitUp = false). Entering from the grid lands
             // on the last button used, else "Previous day".
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier =
                     Modifier
                         .onPreviewKeyEvent { event ->
@@ -525,9 +528,8 @@ private fun GuideHeader(
             }
         }
 
-        // Date and status: "N of M channels have listings · source · updated …" (GD1), and the dev
-        // stats dimmed beneath it in dev mode only — never in the title (G-10).
-        val dateLabel = selectedDate.format(EPG_DATE_FORMATTER)
+        // Status: "N of M channels have listings · source · updated …" (GD1), and the dev stats
+        // dimmed beneath it in dev mode only — never in the title (G-10). The date is in the header.
         val statusLine =
             when (state) {
                 is EpgViewModel.UiState.Ready -> {
@@ -542,13 +544,15 @@ private fun GuideHeader(
                     null
                 }
             }
-        Text(
-            text = if (statusLine == null) dateLabel else "$dateLabel · $statusLine",
-            style = lineStyle,
-            color = CinemaTextSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (statusLine != null) {
+            Text(
+                text = statusLine,
+                style = lineStyle,
+                color = CinemaTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (showDevStats && state is EpgViewModel.UiState.Ready) {
             Text(
                 text = state.devStats,
@@ -972,9 +976,13 @@ private fun GuideBody(
     // whole grid. Cells read it through a derived phase; the now line reads it in the draw phase.
     val nowEpochSeconds = rememberNowEpochSecondsState()
     val cardStyle = guideCardStyle()
-    val channelColumnWidth = TvDimensions.epgChannelColumnWidth.scaled(scale)
+    // Wide enough for the channel's logo beside its name (TV UI audit #22).
+    val channelColumnWidth = TvDimensions.epgChannelColumnWidth + TvDimensions.iconXLarge
     val columnGap = Spacing.sm.scaled(scale)
     val canvasLeftPx = with(density) { (channelColumnWidth + columnGap).toPx() }
+    // A cell narrower than half an hour cannot show a title worth reading ("Bu…"): it shows when it
+    // starts instead, and the header's focus line names it (TV UI audit #22).
+    val timeOnlyBelowPx = with(density) { TvDimensions.epgTimeSlotWidth.toPx() }
 
     val movers =
         remember(layout, channelRows, scrollState, verticalListState, focus, scope) {
@@ -1162,7 +1170,8 @@ private fun GuideBody(
                                 .indexOfFirst { r -> r.programs.any { at >= it.startTime && at < it.endTime } }
                                 .takeIf { it >= 0 }
                             ?: channelRows.indexOfFirst { it.programs.isNotEmpty() }.coerceAtLeast(0)
-                    scrollToReveal(at, animate)
+                    val leftEdge = clampScroll(layout.xFor((at - NOW_LEAD_SEC).coerceAtLeast(layout.windowStartSec)))
+                    if (animate) scrollState.animateScrollTo(leftEdge.roundToInt()) else scrollState.scrollTo(leftEdge.roundToInt())
                     focus.anchorSec = at
                     val program = GuideLayout.programAt(channelRows[row].programs, at)?.takeIf(::inWindow)
                     return if (program != null) focusCell(row, program, revealStart = false) else focusChannel(row)
@@ -1312,6 +1321,9 @@ private fun GuideBody(
                 GuideRow(
                     row = row,
                     rowIndex = index,
+                    // Its page has loaded and it has nothing on the day: said, not a blank track.
+                    noListings = row.programs.isEmpty() && state.isRowLoaded(index),
+                    timeOnlyBelowPx = timeOnlyBelowPx,
                     layout = layout,
                     composeRange = composeRange,
                     scrollState = scrollState,
@@ -1402,6 +1414,8 @@ private fun TimeRuler(
 private fun GuideRow(
     row: EpgChannelRow,
     rowIndex: Int,
+    noListings: Boolean,
+    timeOnlyBelowPx: Float,
     layout: GuideLayout,
     composeRange: LongRange,
     scrollState: ScrollState,
@@ -1437,6 +1451,18 @@ private fun GuideRow(
                     .then(if (returnChannelRequester != null) Modifier.focusRequester(returnChannelRequester) else Modifier),
         )
         Spacer(modifier = Modifier.width(columnGap))
+        if (noListings) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+                Text(
+                    text = stringResource(R.string.epg_guide_no_listings_title),
+                    style = cardStyle.titleStyle,
+                    color = CinemaTextTertiary,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = Spacing.md),
+                )
+            }
+            return@Row
+        }
         CanvasScroll(scrollState = scrollState, modifier = Modifier.weight(1f).fillMaxHeight()) {
             Layout(
                 content = {
@@ -1445,6 +1471,7 @@ private fun GuideRow(
                             val key = programKey(channelId, cell.program.id)
                             ProgramCell(
                                 cell = cell,
+                                timeOnly = cell.width < timeOnlyBelowPx,
                                 nowEpochSeconds = nowEpochSeconds,
                                 cardStyle = cardStyle,
                                 onClick = { onProgramClick(cell.program) },
@@ -1672,7 +1699,15 @@ private fun ChannelCell(
         Row(
             modifier = Modifier.fillMaxSize().padding(Spacing.sm.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            // The logo whole on its neutral tile, as in the channel lists.
+            CinemaThumbnail(
+                url = channel.thumbnailUrl,
+                fallbackLetter = channel.name.firstOrNull(),
+                contentType = ThumbnailContentType.LIVE_TV,
+                modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
+            )
             Text(
                 text = channel.name,
                 style = cardStyle.channelStyle,
@@ -1692,6 +1727,8 @@ private enum class CellPhase { PAST, ON_AIR, UPCOMING }
 @Composable
 private fun ProgramCell(
     cell: GuideCell,
+    /** Too narrow for a readable title: the start time alone ("10:45"). */
+    timeOnly: Boolean,
     nowEpochSeconds: State<Long>,
     cardStyle: GuideCardStyle,
     onClick: () -> Unit,
@@ -1736,7 +1773,25 @@ private fun ProgramCell(
                             .background(CinemaAccent),
                 )
             }
-            if (cell.labelFits) {
+            if (cell.labelFits && timeOnly) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = Spacing.xs)
+                            .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = shortTime(cell.program.startTime),
+                        style = cardStyle.titleStyle,
+                        fontWeight = if (phase == CellPhase.ON_AIR) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (phase == CellPhase.ON_AIR) CinemaAccentLight else CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                    )
+                }
+            } else if (cell.labelFits) {
                 Column(
                     modifier =
                         Modifier
@@ -1763,5 +1818,15 @@ private fun ProgramCell(
                 }
             }
         }
+    }
+}
+
+/** A start time without its AM / PM ("10:45", or "22:45" on a 24-hour clock): the ruler above says which. */
+@Composable
+private fun shortTime(epochSec: Long): String {
+    val context = LocalContext.current
+    return remember(context, epochSec) {
+        val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm"
+        Instant.ofEpochSecond(epochSec).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(pattern))
     }
 }

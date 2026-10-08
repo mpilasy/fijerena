@@ -55,7 +55,12 @@ class EpgViewModel(
             val devStats: String,
             val loadedCount: Int = totalCount,
             val lastListingEndSec: Long? = null,
-        ) : UiState()
+            /** Indexes of the pages loaded; null: all of them. */
+            val loadedPages: Set<Int>? = null,
+        ) : UiState() {
+            /** Whether row [index]'s page has loaded, so an empty row means "no listings", not "not yet". */
+            fun isRowLoaded(index: Int): Boolean = loadedPages?.contains(index / PAGE_SIZE) ?: true
+        }
 
         /** Channels found, but not one of them has a programme on [selectedDate]. */
         data class NoListings(
@@ -232,6 +237,7 @@ class EpgViewModel(
                     "${pager.loadedPages(date)}/${pager.pageCount} pages · first ${firstPageMs}ms",
             loadedCount = guide.loadedCount,
             lastListingEndSec = guide.lastListingEndSec,
+            loadedPages = pager.pages(date).keys,
         )
     }
 
