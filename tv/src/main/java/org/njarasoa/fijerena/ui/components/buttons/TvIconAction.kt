@@ -10,6 +10,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -105,8 +106,13 @@ fun TvIconAction(
                 focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
             ),
     ) {
+        // Full height, or the row sits at the top of the circle and CenterVertically only centres
+        // the icon within the row: every icon rode high in its button.
         Row(
-            modifier = Modifier.padding(horizontal = (size - TvDimensions.iconMedium.scaled(scale)) / 2),
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = (size - TvDimensions.iconMedium.scaled(scale)) / 2),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

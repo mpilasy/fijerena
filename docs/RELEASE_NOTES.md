@@ -3,6 +3,7 @@
 ## Version: Phone home overhaul
 **Release Date:** 2026-10-07
 
+- **TV: icon buttons centred:** the round action buttons (details, sources, guide sources, the player) drew their icon in the top half of the circle; it now sits in the middle.
 - **TV: readable over light channel logos and posters:** the blurred backdrop behind the Live TV preview, browse and Home took the image's own brightness, so a light logo (Al Jazeera, C-SPAN) turned the screen pale and the channel name, category, hints and tabs vanished. The backdrop is now darkened with the theme's background, whatever the image.
 - **Phone: back to a section's start from anywhere:** the bottom bar now stays on details, episodes, Search and the guides, so tapping the current tab goes straight back to its start (it replaces the old "back to Movies" button), and switching tabs comes back to the film or screen you left.
 - **Search everything from any phone tab:** a tab's Search now searches Live TV, Movies and TV Shows together, starting on that tab's section — the "All Content" chip widens it in one tap.
