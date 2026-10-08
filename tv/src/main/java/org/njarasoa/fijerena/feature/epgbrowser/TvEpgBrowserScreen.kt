@@ -2,6 +2,11 @@
 
 package org.njarasoa.fijerena.feature.epgbrowser
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +33,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -46,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -93,6 +98,7 @@ import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -112,8 +118,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.SectionRootButton
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
@@ -208,121 +216,71 @@ fun TvEpgBrowserScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.fillMaxWidth(),
+            // The shared TV header (TV UI audit #15): title, the source as its subtitle, the icon
+            // actions on the right; how fresh the guides are goes on its own line beneath it.
+            TvScreenHeader(
+                title = stringResource(R.string.epg_browser_title),
+                subtitle = activeProviderName,
             ) {
-                Text(
-                    text = stringResource(R.string.epg_browser_title),
-                    style =
-                        MaterialTheme.typography.displaySmall.copy(
-                            fontSize =
-                                MaterialTheme.typography.displaySmall.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                val providerName = activeProviderName
-                if (providerName != null) {
-                    Text(
-                        text = stringResource(R.string.epg_browser_provider_suffix_format, providerName),
-                        style =
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.titleLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale), start = Spacing.xs.scaled(scale)),
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                    modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
-                ) {
-                    if (guideSourcesProviderId != null) {
-                        CinemaIconButton(
-                            onClick = {
-                                headerReturnFocus.leaveFrom(RETURN_TV_GUIDE)
-                                onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel)
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.DateRange,
-                                    contentDescription = stringResource(R.string.common_tv_guide),
-                                    tint = CinemaTextPrimary,
-                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                )
-                            },
-                            modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_TV_GUIDE),
-                        )
-                    }
-                    val freshnessText =
-                        freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
-                    val freshnessColor =
-                        if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
-                            (oldestIngestedAtMs == null && hasOffSources)
-                        ) {
-                            CinemaWarning
-                        } else {
-                            CinemaTextSecondary
-                        }
-                    Text(
-                        text = freshnessText,
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.labelLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = freshnessColor,
-                    )
-                    CinemaIconButton(
-                        onClick = { if (!isRefreshing) viewModel.refreshStale() },
-                        icon = {
-                            if (isRefreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                    color = CinemaAccent,
-                                    strokeWidth = TvDimensions.borderFocused,
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = CinemaIcons.Refresh,
-                                    contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
-                                    tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
-                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                )
-                            }
+                if (guideSourcesProviderId != null) {
+                    TvIconAction(
+                        onClick = {
+                            headerReturnFocus.leaveFrom(RETURN_TV_GUIDE)
+                            onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel)
                         },
+                        icon = CinemaIcons.DateRange,
+                        label = stringResource(R.string.common_tv_guide),
+                        modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_TV_GUIDE),
                     )
-                    // The guides this search runs over, for a source that can have them.
-                    guideSourcesProviderId?.let { providerId ->
-                        CinemaIconButton(
-                            onClick = {
-                                headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
-                                onGuideSources(providerId)
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Tune,
-                                    contentDescription = stringResource(R.string.epg_sources_header),
-                                    tint = CinemaTextPrimary,
-                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                )
-                            },
-                            modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_GUIDE_SOURCES),
-                        )
-                    }
-                    SectionRootButton(sectionRoot)
                 }
+                // Never disabled: a disabled button drops the focus it holds. A press while
+                // refreshing does nothing; the icon turns meanwhile, as on the TV Guide.
+                val refreshTurn = rememberInfiniteTransition(label = "guideSearchRefresh")
+                val refreshAngle by refreshTurn.animateFloat(
+                    initialValue = 0f,
+                    targetValue = FULL_TURN_DEGREES,
+                    animationSpec = infiniteRepeatable(tween(CinemaAnimation.fadeInDurationMs * 2, easing = LinearEasing)),
+                    label = "guideSearchRefreshAngle",
+                )
+                TvIconAction(
+                    onClick = { if (!isRefreshing) viewModel.refreshStale() },
+                    icon = CinemaIcons.Refresh,
+                    label = stringResource(R.string.epg_browser_refresh_stale_description),
+                    iconTint = if (staleSourceCount > 0) CinemaWarning else null,
+                    iconModifier = if (isRefreshing) Modifier.rotate(refreshAngle) else Modifier,
+                )
+                // The guides this search runs over, for a source that can have them.
+                guideSourcesProviderId?.let { providerId ->
+                    TvIconAction(
+                        onClick = {
+                            headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
+                            onGuideSources(providerId)
+                        },
+                        icon = CinemaIcons.Tune,
+                        label = stringResource(R.string.epg_sources_header),
+                        modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_GUIDE_SOURCES),
+                    )
+                }
+                SectionRootButton(sectionRoot)
             }
 
-            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+            val freshnessColor =
+                if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
+                    (oldestIngestedAtMs == null && hasOffSources)
+                ) {
+                    CinemaWarning
+                } else {
+                    CinemaTextSecondary
+                }
+            Text(
+                text = freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources),
+                style = MaterialTheme.typography.bodyMedium,
+                color = freshnessColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             when (val state = uiState) {
                 is EpgBrowserViewModel.UiState.NoEpgFile -> {
@@ -407,10 +365,7 @@ private fun EpgBrowserContent(
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
 
-    // Down from the search field should reach the first recent-search chip. Left to a spatial
-    // focus search it lands on the "Recent Searches" header's clear-all button instead, which sits
-    // between the field and the chips. Only wired up while the history is actually on screen —
-    // aiming `down` at an unattached requester would stop Down working at all.
+    // Down from the filter chips should reach the first recent-search chip (see the chip row).
     val historyFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
     // Saveable: Back from a channel must find the same filtered list, or the airing it came from
@@ -445,52 +400,48 @@ private fun EpgBrowserContent(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        GlassPanel {
-            Column(modifier = Modifier.padding(Spacing.sm.scaled(scale))) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                ) {
-                    // A bare Material3 Checkbox draws focus through LocalIndication, a ripple —
-                    // invisible without a pointer on TV — so the toggles are selectable buttons.
-                    if (contextName != null) {
-                        TvSelectableButton(
-                            selected = inContextOnly,
-                            onSelect = { inContextOnly = !inContextOnly },
-                            text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
-                        )
-                    }
+        TvSearchField(
+            query = localQuery,
+            onQueryChange = { localQuery = it },
+            onSearchSubmit = { onSearch(localQuery) },
+            onClear = {
+                localQuery = ""
+                onClearSearch()
+            },
+            placeholder = stringResource(R.string.epg_browser_enter_programme_placeholder),
+            focusRequester = searchFocusRequester,
+            editing = editing,
+            onEditingChange = { editing = it },
+            showClearButton = localQuery.isNotEmpty() || hasResults,
+        )
 
-                    TvSelectableButton(
-                        selected = matchedOnly,
-                        onSelect = { matchedOnly = !matchedOnly },
-                        text = stringResource(R.string.epg_browser_matched_only_label),
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-
-                TvSearchField(
-                    modifier =
-                        if (showsHistory) {
-                            Modifier.focusProperties { down = historyFocusRequester }
-                        } else {
-                            Modifier
-                        },
-                    query = localQuery,
-                    onQueryChange = { localQuery = it },
-                    onSearchSubmit = { onSearch(localQuery) },
-                    onClear = {
-                        localQuery = ""
-                        onClearSearch()
-                    },
-                    placeholder = stringResource(R.string.epg_browser_enter_programme_placeholder),
-                    focusRequester = searchFocusRequester,
-                    editing = editing,
-                    onEditingChange = { editing = it },
-                    showClearButton = localQuery.isNotEmpty() || hasResults,
+        // The filters, as a row of chips under the field (TV UI audit #15). Down from them reaches
+        // the first recent search, not the "Clear all" icon a spatial search would find first; only
+        // wired up while the history is on screen, since aiming `down` at an unattached requester
+        // would stop Down working at all.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            modifier =
+                Modifier
+                    .padding(top = Spacing.xs)
+                    .then(if (showsHistory) Modifier.focusProperties { down = historyFocusRequester } else Modifier),
+        ) {
+            // A bare Material3 Checkbox draws focus through LocalIndication, a ripple —
+            // invisible without a pointer on TV — so the toggles are selectable buttons.
+            if (contextName != null) {
+                TvSelectableButton(
+                    selected = inContextOnly,
+                    onSelect = { inContextOnly = !inContextOnly },
+                    text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
                 )
             }
+
+            TvSelectableButton(
+                selected = matchedOnly,
+                onSelect = { matchedOnly = !matchedOnly },
+                text = stringResource(R.string.epg_browser_matched_only_label),
+            )
         }
 
         // Auto-focus on screen open (not on a return from a channel)
@@ -599,7 +550,7 @@ private fun EpgBrowserContent(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        val hintText = stringResource(R.string.epg_browser_hint_search_titles_local)
+                        val hintText = stringResource(R.string.epg_browser_hint_search_titles)
                         Text(
                             text = hintText,
                             style =
@@ -686,13 +637,8 @@ private fun EpgSearchHistorySection(
         ) {
             Text(
                 text = stringResource(R.string.epg_browser_recent_searches),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary,
+                style = MaterialTheme.typography.headlineSmall,
+                color = CinemaTextPrimary,
             )
             CinemaIconButton(
                 onClick = onClearAll,
@@ -796,17 +742,15 @@ private fun ResultsContent(
         }
 
     Column {
-        Text(
-            text = results.statsLine(),
-            style =
-                MaterialTheme.typography.titleMedium.copy(
-                    fontSize =
-                        MaterialTheme.typography.titleMedium.fontSize
-                            .scaled(scale),
-                ),
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale)),
-        )
+        // Counts, timing and search path: developer information (TV UI audit #15).
+        if (isDevMode) {
+            Text(
+                text = results.statsLine(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                modifier = Modifier.padding(bottom = Spacing.sm),
+            )
+        }
         if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
             Text(
                 text = stringResource(R.string.epg_browser_partial_results_note),
@@ -1221,3 +1165,5 @@ private fun AiringRow(
         rowContent()
     }
 }
+
+private const val FULL_TURN_DEGREES = 360f
