@@ -8,14 +8,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,10 +28,10 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,20 +51,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
-import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -69,7 +72,6 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -110,6 +112,8 @@ fun MobileControlsOverlay(
     onRewind: (() -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
+    // The bottom panel's height in px, for the player to lift the subtitles above it.
+    onPanelHeightChanged: (Int) -> Unit = {},
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -163,7 +167,6 @@ fun MobileControlsOverlay(
     }
 
     val typography = MaterialTheme.typography
-    val labelStyle = typography.labelSmall
 
     Box(
         modifier =
@@ -181,12 +184,14 @@ fun MobileControlsOverlay(
         // bottom bar (e.g. Live TV's EPG block) gets. No synopsis competes for this space (see
         // showInfo above), so nothing here has to share it with anything else either.
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar with title and clock
+            // Top bar: the resolution/codec line and the clock. The title sits in the bottom
+            // panel, above the seek bar. Padded clear of a display cutout; the system bars are
+            // hidden while the player is up (see MobilePlayerContent).
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
                         .padding(CinemaSpacing.md),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -197,51 +202,6 @@ fun MobileControlsOverlay(
                             .weight(1f)
                             .padding(horizontal = CinemaSpacing.xs),
                 ) {
-                    // Big title treatment for VOD (movies get the show's own title big; episodes
-                    // get the series title big with the episode demoted to a subtitle line).
-                    // Live TV keeps the old small plain label — it has no TMDB entry of its own.
-                    val bigTitle = metadata.showTitle ?: metadata.title.takeIf { !metadata.isLive }
-                    if (bigTitle != null) {
-                        val logoUrl = metadata.logoUrl
-                        if (logoUrl != null) {
-                            AdaptiveLogoImage(
-                                logoUrl = logoUrl,
-                                contentDescription = parseDisplayTitle(bigTitle).title,
-                                modifier = Modifier.height(MobileDimensions.osdLogoHeight),
-                            )
-                        } else {
-                            // No TMDB logo art for this title — fall back to a stylized gradient
-                            // rendering of the title text instead, its provider tag as a badge.
-                            BadgedTitle(
-                                raw = bigTitle,
-                                style =
-                                    typography.headlineSmall.copy(
-                                        fontWeight = FontWeight.Black,
-                                        brush = Brush.linearGradient(listOf(CinemaAccent, CinemaTextPrimary)),
-                                    ),
-                            )
-                        }
-                        if (metadata.showTitle != null) {
-                            // Some providers' episode titles already embed the show name and
-                            // number ("A+ - Silo (2023) (US) - S03E01 - Who Are You?"): only the
-                            // episode's own name is shown, none when the title is just the show
-                            // and the number.
-                            val episodeName = playerEpisodeName(metadata.title).takeIf { it.isNotBlank() }
-                            val episodeSubtitle = listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" - ")
-                            if (episodeSubtitle.isNotBlank()) {
-                                Text(
-                                    text = episodeSubtitle,
-                                    style = typography.bodySmall,
-                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    } else {
-                        BadgedTitle(raw = metadata.title, style = typography.titleMedium, color = CinemaTextPrimary)
-                    }
-
                     if (videoResolution != null || videoCodec != null) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
@@ -334,25 +294,87 @@ fun MobileControlsOverlay(
                 }
             }
 
-            // Bottom bar: "Ends at" (VOD only), then the scrubber + time row, then a compact icon
-            // row — a slim strip along the bottom, not a tall stack of scrubber + time + remaining
-            // + transport controls + icons that could eat a quarter of the screen on its own.
+            // Bottom bar: the title (with "Ends at" on VOD), then the scrubber + time row (live:
+            // Now and Next), then a compact icon row — a slim strip along the bottom, not a tall
+            // stack that could eat a quarter of the screen on its own. Its height goes to the
+            // player, which lifts the subtitles above it.
             GlassPanel(
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { onPanelHeightChanged(it.height) },
             ) {
                 Column(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
                             .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
                 ) {
-                    // VOD progress bar and time info
-                    if (!isLive) {
-                        val position = livePosition
-                        val duration = liveDuration
+                    val position = livePosition
+                    val duration = liveDuration
+                    val hasSeekBar = !isLive && duration > 0
 
-                        if (duration > 0) {
+                    // The title, one line. VOD: the film, or "Show · S01E02 · Episode". Live:
+                    // LIVE · the channel name.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (isLive) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .size(MobileDimensions.liveDotSize)
+                                            .background(CinemaLive, shape = CircleShape),
+                                )
+                                Text(
+                                    text = stringResource(R.string.player_live),
+                                    style = typography.labelLarge,
+                                    color = CinemaTextPrimary,
+                                )
+                                BadgedTitle(
+                                    raw = metadata.title,
+                                    style = typography.titleMedium,
+                                    color = CinemaTextPrimary,
+                                    modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
+                                )
+                            } else {
+                                // Some providers' episode titles already embed the show name and
+                                // number ("A+ - Silo (2023) (US) - S03E01 - Who Are You?"): only the
+                                // episode's own name is shown, none when the title is just the show
+                                // and the number.
+                                val episodeLine =
+                                    metadata.showTitle?.let {
+                                        val episodeName = playerEpisodeName(metadata.title).takeIf { name -> name.isNotBlank() }
+                                        listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" · ")
+                                    }
+                                BadgedTitle(
+                                    raw = metadata.showTitle ?: metadata.title,
+                                    style = typography.titleMedium,
+                                    color = CinemaTextPrimary,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                if (!episodeLine.isNullOrBlank()) {
+                                    Text(
+                                        text = "· $episodeLine",
+                                        style = typography.titleMedium,
+                                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                }
+                            }
+                        }
+                        if (hasSeekBar) {
                             Text(
                                 text =
                                     stringResource(
@@ -360,142 +382,120 @@ fun MobileControlsOverlay(
                                         org.njarasoa.fijerena.core.ui.theme.TimeFormat
                                             .formatClockTime(Date(System.currentTimeMillis() + (duration - position))),
                                     ),
-                                style = labelStyle,
-                                color = MaterialTheme.colorScheme.primary,
+                                style = typography.bodySmall,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 maxLines = 1,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.End,
                             )
-
-                            var isSeeking by remember { mutableStateOf(false) }
-                            var seekPosition by remember { mutableStateOf(0f) }
-                            var lastHapticSecond by remember { mutableStateOf(-1L) }
-
-                            val scrubberColors =
-                                SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                    inactiveTrackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
-                                )
-                            val scrubberInteractionSource = remember { MutableInteractionSource() }
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = formatTime(position),
-                                    style = typography.bodySmall,
-                                    color = CinemaTextPrimary,
-                                )
-                                Slider(
-                                    value = if (isSeeking) seekPosition else position.toFloat() / duration.toFloat(),
-                                    onValueChange = { newValue ->
-                                        isSeeking = true
-                                        seekPosition = newValue
-                                        // One tick per second crossed while dragging, not per pixel —
-                                        // Slider fires onValueChange continuously during a drag.
-                                        val newSecond = (newValue * duration).toLong() / 1000
-                                        if (newSecond != lastHapticSecond) {
-                                            lastHapticSecond = newSecond
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        }
-                                    },
-                                    onValueChangeFinished = {
-                                        val newPositionMs = (seekPosition * duration).toLong()
-                                        viewModel.seekTo(newPositionMs)
-                                        isSeeking = false
-                                    },
-                                    modifier = Modifier.weight(1f).padding(horizontal = CinemaSpacing.xs),
-                                    colors = scrubberColors,
-                                    interactionSource = scrubberInteractionSource,
-                                    // Default thumb is a 4dp-wide bar — round and enlarge it so it
-                                    // reads as a draggable knob, not a thin tick mark.
-                                    thumb = {
-                                        SliderDefaults.Thumb(
-                                            interactionSource = scrubberInteractionSource,
-                                            colors = scrubberColors,
-                                            thumbSize =
-                                                DpSize(
-                                                    MobileDimensions.playerScrubberThumbSize,
-                                                    MobileDimensions.playerScrubberThumbSize,
-                                                ),
-                                        )
-                                    },
-                                )
-                                Text(
-                                    text = formatTime(duration),
-                                    style = typography.bodySmall,
-                                    color = CinemaTextPrimary,
-                                )
-                            }
                         }
-                    } else {
-                        // Live indicator with EPG info — single-line title/up-next so this can't
-                        // grow past what a compact bottom bar can afford.
-                        Column(modifier = Modifier.padding(bottom = Spacing.xxs)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            ) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .size(MobileDimensions.liveDotSize)
-                                            .background(CinemaLive, shape = MaterialTheme.shapes.small),
-                                )
+                    }
+
+                    // VOD progress bar and time info
+                    if (hasSeekBar) {
+                        var isSeeking by remember { mutableStateOf(false) }
+                        var seekPosition by remember { mutableStateOf(0f) }
+                        var lastHapticSecond by remember { mutableStateOf(-1L) }
+
+                        val scrubberColors =
+                            SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                            )
+                        val scrubberInteractionSource = remember { MutableInteractionSource() }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = formatTime(position),
+                                style = typography.bodySmall,
+                                color = CinemaTextPrimary,
+                            )
+                            Slider(
+                                value = if (isSeeking) seekPosition else position.toFloat() / duration.toFloat(),
+                                onValueChange = { newValue ->
+                                    isSeeking = true
+                                    seekPosition = newValue
+                                    // One tick per second crossed while dragging, not per pixel —
+                                    // Slider fires onValueChange continuously during a drag.
+                                    val newSecond = (newValue * duration).toLong() / 1000
+                                    if (newSecond != lastHapticSecond) {
+                                        lastHapticSecond = newSecond
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                },
+                                onValueChangeFinished = {
+                                    val newPositionMs = (seekPosition * duration).toLong()
+                                    viewModel.seekTo(newPositionMs)
+                                    isSeeking = false
+                                },
+                                modifier = Modifier.weight(1f).padding(horizontal = CinemaSpacing.xs),
+                                colors = scrubberColors,
+                                interactionSource = scrubberInteractionSource,
+                                // Default thumb is a 4dp-wide bar — round and enlarge it so it
+                                // reads as a draggable knob, not a thin tick mark.
+                                thumb = {
+                                    SliderDefaults.Thumb(
+                                        interactionSource = scrubberInteractionSource,
+                                        colors = scrubberColors,
+                                        thumbSize =
+                                            DpSize(
+                                                MobileDimensions.playerScrubberThumbSize,
+                                                MobileDimensions.playerScrubberThumbSize,
+                                            ),
+                                    )
+                                },
+                            )
+                            Text(
+                                text = formatTime(duration),
+                                style = typography.bodySmall,
+                                color = CinemaTextPrimary,
+                            )
+                        }
+                    } else if (isLive && currentEpgProgram != null) {
+                        // Live: Now with its times and the programme's progress, then Next — one
+                        // line each, so this can't grow past what a compact bottom bar can afford.
+                        Column(modifier = Modifier.padding(top = Spacing.xxs, bottom = Spacing.xs)) {
+                            val epgContext = LocalContext.current
+                            val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
+                            val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
+                            Text(
+                                text = stringResource(R.string.player_now_playing_format, currentEpgProgram.title, nowStart, nowEnd),
+                                style = typography.bodySmall,
+                                color = CinemaTextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
+                            val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
+                            val epgProgress =
+                                if (currentEpgProgram.duration > 0) {
+                                    ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat())
+                                        .coerceIn(0f, 1f)
+                                } else {
+                                    0f
+                                }
+                            LinearProgressIndicator(
+                                progress = { epgProgress },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = Spacing.xxs)
+                                        .height(Spacing.xxxs),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                            )
+                            if (nextEpgProgram != null) {
                                 Text(
-                                    text = stringResource(R.string.player_live),
-                                    style = typography.labelLarge,
-                                    color = CinemaTextPrimary,
-                                )
-                            }
-                            if (currentEpgProgram != null) {
-                                val epgContext = LocalContext.current
-                                val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
-                                val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
-                                Text(
-                                    text = stringResource(R.string.player_now_playing_format, currentEpgProgram.title, nowStart, nowEnd),
+                                    text =
+                                        stringResource(
+                                            R.string.player_up_next_format,
+                                            nextEpgProgram.title,
+                                            formatEpochTime(epgContext, nextEpgProgram.startTime),
+                                        ),
                                     style = typography.bodySmall,
                                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = Spacing.xxs),
                                 )
-                                // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
-                                val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
-                                val epgProgress =
-                                    if (currentEpgProgram.duration > 0) {
-                                        ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat())
-                                            .coerceIn(
-                                                0f,
-                                                1f,
-                                            )
-                                    } else {
-                                        0f
-                                    }
-                                LinearProgressIndicator(
-                                    progress = { epgProgress },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xxs)
-                                            .height(Spacing.xxxs),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
-                                )
-                                if (nextEpgProgram != null) {
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                R.string.player_up_next_format,
-                                                nextEpgProgram.title,
-                                                formatEpochTime(epgContext, nextEpgProgram.startTime),
-                                            ),
-                                        style = labelStyle,
-                                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(top = Spacing.xxxs),
-                                    )
-                                }
                             }
                         }
                     }
@@ -543,7 +543,7 @@ fun MobileControlsOverlay(
                             },
                             icon = {
                                 Icon(
-                                    imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
+                                    imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                     contentDescription =
                                         stringResource(
                                             if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
