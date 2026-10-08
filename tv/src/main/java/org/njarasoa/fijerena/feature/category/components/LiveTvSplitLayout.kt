@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -157,7 +156,9 @@ internal fun LiveTvSplitLayout(
         // death the list comes back as Recent first, then the category the preview was on.
         if (seed == null && (guideReturnStreamId != null || initialStreamId != null)) return@LaunchedEffect
         hasSeeded = true
-        if (seed != null) previewTarget = seed
+        // A separator row is a heading, never played — not even one recorded as watched before
+        // they were headings (TV UI audit #24): the list alone then, until OK picks a channel.
+        if (seed != null && !seed.isSeparatorRow) previewTarget = seed
     }
 
     // No setContentType(LIVE_TV) effect here: StreamingPlaybackService.playStream() picks the
@@ -621,63 +622,71 @@ internal fun LiveTvSplitLayout(
                 // from the bare browse list behind it, and the video with the hint line under it
                 // already does (docs/UX_FLOW_AUDIT.md, "Live TV back-stopover").
                 // TODO: the channel number goes before the name once metadata carries one.
+                // One hierarchy (TV UI audit #4): the channel's name, its category under it, then
+                // Now (with its progress) and Next — and the key hint right below, where it
+                // explains what is above it, not floating at the bottom of the screen.
                 val resolved = success?.takeIf { it.streamId == target.id }
-                Text(
-                    text = resolved?.streamName ?: target.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = CinemaTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val categoryName =
-                    target.categoryId
-                        .takeUnless { it in CategoryViewModel.VIRTUAL_CATEGORY_IDS }
-                        ?.let { categoryMap[it]?.name }
-                if (categoryName != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(
-                        text = categoryName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary,
+                        text = resolved?.streamName ?: target.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    val categoryName =
+                        target.categoryId
+                            .takeUnless { it in CategoryViewModel.VIRTUAL_CATEGORY_IDS }
+                            ?.let { categoryMap[it]?.name }
+                    if (categoryName != null) {
+                        Text(
+                            text = categoryName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = CinemaTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
 
                 val nowProg = resolved?.currentEpgProgram
-                if (nowProg != null) {
-                    Text(
-                        text = stringResource(R.string.epg_now_prefix, nowProg.title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    val fraction = nowProg.elapsedFraction()
-                    LinearProgressIndicator(
-                        progress = { fraction },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = CinemaAccent,
-                        trackColor = CinemaSurface,
-                    )
-                }
-
                 val nextProg = resolved?.nextEpgProgram
-                if (nextProg != null) {
-                    Text(
-                        text = stringResource(R.string.live_preview_next_format, nextProg.title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                if (nowProg != null || nextProg != null) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        if (nowProg != null) {
+                            Text(
+                                text = stringResource(R.string.epg_now_prefix, nowProg.title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = CinemaTextPrimary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            val fraction = nowProg.elapsedFraction()
+                            LinearProgressIndicator(
+                                progress = { fraction },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = CinemaAccent,
+                                trackColor = CinemaSurface,
+                            )
+                        }
+                        if (nextProg != null) {
+                            Text(
+                                text = stringResource(R.string.live_preview_next_format, nextProg.title),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = CinemaTextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = stringResource(R.string.live_preview_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = CinemaTextSecondary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -728,14 +737,15 @@ internal fun LiveTvSplitLayout(
  * Computes the channel next to [currentId] in [streams], wrapping around. Used for full-screen
  * Up/Down channel switching — computed off the currently-displayed list rather than the loader's
  * internal index, which [StreamLoaderViewModel.loadStreamLight] (the preview re-point path) never
- * keeps in sync with what's actually on screen.
+ * keeps in sync with what's actually on screen. Separator rows are skipped: a heading is never
+ * zapped to (TV UI audit #24).
  */
 private fun neighborChannel(
     streams: ImmutableMediaList?,
     currentId: String,
     direction: Int,
 ): MediaItem? {
-    val list = streams?.takeIf { it.isNotEmpty() }
+    val list = streams?.filterNot { it.isSeparatorRow }?.takeIf { it.isNotEmpty() }
     val neighbor =
         list?.let {
             val currentIndex = it.indexOfFirst { item -> item.id == currentId }.takeIf { index -> index != -1 } ?: 0
