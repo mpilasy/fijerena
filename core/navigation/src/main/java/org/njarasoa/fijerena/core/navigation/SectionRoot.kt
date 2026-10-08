@@ -7,9 +7,11 @@ import androidx.navigation.NavController
 
 /**
  * The section-root button (docs/plans/archive/20261003_sources-guide-profiles-plan.md → D4, P6) shows on a
- * screen this many back-stack entries above Home ([Screen.ContentTypeSelection]) or more.
+ * screen this many back-stack entries above Home ([Screen.ContentTypeSelection]) or more: from
+ * where one Back no longer reaches the section's first screen (Home → Movies → film → related
+ * film). Was 4 until 2026-10-07, when the user found it came too late.
  */
-const val HOME_BUTTON_MIN_DEPTH = 4
+const val HOME_BUTTON_MIN_DEPTH = 3
 
 /**
  * Where the section-root button of the last entry of [stack] (bottom first, the asking screen

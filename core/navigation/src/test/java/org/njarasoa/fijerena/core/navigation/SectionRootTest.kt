@@ -8,15 +8,15 @@ class SectionRootTest {
     private fun rootOf(vararg stack: String): Int? = sectionRootIndex(stack.toList()) { it == HOME }
 
     @Test
-    fun `hidden at depths 1 to 3`() {
+    fun `hidden at depths 1 and 2, where one Back reaches the section`() {
         assertNull(rootOf(GRAPH, HOME))
         assertNull(rootOf(GRAPH, HOME, "Movies"))
         assertNull(rootOf(GRAPH, HOME, "Movies", "film"))
-        assertNull(rootOf(GRAPH, HOME, "Movies", "film", "related"))
     }
 
     @Test
-    fun `at depth 4 and beyond the root is the entry directly above Home`() {
+    fun `at depth 3 and beyond the root is the entry directly above Home`() {
+        assertEquals(2, rootOf(GRAPH, HOME, "Movies", "film", "related"))
         assertEquals(2, rootOf(GRAPH, HOME, "Movies", "film", "related", "category"))
         assertEquals(2, rootOf(GRAPH, HOME, "Settings", "Sources", "Edit Source", "Guide sources"))
         assertEquals(2, rootOf(GRAPH, HOME, "Movies", "film", "Movies", "film", "Movies"))
@@ -24,7 +24,7 @@ class SectionRootTest {
 
     @Test
     fun `the graph entry below Home does not count`() {
-        assertEquals(1, rootOf(HOME, "Search", "film", "related", "related"))
+        assertEquals(1, rootOf(HOME, "Search", "film", "related"))
     }
 
     @Test

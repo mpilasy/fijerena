@@ -199,7 +199,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 1. **Startup:** `NewerData` / `SafeMode` first when they apply; otherwise, if a provider is configured, TV's home screen (`ContentTypeSelection`, through `ProfilePicker` when there is more than one profile) and on the phone the last tab used (no Home: a bottom bar of section tabs, Back-Stack Rule 7) — else Settings. See `docs/NAVIGATION_GUIDE.md` → "Navigation Rules".
 2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
 3. **Navigation IDs:** Always use `String` for IDs.
-4. **Section-root button:** a screen 4 or more back-stack entries above Home (`HOME_BUTTON_MIN_DEPTH`) shows a button back to the first screen above Home (Movies, Settings…). TV only: a new screen that can sit that deep takes `sectionRoot: SectionRoot?` drawn with `SectionRootButton` last in its header row, and the TV nav host passes `sectionRootFor(navController, backStackEntry)`; on the phone, tapping the current tab does it. Never on the player or the Live TV preview. See `docs/NAVIGATION_GUIDE.md` → Back-Stack Rules.
+4. **Section-root button:** a screen 3 or more back-stack entries above Home (`HOME_BUTTON_MIN_DEPTH`; where one Back no longer reaches the section) shows a button back to the first screen above Home (Movies, Settings…). TV only: a new screen that can sit that deep takes `sectionRoot: SectionRoot?` drawn with `SectionRootButton` last in its header row, and the TV nav host passes `sectionRootFor(navController, backStackEntry)`; on the phone, tapping the current tab does it. Never on the player or the Live TV preview. See `docs/NAVIGATION_GUIDE.md` → Back-Stack Rules.
 
 ### Features
 
