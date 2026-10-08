@@ -52,9 +52,6 @@ object MobileDimensions {
     val epgProgramHeight: Dp = 64.dp
     val epgChannelHeaderHeight: Dp = 44.dp
 
-    /** A tab root's top bar with the status line under the source name: the name plus a 48 dp touch row. */
+    /** A tab root's top bar: the section's name over the source line's 48 dp touch row. */
     val homeTopBarHeight: Dp = 84.dp
-
-    /** Avatar on the "Who's watching?" profile picker. */
-    val profilePickerAvatar: Dp = 88.dp
 }

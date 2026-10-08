@@ -94,7 +94,7 @@ private fun MobileTab.icon(): ImageVector =
     }
 
 @Composable
-private fun MobileTab.label(): String =
+fun MobileTab.label(): String =
     when (this) {
         MobileTab.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
         MobileTab.MOVIES -> stringResource(R.string.provider_movies_label)

@@ -1,11 +1,9 @@
 package org.njarasoa.fijerena.feature.contentselection
 
 import android.content.Context
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,12 +14,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -51,11 +47,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
@@ -68,9 +66,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceStatusLine
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceLine
+import org.njarasoa.fijerena.feature.profile.ProfileSheet
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -89,7 +88,16 @@ data class ActiveSource(
     val needsSignIn: Boolean,
     /** The sections the source has; null while [needsSignIn] (no repository is built for it). */
     val supportedTypes: Set<String>?,
-)
+    /** The source has Live TV but its last sync found no channels (see [loadActiveSource]). */
+    val noChannels: Boolean = false,
+) {
+    /**
+     * The sections the tabs offer: [supportedTypes] without a Live TV that has no channels — as on
+     * TV, where that card is dimmed and skipped.
+     */
+    val sections: Set<String>?
+        get() = if (noChannels) supportedTypes?.minus(ContentType.LIVE_TV) else supportedTypes
+}
 
 /**
  * The active source, or null with none. Its sections are read from the app-wide repository's
@@ -126,25 +134,41 @@ suspend fun loadActiveSource(
                             ?.supportedContentTypes
                     }
                 }
-            ActiveSource(provider.id, provider.name, provider.type, needsSignIn, supportedTypes)
+            // Re-read on every call, so channels a later sync brings show the tab again. Only for
+            // Xtream once it has synced: a count of its stored live categories, no network call.
+            // Not for M3U (listing its channels downloads the playlist) nor Jellyfin (no Live TV).
+            val noChannels =
+                provider.type == "XTREAM" &&
+                    provider.lastSyncedAtMs > 0 &&
+                    supportedTypes?.contains(ContentType.LIVE_TV) == true &&
+                    (
+                        AppContainer
+                            .getInstance(context.applicationContext)
+                            .getMediaRepository(provider.id)
+                            .getProvider() as? XtreamMediaProvider
+                    )?.getCategoryTotalCount(ContentType.LIVE_TV) == 0
+            ActiveSource(provider.id, provider.name, provider.type, needsSignIn, supportedTypes, noChannels)
         }
     }
 
 /**
- * The top bar of every tab root on the phone: no back arrow; the source's name (a picker with two
- * or more sources) with its sync status under it; [sectionActions] (the section's own Search, and
- * TV Guide on Live TV) first, then Search the guide (once the guide index is ready), the profile
- * avatar and Settings. [onSourcePicked] runs after another source was made the active one.
+ * The top bar of every tab root on the phone: no back arrow; [title] (the section's name) over one
+ * line with the source and its sync status, which switches source when there are two or more. Then
+ * Search the guide ([onSearchGuide], Live TV only, once the guide index is ready), the section's
+ * Search ([onSearch]; null while signed out of the source) and the profile avatar, whose sheet
+ * switches profile ([onProfileChosen] runs after the switch) and opens Settings. [onSourcePicked]
+ * runs after another source was made the active one.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileSourceTopBar(
+    title: String,
     source: ActiveSource?,
     onSourcePicked: () -> Unit,
-    onSearchGuide: () -> Unit,
-    onChooseProfile: () -> Unit,
+    onSearch: (() -> Unit)?,
+    onSearchGuide: (() -> Unit)?,
+    onProfileChosen: () -> Unit,
     onSettings: () -> Unit,
-    sectionActions: @Composable RowScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -154,9 +178,10 @@ fun MobileSourceTopBar(
     val sourceId = source?.id ?: 0L
     var allProviders by remember { mutableStateOf<List<ProviderEntity>>(emptyList()) }
     var showProviderPicker by remember { mutableStateOf(false) }
+    var showProfileSheet by remember { mutableStateOf(false) }
 
-    // The status line (phone home overhaul plan, Phase 2): the source's last catalogue sync,
-    // re-read when a sync of it ends and on every ON_RESUME.
+    // The status on the source line (phone home overhaul plan, Phase 2): the source's last
+    // catalogue sync, re-read when a sync of it ends and on every ON_RESUME.
     var lastSyncedAtMs by remember { mutableLongStateOf(0L) }
     var lastSyncError by remember { mutableStateOf<String?>(null) }
     var syncStatsReload by remember { mutableIntStateOf(0) }
@@ -200,91 +225,78 @@ fun MobileSourceTopBar(
                 append(" (${source.type})")
             }
         }
-    val switchProviderDescription = stringResource(R.string.content_switch_provider_description_format, displayName)
+    // The picker only opens with two or more sources; with one, the line opens the failure's reason.
+    val hasPicker = allProviders.size > 1
+    val onSourceLineClick: (() -> Unit)? =
+        when {
+            hasPicker -> {
+                { showProviderPicker = true }
+            }
+
+            syncStatus == SourceSyncStatus.FAILED -> {
+                { showSyncError = true }
+            }
+
+            else -> {
+                null
+            }
+        }
     TopAppBar(
         title = {
             Column {
-                // Only a dropdown when there's something to switch to: the picker below only
-                // opens with two or more sources.
-                if (allProviders.size > 1) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier =
-                            Modifier
-                                .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                .semantics {
-                                    contentDescription = switchProviderDescription
-                                }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
-                    ) {
-                        Text(
-                            text = displayName,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        Icon(
-                            imageVector = CinemaIcons.ArrowDropDown,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                } else {
-                    Text(
-                        text = displayName,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                MobileSourceStatusLine(
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                MobileSourceLine(
+                    name = displayName,
                     status = syncStatus,
                     lastSyncedAtMs = lastSyncedAtMs,
-                    onFailedClick = { showSyncError = true },
+                    showsPicker = hasPicker,
+                    onClick = onSourceLineClick,
                 )
             }
         },
-        // Taller while the status line shows, so it fits under the name.
-        expandedHeight =
-            if (syncStatus == SourceSyncStatus.NONE) {
-                TopAppBarDefaults.TopAppBarExpandedHeight
-            } else {
-                MobileDimensions.homeTopBarHeight
-            },
+        // The title plus the source line's 48 dp touch row, whatever the status.
+        expandedHeight = MobileDimensions.homeTopBarHeight,
         actions = {
-            sectionActions()
-            if (hasEpgData) {
-                CinemaIconButton(
-                    onClick = onSearchGuide,
-                    icon = {
-                        Icon(CinemaIcons.MenuBook, stringResource(R.string.epg_browser_title), tint = CinemaTextPrimary)
-                    },
-                )
+            if (onSearchGuide != null && hasEpgData) {
+                IconAction(onClick = onSearchGuide, icon = CinemaIcons.MenuBook, label = stringResource(R.string.epg_browser_title))
+            }
+            if (onSearch != null) {
+                IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
             }
             // Always shown, even with one profile, so profiles are discoverable.
             activeProfile?.let { profile ->
                 val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
-                CinemaIconButton(
-                    onClick = onChooseProfile,
+                IconButton(
+                    onClick = { showProfileSheet = true },
                     modifier = Modifier.semantics { contentDescription = switchLabel },
-                    icon = {
-                        ProfileAvatar(
-                            name = profile.name,
-                            colorIndex = profile.colorIndex,
-                            size = MobileDimensions.iconLarge,
-                            fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                        )
-                    },
-                )
+                ) {
+                    ProfileAvatar(
+                        name = profile.name,
+                        colorIndex = profile.colorIndex,
+                        size = MobileDimensions.iconLarge,
+                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                    )
+                }
             }
-            CinemaIconButton(
-                onClick = onSettings,
-                icon = {
-                    Icon(CinemaIcons.Settings, stringResource(R.string.settings_title), tint = CinemaTextPrimary)
-                },
-            )
         },
     )
+
+    if (showProfileSheet) {
+        ProfileSheet(
+            viewModel = profilesViewModel,
+            onProfileChosen = onProfileChosen,
+            onSettings = {
+                showProfileSheet = false
+                onSettings()
+            },
+            onDismiss = { showProfileSheet = false },
+        )
+    }
 
     if (showSyncError) {
         // The line only says "Update failed"; the reason is here. It already carries the raw detail
@@ -301,7 +313,7 @@ fun MobileSourceTopBar(
         )
     }
 
-    if (showProviderPicker && allProviders.size > 1) {
+    if (showProviderPicker && hasPicker) {
         CinemaAlertDialog(
             onDismissRequest = { showProviderPicker = false },
             title = { Text(stringResource(R.string.content_switch_provider_title)) },
@@ -310,6 +322,16 @@ fun MobileSourceTopBar(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
+                    // The line only says "Update failed"; the reason is here, as on TV. It already
+                    // carries the raw detail in developer mode (ProviderSyncRunner).
+                    lastSyncError?.takeIf { syncStatus == SourceSyncStatus.FAILED }?.let { error ->
+                        Text(
+                            text = stringResource(R.string.home_source_update_failed_detail, error),
+                            color = CinemaError,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(bottom = CinemaSpacing.sm),
+                        )
+                    }
                     allProviders.forEach { provider ->
                         val isActive = provider.id == sourceId
                         val label =

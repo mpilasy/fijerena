@@ -188,9 +188,9 @@ fun MobileCategoryListScreen(
     onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
     /**
      * Set on a bottom-bar tab's root: its top bar (the source's, see `MobileSourceTopBar`) in place
-     * of the section title and back arrow, given this section's own actions to show first.
+     * of the section title, back arrow and TV Guide, given this section's Search.
      */
-    sourceTopBar: (@Composable (sectionActions: @Composable RowScope.() -> Unit) -> Unit)? = null,
+    sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -583,7 +583,7 @@ fun MobileCategoryListScreen(
                         )
                     }
                     if (sourceTopBar != null) {
-                        sourceTopBar(sectionActions)
+                        sourceTopBar { stopDockThen(onSearchClick) }
                     } else {
                         TopAppBar(
                             title = {

@@ -4,7 +4,6 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,7 +62,6 @@ import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
-import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.safemode.MobileNewerDataScreen
@@ -143,7 +141,7 @@ fun MobileNavHost(
     suspend fun startOver() {
         val source = loadActiveSource(context)
         activeSource = source
-        restartOn(startTab(appSettings.lastTab, source?.supportedTypes))
+        restartOn(startTab(appSettings.lastTab, source?.sections))
     }
 
     // Each visit to a tab's root re-reads the source, as Home did: back from signing in to it, or
@@ -155,7 +153,7 @@ fun MobileNavHost(
     // Remote Stop (live sync) leaves the screen that was playing for the Live TV tab's root — the
     // start tab when the source has no Live TV.
     fun openLiveTvRoot() {
-        val types = activeSource?.supportedTypes
+        val types = activeSource?.sections
         val tab = if (types == null || ContentType.LIVE_TV in types) MobileTab.LIVE_TV else startTab(appSettings.lastTab, types)
         if (!navController.popBackStack(tab.route, inclusive = false)) {
             navController.clearBackStack(tab.route)
@@ -199,7 +197,7 @@ fun MobileNavHost(
             // graph exists, rather than open on a tab the source doesn't have.
             val source = loadActiveSource(context)
             activeSource = source
-            openingTab = startTab(appSettings.lastTab, source?.supportedTypes)
+            openingTab = startTab(appSettings.lastTab, source?.sections)
         }
         hasProvider = anyProvider
     }
@@ -270,12 +268,12 @@ fun MobileNavHost(
     // The bar shows on a tab's root, nowhere else — and not with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentTab = MobileTab.rootedAt(currentEntry?.destination)
-    val tabs = visibleTabs(activeSource?.supportedTypes)
+    val tabs = visibleTabs(activeSource?.sections)
 
     // The app opens next time on the tab used last. A tab the source doesn't have (opened while its
     // sections were unknown, before a Jellyfin sign-in) gives way to one it has.
     LaunchedEffect(currentTab, activeSource) {
-        val types = activeSource?.supportedTypes ?: return@LaunchedEffect
+        val types = activeSource?.sections ?: return@LaunchedEffect
         val tab = currentTab ?: return@LaunchedEffect
         if (tab.contentType in types) {
             appSettings.lastTab = tab.contentType
@@ -284,23 +282,34 @@ fun MobileNavHost(
         }
     }
 
-    // The top bar of every tab's root: the source, its sync status, the profile and Settings.
-    val sourceTopBar: @Composable (@Composable RowScope.() -> Unit) -> Unit = { sectionActions ->
-        MobileSourceTopBar(
-            source = activeSource,
-            sectionActions = sectionActions,
-            onSourcePicked = { coroutineScope.launch { startOver() } },
-            onSearchGuide = { leaveTabRoot { navController.navigateOnce(Screen.EpgBrowser()) } },
-            onChooseProfile = { leaveTabRoot { navController.navigateOnce(Screen.ProfilePicker) } },
-            onSettings = { leaveTabRoot { navController.navigateOnce(Screen.Settings) } },
-        )
-    }
-    // The section's list under that top bar — or, while this profile has no login for the active
+    // The top bar of [tab]'s root: the section's name over the source and its sync status; Search
+    // the guide on Live TV, the section's Search, and the profile avatar (profiles and Settings).
+    fun sourceTopBar(tab: MobileTab): @Composable ((() -> Unit)?) -> Unit =
+        { onSearch ->
+            MobileSourceTopBar(
+                title = tab.label(),
+                source = activeSource,
+                onSourcePicked = { coroutineScope.launch { startOver() } },
+                onSearch = onSearch,
+                onSearchGuide =
+                    if (tab == MobileTab.LIVE_TV) {
+                        { leaveTabRoot { navController.navigateOnce(Screen.EpgBrowser()) } }
+                    } else {
+                        null
+                    },
+                // Every screen may hold the previous profile's repository: start over on its last
+                // tab, as after the profile page's switch.
+                onProfileChosen = { coroutineScope.launch { startOver() } },
+                onSettings = { leaveTabRoot { navController.navigateOnce(Screen.Settings) } },
+            )
+        }
+
+    // [tab]'s list under that top bar — or, while this profile has no login for the active
     // Jellyfin server, the sign-in panel.
-    val tabRoot: @Composable (@Composable () -> Unit) -> Unit = { section ->
+    val tabRoot: @Composable (MobileTab, @Composable () -> Unit) -> Unit = { tab, section ->
         TabRoot(
             source = activeSource,
-            topBar = sourceTopBar,
+            topBar = sourceTopBar(tab),
             onEnter = ::refreshSource,
             onSignIn = { providerId ->
                 // Plain navigate, not navigateOnce: this fires from the tab's first frames, often
@@ -408,12 +417,12 @@ fun MobileNavHost(
             // The tabs' roots: the section's list under the source's top bar. Live TV's reports
             // its dock, which the bar stops on leaving the tab and hides under.
             composable<Screen.LiveTvTab> {
-                tabRoot {
+                tabRoot(MobileTab.LIVE_TV) {
                     CategoryListDestination(
                         navController,
                         Screen.CategoryList(ContentType.LIVE_TV),
                         onHome = ::openLiveTvRoot,
-                        sourceTopBar = sourceTopBar,
+                        sourceTopBar = sourceTopBar(MobileTab.LIVE_TV),
                     ) { stopDock, coversScreen ->
                         stopLiveDock = stopDock
                         liveDockCoversScreen = coversScreen
@@ -422,23 +431,23 @@ fun MobileNavHost(
             }
 
             composable<Screen.MoviesTab> {
-                tabRoot {
+                tabRoot(MobileTab.MOVIES) {
                     CategoryListDestination(
                         navController,
                         Screen.CategoryList(ContentType.MOVIES),
                         onHome = ::openLiveTvRoot,
-                        sourceTopBar = sourceTopBar,
+                        sourceTopBar = sourceTopBar(MobileTab.MOVIES),
                     )
                 }
             }
 
             composable<Screen.TvShowsTab> {
-                tabRoot {
+                tabRoot(MobileTab.TV_SHOWS) {
                     CategoryListDestination(
                         navController,
                         Screen.CategoryList(ContentType.TV_SHOWS),
                         onHome = ::openLiveTvRoot,
-                        sourceTopBar = sourceTopBar,
+                        sourceTopBar = sourceTopBar(MobileTab.TV_SHOWS),
                     )
                 }
             }
@@ -545,16 +554,6 @@ fun MobileNavHost(
                     },
                     onBack = {
                         navController.navigateUp()
-                    },
-                )
-            }
-
-            composable<Screen.ProfilePicker> {
-                ProfilePickerScreen(
-                    onProfileChosen = {
-                        // Every screen below may hold the previous profile's repository; start
-                        // over on its last tab rather than returning to any of them.
-                        coroutineScope.launch { startOver() }
                     },
                 )
             }
@@ -846,7 +845,7 @@ private fun CategoryListDestination(
     navController: NavHostController,
     route: Screen.CategoryList,
     onHome: () -> Unit,
-    sourceTopBar: (@Composable (sectionActions: @Composable RowScope.() -> Unit) -> Unit)? = null,
+    sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
     onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
 ) {
     MobileCategoryListScreen(
@@ -938,7 +937,7 @@ private fun CategoryListDestination(
 @Composable
 private fun TabRoot(
     source: ActiveSource?,
-    topBar: @Composable (@Composable RowScope.() -> Unit) -> Unit,
+    topBar: @Composable ((() -> Unit)?) -> Unit,
     onEnter: () -> Unit,
     onSignIn: (providerId: Long) -> Unit,
     section: @Composable () -> Unit,
@@ -957,7 +956,7 @@ private fun TabRoot(
             AmbientBackdrop(modifier = Modifier.fillMaxSize())
             Scaffold(
                 containerColor = Color.Transparent,
-                topBar = { topBar {} },
+                topBar = { topBar(null) },
             ) { paddingValues ->
                 JellyfinSignInPanel(
                     providerName = source.name,

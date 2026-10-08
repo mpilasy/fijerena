@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.navigation
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.feature.contentselection.ActiveSource
 
 class MobileBottomBarTest {
     @Test
@@ -56,6 +57,14 @@ class MobileBottomBarTest {
         assertEquals(MobileTab.MOVIES, startTab(ContentType.MOVIES, null))
         assertEquals(MobileTab.LIVE_TV, startTab(null, null))
         assertEquals(MobileTab.LIVE_TV, startTab(null, emptyList()))
+    }
+
+    @Test
+    fun `no Live TV tab for a source without channels`() {
+        val source = ActiveSource(1L, "jellyxtream", "XTREAM", needsSignIn = false, supportedTypes = ALL.toSet(), noChannels = true)
+        assertEquals(listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS), visibleTabs(source.sections))
+        assertEquals(MobileTab.MOVIES, startTab(ContentType.LIVE_TV, source.sections))
+        assertEquals(ALL.toSet(), source.copy(noChannels = false).sections)
     }
 
     private companion object {

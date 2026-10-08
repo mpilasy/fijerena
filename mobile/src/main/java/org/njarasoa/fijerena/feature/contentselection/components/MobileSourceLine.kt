@@ -10,9 +10,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -28,10 +30,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
@@ -40,22 +46,29 @@ import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * The top bar's status line under the source name (phone home overhaul plan, Phase 2): a dot and
- * "Updating…" / "Update failed" / "Updated 2 hours ago". Nothing for a source that has never synced
- * (Jellyfin, M3U, a new Xtream source). [onFailedClick] opens the reason when the update failed.
+ * The line under a tab root's title: the source's name and its last update — a dot and
+ * "jellyxtream · Updated 2 hours ago" / "· Updating…" / "· Update failed"; no dot nor status for a
+ * source that has never synced (Jellyfin, M3U, a new Xtream source) — and ▾ when [showsPicker]. The
+ * name is cut first, so the status stays readable. [onClick] (null: not tappable) opens the source
+ * picker, or with a single source the reason the update failed.
  */
 @Composable
-fun MobileSourceStatusLine(
+fun MobileSourceLine(
+    name: String,
     status: SourceSyncStatus,
     lastSyncedAtMs: Long,
-    onFailedClick: () -> Unit,
+    showsPicker: Boolean,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    if (status == SourceSyncStatus.NONE) return
     // Ticks so "Updated 2 minutes ago" keeps counting while the tab stays up; only this line recomposes.
     val now = rememberMinuteTick()
-    val text =
+    val statusText =
         when (status) {
+            SourceSyncStatus.NONE -> {
+                null
+            }
+
             SourceSyncStatus.UPDATING -> {
                 stringResource(R.string.home_source_updating)
             }
@@ -64,7 +77,7 @@ fun MobileSourceStatusLine(
                 stringResource(R.string.home_source_update_failed)
             }
 
-            else -> {
+            SourceSyncStatus.UPDATED -> {
                 // Under a minute, getRelativeTimeSpanString says "0 minutes ago".
                 val ago =
                     if (now - lastSyncedAtMs < DateUtils.MINUTE_IN_MILLIS) {
@@ -75,27 +88,63 @@ fun MobileSourceStatusLine(
                 stringResource(R.string.home_source_updated, ago)
             }
         }
-    val dotColor =
-        when (status) {
-            SourceSyncStatus.UPDATING -> CinemaWarning
-            SourceSyncStatus.FAILED -> CinemaError
-            else -> CinemaSuccess
-        }
-    // Always the 48 dp touch height, so the top bar doesn't change size when the line turns tappable.
+    val switchDescription = stringResource(R.string.content_switch_provider_description_format, name)
     val clickModifier =
-        if (status == SourceSyncStatus.FAILED) Modifier.clickable(role = Role.Button, onClick = onFailedClick) else Modifier
+        when {
+            onClick == null -> {
+                Modifier
+            }
+
+            showsPicker -> {
+                Modifier
+                    .clickable(role = Role.DropdownList, onClick = onClick)
+                    .semantics { contentDescription = switchDescription }
+            }
+
+            else -> {
+                Modifier.clickable(role = Role.Button, onClick = onClick)
+            }
+        }
+    // Always the 48 dp touch height, so the top bar keeps its size whatever the status.
     Row(
         modifier = modifier.minimumInteractiveComponentSize().then(clickModifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StatusDot(color = dotColor, pulsing = status == SourceSyncStatus.UPDATING)
+        if (status != SourceSyncStatus.NONE) {
+            StatusDot(
+                color =
+                    when (status) {
+                        SourceSyncStatus.UPDATING -> CinemaWarning
+                        SourceSyncStatus.FAILED -> CinemaError
+                        else -> CinemaSuccess
+                    },
+                pulsing = status == SourceSyncStatus.UPDATING,
+            )
+            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+        }
         Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
             color = CinemaTextSecondary,
             maxLines = 1,
-            modifier = Modifier.padding(start = CinemaSpacing.xs),
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
+        if (statusText != null) {
+            Text(
+                text = " · $statusText",
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary,
+                maxLines = 1,
+            )
+        }
+        if (showsPicker) {
+            Icon(
+                imageVector = CinemaIcons.ArrowDropDown,
+                contentDescription = null,
+                tint = CinemaTextSecondary,
+            )
+        }
     }
 }
 
