@@ -15,7 +15,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
- * The phone's bottom bar tabs (docs/plans/20261007_phone-home-overhaul-plan.md → Redesign: no Home
+ * The phone's bottom bar tabs (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home
  * on the phone), in bar order. [route] is the tab's root destination; [contentType] the section it
  * opens.
  */

@@ -83,7 +83,7 @@ sealed interface Screen {
 
     /**
      * Mobile only: the roots of the bottom bar's section tabs, each the section's [CategoryList]
-     * with no category or channel picked (docs/plans/20261007_phone-home-overhaul-plan.md → Bottom
+     * with no category or channel picked (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Bottom
      * navigation bar). Three destinations, not [CategoryList] with an argument: Navigation saves a
      * tab's back stack under its root's destination, so one destination for all three would
      * restore Movies when Live TV is asked for.

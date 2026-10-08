@@ -74,7 +74,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * The source the phone's tabs show, as their top bar and the bottom bar need it
- * (docs/plans/20261007_phone-home-overhaul-plan.md → Redesign: no Home on the phone).
+ * (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home on the phone).
  */
 data class ActiveSource(
     val id: Long,

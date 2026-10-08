@@ -1,6 +1,6 @@
 # Phone home overhaul and bottom navigation
 
-**Status:** In progress (user said go 2026-10-07, built by agents in worktrees, merged and checked phase by phase): Phases 1–3 done; Home dropped (see Redesign), Phases 4–6 dropped; Phase 8 next. Design agreed with the user 2026-10-07: the TV home overhaul
+**Status:** Done 2026-10-07 on the phone emulator: Phases 1–3 and 8, the header redesign, docs. Home dropped (Phases 4–6 built, not merged). Known gaps: a source with a native guide but no indexed guide has no TV Guide entry from the Live TV tab; a profile whose filters hide every live category still gets an (empty) Live TV tab; "Update failed" and the Jellyfin sign-in prompt not forced on the emulator.
 (`20261007_tv-home-overhaul-plan.md`) adapted for touch, with a bottom navigation bar in place of
 the section cards. Implementation waits for the user's go-ahead.
 
@@ -173,5 +173,6 @@ clear data without asking.
 | 4 Rows | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
 | 5 Long-press sheet | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
 | 6 Pull to refresh | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
-| 7 Checks + nav docs | Not started (after Phase 8) | |
-| 8 Drop Home | Not started | |
+| 7 Checks + nav docs | Done: FEATURES (Phone: no Home), NAVIGATION_GUIDE Rules 2–7 (Rule 7 phone tabs), AGENTS.md Flow, RELEASE_NOTES | this commit |
+| 8 Drop Home | Done: tab routes only (`MobileTab` Live TV / Movies / TV Shows), start tab `startTab(AppSettings.lastTab, sections)` per profile, header on tab roots, `startOver()` for every switch, `openLiveTvRoot` for Remote Stop, sign-in panel with no bar, phone home + shelf removed. Checked on the phone emulator: tabs keep state, Back on a tab root leaves the app, cold start on the last tab, source switch with the dock open stops it and lands on the last tab with the new source's sections, njarasoa (Jellyfin) → Movies + TV Shows | 241dd2a3 |
+| Header redesign | Done (user: "that header looks like shit"; chose section title + source line): section name over one source line (dot · source · status ▾, tap to switch / see the failure), plain icons — Live TV: Search the guide, Search, avatar; Movies / TV Shows: Search, avatar; avatar sheet (profiles, Settings) replaces the phone profile picker; TV Guide calendar off the tab header; Live TV tab hidden for a synced Xtream source with no live categories. Checked on the phone emulator: Movies (njarasoa, no status), Live TV (iptv: 3 icons, dock on last channel), avatar sheet, jellyxtream → Movies + TV Shows only | 8423a42d |

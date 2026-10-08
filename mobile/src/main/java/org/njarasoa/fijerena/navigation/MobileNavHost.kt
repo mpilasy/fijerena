@@ -83,7 +83,7 @@ fun MobileNavHost(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // No Home on the phone (docs/plans/20261007_phone-home-overhaul-plan.md → Redesign: no Home on
+    // No Home on the phone (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home on
     // the phone): the bottom bar's tabs are the active source's sections, read at startup, on each
     // visit to a tab's root and after every switch.
     var activeSource by remember { mutableStateOf<ActiveSource?>(null) }
