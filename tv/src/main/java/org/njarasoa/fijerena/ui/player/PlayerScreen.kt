@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -229,6 +231,9 @@ fun PlayerScreen(
         }
     }
 
+    var screenHeightPx by remember { mutableIntStateOf(0) }
+    var osdPanelHeightPx by remember { mutableIntStateOf(0) }
+
     Box(
         modifier =
             Modifier
@@ -316,7 +321,20 @@ fun PlayerScreen(
         // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
         // recomposition here never steals frames from the video. See LiveTvSplitLayout's
         // videoSurface comment for why the preview pane needs the opposite (TextureView).
-        EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
+        // While the controls are up, the subtitles sit above their bottom panel instead of on
+        // the title and timeline. A share of the screen's height: the subtitles' own share is of
+        // the video's height, never taller than the screen, so a letterboxed video only lifts them
+        // a little further.
+        val osdShown = state.showControls || state.showStreamInfo
+        EmbeddedPlayerSurface(
+            modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
+            subtitleBottomPaddingFraction =
+                if (osdShown && osdPanelHeightPx > 0 && screenHeightPx > 0) {
+                    osdPanelHeightPx.toFloat() / screenHeightPx + SUBTITLE_GAP_FRACTION
+                } else {
+                    null
+                },
+        )
 
         // Loading/Error overlays (always show, except Idle which is handled silently)
         Box(
@@ -527,6 +545,7 @@ fun PlayerScreen(
                 onCommitScrub = { commitScrub(state, viewModel) },
                 nextEpisode = nextEpisode,
                 onPlayNextEpisode = onPlayNextEpisode,
+                onPanelHeightChanged = { osdPanelHeightPx = it },
             )
         }
 
@@ -583,6 +602,9 @@ fun PlayerScreen(
         }
     }
 }
+
+/** Space between the lifted subtitles and the controls' panel, as a share of the screen's height. */
+private const val SUBTITLE_GAP_FRACTION = 0.02f
 
 /** The full-screen channel panel's share of the width, as the preview docks it. */
 private const val CHANNEL_PANEL_WIDTH_FRACTION = 0.34f

@@ -2,12 +2,6 @@
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
@@ -22,16 +16,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.LinearProgressIndicator
@@ -59,12 +53,13 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
@@ -74,7 +69,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
-import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -84,24 +78,26 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import java.util.Date
 
 // Frame-count budget for the OSD's initial-focus retry loop — see its LaunchedEffect below.
@@ -138,6 +134,8 @@ fun TvPlayerControlsOverlay(
     onCommitScrub: () -> Unit = {},
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
+    // The bottom panel's height in px, for the player to lift the subtitles above it.
+    onPanelHeightChanged: (Int) -> Unit = {},
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
@@ -199,6 +197,12 @@ fun TvPlayerControlsOverlay(
     val iconRowFocusRequester = remember { FocusRequester() }
     var isProgressBarFocused by remember { mutableStateOf(false) }
     val canFocusPlayPause = !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)
+    val showsPlayPause = showFullControls && canFocusPlayPause
+    // VOD's D-pad column: Play/Pause → (Down) the seek bar → (Down) the first button of the row,
+    // Up back the same way. Set explicitly: geometric search from the full-width seek bar picked
+    // the button nearest the screen's centre (More), not the first.
+    val seekBarFocusRequester = remember { FocusRequester() }
+    val hasSeekBar = !isLive && liveDuration > 0
 
     // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
     // implicit first child — whichever button happens to be first for this stream. Live opens on
@@ -269,79 +273,28 @@ fun TvPlayerControlsOverlay(
                 .fillMaxSize()
                 .background(CinemaBackground.copy(alpha = CinemaAlpha.focusedTint)),
     ) {
-        // Clock in top-right corner — self-ticking so only this leaf recomposes each second.
-        // Hidden while a side panel is open since it would collide with the last-watched
-        // panel's own top-right-ish title.
+        // Top: the clock, and the developer-mode resolution/codec line, on a soft gradient rather
+        // than a band. Hidden while a side panel is open since they would collide with the panel's
+        // own tab row.
         if (!hideTopBars) {
-            ClockDisplay(
+            Box(
                 modifier =
                     Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-            )
-        }
-
-        // Top bar: VOD's title, and the developer-mode resolution/codec line. Hidden while a side
-        // panel is open since it would collide with the panel's own tab row.
-        if (!hideTopBars) {
-            Column(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopCenter)
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+                        .background(
+                            Brush.verticalGradient(listOf(CinemaBackground.copy(alpha = CinemaAlpha.textMedium), Color.Transparent)),
+                        ).padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             ) {
-                // Big title treatment for VOD (movies get the show's own title big; episodes get
-                // the series title big with the episode demoted to a subtitle line). Live TV's one
-                // title is the channel name in the banner at the bottom (LT4) — for live, title and
-                // channel name are the same string, which used to show here twice.
-                if (!isLive) {
-                    val bigTitle = metadata.showTitle ?: metadata.title
-                    val logoUrl = metadata.logoUrl
-                    if (logoUrl != null) {
-                        AdaptiveLogoImage(
-                            logoUrl = logoUrl,
-                            contentDescription = parseDisplayTitle(bigTitle).title,
-                            modifier = Modifier.height(TvDimensions.osdLogoHeight),
-                        )
-                    } else {
-                        // No TMDB logo art for this title — fall back to a stylized gradient
-                        // rendering of the title text instead, its provider tag as a badge.
-                        BadgedTitle(
-                            raw = bigTitle,
-                            style =
-                                MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Black,
-                                    brush = Brush.linearGradient(listOf(CinemaAccent, CinemaTextPrimary)),
-                                ),
-                            textModifier = Modifier.bounceMarquee(),
-                        )
-                    }
-                    if (metadata.showTitle != null) {
-                        // Some providers' episode titles already embed the show name and number
-                        // ("EN - Show - S01E22 - Pilot"): only the episode's own name is shown, and
-                        // none when the title is just the show and the number.
-                        val episodeName = playerEpisodeName(metadata.title).takeIf { it.isNotBlank() }
-                        val episodeSubtitle = listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" - ")
-                        if (episodeSubtitle.isNotBlank()) {
-                            Text(
-                                text = episodeSubtitle,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.bounceMarquee(),
-                            )
-                        }
-                    }
-                }
+                // Self-ticking so only this leaf recomposes each second.
+                ClockDisplay(modifier = Modifier.align(Alignment.TopEnd))
 
                 // Resolution and codec — developer mode only (the polling above is gated too).
                 if (isDeveloperMode && (videoResolution != null || videoCodec != null)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = Spacing.xs),
+                        modifier = Modifier.align(Alignment.TopStart),
                     ) {
                         if (videoResolution != null) {
                             Text(
@@ -371,7 +324,7 @@ fun TvPlayerControlsOverlay(
         // ErrorContent(), ...). An allowlist closes all of them at once. Mobile's equivalent overlay uses the same allowlist for the same reason.
         // The rest of this panel (title, description, audio/subtitle/quality selectors) stays
         // visible regardless — only this button collides with another state's centered content.
-        if (showFullControls && !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
+        if (showsPlayPause) {
             CinemaButton(
                 onClick = {
                     if (isPaused) viewModel.resume() else viewModel.pause()
@@ -387,7 +340,8 @@ fun TvPlayerControlsOverlay(
                     Modifier
                         .align(Center)
                         .size(TvDimensions.iconButtonSizeLarge)
-                        .focusRequester(controlsFocusRequester),
+                        .focusRequester(controlsFocusRequester)
+                        .moveFocusOn(Key.DirectionDown, if (hasSeekBar) seekBarFocusRequester else iconRowFocusRequester),
             ) {
                 Icon(
                     imageVector = if (isPaused) CinemaIcons.PlayArrow else CinemaIcons.Pause,
@@ -397,14 +351,16 @@ fun TvPlayerControlsOverlay(
             }
         }
 
-        // Bottom section: progress/EPG info + icon controls. Spans full width, so when a side
-        // panel is open this needs to be opaque enough to fully mask its channel list rather
-        // than letting it ghost through at the usual, lighter glass alpha.
+        // Bottom section: title, progress/EPG info + icon controls. Spans full width, so when a
+        // side panel is open this needs to be opaque enough to fully mask its channel list rather
+        // than letting it ghost through at the usual, lighter glass alpha. Its height goes to the
+        // player, which lifts the subtitles above it.
         TvGlassPanel(
             modifier =
                 Modifier
                     .align(BottomCenter)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .onSizeChanged { onPanelHeightChanged(it.height) },
             backgroundAlpha = if (hideTopBars) 0.92f else 0.6f,
         ) {
             Column(
@@ -413,22 +369,78 @@ fun TvPlayerControlsOverlay(
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.xl, vertical = Spacing.md),
             ) {
-                // Stream description (above the progress / EPG section). Shown for both VOD and Live
-                // whenever the OSD is visible — TV parity with mobile.
+                // The title, the same size on VOD and live. VOD: the film, or "Show · S01E02 ·
+                // Episode". Live (LT4): LIVE · the channel name, the one title — this banner, not a
+                // top bar, so it is still there when hideTopBars is set.
+                // TODO: the channel number goes before the name once one reaches the player.
+                Row(
+                    verticalAlignment = CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    if (isLive) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.statsDotSize)
+                                    .background(CinemaLive, shape = CircleShape),
+                        )
+                        Text(
+                            text = stringResource(R.string.player_live),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = CinemaTextPrimary,
+                        )
+                        BadgedTitle(
+                            raw = metadata.channelName,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaTextPrimary,
+                            modifier = Modifier.padding(start = Spacing.xs),
+                            textModifier = Modifier.bounceMarquee(),
+                        )
+                    } else {
+                        // Some providers' episode titles already embed the show name and number
+                        // ("EN - Show - S01E22 - Pilot"): only the episode's own name is shown, and
+                        // none when the title is just the show and the number.
+                        val episodeLine =
+                            metadata.showTitle?.let {
+                                val episodeName = playerEpisodeName(metadata.title).takeIf { name -> name.isNotBlank() }
+                                listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" · ")
+                            }
+                        BadgedTitle(
+                            raw = metadata.showTitle ?: metadata.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaTextPrimary,
+                            modifier = Modifier.weight(1f, fill = false),
+                            textModifier = Modifier.bounceMarquee(),
+                        )
+                        if (!episodeLine.isNullOrBlank()) {
+                            Text(
+                                text = "· $episodeLine",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
+                    }
+                }
+
+                // The plot (or the channel's description), secondary and short: two lines at most.
                 val description = metadata.description
                 if (!description.isNullOrBlank()) {
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
-                        maxLines = 3,
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = Spacing.sm),
+                                .padding(top = Spacing.xxs),
                     )
                 }
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 if (!isLive) {
                     val position = livePosition
@@ -437,10 +449,16 @@ fun TvPlayerControlsOverlay(
                     if (duration > 0) {
                         val isScrubbing = scrubPositionMs != null
                         val displayPosition = scrubPositionMs ?: position
+                        val seekBarLit = isProgressBarFocused || isScrubbing
+                        // The seek bar: a focus stop between Play/Pause and the buttons. Focused,
+                        // it is outlined and thicker, like a focused row; the box keeps one height
+                        // so the rows below never shift.
                         Box(
+                            contentAlignment = Center,
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
+                                    .focusRequester(seekBarFocusRequester)
                                     .focusable(enabled = showFullControls)
                                     .onFocusChanged { isProgressBarFocused = it.isFocused }
                                     .onKeyEvent { event ->
@@ -467,6 +485,14 @@ fun TvPlayerControlsOverlay(
                                                     }
                                                 }
 
+                                                Key.DirectionUp -> {
+                                                    showsPlayPause && controlsFocusRequester.requestFocus()
+                                                }
+
+                                                Key.DirectionDown -> {
+                                                    iconRowFocusRequester.requestFocus()
+                                                }
+
                                                 else -> {
                                                     false
                                                 }
@@ -474,40 +500,57 @@ fun TvPlayerControlsOverlay(
                                         } else {
                                             false
                                         }
-                                    }.then(
-                                        if (isProgressBarFocused || isScrubbing) {
-                                            Modifier.border(
-                                                width = TvDimensions.borderFocused,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                shape = RoundedCornerShape(CornerRadius.small),
-                                            )
-                                        } else {
-                                            Modifier
-                                        },
-                                    ).padding(vertical = if (isProgressBarFocused || isScrubbing) Spacing.xs else Spacing.none),
+                                    }.border(
+                                        width = TvFocusTokens.focusBorderWidth,
+                                        color = if (seekBarLit) TvFocusTokens.focusedRowOutline else Color.Transparent,
+                                        shape = RoundedCornerShape(CornerRadius.small),
+                                    ).padding(Spacing.xs),
                         ) {
                             LinearProgressIndicator(
                                 progress = { displayPosition.toFloat() / duration.toFloat() },
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .height(if (isProgressBarFocused || isScrubbing) Spacing.xs else TvDimensions.progressBar),
-                                color = MaterialTheme.colorScheme.primary,
+                                        .height(if (seekBarLit) Spacing.xs else TvDimensions.progressBar),
+                                color = if (seekBarLit) CinemaAccentLight else MaterialTheme.colorScheme.primary,
                                 trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(Spacing.xs))
-
+                        // Position · remaining and end time (the seek hint while scrubbing) · duration.
+                        val remainingTime = duration - displayPosition
+                        val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.xs),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                            verticalAlignment = CenterVertically,
                         ) {
                             Text(
                                 text = formatTime(displayPosition),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isScrubbing) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                                color = if (isScrubbing) CinemaAccentLight else CinemaTextPrimary,
                                 fontWeight = if (isScrubbing) FontWeight.Bold else FontWeight.Normal,
+                            )
+                            Text(
+                                text =
+                                    if (isScrubbing) {
+                                        stringResource(R.string.player_seek_hint)
+                                    } else {
+                                        stringResource(
+                                            R.string.player_remaining_ends_at_format,
+                                            formatTime(remainingTime),
+                                            TimeFormat.formatClockTime(Date(estimatedEndTimeMillis)),
+                                        )
+                                    },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.weight(1f),
                             )
                             Text(
                                 text = formatTime(duration),
@@ -516,138 +559,77 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        // Remaining time + estimated end time, grouped together at the right.
-                        val remainingTime = duration - displayPosition
-                        val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                        ) {
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.player_remaining_ends_at_format,
-                                        formatTime(remainingTime),
-                                        TimeFormat.formatClockTime(Date(estimatedEndTimeMillis)),
-                                    ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaAccent,
-                            )
-                        }
-
-                        if (isScrubbing) {
-                            Text(
-                                text = stringResource(R.string.player_seek_hint),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.xxs),
-                            )
-                        }
-
                         Spacer(modifier = Modifier.height(Spacing.sm))
                     }
-                } else {
-                    // The live banner (LT4): LIVE · channel name — the one title — then Now with
-                    // the programme's progress and Next, when the guide has them. It lives here,
-                    // not in the top bar, so it is still there when hideTopBars is set — this
-                    // bottom section is the only thing shown while a side panel is open.
-                    // TODO: the channel number goes before the name once one reaches the player.
-                    Column(modifier = Modifier.padding(bottom = Spacing.sm)) {
-                        Row(
-                            verticalAlignment = CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(TvDimensions.statsDotSize)
-                                        .background(
-                                            org.njarasoa.fijerena.ui.theme.CinemaLive,
-                                            shape =
-                                                RoundedCornerShape(
-                                                    TvDimensions.statsDotSize / 2,
-                                                ),
-                                        ),
-                            )
-                            Text(
-                                text = stringResource(R.string.player_live),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = CinemaTextPrimary,
-                            )
-                            BadgedTitle(
-                                raw = metadata.channelName,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = CinemaTextPrimary,
-                                modifier = Modifier.padding(start = Spacing.xs),
-                                textModifier = Modifier.bounceMarquee(),
-                            )
+                } else if (currentEpgProgram != null) {
+                    // Live: Now with its times and the programme's progress, then Next.
+                    val epgContext = LocalContext.current
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.player_now_playing_format,
+                                currentEpgProgram.title,
+                                formatEpochTime(epgContext, currentEpgProgram.startTime),
+                                formatEpochTime(epgContext, currentEpgProgram.endTime),
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
+                    val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
+                    val epgProgress =
+                        if (currentEpgProgram.duration > 0) {
+                            ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
+                        } else {
+                            0f
                         }
-                        if (currentEpgProgram != null) {
-                            val epgContext = LocalContext.current
-                            val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
-                            val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.player_now_playing_format,
-                                        currentEpgProgram.title,
-                                        nowStart,
-                                        nowEnd,
-                                    ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                modifier = Modifier.padding(top = Spacing.xxs),
-                            )
-                            // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
-                            val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
-                            val epgProgress =
-                                if (currentEpgProgram.duration > 0) {
-                                    ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(
-                                        0f,
-                                        1f,
-                                    )
-                                } else {
-                                    0f
-                                }
-                            LinearProgressIndicator(
-                                progress = { epgProgress },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.xxs)
-                                        .height(TvDimensions.progressBar),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
-                            )
-                            if (nextEpgProgram != null) {
-                                Text(
-                                    text =
-                                        stringResource(
-                                            R.string.player_osd_next_format,
-                                            nextEpgProgram.title,
-                                            formatEpochTime(epgContext, nextEpgProgram.startTime),
-                                        ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                    modifier = Modifier.padding(top = Spacing.xxs),
-                                )
-                            }
-                        }
+                    LinearProgressIndicator(
+                        progress = { epgProgress },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = Spacing.xs)
+                                .height(TvDimensions.progressBar),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                    )
+                    if (nextEpgProgram != null) {
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string.player_osd_next_format,
+                                    nextEpgProgram.title,
+                                    formatEpochTime(epgContext, nextEpgProgram.startTime),
+                                ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                    Spacer(modifier = Modifier.height(Spacing.sm))
                 }
 
-                // Button row (only when full controls are visible). Every button carries its label
-                // (LT4). Live: Channels, Guide, ★, Subtitles, Audio, Quality, ⋮ More (Stats); VOD the same
-                // without Channels, with Chapters first and Next episode before More. Left/Right
-                // move along it and stop at its ends; Up/Down zap on live (PlayerKeyHandler).
+                // Button row (only when full controls are visible). Icon buttons, each naming itself
+                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, ⋮ More (Stats);
+                // VOD the same without Channels, with Chapters first and Next episode before More.
+                // Left/Right move along it and stop at its ends; Up/Down zap on live
+                // (PlayerKeyHandler); on VOD Up goes back to the seek bar (or Play/Pause).
                 if (showFullControls) {
+                    val rowUp =
+                        when {
+                            isLive -> null
+                            hasSeekBar -> seekBarFocusRequester
+                            showsPlayPause -> controlsFocusRequester
+                            else -> null
+                        }
                     Row(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
+                                .moveFocusOn(Key.DirectionUp, rowUp)
                                 .focusRequester(iconRowFocusRequester)
                                 // Left/Right past either end stay on the row instead of dropping
                                 // focus (L-6). Directly before focusGroup, so the exit is the group's.
@@ -696,11 +678,10 @@ fun TvPlayerControlsOverlay(
 
                         if (onToggleFavorite != null) {
                             OsdButton(
-                                icon = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
+                                icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 label = stringResource(if (isFavorite) R.string.player_favorited else R.string.player_favorite),
                                 onClick = onToggleFavorite,
-                                active = isFavorite,
-                                iconTint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                                iconTint = if (isFavorite) CinemaAccent else null,
                             )
                         }
 
@@ -756,7 +737,7 @@ fun TvPlayerControlsOverlay(
                             label = stringResource(R.string.player_osd_more),
                             onClick = { moreOpen = !moreOpen },
                             modifier = Modifier.focusRequester(moreFocusRequester),
-                            active = moreOpen,
+                            iconTint = if (moreOpen) CinemaAccentLight else null,
                         )
 
                         if (moreOpen) {
@@ -775,8 +756,8 @@ fun TvPlayerControlsOverlay(
 }
 
 /**
- * One OSD button: an icon, its label shown beside it while focused (icon-buttons plan; LT4 had it
- * always on). [active] (subtitles on, a favourite) tints the resting container.
+ * One OSD button: [TvIconAction], the icon button used on details and across the app — its label
+ * shows beside the icon while focused. [iconTint] marks a state (a favourite, More open).
  */
 @Composable
 private fun OsdButton(
@@ -784,39 +765,21 @@ private fun OsdButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    active: Boolean = false,
-    iconTint: Color = Color.Unspecified,
+    iconTint: Color? = null,
 ) {
-    var focused by remember { mutableStateOf(false) }
-    CinemaButton(
-        onClick = onClick,
-        modifier = modifier.onFocusChanged { focused = it.isFocused }.semantics { contentDescription = label },
-        colors =
-            ButtonDefaults.colors(
-                containerColor =
-                    if (active) {
-                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                    } else {
-                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                    },
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaTextPrimary,
-                focusedContentColor = CinemaBackground,
-            ),
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = iconTint)
-        AnimatedVisibility(
-            visible = focused,
-            enter = expandHorizontally(tween(CinemaAnimation.focusDurationMs)) + fadeIn(tween(CinemaAnimation.focusDurationMs)),
-            exit = shrinkHorizontally(tween(CinemaAnimation.focusDurationMs)) + fadeOut(tween(CinemaAnimation.focusDurationMs)),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text(text = label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-            }
-        }
-    }
+    TvIconAction(onClick = onClick, icon = icon, label = label, modifier = modifier, iconTint = iconTint)
 }
+
+/** [key] (on KeyDown) moves focus to [target]; no-op when [target] is null or can't take focus. */
+private fun Modifier.moveFocusOn(
+    key: Key,
+    target: FocusRequester?,
+): Modifier =
+    if (target == null) {
+        this
+    } else {
+        onPreviewKeyEvent { event -> event.type == KeyEventType.KeyDown && event.key == key && target.requestFocus() }
+    }
 
 @Composable
 private fun ClockDisplay(modifier: Modifier = Modifier) {

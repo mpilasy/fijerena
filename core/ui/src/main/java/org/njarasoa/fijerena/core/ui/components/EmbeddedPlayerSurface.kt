@@ -13,6 +13,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.SubtitleView
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 
@@ -35,6 +36,9 @@ fun EmbeddedPlayerSurface(
     // a scrolling/recomposing sibling (the Live TV preview pane beside the channel list) — a
     // SurfaceView there stalls the main thread and ANRs. Full-screen playback keeps SurfaceView.
     useTextureView: Boolean = false,
+    // Where subtitles sit, as a share of the video's height from its bottom; null keeps Media3's
+    // default. The TV player lifts them above its controls while those are up.
+    subtitleBottomPaddingFraction: Float? = null,
 ) {
     // The playback service is created asynchronously; bump a tick once it's ready (and if it is
     // recycled) so the AndroidView update block re-runs and (re)binds the live player.
@@ -75,6 +79,9 @@ fun EmbeddedPlayerSurface(
             @Suppress("UNUSED_EXPRESSION")
             bindTick
             view.resizeMode = resizeMode
+            view.subtitleView?.setBottomPaddingFraction(
+                subtitleBottomPaddingFraction ?: SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION,
+            )
             val player = StreamingPlaybackService.getInstance()?.getPlayer()
             if (view.player != player) {
                 view.player = player
