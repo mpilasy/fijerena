@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -81,11 +82,7 @@ fun SyncSettingsScreen() {
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
-        Text(
-            text = stringResource(R.string.live_sync_title),
-            style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        TvScreenHeader(title = stringResource(R.string.live_sync_title))
         Text(stringResource(R.string.live_sync_desc), style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
 
         val qr = ui.handoffQr ?: ui.inviteQr

@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -60,11 +61,9 @@ fun DeviceInfoScreen() {
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
         item {
-            Text(
-                text = stringResource(R.string.device_info_title),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            TvScreenHeader(title = stringResource(R.string.device_info_title)) {
+                TvIconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
+            }
         }
         item {
             Text(
@@ -77,9 +76,6 @@ fun DeviceInfoScreen() {
             item {
                 Text(stringResource(R.string.device_info_load_failed), style = MaterialTheme.typography.bodyMedium, color = CinemaError)
             }
-        }
-        item {
-            TvIconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
         }
         items(sections.orEmpty()) { section ->
             // A no-op clickable Surface only so each section takes D-pad focus (and the list
@@ -97,7 +93,7 @@ fun DeviceInfoScreen() {
                 scale = ClickableSurfaceDefaults.scale(focusedScale = TvFocusTokens.defaultScale),
                 border =
                     ClickableSurfaceDefaults.border(
-                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
+                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline)),
                     ),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {

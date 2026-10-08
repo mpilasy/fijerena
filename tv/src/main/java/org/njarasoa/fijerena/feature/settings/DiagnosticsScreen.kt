@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -62,21 +63,7 @@ fun DiagnosticsScreen() {
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
         item {
-            Text(
-                text = stringResource(R.string.settings_diagnostics_title),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        item {
-            Text(
-                stringResource(R.string.settings_diagnostics_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
-            )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+            TvScreenHeader(title = stringResource(R.string.settings_diagnostics_title)) {
                 TvIconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
                 TvIconAction(
                     onClick = viewModel::clear,
@@ -85,6 +72,13 @@ fun DiagnosticsScreen() {
                     danger = true,
                 )
             }
+        }
+        item {
+            Text(
+                stringResource(R.string.settings_diagnostics_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary,
+            )
         }
         val loaded = entries
         if (loaded != null && loaded.isEmpty()) {
@@ -112,7 +106,7 @@ fun DiagnosticsScreen() {
                 scale = ClickableSurfaceDefaults.scale(focusedScale = TvFocusTokens.defaultScale),
                 border =
                     ClickableSurfaceDefaults.border(
-                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
+                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline)),
                     ),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
