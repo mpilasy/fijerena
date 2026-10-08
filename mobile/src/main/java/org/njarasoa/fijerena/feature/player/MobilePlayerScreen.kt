@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,10 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStoreOwner
@@ -93,6 +98,9 @@ private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
 /** Double-tap seek step (2a) — matches the app-wide seek convention documented in AGENTS.md. */
 private const val SEEK_STEP_MS = 10_000L
 private const val SEEK_STEP_SECONDS = 10
+
+/** Space between the lifted subtitles and the controls' panel, as a share of the screen's height. */
+private const val SUBTITLE_GAP_FRACTION = 0.02f
 
 /**
  * Nav-route wrapper: owns ViewModel creation (fresh [StreamLoaderViewModel] per back-stack entry,
@@ -238,6 +246,18 @@ fun MobilePlayerContent(
         }
     }
 
+    // Immersive while in the full-screen player: the status and navigation bars are hidden, even
+    // while the controls show — a swipe from an edge brings them back for a moment. Leaving the
+    // player (or shrinking back to the Live TV dock) shows them again.
+    DisposableEffect(activity) {
+        val controller = activity?.window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller?.hide(WindowInsetsCompat.Type.systemBars())
+        onDispose {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
 
     // Remember the last successful stream so a channel change can keep the player UI mounted
@@ -283,6 +303,9 @@ fun MobilePlayerContent(
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
     var showStats by remember { mutableStateOf(false) }
+    // For lifting the subtitles above the controls' bottom panel while it shows.
+    var screenHeightPx by remember { mutableIntStateOf(0) }
+    var controlsPanelHeightPx by remember { mutableIntStateOf(0) }
 
     // Back closes an open channel panel first, as on TV; without this it left the player
     // altogether. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-19.
@@ -587,6 +610,18 @@ fun MobilePlayerContent(
 
         is StreamLoaderViewModel.StreamState.Success -> {
             val isLiveContent = state.isLive
+            // Buffering is included alongside Playing/Paused (unlike the equivalent TV gate, which
+            // never excluded it in the first place) — without it, the tap gesture still flipped
+            // showControls, but the overlay itself stayed invisible for as long as a stream was
+            // buffering, silently swallowing every reveal tap. Idle/Error/Ended stay excluded:
+            // nothing here to control yet.
+            val controlsVisible =
+                !isInPipMode && showControls && !showStats &&
+                    (
+                        currentPs is PlaybackState.Playing ||
+                            currentPs is PlaybackState.Paused ||
+                            currentPs is PlaybackState.Buffering
+                    )
             Box(
                 modifier =
                     Modifier
@@ -723,7 +758,19 @@ fun MobilePlayerContent(
                 // recomposition here never steals frames from the video. See
                 // MobileCategoryListScreen's videoSurface comment for why the dock needs the
                 // opposite (TextureView).
-                EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
+                // While the controls are up, the subtitles sit above their bottom panel instead of
+                // on the title and seek bar. A share of the screen's height: the subtitles' own
+                // share is of the video's height, never taller than the screen, so a letterboxed
+                // video only lifts them a little further.
+                EmbeddedPlayerSurface(
+                    modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
+                    subtitleBottomPaddingFraction =
+                        if (controlsVisible && controlsPanelHeightPx > 0 && screenHeightPx > 0) {
+                            controlsPanelHeightPx.toFloat() / screenHeightPx + SUBTITLE_GAP_FRACTION
+                        } else {
+                            null
+                        },
+                )
 
                 // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
                 // session and stopping playback is NOT done here — this composable is shared
@@ -777,21 +824,9 @@ fun MobilePlayerContent(
                     }
                 }
 
-                // Touch controls overlay
-                //
-                // Buffering is included alongside Playing/Paused (unlike the equivalent TV
-                // gate, which never excluded it in the first place) — without it, the tap
-                // gesture still flipped showControls, but the overlay itself stayed invisible
-                // for as long as a stream was buffering, silently swallowing every reveal tap.
-                // Idle/Error/Ended stay excluded: nothing here to control yet.
+                // Touch controls overlay (see controlsVisible above for when it shows).
                 AnimatedVisibility(
-                    visible =
-                        !isInPipMode && showControls && !showStats &&
-                            (
-                                currentPs is PlaybackState.Playing ||
-                                    currentPs is PlaybackState.Paused ||
-                                    currentPs is PlaybackState.Buffering
-                            ),
+                    visible = controlsVisible,
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
@@ -836,6 +871,7 @@ fun MobilePlayerContent(
                                 loaderViewModel.playNextEpisode(nextEp)
                             }
                         },
+                        onPanelHeightChanged = { controlsPanelHeightPx = it },
                     )
                 }
 
