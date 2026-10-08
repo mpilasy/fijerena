@@ -15,14 +15,17 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvErrorState
 
 /**
  * The TV Guide. Loading, the grid and "No listings" share one chrome ([TvGuideGrid]: title, date
  * and status line, labelled header buttons), so day navigation and Refresh stay reachable when a
- * day has nothing (GD2). No guide at all and load errors are full-screen [TvErrorState]s.
+ * day has nothing (GD2). No guide at all and load errors are full-screen [TvErrorState]s; a list
+ * with no channels is a [TvEmptyState], since nothing failed.
  *
  * [focusChannelId] (opened from the player, GD5) is the row entry focus lands on; [onSearch] opens
  * "Search the guide" on this guide's channels — the grid has no search of its own (G-9).
@@ -62,6 +65,16 @@ fun TvEpgGuideScreen(
                     title = stringResource(R.string.epg_guide_no_guide_title),
                     onBack = onBack,
                     backLabel = stringResource(R.string.common_back),
+                )
+            }
+
+            is EpgViewModel.UiState.NoChannels -> {
+                TvEmptyState(
+                    message = stringResource(R.string.epg_guide_no_channels),
+                    icon = CinemaIcons.LiveTv,
+                    actionLabel = stringResource(R.string.common_back),
+                    onAction = onBack,
+                    onBack = onBack,
                 )
             }
 

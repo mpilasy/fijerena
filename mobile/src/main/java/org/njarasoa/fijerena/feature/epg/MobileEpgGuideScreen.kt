@@ -284,7 +284,9 @@ fun MobileEpgGuideScreen(
                         )
                     }
 
-                    is EpgViewModel.UiState.Error -> {
+                    // The phone still shows a list without channels as it did before NoChannels
+                    // had a state of its own.
+                    is EpgViewModel.UiState.Error, EpgViewModel.UiState.NoChannels -> {
                         RetryWhenOnline { viewModel.loadEpgData() }
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -301,7 +303,9 @@ fun MobileEpgGuideScreen(
                                 )
                                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                                 Text(
-                                    text = state.message,
+                                    text =
+                                        (state as? EpgViewModel.UiState.Error)?.message
+                                            ?: stringResource(R.string.epg_error_no_channels_in_category),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

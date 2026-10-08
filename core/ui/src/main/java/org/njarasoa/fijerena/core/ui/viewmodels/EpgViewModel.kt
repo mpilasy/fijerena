@@ -69,6 +69,9 @@ class EpgViewModel(
         /** This source has no guide source and no native EPG: Settings → Source & guide. */
         data object NoGuide : UiState()
 
+        /** The list has no channels to show a guide for — nothing failed. */
+        data object NoChannels : UiState()
+
         data class Error(
             val message: String,
         ) : UiState()
@@ -159,7 +162,7 @@ class EpgViewModel(
                 }
             }
         if (items.isEmpty()) {
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
+            _uiState.value = UiState.NoChannels
             return
         }
 

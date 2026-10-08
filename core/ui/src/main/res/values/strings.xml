@@ -943,6 +943,7 @@
     <string name="epg_guide_no_listings_stale_format">Nothing for this day: the %1$s was updated %2$s and stops before it.</string>
     <string name="epg_guide_no_listings_none">No listings for these channels, from the guide or from the source.</string>
     <string name="epg_guide_no_guide_title">No guide</string>
+    <string name="epg_guide_no_channels">No channels to show a guide for</string>
     <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Edit Source → Guide sources.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connection</string>

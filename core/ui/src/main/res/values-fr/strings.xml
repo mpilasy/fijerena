@@ -905,6 +905,7 @@
     <string name="epg_guide_no_listings_stale_format">Rien pour ce jour : %1$s, mis à jour %2$s, s\'arrête avant.</string>
     <string name="epg_guide_no_listings_none">Aucun programme pour ces chaînes, ni dans le guide ni chez la source.</string>
     <string name="epg_guide_no_guide_title">Pas de guide</string>
+    <string name="epg_guide_no_channels">Aucune chaîne pour laquelle afficher un guide</string>
     <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Modifier la source → Sources de guide.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connexion</string>

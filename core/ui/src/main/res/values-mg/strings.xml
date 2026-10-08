@@ -712,6 +712,7 @@
     <string name="epg_guide_no_listings_stale_format">Tsy misy ho an\'ity andro ity: %1$s, nohavaozina %2$s, tsy mahatratra azy.</string>
     <string name="epg_guide_no_listings_none">Tsy misy fandaharana ho an\'ireto fantsona ireto, na avy amin\'ny fitarihana na avy amin\'ny loharano.</string>
     <string name="epg_guide_no_guide_title">Tsy misy fitarihana</string>
+    <string name="epg_guide_no_channels">Tsy misy fantsona hasehoana fitarihana</string>
     <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Fifandraisana</string>
