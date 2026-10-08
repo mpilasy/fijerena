@@ -52,7 +52,6 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
-import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * "Who's watching?" — pick the profile this TV uses. See `docs/plans/archive/20260929_live-sync-plan.md`
@@ -65,7 +64,6 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val viewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
-    val scale = LocalUiScale.current
     var adding by remember { mutableStateOf(false) }
     val activeFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
@@ -90,18 +88,18 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = stringResource(R.string.profile_picker_title),
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+            Spacer(modifier = Modifier.height(Spacing.xxl))
             switchingTo?.let { name ->
                 // A switch can take a while (it re-applies the profile's category filters): say so,
                 // instead of a list that looks like it ignored the pick.
                 androidx.compose.material3.CircularProgressIndicator(color = CinemaAccentLight)
-                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                Spacer(modifier = Modifier.height(Spacing.md))
                 Text(
                     text = stringResource(R.string.profile_switching, name),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = CinemaTextPrimary,
                 )
                 return@Column
@@ -110,23 +108,20 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
             // with D-pad focus moving onto cards nobody can see.
             LazyRow(
                 state = listState,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
-                contentPadding = PaddingValues(horizontal = Spacing.lg.scaled(scale), vertical = Spacing.md.scaled(scale)),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xl),
+                contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.md),
             ) {
                 items(profiles, key = { it.id }) { profile ->
                     PickerCard(
                         label = profile.name,
                         onClick = { viewModel.switchTo(profile.id, onProfileChosen) },
                         modifier = if (profile.isActive) Modifier.focusRequester(activeFocusRequester) else Modifier,
-                        scale = scale,
                     ) {
                         ProfileAvatar(
                             name = profile.name,
                             colorIndex = profile.colorIndex,
-                            size = TvDimensions.iconButtonSizeLarge.scaled(scale),
-                            fontSize =
-                                MaterialTheme.typography.displaySmall.fontSize
-                                    .scaled(scale),
+                            size = TvDimensions.profilePickerAvatarSize,
+                            fontSize = MaterialTheme.typography.displayLarge.fontSize,
                         )
                     }
                 }
@@ -134,17 +129,16 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                     PickerCard(
                         label = stringResource(R.string.settings_profiles_add),
                         onClick = { adding = true },
-                        scale = scale,
                     ) {
                         Box(
-                            modifier = Modifier.size(TvDimensions.iconButtonSizeLarge.scaled(scale)),
+                            modifier = Modifier.size(TvDimensions.profilePickerAvatarSize),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = CinemaIcons.Add,
                                 contentDescription = null,
                                 tint = CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
+                                modifier = Modifier.size(TvDimensions.iconXLarge),
                             )
                         }
                     }
@@ -161,7 +155,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 adding = false
             },
             onDismiss = { adding = false },
-            scale = scale,
+            scale = LocalUiScale.current,
         )
     }
 }
@@ -171,7 +165,6 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
 private fun PickerCard(
     label: String,
     onClick: () -> Unit,
-    scale: Float,
     modifier: Modifier = Modifier,
     avatar: @Composable () -> Unit,
 ) {
@@ -192,27 +185,23 @@ private fun PickerCard(
                     focusedScale = TvFocusTokens.focusedScale,
                     pressedScale = TvFocusTokens.pressedScale,
                 ),
-            // A ring around the avatar, not on it (F-PP-1): a gap of background between the two
-            // keeps the focus colour from blending into a coloured avatar at ten feet.
+            // A white ring hugging the avatar (F-PP-1, TV UI audit #1): drawn just outside its edge,
+            // with no gap, so it reads as the avatar's own outline; white, the rows' focus colour,
+            // never blends into a coloured avatar the way the accent did.
             border =
                 ClickableSurfaceDefaults.border(
                     focusedBorder =
                         Border(
-                            border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth.scaled(scale), CinemaAccentLight),
-                            inset = (TvFocusTokens.avatarFocusBorderWidth / 2 + Spacing.xxs).scaled(scale),
+                            border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth, TvFocusTokens.focusedRowOutline),
+                            inset = TvFocusTokens.avatarFocusBorderWidth / 2,
                             shape = CircleShape,
                         ),
                 ),
         ) { avatar() }
-        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+        Spacer(modifier = Modifier.height(Spacing.md))
         Text(
             text = label,
-            style =
-                MaterialTheme.typography.titleMedium.copy(
-                    fontSize =
-                        MaterialTheme.typography.titleMedium.fontSize
-                            .scaled(scale),
-                ),
+            style = MaterialTheme.typography.headlineSmall,
             color = CinemaTextPrimary,
             textAlign = TextAlign.Center,
             maxLines = 1,

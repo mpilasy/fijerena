@@ -41,6 +41,9 @@ object TvDimensions {
     val iconButtonSize: Dp = 72.dp
     val iconButtonSizeLarge: Dp = 96.dp
 
+    /** An avatar on "Who's watching?": the screen's only content, so sized to be read across the room. */
+    val profilePickerAvatarSize: Dp = 160.dp
+
     // Height of the TMDB logo art rendered in place of the OSD's big title text.
     val osdLogoHeight: Dp = 56.dp
 
