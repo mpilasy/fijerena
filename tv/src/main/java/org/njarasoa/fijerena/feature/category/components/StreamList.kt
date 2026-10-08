@@ -44,13 +44,12 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardBorder
 import androidx.tv.material3.CardColors
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Glow
 import androidx.tv.material3.Icon
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
@@ -80,7 +79,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -88,6 +86,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
@@ -99,19 +98,19 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Row card styling, built once per list composition instead of once per row.
- * `CardDefaults.colors` is `@Composable`, so it cannot be wrapped in `remember` — hoisting the
- * calls out of the item body is what stops a `CardColors`/`CardScale`/`CardGlow`/`CardShape` set
+ * `TvListRowDefaults.colors` is `@Composable`, so it cannot be wrapped in `remember` — hoisting the
+ * calls out of the item body is what stops a `CardColors`/`CardBorder`/`CardScale`/`CardGlow`/`CardShape` set
  * being allocated per visible row per recomposition. A data class so a fresh instance (e.g. from
  * the refresh-spinner rotation) still compares equal and lets rows skip.
  */
 @Immutable
 private data class StreamCardStyle(
     val colors: CardColors,
+    val border: CardBorder,
     val cardScale: CardScale,
     val glow: CardGlow,
     val shape: CardShape,
@@ -134,28 +133,11 @@ private fun streamCardStyle(
             typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
         }
     return StreamCardStyle(
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        cardScale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+        colors = TvListRowDefaults.colors(),
+        border = TvListRowDefaults.border(),
+        cardScale = TvListRowDefaults.scale(),
+        glow = TvListRowDefaults.glow(),
+        shape = TvListRowDefaults.shape(),
         titleMedium = scaledTitleMedium,
         bodySmall = scaledBodySmall,
     )
@@ -591,6 +573,7 @@ private fun StreamItem(
                     true
                 },
         colors = cardStyle.colors,
+        border = cardStyle.border,
         shape = cardStyle.shape,
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
@@ -647,7 +630,7 @@ private fun StreamItem(
                             // name (e.g. "EN -  (US)" with nothing between the dashes).
                             text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
                             style = cardStyle.titleMedium,
-                            color = if (isCurrent) TvFocusTokens.currentText else CinemaTextPrimary,
+                            color = TvListRowDefaults.titleColor(isCurrent = isCurrent, isFocused = isFocused),
                             maxLines = 1,
                             modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                         )

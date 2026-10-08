@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
@@ -70,6 +71,15 @@ object TvFocusTokens {
     val focusedContainer: Color
         @Composable @ReadOnlyComposable
         get() = CinemaSurfaceLight
+
+    /**
+     * Outline of a focused content list row (channels, titles, categories, search results): white,
+     * with [focusedContainer] behind it and the text kept white, so focus never borrows the accent
+     * that marks the "current" row (TV UI audit, X2).
+     */
+    val focusedRowOutline: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTextPrimary
 
     /** Width of the "current" bar on a selected / current row's leading edge (see `Modifier.currentIndicator`). */
     val currentBarWidth: Dp = 4.dp
