@@ -1119,4 +1119,11 @@
     <string name="browse_select_to_view_films">Sélectionnez une catégorie pour voir ses films</string>
     <string name="browse_select_to_view_shows">Sélectionnez une catégorie pour voir ses séries</string>
     <!-- /TV polish: browse and Live TV -->
+    <!-- TV polish: details + episodes -->
+    <string name="details_label_source">Source :</string>
+    <string name="details_label_released">Sortie :</string>
+    <string name="details_label_director">Réalisateur :</string>
+    <string name="details_label_stream_name">Nom du flux :</string>
+    <string name="details_label_tmdb">TMDB :</string>
+    <string name="details_rating_out_of_ten">%1$s/10</string>
 </resources>

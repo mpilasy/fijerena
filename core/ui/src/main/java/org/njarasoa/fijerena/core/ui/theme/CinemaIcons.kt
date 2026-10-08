@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DateRange
@@ -67,6 +68,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DateRange
@@ -111,6 +113,7 @@ import androidx.compose.material.icons.sharp.Add
 import androidx.compose.material.icons.sharp.ArrowDropDown
 import androidx.compose.material.icons.sharp.BarChart
 import androidx.compose.material.icons.sharp.CheckCircle
+import androidx.compose.material.icons.sharp.CheckCircleOutline
 import androidx.compose.material.icons.sharp.Close
 import androidx.compose.material.icons.sharp.ContentCopy
 import androidx.compose.material.icons.sharp.DateRange
@@ -265,6 +268,19 @@ object CinemaIcons {
     val CheckCircle: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.CheckCircle, Icons.Outlined.CheckCircle, Icons.Sharp.CheckCircle)
+
+    /**
+     * The "watched" / "not watched" pair on details screens: a check in a ring, then the same
+     * check on a filled disc — filled in every style (the Outlined family's CheckCircle is itself
+     * a ring, which made the two states the same shape).
+     */
+    val CheckCircleOutline: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.CheckCircleOutline, Icons.Outlined.CheckCircleOutline, Icons.Sharp.CheckCircleOutline)
+
+    val CheckCircleFilled: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.CheckCircle, Icons.Rounded.CheckCircle, Icons.Sharp.CheckCircle)
 
     val BarChart: ImageVector
         @Composable @ReadOnlyComposable

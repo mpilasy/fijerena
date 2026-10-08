@@ -1,6 +1,9 @@
 package org.njarasoa.fijerena.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -12,18 +15,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
-import org.njarasoa.fijerena.core.ui.components.GradientOverlay
+import org.njarasoa.fijerena.core.player.model.formatRating
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -40,10 +52,9 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * Meant as one non-focusable item in the screen's existing `LazyColumn` — it takes no focus and
  * intercepts no input itself, so the screen's own D-pad handling is untouched by adding it.
  *
- * [scoreChips] and [actions] are content slots rather than data lists (unlike the plan sketch's
- * `List<ScoreChip>`): a `data class` with the same shape as the [org.njarasoa.fijerena.core.ui.components.ScoreChip]
- * composable's parameters would collide with it by name, and a slot lets a caller with no second
- * score to show skip the row entirely instead of building a one-element list.
+ * The rating is part of [metaLine] (plain "8.2/10"), not a boxed chip of its own, and the
+ * backdrop fades into the screen background at the bottom and left instead of ending in a hard
+ * edge (TV UI audit, #12).
  *
  * @param title Plain-text title, used only as the logo image's accessibility description —
  *   [titleFallback] draws its own text and is free to use a different string.
@@ -58,7 +69,6 @@ fun TvDetailHero(
     titleFallback: @Composable () -> Unit,
     metaLine: List<String>,
     modifier: Modifier = Modifier,
-    scoreChips: @Composable (RowScope.() -> Unit)? = null,
     tagline: String? = null,
     plot: String? = null,
     sideSlot: @Composable (() -> Unit)? = null,
@@ -115,9 +125,16 @@ fun TvDetailHero(
                 }
             Box(modifier = Modifier.matchParentSize().background(scrimBrush))
 
-            // Bottom scrim: keeps the action row legible over whatever is directly behind it,
-            // independent of the horizontal one above.
-            GradientOverlay(modifier = Modifier.matchParentSize())
+            // Bottom scrim: keeps the action row legible, and reaches the solid background at the
+            // hero's bottom edge so the backdrop runs into the tab row below without a seam.
+            val bottomScrimBrush =
+                remember(palette.background) {
+                    Brush.verticalGradient(
+                        BOTTOM_FADE_START to palette.background.copy(alpha = 0f),
+                        1f to palette.background,
+                    )
+                }
+            Box(modifier = Modifier.matchParentSize().background(bottomScrimBrush))
 
             Column(
                 modifier =
@@ -137,13 +154,6 @@ fun TvDetailHero(
                 if (meta.isNotBlank()) {
                     Spacer(Modifier.height(Spacing.sm))
                     Text(text = meta, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
-                }
-
-                if (scoreChips != null) {
-                    Spacer(Modifier.height(Spacing.md))
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        scoreChips()
-                    }
                 }
 
                 if (!tagline.isNullOrBlank()) {
@@ -168,7 +178,10 @@ fun TvDetailHero(
                 }
 
                 Spacer(Modifier.height(Spacing.lg))
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     actions()
                 }
             }
@@ -185,4 +198,101 @@ fun TvDetailHero(
             }
         }
     }
+}
+
+/** Where the hero's bottom scrim starts: clear above this fraction, solid background at the bottom. */
+private const val BOTTOM_FADE_START = 0.4f
+
+/**
+ * Keeps a details screen's hero whole while focus is in it. On Android TV the default
+ * [BringIntoViewSpec] pivots every focused child to about a third of the viewport, so focusing
+ * Play scrolled the screen until the title or logo was cut off at the top (TV UI audit, #13).
+ * While focus is inside the hero — [content] puts the modifier it is given on the hero — no
+ * scroll is asked for and [scrollToTop] brings the hero back in full; everywhere else (the tab
+ * row, episode cards, related titles) the default pivot stays.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun KeepHeroInView(
+    scrollToTop: suspend () -> Unit,
+    content: @Composable (heroModifier: Modifier) -> Unit,
+) {
+    val defaultSpec = LocalBringIntoViewSpec.current
+    // Read by the spec straight from the state, not through recomposition: the scroll request
+    // comes in the same frame as the focus change.
+    val heroFocused = remember { mutableStateOf(false) }
+    val spec =
+        remember(defaultSpec) {
+            object : BringIntoViewSpec {
+                override fun calculateScrollDistance(
+                    offset: Float,
+                    size: Float,
+                    containerSize: Float,
+                ): Float =
+                    when {
+                        !heroFocused.value -> defaultSpec.calculateScrollDistance(offset, size, containerSize)
+
+                        // Only as far as it takes to show a button that is off screen (a hero
+                        // taller than the screen), never the pivot.
+                        offset < 0f -> offset
+
+                        offset + size > containerSize -> offset + size - containerSize
+
+                        else -> 0f
+                    }
+            }
+        }
+    val focused by heroFocused
+    LaunchedEffect(focused) {
+        if (focused) scrollToTop()
+    }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides spec) {
+        content(Modifier.onFocusChanged { heroFocused.value = it.hasFocus })
+    }
+}
+
+/**
+ * One line of a details screen's Details tab: the label in a fixed column, so every value starts
+ * at the same place (TV UI audit, #12). [value] is free-form for the stream-name picker.
+ */
+@Composable
+fun TvDetailRow(
+    label: String,
+    modifier: Modifier = Modifier,
+    value: @Composable () -> Unit,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.Top) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaTextSecondary,
+            modifier = Modifier.width(DETAIL_LABEL_WIDTH),
+        )
+        Spacer(Modifier.width(Spacing.md))
+        value()
+    }
+}
+
+/** [TvDetailRow] with plain text for its value. */
+@Composable
+fun TvDetailRow(
+    label: String,
+    value: String,
+) {
+    TvDetailRow(label = label) {
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+    }
+}
+
+/** Wide enough for the longest label in every language ("Anaran'ny fantsakana:"). */
+private val DETAIL_LABEL_WIDTH = 180.dp
+
+/**
+ * A rating for the hero's meta line: "8.2/10" when it's a number, the provider's own text
+ * otherwise. Plain text, no star — a star is the favourite button's icon (TV UI audit, X9).
+ */
+@Composable
+fun ratingOutOfTen(rating: String): String {
+    val value = formatRating(rating)
+    return if (value.toDoubleOrNull() != null) stringResource(R.string.details_rating_out_of_ten, value) else value
 }

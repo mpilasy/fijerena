@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
@@ -49,13 +50,14 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * One row of related titles on a detail screen — those the provider actually carries. Detail
- * screens show two, [title] telling them apart. Draws nothing at all when [items] is empty — no
- * header, no empty state — since a row is a bonus and an empty one only takes up space.
+ * One row of related titles on a detail screen — those the provider actually carries. [title] is
+ * the heading above the row, or null when the tab it sits under already names it ("Similar").
+ * Draws nothing at all when [items] is empty — no header, no empty state — since a row is a
+ * bonus and an empty one only takes up space.
  */
 @Composable
 fun RelatedTitlesRow(
-    title: String,
+    title: String?,
     items: List<MediaItem>,
     onItemClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
@@ -75,12 +77,14 @@ fun RelatedTitlesRow(
     val cardStyle = relatedTitleCardStyle()
 
     Column(modifier = modifier) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = CinemaTextPrimary,
-        )
-        Spacer(modifier = Modifier.height(Spacing.sm))
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+        }
         LazyRow(
             state = rowState,
             // Coming back to the row lands on the card the user left, not back at the start.
@@ -196,24 +200,25 @@ private fun RelatedTitleCard(
                 )
             }
         }
+        val titleStyle = MaterialTheme.typography.bodyMedium
+        // Room for two lines on every card, so a one-line title doesn't make its card shorter
+        // than the rest and a long one isn't cut after a word ("Avengers: Age …", TV UI audit X4).
+        val twoLines = with(LocalDensity.current) { (titleStyle.lineHeight * 2).toDp() }
         Text(
             // See mobile's StreamCard — provider data occasionally sends a blank name.
             text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-            style = MaterialTheme.typography.bodySmall,
+            style = titleStyle,
             color = CinemaTextPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier =
                 Modifier
                     .width(TvDimensions.posterWidth)
-                    .height(TITLE_BLOCK_HEIGHT)
-                    .padding(Spacing.xs),
+                    .padding(Spacing.xs)
+                    .height(twoLines),
         )
     }
 }
-
-/** Room for two lines of bodySmall, so a one-line title does not make its card shorter than the rest. */
-private val TITLE_BLOCK_HEIGHT = Spacing.xl + Spacing.sm
 
 /** Slack around the row so a focused card's border, scale and glow are not clipped away. */
 private val FOCUS_BLEED = Spacing.sm

@@ -1111,4 +1111,11 @@
     <string name="browse_select_to_view_films">Misafidiana sokajy hijerena ny sarimihetsika</string>
     <string name="browse_select_to_view_shows">Misafidiana sokajy hijerena ny andian-tantara</string>
     <!-- /TV polish: browse and Live TV -->
+    <!-- TV polish: details + episodes -->
+    <string name="details_label_source">Loharano:</string>
+    <string name="details_label_released">Navoaka:</string>
+    <string name="details_label_director">Mpanatontosa:</string>
+    <string name="details_label_stream_name">Anaran\'ny fantsakana:</string>
+    <string name="details_label_tmdb">TMDB:</string>
+    <string name="details_rating_out_of_ten">%1$s/10</string>
 </resources>

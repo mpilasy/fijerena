@@ -1116,4 +1116,11 @@
     <string name="browse_select_to_view_films">Select a category to see its films</string>
     <string name="browse_select_to_view_shows">Select a category to see its shows</string>
     <!-- /TV polish: browse and Live TV -->
+    <!-- TV polish: details + episodes -->
+    <string name="details_label_source">Source:</string>
+    <string name="details_label_released">Released:</string>
+    <string name="details_label_director">Director:</string>
+    <string name="details_label_stream_name">Stream name:</string>
+    <string name="details_label_tmdb">TMDB:</string>
+    <string name="details_rating_out_of_ten">%1$s/10</string>
 </resources>

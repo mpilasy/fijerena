@@ -127,7 +127,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
-import org.njarasoa.fijerena.core.ui.components.ScoreChip
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
@@ -145,9 +144,11 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.TvDetailHero
+import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -160,6 +161,7 @@ import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -299,17 +301,6 @@ internal fun EpisodeListContent(
     val scale = LocalUiScale.current
     val episodeCardStyle = episodeCardStyle()
     val watchedToggleScope = rememberCoroutineScope()
-    val typography = MaterialTheme.typography
-    // Only the Details tab (provider name, stream picker) still needs its own styles — the hero
-    // draws its own text directly off MaterialTheme.typography, matching TvDetailHero's contract,
-    // and Cast/Seasons/Similar use their own components' defaults.
-    val scaledStyles =
-        remember(scale, typography) {
-            object {
-                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            }
-        }
 
     // Selected episode for detail panel — only set by an explicit tap (including on the
     // Continue Watching resume episode below); arriving here never auto-opens it.
@@ -883,474 +874,480 @@ internal fun EpisodeListContent(
                 onBack = closeEpisodePanel,
             )
         } else {
-            LazyColumn(
-                state = listState,
-                // No horizontal margin here: the hero backdrop below must run edge to edge. Every
-                // other item applies Spacing.tvSafeMarginHorizontal to itself instead.
-                contentPadding = PaddingValues(bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                // Confirmed on a real Shield (logcat, MovieDetailsScreen's identical bug): the
-                // first Back press while a focused TV Button has focus reaches Compose's key
-                // dispatch fine, but something between there and the BackHandler(selectedEpisode
-                // == null) above marks it handled — that BackHandler never fires on the first
-                // press, only the second. Intercept here instead: onPreviewKeyEvent runs
-                // top-down, before any descendant (including the focused Button) gets a look, so
-                // this always wins the race. Matches the same pattern TvDpadEscape.kt uses.
-                modifier =
-                    Modifier.fillMaxSize().testTag("episode_list").onPreviewKeyEvent { event ->
-                        if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
-                            // Phase 5: Back out of an open tab section goes to the tab row, not
-                            // out of the screen — same interception point as the screen-exit
-                            // case, since this handler already runs before any descendant.
-                            if (focusInSection) {
-                                focusTabRow()
+            KeepHeroInView(scrollToTop = { listState.animateScrollToItem(0) }) { heroModifier ->
+                LazyColumn(
+                    state = listState,
+                    // No horizontal margin here: the hero backdrop below must run edge to edge. Every
+                    // other item applies Spacing.tvSafeMarginHorizontal to itself instead.
+                    contentPadding = PaddingValues(bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                    // Confirmed on a real Shield (logcat, MovieDetailsScreen's identical bug): the
+                    // first Back press while a focused TV Button has focus reaches Compose's key
+                    // dispatch fine, but something between there and the BackHandler(selectedEpisode
+                    // == null) above marks it handled — that BackHandler never fires on the first
+                    // press, only the second. Intercept here instead: onPreviewKeyEvent runs
+                    // top-down, before any descendant (including the focused Button) gets a look, so
+                    // this always wins the race. Matches the same pattern TvDpadEscape.kt uses.
+                    modifier =
+                        Modifier.fillMaxSize().testTag("episode_list").onPreviewKeyEvent { event ->
+                            if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                                // Phase 5: Back out of an open tab section goes to the tab row, not
+                                // out of the screen — same interception point as the screen-exit
+                                // case, since this handler already runs before any descendant.
+                                if (focusInSection) {
+                                    focusTabRow()
+                                } else {
+                                    onBack()
+                                }
+                                true
                             } else {
-                                onBack()
+                                false
                             }
-                            true
-                        } else {
-                            false
-                        }
-                    },
-            ) {
-                item(key = "series_hero", contentType = "hero") {
-                    val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
-                    val presentLabel = stringResource(R.string.series_present)
-                    val yearRange = seriesDetail.seriesYearRange(presentLabel)
-                    val countText =
-                        if (sortedSeasons.size > 1) {
-                            stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
-                        } else {
-                            stringResource(R.string.series_total_episodes_format, totalEpisodes)
-                        }
-                    val metaLine = listOfNotNull(yearRange, seriesDetail.metadata.contentRating, countText, seriesDetail.metadata.genre)
-                    val communityRatingLabel = stringResource(R.string.details_community_rating)
-
-                    TvDetailHero(
-                        title = seriesTitleText,
-                        backdropUrl = backdropUrl,
-                        logoUrl = logoUrl,
-                        titleFallback = {
-                            Text(
-                                text = seriesTitleText,
-                                style = MaterialTheme.typography.displayLarge,
-                                color = CinemaTextPrimary,
-                            )
                         },
-                        metaLine = metaLine,
-                        scoreChips =
-                            seriesDetail.metadata.rating?.let { rating ->
-                                { ScoreChip(value = formatRating(rating), label = communityRatingLabel) }
-                            },
-                        plot = seriesDetail.metadata.plot,
-                        sideSlot = anchorEpisode?.let { ep -> { NextUpCard(episode = ep, progress = episodeProgress[ep.id] ?: 0f) } },
-                    ) {
-                        // Phase 5: D-pad Down from any action button lands on the (outer) tab
-                        // row below, not wherever default geometry search prefers — same fix as
-                        // MovieDetailsScreen's Phase 4 downToTabRow, its focusProperties { down =
-                        // ... } having never taken for this exact transition either.
-                        val downToTabRow =
-                            Modifier.onPreviewKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
-                                    tabRowFocusRequester.requestFocus()
-                                    true
-                                } else {
-                                    false
-                                }
+                ) {
+                    item(key = "series_hero", contentType = "hero") {
+                        val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
+                        val presentLabel = stringResource(R.string.series_present)
+                        val yearRange = seriesDetail.seriesYearRange(presentLabel)
+                        val countText =
+                            if (sortedSeasons.size > 1) {
+                                stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
+                            } else {
+                                stringResource(R.string.series_total_episodes_format, totalEpisodes)
                             }
-                        // D-pad Up from the hero action row — these buttons are the topmost
-                        // focusable in the whole screen, nothing above them to send focus to, so
-                        // the LazyColumn never scrolls back up on its own. bringIntoView only
-                        // guarantees the *focused* button stays visible, not the title/plot above
-                        // it, so once a tall plot or tab switch has scrolled the list down, the
-                        // top of the hero can sit clipped above the viewport with no way back —
-                        // the exact "can't scroll up to see the whole picture" report. Force it
-                        // explicitly instead of relying on focus search finding nothing to do.
-                        val upScrollToTop =
-                            Modifier.onPreviewKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
-                                    watchedToggleScope.launch { listState.animateScrollToItem(0) }
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                        CinemaPrimaryButton(
-                            onClick = { playAnchor(false) },
-                            text = playNextLabel,
-                            modifier =
-                                Modifier
-                                    .testTag(
-                                        "hero_play_button",
-                                    ).focusRequester(playButtonFocusRequester)
-                                    .then(downToTabRow)
-                                    .then(upScrollToTop),
-                        )
-                        if (hasResume) {
-                            CinemaIconButton(
-                                onClick = { playAnchor(true) },
-                                modifier = downToTabRow.then(upScrollToTop),
-                                icon = {
-                                    Icon(
-                                        imageVector = CinemaIcons.Replay,
-                                        contentDescription = stringResource(R.string.movie_start_beginning),
-                                        tint = CinemaTextPrimary,
-                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    )
-                                },
+                        val metaLine =
+                            listOfNotNull(
+                                yearRange,
+                                seriesDetail.metadata.rating?.let { ratingOutOfTen(it) },
+                                seriesDetail.metadata.contentRating,
+                                countText,
+                                seriesDetail.metadata.genre,
                             )
-                        }
-                        CinemaIconButton(
-                            onClick = onToggleFavorite,
-                            modifier = downToTabRow.then(upScrollToTop),
-                            icon = {
-                                Icon(
-                                    imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                    contentDescription =
-                                        if (isFavorite) {
-                                            stringResource(
-                                                R.string.favorite_remove,
-                                            )
-                                        } else {
-                                            stringResource(R.string.favorite_add)
-                                        },
-                                    tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
-                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+
+                        TvDetailHero(
+                            title = seriesTitleText,
+                            backdropUrl = backdropUrl,
+                            logoUrl = logoUrl,
+                            titleFallback = {
+                                Text(
+                                    text = seriesTitleText,
+                                    style = MaterialTheme.typography.displayLarge,
+                                    color = CinemaTextPrimary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             },
-                        )
-                        seriesDetail.metadata.trailerUrl?.let { trailer ->
-                            CinemaIconButton(
-                                onClick = { openExternalUrl(context, trailer) },
-                                modifier = downToTabRow.then(upScrollToTop),
-                                icon = {
-                                    Icon(
-                                        imageVector = CinemaIcons.Movie,
-                                        contentDescription = stringResource(R.string.details_watch_trailer_description),
-                                        tint = CinemaTextPrimary,
-                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    )
-                                },
-                            )
-                        }
-                        // Refresh info is maintenance, not something to watch: it lives behind
-                        // "More" at the end of the row, as on the movie hero (Phase 6). While a
-                        // refresh runs the button shows a spinning Refresh glyph instead.
-                        TvIconAction(
-                            onClick = { showMoreMenu = true },
-                            icon = if (isRefreshing) CinemaIcons.Refresh else CinemaIcons.MoreVert,
-                            label = stringResource(R.string.details_action_more),
-                            modifier = downToTabRow.then(upScrollToTop).focusRequester(moreButtonFocusRequester),
-                            iconModifier = if (isRefreshing) Modifier.rotate(rotation) else Modifier,
-                        )
-                        SectionRootButton(sectionRoot, modifier = downToTabRow.then(upScrollToTop))
-                    }
-                }
-
-                item(key = "tabs") {
-                    TvSectionTabs(
-                        tabs = tabLabels,
-                        selectedIndex = safeTabIndex,
-                        onTabSelected = {
-                            selectedTabIndex = it
-                            // A tab regaining focus — whether from Left/Right, the initial Down
-                            // from the action row, or our own Back-triggered
-                            // tabRowFocusRequester.requestFocus() above — means focus is on the
-                            // tab row, not in a section.
-                            focusInSection = false
-                        },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                                .padding(top = Spacing.xl.scaled(scale))
-                                // D-pad Down from the Episodes tab straight into the season pill
-                                // that's actually selected, bypassing this Row's own default
-                                // focus-group entry: SeasonTabs' `onEnter` is the exact class of
-                                // "default geometry search into a tab row" this codebase has
-                                // already found unreliable (see SeasonTabs' own comment on why
-                                // it's wired explicitly for D-pad left/right). An unreliable entry
-                                // landing on the wrong pill isn't just a focus glitch here — each
-                                // SeasonTab focus-follow-selects, so landing on Season 1 even for
-                                // one frame permanently overwrites the resume anchor's season.
-                                .onPreviewKeyEvent { event ->
-                                    if (event.type == KeyEventType.KeyDown &&
-                                        event.key == Key.DirectionDown &&
-                                        tabs.getOrNull(safeTabIndex) == SeriesDetailTab.EPISODES &&
-                                        hasMultipleSeasons
-                                    ) {
-                                        seasonTabsFocusRequester.requestFocus()
+                            metaLine = metaLine,
+                            plot = seriesDetail.metadata.plot,
+                            modifier = heroModifier,
+                            sideSlot = anchorEpisode?.let { ep -> { NextUpCard(episode = ep, progress = episodeProgress[ep.id] ?: 0f) } },
+                        ) {
+                            // Phase 5: D-pad Down from any action button lands on the (outer) tab
+                            // row below, not wherever default geometry search prefers — same fix as
+                            // MovieDetailsScreen's Phase 4 downToTabRow, its focusProperties { down =
+                            // ... } having never taken for this exact transition either.
+                            val downToTabRow =
+                                Modifier.onPreviewKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                                        tabRowFocusRequester.requestFocus()
                                         true
                                     } else {
                                         false
                                     }
-                                },
-                        entryFocusRequester = tabRowFocusRequester,
-                    )
-                }
-
-                // Only the selected tab's section composes below — a perf win as well as a look
-                // change, same rationale as MovieDetailsScreen's Phase 4 tabs. Episodes is the
-                // one exception to "one wrapped item per tab": it keeps emitting its existing
-                // stickyHeader (season pills) + itemsIndexed (episode cards) shape directly into
-                // this LazyColumn, instead of nesting them inside a single Box item, so episode
-                // cards stay individually lazy rather than measuring all at once.
-                when (tabs.getOrNull(safeTabIndex)) {
-                    SeriesDetailTab.EPISODES -> {
-                        // The episodes header — pinned in place as the episode list scrolls under it
-                        // (stickyHeader, not a plain item), so it reads as the control for what's
-                        // below rather than scrolling away with it, same as the mobile row: season
-                        // tabs when there are several (D-pad left/right moves focus between them,
-                        // which selects immediately — see SeasonTab), and once the hero is off
-                        // screen a compact "title · season · Play next" line above them (Phase 6).
-                        // Left from any episode comes back here; Right steps to the next season.
-                        stickyHeader(key = "season_tabs", contentType = "header") {
-                            Column(
+                                }
+                            // D-pad Up from the hero action row — these buttons are the topmost
+                            // focusable in the whole screen, nothing above them to send focus to, so
+                            // the LazyColumn never scrolls back up on its own. bringIntoView only
+                            // guarantees the *focused* button stays visible, not the title/plot above
+                            // it, so once a tall plot or tab switch has scrolled the list down, the
+                            // top of the hero can sit clipped above the viewport with no way back —
+                            // the exact "can't scroll up to see the whole picture" report. Force it
+                            // explicitly instead of relying on focus search finding nothing to do.
+                            val upScrollToTop =
+                                Modifier.onPreviewKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
+                                        watchedToggleScope.launch { listState.animateScrollToItem(0) }
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                            CinemaPrimaryButton(
+                                onClick = { playAnchor(false) },
+                                text = playNextLabel,
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth()
-                                        // Opaque, top padding included: cards scroll in underneath.
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                                        .padding(top = Spacing.md.scaled(scale))
-                                        .onFocusChanged { if (it.hasFocus) focusInSection = true },
-                            ) {
-                                if (compactHeaderShown) {
-                                    CompactEpisodesHeader(
-                                        title =
-                                            listOfNotNull(
-                                                tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
-                                                resumeState.selectedSeason?.let { stringResource(R.string.series_season_label, it) },
-                                            ).joinToString(" · "),
-                                        playLabel = playNextLabel,
-                                        onPlay = { playAnchor(false) },
-                                        playModifier =
-                                            Modifier
-                                                .focusRequester(compactPlayFocusRequester)
-                                                .onPreviewKeyEvent { event ->
-                                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                                    when {
-                                                        event.key == Key.DirectionUp -> {
-                                                            scrollToTabRow()
-                                                            true
-                                                        }
-
-                                                        event.key == Key.DirectionDown && hasMultipleSeasons -> {
-                                                            seasonTabsFocusRequester.requestFocus()
-                                                            true
-                                                        }
-
-                                                        else -> {
-                                                            false
-                                                        }
-                                                    }
-                                                },
-                                    )
-                                }
-                                if (hasMultipleSeasons) {
-                                    Box(
-                                        // Up from a season tab: Play next when the compact line is
-                                        // showing, else the section tab row (on screen with the hero).
-                                        modifier =
-                                            Modifier.onPreviewKeyEvent { event ->
-                                                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
-                                                    if (compactHeaderShown) {
-                                                        compactPlayFocusRequester.requestFocus()
-                                                    } else {
-                                                        tabRowFocusRequester.requestFocus()
-                                                    }
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            },
-                                    ) {
-                                        SeasonTabs(
-                                            seasons = sortedSeasons,
-                                            selectedSeason = resumeState.selectedSeason,
-                                            onSeasonSelected = {
-                                                // EpisodeResumeState.selectSeason is itself guarded to
-                                                // a no-op when `it` is already selected: focus-follow-
-                                                // select (see SeasonTab) fires this the instant D-pad
-                                                // focus *enters* the row, landing on the already-
-                                                // selected tab — a no-op season change that used to
-                                                // still flip hasManuallySelectedSeason and write
-                                                // selectedSeasonNumber to its own value. That write was
-                                                // enough to recompose this row out from under the very
-                                                // focus-search transaction bringing it in, which is why
-                                                // the first Up/Down into the tabs always missed them and
-                                                // landed on the episode list instead. Skipping the no-op
-                                                // leaves that transaction undisturbed; a real season
-                                                // change (left/right to a different tab) still goes
-                                                // through normally.
-                                                if (!awaitingFirstFocus) resumeState.selectSeason(it)
-                                            },
-                                            entryFocusRequester = seasonTabsFocusRequester,
+                                        .testTag(
+                                            "hero_play_button",
+                                        ).focusRequester(playButtonFocusRequester)
+                                        .then(downToTabRow)
+                                        .then(upScrollToTop),
+                            )
+                            if (hasResume) {
+                                CinemaIconButton(
+                                    onClick = { playAnchor(true) },
+                                    modifier = downToTabRow.then(upScrollToTop),
+                                    icon = {
+                                        Icon(
+                                            imageVector = CinemaIcons.Replay,
+                                            contentDescription = stringResource(R.string.movie_start_beginning),
+                                            tint = CinemaTextPrimary,
+                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                                         )
-                                    }
-                                }
+                                    },
+                                )
                             }
-                        }
-                        // Gap before the episode cards, as its own plain (non-sticky) item —
-                        // inside the stickyHeader above, it would pin along with the header and
-                        // show cards through its unbacked height as they scroll past.
-                        item(key = "season_tabs_gap", contentType = "spacer") {
-                            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        }
-
-                        val currentSeasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: emptyList()
-                        itemsIndexed(currentSeasonEpisodes, key = {
-                            _,
-                            episode,
-                            ->
-                            episode.id
-                        }, contentType = { _, _ -> "episode" }) { index, episode ->
-                            val isContinueWatching = episode.id == resumeState.resumeEpisodeId
-                            EpisodeCard(
-                                episode = episode,
-                                cardStyle = episodeCardStyle,
-                                isContinueWatching = isContinueWatching,
-                                watchProgress = episodeProgress[episode.id] ?: 0f,
-                                isWatched = episode.id in watchedEpisodeIds,
-                                focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
-                                modifier =
-                                    Modifier
-                                        .onPreviewKeyEvent { event ->
-                                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                            when {
-                                                // Left from any episode, or Up from the first, goes
-                                                // back to the episodes header in one press (Phase 6,
-                                                // F-E-2) — an explicit request, since plain focus
-                                                // search into the season tabs grabbed the wrong pill
-                                                // and, via its focus-follow-select, changed season.
-                                                event.key == Key.DirectionLeft || (index == 0 && event.key == Key.DirectionUp) -> {
-                                                    focusEpisodesHeader()
-                                                    true
-                                                }
-
-                                                // Right stays put: arrows move focus, they don't change
-                                                // season — that is the season tabs' job, one Left away.
-                                                event.key == Key.DirectionRight -> {
-                                                    true
-                                                }
-
-                                                else -> {
-                                                    false
-                                                }
-                                            }
-                                        }.padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                                        .onFocusChanged { if (it.hasFocus) focusInSection = true }
-                                        .then(
-                                            if (episode.id == reopenedEpisodeId) {
-                                                Modifier.focusRequester(reopenedEpisodeFocusRequester)
+                            CinemaIconButton(
+                                onClick = onToggleFavorite,
+                                modifier = downToTabRow.then(upScrollToTop),
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                        contentDescription =
+                                            if (isFavorite) {
+                                                stringResource(
+                                                    R.string.favorite_remove,
+                                                )
                                             } else {
-                                                Modifier
+                                                stringResource(R.string.favorite_add)
                                             },
-                                        ).testTag("episode_${episode.id}"),
-                                onClick = {
-                                    selectedEpisode = episode
-                                },
-                                onLongPress = {
-                                    // Manual watched/unwatched mark (Phase 6,
-                                    // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic:
-                                    // flips this episode's own badge immediately rather than
-                                    // waiting on the write; the full re-read after it lands is what
-                                    // catches a TMDB sibling this mark just completed too (Phase 5)
-                                    // and restores the resume bar on an unmark — a single-item
-                                    // patch would miss both.
-                                    val nowWatched = episode.id !in watchedEpisodeIds
-                                    watchedEpisodeIds =
-                                        if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                                    watchedToggleScope.launch {
-                                        mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                                        refreshEpisodeWatchState()
-                                    }
+                                        tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                    )
                                 },
                             )
-                        }
-                    }
-
-                    SeriesDetailTab.CAST -> {
-                        item(key = "tab-section-cast") {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                                        .padding(top = Spacing.md.scaled(scale))
-                                        .focusRestorer()
-                                        .onFocusChanged { if (it.hasFocus) focusInSection = true },
-                            ) {
-                                SeriesCastTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                            seriesDetail.metadata.trailerUrl?.let { trailer ->
+                                CinemaIconButton(
+                                    onClick = { openExternalUrl(context, trailer) },
+                                    modifier = downToTabRow.then(upScrollToTop),
+                                    icon = {
+                                        Icon(
+                                            imageVector = CinemaIcons.Movie,
+                                            contentDescription = stringResource(R.string.details_watch_trailer_description),
+                                            tint = CinemaTextPrimary,
+                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                        )
+                                    },
+                                )
                             }
+                            // Refresh info is maintenance, not something to watch: it lives behind
+                            // "More" at the end of the row, as on the movie hero (Phase 6). While a
+                            // refresh runs the button shows a spinning Refresh glyph instead.
+                            TvIconAction(
+                                onClick = { showMoreMenu = true },
+                                icon = if (isRefreshing) CinemaIcons.Refresh else CinemaIcons.MoreVert,
+                                label = stringResource(R.string.details_action_more),
+                                modifier = downToTabRow.then(upScrollToTop).focusRequester(moreButtonFocusRequester),
+                                iconModifier = if (isRefreshing) Modifier.rotate(rotation) else Modifier,
+                            )
+                            SectionRootButton(sectionRoot, modifier = downToTabRow.then(upScrollToTop))
                         }
                     }
 
-                    SeriesDetailTab.DETAILS -> {
-                        item(key = "tab-section-details") {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                                        .padding(top = Spacing.md.scaled(scale))
-                                        .focusRestorer()
-                                        .onFocusChanged { if (it.hasFocus) focusInSection = true },
-                            ) {
-                                SeriesDetailsTabContent(
-                                    seriesDetail = seriesDetail,
-                                    seriesName = seriesName,
-                                    providerName = providerName,
-                                    categoryName = categoryName,
-                                    alternateStreams = alternateStreams,
-                                    streamNameFocusRequester = streamNameFocusRequester,
-                                    onStreamSelected = {
-                                        streamSwitchSignal++
-                                        onAlternateStreamSelected(it)
+                    item(key = "tabs") {
+                        TvSectionTabs(
+                            tabs = tabLabels,
+                            selectedIndex = safeTabIndex,
+                            onTabSelected = {
+                                selectedTabIndex = it
+                                // A tab regaining focus — whether from Left/Right, the initial Down
+                                // from the action row, or our own Back-triggered
+                                // tabRowFocusRequester.requestFocus() above — means focus is on the
+                                // tab row, not in a section.
+                                focusInSection = false
+                            },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                                    .padding(top = Spacing.xl.scaled(scale))
+                                    // D-pad Down from the Episodes tab straight into the season pill
+                                    // that's actually selected, bypassing this Row's own default
+                                    // focus-group entry: SeasonTabs' `onEnter` is the exact class of
+                                    // "default geometry search into a tab row" this codebase has
+                                    // already found unreliable (see SeasonTabs' own comment on why
+                                    // it's wired explicitly for D-pad left/right). An unreliable entry
+                                    // landing on the wrong pill isn't just a focus glitch here — each
+                                    // SeasonTab focus-follow-selects, so landing on Season 1 even for
+                                    // one frame permanently overwrites the resume anchor's season.
+                                    .onPreviewKeyEvent { event ->
+                                        if (event.type == KeyEventType.KeyDown &&
+                                            event.key == Key.DirectionDown &&
+                                            tabs.getOrNull(safeTabIndex) == SeriesDetailTab.EPISODES &&
+                                            hasMultipleSeasons
+                                        ) {
+                                            seasonTabsFocusRequester.requestFocus()
+                                            true
+                                        } else {
+                                            false
+                                        }
                                     },
-                                    onStreamFocusedChanged = { streamRowFocused = it },
-                                    onCategorySelected = {
-                                        returnFocus.leaveFrom(RETURN_CATEGORY)
-                                        onCategorySelected()
+                            entryFocusRequester = tabRowFocusRequester,
+                        )
+                    }
+
+                    // Only the selected tab's section composes below — a perf win as well as a look
+                    // change, same rationale as MovieDetailsScreen's Phase 4 tabs. Episodes is the
+                    // one exception to "one wrapped item per tab": it keeps emitting its existing
+                    // stickyHeader (season pills) + itemsIndexed (episode cards) shape directly into
+                    // this LazyColumn, instead of nesting them inside a single Box item, so episode
+                    // cards stay individually lazy rather than measuring all at once.
+                    when (tabs.getOrNull(safeTabIndex)) {
+                        SeriesDetailTab.EPISODES -> {
+                            // The episodes header — pinned in place as the episode list scrolls under it
+                            // (stickyHeader, not a plain item), so it reads as the control for what's
+                            // below rather than scrolling away with it, same as the mobile row: season
+                            // tabs when there are several (D-pad left/right moves focus between them,
+                            // which selects immediately — see SeasonTab), and once the hero is off
+                            // screen a compact "title · season · Play next" line above them (Phase 6).
+                            // Left from any episode comes back here; Right steps to the next season.
+                            stickyHeader(key = "season_tabs", contentType = "header") {
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            // Opaque, top padding included: cards scroll in underneath.
+                                            .background(MaterialTheme.colorScheme.background)
+                                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                                            .padding(top = Spacing.md.scaled(scale))
+                                            .onFocusChanged { if (it.hasFocus) focusInSection = true },
+                                ) {
+                                    if (compactHeaderShown) {
+                                        CompactEpisodesHeader(
+                                            title =
+                                                listOfNotNull(
+                                                    tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
+                                                    resumeState.selectedSeason?.let { stringResource(R.string.series_season_label, it) },
+                                                ).joinToString(" · "),
+                                            playLabel = playNextLabel,
+                                            onPlay = { playAnchor(false) },
+                                            playModifier =
+                                                Modifier
+                                                    .focusRequester(compactPlayFocusRequester)
+                                                    .onPreviewKeyEvent { event ->
+                                                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                                        when {
+                                                            event.key == Key.DirectionUp -> {
+                                                                scrollToTabRow()
+                                                                true
+                                                            }
+
+                                                            event.key == Key.DirectionDown && hasMultipleSeasons -> {
+                                                                seasonTabsFocusRequester.requestFocus()
+                                                                true
+                                                            }
+
+                                                            else -> {
+                                                                false
+                                                            }
+                                                        }
+                                                    },
+                                        )
+                                    }
+                                    if (hasMultipleSeasons) {
+                                        Box(
+                                            // Up from a season tab: Play next when the compact line is
+                                            // showing, else the section tab row (on screen with the hero).
+                                            modifier =
+                                                Modifier.onPreviewKeyEvent { event ->
+                                                    if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
+                                                        if (compactHeaderShown) {
+                                                            compactPlayFocusRequester.requestFocus()
+                                                        } else {
+                                                            tabRowFocusRequester.requestFocus()
+                                                        }
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                },
+                                        ) {
+                                            SeasonTabs(
+                                                seasons = sortedSeasons,
+                                                selectedSeason = resumeState.selectedSeason,
+                                                onSeasonSelected = {
+                                                    // EpisodeResumeState.selectSeason is itself guarded to
+                                                    // a no-op when `it` is already selected: focus-follow-
+                                                    // select (see SeasonTab) fires this the instant D-pad
+                                                    // focus *enters* the row, landing on the already-
+                                                    // selected tab — a no-op season change that used to
+                                                    // still flip hasManuallySelectedSeason and write
+                                                    // selectedSeasonNumber to its own value. That write was
+                                                    // enough to recompose this row out from under the very
+                                                    // focus-search transaction bringing it in, which is why
+                                                    // the first Up/Down into the tabs always missed them and
+                                                    // landed on the episode list instead. Skipping the no-op
+                                                    // leaves that transaction undisturbed; a real season
+                                                    // change (left/right to a different tab) still goes
+                                                    // through normally.
+                                                    if (!awaitingFirstFocus) resumeState.selectSeason(it)
+                                                },
+                                                entryFocusRequester = seasonTabsFocusRequester,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            // Gap before the episode cards, as its own plain (non-sticky) item —
+                            // inside the stickyHeader above, it would pin along with the header and
+                            // show cards through its unbacked height as they scroll past.
+                            item(key = "season_tabs_gap", contentType = "spacer") {
+                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                            }
+
+                            val currentSeasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: emptyList()
+                            itemsIndexed(currentSeasonEpisodes, key = {
+                                _,
+                                episode,
+                                ->
+                                episode.id
+                            }, contentType = { _, _ -> "episode" }) { index, episode ->
+                                val isContinueWatching = episode.id == resumeState.resumeEpisodeId
+                                EpisodeCard(
+                                    episode = episode,
+                                    cardStyle = episodeCardStyle,
+                                    isContinueWatching = isContinueWatching,
+                                    watchProgress = episodeProgress[episode.id] ?: 0f,
+                                    isWatched = episode.id in watchedEpisodeIds,
+                                    focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
+                                    modifier =
+                                        Modifier
+                                            .onPreviewKeyEvent { event ->
+                                                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                                when {
+                                                    // Left from any episode, or Up from the first, goes
+                                                    // back to the episodes header in one press (Phase 6,
+                                                    // F-E-2) — an explicit request, since plain focus
+                                                    // search into the season tabs grabbed the wrong pill
+                                                    // and, via its focus-follow-select, changed season.
+                                                    event.key == Key.DirectionLeft || (index == 0 && event.key == Key.DirectionUp) -> {
+                                                        focusEpisodesHeader()
+                                                        true
+                                                    }
+
+                                                    // Right stays put: arrows move focus, they don't change
+                                                    // season — that is the season tabs' job, one Left away.
+                                                    event.key == Key.DirectionRight -> {
+                                                        true
+                                                    }
+
+                                                    else -> {
+                                                        false
+                                                    }
+                                                }
+                                            }.padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                                            .onFocusChanged { if (it.hasFocus) focusInSection = true }
+                                            .then(
+                                                if (episode.id == reopenedEpisodeId) {
+                                                    Modifier.focusRequester(reopenedEpisodeFocusRequester)
+                                                } else {
+                                                    Modifier
+                                                },
+                                            ).testTag("episode_${episode.id}"),
+                                    onClick = {
+                                        selectedEpisode = episode
                                     },
-                                    titleSmallStyle = scaledStyles.titleSmall,
-                                    bodySmallStyle = scaledStyles.bodySmall,
-                                    topFocusModifier = upToTabRow,
-                                    categoryButtonFocusRequester = returnFocus.requesterFor(RETURN_CATEGORY),
+                                    onLongPress = {
+                                        // Manual watched/unwatched mark (Phase 6,
+                                        // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic:
+                                        // flips this episode's own badge immediately rather than
+                                        // waiting on the write; the full re-read after it lands is what
+                                        // catches a TMDB sibling this mark just completed too (Phase 5)
+                                        // and restores the resume bar on an unmark — a single-item
+                                        // patch would miss both.
+                                        val nowWatched = episode.id !in watchedEpisodeIds
+                                        watchedEpisodeIds =
+                                            if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                                        watchedToggleScope.launch {
+                                            mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                                            refreshEpisodeWatchState()
+                                        }
+                                    },
                                 )
                             }
                         }
-                    }
 
-                    SeriesDetailTab.SIMILAR -> {
-                        item(key = "tab-section-similar") {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.md.scaled(scale))
-                                        .focusRestorer()
-                                        .then(upToTabRow)
-                                        .onFocusChanged { if (it.hasFocus) focusInSection = true },
-                            ) {
-                                RelatedTitlesRow(
-                                    title = stringResource(R.string.details_more_like_this),
-                                    items = relatedTitles.moreLikeThis,
-                                    onItemClick = { item ->
-                                        returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
-                                        onRelatedTitleSelected(item)
-                                    },
-                                    focusTargetId = relatedReturnId,
-                                    focusTargetModifier =
-                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_RELATED_PREFIX + relatedReturnId),
-                                    modifier = Modifier.padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale)),
-                                )
+                        SeriesDetailTab.CAST -> {
+                            item(key = "tab-section-cast") {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                                            .padding(top = Spacing.md.scaled(scale))
+                                            .focusRestorer()
+                                            .onFocusChanged { if (it.hasFocus) focusInSection = true },
+                                ) {
+                                    SeriesCastTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                                }
                             }
                         }
-                    }
 
-                    null -> {
-                        Unit
+                        SeriesDetailTab.DETAILS -> {
+                            item(key = "tab-section-details") {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                                            .padding(top = Spacing.md.scaled(scale))
+                                            .focusRestorer()
+                                            .onFocusChanged { if (it.hasFocus) focusInSection = true },
+                                ) {
+                                    SeriesDetailsTabContent(
+                                        seriesDetail = seriesDetail,
+                                        seriesName = seriesName,
+                                        providerName = providerName,
+                                        categoryName = categoryName,
+                                        alternateStreams = alternateStreams,
+                                        streamNameFocusRequester = streamNameFocusRequester,
+                                        onStreamSelected = {
+                                            streamSwitchSignal++
+                                            onAlternateStreamSelected(it)
+                                        },
+                                        onStreamFocusedChanged = { streamRowFocused = it },
+                                        onCategorySelected = {
+                                            returnFocus.leaveFrom(RETURN_CATEGORY)
+                                            onCategorySelected()
+                                        },
+                                        topFocusModifier = upToTabRow,
+                                        categoryButtonFocusRequester = returnFocus.requesterFor(RETURN_CATEGORY),
+                                    )
+                                }
+                            }
+                        }
+
+                        SeriesDetailTab.SIMILAR -> {
+                            item(key = "tab-section-similar") {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.md.scaled(scale))
+                                            .focusRestorer()
+                                            .then(upToTabRow)
+                                            .onFocusChanged { if (it.hasFocus) focusInSection = true },
+                                ) {
+                                    // No heading: the Similar tab above already says what this row is.
+                                    RelatedTitlesRow(
+                                        title = null,
+                                        items = relatedTitles.moreLikeThis,
+                                        onItemClick = { item ->
+                                            returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
+                                            onRelatedTitleSelected(item)
+                                        },
+                                        focusTargetId = relatedReturnId,
+                                        focusTargetModifier =
+                                            Modifier.navReturnFocusTarget(returnFocus, RETURN_RELATED_PREFIX + relatedReturnId),
+                                        modifier = Modifier.padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale)),
+                                    )
+                                }
+                            }
+                        }
+
+                        null -> {
+                            Unit
+                        }
                     }
                 }
             }
@@ -1388,9 +1385,9 @@ private fun SeriesCastTabContent(cast: String) {
 }
 
 /**
- * Details tab: diagnostics rather than headline facts — provider name, the stream-name picker,
- * TMDB id, director, and the category button. Cast lives in its own tab
- * ([SeriesCastTabContent]), not repeated here.
+ * Details tab: diagnostics rather than headline facts, one label/value row each — the stream-name
+ * picker, TMDB id, director and the source last — then the category button. Cast lives in its own
+ * tab ([SeriesCastTabContent]), not repeated here.
  */
 @Composable
 private fun SeriesDetailsTabContent(
@@ -1403,8 +1400,6 @@ private fun SeriesDetailsTabContent(
     onStreamSelected: (MediaItem) -> Unit,
     onStreamFocusedChanged: (Boolean) -> Unit,
     onCategorySelected: () -> Unit,
-    titleSmallStyle: TextStyle,
-    bodySmallStyle: TextStyle,
     // D-pad Up from this section's topmost focusable row back to the tab row (see `upToTabRow`
     // at the call site). The picker below is normally that row, but it renders as plain
     // non-focusable Text when there are no alternate streams to switch between — in that case
@@ -1412,41 +1407,29 @@ private fun SeriesDetailsTabContent(
     topFocusModifier: Modifier = Modifier,
     categoryButtonFocusRequester: FocusRequester? = null,
 ) {
-    val scale = LocalUiScale.current
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = providerName,
-            style = titleSmallStyle,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-        StreamNamePicker(
-            currentName = seriesName,
-            alternates = alternateStreams,
-            onSelect = onStreamSelected,
-            textStyle = bodySmallStyle,
-            focusRequester = streamNameFocusRequester,
-            onFocusedChanged = onStreamFocusedChanged,
-            modifier = topFocusModifier,
-        )
-        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-        Text(
-            text = stringResource(R.string.details_tmdb_format, seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-            style = bodySmallStyle,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-
-        seriesDetail.metadata.director?.let { director ->
-            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = stringResource(R.string.movie_director_format, director),
-                style = bodySmallStyle,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
+            StreamNamePicker(
+                currentName = seriesName,
+                alternates = alternateStreams,
+                onSelect = onStreamSelected,
+                focusRequester = streamNameFocusRequester,
+                onFocusedChanged = onStreamFocusedChanged,
+                modifier = topFocusModifier,
             )
         }
+        TvDetailRow(
+            label = stringResource(R.string.details_label_tmdb),
+            value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+        )
+        seriesDetail.metadata.director?.let { TvDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+        TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {
-            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+            Spacer(modifier = Modifier.height(Spacing.sm))
             CinemaSecondaryButton(
                 onClick = onCategorySelected,
                 text = stringResource(R.string.details_category_format, categoryName),
@@ -1564,25 +1547,26 @@ private const val PLAY_LABEL_TITLE_MAX = 40
 private const val NEXT_UP_SHADOW_BLUR = 8f
 
 /**
- * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
- * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
- * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ * The stream name, the value of the Details tab's "Stream name" row. Plain text when [alternates]
+ * is empty — most titles have no other cached instance. Becomes a tappable dropdown once there is
+ * at least one other local catalogue entry sharing the same TMDB id, letting the user switch to
+ * that instance's detail screen.
  */
 @Composable
 private fun StreamNamePicker(
     currentName: String,
     alternates: List<MediaItem>,
     onSelect: (MediaItem) -> Unit,
-    textStyle: TextStyle,
     focusRequester: FocusRequester,
     onFocusedChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val textColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+    val textStyle = MaterialTheme.typography.bodyMedium
+    val textColor = CinemaTextPrimary
 
     if (alternates.isEmpty()) {
         Text(
-            text = stringResource(R.string.details_stream_name_format, currentName),
+            text = currentName,
             style = textStyle,
             color = textColor,
         )
@@ -1625,7 +1609,7 @@ private fun StreamNamePicker(
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
             Text(
-                text = stringResource(R.string.details_stream_name_format, currentName),
+                text = currentName,
                 style = textStyle,
                 color = textColor,
             )
@@ -1677,15 +1661,6 @@ private fun EpisodeDetailPanel(
     val extension = episode.extension ?: "mp4"
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    // Only the diagnostics block below the hero (provider name, tmdb id, cast, director,
-    // container, air date, bitrate) still needs its own styles — the hero draws its own text
-    // directly off MaterialTheme.typography, matching TvDetailHero's contract.
-    val detailScaledStyles =
-        remember(scale, typography) {
-            object {
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            }
-        }
 
     val playButtonFocusRequester = remember { FocusRequester() }
 
@@ -1721,7 +1696,6 @@ private fun EpisodeDetailPanel(
     }
 
     val hasResume = resumePositionMs > 0L
-    val communityRatingLabel = stringResource(R.string.details_community_rating)
     val seasonEpisodeLabel =
         listOfNotNull(
             episode.seasonNumber?.let { stringResource(R.string.series_season_label, it) },
@@ -1736,6 +1710,7 @@ private fun EpisodeDetailPanel(
     val metaLine =
         listOfNotNull(
             seasonEpisodeLabel.ifBlank { null },
+            (episode.metadata.rating ?: seriesDetail.metadata.rating)?.let { ratingOutOfTen(it) },
             contentRating,
             episode.metadata.duration
                 ?.takeIf(::hasMeaningfulDuration)
@@ -1744,210 +1719,214 @@ private fun EpisodeDetailPanel(
             seriesDetail.metadata.genre,
         )
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                    when (event.key) {
-                        Key.MediaNext -> {
-                            nextEpisode?.let {
-                                arrivedVia = EpisodeStep.NEXT
-                                onNavigate(it)
-                                true
-                            } ?: false
-                        }
-
-                        Key.MediaPrevious -> {
-                            previousEpisode?.let {
-                                arrivedVia = EpisodeStep.PREVIOUS
-                                onNavigate(it)
-                                true
-                            } ?: false
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                }.verticalScroll(rememberScrollState())
-                .focusable(),
-    ) {
-        // Full-bleed, edge to edge — the series' own backdrop, since an episode has no backdrop
-        // art of its own (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md Phase 5: "no new screen").
-        // The provider's title often only repeats the show and the number ("EN - Show - S01E22").
-        val heroTitle = episodeOwnTitle(episode.title).ifBlank { stringResource(R.string.series_episode_label, episode.episodeNumber) }
-        TvDetailHero(
-            title = heroTitle,
-            backdropUrl = backdropUrl,
-            logoUrl = null,
-            titleFallback = {
-                Text(
-                    text = heroTitle,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = CinemaTextPrimary,
-                )
-            },
-            metaLine = metaLine,
-            scoreChips =
-                (episode.metadata.rating ?: seriesDetail.metadata.rating)?.let { rating ->
-                    { ScoreChip(value = formatRating(rating), label = communityRatingLabel) }
-                },
-            plot = episode.metadata.plot,
-        ) {
-            if (hasResume) {
-                val resumeTimeText = formatTime(resumePositionMs)
-                CinemaPrimaryButton(
-                    onClick = { onPlay(episode.id, episode.title, extension, false) },
-                    text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                    modifier = Modifier.focusRequester(playButtonFocusRequester),
-                )
-                CinemaIconButton(
-                    onClick = { onPlay(episode.id, episode.title, extension, true) },
-                    icon = {
-                        Icon(
-                            imageVector = CinemaIcons.Replay,
-                            contentDescription = stringResource(R.string.movie_start_beginning),
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                )
-            } else {
-                CinemaPrimaryButton(
-                    onClick = { onPlay(episode.id, episode.title, extension, false) },
-                    text = stringResource(R.string.series_play_episode_action),
-                    modifier = Modifier.focusRequester(playButtonFocusRequester),
-                )
-            }
-            // Step to the adjacent episode without leaving this screen. These used to be a text
-            // hint for the remote's transport keys, which the Shield and Bravia remotes don't
-            // have — so they read as buttons that did nothing. The key handler above still works
-            // for remotes that do have them.
-            previousEpisode?.let {
-                CinemaIconButton(
-                    onClick = {
-                        arrivedVia = EpisodeStep.PREVIOUS
-                        onNavigate(it)
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = CinemaIcons.SkipPrevious,
-                            contentDescription = stringResource(R.string.player_prev_episode),
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                    modifier = Modifier.focusRequester(previousButtonFocusRequester),
-                )
-            }
-            nextEpisode?.let {
-                CinemaIconButton(
-                    onClick = {
-                        arrivedVia = EpisodeStep.NEXT
-                        onNavigate(it)
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = CinemaIcons.SkipNext,
-                            contentDescription = stringResource(R.string.player_next_episode),
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                    modifier = Modifier.focusRequester(nextButtonFocusRequester),
-                )
-            }
-            // The trailer is the show's, not this episode's — Xtream and Jellyfin only ever
-            // carry one per series.
-            seriesDetail.metadata.trailerUrl?.let { trailer ->
-                val trailerContext = LocalContext.current
-                CinemaIconButton(
-                    onClick = { openExternalUrl(trailerContext, trailer) },
-                    icon = {
-                        Icon(
-                            imageVector = CinemaIcons.Movie,
-                            contentDescription = stringResource(R.string.details_watch_trailer_description),
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                )
-            }
-        }
-
-        // Diagnostics, not headline facts — provider name, tmdb id, cast/director, container,
-        // air date, bitrate. Plain column, no GlassPanel, same shape as the series list's own
-        // details block below its hero.
+    val panelScroll = rememberScrollState()
+    KeepHeroInView(scrollToTop = { panelScroll.animateScrollTo(0) }) { heroModifier ->
         Column(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                    .padding(top = Spacing.xl.scaled(scale), bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
+                    .fillMaxSize()
+                    .onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        when (event.key) {
+                            Key.MediaNext -> {
+                                nextEpisode?.let {
+                                    arrivedVia = EpisodeStep.NEXT
+                                    onNavigate(it)
+                                    true
+                                } ?: false
+                            }
+
+                            Key.MediaPrevious -> {
+                                previousEpisode?.let {
+                                    arrivedVia = EpisodeStep.PREVIOUS
+                                    onNavigate(it)
+                                    true
+                                } ?: false
+                            }
+
+                            else -> {
+                                false
+                            }
+                        }
+                    }.verticalScroll(panelScroll)
+                    .focusable(),
         ) {
-            Text(
-                text = providerName,
-                style = detailScaledStyles.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-            Text(
-                text =
-                    stringResource(
-                        R.string.details_tmdb_format,
-                        episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
-                    ),
-                style = detailScaledStyles.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-
-            val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
-            cast?.let {
-                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                Text(
-                    text = stringResource(R.string.movie_cast_format, it),
-                    style = detailScaledStyles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            // Full-bleed, edge to edge — the series' own backdrop, since an episode has no backdrop
+            // art of its own (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md Phase 5: "no new screen").
+            // The provider's title often only repeats the show and the number ("EN - Show - S01E22").
+            val heroTitle = episodeOwnTitle(episode.title).ifBlank { stringResource(R.string.series_episode_label, episode.episodeNumber) }
+            TvDetailHero(
+                title = heroTitle,
+                backdropUrl = backdropUrl,
+                logoUrl = null,
+                titleFallback = {
+                    Text(
+                        text = heroTitle,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = CinemaTextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                metaLine = metaLine,
+                plot = episode.metadata.plot,
+                modifier = heroModifier,
+            ) {
+                if (hasResume) {
+                    val resumeTimeText = formatTime(resumePositionMs)
+                    CinemaPrimaryButton(
+                        onClick = { onPlay(episode.id, episode.title, extension, false) },
+                        text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester),
+                    )
+                    CinemaIconButton(
+                        onClick = { onPlay(episode.id, episode.title, extension, true) },
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.Replay,
+                                contentDescription = stringResource(R.string.movie_start_beginning),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                    )
+                } else {
+                    CinemaPrimaryButton(
+                        onClick = { onPlay(episode.id, episode.title, extension, false) },
+                        text = stringResource(R.string.series_play_episode_action),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester),
+                    )
+                }
+                // Step to the adjacent episode without leaving this screen. These used to be a text
+                // hint for the remote's transport keys, which the Shield and Bravia remotes don't
+                // have — so they read as buttons that did nothing. The key handler above still works
+                // for remotes that do have them.
+                previousEpisode?.let {
+                    CinemaIconButton(
+                        onClick = {
+                            arrivedVia = EpisodeStep.PREVIOUS
+                            onNavigate(it)
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.SkipPrevious,
+                                contentDescription = stringResource(R.string.player_prev_episode),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                        modifier = Modifier.focusRequester(previousButtonFocusRequester),
+                    )
+                }
+                nextEpisode?.let {
+                    CinemaIconButton(
+                        onClick = {
+                            arrivedVia = EpisodeStep.NEXT
+                            onNavigate(it)
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.SkipNext,
+                                contentDescription = stringResource(R.string.player_next_episode),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                        modifier = Modifier.focusRequester(nextButtonFocusRequester),
+                    )
+                }
+                // The trailer is the show's, not this episode's — Xtream and Jellyfin only ever
+                // carry one per series.
+                seriesDetail.metadata.trailerUrl?.let { trailer ->
+                    val trailerContext = LocalContext.current
+                    CinemaIconButton(
+                        onClick = { openExternalUrl(trailerContext, trailer) },
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.Movie,
+                                contentDescription = stringResource(R.string.details_watch_trailer_description),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                    )
+                }
             }
 
-            val director = episode.metadata.director ?: seriesDetail.metadata.director
-            director?.let {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+            // Diagnostics, not headline facts — provider name, tmdb id, cast/director, container,
+            // air date, bitrate. Plain column, no GlassPanel, same shape as the series list's own
+            // details block below its hero.
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                        .padding(top = Spacing.xl.scaled(scale), bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
+            ) {
                 Text(
-                    text = stringResource(R.string.movie_director_format, it),
-                    style = detailScaledStyles.bodySmall,
+                    text =
+                        stringResource(
+                            R.string.details_tmdb_format,
+                            episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                        ),
+                    style = typography.bodyMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
-            }
 
-            episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
+                val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
+                cast?.let {
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.movie_cast_format, it),
+                        style = typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                val director = episode.metadata.director ?: seriesDetail.metadata.director
+                director?.let {
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.movie_director_format, it),
+                        style = typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
+
+                episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = "${stringResource(R.string.tech_container_label)} ${ext.uppercase()}",
+                        style = typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
+
+                episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.series_aired_format, it),
+                        style = typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
+
+                episode.metadata.bitrate?.takeIf { it > 0 }?.let {
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.series_bitrate_format, it),
+                        style = typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
+
+                // The source last and labelled: alone at the top it read as a heading (TV UI audit, #12).
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
-                    text = "${stringResource(R.string.tech_container_label)} ${ext.uppercase()}",
-                    style = detailScaledStyles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                )
-            }
-
-            episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = stringResource(R.string.series_aired_format, it),
-                    style = detailScaledStyles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                )
-            }
-
-            episode.metadata.bitrate?.takeIf { it > 0 }?.let {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = stringResource(R.string.series_bitrate_format, it),
-                    style = detailScaledStyles.bodySmall,
+                    text = "${stringResource(R.string.details_label_source)} $providerName",
+                    style = typography.bodyMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }
@@ -1959,6 +1938,9 @@ private fun EpisodeDetailPanel(
  * One row of season pills. D-pad left/right moves focus between them via Compose's default
  * focus search inside this Row — [SeasonTab] selects as soon as it receives focus, so that
  * movement alone switches the visible season, the TV equivalent of the mobile swipe.
+ *
+ * Drawn as smaller filled chips, not tabs: right under the section tabs (Episodes / Cast /
+ * Details), two rows of the same tab look read as two equal levels (TV UI audit, #13).
  */
 @Composable
 private fun SeasonTabs(
@@ -2041,7 +2023,6 @@ private fun SeasonTab(
     nextTabFocusRequester: FocusRequester?,
     entryFocusRequester: FocusRequester?,
 ) {
-    val scale = LocalUiScale.current
     var isFocused by remember { mutableStateOf(false) }
     val focusScale by animateFloatAsState(
         targetValue = if (isFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
@@ -2060,9 +2041,9 @@ private fun SeasonTab(
         if (isFocused) onSelected()
     }
 
-    // P5: the selected tab keeps the resting look and is marked by a bottom accent bar plus
+    // P5: the selected chip keeps the resting look and is marked by a bottom accent bar plus
     // accent text; only focus lifts the container.
-    val containerColor = if (isFocused) TvFocusTokens.focusedContainer else Color.Transparent
+    val containerColor = if (isFocused) TvFocusTokens.focusedContainer else TvFocusTokens.restingContainer
 
     val textColor =
         when {
@@ -2084,17 +2065,17 @@ private fun SeasonTab(
                     scaleY = focusScale
                 }.currentIndicator(
                     active = isSelected,
-                    shape = RoundedCornerShape(CornerRadius.medium),
+                    shape = SeasonChipShape,
                     edge = CurrentIndicatorEdge.Bottom,
                 ).background(
                     color = containerColor,
-                    shape = RoundedCornerShape(CornerRadius.medium),
+                    shape = SeasonChipShape,
                 ).then(
                     if (isFocused) {
                         Modifier.border(
                             width = TvFocusTokens.focusBorderWidth,
                             color = CinemaAccentLight,
-                            shape = RoundedCornerShape(CornerRadius.medium),
+                            shape = SeasonChipShape,
                         )
                     } else {
                         Modifier
@@ -2106,21 +2087,18 @@ private fun SeasonTab(
                 // those go through the explicit FocusRequester wiring above, bypassing search).
                 .onFocusChanged { isFocused = it.isFocused }
                 .clickable { onSelected() }
-                .padding(horizontal = Spacing.md.scaled(scale), vertical = Spacing.sm.scaled(scale)),
+                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = stringResource(R.string.series_season_label, season.seasonNumber),
-            style =
-                MaterialTheme.typography.titleMedium.copy(
-                    fontSize =
-                        MaterialTheme.typography.titleMedium.fontSize
-                            .scaled(scale),
-                ),
+            style = MaterialTheme.typography.bodyMedium,
             color = textColor,
         )
     }
 }
+
+private val SeasonChipShape = RoundedCornerShape(percent = 50)
 
 /**
  * Episode card styling, built once per list composition instead of once per card.
@@ -2182,8 +2160,7 @@ private fun EpisodeCard(
         remember(scale, typography) {
             object {
                 val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
                 val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
             }
         }
@@ -2277,7 +2254,7 @@ private fun EpisodeCard(
                     episode.metadata.plot?.let { plotText ->
                         Text(
                             text = plotText,
-                            style = cardScaledStyles.bodySmall,
+                            style = cardScaledStyles.bodyMedium,
                             color = CinemaTextSecondary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -2288,8 +2265,9 @@ private fun EpisodeCard(
                 episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                     Text(
-                        text = duration,
-                        style = cardScaledStyles.labelMedium,
+                        // "1h 33m", as everywhere else — not the provider's "01:33:44" (TV UI audit, X10).
+                        text = formatDuration(duration),
+                        style = cardScaledStyles.bodyMedium,
                         color = CinemaTextSecondary,
                     )
                 }
