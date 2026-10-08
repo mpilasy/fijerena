@@ -3,7 +3,7 @@
 ## Version: TV UI polish
 **Release Date:** 2026-10-08
 
-A pass over every TV screen (`docs/plans/20261007_tv-ui-audit-plan.md`):
+A pass over every TV screen (`docs/plans/archive/20261007_tv-ui-audit-plan.md`):
 - **Readable focus everywhere:** a focused row in any list (channels, films, shows, categories, search results, settings, pickers) lifts with a white outline and keeps white text — no more blue text on a blue fill.
 - **Channel logos whole:** logos are no longer cropped to fill the card ("WORLD NEWS", France 24).
 - **One header style:** browse, Search, Search the guide, the TV Guide, Settings, Sources, Edit Source, guide sources, Live sync, Device info and Diagnostics share one header — title, a short subtitle, icon actions on the right. Browse has one Refresh instead of two and no repeated source name.
