@@ -1,6 +1,6 @@
 # Phone home overhaul and bottom navigation
 
-**Status:** Done 2026-10-07 on the phone emulator: Phases 1–3 and 8, the header redesign, docs. Home dropped (Phases 4–6 built, not merged). Known gaps: a source with a native guide but no indexed guide has no TV Guide entry from the Live TV tab; a profile whose filters hide every live category still gets an (empty) Live TV tab; "Update failed" and the Jellyfin sign-in prompt not forced on the emulator.
+**Status:** Done 2026-10-07 on the phone emulator: Phases 1–3 and 8, the header redesign, docs. Home dropped (Phases 4–6 built, not merged). Known gaps: a source with a native guide but no indexed guide has no TV Guide entry from the Live TV tab; a profile whose filters hide every live category still gets an (empty) Live TV tab; "Update failed" and the Jellyfin sign-in prompt not forced on the emulator. On bears (user allowed it): the header shows "● bears (XTREAM) · Updating…" during a manual sync, then "Updated just now"; switching source takes about 4 s (jellyxtream) and 6 s (bears) from the tap to the new tab.
 (`20261007_tv-home-overhaul-plan.md`) adapted for touch, with a bottom navigation bar in place of
 the section cards. Implementation waits for the user's go-ahead.
 
