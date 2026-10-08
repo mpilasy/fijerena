@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
@@ -100,6 +102,8 @@ fun MobileGuideGrid(
     onChannelClick: (MediaItem) -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** Whether row [index]'s page has loaded: an empty row then says "No listings", not a blank bar. */
+    isRowLoaded: (index: Int) -> Boolean = { true },
 ) {
     val density = LocalDensity.current
     val zone = remember { ZoneId.systemDefault() }
@@ -196,6 +200,7 @@ fun MobileGuideGrid(
                     scrollState = scrollState,
                     nowEpochSeconds = nowEpochSeconds,
                     channelColumnWidth = channelColumnWidth,
+                    noListings = row.programs.isEmpty() && isRowLoaded(index),
                     onChannelClick = { onChannelClick(row.channel) },
                     onProgramClick = { program -> onProgramClick(program, row.channel) },
                 )
@@ -258,6 +263,7 @@ private fun GuideRow(
     scrollState: ScrollState,
     nowEpochSeconds: State<Long>,
     channelColumnWidth: Dp,
+    noListings: Boolean,
     onChannelClick: () -> Unit,
     onProgramClick: (EpgProgram) -> Unit,
 ) {
@@ -270,6 +276,18 @@ private fun GuideRow(
             onClick = onChannelClick,
             modifier = Modifier.width(channelColumnWidth).fillMaxHeight(),
         )
+        if (noListings) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+                Text(
+                    text = stringResource(R.string.epg_guide_no_listings_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.sm),
+                )
+            }
+            return@Row
+        }
         Box(
             modifier =
                 Modifier

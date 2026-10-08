@@ -261,6 +261,7 @@ fun MobileEpgGuideScreen(
                                         onChannelSelected(channel.id, channel.name, channel.categoryId)
                                     },
                                     onRowsVisible = viewModel::onRowsVisible,
+                                    isRowLoaded = state::isRowLoaded,
                                 )
                             }
                         }

@@ -108,8 +108,13 @@ class XmltvEpgService(
         val normalizedIdsList = ArrayList<String>(allXmltvChannels.size)
 
         for (ch in allXmltvChannels) {
-            byId[ch.xmltvId] = ch.xmltvId
-            byIdLower[ch.xmltvId.lowercase()] = ch.xmltvId
+            // A guide channel with no id can't be matched by id: under "" it caught every stream
+            // whose own guide id is empty (most of an Xtream panel's), before their names were
+            // tried — CY: ANT1 got that empty channel's (no) programmes instead of GR: ANT1's.
+            if (ch.xmltvId.isNotBlank()) {
+                byId[ch.xmltvId] = ch.xmltvId
+                byIdLower[ch.xmltvId.lowercase()] = ch.xmltvId
+            }
             byName[ch.displayName] = ch.xmltvId
             val norm = normalizeName(ch.displayName)
             if (norm.isNotEmpty()) {
@@ -456,7 +461,7 @@ class XmltvEpgService(
         normalizedNames: Array<String>,
         normalizedIds: Array<String>,
     ): String? {
-        val epgChannelId = item.providerData["epgChannelId"]
+        val epgChannelId = item.providerData["epgChannelId"]?.takeIf { it.isNotBlank() }
 
         // 1. Exact epgChannelId
         if (epgChannelId != null) {
