@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package org.njarasoa.fijerena.feature.contentselection
 
@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -131,6 +133,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
 import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
 import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
@@ -687,182 +690,186 @@ fun ContentTypeSelectionScreen(
                     )
                 } else {
                     // Section tiles, then the shelf (TV home overhaul plan, Phase 2). Scrollable: on a
-                    // lower-density TV the shelf can still run past the bottom edge.
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
-                            verticalAlignment = Alignment.CenterVertically,
-                            // Up from a row comes back to the tile focused last, not the one
-                            // geometrically above the card.
+                    // lower-density TV the shelf can still run past the bottom edge. Scrolled only as
+                    // far as the focused card needs: Android TV's default pulls it a third of the way
+                    // down, which at a large Text & grid size slid the tiles under the header on open.
+                    CompositionLocalProvider(LocalBringIntoViewSpec provides MinimalBringIntoView) {
+                        Column(
                             modifier =
                                 Modifier
-                                    .fillMaxWidth()
-                                    .focusRestorer(headerDownCard?.let(heroCardFocus::getValue) ?: FocusRequester.Default)
-                                    .focusGroup(),
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            val isDevMode = appSettings.isDevMode
-                            var cardIndex = 1
-                            val heroCardModifier: (String) -> Modifier = { key ->
-                                Modifier
-                                    .focusRequester(heroCardFocus.getValue(key))
-                                    .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
-                                    // Left on the first focusable tile and Right on the last stay
-                                    // put: with Live TV dimmed, the search left from Movies fell
-                                    // through to the shelf below.
-                                    .focusProperties {
-                                        if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
-                                        if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
-                                    }
-                            }
-                            if (ContentType.LIVE_TV in supportedContentTypes) {
-                                SectionTile(
-                                    title = stringResource(R.string.provider_live_tv_label),
-                                    icon = CinemaIcons.LiveTv,
-                                    categoryCounts = liveTvCounts,
-                                    showCount = isDevMode,
-                                    showLivePulse = !liveTvEmpty,
-                                    emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
-                                    gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                                    onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .then(heroCardModifier(RETURN_LIVE_TV))
-                                            .staggeredEntrance(cardIndex++)
-                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
-                                )
-                            }
-
-                            if (ContentType.MOVIES in supportedContentTypes) {
-                                SectionTile(
-                                    title = stringResource(R.string.provider_movies_label),
-                                    icon = CinemaIcons.Movie,
-                                    categoryCounts = moviesCounts,
-                                    showCount = isDevMode,
-                                    gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                                    onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .then(heroCardModifier(RETURN_MOVIES))
-                                            .staggeredEntrance(cardIndex++)
-                                            .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
-                                )
-                            }
-
-                            if (ContentType.TV_SHOWS in supportedContentTypes) {
-                                SectionTile(
-                                    title = stringResource(R.string.provider_tv_shows_label),
-                                    icon = CinemaIcons.Tv,
-                                    categoryCounts = tvShowsCounts,
-                                    showCount = isDevMode,
-                                    gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                                    onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .then(heroCardModifier(RETURN_TV_SHOWS))
-                                            .staggeredEntrance(cardIndex++)
-                                            .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
-                                )
-                            }
-                        }
-
-                        if (continueWatchingItems.isNotEmpty()) {
-                            TvContinueWatchingShelf(
-                                items = continueWatchingItems,
-                                firstItemFocus = shelfFirstFocus,
-                                onItemSelected = { item ->
-                                    leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
-                                },
-                                listState = shelfListState,
-                                itemModifier = { item ->
-                                    Modifier
-                                        .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
-                                        .then(artOnFocus(item.thumbnailUrl))
-                                },
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                                verticalAlignment = Alignment.CenterVertically,
+                                // Up from a row comes back to the tile focused last, not the one
+                                // geometrically above the card.
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(top = Spacing.xl.scaled(scale)),
-                            )
-                        }
-
-                        if (liveRowEntries.isNotEmpty()) {
-                            TvLiveRow(
-                                entries = liveRowEntries,
-                                nowPlaying = liveNowPlaying,
-                                onEntrySelected = { entry ->
-                                    val listId =
-                                        if (entry.fromFavorites) {
-                                            CategoryViewModel.FAVORITES_CATEGORY_ID
-                                        } else {
-                                            CategoryViewModel.RECENT_CATEGORY_ID
+                                        .focusRestorer(headerDownCard?.let(heroCardFocus::getValue) ?: FocusRequester.Default)
+                                        .focusGroup(),
+                            ) {
+                                val isDevMode = appSettings.isDevMode
+                                var cardIndex = 1
+                                val heroCardModifier: (String) -> Modifier = { key ->
+                                    Modifier
+                                        .focusRequester(heroCardFocus.getValue(key))
+                                        .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
+                                        // Left on the first focusable tile and Right on the last stay
+                                        // put: with Live TV dimmed, the search left from Movies fell
+                                        // through to the shelf below.
+                                        .focusProperties {
+                                            if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
+                                            if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
                                         }
-                                    leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.id) { onLiveChannelSelected(entry.item.id, listId) }
-                                },
-                                firstItemFocus = liveRowFirstFocus,
-                                listState = liveRowListState,
-                                itemModifier = { entry ->
-                                    Modifier
-                                        .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
-                                        .then(artOnFocus(entry.item.thumbnailUrl))
-                                },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.xl.scaled(scale)),
-                            )
-                        }
+                                }
+                                if (ContentType.LIVE_TV in supportedContentTypes) {
+                                    SectionTile(
+                                        title = stringResource(R.string.provider_live_tv_label),
+                                        icon = CinemaIcons.LiveTv,
+                                        categoryCounts = liveTvCounts,
+                                        showCount = isDevMode,
+                                        showLivePulse = !liveTvEmpty,
+                                        emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
+                                        gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
+                                        onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .then(heroCardModifier(RETURN_LIVE_TV))
+                                                .staggeredEntrance(cardIndex++)
+                                                .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
+                                    )
+                                }
 
-                        if (favoriteMovies.isNotEmpty()) {
-                            TvFavoritesRow(
-                                title = stringResource(R.string.home_favorite_movies),
-                                items = favoriteMovies,
-                                thumbnailType = ThumbnailContentType.MOVIE,
-                                onItemSelected = { item ->
-                                    leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
-                                },
-                                firstItemFocus = favoriteMoviesFirstFocus,
-                                listState = favoriteMoviesListState,
-                                itemModifier = { item ->
-                                    Modifier
-                                        .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
-                                        .then(artOnFocus(item.thumbnailUrl))
-                                },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.xl.scaled(scale)),
-                            )
-                        }
+                                if (ContentType.MOVIES in supportedContentTypes) {
+                                    SectionTile(
+                                        title = stringResource(R.string.provider_movies_label),
+                                        icon = CinemaIcons.Movie,
+                                        categoryCounts = moviesCounts,
+                                        showCount = isDevMode,
+                                        gradientColors = listOf(CinemaAccent, CinemaAccentDark),
+                                        onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .then(heroCardModifier(RETURN_MOVIES))
+                                                .staggeredEntrance(cardIndex++)
+                                                .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
+                                    )
+                                }
 
-                        if (favoriteShows.isNotEmpty()) {
-                            TvFavoritesRow(
-                                title = stringResource(R.string.home_favorite_shows),
-                                items = favoriteShows,
-                                thumbnailType = ThumbnailContentType.TV_SHOW,
-                                onItemSelected = { item ->
-                                    leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
-                                },
-                                firstItemFocus = favoriteShowsFirstFocus,
-                                listState = favoriteShowsListState,
-                                itemModifier = { item ->
-                                    Modifier
-                                        .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
-                                        .then(artOnFocus(item.thumbnailUrl))
-                                },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.xl.scaled(scale)),
-                            )
+                                if (ContentType.TV_SHOWS in supportedContentTypes) {
+                                    SectionTile(
+                                        title = stringResource(R.string.provider_tv_shows_label),
+                                        icon = CinemaIcons.Tv,
+                                        categoryCounts = tvShowsCounts,
+                                        showCount = isDevMode,
+                                        gradientColors = listOf(CinemaAccentLight, CinemaAccent),
+                                        onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .then(heroCardModifier(RETURN_TV_SHOWS))
+                                                .staggeredEntrance(cardIndex++)
+                                                .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
+                                    )
+                                }
+                            }
+
+                            if (continueWatchingItems.isNotEmpty()) {
+                                TvContinueWatchingShelf(
+                                    items = continueWatchingItems,
+                                    firstItemFocus = shelfFirstFocus,
+                                    onItemSelected = { item ->
+                                        leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
+                                    },
+                                    listState = shelfListState,
+                                    itemModifier = { item ->
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
+                                            .then(artOnFocus(item.thumbnailUrl))
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
+
+                            if (liveRowEntries.isNotEmpty()) {
+                                TvLiveRow(
+                                    entries = liveRowEntries,
+                                    nowPlaying = liveNowPlaying,
+                                    onEntrySelected = { entry ->
+                                        val listId =
+                                            if (entry.fromFavorites) {
+                                                CategoryViewModel.FAVORITES_CATEGORY_ID
+                                            } else {
+                                                CategoryViewModel.RECENT_CATEGORY_ID
+                                            }
+                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.id) { onLiveChannelSelected(entry.item.id, listId) }
+                                    },
+                                    firstItemFocus = liveRowFirstFocus,
+                                    listState = liveRowListState,
+                                    itemModifier = { entry ->
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
+                                            .then(artOnFocus(entry.item.thumbnailUrl))
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
+
+                            if (favoriteMovies.isNotEmpty()) {
+                                TvFavoritesRow(
+                                    title = stringResource(R.string.home_favorite_movies),
+                                    items = favoriteMovies,
+                                    thumbnailType = ThumbnailContentType.MOVIE,
+                                    onItemSelected = { item ->
+                                        leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
+                                    },
+                                    firstItemFocus = favoriteMoviesFirstFocus,
+                                    listState = favoriteMoviesListState,
+                                    itemModifier = { item ->
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
+                                            .then(artOnFocus(item.thumbnailUrl))
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
+
+                            if (favoriteShows.isNotEmpty()) {
+                                TvFavoritesRow(
+                                    title = stringResource(R.string.home_favorite_shows),
+                                    items = favoriteShows,
+                                    thumbnailType = ThumbnailContentType.TV_SHOW,
+                                    onItemSelected = { item ->
+                                        leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
+                                    },
+                                    firstItemFocus = favoriteShowsFirstFocus,
+                                    listState = favoriteShowsListState,
+                                    itemModifier = { item ->
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
+                                            .then(artOnFocus(item.thumbnailUrl))
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
                         }
                     }
                 }
