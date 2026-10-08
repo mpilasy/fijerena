@@ -609,8 +609,11 @@ private const val SUBTITLE_GAP_FRACTION = 0.02f
 /** The full-screen channel panel's share of the width, as the preview docks it. */
 private const val CHANNEL_PANEL_WIDTH_FRACTION = 0.34f
 
-/** The glass the channel flyouts had over video, kept for the panel. */
-private const val CHANNEL_PANEL_BACKGROUND_ALPHA = 0.5f
+/**
+ * The panel's surface over video: near-opaque, so its rows read over any picture (at 0.5 a bright
+ * frame showed through and the rows' text was lost in it).
+ */
+private const val CHANNEL_PANEL_BACKGROUND_ALPHA = 0.9f
 
 /** Keys the "Up next" card's buttons, and the error's Retry and Back, get while they hold focus. */
 private val UP_NEXT_CARD_KEYS =
