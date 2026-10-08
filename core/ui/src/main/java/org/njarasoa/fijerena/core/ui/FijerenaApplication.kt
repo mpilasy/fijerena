@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.ui
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
 import android.util.Log
@@ -44,6 +45,13 @@ import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 class FijerenaApplication :
     Application(),
     SingletonImageLoader.Factory {
+    // The application context in the app's chosen language too, not only the activities: text
+    // looked up through it (ViewModels, services) stayed in the phone's language — Recent,
+    // Favorites, Recent Categories in English on a Malagasy app (phone UI audit, spot check).
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(LocaleManager.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
         // First, so anything that goes wrong from here on — startup included — is recorded.

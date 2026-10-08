@@ -40,5 +40,15 @@ object LocaleManager {
         language: String,
     ) {
         AppSettings(context).language = language
+        // The application context's resources follow at once, so text looked up through it
+        // (ViewModels) switches with the recreated activity rather than at the next launch.
+        val resources = context.applicationContext.resources
+        val config = Configuration(resources.configuration)
+        val locale = Locale.forLanguageTag(language)
+        Locale.setDefault(locale)
+        config.setLocale(locale)
+        config.setLayoutDirection(locale)
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(config, resources.displayMetrics)
     }
 }

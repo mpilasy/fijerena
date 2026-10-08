@@ -125,6 +125,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
@@ -1223,7 +1224,7 @@ private fun CategoryChipRow(
                     LeadingIconTab(
                         selected = category.id == selectedCategoryId,
                         onClick = { onCategorySelected(category.id) },
-                        text = { Text(text = category.name, maxLines = 1) },
+                        text = { Text(text = virtualCategoryName(category), maxLines = 1) },
                         icon = {
                             Icon(
                                 imageVector = virtualCategoryIcon(category.id),
@@ -1270,6 +1271,20 @@ private fun CategoryChipRow(
         }
     }
 }
+
+/**
+ * A virtual category's name in the app's current language. The ViewModel names them when the list
+ * loads and keeps them, so after a language change in Settings they stayed in the old one.
+ */
+@Composable
+private fun virtualCategoryName(category: MediaCategory): String =
+    when (category.id) {
+        CategoryViewModel.RECENT_CATEGORY_ID -> stringResource(R.string.category_recent_label)
+        CategoryViewModel.FAVORITES_CATEGORY_ID -> stringResource(R.string.settings_import_favorites_label)
+        CategoryViewModel.FAVORITE_CATEGORIES_ID -> stringResource(R.string.category_favorite_categories_label)
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID -> stringResource(R.string.category_recent_categories_label)
+        else -> category.name
+    }
 
 /** The icon that marks a virtual category as a mode of browsing — the same ones as on the TV. */
 @Composable
