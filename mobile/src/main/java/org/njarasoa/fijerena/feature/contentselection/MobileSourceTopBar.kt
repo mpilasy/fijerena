@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -218,13 +219,8 @@ fun MobileSourceTopBar(
     }
 
     val appName = stringResource(R.string.login_app_name)
-    val displayName =
-        buildString {
-            append(source?.name.orEmpty().ifEmpty { appName })
-            if (appSettings.isDevMode && source != null) {
-                append(" (${source.type})")
-            }
-        }
+    // The name alone: developer mode's type suffix cut the status short; the picker still shows it.
+    val displayName = source?.name.orEmpty().ifEmpty { appName }
     // The picker only opens with two or more sources; with one, the line opens the failure's reason.
     val hasPicker = allProviders.size > 1
     val onSourceLineClick: (() -> Unit)? =
@@ -385,8 +381,9 @@ fun MobileSourceTopBar(
                     }
                 }
             },
+            // The sole action: the app's dialog button, as other one-button dialogs (OK), not a text link.
             confirmButton = {
-                CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
+                CinemaDialogActionButton(onClick = { showProviderPicker = false }) {
                     Text(stringResource(R.string.common_close))
                 }
             },
