@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -38,7 +37,6 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -62,26 +60,21 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * guide source's row (docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b).
  */
 
-/** "Guide data maintenance" card (Backup & storage): the guide database's state; OK opens [GuideMaintenancePane]. */
+/** "Guide data maintenance" row (Backup & storage): the guide database's state; OK opens [GuideMaintenancePane]. */
 @Composable
-fun GuideMaintenanceCard(
+fun GuideMaintenanceRow(
     viewModel: EpgManagementViewModel,
     onOpen: () -> Unit,
     focusRequester: FocusRequester? = null,
 ) {
-    val scale = LocalUiScale.current
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        SettingsRow(
-            title = stringResource(R.string.settings_guide_maintenance_title),
-            description = stringResource(R.string.epg_maintenance_desc_tv),
-            value = databaseStatusText(indexState),
-            scope = SettingsScope.DEVICE,
-            onClick = onOpen,
-            modifier = Modifier.padding(Spacing.md.scaled(scale)),
-            focusRequester = focusRequester,
-        )
-    }
+    SettingsRow(
+        title = stringResource(R.string.settings_guide_maintenance_title),
+        description = stringResource(R.string.epg_maintenance_desc_tv),
+        value = databaseStatusText(indexState),
+        onClick = onOpen,
+        focusRequester = focusRequester,
+    )
 }
 
 /**

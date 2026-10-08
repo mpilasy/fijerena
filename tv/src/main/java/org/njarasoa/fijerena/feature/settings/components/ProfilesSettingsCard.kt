@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -53,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -91,81 +93,49 @@ fun ProfilesSettingsCard(
 ) {
     var adding by remember { mutableStateOf(false) }
 
-    GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(
-                text = stringResource(R.string.settings_profiles_title),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
-            )
-            Text(
-                text = stringResource(R.string.settings_profiles_description),
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                profiles.forEachIndexed { index, profile ->
-                    TvInputListItem(
-                        selected = false,
-                        onClick = {
-                            onDismissMessage()
-                            onEdit(profile)
-                        },
-                        modifier = (if (index == 0) firstRowModifier else Modifier).then(rowModifier(profile)),
-                        leadingContent = {
-                            ProfileAvatar(
-                                name = profile.name,
-                                colorIndex = profile.colorIndex,
-                                size = TvDimensions.iconMedium.scaled(scale),
-                                fontSize =
-                                    MaterialTheme.typography.titleSmall.fontSize
-                                        .scaled(scale),
-                            )
-                        },
-                        supportingContent =
-                            if (profile.isActive) {
-                                { Text(stringResource(R.string.settings_profiles_active_marker)) }
-                            } else {
-                                null
-                            },
-                        headlineContent = { Text(profile.name) },
-                    )
-                }
-            }
-            if (message != null) {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = message,
-                    style =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodyMedium.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaError,
-                )
-            }
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            CinemaSecondaryButton(
+    SettingsSection(
+        title = stringResource(R.string.settings_profiles_title),
+        description = stringResource(R.string.settings_profiles_description),
+    ) {
+        profiles.forEachIndexed { index, profile ->
+            SettingsRow(
+                title = profile.name,
+                description = if (profile.isActive) stringResource(R.string.settings_profiles_active_marker) else null,
                 onClick = {
                     onDismissMessage()
-                    adding = true
+                    onEdit(profile)
                 },
-                text = stringResource(R.string.settings_profiles_add),
-                modifier = (if (profiles.isEmpty()) firstRowModifier else Modifier).fillMaxWidth(),
+                modifier = (if (index == 0) firstRowModifier else Modifier).then(rowModifier(profile)),
+                leading = {
+                    ProfileAvatar(
+                        name = profile.name,
+                        colorIndex = profile.colorIndex,
+                        size = TvDimensions.iconMedium,
+                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                    )
+                },
             )
         }
+        if (message != null) {
+            Text(text = message, style = MaterialTheme.typography.bodyMedium, color = CinemaError)
+        }
+        SettingsRow(
+            title = stringResource(R.string.settings_profiles_add),
+            description = null,
+            onClick = {
+                onDismissMessage()
+                adding = true
+            },
+            modifier = if (profiles.isEmpty()) firstRowModifier else Modifier,
+            chevron = false,
+            leading = {
+                Icon(
+                    imageVector = CinemaIcons.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(TvDimensions.iconMedium),
+                )
+            },
+        )
     }
 
     if (adding) {
@@ -301,13 +271,12 @@ fun ProfileEditPane(
                 if (showNameError) {
                     Text(stringResource(R.string.profile_error_name_required), color = CinemaError)
                 }
-                TvInputListItem(
-                    selected = false,
+                SettingsRow(
+                    title = stringResource(R.string.profile_color_label),
+                    description = null,
                     onClick = { choosingColour = true },
-                    modifier = Modifier.fillMaxWidth().focusRequester(colourFocus),
-                    leadingContent = { ColourDot(colorIndex, scale) },
-                    trailingContent = { Text("›", style = MaterialTheme.typography.bodyMedium) },
-                    headlineContent = { Text(stringResource(R.string.profile_color_label)) },
+                    focusRequester = colourFocus,
+                    leading = { ColourDot(colorIndex, scale) },
                 )
                 TvSwitchRow(
                     checked = devMode,
@@ -326,7 +295,6 @@ fun ProfileEditPane(
                         title = stringResource(R.string.profile_content_filters_title),
                         description = stringResource(R.string.provider_category_filters_desc),
                         value = filtersSource.name,
-                        scope = SettingsScope.SOURCE,
                         onClick = {
                             viewModel.loadCategoryFilters(filtersSource.id, profile.id) { editingFilters = it }
                         },

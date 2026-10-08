@@ -3,10 +3,7 @@ package org.njarasoa.fijerena.feature.settings.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -14,49 +11,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.scaled
 
+/** Display's Theme and Look and feel rows; they sit in the Display section (SettingsScreen). */
 @Composable
-fun ThemeSettingsCard(
+fun ThemeSettingsRows(
     selectedThemeId: String,
     onOpenThemePicker: () -> Unit,
     selectedUiStyleId: String,
     onOpenUiStylePicker: () -> Unit,
-    scale: Float,
     themeRowFocusRequester: FocusRequester? = null,
     uiStyleRowFocusRequester: FocusRequester? = null,
-    /** Goes on the Theme row, the card's first focusable — the pane's entry row. */
+    /** Goes on the Theme row, the group's first focusable — the pane's entry row. */
     themeRowModifier: Modifier = Modifier,
 ) {
-    GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        Column(
-            modifier = Modifier.padding(Spacing.md.scaled(scale)),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-        ) {
-            SettingsRow(
-                title = stringResource(R.string.settings_theme_section_title),
-                description = stringResource(R.string.settings_theme_desc),
-                value = AllPalettes.firstOrNull { it.id == selectedThemeId }?.displayName ?: selectedThemeId,
-                scope = SettingsScope.DEVICE,
-                onClick = onOpenThemePicker,
-                focusRequester = themeRowFocusRequester,
-                modifier = themeRowModifier,
-            )
-            SettingsRow(
-                title = stringResource(R.string.settings_ui_style_section_title),
-                description = stringResource(R.string.settings_ui_style_desc_tv),
-                value = AllUiStyles.firstOrNull { it.id == selectedUiStyleId }?.displayName ?: selectedUiStyleId,
-                scope = SettingsScope.DEVICE,
-                onClick = onOpenUiStylePicker,
-                focusRequester = uiStyleRowFocusRequester,
-            )
-        }
-    }
+    SettingsRow(
+        title = stringResource(R.string.settings_theme_section_title),
+        description = stringResource(R.string.settings_theme_desc),
+        value = AllPalettes.firstOrNull { it.id == selectedThemeId }?.displayName ?: selectedThemeId,
+        onClick = onOpenThemePicker,
+        focusRequester = themeRowFocusRequester,
+        modifier = themeRowModifier,
+    )
+    SettingsRow(
+        title = stringResource(R.string.settings_ui_style_section_title),
+        description = stringResource(R.string.settings_ui_style_desc_tv),
+        value = AllUiStyles.firstOrNull { it.id == selectedUiStyleId }?.displayName ?: selectedUiStyleId,
+        onClick = onOpenUiStylePicker,
+        focusRequester = uiStyleRowFocusRequester,
+    )
 }
 
 @Composable

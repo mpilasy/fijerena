@@ -1132,4 +1132,7 @@
     <string name="tv_search_placeholder_channels">Rechercher des chaînes</string>
     <string name="tv_search_placeholder_films">Rechercher des films</string>
     <string name="tv_search_placeholder_shows">Rechercher des séries</string>
+    <!-- TV polish: settings and sources -->
+    <string name="settings_scope_device_section">S\'applique à cet appareil uniquement</string>
+    <string name="epg_management_screen_title">Sources de guide</string>
 </resources>

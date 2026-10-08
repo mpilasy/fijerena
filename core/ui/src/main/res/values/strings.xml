@@ -1129,4 +1129,7 @@
     <string name="tv_search_placeholder_channels">Search channels</string>
     <string name="tv_search_placeholder_films">Search films</string>
     <string name="tv_search_placeholder_shows">Search shows</string>
+    <!-- TV polish: settings and sources -->
+    <string name="settings_scope_device_section">Applies to this device only</string>
+    <string name="epg_management_screen_title">Guide sources</string>
 </resources>

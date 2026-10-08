@@ -1,105 +1,38 @@
 package org.njarasoa.fijerena.feature.settings.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.scaled
 
+/** Export / Import: one row per action, one under the other (no 2-D grids in Settings, rule 2). */
 @Composable
 fun ExportImportSettingsCard(
     onExport: () -> Unit,
     onImport: () -> Unit,
     onQuickImport: () -> Unit,
     exportImportMessage: String?,
-    scale: Float,
     /** Quick Import from Downloads is a developer convenience; hidden otherwise (plan Part I, A, group 6). */
     isDevMode: Boolean = false,
-    /** Goes on the Export button, the card's first focusable — the pane's entry row. */
-    exportButtonModifier: Modifier = Modifier,
+    /** Goes on the Export row, the group's first focusable — the pane's entry row. */
+    exportRowModifier: Modifier = Modifier,
 ) {
-    GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(
-                text = stringResource(R.string.settings_export_import_section_title),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.settings_export_import_desc),
-                    style =
-                        MaterialTheme.typography.bodySmall.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodySmall.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                SettingsScopeChip(SettingsScope.DEVICE)
-            }
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            ) {
-                CinemaSecondaryButton(
-                    onClick = onExport,
-                    text = stringResource(R.string.settings_export_button),
-                    modifier = exportButtonModifier.weight(1f),
-                )
-                CinemaSecondaryButton(
-                    onClick = onImport,
-                    text = stringResource(R.string.settings_import_button),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            if (isDevMode) {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                CinemaSecondaryButton(
-                    onClick = onQuickImport,
-                    text = stringResource(R.string.settings_quick_import_button),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            if (exportImportMessage != null) {
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = exportImportMessage,
-                    style =
-                        MaterialTheme.typography.bodySmall.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodySmall.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary,
-                )
-            }
+    SettingsSection(
+        title = stringResource(R.string.settings_export_import_section_title),
+        description =
+            stringResource(R.string.settings_export_import_desc) + "\n" +
+                stringResource(R.string.settings_scope_device_section),
+    ) {
+        SettingsRow(
+            title = stringResource(R.string.settings_export_button),
+            description = null,
+            onClick = onExport,
+            modifier = exportRowModifier,
+        )
+        SettingsRow(title = stringResource(R.string.settings_import_button), description = null, onClick = onImport)
+        if (isDevMode) {
+            SettingsRow(title = stringResource(R.string.settings_quick_import_button), description = null, onClick = onQuickImport)
         }
+        if (exportImportMessage != null) SettingsNote(exportImportMessage)
     }
 }

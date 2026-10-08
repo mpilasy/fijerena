@@ -1124,4 +1124,7 @@
     <string name="tv_search_placeholder_channels">Tadiavo fantsona</string>
     <string name="tv_search_placeholder_films">Tadiavo sarimihetsika</string>
     <string name="tv_search_placeholder_shows">Tadiavo andian-tantara</string>
+    <!-- TV polish: settings and sources -->
+    <string name="settings_scope_device_section">Mihatra amin\'ity fitaovana ity ihany</string>
+    <string name="epg_management_screen_title">Loharanon\'ny fitarihana</string>
 </resources>
