@@ -1126,4 +1126,10 @@
     <string name="details_label_stream_name">Nom du flux :</string>
     <string name="details_label_tmdb">TMDB :</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>
+    <!-- TV polish: search, guide, home, profiles -->
+    <string name="tv_home_time_left_format">reste %1$s</string>
+    <string name="tv_search_placeholder_all">Rechercher films, séries et chaînes</string>
+    <string name="tv_search_placeholder_channels">Rechercher des chaînes</string>
+    <string name="tv_search_placeholder_films">Rechercher des films</string>
+    <string name="tv_search_placeholder_shows">Rechercher des séries</string>
 </resources>

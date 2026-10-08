@@ -1118,4 +1118,10 @@
     <string name="details_label_stream_name">Anaran\'ny fantsakana:</string>
     <string name="details_label_tmdb">TMDB:</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>
+    <!-- TV polish: search, guide, home, profiles -->
+    <string name="tv_home_time_left_format">sisa %1$s</string>
+    <string name="tv_search_placeholder_all">Tadiavo sarimihetsika, andian-tantara ary fantsona</string>
+    <string name="tv_search_placeholder_channels">Tadiavo fantsona</string>
+    <string name="tv_search_placeholder_films">Tadiavo sarimihetsika</string>
+    <string name="tv_search_placeholder_shows">Tadiavo andian-tantara</string>
 </resources>

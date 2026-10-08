@@ -1123,4 +1123,10 @@
     <string name="details_label_stream_name">Stream name:</string>
     <string name="details_label_tmdb">TMDB:</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>
+    <!-- TV polish: search, guide, home, profiles -->
+    <string name="tv_home_time_left_format">%1$s left</string>
+    <string name="tv_search_placeholder_all">Search films, shows and channels</string>
+    <string name="tv_search_placeholder_channels">Search channels</string>
+    <string name="tv_search_placeholder_films">Search films</string>
+    <string name="tv_search_placeholder_shows">Search shows</string>
 </resources>

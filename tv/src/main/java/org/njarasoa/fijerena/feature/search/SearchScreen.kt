@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,15 +58,18 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Border
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardBorder
+import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -99,9 +104,12 @@ import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.ui.components.SectionRootButton
+import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
@@ -124,6 +132,16 @@ private fun localizedContentTypeLabel(contentType: String): String =
         ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
         ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
         else -> contentType.asContentTypeLabel()
+    }
+
+/** What the field searches, in the viewer's words (TV UI audit X8): films, shows, channels. */
+@Composable
+private fun searchPlaceholder(contentType: String): String =
+    when (contentType) {
+        ContentType.LIVE_TV -> stringResource(R.string.tv_search_placeholder_channels)
+        ContentType.MOVIES -> stringResource(R.string.tv_search_placeholder_films)
+        ContentType.TV_SHOWS -> stringResource(R.string.tv_search_placeholder_shows)
+        else -> stringResource(R.string.tv_search_placeholder_all)
     }
 
 @Composable
@@ -210,9 +228,12 @@ fun SearchScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            HeaderRow(contentType = contentType, sectionRoot = sectionRoot)
-
-            Spacer(modifier = Modifier.height(Spacing.lg))
+            TvScreenHeader(
+                title = stringResource(R.string.common_search),
+                subtitle = localizedContentTypeLabel(contentType),
+            ) {
+                SectionRootButton(sectionRoot)
+            }
 
             when (val state = uiState) {
                 is SearchViewModel.UiState.Loading -> {
@@ -294,32 +315,6 @@ fun SearchScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HeaderRow(
-    contentType: String,
-    sectionRoot: SectionRoot?,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.common_search),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = localizedContentTypeLabel(contentType),
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaAccent,
-            )
-        }
-        SectionRootButton(sectionRoot)
     }
 }
 
@@ -443,7 +438,7 @@ private fun SearchContent(
                 localQuery = ""
                 onClearSearch()
             },
-            placeholder = stringResource(R.string.search_stream_name_placeholder),
+            placeholder = searchPlaceholder(contentType),
             focusRequester = searchFocusRequester,
             editing = editing,
             onEditingChange = { editing = it },
@@ -465,16 +460,7 @@ private fun SearchContent(
                     firstItemFocusRequester = historyFocusRequester,
                 )
             } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.search_categories_streams_hint),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
-                }
+                TvEmptyState(message = searchPlaceholder(contentType), icon = CinemaIcons.Search)
             }
         } else {
             SearchResultsList(
@@ -516,8 +502,8 @@ private fun SearchHistorySection(
         ) {
             Text(
                 text = stringResource(R.string.epg_browser_recent_searches),
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextSecondary,
+                style = MaterialTheme.typography.headlineSmall,
+                color = CinemaTextPrimary,
             )
             CinemaIconButton(
                 onClick = onClearAll,
@@ -616,6 +602,7 @@ private fun SearchResultsList(
     val firstItemFocusRequester = remember { FocusRequester() }
 
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
+    val rowStyle = searchRowStyle()
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     // — not when Back has just rebuilt the list and NavReturnFocusEffect is about to hand focus to
@@ -738,6 +725,7 @@ private fun SearchResultsList(
                                     val returnKey = "cat_${catResult.categoryId}_${catResult.contentType}"
                                     CategoryResultItem(
                                         result = catResult,
+                                        rowStyle = rowStyle,
                                         onClick = {
                                             returnFocus.leaveFrom(returnKey, listState)
                                             onCategoryClick(catResult)
@@ -762,6 +750,7 @@ private fun SearchResultsList(
                                     val returnKey = "stream_${result.itemId}_${result.categoryId}_${result.contentType}"
                                     SearchResultItem(
                                         result = result,
+                                        rowStyle = rowStyle,
                                         onClick = {
                                             returnFocus.leaveFrom(returnKey, listState)
                                             onResultClick(result)
@@ -800,6 +789,7 @@ private fun SearchResultsList(
                             val returnKey = "cat_${catResult.categoryId}_${catResult.contentType}"
                             CategoryResultItem(
                                 result = catResult,
+                                rowStyle = rowStyle,
                                 onClick = {
                                     returnFocus.leaveFrom(returnKey, listState)
                                     onCategoryClick(catResult)
@@ -815,7 +805,7 @@ private fun SearchResultsList(
                     if (results.isNotEmpty()) {
                         item(key = "stream_header", contentType = "header") {
                             SearchSectionHeader(
-                                title = stringResource(R.string.search_tab_streams),
+                                title = localizedContentTypeLabel(queryContentType),
                                 count = results.size,
                                 hiddenCount = excludedCountByType[queryContentType] ?: 0,
                             )
@@ -829,6 +819,7 @@ private fun SearchResultsList(
                             val returnKey = "${result.itemId}_${result.categoryId}"
                             SearchResultItem(
                                 result = result,
+                                rowStyle = rowStyle,
                                 onClick = {
                                     returnFocus.leaveFrom(returnKey, listState)
                                     onResultClick(result)
@@ -881,8 +872,8 @@ private fun SearchSectionHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = CinemaAccent,
+            style = MaterialTheme.typography.headlineSmall,
+            color = CinemaTextPrimary,
         )
         Spacer(Modifier.weight(1f))
         Text(
@@ -907,23 +898,17 @@ private fun CollapsibleHeader(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = Spacing.xs),
+        // A section title that folds its group: no fill at rest, the content rows' focus look
+        // (light lift, white outline) when focused.
         colors =
             CardDefaults.colors(
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = TvFocusTokens.focusedContainer,
+                focusedContentColor = CinemaTextPrimary,
             ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
-        border =
-            CardDefaults.border(
-                focusedBorder =
-                    Border(
-                        border =
-                            androidx.compose.foundation.BorderStroke(
-                                TvDimensions.borderFocused,
-                                CinemaAccent,
-                            ),
-                    ),
-            ),
+        shape = TvListRowDefaults.shape(),
+        border = TvListRowDefaults.border(),
     ) {
         Row(
             modifier =
@@ -935,9 +920,8 @@ private fun CollapsibleHeader(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaAccent,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
+                color = CinemaTextPrimary,
             )
             Spacer(Modifier.weight(1f))
             Text(
@@ -949,16 +933,40 @@ private fun CollapsibleHeader(
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tint = CinemaAccent,
-                modifier = Modifier.size(TvDimensions.iconSmall),
+                tint = CinemaTextSecondary,
+                modifier = Modifier.size(TvDimensions.iconMedium),
             )
         }
     }
 }
 
+/**
+ * The content rows' focus look ([TvListRowDefaults]: light lift, white outline, text stays white),
+ * built once per results list rather than once per row.
+ */
+@Immutable
+private data class SearchRowStyle(
+    val colors: CardColors,
+    val border: CardBorder,
+    val cardScale: CardScale,
+    val glow: CardGlow,
+    val shape: CardShape,
+)
+
+@Composable
+private fun searchRowStyle(): SearchRowStyle =
+    SearchRowStyle(
+        colors = TvListRowDefaults.colors(),
+        border = TvListRowDefaults.border(),
+        cardScale = TvListRowDefaults.scale(),
+        glow = TvListRowDefaults.glow(),
+        shape = TvListRowDefaults.shape(),
+    )
+
 @Composable
 private fun CategoryResultItem(
     result: CategorySearchResult,
+    rowStyle: SearchRowStyle,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -971,52 +979,19 @@ private fun CategoryResultItem(
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight)
                 .tvLongPress(onLongPress),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        shape =
-            CardDefaults.shape(
-                shape =
-                    androidx.compose.foundation.shape
-                        .RoundedCornerShape(CornerRadius.medium),
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
+        colors = rowStyle.colors,
+        border = rowStyle.border,
+        scale = rowStyle.cardScale,
+        glow = rowStyle.glow,
+        shape = rowStyle.shape,
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    .padding(horizontal = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .width(TvDimensions.borderFocused)
-                        .height(TvDimensions.cardHeight)
-                        .padding(vertical = Spacing.sm)
-                        .then(
-                            Modifier.fillMaxHeight(),
-                        ),
-            )
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.titleMedium,
@@ -1031,6 +1006,7 @@ private fun CategoryResultItem(
 @Composable
 private fun SearchResultItem(
     result: SearchResult,
+    rowStyle: SearchRowStyle,
     onClick: () -> Unit,
     focusRequester: FocusRequester?,
     modifier: Modifier = Modifier,
@@ -1045,54 +1021,29 @@ private fun SearchResultItem(
                 .height(TvDimensions.cardHeight)
                 .tvLongPress(onLongPress)
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        shape =
-            CardDefaults.shape(
-                shape =
-                    androidx.compose.foundation.shape
-                        .RoundedCornerShape(CornerRadius.medium),
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
+        colors = rowStyle.colors,
+        border = rowStyle.border,
+        scale = rowStyle.cardScale,
+        glow = rowStyle.glow,
+        shape = rowStyle.shape,
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // A channel's logo is drawn whole (see StreamList).
+            // A channel's logo is drawn whole (see StreamList). 16:9 at the row's height, not a
+            // poster-width strip squashed into it (TV UI audit #14).
             val isChannel = result.contentType == ContentType.LIVE_TV
             CinemaThumbnail(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),
                 contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
                 overlayGradient = !isChannel,
-                modifier =
-                    Modifier.size(
-                        width = TvDimensions.posterWidth,
-                        height = TvDimensions.posterHeight,
-                    ),
+                modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
             )
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -1112,10 +1063,13 @@ private fun SearchResultItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                // The category it is in, as a plain secondary line ("kids' movies", not "Category: kids' movies").
                 Text(
-                    text = stringResource(R.string.search_result_category_format, result.categoryName),
+                    text = result.categoryName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = CinemaTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

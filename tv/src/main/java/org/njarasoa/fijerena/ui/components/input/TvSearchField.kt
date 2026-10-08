@@ -65,8 +65,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * key: the buttons beside the field and the recent searches below it were out of reach.
  *
  * At rest ([editing] false) the field is a plain focus stop showing the query or [placeholder]:
- * Up/Down/Left/Right move focus like on any other control, so Right reaches the clear (×) and
- * search buttons, which are ordinary stops in the same row. **OK** asks for [editing]; the field
+ * Up/Down/Left/Right move focus like on any other control, so Right reaches the clear (×) button,
+ * an ordinary stop in the same row (no separate search button: the field searches on its own,
+ * TV UI audit #14). **OK** asks for [editing]; the field
  * becomes a text field, takes focus and opens the keyboard. **IME Search/Done** submits; **Back**
  * submits too when the text changed. Either way the keyboard closes and focus comes back to the
  * resting field. Back is taken before the keyboard sees it ([onInterceptKeyBeforeSoftKeyboard]):
@@ -76,7 +77,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  *
  * [editing] is hoisted so a screen can open on the keyboard (a first search with no history).
  * [focusRequester] targets the resting field; the caller's [modifier] goes on the whole row, so
- * `focusProperties { down = … }` there applies to the field and both buttons.
+ * `focusProperties { down = … }` there applies to the field and the clear button.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -251,17 +252,5 @@ fun TvSearchField(
                 },
             )
         }
-
-        CinemaIconButton(
-            onClick = onSearchSubmit,
-            icon = {
-                Icon(
-                    imageVector = CinemaIcons.Search,
-                    contentDescription = stringResource(R.string.common_search),
-                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                    tint = CinemaTextPrimary,
-                )
-            },
-        )
     }
 }
