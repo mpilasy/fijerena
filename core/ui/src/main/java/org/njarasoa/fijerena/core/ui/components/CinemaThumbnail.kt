@@ -56,7 +56,9 @@ enum class ThumbnailContentType {
 /**
  * Image loading composable with gradient fallback and shimmer placeholder.
  *
- * - Non-null URL: Coil AsyncImage with crossfade
+ * - Non-null URL: Coil AsyncImage with crossfade. Posters fill the frame (cropped);
+ *   [ThumbnailContentType.LIVE_TV] logos are drawn whole, fitted with a little padding on a
+ *   neutral dark tile, so neither a wide logo nor a white one on a transparent background is lost.
  * - Null/blank/error: Large letter over content-type gradient background
  * - Shimmer placeholder while loading
  */
@@ -72,10 +74,15 @@ fun CinemaThumbnail(
     val radius = CinemaCornerRadius.medium
     val shape = remember(radius) { RoundedCornerShape(radius) }
     val context = LocalContext.current
+    val isLogo = contentType == ThumbnailContentType.LIVE_TV
+    val palette = CinemaThemeHolder.current
 
     // Track measured size so Coil decodes at display resolution, not full source resolution
     Box(
-        modifier = modifier.clip(shape),
+        modifier =
+            modifier
+                .clip(shape)
+                .then(if (isLogo) Modifier.background(palette.surfaceVariant) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         if (!url.isNullOrBlank()) {
@@ -96,8 +103,8 @@ fun CinemaThumbnail(
                 AsyncImage(
                     model = model,
                     contentDescription = contentDescription,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    contentScale = if (isLogo) ContentScale.Fit else ContentScale.Crop,
+                    modifier = if (isLogo) Modifier.fillMaxSize().padding(CinemaSpacing.xxs) else Modifier.fillMaxSize(),
                     onSuccess = { showShimmer = false },
                     onError = {
                         showShimmer = false

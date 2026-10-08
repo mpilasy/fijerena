@@ -1081,11 +1081,13 @@ private fun SearchResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // A channel's logo is drawn whole (see StreamList).
+            val isChannel = result.contentType == ContentType.LIVE_TV
             CinemaThumbnail(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),
-                contentType = ThumbnailContentType.DEFAULT,
-                overlayGradient = true,
+                contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
+                overlayGradient = !isChannel,
                 modifier =
                     Modifier.size(
                         width = TvDimensions.posterWidth,

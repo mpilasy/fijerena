@@ -57,6 +57,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -587,11 +588,14 @@ private fun StreamItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             ) {
+                // A channel's logo is drawn whole on a neutral tile; the shading under artwork
+                // would only dim it.
+                val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
                 CinemaThumbnail(
                     url = item.thumbnailUrl,
                     fallbackLetter = item.name.firstOrNull(),
-                    contentType = ThumbnailContentType.DEFAULT,
-                    overlayGradient = true,
+                    contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
+                    overlayGradient = !isChannel,
                     modifier =
                         Modifier
                             .size(
