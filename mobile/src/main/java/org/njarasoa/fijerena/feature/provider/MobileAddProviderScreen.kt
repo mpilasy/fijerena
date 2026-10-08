@@ -164,8 +164,6 @@ fun MobileAddProviderScreen(
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
     var autoResumeEnabled by remember { mutableStateOf(true) }
     var watchHistorySize by remember { mutableStateOf("25") }
-    var newWatchHistorySize by remember { mutableStateOf("") }
-    var isEditingQueueSize by remember { mutableStateOf(false) }
     var cachingEnabled by remember { mutableStateOf(true) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
@@ -512,8 +510,6 @@ fun MobileAddProviderScreen(
                 providerSettings = providerSettings,
                 autoResumeEnabled = autoResumeEnabled,
                 watchHistorySize = watchHistorySize,
-                newWatchHistorySize = newWatchHistorySize,
-                isEditingQueueSize = isEditingQueueSize,
                 cachingEnabled = cachingEnabled,
                 streamOutputFormat = streamOutputFormat,
                 playlistType = playlistType,
@@ -522,8 +518,6 @@ fun MobileAddProviderScreen(
                 onProviderSettingsChange = { providerSettings = it },
                 onAutoResumeEnabledChange = { autoResumeEnabled = it },
                 onWatchHistorySizeChange = { watchHistorySize = it },
-                onNewWatchHistorySizeChange = { newWatchHistorySize = it },
-                onIsEditingQueueSizeChange = { isEditingQueueSize = it },
                 onCachingEnabledChange = { cachingEnabled = it },
                 onStreamOutputFormatChange = { streamOutputFormat = it },
                 onPlaylistTypeChange = { playlistType = it },

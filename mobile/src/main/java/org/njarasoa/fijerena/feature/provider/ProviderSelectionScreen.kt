@@ -33,7 +33,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.*
@@ -98,29 +98,11 @@ fun MobileProviderSelectionScreen(
                 }
 
                 is ProviderUiState.NoProviders -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                CinemaIcons.Add,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                                modifier = Modifier.size(MobileDimensions.iconXLarge),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            Text(
-                                text = stringResource(R.string.provider_no_providers),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                            CinemaButton(onClick = onAddProvider) {
-                                Text(stringResource(R.string.provider_add_title))
-                            }
-                        }
-                    }
+                    MobileEmptyState(
+                        message = stringResource(R.string.provider_no_providers),
+                        actionLabel = stringResource(R.string.provider_add_title),
+                        onAction = onAddProvider,
+                    )
                 }
 
                 is ProviderUiState.Error -> {
@@ -258,8 +240,8 @@ private fun MobileProviderList(
 }
 
 /**
- * One source: tapping the card edits it (chevron); "Use" switches to it (hidden on the active
- * one); everything else sits in the overflow menu, Delete last and separated.
+ * One source: tapping the card edits it (the one way in, no chevron); "Use" switches to it
+ * (hidden on the active one); everything else sits in the overflow menu, Delete last and separated.
  */
 @Composable
 private fun MobileProviderRow(
@@ -382,11 +364,6 @@ private fun MobileProviderRow(
                     )
                 }
             }
-            Icon(
-                CinemaIcons.KeyboardArrowRight,
-                contentDescription = null,
-                tint = dimmed,
-            )
         }
     }
 }
