@@ -117,7 +117,7 @@ fun MobileNavHost(
     // being left is the current destination's. Only one tab's stack is ever on the back stack, so
     // Back on a tab's root leaves the app.
     fun selectTab(tab: MobileTab) {
-        val current = tabOf(navController.currentBackStack.value)
+        val current = navController.currentTab()
         if (tab == current) {
             // From anywhere inside the tab: back to its start, the screens above dropped.
             navController.popBackStack(tab.route, inclusive = false)
@@ -280,7 +280,7 @@ fun MobileNavHost(
     // episodes, Search, guides…) — so the current tab always leads back to its start and each tab
     // keeps its place; not on the player, Settings and its screens, or with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
-    val currentTab = currentEntry?.let { tabOf(navController.currentBackStack.value) }
+    val currentTab = currentEntry?.let { navController.currentTab() }
     val tabs = visibleTabs(activeSource?.sections)
 
     // The app opens next time on the tab used last. A tab the source doesn't have (opened while its

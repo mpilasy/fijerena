@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -42,8 +42,20 @@ enum class MobileTab(
     }
 }
 
-/** The tab whose stack [backStack] is: its root is the one tab entry on it (one tab's stack at a time). */
-fun tabOf(backStack: List<NavBackStackEntry>): MobileTab? = backStack.firstNotNullOfOrNull { MobileTab.rootedAt(it.destination) }
+/**
+ * The tab whose stack is on the back stack: its root is the one tab entry there (one tab's stack at
+ * a time). Asked per tab with `getBackStackEntry`, which throws when the route isn't on the stack —
+ * `currentBackStack` would say it in one read, but it is restricted API.
+ */
+fun NavController.currentTab(): MobileTab? =
+    MobileTab.entries.firstOrNull { tab ->
+        try {
+            getBackStackEntry(tab.route)
+            true
+        } catch (_: IllegalArgumentException) {
+            false
+        }
+    }
 
 /** Screens inside a tab that still hide the bar: the player, and Settings with what it opens. */
 fun hidesBottomBar(destination: NavDestination?): Boolean =
