@@ -147,5 +147,15 @@ fun AmbientBackdrop(
                 )
             }
         }
+        // The wash takes the image's own brightness: a light logo or poster (Al Jazeera's grey
+        // logo) turned the whole screen pale, and the white and grey text over it — channel name,
+        // category, hints, unselected tabs — vanished. The theme's background over it caps the
+        // brightness, so text stays readable whatever the image.
+        if (crossfadeTarget != null) {
+            Box(modifier = Modifier.fillMaxSize().background(palette.background.copy(alpha = BACKDROP_SCRIM_ALPHA)))
+        }
     }
 }
+
+/** How much of the theme's background covers the image wash: enough that white text always reads. */
+private const val BACKDROP_SCRIM_ALPHA = 0.75f
