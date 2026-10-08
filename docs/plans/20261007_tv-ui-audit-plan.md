@@ -1,6 +1,6 @@
 # TV UI audit and polish
 
-**Status:** Capture and findings done; review with the user in progress. Plan written 2026-10-07 at the user's request ("the UI still looks like
+**Status:** Findings reviewed with the user (decisions recorded); Phase 1 in progress. Plan written 2026-10-07 at the user's request ("the UI still looks like
 crap on the TV … walk through the whole app and audit every single section and every single
 widget … and make it better"; then "first make a plan"). Waits for the user's go-ahead.
 
@@ -158,14 +158,39 @@ data, the Up next card, loading screens.
 | 20 | Guide sources (empty) | Sentence and button at the top of an empty screen (X7) | N | 43 |
 | 21 | Device info | "Detected as GENERIC_MOBILE" on a TV (detection, not looks — flagged for a separate fix) | N | 44 |
 
+## Decisions (user, 2026-10-07)
+
+- **Text & grid size (X1):** keep the range (40–100 %) and the 80 % default, but apply it to every
+  screen — Settings, dialogs, the player included — so the same text is the same size everywhere.
+- **Focused list rows (X2):** light lift + white outline; text stays white, accent only for the
+  "current" bar.
+- **Headers (X6):** one shared TV screen header — title (+ short subtitle) left, icon actions right.
+- **Selectors (X5):** unified — choices as picker rows, Source Type read-only, scope badges out of
+  every row.
+- Everything else in Findings is plain polish and gets fixed without a further decision, except
+  #21 (device detection), which is not a looks issue and is left for a separate fix.
+
+## Fix phases
+
+| Phase | Who | Files (non-overlapping) | Covers |
+|---|---|---|---|
+| 1 Tokens + shared components | one agent, alone (touches most screens) | theme / `LocalUiScale` plumbing, `TvDimensions`, `Spacing`, new `TvScreenHeader`, new `TvEmptyState`, row focus look, `CinemaThumbnail` logo fit | X1, X2 (the look itself), X3, X6 (component), X7 (component) |
+| 2a Browse + Live TV | agent | `feature/category/**` | X2–X4, X7, X8 there; #4, #5, #7, #11; header adoption |
+| 2b Details + episodes | agent | `feature/movie/**`, `feature/episode/**`, `TvDetailHero`, `DetailsActions`, `RelatedTitlesRow` | #12, #13, X9 (rating), X10 |
+| 2c Player | agent | `feature/player/**`, `ui/player/**` | #8, #9, #10, X9 (favourite star), #7 panel opacity |
+| 2d Settings + sources | agent | `feature/settings/**`, `feature/provider/**`, `feature/epg/TvEpgManagementScreen.kt` | #17–#20, X5, header adoption |
+| 2e Search, guide, home, profiles | agent | `feature/search/**`, `feature/epgbrowser/**`, `feature/epg/TvGuideGrid.kt` (+ guide screen), `feature/contentselection/**`, `feature/profile/**` | #1–#3, #14–#16, X8 there, header adoption |
+| 3 Verify | me | — | re-capture every shot, focus walks, lint / tests, spot checks |
+
+Phase 2 agents start from Phase 1 merged on main; I merge them one at a time and re-capture.
+
 ## Progress
 
 | Step | Status | Commit |
 |---|---|---|
 | Capture | Done 2026-10-07: 45 shots (see Findings for what wasn't captured) | |
 | Findings | Done 2026-10-07: 10 shared causes, 21 per-screen rows | |
-| Review with the user | In progress | |
-| Phase A — tokens | Not started | |
-| Phase B — shared components | Not started | |
-| Phase C — per screen | Not started | |
+| Review with the user | Done 2026-10-07: decisions above | |
+| Phase 1 — tokens + shared components | In progress | |
+| Phase 2a–2e — per area | Not started | |
 | Verify + spot checks | Not started | |
