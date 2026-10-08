@@ -2,12 +2,10 @@ package org.njarasoa.fijerena.feature.movie
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
@@ -20,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -36,7 +36,6 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -47,13 +46,16 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.MetaBadge
+import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
+import org.njarasoa.fijerena.ui.components.MobileCategoryLinkRow
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
+import org.njarasoa.fijerena.ui.components.MobileDetailRow
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
+import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +94,15 @@ fun MobileMovieDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.movie_details_title)) },
+                // The film's own title, as the episodes screen shows the show's (phone UI audit,
+                // #2): TMDB's clean title once it resolves, the provider's name until then.
+                title = {
+                    Text(
+                        text = tmdbTitle ?: lastSuccess?.movieDetail?.name?.ifEmpty { null } ?: movieName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 navigationIcon = {
                     CinemaIconButton(
                         onClick = onBack,
@@ -221,13 +231,17 @@ private fun MovieDetailsContent(
                         )
                     }
 
-                    // Single dot-separated meta row: star rating and content rating/resolution stay their own
-                    // small pills, everything else is plain text — all joined by " · " into
-                    // one flowing line instead of each fact carrying its own separate spacing.
+                    // Single dot-separated facts line in TV's order ("1999 • 8.2/10 • R • 2h 16m"): content
+                    // rating and resolution are small outlined badges, everything else plain text.
+                    // The length is the provider's, else the one the player saw last time
+                    // (phone UI audit, P4) — many providers send none.
+                    val length =
+                        movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)
+                            ?: (resumeDurationMs / 1000).takeIf { it > 0 }?.toString()
                     val endsAtContext = LocalContext.current
                     val endsAtText =
-                        remember(movieDetail.metadata.duration, resumePositionMs) {
-                            computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+                        remember(length, resumePositionMs) {
+                            computeEndsAt(endsAtContext, length, resumePositionMs)
                         }
                     val year =
                         extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
@@ -235,43 +249,16 @@ private fun MovieDetailsContent(
                         movieDetail.videoInfo?.let { video -> video.width?.let { w -> video.height?.let { h -> resolutionLabel(w, h) } } }
                     val metaSegments =
                         listOfNotNull<@Composable () -> Unit>(
-                            movieDetail.metadata.rating?.let { rating ->
-                                {
-                                    RatingBadge(
-                                        rating = rating,
-                                        textColor = MaterialTheme.colorScheme.secondary,
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
-                                }
-                            },
                             year?.let { { MetaText(it.toString()) } },
+                            movieDetail.metadata.rating?.let { { MetaText(ratingOutOfTen(it)) } },
                             movieDetail.metadata.contentRating?.let { { MetaBadge(it) } },
-                            movieDetail.metadata.duration
-                                ?.takeIf(::hasMeaningfulDuration)
-                                ?.let { { MetaText(formatDuration(it)) } },
+                            length?.let { { MetaText(formatDuration(it)) } },
                             endsAtText?.let { { MetaText(stringResource(R.string.movie_ends_at_format, it)) } },
                             resolution?.let { { MetaBadge(it) } },
                         )
                     if (metaSegments.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        Row(
-                            // Rating badge + a long meta line can add up to wider than a narrow phone screen;
-                            // a plain Row clips the tail instead of wrapping. Scroll rather than clip.
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            metaSegments.forEachIndexed { index, segment ->
-                                if (index > 0) {
-                                    Text(
-                                        text = "•",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    )
-                                }
-                                segment()
-                            }
-                        }
+                        MetaLine(segments = metaSegments)
                     }
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.lg))
@@ -312,7 +299,7 @@ private fun MovieDetailsContent(
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                         )
                         DetailIconAction(
-                            icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                            icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
                             label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                             onClick = onToggleWatched,
                             tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
@@ -438,8 +425,8 @@ private fun movieDetailTabLabel(tab: MovieDetailTab): String =
     }
 
 /**
- * Overview tab: plot, release date, director, technical stream info, then the TMDB id and the
- * category button — diagnostics/context rather than headline facts. Cast lives in its own tab
+ * Overview tab: plot, then label / value rows — release date, director, technical stream info, the
+ * TMDB id (developer mode) and the category link. Cast lives in its own tab
  * (see [CastChipsTabContent]); alternate stream
  * instances live in the Versions tab.
  */
@@ -455,34 +442,11 @@ private fun MovieOverviewTabContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.md))
         }
 
-        movieDetail.metadata.releaseDate?.let { releaseDate ->
-            Text(
-                text = stringResource(R.string.movie_released_format, releaseDate),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-        }
+        // Label / value rows, every value starting at the same place (phone UI audit, #2).
+        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+            movieDetail.metadata.releaseDate?.let { MobileDetailRow(label = stringResource(R.string.details_label_released), value = it) }
+            movieDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
 
-        movieDetail.metadata.director?.let { director ->
-            Text(
-                text = stringResource(R.string.movie_director_format, director),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-        }
-
-        // Technical stream info (labeled rows)
-        val hasVideoInfo =
-            movieDetail.videoInfo != null &&
-                (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
-        if (hasVideoInfo ||
-            movieDetail.audioTracks.isNotEmpty() ||
-            movieDetail.subtitleTracks.isNotEmpty() ||
-            movieDetail.extension != null
-        ) {
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             movieDetail.videoInfo?.let { video ->
                 val videoText =
                     video.displayTitle ?: run {
@@ -502,7 +466,7 @@ private fun MovieOverviewTabContent(
                         parts.joinToString(" · ")
                     }
                 if (videoText.isNotBlank()) {
-                    MobileTechInfoRow(label = stringResource(R.string.tech_video_label), value = videoText)
+                    MobileDetailRow(label = stringResource(R.string.tech_video_label), value = videoText)
                 }
             }
             if (movieDetail.audioTracks.isNotEmpty()) {
@@ -520,7 +484,7 @@ private fun MovieOverviewTabContent(
                         text.ifBlank { null }
                     }
                 if (audioTexts.isNotEmpty()) {
-                    MobileTechInfoRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
+                    MobileDetailRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
                 }
             }
             if (movieDetail.subtitleTracks.isNotEmpty()) {
@@ -537,30 +501,22 @@ private fun MovieOverviewTabContent(
                         text.ifBlank { null }
                     }
                 if (subTexts.isNotEmpty()) {
-                    MobileTechInfoRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
+                    MobileDetailRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
                 }
             }
             movieDetail.extension?.let { ext ->
-                MobileTechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
+                MobileDetailRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
-        }
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-        Text(
-            text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-        )
-
-        if (categoryName != null) {
-            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-            CinemaOutlinedButton(
-                onClick = onCategorySelected,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.details_category_format, categoryName))
+            // The TMDB id is for developers only (phone UI audit, #2).
+            val context = LocalContext.current
+            val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+            if (isDevMode) {
+                MobileDetailRow(
+                    label = stringResource(R.string.details_label_tmdb),
+                    value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                )
             }
+            categoryName?.let { MobileCategoryLinkRow(categoryName = it, onClick = onCategorySelected) }
         }
     }
 }
@@ -689,27 +645,5 @@ private fun StreamNamePicker(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun MobileTechInfoRow(
-    label: String,
-    value: String,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-        )
     }
 }

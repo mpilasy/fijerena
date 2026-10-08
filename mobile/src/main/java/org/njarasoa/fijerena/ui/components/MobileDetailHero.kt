@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -19,7 +17,6 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
 /**
@@ -67,16 +64,12 @@ fun MobileDetailHero(
                 )
             }
         Box(modifier = Modifier.matchParentSize().background(scrimBrush))
+        // The title's logo art only: the plain title is the top bar's, not stamped onto the
+        // picture a second time (phone UI audit, #2).
         TitleLogoOrText(
             contentDescription = title,
             logoUrl = logoUrl,
             modifier = Modifier.align(Alignment.BottomStart).padding(CinemaSpacing.md),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineLarge,
-                color = CinemaTextPrimary,
-            )
-        }
+        ) {}
     }
 }

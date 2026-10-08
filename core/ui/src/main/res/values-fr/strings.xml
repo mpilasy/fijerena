@@ -1137,4 +1137,9 @@
     <string name="epg_management_screen_title">Sources de guide</string>
     <!-- phone polish: search, settings, sources -->
     <string name="settings_diagnostics_clear_confirm_title">Effacer le journal ?</string>
+    <!-- phone polish: details and episodes -->
+    <string name="details_label_category">Catégorie :</string>
+    <string name="series_resume_code_left_format">▶ Reprendre S%1$02dE%2$02d · reste %3$s</string>
+    <string name="series_resume_code_from_format">▶ Reprendre S%1$02dE%2$02d à %3$s</string>
+    <string name="series_play_code_format">▶ Lire S%1$02dE%2$02d</string>
 </resources>
