@@ -37,6 +37,7 @@ fun AdaptiveLogoImage(
     logoUrl: String,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    onError: () -> Unit = {},
 ) {
     // Null until this logo's tone is known: cached from an earlier showing, or worked out off the
     // main thread once it loads (on the main thread, copying the hardware bitmap's pixels drew a
@@ -50,6 +51,7 @@ fun AdaptiveLogoImage(
         contentDescription = contentDescription,
         contentScale = ContentScale.Fit,
         alignment = Alignment.CenterStart,
+        onError = { onError() },
         onSuccess = { state ->
             val bitmap = (state.result.image as? BitmapImage)?.bitmap
             if (isDark == null) {
