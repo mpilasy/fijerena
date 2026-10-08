@@ -51,6 +51,8 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
 import org.njarasoa.fijerena.ui.components.SectionRootButton
+import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -121,12 +123,12 @@ fun TvEpgManagementScreen(
     val firstSourceId = sourceList.firstOrNull()?.id
 
     // Entry focus, once the list has loaded: the first guide source, or Add guide source when
-    // there is none (the TV focus contract, plan Part I, B).
+    // there is none — TvEmptyState focuses its action itself (the TV focus contract, plan Part I, B).
     val firstRowFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
     val loaded = sources != null
     LaunchedEffect(loaded) {
-        if (loaded) (if (firstSourceId != null) firstRowFocus else addFocus).requestFocusWithRetry()
+        if (loaded && firstSourceId != null) firstRowFocus.requestFocusWithRetry()
     }
 
     // A source's auto-refresh picker (P5b), drawn in place of the list like Settings' choice
@@ -175,334 +177,313 @@ fun TvEpgManagementScreen(
                     ),
         ) {
             // Up from Add (the list's first row) reaches the section-root button.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text =
-                        providerName?.let { stringResource(R.string.epg_management_title_format, it) }
-                            ?: stringResource(R.string.epg_sources_header),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+            TvScreenHeader(title = stringResource(R.string.epg_management_screen_title), subtitle = providerName) {
                 SectionRootButton(sectionRoot)
             }
 
-            Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
-
-            LazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier.fillMaxSize().focusRestorer(),
-            ) {
-                if (sources?.isEmpty() == true) {
-                    // Empty state: one line and the one thing to do here.
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg.scaled(scale)),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        ) {
-                            Text(
-                                stringResource(R.string.epg_summary_no_sources),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                            )
-                            CinemaPrimaryButton(
-                                onClick = { showAddDialog = true },
-                                text = stringResource(R.string.epg_add_source),
-                                modifier = Modifier.focusRequester(addFocus),
-                            )
-                        }
-                    }
-                } else if (sources != null) {
-                    // Add, and refreshing the stale or failed sources of this list.
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        ) {
-                            CinemaPrimaryButton(
-                                onClick = { showAddDialog = true },
-                                text = stringResource(R.string.epg_add_source),
-                                modifier = Modifier.focusRequester(addFocus),
-                            )
-
-                            if (staleSourceCount > 0) {
-                                CinemaSecondaryButton(
-                                    onClick = { viewModel.refreshStale() },
-                                    text = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
-                                )
-                            }
-
-                            if (failedSourceCount > 0) {
-                                CinemaSecondaryButton(
-                                    onClick = { viewModel.refreshFailed() },
-                                    text = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                items(sourceList, key = { it.id }, contentType = { "source" }) { source ->
-                    val latestTime = latestProgrammeTimes[source.id] ?: 0L
-
-                    val activeProgress =
-                        if (processingState is MultiSourceState.Processing) {
-                            (processingState as MultiSourceState.Processing).activeProgress[source.id]
-                        } else {
-                            null
-                        }
-
-                    // Whether the run that just finished confirmed this source's data hadn't
-                    // changed (304, or a matching content hash) — true only right after that run,
-                    // resets once the next processing state replaces this one.
-                    val wasUnchanged =
-                        (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
-
-                    GlassPanel(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
+            // No guide source: one sentence and the one thing to do here, centred (TV UI audit #20).
+            // The action takes focus itself.
+            if (sources?.isEmpty() == true) {
+                TvEmptyState(
+                    message = stringResource(R.string.epg_summary_no_sources),
+                    icon = CinemaIcons.DateRange,
+                    actionLabel = stringResource(R.string.epg_add_source),
+                    onAction = { showAddDialog = true },
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                    modifier = Modifier.fillMaxSize().focusRestorer(),
+                ) {
+                    if (sources != null) {
+                        // Add, and refreshing the stale or failed sources of this list.
+                        item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                             ) {
-                                // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
-                                val useLabel = stringResource(R.string.epg_source_use_label)
-                                androidx.tv.material3.Surface(
-                                    checked = source.enabled,
-                                    onCheckedChange = { viewModel.setSourceEnabled(source, it) },
-                                    modifier =
-                                        (if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier)
-                                            .semantics { contentDescription = useLabel },
-                                    // P5: checked keeps the resting container and shows the
-                                    // check glyph in the current colour; only focus lifts it.
-                                    colors =
-                                        ToggleableSurfaceDefaults.colors(
-                                            containerColor = TvFocusTokens.restingContainer,
-                                            contentColor = CinemaTextSecondary,
-                                            focusedContainerColor = TvFocusTokens.focusedContainer,
-                                            focusedContentColor = CinemaTextPrimary,
-                                            selectedContainerColor = TvFocusTokens.restingContainer,
-                                            selectedContentColor = TvFocusTokens.currentText,
-                                            focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
-                                            focusedSelectedContentColor = TvFocusTokens.currentText,
-                                        ),
-                                    scale =
-                                        ToggleableSurfaceDefaults.scale(
-                                            scale = TvFocusTokens.defaultScale,
-                                            focusedScale = TvFocusTokens.focusedScale,
-                                            selectedScale = TvFocusTokens.defaultScale,
-                                            pressedScale = TvFocusTokens.pressedScale,
-                                        ),
-                                    border =
-                                        ToggleableSurfaceDefaults.border(
-                                            border = Border.None,
-                                            focusedBorder =
-                                                Border(
-                                                    border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
-                                                    shape = CircleShape,
-                                                ),
-                                        ),
-                                    glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
-                                    shape = ToggleableSurfaceDefaults.shape(shape = CircleShape),
-                                ) {
-                                    Box(
-                                        modifier = Modifier.padding(Spacing.xs.scaled(scale)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Switch(
-                                            checked = source.enabled,
-                                            onCheckedChange = null,
-                                            colors =
-                                                SwitchDefaults.colors(
-                                                    checkedThumbColor = CinemaAccent,
-                                                    checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                                                    uncheckedThumbColor = CinemaTextSecondary,
-                                                    uncheckedTrackColor = CinemaSurfaceVariant,
-                                                ),
-                                        )
-                                    }
+                                CinemaPrimaryButton(
+                                    onClick = { showAddDialog = true },
+                                    text = stringResource(R.string.epg_add_source),
+                                    modifier = Modifier.focusRequester(addFocus),
+                                )
+
+                                if (staleSourceCount > 0) {
+                                    CinemaSecondaryButton(
+                                        onClick = { viewModel.refreshStale() },
+                                        text = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
+                                    )
                                 }
 
-                                StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
-                                    Text(
-                                        text = guideSourceUrlHint(source.url),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    )
-                                    // The source's own guide, whose switch is "Provides a guide" (Edit Source).
-                                    if (provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true) {
-                                        Text(
-                                            text = stringResource(R.string.epg_source_own_guide_hint),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                        )
-                                    }
-                                    Text(
-                                        text =
-                                            EpgManagementViewModel
-                                                .refreshSummary(
-                                                    source.enabled,
-                                                    viewModel.refreshIntervalHours(source),
-                                                ).asString(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                                if (failedSourceCount > 0) {
+                                    CinemaSecondaryButton(
+                                        onClick = { viewModel.refreshFailed() },
+                                        text = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
                                     )
                                 }
                             }
+                        }
+                    }
 
-                            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    items(sourceList, key = { it.id }, contentType = { "source" }) { source ->
+                        val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                TvIconAction(
-                                    onClick = { viewModel.refreshSource(source.id) },
-                                    icon = CinemaIcons.Refresh,
-                                    label = stringResource(R.string.common_refresh),
-                                )
-                                TvIconAction(
-                                    onClick = { editingSource = source },
-                                    icon = CinemaIcons.Edit,
-                                    label = stringResource(R.string.provider_edit_button),
-                                )
-                                TvIconAction(
-                                    onClick = { intervalSource = source },
-                                    icon = CinemaIcons.Sync,
-                                    label = stringResource(R.string.epg_auto_refresh_title),
-                                    modifier =
-                                        if (source.id == intervalReturnId) Modifier.focusRequester(intervalButtonFocus) else Modifier,
-                                )
-                                TvIconAction(
-                                    onClick = { deletingSource = source },
-                                    icon = CinemaIcons.Delete,
-                                    label = stringResource(R.string.provider_delete_button),
-                                    danger = true,
-                                )
-                            }
-
-                            if (activeProgress != null) {
-                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                    ) {
-                                        Text(
-                                            text =
-                                                stringResource(
-                                                    R.string.epg_source_phase_format,
-                                                    localizedEpgPhase(activeProgress.phase),
-                                                ),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                        Text(
-                                            // No size from the server (bears sends none): the bytes so far instead of a percentage.
-                                            text =
-                                                if (activeProgress.progressPercent >= 0) {
-                                                    stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent)
-                                                } else {
-                                                    NumberUtils.formatBytes(activeProgress.downloadedBytes)
-                                                },
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                    if (activeProgress.progressPercent >= 0) {
-                                        LinearProgressIndicator(
-                                            progress = { activeProgress.progressPercent / 100f },
-                                            modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                                        )
-                                    } else {
-                                        LinearProgressIndicator(
-                                            modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                                        )
-                                    }
-                                }
+                        val activeProgress =
+                            if (processingState is MultiSourceState.Processing) {
+                                (processingState as MultiSourceState.Processing).activeProgress[source.id]
                             } else {
-                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                null
+                            }
 
+                        // Whether the run that just finished confirmed this source's data hadn't
+                        // changed (304, or a matching content hash) — true only right after that run,
+                        // resets once the next processing state replaces this one.
+                        val wasUnchanged =
+                            (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+
+                        GlassPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                                 ) {
-                                    val lastIngested =
-                                        if (source.lastIngestedAtMs > 0) {
-                                            java.text
-                                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                                                .format(java.util.Date(source.lastIngestedAtMs))
-                                        } else {
-                                            stringResource(R.string.epg_source_never)
+                                    // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
+                                    val useLabel = stringResource(R.string.epg_source_use_label)
+                                    androidx.tv.material3.Surface(
+                                        checked = source.enabled,
+                                        onCheckedChange = { viewModel.setSourceEnabled(source, it) },
+                                        modifier =
+                                            (if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier)
+                                                .semantics { contentDescription = useLabel },
+                                        // P5: checked keeps the resting container and shows the
+                                        // check glyph in the current colour; only focus lifts it.
+                                        colors =
+                                            ToggleableSurfaceDefaults.colors(
+                                                containerColor = TvFocusTokens.restingContainer,
+                                                contentColor = CinemaTextSecondary,
+                                                focusedContainerColor = TvFocusTokens.focusedContainer,
+                                                focusedContentColor = CinemaTextPrimary,
+                                                selectedContainerColor = TvFocusTokens.restingContainer,
+                                                selectedContentColor = TvFocusTokens.currentText,
+                                                focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
+                                                focusedSelectedContentColor = TvFocusTokens.currentText,
+                                            ),
+                                        scale =
+                                            ToggleableSurfaceDefaults.scale(
+                                                scale = TvFocusTokens.defaultScale,
+                                                focusedScale = TvFocusTokens.focusedScale,
+                                                selectedScale = TvFocusTokens.defaultScale,
+                                                pressedScale = TvFocusTokens.pressedScale,
+                                            ),
+                                        border =
+                                            ToggleableSurfaceDefaults.border(
+                                                border = Border.None,
+                                                focusedBorder =
+                                                    Border(
+                                                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
+                                                        shape = CircleShape,
+                                                    ),
+                                            ),
+                                        glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
+                                        shape = ToggleableSurfaceDefaults.shape(shape = CircleShape),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(Spacing.xs.scaled(scale)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Switch(
+                                                checked = source.enabled,
+                                                onCheckedChange = null,
+                                                colors =
+                                                    SwitchDefaults.colors(
+                                                        checkedThumbColor = CinemaAccent,
+                                                        checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                                                        uncheckedThumbColor = CinemaTextSecondary,
+                                                        uncheckedTrackColor = CinemaSurfaceVariant,
+                                                    ),
+                                            )
                                         }
+                                    }
 
-                                    val latestProgStr =
-                                        if (latestTime > 0) {
-                                            java.text
-                                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                                                .format(java.util.Date(latestTime * 1000L))
-                                        } else {
-                                            stringResource(R.string.epg_source_none)
-                                        }
+                                    StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
 
-                                    SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
-                                    if (wasUnchanged) {
-                                        // The last run confirmed no change and skipped parsing —
-                                        // the stored download/ingest durations are from whenever
-                                        // it last actually ran, so showing them here would read
-                                        // as work that didn't happen this time.
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = stringResource(R.string.epg_source_stat_unchanged),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = org.njarasoa.fijerena.ui.theme.CinemaWarning,
+                                            text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
+                                            style = MaterialTheme.typography.titleMedium,
                                         )
-                                    } else {
-                                        SourceStat(
-                                            stringResource(R.string.epg_source_stat_download),
-                                            NumberUtils.formatDuration(source.lastDownloadDurationMs),
-                                            scale,
+                                        Text(
+                                            text = guideSourceUrlHint(source.url),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         )
-                                        SourceStat(
-                                            stringResource(R.string.epg_source_stat_ingest),
-                                            NumberUtils.formatDuration(source.lastIngestionDurationMs),
-                                            scale,
+                                        // The source's own guide, whose switch is "Provides a guide" (Edit Source).
+                                        if (provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true) {
+                                            Text(
+                                                text = stringResource(R.string.epg_source_own_guide_hint),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                            )
+                                        }
+                                        Text(
+                                            text =
+                                                EpgManagementViewModel
+                                                    .refreshSummary(
+                                                        source.enabled,
+                                                        viewModel.refreshIntervalHours(source),
+                                                    ).asString(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                                         )
                                     }
-                                    SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
-                                    SourceStat(
-                                        stringResource(R.string.epg_source_stat_channels),
-                                        NumberUtils.formatCount(source.lastChannels),
-                                        scale,
-                                    )
-                                    SourceStat(
-                                        stringResource(R.string.epg_source_stat_programmes),
-                                        NumberUtils.formatCount(source.lastProgrammes),
-                                        scale,
-                                    )
+                                }
 
-                                    val lastError = source.lastError
-                                    if (lastError != null) {
-                                        Text(
-                                            text = stringResource(R.string.epg_database_error, lastError),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.error,
+                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                                    TvIconAction(
+                                        onClick = { viewModel.refreshSource(source.id) },
+                                        icon = CinemaIcons.Refresh,
+                                        label = stringResource(R.string.common_refresh),
+                                    )
+                                    TvIconAction(
+                                        onClick = { editingSource = source },
+                                        icon = CinemaIcons.Edit,
+                                        label = stringResource(R.string.provider_edit_button),
+                                    )
+                                    TvIconAction(
+                                        onClick = { intervalSource = source },
+                                        icon = CinemaIcons.Sync,
+                                        label = stringResource(R.string.epg_auto_refresh_title),
+                                        modifier =
+                                            if (source.id == intervalReturnId) Modifier.focusRequester(intervalButtonFocus) else Modifier,
+                                    )
+                                    TvIconAction(
+                                        onClick = { deletingSource = source },
+                                        icon = CinemaIcons.Delete,
+                                        label = stringResource(R.string.provider_delete_button),
+                                        danger = true,
+                                    )
+                                }
+
+                                if (activeProgress != null) {
+                                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
+                                            Text(
+                                                text =
+                                                    stringResource(
+                                                        R.string.epg_source_phase_format,
+                                                        localizedEpgPhase(activeProgress.phase),
+                                                    ),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            Text(
+                                                // No size from the server (bears sends none): the bytes so far instead of a percentage.
+                                                text =
+                                                    if (activeProgress.progressPercent >= 0) {
+                                                        stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent)
+                                                    } else {
+                                                        NumberUtils.formatBytes(activeProgress.downloadedBytes)
+                                                    },
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                        if (activeProgress.progressPercent >= 0) {
+                                            LinearProgressIndicator(
+                                                progress = { activeProgress.progressPercent / 100f },
+                                                modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                            )
+                                        } else {
+                                            LinearProgressIndicator(
+                                                modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                                    ) {
+                                        val lastIngested =
+                                            if (source.lastIngestedAtMs > 0) {
+                                                java.text
+                                                    .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                                    .format(java.util.Date(source.lastIngestedAtMs))
+                                            } else {
+                                                stringResource(R.string.epg_source_never)
+                                            }
+
+                                        val latestProgStr =
+                                            if (latestTime > 0) {
+                                                java.text
+                                                    .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                                    .format(java.util.Date(latestTime * 1000L))
+                                            } else {
+                                                stringResource(R.string.epg_source_none)
+                                            }
+
+                                        SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
+                                        if (wasUnchanged) {
+                                            // The last run confirmed no change and skipped parsing —
+                                            // the stored download/ingest durations are from whenever
+                                            // it last actually ran, so showing them here would read
+                                            // as work that didn't happen this time.
+                                            Text(
+                                                text = stringResource(R.string.epg_source_stat_unchanged),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = org.njarasoa.fijerena.ui.theme.CinemaWarning,
+                                            )
+                                        } else {
+                                            SourceStat(
+                                                stringResource(R.string.epg_source_stat_download),
+                                                NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                                                scale,
+                                            )
+                                            SourceStat(
+                                                stringResource(R.string.epg_source_stat_ingest),
+                                                NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                                                scale,
+                                            )
+                                        }
+                                        SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
+                                        SourceStat(
+                                            stringResource(R.string.epg_source_stat_channels),
+                                            NumberUtils.formatCount(source.lastChannels),
+                                            scale,
                                         )
+                                        SourceStat(
+                                            stringResource(R.string.epg_source_stat_programmes),
+                                            NumberUtils.formatCount(source.lastProgrammes),
+                                            scale,
+                                        )
+
+                                        val lastError = source.lastError
+                                        if (lastError != null) {
+                                            Text(
+                                                text = stringResource(R.string.epg_database_error, lastError),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
                                     }
                                 }
                             }
