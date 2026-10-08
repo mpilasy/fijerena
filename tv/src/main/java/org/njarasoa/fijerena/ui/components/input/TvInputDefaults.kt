@@ -24,7 +24,6 @@ import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.ListItemGlow
 import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.ListItemShape
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -42,15 +41,18 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * these tokens fill in. That matrix is the whole point: a row can be focused-and-unselected or
  * selected-and-unfocused, and both have to read at ten feet.
  *
- * - **Focus** lifts: [TvFocusTokens.focusedContainer] (lighter than rest) plus a full-weight accent
- *   outline plus the active style's scale and, where the style asks for one, its shadow.
+ * - **Focus** lifts: [TvFocusTokens.focusedContainer] (lighter than rest) plus a full-weight white
+ *   outline ([TvFocusTokens.focusedRowOutline]) plus the active style's scale and, where the style
+ *   asks for one, its shadow; the text stays white. The same look as a content list row
+ *   ([org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults], TV UI audit X2), so a settings
+ *   row and a channel row focus alike.
  * - **Selection** keeps the container: a [TvFocusTokens.currentBarWidth] bar on the leading edge
- *   ([currentIndicator]), [TvFocusTokens.currentText] for the text, and the control's own glyph
- *   (check / radio dot / switch thumb). No tint and no outline, so a selected row never looks
- *   like a second focused one (UX overhaul plan Part II P5).
+ *   ([currentIndicator]), [TvFocusTokens.currentText] for the text at rest, and the control's own
+ *   glyph (check / radio dot / switch thumb). No tint and no outline, so a selected row never
+ *   looks like a second focused one (UX overhaul plan Part II P5).
  *
- * When a row is both, it gets the focus look and keeps the bar and the text colour, so the two
- * never collapse into one another.
+ * When a row is both, it gets the focus look (white text) and keeps the bar, so the two never
+ * collapse into one another and focus never borrows the accent.
  */
 object TvInputDefaults {
     @ReadOnlyComposable
@@ -64,7 +66,7 @@ object TvInputDefaults {
             selectedContainerColor = TvFocusTokens.restingContainer,
             selectedContentColor = TvFocusTokens.currentText,
             focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
-            focusedSelectedContentColor = TvFocusTokens.currentText,
+            focusedSelectedContentColor = CinemaTextPrimary,
             disabledContainerColor = TvFocusTokens.restingContainer.copy(alpha = CinemaAlpha.scrim),
             disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
         )
@@ -104,7 +106,7 @@ object TvInputDefaults {
     @Composable
     private fun focusBorder(): Border =
         Border(
-            border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight),
+            border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = TvFocusTokens.focusedRowOutline),
             shape = RoundedCornerShape(CornerRadius.small),
         )
 }
