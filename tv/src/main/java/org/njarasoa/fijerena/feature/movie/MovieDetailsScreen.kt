@@ -445,7 +445,14 @@ private fun MovieDetailsContent(
                         val downToTabRow =
                             Modifier.onPreviewKeyEvent { event ->
                                 if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
-                                    tabRowFocusRequester.requestFocus()
+                                    // The tab row may not be composed yet (a hero taller than the
+                                    // screen): scroll it in, then focus it.
+                                    if (!tabRowFocusRequester.requestFocus()) {
+                                        refreshScope.launch {
+                                            movieListState.animateScrollToItem(1)
+                                            tabRowFocusRequester.requestFocusWithRetry()
+                                        }
+                                    }
                                     true
                                 } else {
                                     false

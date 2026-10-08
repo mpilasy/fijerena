@@ -86,7 +86,10 @@ fun TvDetailHero(
     // override (see LocalUiScale/UiScale.kt); the two disagreeing silently reproduced the exact
     // same overflow this was meant to fix.
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val heroMinHeight = remember(maxWidth) { maxWidth / TvDimensions.heroBackdropAspect }
+        // Not the full 16:9 height: the tab row below has to peek in at the bottom, so it's seen
+        // to be there and is composed for Down to land on (with the hero kept in view while
+        // focused, a full-height hero left the tab row out of the tree and Down did nothing).
+        val heroMinHeight = remember(maxWidth) { maxWidth / TvDimensions.heroBackdropAspect * HERO_HEIGHT_FRACTION }
 
         Box(
             modifier =
@@ -199,6 +202,9 @@ fun TvDetailHero(
         }
     }
 }
+
+/** The hero's share of a full 16:9 screen height: the rest is where the tab row peeks in. */
+private const val HERO_HEIGHT_FRACTION = 0.82f
 
 /** Where the hero's bottom scrim starts: clear above this fraction, solid background at the bottom. */
 private const val BOTTOM_FADE_START = 0.4f
