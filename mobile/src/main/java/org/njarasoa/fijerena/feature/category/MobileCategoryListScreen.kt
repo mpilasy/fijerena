@@ -181,6 +181,7 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
@@ -244,6 +245,8 @@ fun MobileCategoryListScreen(
     val activity = LocalActivity.current as? ComponentActivity
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
+    // The TV Guide needs a guide: the source's own EPG or an indexed XMLTV file.
+    val hasEpgData = supportsNativeEpg || epgIndexState is EpgIndexState.Indexed
 
     // Refresh last played item when returning from player
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -590,9 +593,6 @@ fun MobileCategoryListScreen(
                             if (state is CategoryViewModel.UiState.Success) {
                                 val selectedCatId = state.selectedCategoryId
                                 val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
-                                val hasEpgData =
-                                    supportsNativeEpg ||
-                                        epgIndexState is EpgIndexState.Indexed
                                 if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                     // Names the category it opens (G-M4): the selected chip may
                                     // sit under the dock, out of sight. Long-press shows it.
@@ -730,6 +730,10 @@ fun MobileCategoryListScreen(
                                 // video sits right below the top bar instead of being pushed down by
                                 // navigation chrome the user isn't using in that moment.
                                 if (!(isLiveTv && target != null)) {
+                                    // The Live TV tab's root has no section top bar, so its TV Guide
+                                    // sits at the end of the chips; a pushed list keeps it in its bar.
+                                    val guideCategoryId = state.selectedCategoryId
+                                    val guideCategoryName = state.categories.find { it.id == guideCategoryId }?.name
                                     CategoryChipRow(
                                         categories = state.categories,
                                         selectedCategoryId = state.selectedCategoryId,
@@ -739,6 +743,14 @@ fun MobileCategoryListScreen(
                                         onCategorySelected = { categoryId ->
                                             viewModel.loadStreams(categoryId)
                                         },
+                                        onGuideClick =
+                                            if (isLiveTv && sourceTopBar != null && hasEpgData &&
+                                                guideCategoryId != null && guideCategoryName != null
+                                            ) {
+                                                { stopDockThen { onEpgClick(guideCategoryId, guideCategoryName) } }
+                                            } else {
+                                                null
+                                            },
                                     )
 
                                     HorizontalDivider(
@@ -1172,6 +1184,8 @@ private fun CategoryChipRow(
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     categoryViewModel: CategoryViewModel,
     onCategorySelected: (String) -> Unit,
+    /** Opens the selected category's TV Guide from the row's end; null shows no button. */
+    onGuideClick: (() -> Unit)? = null,
 ) {
     val (virtualCategories, regularCategories) =
         remember(categories) {
@@ -1239,33 +1253,47 @@ private fun CategoryChipRow(
             }
         }
 
-        LazyRow(
-            state = listState,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = CinemaSpacing.xxs),
-            contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = CinemaSpacing.xxs),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            itemsIndexed(regularCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
-                CategoryChip(
-                    name = category.name,
-                    selected = category.id == selectedCategoryId,
-                    isFavorite = category.id in favoriteCategoryIds,
-                    onClick = { onCategorySelected(category.id) },
-                    onToggleFavorite = {
-                        categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
-                    },
-                    colors = chipColors,
-                    modifier =
-                        // remember-scoped: bare add() returns false on the first recomposition
-                        // of an already-visible chip, dropping staggeredEntrance mid-animation.
-                        if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
-                            Modifier.staggeredEntrance(index)
-                        } else {
-                            Modifier
+            LazyRow(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+            ) {
+                itemsIndexed(
+                    regularCategories,
+                    key = { _, category -> category.id },
+                    contentType = { _, _ -> "category" },
+                ) { index, category ->
+                    CategoryChip(
+                        name = category.name,
+                        selected = category.id == selectedCategoryId,
+                        isFavorite = category.id in favoriteCategoryIds,
+                        onClick = { onCategorySelected(category.id) },
+                        onToggleFavorite = {
+                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
                         },
+                        colors = chipColors,
+                        modifier =
+                            // remember-scoped: bare add() returns false on the first recomposition
+                            // of an already-visible chip, dropping staggeredEntrance mid-animation.
+                            if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            },
+                    )
+                }
+            }
+            if (onGuideClick != null) {
+                IconAction(
+                    onClick = onGuideClick,
+                    icon = CinemaIcons.DateRange,
+                    label = stringResource(R.string.common_tv_guide),
+                    tint = CinemaTextSecondary,
                 )
             }
         }
