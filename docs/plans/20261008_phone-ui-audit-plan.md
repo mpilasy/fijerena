@@ -1,7 +1,7 @@
 # Phone UI audit and polish
 
 **Status:** Plan written 2026-10-08 at the user's request ("do the same exercise on the phone" — the
-TV audit, `archive/20261007_tv-ui-audit-plan.md`); capture and findings done; review with the user in progress.
+TV audit, `archive/20261007_tv-ui-audit-plan.md`); capture and findings done; decisions recorded; fixes in progress.
 
 ## Goal
 
@@ -109,12 +109,34 @@ Live sync's page, the track sheets, safe mode. Severity: **B** broken, **R** rou
 | 12 | Live TV dock | **A sideways swipe on a row opens its delete action instead of switching Recent ↔ Favorites, and the open delete stays open after the dock closes**; "LIVE PREVIEW" label; letter tiles for missing logos | B | 22–24 |
 | 13 | Device info | "Detected as GENERIC_MOBILE" (detection, not looks — as on TV) | N | 20 |
 
+## Decisions (user, 2026-10-08)
+
+- **Row titles (P1):** primary text colour, accent only for what's current / playing; 16:9
+  thumbnails with the resume bar on the thumbnail.
+- **Category chip stars (P3):** removed; long-press a chip to add / remove it as a favourite.
+- **Live TV dock (#12):** visible Recent | Favorites tabs on the dock's list; a sideways swipe on a
+  row keeps its row actions; an open row closes when the dock closes or the list changes.
+- **Text action buttons (P7):** icons in the top bar with long-press tooltips (Refresh, Share,
+  Clear log); Export / Import as Settings rows; Edit Source's "25 Edit" a row with a picker.
+- Everything else in Findings is plain polish; #13 (device detection) left for a separate fix.
+
+## Fix phases
+
+`MobileEmptyState` (`mobile/.../ui/components/`) written first, for every agent to use.
+
+| Agent | Files (non-overlapping) | Covers |
+|---|---|---|
+| A — tabs, lists, dock | `feature/category/**` | P1, P2, P3 there, #1, #12 |
+| B — details, episodes | `feature/movie/**`, `feature/episode/**`, `ui/components/MobileDetailHero.kt`, `MobileDetailMeta.kt`, `RelatedTitlesRow.kt` | P4 (rating), #2, #3 |
+| C — player | `feature/player/**` | P5, P4 (star), #4 |
+| D — search, settings, sources, header, bar | `feature/search/**`, `feature/settings/**`, `feature/provider/**`, `feature/epg/**`, `feature/epgbrowser/**`, `feature/contentselection/**`, `navigation/MobileBottomBar.kt` | P2, P6–P9, #5, #7–#11 |
+
 ## Progress
 
 | Step | Status | Commit |
 |---|---|---|
 | Capture | Done 2026-10-08: 24 shots | |
 | Findings | Done: 9 shared causes, 13 per-screen rows | |
-| Review with the user | In progress | |
-| Fixes | Not started | |
+| Review with the user | Done 2026-10-08: decisions above | |
+| Fixes | In progress (agents A–D) | |
 | Verify + spot checks | Not started | |
