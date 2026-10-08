@@ -19,6 +19,7 @@ import androidx.tv.material3.ButtonColors
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -55,9 +56,11 @@ fun CinemaPrimaryButton(
         enabled = enabled,
         colors =
             ButtonDefaults.colors(
-                containerColor = CinemaAccent,
+                // Focus must read stronger than rest (TV UI audit, #12): the old focused fill,
+                // AccentLight, was paler than the resting Accent behind the same white text.
+                containerColor = CinemaAccentDark,
                 contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccentLight,
+                focusedContainerColor = CinemaAccent,
                 focusedContentColor = CinemaTextPrimary,
                 pressedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
                 disabledContainerColor = CinemaSurfaceVariant,
