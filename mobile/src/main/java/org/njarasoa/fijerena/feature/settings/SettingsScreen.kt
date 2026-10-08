@@ -29,7 +29,6 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -48,8 +47,6 @@ import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsRows
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
-import org.njarasoa.fijerena.feature.settings.components.SettingsScope
-import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -252,7 +249,6 @@ fun MobileSettingsScreen(
     }
 
     val activeProviderId = uiState.activeProviderId
-    val activeProfile = profiles.firstOrNull { it.isActive }
 
     Scaffold(
         topBar = {
@@ -261,17 +257,6 @@ fun MobileSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
-                    }
-                },
-                actions = {
-                    if (activeProfile != null) {
-                        ProfileAvatar(
-                            name = activeProfile.name,
-                            colorIndex = activeProfile.colorIndex,
-                            size = MobileDimensions.iconLarge,
-                            fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                            modifier = Modifier.padding(end = Spacing.md),
-                        )
                     }
                 },
             )
@@ -304,23 +289,25 @@ fun MobileSettingsScreen(
                 SettingsListRow(
                     title = stringResource(R.string.settings_provider_manage_button),
                     summary = manageSourcesSummary(uiState),
-                    scope = SettingsScope.SOURCE,
                     onClick = onManageProviders,
                 )
             }
 
             // === 3. Playback ===
             item {
-                SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
+                SettingsGroupHeader(
+                    title = stringResource(R.string.settings_playback_section_title),
+                    description = stringResource(R.string.settings_scope_device_section),
+                )
                 SettingsListRow(
                     title = stringResource(R.string.settings_watch_delay_row_title),
                     summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
-                    scope = SettingsScope.DEVICE,
                     onClick = { showWatchDelayPicker = true },
                 )
+                // The per-source playback settings live on Edit Source: a real row into it.
                 SettingsListRow(
-                    title = stringResource(R.string.settings_per_source_playback_hint),
-                    scope = SettingsScope.SOURCE,
+                    title = stringResource(R.string.provider_edit_title),
+                    summary = stringResource(R.string.settings_per_source_playback_hint),
                     onClick = { activeProviderId?.let(onEditSource) },
                     enabled = activeProviderId != null,
                 )
@@ -328,17 +315,18 @@ fun MobileSettingsScreen(
 
             // === 4. Display ===
             item {
-                SettingsGroupHeader(stringResource(R.string.settings_group_display))
+                SettingsGroupHeader(
+                    title = stringResource(R.string.settings_group_display),
+                    description = stringResource(R.string.settings_scope_device_section),
+                )
                 SettingsListRow(
                     title = stringResource(R.string.settings_theme_section_title),
                     summary = AllPalettes.firstOrNull { it.id == uiState.themeId }?.displayName ?: uiState.themeId,
-                    scope = SettingsScope.DEVICE,
                     onClick = { showThemePicker = true },
                 )
                 SettingsListRow(
                     title = stringResource(R.string.settings_ui_style_section_title),
                     summary = AllUiStyles.firstOrNull { it.id == uiState.uiStyleId }?.displayName ?: uiState.uiStyleId,
-                    scope = SettingsScope.DEVICE,
                     onClick = { showUiStylePicker = true },
                 )
                 SettingsListRow(
@@ -350,7 +338,6 @@ fun MobileSettingsScreen(
                             "fr" -> stringResource(R.string.settings_language_fr)
                             else -> uiState.language
                         },
-                    scope = SettingsScope.DEVICE,
                     onClick = { showLanguagePicker = true },
                 )
             }
@@ -363,27 +350,21 @@ fun MobileSettingsScreen(
 
             // === 6. Backup & storage ===
             item {
-                SettingsGroupHeader(stringResource(R.string.settings_group_backup_storage))
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                ) {
-                    CinemaOutlinedButton(
-                        onClick = { exportLauncher.launch("fijerena_settings.json") },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(stringResource(R.string.common_export))
-                    }
-                    CinemaOutlinedButton(
-                        onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(stringResource(R.string.common_import))
-                    }
-                }
+                SettingsGroupHeader(
+                    title = stringResource(R.string.settings_group_backup_storage),
+                    description = stringResource(R.string.settings_scope_device_section),
+                )
+                SettingsListRow(
+                    title = stringResource(R.string.settings_export_button),
+                    summary = stringResource(R.string.settings_export_import_desc),
+                    trailing = {},
+                    onClick = { exportLauncher.launch("fijerena_settings.json") },
+                )
+                SettingsListRow(
+                    title = stringResource(R.string.settings_import_button),
+                    trailing = {},
+                    onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
+                )
                 if (uiState.isDevMode) {
                     val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
                     SettingsListRow(
@@ -422,7 +403,6 @@ fun MobileSettingsScreen(
                             },
                         ),
                     summary = stringResource(R.string.settings_shrink_database_desc),
-                    scope = SettingsScope.DEVICE,
                     trailing = {
                         if (uiState.isPruningDatabase) {
                             CircularProgressIndicator(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
@@ -523,7 +503,6 @@ private fun LiveSyncRow(onOpen: () -> Unit) {
     SettingsListRow(
         title = stringResource(R.string.live_sync_title),
         summary = status.serverUrl ?: stringResource(R.string.live_sync_off),
-        scope = SettingsScope.SYNCED,
         onClick = onOpen,
     )
 }

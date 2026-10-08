@@ -32,18 +32,34 @@ enum class SettingsScope {
     SYNCED,
 }
 
-/** Section header of the grouped settings list (one per shared IA group). */
+/**
+ * Section header of the grouped settings list (one per shared IA group). [description] says once
+ * for the whole section where its settings live (e.g. "Applies to this device only"), as on TV.
+ */
 @Composable
-fun SettingsGroupHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
+fun SettingsGroupHeader(
+    title: String,
+    description: String? = null,
+) {
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(start = Spacing.md, end = Spacing.md, top = Spacing.lg, bottom = Spacing.xs),
-    )
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (description != null) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            )
+        }
+    }
 }
 
 /**

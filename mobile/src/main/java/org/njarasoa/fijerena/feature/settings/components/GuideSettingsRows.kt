@@ -54,7 +54,6 @@ fun GuideMaintenanceRow(viewModel: EpgManagementViewModel) {
     SettingsListRow(
         title = stringResource(R.string.settings_guide_maintenance_title),
         summary = databaseStatusText(indexState),
-        scope = SettingsScope.DEVICE,
         onClick = { showDialog = true },
     )
     if (showDialog) {
