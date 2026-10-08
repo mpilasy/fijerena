@@ -1,6 +1,6 @@
 # TV UI audit and polish
 
-**Status:** Not started. Plan written 2026-10-07 at the user's request ("the UI still looks like
+**Status:** Capture and findings done; review with the user in progress. Plan written 2026-10-07 at the user's request ("the UI still looks like
 crap on the TV … walk through the whole app and audit every single section and every single
 widget … and make it better"; then "first make a plan"). Waits for the user's go-ahead.
 
@@ -109,15 +109,62 @@ asking (emulators only here).
 
 ## Findings
 
-(Filled in by the audit.)
+Captured 2026-10-07 on the TV emulator (1920×1080), profile atr (developer mode on), theme Deep
+Night, look Material, **Text & grid size 60 %** (the setting's default is 80 %), English. Sources:
+bears (Live TV, until the user asked to get off it), iptv (Live TV), jellyxtream (films, shows).
+Shots: `/home/tahiry/data/sary/screenshots/tv-audit/NN_*.png` (45). Severity: **B** broken,
+**R** rough, **N** nit. Not captured: a filled-in TV Guide grid (needs a source with guide data;
+bears is off-limits), Live sync's Manage page, Add Source, the profile page, safe mode / newer
+data, the Up next card, loading screens.
+
+### Shared causes (one fix, many screens)
+
+| # | Finding | Sev | Seen on | Likely fix |
+|---|---|---|---|---|
+| X1 | **Sizes:** "Text & grid size" defaults to 80 % and goes down to 40 %; it scales only some screens (browse, home, details), not Settings, dialogs or the player, so the same text is different sizes from screen to screen; at 60–80 % body text is too small for 3 m | B | all | Rework the scale: 100 % default, a narrower range (e.g. 90–120 %), applied to every screen through the type scale and spacing tokens |
+| X2 | **Focused list rows:** blue fill with blue (accent) text — low contrast; rating stars and secondary text vanish on it; the focus look differs between widgets (rows: blue fill; cards and settings: white or blue outline; tabs: outlined pill; buttons: paler fill) | B | 05, 06, 07, 12, 14, 25, 28 | One focus look for rows (light surface or outline + white text), applied in `StreamList`, `CategoryList`, channel panel, search results |
+| X3 | **Channel logos cropped** to 16:9 (`CinemaThumbnail` always `ContentScale.Crop`): "WORLD NEWS" cut, France 24 cut | B | 02, 05, 06, 12 | Logos (live items) drawn with `Fit` on a neutral tile with padding; posters stay `Crop` |
+| X4 | **Truncated second lines** on cards ("35m r…", "Pays et marchés du mo…", "Avengers: Age …") at the card widths used | R | 02, 18 | Two-line titles where it's the title; shorter secondary lines (drop the redundant part) |
+| X5 | **Inconsistent selectors:** radio list (Settings pickers), pill pair with a left accent bar (Edit Source), `Switch` (toggles), outlined Material text field (Source Type) | R | 39, 42 | One selected-state style for pills; no Material text field on TV |
+| X6 | **Headers differ on every screen:** browse (two round icons glued to a 3-line stacked title + the source repeated top-right), Search ("Search / All Content"), Search the guide (title — source, status text and three icons), Settings (title + avatar · source), Sources (title + "+") | R | 06, 14, 27, 29, 32, 41 | One TV screen header: title (+ subtitle) left, icon actions right, same sizes and spacing |
+| X7 | **Empty / error states:** "Error Loading Guide" in red for a source that simply has no channels; "No channels in this category" + "0 streams" on TV Shows; "No guide sources configured" floating at the top | R | 26, 31, 43 | One empty-state component (icon, sentence, optional action), centred; errors only for real failures; wording per section |
+| X8 | **Technical wording shown to users:** "streams", "Enter stream name…", "Category: en", "(XTREAM)" in names outside developer mode, "No channels" for shows | R | 25, 27, 28 | Words per section: channels / films / shows; "Search films, shows and channels" |
+| X9 | **Heart vs star:** the player's Favorite is a heart; everywhere else favourites are a star (and ratings are also a blue star, confusable with favourite) | R | 10, 21, 25 | Star for favourite everywhere; rating as "8.2" with a neutral icon or none |
+| X10 | **Durations:** "01:33:44" on episodes vs "1h 33m" elsewhere | N | 26 | One duration format |
+
+### Per screen
+
+| # | Screen | Finding | Sev | Shot |
+|---|---|---|---|---|
+| 1 | Profile picker | Small avatars and labels alone in the middle of an empty screen | R | 01 |
+| 2 | Home | Section titles small; Live TV tile's live dot invisible; category counts differ from the browse header ("4 categories" vs "7 categories") | N | 02, 13, 14 |
+| 3 | Source picker | Rows dark on dark; tiny "Close" text link; no status per source | N | 04 |
+| 4 | Live TV preview | Hint "OK Play · OK again Full screen · Hold OK Options" low contrast, floating at the bottom far from what it explains; info under the video sparse (no Now/Next when no guide) | R | 05, 11 |
+| 5 | Live TV browse | Two refresh buttons (categories and list); "Recent Categories" looks like a category; super-script quality tags ("UHD ³⁸⁴⁰ᴾ") add noise | R | 06, 07 |
+| 6 | Row actions menu | Fine; "Remove from Favorites" in red reads as destructive | N | 08 |
+| 7 | Live TV full screen | Channel panel is see-through over the video and mostly empty below its rows; placeholder letter tiles ("A", "9") for missing logos | R | 12 |
+| 8 | Live / VOD controls (OSD) | Hard black band at the top (dev line + clock) instead of a gradient; small unlabelled icon row; heart for favourite (X9) | R | 10, 21 |
+| 9 | VOD controls | **No title** — only the plot line; **subtitles draw over the controls** (plot, timeline); focus: Down from Pause stays, then lands on nothing visible, then on More (last button), not the first | B | 21, 22, 23 |
+| 10 | Stats overlay | Very small monospace text (a developer tool) | N | 24 |
+| 11 | Movies / Shows browse | Opens part-scrolled with the first row cut at the top; resume bars sit on the boundary between rows; rows carry the title only (no year / length / rating) | R | 14, 25 |
+| 12 | Movie details | **No title when the film has no logo image** (The Matrix); hero ends in a hard horizontal edge instead of fading; boxed "8.2 Community Rating" chip; "Details" tab starts with a lone "jellyxtream"; "More Like This" repeats the "Similar" tab name; Play is paler when focused than unfocused; ○ for "mark watched" is unclear | B | 15–19 |
+| 13 | Episodes | Opens scrolled with the show's logo cut at the top; two stacked tab rows of the same style (sections / seasons) | R | 26 |
+| 14 | Search | Separate search button beside a field that already searches; results are thin squashed thumbnails with "Category: en" | R | 27, 28 |
+| 15 | Search the guide | Search inside its own panel with the "Matched only" chip; header crams status text with three icons | R | 29, 30 |
+| 16 | TV Guide (no channels) | Shown as a red error with Retry (X7) | R | 31 |
+| 17 | Settings | Panes fill only the top; values in odd columns (source row: "jellyxtream ›", "Oct 7, 2027", "5"); every row has a tiny "This device / This source" badge; "Add profile" a bare text row | R | 32–40 |
+| 18 | Sources | Cards end at two-thirds width with icon buttons floating far right, gaps where a button is missing; ⋮ blue while the others are white | R | 41 |
+| 19 | Edit Source | Three control styles (X5); "Source Name:" label-colon rows with pencil buttons; "25 Edit"; Cancel / Save small | R | 42 |
+| 20 | Guide sources (empty) | Sentence and button at the top of an empty screen (X7) | N | 43 |
+| 21 | Device info | "Detected as GENERIC_MOBILE" on a TV (detection, not looks — flagged for a separate fix) | N | 44 |
 
 ## Progress
 
 | Step | Status | Commit |
 |---|---|---|
-| Capture | Not started | |
-| Findings | Not started | |
-| Review with the user | Not started | |
+| Capture | Done 2026-10-07: 45 shots (see Findings for what wasn't captured) | |
+| Findings | Done 2026-10-07: 10 shared causes, 21 per-screen rows | |
+| Review with the user | In progress | |
 | Phase A — tokens | Not started | |
 | Phase B — shared components | Not started | |
 | Phase C — per screen | Not started | |
