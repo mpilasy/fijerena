@@ -3,7 +3,9 @@
 # Walk 1 start: Movies → a movie never played (no Resume, no trailer) → OK. Focus is on Play.
 # Walk 2 start: during the WAIT, open a TV show with several seasons and a continue-watching
 # episode past the first few (Home → TV Shows → the show → OK). Focus is on that episode.
-# Written 2026-10-03 from the plan, not yet recorded — re-record with -r on the emulator.
+# Written 2026-10-03 from the plan. Walk 1 checked 2026-10-08 (jellyxtream, 2001: A Space Odyssey):
+# 9 steps, 0 mismatches. Walk 2 not yet run: jellyxtream has no show with a continue-watching
+# episode past the first few.
 # Lines marked (-r) depend on the title's data (which tabs it has, the episode's place in the
 # list) and are left unchecked or checked loosely until recorded.
 #
