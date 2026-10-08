@@ -20,6 +20,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,18 +53,24 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LeadingIconTab
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -87,11 +94,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -102,6 +116,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1146,7 +1161,7 @@ private fun SwipeActionButton(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryChipRow(
     categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
@@ -1184,50 +1199,39 @@ private fun CategoryChipRow(
     }
 
     Column {
-        // Virtual categories row (Favorites, Last Watched)
+        // The modes of browsing (Recent, Favorites, Favorite / Recent Categories) as icon tabs, so
+        // they read apart from the category chips below (phone UI audit #1). No tab is marked
+        // while a real category is picked.
         if (virtualCategories.isNotEmpty()) {
-            LazyRow(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = CinemaSpacing.sm, bottom = CinemaSpacing.xs),
-                contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+            val selectedModeIndex = virtualCategories.indexOfFirst { it.id == selectedCategoryId }
+            PrimaryScrollableTabRow(
+                selectedTabIndex = selectedModeIndex.coerceAtLeast(0),
+                containerColor = Color.Transparent,
+                edgePadding = CinemaSpacing.xxs,
+                indicator = {
+                    if (selectedModeIndex >= 0) {
+                        TabRowDefaults.PrimaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(selectedModeIndex, matchContentSize = true),
+                            width = Dp.Unspecified,
+                        )
+                    }
+                },
+                divider = {},
             ) {
-                itemsIndexed(virtualCategories, key = {
-                    _,
-                    category,
-                    ->
-                    category.id
-                }, contentType = { _, _ -> "category" }) { index, category ->
-                    CinemaFilterChip(
+                virtualCategories.forEach { category ->
+                    LeadingIconTab(
                         selected = category.id == selectedCategoryId,
                         onClick = { onCategorySelected(category.id) },
-                        label = {
-                            Text(
-                                text = category.name,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                // Marquee only on the selected chip. Touch has no focus, so gating on
-                                // selection is the nearest equivalent — otherwise every overflowing chip
-                                // runs its own per-frame invalidateDraw loop for as long as it's visible.
-                                modifier =
-                                    if (category.id == selectedCategoryId) {
-                                        Modifier.bounceMarquee()
-                                    } else {
-                                        Modifier
-                                    },
+                        text = { Text(text = category.name, maxLines = 1) },
+                        icon = {
+                            Icon(
+                                imageVector = virtualCategoryIcon(category.id),
+                                contentDescription = null,
+                                modifier = Modifier.size(MobileDimensions.iconSmall),
                             )
                         },
-                        colors = chipColors,
-                        modifier =
-                            // remember-scoped: bare add() returns false on the first recomposition
-                            // of an already-visible chip, dropping staggeredEntrance mid-animation.
-                            if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
-                                Modifier.staggeredEntrance(index)
-                            } else {
-                                Modifier
-                            },
+                        selectedContentColor = MaterialTheme.colorScheme.primary,
+                        unselectedContentColor = CinemaTextSecondary,
                     )
                 }
             }
@@ -1238,63 +1242,124 @@ private fun CategoryChipRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = CinemaSpacing.sm),
+                    .padding(bottom = CinemaSpacing.xxs),
             contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             itemsIndexed(regularCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
-                val isFavCat = category.id in favoriteCategoryIds
-                CinemaFilterChip(
+                CategoryChip(
+                    name = category.name,
                     selected = category.id == selectedCategoryId,
+                    isFavorite = category.id in favoriteCategoryIds,
                     onClick = { onCategorySelected(category.id) },
-                    label = {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = category.name,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                // See the virtual chips above.
-                                modifier =
-                                    if (category.id == selectedCategoryId) {
-                                        Modifier.bounceMarquee()
-                                    } else {
-                                        Modifier
-                                    },
-                            )
-                            // Long-press was unreliable here (a horizontally scrolling LazyRow
-                            // reads any sideways jitter during the hold as a scroll attempt and
-                            // cancels it) — an always-visible, independently tappable icon sidesteps
-                            // that entirely, same fix as the TV category reveal.
-                            Icon(
-                                imageVector = if (isFavCat) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                contentDescription =
-                                    stringResource(if (isFavCat) R.string.favorite_remove else R.string.favorite_add),
-                                tint = if (isFavCat) MaterialTheme.colorScheme.primary else CinemaTextSecondary,
-                                modifier =
-                                    Modifier
-                                        .size(MobileDimensions.iconSmall)
-                                        .clickable(
-                                            indication = null,
-                                            interactionSource = remember { MutableInteractionSource() },
-                                        ) {
-                                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
-                                        },
-                            )
-                        }
+                    onToggleFavorite = {
+                        categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
                     },
+                    colors = chipColors,
                     modifier =
-                        // See above — remember-scoped so recomposition can't cancel it.
+                        // remember-scoped: bare add() returns false on the first recomposition
+                        // of an already-visible chip, dropping staggeredEntrance mid-animation.
                         if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
                             Modifier.staggeredEntrance(index)
                         } else {
                             Modifier
                         },
-                    colors = chipColors,
                 )
             }
+        }
+    }
+}
+
+/** The icon that marks a virtual category as a mode of browsing — the same ones as on the TV. */
+@Composable
+private fun virtualCategoryIcon(categoryId: String): ImageVector =
+    when (categoryId) {
+        CategoryViewModel.RECENT_CATEGORY_ID -> CinemaIcons.Replay
+        CategoryViewModel.FAVORITES_CATEGORY_ID -> CinemaIcons.Star
+        CategoryViewModel.FAVORITE_CATEGORIES_ID -> CinemaIcons.StarBorder
+        else -> CinemaIcons.Folder
+    }
+
+/**
+ * A category chip. A long-press opens a one-item menu to add the category to Favorite Categories
+ * or take it off (phone UI audit P3) — it replaced a ☆ on every chip.
+ *
+ * FilterChip has no long-click of its own, so the hold is timed from its press interactions: a
+ * press held past the long-press timeout opens the menu, and the click its release then sends is
+ * dropped. A sideways drag cancels the press (the row scrolls), as it would any long-press.
+ */
+@Composable
+private fun CategoryChip(
+    name: String,
+    selected: Boolean,
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    colors: SelectableChipColors,
+    modifier: Modifier = Modifier,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    var longPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val haptics = LocalHapticFeedback.current
+    val longPressTimeoutMs = LocalViewConfiguration.current.longPressTimeoutMillis
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collectLatest { interaction ->
+            if (interaction is PressInteraction.Press) {
+                longPressed = false
+                delay(longPressTimeoutMs)
+                longPressed = true
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                menuOpen = true
+            }
+        }
+    }
+    val favoriteLabel = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add)
+    Box(modifier = modifier) {
+        CinemaFilterChip(
+            selected = selected,
+            onClick = {
+                if (longPressed) longPressed = false else onClick()
+            },
+            label = {
+                Text(
+                    text = name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    // Marquee only on the selected chip. Touch has no focus, so gating on
+                    // selection is the nearest equivalent — otherwise every overflowing chip
+                    // runs its own per-frame invalidateDraw loop for as long as it's visible.
+                    modifier = if (selected) Modifier.bounceMarquee() else Modifier,
+                )
+            },
+            colors = colors,
+            interactionSource = interactionSource,
+            // The menu's action for TalkBack, which has no long-press of its own here.
+            modifier =
+                Modifier.semantics {
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(favoriteLabel) {
+                                onToggleFavorite()
+                                true
+                            },
+                        )
+                },
+        )
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(favoriteLabel) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    menuOpen = false
+                    onToggleFavorite()
+                },
+            )
         }
     }
 }
