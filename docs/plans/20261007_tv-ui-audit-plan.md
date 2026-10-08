@@ -113,8 +113,7 @@ Captured 2026-10-07 on the TV emulator (1920×1080), profile atr (developer mode
 Night, look Material, **Text & grid size 60 %** (the setting's default is 80 %), English. Sources:
 bears (Live TV, until the user asked to get off it), iptv (Live TV), jellyxtream (films, shows).
 Shots: `/home/tahiry/data/sary/screenshots/tv-audit/NN_*.png` (45). Severity: **B** broken,
-**R** rough, **N** nit. Not captured: a filled-in TV Guide grid (needs a source with guide data;
-bears is off-limits), Live sync's Manage page, Add Source, the profile page, safe mode / newer
+**R** rough, **N** nit. Not captured: Live sync's Manage page, Add Source, the profile page, safe mode / newer
 data, the Up next card, loading screens.
 
 ### Shared causes (one fix, many screens)
@@ -157,6 +156,9 @@ data, the Up next card, loading screens.
 | 19 | Edit Source | Three control styles (X5); "Source Name:" label-colon rows with pencil buttons; "25 Edit"; Cancel / Save small | R | 42 |
 | 20 | Guide sources (empty) | Sentence and button at the top of an empty screen (X7) | N | 43 |
 | 21 | Device info | "Detected as GENERIC_MOBILE" on a TV (detection, not looks — flagged for a separate fix) | N | 44 |
+| 22 | TV Guide grid (bears) | Opens hours in the past with "now" at the right edge and cells cut at the left; short programmes unreadable ("Bu…", "B…"); channels without listings are blank rows; no channel logos; two lines of developer counters in the header | R | 46 |
+| 23 | Programme panel | Fine (title, channel, time, Close / Watch channel) | — | 47 |
+| 24 | Live TV lists (bears) | Separator rows ("####### ETHIOPIA VIP #######") are playable rows and can take first focus and get tuned; channels without logos show an empty dark tile instead of a letter | R | (seen while capturing) |
 
 ## Decisions (user, 2026-10-07)
 
