@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -40,6 +41,23 @@ enum class MobileTab(
             }
     }
 }
+
+/** The tab whose stack [backStack] is: its root is the one tab entry on it (one tab's stack at a time). */
+fun tabOf(backStack: List<NavBackStackEntry>): MobileTab? = backStack.firstNotNullOfOrNull { MobileTab.rootedAt(it.destination) }
+
+/** Screens inside a tab that still hide the bar: the player, and Settings with what it opens. */
+fun hidesBottomBar(destination: NavDestination?): Boolean =
+    destination != null &&
+        (
+            destination.hasRoute<Screen.Player>() ||
+                destination.hasRoute<Screen.Settings>() ||
+                destination.hasRoute<Screen.AddProvider>() ||
+                destination.hasRoute<Screen.ProviderSelection>() ||
+                destination.hasRoute<Screen.ProfileEdit>() ||
+                destination.hasRoute<Screen.SyncSettings>() ||
+                destination.hasRoute<Screen.Diagnostics>() ||
+                destination.hasRoute<Screen.DeviceInfo>()
+        )
 
 /**
  * The tabs the bar shows: the sections the active source has — none, so no bar, when it has only

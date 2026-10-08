@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-07
 
 - **TV: readable over light channel logos and posters:** the blurred backdrop behind the Live TV preview, browse and Home took the image's own brightness, so a light logo (Al Jazeera, C-SPAN) turned the screen pale and the channel name, category, hints and tabs vanished. The backdrop is now darkened with the theme's background, whatever the image.
+- **Phone: back to a section's start from anywhere:** the bottom bar now stays on details, episodes, Search and the guides, so tapping the current tab goes straight back to its start (it replaces the old "back to Movies" button), and switching tabs comes back to the film or screen you left.
 - **Search everything from any phone tab:** a tab's Search now searches Live TV, Movies and TV Shows together, starting on that tab's section — the "All Content" chip widens it in one tap.
 - **No more picture-in-picture with nothing playing:** after watching a channel docked in Live TV and moving on (Search the guide, another tab, Back), pressing Home put whatever screen was open into a PiP window. PiP now only happens while live video is playing.
 - **The phone has tabs instead of Home:** a bottom bar with Live TV, Movies and TV Shows (the sections the source has; no Live TV tab for a source without channels). Each tab keeps its place when you switch, tapping the tab you're on takes it back to its start, and the app opens on the tab you used last. → Phases 3, 8.

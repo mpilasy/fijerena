@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,10 +91,18 @@ fun MobileNavHost(
     var activeSource by remember { mutableStateOf<ActiveSource?>(null) }
     // The graph's start destination, decided once at startup.
     var openingTab by remember { mutableStateOf(MobileTab.LIVE_TV) }
-    // The Live TV tab's dock as its screen reports it: stopped before the bar leaves the tab (the
-    // engine is Activity-scoped), and the bar hides while the video takes the screen.
-    var stopLiveDock by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var liveDockCoversScreen by remember { mutableStateOf(false) }
+    // Each Live TV dock as its screen reports it, by back-stack entry — the tab's root and any
+    // CategoryList pushed deeper (a channel opened from Search or a guide): stopped before the bar
+    // leaves the tab (the engine is Activity-scoped), and the bar hides while one takes the screen.
+    // Keyed by entry so the screen leaving can't clear the report of the one arriving.
+    val liveDocks = remember { mutableStateMapOf<String, Pair<(() -> Unit)?, Boolean>>() }
+
+    fun stopLiveDocks() = liveDocks.values.forEach { (stop, _) -> stop?.invoke() }
+
+    fun reportLiveDock(entryId: String): (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit =
+        { stopDock, coversScreen ->
+            if (stopDock == null && !coversScreen) liveDocks.remove(entryId) else liveDocks[entryId] = stopDock to coversScreen
+        }
 
     // Back-Stack Rule 4's switches also drop every tab's saved back stack: a later tab tap would
     // otherwise restore a screen holding the previous source's (closed) repository.
@@ -108,11 +117,12 @@ fun MobileNavHost(
     // being left is the current destination's. Only one tab's stack is ever on the back stack, so
     // Back on a tab's root leaves the app.
     fun selectTab(tab: MobileTab) {
-        val current = MobileTab.rootedAt(navController.currentDestination)
+        val current = tabOf(navController.currentBackStack.value)
         if (tab == current) {
+            // From anywhere inside the tab: back to its start, the screens above dropped.
             navController.popBackStack(tab.route, inclusive = false)
         } else {
-            if (current == MobileTab.LIVE_TV) stopLiveDock?.invoke()
+            stopLiveDocks()
             navController.navigate(tab.route) {
                 popUpTo(navController.graph.id) { saveState = true }
                 launchSingleTop = true
@@ -123,13 +133,13 @@ fun MobileNavHost(
 
     // A tab root's top bar leaves it: the Live TV dock is stopped first, as the bar does.
     fun leaveTabRoot(go: () -> Unit) {
-        stopLiveDock?.invoke()
+        stopLiveDocks()
         go()
     }
 
     // Starts over on [tab]'s root as the only screen, every tab's saved place dropped.
     fun restartOn(tab: MobileTab) {
-        stopLiveDock?.invoke()
+        stopLiveDocks()
         clearTabStacks()
         navController.navigate(tab.route) {
             popUpTo(navController.graph.id) { inclusive = true }
@@ -266,9 +276,11 @@ fun MobileNavHost(
         }
     }
 
-    // The bar shows on a tab's root, nowhere else — and not with a single section.
+    // The bar shows on every screen inside a tab — its root and what's pushed on it (details,
+    // episodes, Search, guides…) — so the current tab always leads back to its start and each tab
+    // keeps its place; not on the player, Settings and its screens, or with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
-    val currentTab = MobileTab.rootedAt(currentEntry?.destination)
+    val currentTab = currentEntry?.let { tabOf(navController.currentBackStack.value) }
     val tabs = visibleTabs(activeSource?.sections)
 
     // The app opens next time on the tab used last. A tab the source doesn't have (opened while its
@@ -328,7 +340,9 @@ fun MobileNavHost(
         // takes in the navigation bar) is padded off and consumed below.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (currentTab != null && tabs.isNotEmpty() && !(currentTab == MobileTab.LIVE_TV && liveDockCoversScreen)) {
+            val entry = currentEntry
+            val dockCovers = entry != null && liveDocks[entry.id]?.second == true
+            if (currentTab != null && tabs.isNotEmpty() && !dockCovers && !hidesBottomBar(entry?.destination)) {
                 MobileBottomBar(tabs = tabs, selected = currentTab, onSelect = ::selectTab)
             }
         },
@@ -412,22 +426,25 @@ fun MobileNavHost(
             }
 
             composable<Screen.CategoryList> { backStackEntry ->
-                CategoryListDestination(navController, backStackEntry.toRoute<Screen.CategoryList>(), onHome = ::openLiveTvRoot)
+                CategoryListDestination(
+                    navController,
+                    backStackEntry.toRoute<Screen.CategoryList>(),
+                    onHome = ::openLiveTvRoot,
+                    onDockChanged = reportLiveDock(backStackEntry.id),
+                )
             }
 
             // The tabs' roots: the section's list under the source's top bar. Live TV's reports
             // its dock, which the bar stops on leaving the tab and hides under.
-            composable<Screen.LiveTvTab> {
+            composable<Screen.LiveTvTab> { backStackEntry ->
                 tabRoot(MobileTab.LIVE_TV) {
                     CategoryListDestination(
                         navController,
                         Screen.CategoryList(ContentType.LIVE_TV),
                         onHome = ::openLiveTvRoot,
                         sourceTopBar = sourceTopBar(MobileTab.LIVE_TV),
-                    ) { stopDock, coversScreen ->
-                        stopLiveDock = stopDock
-                        liveDockCoversScreen = coversScreen
-                    }
+                        onDockChanged = reportLiveDock(backStackEntry.id),
+                    )
                 }
             }
 
