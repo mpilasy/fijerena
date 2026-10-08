@@ -1,6 +1,6 @@
 # Icon Buttons Plan
 
-**Status:** Done on the emulators (2026-10-05) except three places not reached: live sync device rows (no other devices), the section-root button, the phone's guide-source rows. Walks `sources`, `edit-source`, `guide` and `details` (walk 1) pass; `live-tv-osd` differs only where its stream has no subtitles; `epg-management` not run (needs bearstv). Row icons push their neighbours when the label opens (no overlap); the Sources slots don't move.
+**Status:** Closed and archived 2026-10-07 at the user's request; live sync device rows and the phone's guide-source rows never reached; the section-root item is moot (the phone's button was removed with its Home, 2026-10-07). Before: Done on the emulators (2026-10-05) except three places not reached: live sync device rows (no other devices), the section-root button, the phone's guide-source rows. Walks `sources`, `edit-source`, `guide` and `details` (walk 1) pass; `live-tv-osd` differs only where its stream has no subtitles; `epg-management` not run (needs bearstv). Row icons push their neighbours when the label opens (no overlap); the Sources slots don't move.
 
 ## Goal
 

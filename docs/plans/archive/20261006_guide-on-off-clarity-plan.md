@@ -1,6 +1,6 @@
 # Guide on/off clarity
 
-**Status:** All five phases done and checked on the emulators 2026-10-06, except Phase 1 (not forced on a device). Left: the OnePlus. User said proceed 2026-10-06; bulk select dropped entirely (default taken, user didn't choose a menu).
+**Status:** Closed and archived 2026-10-07 at the user's request; Phase 1 never forced on a device and the OnePlus check never done. Before: All five phases done and checked on the emulators 2026-10-06, except Phase 1 (not forced on a device). Left: the OnePlus. User said proceed 2026-10-06; bulk select dropped entirely (default taken, user didn't choose a menu).
 
 ## Problem
 

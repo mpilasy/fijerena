@@ -40,7 +40,7 @@ object ProviderSyncRunner {
     /**
      * Ids of the sources whose catalogue sync is running now, whichever caller started it (manual,
      * TV's in-process refresh, [XtreamSyncWorker]). Home's source pill shows "Updating…" from it
-     * (docs/plans/20261007_tv-home-overhaul-plan.md → Phase 1).
+     * (docs/plans/archive/20261007_tv-home-overhaul-plan.md → Phase 1).
      */
     val running: Flow<Set<Long>> = runningCounts.map { it.keys }.distinctUntilChanged()
 

@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * An action as an icon: [label] is its content description and shows in a tooltip on long-press.
- * The mobile side of docs/plans/20261005_icon-buttons-plan.md (TV: `TvIconAction`).
+ * The mobile side of docs/plans/archive/20261005_icon-buttons-plan.md (TV: `TvIconAction`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

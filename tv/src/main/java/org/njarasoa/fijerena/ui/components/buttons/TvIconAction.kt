@@ -51,7 +51,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * is focused, so a row of actions stays compact and the one being pointed at says what it does.
  * The icon carries the state (filled or outlined star); [label] names the action and is the
  * button's content description. [danger] (Remove, Delete) is outlined in the error colour.
- * See docs/plans/20261005_icon-buttons-plan.md.
+ * See docs/plans/archive/20261005_icon-buttons-plan.md.
  */
 @Composable
 fun TvIconAction(

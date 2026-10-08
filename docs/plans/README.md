@@ -16,9 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-07 | [TV home overhaul](./20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Done on the TV emulator, Now line and Updating… checked on bears; Shield check left |
-| 2026-10-06 | [Guide on/off clarity](./20261006_guide-on-off-clarity-plan.md) | One empty download no longer turns a source's guide off; guide sources get a real on/off switch instead of bulk-select checkboxes; refresh line, search header and "-1%" tell the truth | Done on the emulators; Phase 1 not forced on a device; OnePlus check left |
-| 2026-10-05 | [Icon buttons](./20261005_icon-buttons-plan.md) | Action buttons back to icons app-wide; TV shows the name on focus, mobile on long-press | Done on the emulators; live sync rows, section-root button, phone guide rows not reached |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real bears) needs a second bears login |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
@@ -27,6 +24,9 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-07 | [TV home overhaul](./archive/20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Done on the TV emulator; Shield check never done |
+| 2026-10-06 | [Guide on/off clarity](./archive/20261006_guide-on-off-clarity-plan.md) | One empty download no longer turns a source's guide off; guide sources get a real on/off switch instead of bulk-select checkboxes; refresh line, search header and "-1%" tell the truth | Done on the emulators; device and OnePlus checks never done |
+| 2026-10-05 | [Icon buttons](./archive/20261005_icon-buttons-plan.md) | Action buttons back to icons app-wide; TV shows the name on focus, mobile on long-press | Done on the emulators; live sync and phone guide-source rows not reached |
 | 2026-10-07 | [Phone home overhaul](./archive/20261007_phone-home-overhaul-plan.md) | Phone without Home: bottom bar of section tabs that keep their place, opens on the last tab; header = section name over the source and its sync status, Search the guide / Search / profile sheet | Done on the phone emulator; Home rows dropped by the user |
 | 2026-10-07 | [Guide Watch wrong channel](./archive/20261007_guide-watch-wrong-channel-plan.md) | Search the guide's Watch plays the channel asked for: no last-channel fallback in the TV preview, a matcher cache with every stream and no separator matches by name, results in hidden categories dropped | Done; checked on the TV emulator (atr on bears) |
 | 2026-10-05 | [Up next details](./archive/20261005_up-next-details-plan.md) | Next episode's title and synopsis in a panel under the "Up next" strip (TV: while the card has focus, in practice whenever it shows; mobile: always) | Done; checked on the emulators and bears |
