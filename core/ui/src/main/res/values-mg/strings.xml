@@ -1132,6 +1132,6 @@
     <!-- phone polish: details and episodes -->
     <string name="details_label_category">Sokajy:</string>
     <string name="series_resume_code_left_format">▶ Tohizo S%1$02dE%2$02d · sisa %3$s</string>
-    <string name="series_resume_code_from_format">▶ Tohizo S%1$02dE%2$02d amin\'ny %3$s</string>
+    <string name="series_resume_code_from_format">▶ Tohizo S%1$02dE%2$02d · amin\'ny %3$s</string>
     <string name="series_play_code_format">▶ Alefaso S%1$02dE%2$02d</string>
 </resources>

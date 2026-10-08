@@ -5,9 +5,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -37,7 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -57,11 +60,11 @@ import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
+import org.njarasoa.fijerena.core.player.model.parseDurationToSeconds
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
@@ -75,8 +78,11 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.MetaBadge
+import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
+import org.njarasoa.fijerena.ui.components.MobileCategoryLinkRow
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
+import org.njarasoa.fijerena.ui.components.MobileDetailRow
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -84,6 +90,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
+import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
@@ -155,7 +162,7 @@ fun MobileEpisodeSelectionScreen(
         topBar = {
             TopAppBar(
                 // TMDB's clean title once it resolves, the provider's raw stream name until then
-                title = { Text(tmdbTitle ?: (lastSuccess?.streamName ?: seriesName)) },
+                title = { Text(tmdbTitle ?: (lastSuccess?.streamName ?: seriesName), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     CinemaIconButton(
                         onClick = {
@@ -508,9 +515,9 @@ private fun EpisodeListContent(
                     )
                 }
 
-                // Single dot-separated meta row (see MobileMovieDetailsScreen for the same
-                // treatment): star rating and content rating stay their own small pills,
-                // year range and season/episode count are plain text, all dot-joined.
+                // Single dot-separated facts line, wrapping on a narrow phone (see
+                // MobileMovieDetailsScreen for the same treatment): the content rating an
+                // outlined badge, everything else plain text, in TV's order.
                 val presentLabel = stringResource(R.string.series_present)
                 val yearRange = seriesDetail.seriesYearRange(presentLabel)
                 val countText =
@@ -521,100 +528,79 @@ private fun EpisodeListContent(
                     }
                 val seriesMetaSegments =
                     listOfNotNull<@Composable () -> Unit>(
-                        seriesDetail.metadata.rating?.let { rating ->
-                            {
-                                RatingBadge(
-                                    rating = rating,
-                                    textColor = MaterialTheme.colorScheme.secondary,
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                            }
-                        },
                         yearRange?.let { { MetaText(it) } },
+                        seriesDetail.metadata.rating?.let { { MetaText(ratingOutOfTen(it)) } },
                         seriesDetail.metadata.contentRating?.let { { MetaBadge(it) } },
                         { MetaText(countText) },
                     )
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    seriesMetaSegments.forEachIndexed { index, segment ->
-                        if (index > 0) {
-                            Text(
-                                text = "•",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                            )
-                        }
-                        segment()
-                    }
-                }
+                MetaLine(segments = seriesMetaSegments)
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-                // The episode by code and title, as on TV ("S01E04 · title"); no code when the
-                // provider numbers episodes 0, and the numbers alone without a title.
+                // Two lines (phone UI audit, #3): what the button does with the episode's code
+                // ("▶ Resume S02E10 · 19:04 left", "▶ Play S01E01"), then the episode's own title
+                // under it. No code when the provider numbers episodes 0.
                 val anchorOwnTitle = anchorEpisode?.let { episodeOwnTitle(it.title) }?.takeIf { it.isNotBlank() }
-                val anchorTitle =
-                    if (anchorEpisode != null && anchorOwnTitle != null && anchorEpisode.episodeNumber > 0) {
-                        stringResource(
-                            R.string.series_episode_code_title_format,
-                            anchorEpisode.seasonNumber ?: 1,
-                            anchorEpisode.episodeNumber,
-                            anchorOwnTitle,
-                        )
+                val anchorSeason = anchorEpisode?.seasonNumber ?: 1
+                val anchorHasCode = anchorEpisode != null && anchorEpisode.episodeNumber > 0
+                val actionText =
+                    if (hasResume) {
+                        // Time left when the episode's length is known, else where it stopped.
+                        val remainingMs =
+                            anchorEpisode
+                                ?.metadata
+                                ?.duration
+                                ?.let(::parseDurationToSeconds)
+                                ?.let { it * 1000 - anchorResumePosMs }
+                                ?.takeIf { it > 0 }
+                        when {
+                            anchorHasCode && remainingMs != null -> {
+                                stringResource(
+                                    R.string.series_resume_code_left_format,
+                                    anchorSeason,
+                                    anchorEpisode.episodeNumber,
+                                    formatTime(remainingMs),
+                                )
+                            }
+
+                            anchorHasCode -> {
+                                stringResource(
+                                    R.string.series_resume_code_from_format,
+                                    anchorSeason,
+                                    anchorEpisode.episodeNumber,
+                                    formatTime(anchorResumePosMs),
+                                )
+                            }
+
+                            else -> {
+                                stringResource(R.string.movie_resume_from_format, formatTime(anchorResumePosMs))
+                            }
+                        }
+                    } else if (anchorHasCode) {
+                        stringResource(R.string.series_play_code_format, anchorSeason, anchorEpisode.episodeNumber)
                     } else {
-                        anchorOwnTitle
+                        stringResource(R.string.series_play_episode_action)
                     }
-                if (hasResume) {
-                    val resumeButtonText =
-                        if (anchorTitle != null) {
-                            stringResource(R.string.series_resume_next_format, anchorTitle, formatTime(anchorResumePosMs))
-                        } else if (anchorEpisode != null) {
-                            stringResource(
-                                R.string.series_resume_episode_time_format,
-                                anchorEpisode.seasonNumber ?: 1,
-                                anchorEpisode.episodeNumber,
-                                formatTime(anchorResumePosMs),
-                            )
-                        } else {
-                            stringResource(R.string.movie_resume_from_format, formatTime(anchorResumePosMs))
+                CinemaButton(
+                    onClick = {
+                        anchorEpisode?.let { ep ->
+                            onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", false)
                         }
-                    CinemaButton(
-                        onClick = {
-                            anchorEpisode?.let { ep ->
-                                onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", false)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(resumeButtonText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                } else {
-                    val playButtonText =
-                        if (anchorTitle != null) {
-                            stringResource(R.string.series_play_next_format, anchorTitle)
-                        } else if (anchorEpisode != null) {
-                            stringResource(
-                                R.string.series_play_episode_format,
-                                anchorEpisode.seasonNumber ?: 1,
-                                anchorEpisode.episodeNumber,
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(actionText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        anchorOwnTitle?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
-                        } else {
-                            stringResource(R.string.series_play_episode_action)
                         }
-                    CinemaButton(
-                        onClick = {
-                            anchorEpisode?.let { ep ->
-                                onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", false)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(playButtonText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -781,36 +767,26 @@ private fun SeriesOverviewTabContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.md))
         }
 
-        seriesDetail.metadata.director?.let { director ->
-            Text(
-                text = stringResource(R.string.movie_director_format, director),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-        }
-
-        StreamNamePicker(
-            currentName = seriesName,
-            alternates = alternateStreams,
-            onSelect = onAlternateStreamSelected,
-            modifier = Modifier.padding(vertical = CinemaSpacing.xs),
-        )
-
-        Text(
-            text = stringResource(R.string.details_tmdb_format, seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-        )
-
-        if (categoryName != null) {
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaOutlinedButton(
-                onClick = onCategorySelected,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.details_category_format, categoryName))
+        // Label / value rows, every value starting at the same place (phone UI audit, #2).
+        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+            seriesDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+            MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
+                StreamNamePicker(
+                    currentName = seriesName,
+                    alternates = alternateStreams,
+                    onSelect = onAlternateStreamSelected,
+                )
             }
+            // The TMDB id is for developers only.
+            val context = LocalContext.current
+            val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+            if (isDevMode) {
+                MobileDetailRow(
+                    label = stringResource(R.string.details_label_tmdb),
+                    value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                )
+            }
+            categoryName?.let { MobileCategoryLinkRow(categoryName = it, onClick = onCategorySelected) }
         }
     }
 }
@@ -829,9 +805,10 @@ private fun CastChipsTabContent(cast: String) {
 }
 
 /**
- * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
- * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
- * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ * The value of the Overview tab's "Stream name" row. Plain text when [alternates] is empty — most
+ * titles have no other cached instance. Becomes a tappable dropdown once there is at least one
+ * other local catalogue entry sharing the same TMDB id, letting the user switch to that instance's
+ * detail screen.
  */
 @Composable
 private fun StreamNamePicker(
@@ -840,12 +817,12 @@ private fun StreamNamePicker(
     onSelect: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val textStyle = MaterialTheme.typography.bodySmall
-    val textColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
+    val textStyle = MaterialTheme.typography.bodyMedium
+    val textColor = CinemaTextPrimary
 
     if (alternates.isEmpty()) {
         Text(
-            text = stringResource(R.string.details_stream_name_format, currentName),
+            text = currentName,
             style = textStyle,
             color = textColor,
             modifier = modifier,
@@ -869,9 +846,10 @@ private fun StreamNamePicker(
                 },
         ) {
             Text(
-                text = stringResource(R.string.details_stream_name_format, currentName),
+                text = currentName,
                 style = textStyle,
                 color = textColor,
+                modifier = Modifier.weight(1f, fill = false),
             )
             Icon(
                 imageVector = CinemaIcons.ArrowDropDown,
@@ -1000,16 +978,8 @@ private fun EpisodeDetailContent(
             }
         val episodeMetaSegments =
             listOfNotNull<@Composable () -> Unit>(
-                rating?.let {
-                    {
-                        RatingBadge(
-                            rating = it,
-                            textColor = MaterialTheme.colorScheme.secondary,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                },
                 year?.let { { MetaText("$it") } },
+                rating?.let { { MetaText(ratingOutOfTen(it)) } },
                 contentRating?.let { { MetaBadge(it) } },
                 episode.metadata.duration
                     ?.takeIf(::hasMeaningfulDuration)
@@ -1018,24 +988,7 @@ private fun EpisodeDetailContent(
             )
         if (episodeMetaSegments.isNotEmpty()) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            Row(
-                // See the series header above — same overflow-clips-instead-of-wraps risk on a
-                // narrow phone screen.
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                episodeMetaSegments.forEachIndexed { index, segment ->
-                    if (index > 0) {
-                        Text(
-                            text = "•",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                    }
-                    segment()
-                }
-            }
+            MetaLine(segments = episodeMetaSegments)
         }
 
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
@@ -1115,17 +1068,21 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // TMDB id: the episode's own when it has one, else the show's
-        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-        Text(
-            text =
-                stringResource(
-                    R.string.details_tmdb_format,
-                    episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
-                ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-        )
+        // TMDB id, developers only: the episode's own when it has one, else the show's
+        val context = LocalContext.current
+        val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+        if (isDevMode) {
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            Text(
+                text =
+                    stringResource(
+                        R.string.details_tmdb_format,
+                        episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+        }
 
         episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
@@ -1158,7 +1115,10 @@ private fun EpisodeDetailContent(
 
 /**
  * One row of season pills; tapping one switches [selectedSeason]. Horizontally scrollable so a
- * long-running show's season count never wraps the row.
+ * long-running show's season count never wraps the row. The row runs to the screen's edges (out
+ * through the list's side padding) with the pills inset by that padding, so the first pill lines
+ * up with the content and the last ones slide off the edge — plainly a row that scrolls — rather
+ * than being cut short of it; the selected season is scrolled into view (phone UI audit, #3).
  */
 @Composable
 private fun SeasonTabs(
@@ -1166,18 +1126,44 @@ private fun SeasonTabs(
     selectedSeason: Int?,
     onSeasonSelected: (Int) -> Unit,
 ) {
-    Row(
+    val rowState = rememberLazyListState()
+    val selectedIndex = seasons.indexOfFirst { it.seasonNumber == selectedSeason }
+    LaunchedEffect(selectedIndex) {
+        if (selectedIndex < 0) return@LaunchedEffect
+        // After the row's first layout, so a season already on screen isn't scrolled to.
+        val layout = snapshotFlow { rowState.layoutInfo }.first { it.visibleItemsInfo.isNotEmpty() }
+        val shown = layout.visibleItemsInfo.firstOrNull { it.index == selectedIndex }
+        val fullyShown =
+            shown != null &&
+                shown.offset >= layout.viewportStartOffset &&
+                shown.offset + shown.size <= layout.viewportEndOffset
+        if (!fullyShown) rowState.animateScrollToItem(selectedIndex)
+    }
+    LazyRow(
+        state = rowState,
+        contentPadding = PaddingValues(horizontal = CinemaSpacing.md),
         modifier =
             Modifier
                 .fillMaxWidth()
+                .layout { measurable, constraints ->
+                    // Out through the LazyColumn's side padding to the screen's edges.
+                    val bleed = CinemaSpacing.md.roundToPx()
+                    val placeable =
+                        measurable.measure(
+                            constraints.copy(
+                                minWidth = constraints.maxWidth + bleed * 2,
+                                maxWidth = constraints.maxWidth + bleed * 2,
+                            ),
+                        )
+                    layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+                }
                 // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
                 // underneath it and need to actually be hidden, not show through.
                 .background(MaterialTheme.colorScheme.background)
-                .horizontalScroll(rememberScrollState())
                 .padding(vertical = CinemaSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
-        seasons.forEach { season ->
+        items(seasons, key = { it.seasonNumber }) { season ->
             val isSelected = season.seasonNumber == selectedSeason
             Text(
                 text = stringResource(R.string.series_season_name_format, season.seasonNumber),
