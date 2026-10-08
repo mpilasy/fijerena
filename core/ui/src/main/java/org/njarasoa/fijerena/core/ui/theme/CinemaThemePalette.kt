@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 @Immutable
 data class CinemaThemePalette(
@@ -37,7 +38,13 @@ data class CinemaThemePalette(
     val textSecondary: Color = Color(0xFFB0B0B0),
     val textTertiary: Color = Color(0xFF808080),
     val textDisabled: Color = Color(0xFF606060),
-)
+) {
+    /**
+     * Text and icons on the accent (filled buttons, the selected tab): white on a dark accent,
+     * black on a light one — AMOLED Black's light grey accent left white button text unreadable.
+     */
+    val onAccent: Color get() = if (accent.luminance() > 0.5f) Color.Black else Color.White
+}
 
 // --- Predefined Palettes ---
 

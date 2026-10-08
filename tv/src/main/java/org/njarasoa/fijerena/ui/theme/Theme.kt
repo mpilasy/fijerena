@@ -33,7 +33,7 @@ import org.njarasoa.fijerena.core.ui.theme.styleById
 private fun cinemaMaterialColorScheme(palette: org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette) =
     androidx.compose.material3.darkColorScheme(
         primary = palette.accent,
-        onPrimary = androidx.compose.ui.graphics.Color.White,
+        onPrimary = palette.onAccent,
         primaryContainer = palette.accentDark,
         onPrimaryContainer = palette.accentLight,
         secondary = palette.orange,

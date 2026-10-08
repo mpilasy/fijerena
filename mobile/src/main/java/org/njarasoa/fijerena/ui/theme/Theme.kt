@@ -46,7 +46,7 @@ fun FirstVideoPlayerTheme(
         remember(palette) {
             darkColorScheme(
                 primary = palette.accent,
-                onPrimary = Color.White,
+                onPrimary = palette.onAccent,
                 primaryContainer = palette.accentDark,
                 onPrimaryContainer = palette.accentLight,
                 secondary = palette.orange,
