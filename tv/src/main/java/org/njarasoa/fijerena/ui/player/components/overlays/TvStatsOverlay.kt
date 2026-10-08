@@ -31,14 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -88,7 +84,6 @@ fun TvStatsOverlay(
     metadata: PlayerMetadata,
     onHide: () -> Unit = {},
 ) {
-    val configuration = LocalConfiguration.current
     val resources = LocalResources.current
 
     BackHandler(enabled = true) {
@@ -330,10 +325,6 @@ fun TvStatsOverlay(
         }
     }
 
-    // Half-width panel in the top-right corner, under the clock: the OSD's progress bar, description
-    // and buttons fill the bottom, and a panel anchored there was drawn over by them.
-    val overlayWidth = Dp(configuration.screenWidthDp * 0.5f)
-
     BoxWithConstraints(
         modifier =
             Modifier
@@ -343,7 +334,11 @@ fun TvStatsOverlay(
         Box(
             modifier =
                 Modifier
-                    .width(overlayWidth)
+                    // Half-width panel in the top-right corner, under the clock: the OSD's progress
+                    // bar, description and buttons fill the bottom, and a panel anchored there was
+                    // drawn over by them. Half the layout's width, not Configuration's, whose dp
+                    // ignore the UI-scale density (it came out a third of the screen).
+                    .width(maxWidth * 0.5f)
                     // As tall as its rows, up to most of the screen: it can't take focus, so rows
                     // past a fixed height were cut off with no way to scroll to them. The cap comes
                     // from the layout, not Configuration, whose dp ignore the UI-scale density.
@@ -369,11 +364,7 @@ fun TvStatsOverlay(
                 ) {
                     Text(
                         text = "📊 " + stringResource(R.string.player_stats_title),
-                        style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontSize = 14.sp,
-                                fontFamily = FontFamily.Monospace,
-                            ),
+                        style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
@@ -604,7 +595,7 @@ fun TvStatsOverlay(
                     Column {
                         Text(
                             text = stringResource(R.string.player_stats_hint),
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                            style = MaterialTheme.typography.labelMedium,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                             fontWeight = FontWeight.Medium,
                         )
@@ -620,15 +611,15 @@ fun TvStatsOverlay(
                                     org.njarasoa.fijerena.BuildConfig.BUILD_TIME,
                                     org.njarasoa.fijerena.BuildConfig.GIT_HASH,
                                 ),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = CinemaTextSecondary.copy(alpha = 0.3f),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                             modifier = Modifier.padding(top = Spacing.xxs),
                         )
 
                         Text(
                             text = stringResource(R.string.player_stats_device_type_format, android.os.Build.MODEL, caps.deviceType),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            color = CinemaTextSecondary.copy(alpha = 0.3f),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                         )
                     }
                 }
@@ -643,7 +634,7 @@ private fun StatNameRow(
     label: String,
     value: String,
 ) {
-    val style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+    val style = MaterialTheme.typography.labelMedium
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -672,21 +663,13 @@ private fun CompactStatRow(
     ) {
         Text(
             text = label,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                ),
+            style = MaterialTheme.typography.labelMedium,
             color = CinemaTextSecondary,
             modifier = Modifier.weight(1f, fill = false),
         )
         Text(
             text = value,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                ),
+            style = MaterialTheme.typography.labelMedium,
             color = CinemaTextPrimary,
             fontWeight = FontWeight.Bold,
         )
@@ -705,21 +688,13 @@ private fun CompactStatRowColored(
     ) {
         Text(
             text = label,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                ),
+            style = MaterialTheme.typography.labelMedium,
             color = CinemaTextSecondary,
             modifier = Modifier.weight(1f, fill = false),
         )
         Text(
             text = value,
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                ),
+            style = MaterialTheme.typography.labelMedium,
             color = valueColor,
             fontWeight = FontWeight.Bold,
         )
@@ -730,11 +705,7 @@ private fun CompactStatRowColored(
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style =
-            MaterialTheme.typography.labelMedium.copy(
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-            ),
+        style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(top = Spacing.xs),
