@@ -153,20 +153,29 @@ private fun TvContinueWatchingCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                // An episode's title repeats the series' raw name, which the line above already shows.
-                val episode = item.subtitle?.let { episodeTitleWithoutSeries(it, item.name) }
+                // An episode's title repeats the series' raw name, which the line above already shows;
+                // on a card's width only its number fits beside the time left ("S18E01 • 35m left",
+                // TV UI audit X4), so the number stands for it when there is one.
+                val episode =
+                    item.subtitle?.let { subtitle ->
+                        val own = episodeTitleWithoutSeries(subtitle, item.name)
+                        EPISODE_NUMBER.find(own)?.value ?: own
+                    }
                 val subtitleLine =
                     if (item.upNext) {
                         val upNext = stringResource(R.string.continue_watching_up_next)
                         episode?.let { "$upNext • $it" } ?: upNext
                     } else {
-                        val remainingLabel =
-                            stringResource(R.string.series_remaining_format, formatDuration((item.remainingMs / 1000).toString()))
-                        episode?.let { "$it • $remainingLabel" } ?: remainingLabel
+                        val timeLeft = formatDuration((item.remainingMs / 1000).toString())
+                        if (episode != null) {
+                            "$episode • " + stringResource(R.string.tv_home_time_left_format, timeLeft)
+                        } else {
+                            stringResource(R.string.series_remaining_format, timeLeft)
+                        }
                     }
                 Text(
                     text = subtitleLine,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = CinemaTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -175,3 +184,6 @@ private fun TvContinueWatchingCard(
         }
     }
 }
+
+/** An episode's "S18E01" number inside its title. */
+private val EPISODE_NUMBER = Regex("""S\d{1,3}\s?E\d{1,4}""", RegexOption.IGNORE_CASE)

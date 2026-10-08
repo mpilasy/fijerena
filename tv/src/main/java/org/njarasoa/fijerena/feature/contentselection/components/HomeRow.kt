@@ -41,7 +41,8 @@ fun <T> HomeRow(
     Column(modifier = modifier) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            // The TV section-title style (TV UI audit #2): the same on every Home row and on Search's groups.
+            style = MaterialTheme.typography.headlineSmall,
             color = CinemaTextPrimary,
             modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
         )

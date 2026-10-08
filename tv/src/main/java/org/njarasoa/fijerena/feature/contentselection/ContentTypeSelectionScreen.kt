@@ -102,7 +102,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -116,10 +116,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaLive
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -864,7 +864,9 @@ fun ContentTypeSelectionScreen(
                 CinemaAlertDialog(
                     initialFocus = pickerInitialFocus,
                     onDismissRequest = { showProviderPicker = false },
-                    containerColor = CinemaSurface,
+                    // The darkest surface behind the rows, so the option rows (resting container)
+                    // stand out from it rather than dark on dark (TV UI audit #3).
+                    containerColor = CinemaBackground,
                     titleContentColor = CinemaTextPrimary,
                     textContentColor = CinemaTextSecondary,
                     title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
@@ -920,10 +922,16 @@ fun ContentTypeSelectionScreen(
                             }
                         }
                     },
+                    // A standard dialog button, as the TV Guide's programme panel's Close.
                     confirmButton = {
-                        CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
-                            androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaAccent)
-                        }
+                        CinemaDialogActionButton(
+                            onClick = { showProviderPicker = false },
+                            colors =
+                                androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = CinemaSurfaceVariant,
+                                    contentColor = CinemaTextPrimary,
+                                ),
+                        ) { androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
                     },
                 )
             }
@@ -1033,40 +1041,12 @@ private fun SectionTile(
                     .padding(horizontal = Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(contentAlignment = Alignment.TopEnd) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = CinemaTextPrimary,
-                    modifier = Modifier.size(TvDimensions.homeSectionTileIconSize.scaled(scale)),
-                )
-                if (showLivePulse) {
-                    val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
-                    val pulseAlpha by pulseTransition.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 0.3f,
-                        animationSpec =
-                            infiniteRepeatable(
-                                animation = tween(CinemaAnimation.shimmerDurationMs),
-                                repeatMode = RepeatMode.Reverse,
-                            ),
-                        label = "live_pulse_alpha",
-                    )
-                    // pulseAlpha is read inside graphicsLayer's lambda, never in the composable
-                    // body. Read from the body it invalidates *composition* every animation frame —
-                    // and since this runs forever, Home recomposed at 60fps with nothing on screen
-                    // changing: 242 recompositions per 4 idle seconds, measured on a Shield, versus
-                    // 0 on every other screen. In the lambda the read is deferred to draw.
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(TvDimensions.liveDotSmall.scaled(scale))
-                                .graphicsLayer { alpha = pulseAlpha }
-                                .border(TvDimensions.borderThin, CinemaTextPrimary, CircleShape)
-                                .background(CinemaLive, shape = CircleShape),
-                    )
-                }
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = CinemaTextPrimary,
+                modifier = Modifier.size(TvDimensions.homeSectionTileIconSize.scaled(scale)),
+            )
             Text(
                 text = title,
                 style =
@@ -1078,11 +1058,37 @@ private fun SectionTile(
                 color = CinemaTextPrimary,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .padding(start = Spacing.sm.scaled(scale)),
+                modifier = Modifier.padding(start = Spacing.sm.scaled(scale)),
             )
+            if (showLivePulse) {
+                val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
+                val pulseAlpha by pulseTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 0.3f,
+                    animationSpec =
+                        infiniteRepeatable(
+                            animation = tween(CinemaAnimation.shimmerDurationMs),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                    label = "live_pulse_alpha",
+                )
+                // pulseAlpha is read inside graphicsLayer's lambda, never in the composable
+                // body. Read from the body it invalidates *composition* every animation frame —
+                // and since this runs forever, Home recomposed at 60fps with nothing on screen
+                // changing: 242 recompositions per 4 idle seconds, measured on a Shield, versus
+                // 0 on every other screen. In the lambda the read is deferred to draw.
+                // White, after the title (TV UI audit #2): the live red on the tile's orange
+                // gradient, tucked against the icon, could not be seen.
+                Box(
+                    modifier =
+                        Modifier
+                            .padding(start = Spacing.sm.scaled(scale))
+                            .size(TvDimensions.liveDotSize.scaled(scale))
+                            .graphicsLayer { alpha = pulseAlpha }
+                            .background(CinemaTextPrimary, shape = CircleShape),
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
             val countText =
                 when {
                     emptyLabel != null -> {
