@@ -3,6 +3,7 @@
 ## Version: Phone home overhaul
 **Release Date:** 2026-10-07
 
+- **No more picture-in-picture with nothing playing:** after watching a channel docked in Live TV and moving on (Search the guide, another tab, Back), pressing Home put whatever screen was open into a PiP window. PiP now only happens while live video is playing.
 - **The phone has tabs instead of Home:** a bottom bar with Live TV, Movies and TV Shows (the sections the source has; no Live TV tab for a source without channels). Each tab keeps its place when you switch, tapping the tab you're on takes it back to its start, and the app opens on the tab you used last. → Phases 3, 8.
 - **A cleaner phone header:** the section's name, and under it the source with how fresh it is ("● jellyxtream · Updated 2 hours ago") — tap to switch source, or to see why an update failed. Search the guide (Live TV), Search and your profile; the profile sheet switches profile and opens Settings. Live TV's calendar icon and the "back to the section" button are gone (the TV Guide opens from Search the guide; the current tab does the rest). → Phases 2, 8, header.
 

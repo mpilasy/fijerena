@@ -324,6 +324,21 @@ fun MobileCategoryListScreen(
                     .build(),
             )
         }
+        // The params are the Activity's, not this screen's: leaving Live TV (Back, a tab, Search
+        // the guide) stops the dock after this screen has gone, so the effect above never sees
+        // it stop and auto-enter stayed on — the next Home press put Search the guide or a list
+        // into PiP with nothing playing. Off when the screen leaves, as MobilePlayerScreen does.
+        DisposableEffect(Unit) {
+            onDispose {
+                if (dockPlayback?.isInPictureInPictureMode?.value == true) return@onDispose
+                activity?.setPictureInPictureParams(
+                    android.app.PictureInPictureParams
+                        .Builder()
+                        .setAutoEnterEnabled(false)
+                        .build(),
+                )
+            }
+        }
     }
 
     // While a preview is docked, the list below defaults to the shared Recent list — regardless
