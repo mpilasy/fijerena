@@ -1,5 +1,21 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV UI polish
+**Release Date:** 2026-10-08
+
+A pass over every TV screen (`docs/plans/20261007_tv-ui-audit-plan.md`):
+- **Readable focus everywhere:** a focused row in any list (channels, films, shows, categories, search results, settings, pickers) lifts with a white outline and keeps white text — no more blue text on a blue fill.
+- **Channel logos whole:** logos are no longer cropped to fill the card ("WORLD NEWS", France 24).
+- **One header style:** browse, Search, Search the guide, the TV Guide, Settings, Sources, Edit Source, guide sources, Live sync, Device info and Diagnostics share one header — title, a short subtitle, icon actions on the right. Browse has one Refresh instead of two and no repeated source name.
+- **Film and show pages:** a film without a logo image shows its title; the picture fades into the page; the rating sits in the facts line ("8.2/10"); Details are aligned label / value rows; similar titles get two lines; "watched" is a check; seasons are smaller chips under the section tabs; the page opens with the whole picture and title in view; episode lengths read "1h 33m".
+- **Player:** the title shows above the timeline (show · episode for an episode); subtitles move above the controls while they're up; Down from Pause goes to the seek bar, then the first button; favourite is a star; standard icon buttons; a soft gradient behind the clock; a readable Stats panel; the full-screen channel panel no longer lets the picture through.
+- **Browse:** lists open with the first row whole; resume bars sit on the thumbnail; films and shows show year · length · rating; counts say channels / films / shows; empty categories say so plainly; Recent and Favourites are marked as modes; provider separator rows (`#### SPORTS ####`) are headings, never played.
+- **Live TV preview:** the key hint sits under the channel's info; one size order for name, category, Now and Next.
+- **Search:** the field says what it searches; no separate search button; 16:9 thumbnails; the category name alone under each result.
+- **TV Guide:** opens near the current time; short programmes show their start time; empty channels say "No listings"; channel logos; a source without channels gets a plain message instead of a red error.
+- **Settings and sources:** one row layout with values in one column; the panel fills the screen; "This device / This source" said once per section instead of on every row; Edit Source's choices are rows opening the same picker as Settings (Recent row size from presets); Sources rows span the width with buttons in fixed slots; empty guide sources centred with Add.
+- **Home and profiles:** larger section titles and profile avatars, a visible live dot, Continue Watching's episode line fits ("S18E01 • 35m left"), a clearer source picker.
+
 ## Version: Phone home overhaul
 **Release Date:** 2026-10-07
 
