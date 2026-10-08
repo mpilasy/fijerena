@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.provider
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -57,6 +59,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
+import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -124,8 +128,6 @@ fun TvProviderSelectionScreen(
             else -> emptyList()
         }
 
-    val scale = LocalUiScale.current
-
     Column(
         modifier =
             Modifier
@@ -135,38 +137,17 @@ fun TvProviderSelectionScreen(
                     vertical = Spacing.tvSafeMarginVertical,
                 ),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.provider_selection_title),
-                style =
-                    MaterialTheme.typography.displaySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.displaySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            CinemaIconButton(
+        TvScreenHeader(title = stringResource(R.string.provider_selection_title)) {
+            TvIconAction(
                 onClick = {
                     returnFocus.leaveFrom(RETURN_ADD)
                     onAddProvider()
                 },
+                icon = CinemaIcons.Add,
+                label = stringResource(R.string.provider_add_title),
                 modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_ADD),
-                icon = {
-                    Icon(
-                        CinemaIcons.Add,
-                        contentDescription = stringResource(R.string.provider_add_title),
-                        tint = CinemaAccent,
-                    )
-                },
             )
         }
-
-        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
         when (val state = uiState) {
             is ProviderUiState.Loading -> {
@@ -179,36 +160,11 @@ fun TvProviderSelectionScreen(
             }
 
             is ProviderUiState.NoProviders -> {
-                val emptyStateFocusRequester = remember { FocusRequester() }
-                LaunchedEffect(Unit) {
-                    emptyStateFocusRequester.requestFocusWithRetry()
-                }
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            CinemaIcons.Add,
-                            contentDescription = null,
-                            tint = CinemaTextSecondary,
-                            modifier = Modifier.height(TvDimensions.iconLarge.scaled(scale)),
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                        Text(
-                            text = stringResource(R.string.provider_no_providers),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = CinemaTextSecondary,
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-                        CinemaButton(
-                            onClick = onAddProvider,
-                            modifier = Modifier.focusRequester(emptyStateFocusRequester),
-                        ) {
-                            Text(stringResource(R.string.provider_add_title))
-                        }
-                    }
-                }
+                TvEmptyState(
+                    message = stringResource(R.string.provider_no_providers),
+                    actionLabel = stringResource(R.string.provider_add_title),
+                    onAction = onAddProvider,
+                )
             }
 
             is ProviderUiState.Error -> {
@@ -381,9 +337,15 @@ private fun ProviderList(
             // stay in place when empty (Use on the active row, Guide on a source without live
             // channels), so Up/Down from a slot lands on the same slot of the next row and Right
             // from the row walks Use → Guide → ⋮ (TV focus contract, rule 1; A-10).
+            // The row's resting surface spans the whole width, slots included, so a row reads as
+            // one full-width row whatever buttons it shows (TV UI audit #18).
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(TvFocusTokens.restingContainer, RoundedCornerShape(CornerRadius.small))
+                        .padding(end = Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TvInputListItem(
@@ -396,17 +358,12 @@ private fun ProviderList(
                             .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id),
                     headlineContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = provider.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (provider.isActive) CinemaAccent else CinemaTextPrimary,
-                            )
+                            Text(text = provider.name, style = MaterialTheme.typography.titleSmall)
                             if (provider.isActive) {
                                 Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text(
                                     text = stringResource(R.string.provider_active_label),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
                                 )
                             }
                         }
@@ -415,20 +372,20 @@ private fun ProviderList(
                         Column {
                             Text(
                                 text = provider.url,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             )
                             Text(
                                 text = provider.username,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextTertiary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CinemaTextSecondary,
                             )
                         }
                     },
                 )
                 // Icons at the slot's end: the focused one's name grows into the slot, so nothing
                 // beside it moves (icon-buttons plan).
-                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale)), contentAlignment = Alignment.CenterEnd) {
+                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH), contentAlignment = Alignment.CenterEnd) {
                     if (!provider.isActive) {
                         TvIconAction(
                             onClick = { onSelect(provider) },
@@ -437,7 +394,7 @@ private fun ProviderList(
                         )
                     }
                 }
-                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale)), contentAlignment = Alignment.CenterEnd) {
+                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH), contentAlignment = Alignment.CenterEnd) {
                     // Guide sources only apply to sources that carry live channels
                     if (MediaProviderFactory.hasLiveTv(provider)) {
                         TvIconAction(
@@ -449,7 +406,7 @@ private fun ProviderList(
                     }
                 }
                 // Edit / Guide sources / Duplicate / Copy to… / Delete with real text labels —
-                // see ProviderActionsMenuDialog.
+                // see ProviderActionsMenuDialog. White like the slots' icons, not the accent.
                 CinemaIconButton(
                     onClick = { onMoreActions(provider) },
                     modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_MORE_PREFIX + provider.id),
@@ -457,7 +414,6 @@ private fun ProviderList(
                         Icon(
                             CinemaIcons.MoreVert,
                             contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
-                            tint = CinemaAccent,
                         )
                     },
                 )
