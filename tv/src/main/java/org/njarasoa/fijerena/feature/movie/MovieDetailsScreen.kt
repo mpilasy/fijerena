@@ -33,7 +33,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,7 +130,6 @@ fun MovieDetailsScreen(
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
     val viewModel: MovieDetailsViewModel =
         viewModel(
             factory =
@@ -146,48 +144,46 @@ fun MovieDetailsScreen(
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        when (val state = uiState) {
-            is MovieDetailsViewModel.UiState.Loading -> {
-                LoadingScreen()
-            }
+    when (val state = uiState) {
+        is MovieDetailsViewModel.UiState.Loading -> {
+            LoadingScreen()
+        }
 
-            is MovieDetailsViewModel.UiState.Error -> {
-                TvErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.loadMovieInfo() },
-                    title = stringResource(R.string.movie_error_loading),
-                    onBack = onBack,
-                    backLabel = stringResource(R.string.movie_back_to_movies),
-                )
-            }
+        is MovieDetailsViewModel.UiState.Error -> {
+            TvErrorState(
+                message = state.message,
+                onRetry = { viewModel.loadMovieInfo() },
+                title = stringResource(R.string.movie_error_loading),
+                onBack = onBack,
+                backLabel = stringResource(R.string.movie_back_to_movies),
+            )
+        }
 
-            is MovieDetailsViewModel.UiState.Success -> {
-                MovieDetailsContent(
-                    movieDetail = state.movieDetail,
-                    relatedTitles = relatedTitles,
-                    tmdbTitle = tmdbTitle,
-                    logoUrl = logoUrl,
-                    backdropUrl = backdropUrl,
-                    alternateStreams = alternateStreams,
-                    movieId = state.movieDetail.id,
-                    movieName = state.streamName,
-                    isFavorite = state.isFavorite,
-                    isWatched = state.isWatched,
-                    resumePositionMs = state.resumePositionMs,
-                    resumeDurationMs = state.resumeDurationMs,
-                    categoryName = state.categoryName,
-                    onPlayMovie = onPlayMovie,
-                    onCategorySelected = { onCategorySelected(state.categoryId) },
-                    onToggleFavorite = { viewModel.toggleFavorite(state.streamName) },
-                    onToggleWatched = { viewModel.toggleWatched() },
-                    onRefresh = { viewModel.refreshMovieInfo() },
-                    onBack = onBack,
-                    onRelatedTitleSelected = onRelatedTitleSelected,
-                    onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
-                    sectionRoot = sectionRoot,
-                )
-            }
+        is MovieDetailsViewModel.UiState.Success -> {
+            MovieDetailsContent(
+                movieDetail = state.movieDetail,
+                relatedTitles = relatedTitles,
+                tmdbTitle = tmdbTitle,
+                logoUrl = logoUrl,
+                backdropUrl = backdropUrl,
+                alternateStreams = alternateStreams,
+                movieId = state.movieDetail.id,
+                movieName = state.streamName,
+                isFavorite = state.isFavorite,
+                isWatched = state.isWatched,
+                resumePositionMs = state.resumePositionMs,
+                resumeDurationMs = state.resumeDurationMs,
+                categoryName = state.categoryName,
+                onPlayMovie = onPlayMovie,
+                onCategorySelected = { onCategorySelected(state.categoryId) },
+                onToggleFavorite = { viewModel.toggleFavorite(state.streamName) },
+                onToggleWatched = { viewModel.toggleWatched() },
+                onRefresh = { viewModel.refreshMovieInfo() },
+                onBack = onBack,
+                onRelatedTitleSelected = onRelatedTitleSelected,
+                onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                sectionRoot = sectionRoot,
+            )
         }
     }
 }

@@ -3,9 +3,7 @@ package org.njarasoa.fijerena.feature.epg
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -20,7 +18,6 @@ import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvErrorState
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 
 /**
  * The TV Guide. Loading, the grid and "No listings" share one chrome ([TvGuideGrid]: title, date
@@ -55,53 +52,50 @@ fun TvEpgGuideScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (val state = uiState) {
-                is EpgViewModel.UiState.NoGuide -> {
-                    TvErrorState(
-                        message = stringResource(R.string.epg_guide_no_guide_message),
-                        onRetry = { viewModel.loadEpgData() },
-                        title = stringResource(R.string.epg_guide_no_guide_title),
-                        onBack = onBack,
-                        backLabel = stringResource(R.string.common_back),
-                    )
-                }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val state = uiState) {
+            is EpgViewModel.UiState.NoGuide -> {
+                TvErrorState(
+                    message = stringResource(R.string.epg_guide_no_guide_message),
+                    onRetry = { viewModel.loadEpgData() },
+                    title = stringResource(R.string.epg_guide_no_guide_title),
+                    onBack = onBack,
+                    backLabel = stringResource(R.string.common_back),
+                )
+            }
 
-                is EpgViewModel.UiState.Error -> {
-                    TvErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.loadEpgData() },
-                        title = stringResource(R.string.epg_error_loading),
-                        onBack = onBack,
-                        backLabel = stringResource(R.string.common_back),
-                    )
-                }
+            is EpgViewModel.UiState.Error -> {
+                TvErrorState(
+                    message = state.message,
+                    onRetry = { viewModel.loadEpgData() },
+                    title = stringResource(R.string.epg_error_loading),
+                    onBack = onBack,
+                    backLabel = stringResource(R.string.common_back),
+                )
+            }
 
-                else -> {
-                    TvGuideGrid(
-                        categoryName = categoryName,
-                        state = state,
-                        showDevStats = appSettings.isDevMode,
-                        onProgramSelected = onProgramSelected,
-                        onChannelSelected = onChannelSelected,
-                        onPreviousDay = { viewModel.selectPreviousDay() },
-                        onNextDay = { viewModel.selectNextDay() },
-                        onJumpToNow = { viewModel.jumpToNow() },
-                        onRefresh = { viewModel.forceRefresh() },
-                        isRefreshing = isRefreshing,
-                        onSearch = onSearch,
-                        onBack = onBack,
-                        onRowsVisible = viewModel::onRowsVisible,
-                        isFavoriteChannel = viewModel::isFavoriteChannel,
-                        onToggleFavorite = viewModel::toggleFavoriteChannel,
-                        onRemoveFromRecent = if (viewModel.canRemoveFromRecent) viewModel::removeFromRecent else null,
-                        focusChannelId = focusChannelId,
-                        sectionRoot = sectionRoot,
-                    )
-                }
+            else -> {
+                TvGuideGrid(
+                    categoryName = categoryName,
+                    state = state,
+                    showDevStats = appSettings.isDevMode,
+                    onProgramSelected = onProgramSelected,
+                    onChannelSelected = onChannelSelected,
+                    onPreviousDay = { viewModel.selectPreviousDay() },
+                    onNextDay = { viewModel.selectNextDay() },
+                    onJumpToNow = { viewModel.jumpToNow() },
+                    onRefresh = { viewModel.forceRefresh() },
+                    isRefreshing = isRefreshing,
+                    onSearch = onSearch,
+                    onBack = onBack,
+                    onRowsVisible = viewModel::onRowsVisible,
+                    isFavoriteChannel = viewModel::isFavoriteChannel,
+                    onToggleFavorite = viewModel::toggleFavoriteChannel,
+                    onRemoveFromRecent = if (viewModel.canRemoveFromRecent) viewModel::removeFromRecent else null,
+                    focusChannelId = focusChannelId,
+                    sectionRoot = sectionRoot,
+                )
             }
         }
     }

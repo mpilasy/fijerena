@@ -34,7 +34,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,7 +109,6 @@ import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -160,7 +158,6 @@ fun SearchScreen(
 
     val configuration = LocalConfiguration.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     // Back from a result's details (or a category) lands on that result — see SearchResultsList.
     val returnFocus = rememberNavReturnFocus()
@@ -201,101 +198,99 @@ fun SearchScreen(
         )
     }
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
         ) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            horizontal = Spacing.tvSafeMarginHorizontal,
-                            vertical = Spacing.tvSafeMarginVertical,
-                        ),
-            ) {
-                HeaderRow(contentType = contentType, sectionRoot = sectionRoot)
+            HeaderRow(contentType = contentType, sectionRoot = sectionRoot)
 
-                Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
-                when (val state = uiState) {
-                    is SearchViewModel.UiState.Loading -> {
-                        LoadingView(message = state.message)
-                    }
+            when (val state = uiState) {
+                is SearchViewModel.UiState.Loading -> {
+                    LoadingView(message = state.message)
+                }
 
-                    is SearchViewModel.UiState.Error -> {
-                        ErrorView(state.message)
-                    }
+                is SearchViewModel.UiState.Error -> {
+                    ErrorView(state.message)
+                }
 
-                    is SearchViewModel.UiState.Success -> {
-                        val successState = state
-                        val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
-                        val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
-                        val devStats =
-                            if (appSettings.isDevMode && successState.searchDataSize != null) {
-                                "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
-                            } else {
-                                null
-                            }
-                        SearchContent(
-                            query = successState.query,
-                            categoryResults = successState.categoryResults,
-                            results = successState.filteredResults,
-                            excludedCountByType = successState.excludedCountByType,
-                            isSearching = successState.isSearching,
-                            searchProgress = successState.searchProgress ?: "",
-                            devStats = devStats,
-                            contentType = contentType,
-                            searchHistory = searchHistory,
-                            returnFocus = returnFocus,
-                            // A "more like this" arrival is already searching; don't cover it with the keyboard.
-                            mayOpenKeyboard = initialQuery.isNullOrBlank(),
-                            onSearchSubmit = { viewModel.performSearch(it) },
-                            onHistoryItemClick = { term ->
-                                viewModel.performSearch(term)
-                            },
-                            onHistoryItemRemove = { term ->
-                                viewModel.removeSearchHistoryEntry(term)
-                            },
-                            onClearHistory = { viewModel.clearSearchHistory() },
-                            onClearSearch = { viewModel.clearSearch() },
-                            onResultClick = { result ->
-                                onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
-                            },
-                            onResultLongPress = { result ->
-                                // Manual watched/unwatched mark (Phase 6,
-                                // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike isFavorite,
-                                // there is no synchronous in-memory cache for watch_state — the
-                                // menu target has to wait on one suspend fetch before it opens.
-                                val isWatchable =
-                                    result.contentType == ContentType.MOVIES || result.contentType == ContentType.TV_SHOWS
-                                longPressScope.launch {
-                                    val isWatched = if (isWatchable) viewModel.isWatchedSuspend(result.itemId, result.contentType) else null
-                                    favoriteMenuTarget =
-                                        FavoriteMenuTarget.Stream(
-                                            itemId = result.itemId,
-                                            itemName = result.streamName,
-                                            categoryId = result.categoryId,
-                                            contentType = result.contentType,
-                                            isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
-                                            isWatched = isWatched,
-                                        )
-                                }
-                            },
-                            onCategoryClick = { catResult ->
-                                onCategorySelected(catResult.categoryId, catResult.contentType)
-                            },
-                            onCategoryLongPress = { catResult ->
+                is SearchViewModel.UiState.Success -> {
+                    val successState = state
+                    val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
+                    val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
+                    val devStats =
+                        if (appSettings.isDevMode && successState.searchDataSize != null) {
+                            "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
+                        } else {
+                            null
+                        }
+                    SearchContent(
+                        query = successState.query,
+                        categoryResults = successState.categoryResults,
+                        results = successState.filteredResults,
+                        excludedCountByType = successState.excludedCountByType,
+                        isSearching = successState.isSearching,
+                        searchProgress = successState.searchProgress ?: "",
+                        devStats = devStats,
+                        contentType = contentType,
+                        searchHistory = searchHistory,
+                        returnFocus = returnFocus,
+                        // A "more like this" arrival is already searching; don't cover it with the keyboard.
+                        mayOpenKeyboard = initialQuery.isNullOrBlank(),
+                        onSearchSubmit = { viewModel.performSearch(it) },
+                        onHistoryItemClick = { term ->
+                            viewModel.performSearch(term)
+                        },
+                        onHistoryItemRemove = { term ->
+                            viewModel.removeSearchHistoryEntry(term)
+                        },
+                        onClearHistory = { viewModel.clearSearchHistory() },
+                        onClearSearch = { viewModel.clearSearch() },
+                        onResultClick = { result ->
+                            onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
+                        },
+                        onResultLongPress = { result ->
+                            // Manual watched/unwatched mark (Phase 6,
+                            // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike isFavorite,
+                            // there is no synchronous in-memory cache for watch_state — the
+                            // menu target has to wait on one suspend fetch before it opens.
+                            val isWatchable =
+                                result.contentType == ContentType.MOVIES || result.contentType == ContentType.TV_SHOWS
+                            longPressScope.launch {
+                                val isWatched = if (isWatchable) viewModel.isWatchedSuspend(result.itemId, result.contentType) else null
                                 favoriteMenuTarget =
-                                    FavoriteMenuTarget.Category(
-                                        categoryId = catResult.categoryId,
-                                        categoryName = catResult.categoryName,
-                                        contentType = catResult.contentType,
-                                        isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType),
+                                    FavoriteMenuTarget.Stream(
+                                        itemId = result.itemId,
+                                        itemName = result.streamName,
+                                        categoryId = result.categoryId,
+                                        contentType = result.contentType,
+                                        isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
+                                        isWatched = isWatched,
                                     )
-                            },
-                        )
-                    }
+                            }
+                        },
+                        onCategoryClick = { catResult ->
+                            onCategorySelected(catResult.categoryId, catResult.contentType)
+                        },
+                        onCategoryLongPress = { catResult ->
+                            favoriteMenuTarget =
+                                FavoriteMenuTarget.Category(
+                                    categoryId = catResult.categoryId,
+                                    categoryName = catResult.categoryName,
+                                    contentType = catResult.contentType,
+                                    isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType),
+                                )
+                        },
+                    )
                 }
             }
         }

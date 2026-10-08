@@ -39,7 +39,6 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -392,8 +391,6 @@ fun ContentTypeSelectionScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-
     // Back from whatever a card or header button opened lands on that card or button, not on the
     // first focusable (the "Switch Source" chip). A Continue Watching card waits for the shelf to
     // reload and is scrolled into view first; a card that left the shelf (finished) falls back to
@@ -486,451 +483,449 @@ fun ContentTypeSelectionScreen(
         navigate()
     }
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        val scale = LocalUiScale.current
+    val scale = LocalUiScale.current
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            HomeBackdrop(fallbackUrl = backdropImageUrl, focusedUrl = { focusedArtUrl })
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            horizontal = Spacing.tvSafeMarginHorizontal,
-                            vertical = Spacing.tvSafeMarginVertical,
-                        ),
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        HomeBackdrop(fallbackUrl = backdropImageUrl, focusedUrl = { focusedArtUrl })
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = Spacing.lg.scaled(scale)),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = Spacing.lg.scaled(scale)),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.staggeredEntrance(0),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        Row(
-                            modifier = Modifier.staggeredEntrance(0),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.login_app_name),
-                                style =
-                                    MaterialTheme.typography.headlineSmall.copy(
-                                        fontSize =
-                                            MaterialTheme.typography.headlineSmall.fontSize
-                                                .scaled(scale),
-                                    ),
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            HomeClock()
-                        }
-                        Row(
-                            // Applies to every button in the row (none is a focus group).
-                            modifier =
-                                if (needsSignIn || headerDownCard == null) {
-                                    Modifier
-                                } else {
-                                    Modifier.focusProperties { down = heroCardFocus.getValue(headerDownCard) }
-                                },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        ) {
-                            // Shown with one source too, for its sync status; only a picker (and
-                            // focusable) with two or more.
-                            if (providerName.isNotEmpty()) {
-                                val canPick = allProviders.size > 1
-                                val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
-                                val displayName =
-                                    if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                                        "$providerName ($providerType)"
-                                    } else {
-                                        providerName
-                                    }
-                                val switchProviderDescription =
-                                    stringResource(R.string.content_switch_provider_description_format, displayName)
-                                var providerPillFocused by remember { mutableStateOf(false) }
-                                val pillScale by animateFloatAsState(
-                                    targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
-                                    animationSpec =
-                                        tween(
-                                            durationMillis = org.njarasoa.fijerena.core.ui.theme.CinemaAnimation.focusDurationMs,
-                                        ),
-                                    label = "provider_pill_scale",
-                                )
-                                GlassPanel(
-                                    modifier =
-                                        Modifier
-                                            .scale(pillScale)
-                                            .border(
-                                                width = TvFocusTokens.focusBorderWidth,
-                                                color =
-                                                    if (providerPillFocused) {
-                                                        CinemaAccentLight
-                                                    } else {
-                                                        androidx.compose.ui.graphics.Color.Transparent
-                                                    },
-                                                shape = RoundedCornerShape(CinemaCornerRadius.large),
-                                            ).then(
-                                                if (canPick) {
-                                                    Modifier
-                                                        .onFocusChanged { providerPillFocused = it.isFocused }
-                                                        .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                                        .semantics { contentDescription = switchProviderDescription }
-                                                } else {
-                                                    Modifier
-                                                },
-                                            ),
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier =
-                                            Modifier.padding(
-                                                horizontal = Spacing.md,
-                                                vertical = Spacing.xs,
-                                            ),
-                                    ) {
-                                        Text(
-                                            text = displayName,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                        )
-                                        SourceSyncStatusLine(
-                                            status = syncStatus,
-                                            lastSyncedAtMs = lastSyncedAtMs,
-                                            modifier = Modifier.padding(start = Spacing.sm),
-                                        )
-                                        if (canPick) {
-                                            Icon(
-                                                imageVector = CinemaIcons.ArrowDropDown,
-                                                contentDescription = null,
-                                                tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                                modifier = Modifier.padding(start = Spacing.xs),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            if (hasEpgData) {
-                                CinemaIconButton(
-                                    onClick = { leaveTo(RETURN_EPG_BROWSER, onEpgBrowser) },
-                                    modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
-                                    icon = {
-                                        Icon(
-                                            imageVector = CinemaIcons.MenuBook,
-                                            contentDescription = stringResource(R.string.epg_browser_title),
-                                            tint = CinemaTextPrimary,
-                                        )
-                                    },
-                                )
-                            }
-                            CinemaIconButton(
-                                onClick = { leaveTo(RETURN_SEARCH, onSearch) },
-                                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SEARCH),
-                                icon = {
-                                    Icon(
-                                        imageVector = CinemaIcons.Search,
-                                        contentDescription = stringResource(R.string.content_search_all_description),
-                                        tint = CinemaTextPrimary,
-                                    )
-                                },
-                            )
-                            // Always shown, even with one profile, so profiles are discoverable.
-                            activeProfile?.let { profile ->
-                                val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
-                                CinemaIconButton(
-                                    onClick = { leaveTo(RETURN_PROFILE, onChooseProfile) },
-                                    modifier =
-                                        Modifier
-                                            .semantics { contentDescription = switchLabel }
-                                            .navReturnFocusTarget(returnFocus, RETURN_PROFILE),
-                                    icon = {
-                                        ProfileAvatar(
-                                            name = profile.name,
-                                            colorIndex = profile.colorIndex,
-                                            size = TvDimensions.iconMedium,
-                                            fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                                        )
-                                    },
-                                )
-                            }
-                            CinemaIconButton(
-                                onClick = { leaveTo(RETURN_SETTINGS, onSettings) },
-                                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SETTINGS),
-                                icon = {
-                                    Icon(
-                                        imageVector = CinemaIcons.Settings,
-                                        contentDescription = stringResource(R.string.settings_title),
-                                        tint = CinemaTextPrimary,
-                                    )
-                                },
-                            )
-                        }
-                    }
-
-                    if (needsSignIn) {
-                        JellyfinSignInPanel(
-                            providerName = providerName,
-                            onSignIn = { leaveTo(RETURN_SIGN_IN) { onSignInRequired(activeProviderId) } },
-                            scale = scale,
-                            signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
+                        Text(
+                            text = stringResource(R.string.login_app_name),
+                            style =
+                                MaterialTheme.typography.headlineSmall.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.headlineSmall.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
-                    } else {
-                        // Section tiles, then the shelf (TV home overhaul plan, Phase 2). Scrollable: on a
-                        // lower-density TV the shelf can still run past the bottom edge.
-                        Column(
-                            modifier =
+                        HomeClock()
+                    }
+                    Row(
+                        // Applies to every button in the row (none is a focus group).
+                        modifier =
+                            if (needsSignIn || headerDownCard == null) {
                                 Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically,
-                                // Up from a row comes back to the tile focused last, not the one
-                                // geometrically above the card.
+                            } else {
+                                Modifier.focusProperties { down = heroCardFocus.getValue(headerDownCard) }
+                            },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        // Shown with one source too, for its sync status; only a picker (and
+                        // focusable) with two or more.
+                        if (providerName.isNotEmpty()) {
+                            val canPick = allProviders.size > 1
+                            val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
+                            val displayName =
+                                if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                                    "$providerName ($providerType)"
+                                } else {
+                                    providerName
+                                }
+                            val switchProviderDescription =
+                                stringResource(R.string.content_switch_provider_description_format, displayName)
+                            var providerPillFocused by remember { mutableStateOf(false) }
+                            val pillScale by animateFloatAsState(
+                                targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
+                                animationSpec =
+                                    tween(
+                                        durationMillis = org.njarasoa.fijerena.core.ui.theme.CinemaAnimation.focusDurationMs,
+                                    ),
+                                label = "provider_pill_scale",
+                            )
+                            GlassPanel(
                                 modifier =
                                     Modifier
-                                        .fillMaxWidth()
-                                        .focusRestorer(headerDownCard?.let(heroCardFocus::getValue) ?: FocusRequester.Default)
-                                        .focusGroup(),
-                            ) {
-                                val isDevMode = appSettings.isDevMode
-                                var cardIndex = 1
-                                val heroCardModifier: (String) -> Modifier = { key ->
-                                    Modifier
-                                        .focusRequester(heroCardFocus.getValue(key))
-                                        .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
-                                        // Left on the first focusable tile and Right on the last stay
-                                        // put: with Live TV dimmed, the search left from Movies fell
-                                        // through to the shelf below.
-                                        .focusProperties {
-                                            if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
-                                            if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
-                                        }
-                                }
-                                if (ContentType.LIVE_TV in supportedContentTypes) {
-                                    SectionTile(
-                                        title = stringResource(R.string.provider_live_tv_label),
-                                        icon = CinemaIcons.LiveTv,
-                                        categoryCounts = liveTvCounts,
-                                        showCount = isDevMode,
-                                        showLivePulse = !liveTvEmpty,
-                                        emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
-                                        gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                                        onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .then(heroCardModifier(RETURN_LIVE_TV))
-                                                .staggeredEntrance(cardIndex++)
-                                                .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
-                                    )
-                                }
-
-                                if (ContentType.MOVIES in supportedContentTypes) {
-                                    SectionTile(
-                                        title = stringResource(R.string.provider_movies_label),
-                                        icon = CinemaIcons.Movie,
-                                        categoryCounts = moviesCounts,
-                                        showCount = isDevMode,
-                                        gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                                        onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .then(heroCardModifier(RETURN_MOVIES))
-                                                .staggeredEntrance(cardIndex++)
-                                                .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
-                                    )
-                                }
-
-                                if (ContentType.TV_SHOWS in supportedContentTypes) {
-                                    SectionTile(
-                                        title = stringResource(R.string.provider_tv_shows_label),
-                                        icon = CinemaIcons.Tv,
-                                        categoryCounts = tvShowsCounts,
-                                        showCount = isDevMode,
-                                        gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                                        onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .then(heroCardModifier(RETURN_TV_SHOWS))
-                                                .staggeredEntrance(cardIndex++)
-                                                .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
-                                    )
-                                }
-                            }
-
-                            if (continueWatchingItems.isNotEmpty()) {
-                                TvContinueWatchingShelf(
-                                    items = continueWatchingItems,
-                                    firstItemFocus = shelfFirstFocus,
-                                    onItemSelected = { item ->
-                                        leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
-                                    },
-                                    listState = shelfListState,
-                                    itemModifier = { item ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
-                                            .then(artOnFocus(item.thumbnailUrl))
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            if (liveRowEntries.isNotEmpty()) {
-                                TvLiveRow(
-                                    entries = liveRowEntries,
-                                    nowPlaying = liveNowPlaying,
-                                    onEntrySelected = { entry ->
-                                        val listId =
-                                            if (entry.fromFavorites) {
-                                                CategoryViewModel.FAVORITES_CATEGORY_ID
-                                            } else {
-                                                CategoryViewModel.RECENT_CATEGORY_ID
-                                            }
-                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.id) { onLiveChannelSelected(entry.item.id, listId) }
-                                    },
-                                    firstItemFocus = liveRowFirstFocus,
-                                    listState = liveRowListState,
-                                    itemModifier = { entry ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
-                                            .then(artOnFocus(entry.item.thumbnailUrl))
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            if (favoriteMovies.isNotEmpty()) {
-                                TvFavoritesRow(
-                                    title = stringResource(R.string.home_favorite_movies),
-                                    items = favoriteMovies,
-                                    thumbnailType = ThumbnailContentType.MOVIE,
-                                    onItemSelected = { item ->
-                                        leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
-                                    },
-                                    firstItemFocus = favoriteMoviesFirstFocus,
-                                    listState = favoriteMoviesListState,
-                                    itemModifier = { item ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
-                                            .then(artOnFocus(item.thumbnailUrl))
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            if (favoriteShows.isNotEmpty()) {
-                                TvFavoritesRow(
-                                    title = stringResource(R.string.home_favorite_shows),
-                                    items = favoriteShows,
-                                    thumbnailType = ThumbnailContentType.TV_SHOW,
-                                    onItemSelected = { item ->
-                                        leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
-                                    },
-                                    firstItemFocus = favoriteShowsFirstFocus,
-                                    listState = favoriteShowsListState,
-                                    itemModifier = { item ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
-                                            .then(artOnFocus(item.thumbnailUrl))
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (showProviderPicker && allProviders.size > 1) {
-                    // A new dialog window starts with focus on the Close button *below* the list, so
-                    // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
-                    // current provider's row instead (F-38).
-                    val pickerInitialFocus = remember { FocusRequester() }
-                    val pickerFocusId = (allProviders.firstOrNull { it.id == activeProviderId } ?: allProviders.first()).id
-                    CinemaAlertDialog(
-                        initialFocus = pickerInitialFocus,
-                        onDismissRequest = { showProviderPicker = false },
-                        containerColor = CinemaSurface,
-                        titleContentColor = CinemaTextPrimary,
-                        textContentColor = CinemaTextSecondary,
-                        title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
-                        text = {
-                            Column(
-                                modifier = Modifier.verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            ) {
-                                // The pill only says "Update failed"; the reason is here. It already
-                                // carries the raw detail in developer mode (ProviderSyncRunner).
-                                lastSyncError?.takeIf { !syncing }?.let { error ->
-                                    androidx.compose.material3.Text(
-                                        text = stringResource(R.string.home_source_update_failed_detail, error),
-                                        color = CinemaError,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(bottom = Spacing.sm),
-                                    )
-                                }
-                                allProviders.forEach { provider ->
-                                    val isActive = provider.id == activeProviderId
-                                    val label =
-                                        if (appSettings.isDevMode) {
-                                            "${provider.name} (${provider.type})"
-                                        } else {
-                                            provider.name
-                                        }
-                                    TvOptionRow(
-                                        title = label,
-                                        selected = isActive,
-                                        activeLabel = stringResource(R.string.provider_active_label),
-                                        onClick = {
-                                            if (!isActive) {
-                                                coroutineScope.launch {
-                                                    val providerRepo = ProviderRepository(context.applicationContext)
-                                                    providerRepo.pickProvider(provider.id)
-                                                    showProviderPicker = false
-                                                    refreshTrigger++
-                                                    onProviderChanged()
-                                                }
-                                            } else {
-                                                showProviderPicker = false
-                                            }
-                                        },
-                                        modifier =
-                                            if (provider.id ==
-                                                pickerFocusId
-                                            ) {
-                                                Modifier.focusRequester(pickerInitialFocus)
+                                        .scale(pillScale)
+                                        .border(
+                                            width = TvFocusTokens.focusBorderWidth,
+                                            color =
+                                                if (providerPillFocused) {
+                                                    CinemaAccentLight
+                                                } else {
+                                                    androidx.compose.ui.graphics.Color.Transparent
+                                                },
+                                            shape = RoundedCornerShape(CinemaCornerRadius.large),
+                                        ).then(
+                                            if (canPick) {
+                                                Modifier
+                                                    .onFocusChanged { providerPillFocused = it.isFocused }
+                                                    .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                                    .semantics { contentDescription = switchProviderDescription }
                                             } else {
                                                 Modifier
                                             },
+                                        ),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = Spacing.md,
+                                            vertical = Spacing.xs,
+                                        ),
+                                ) {
+                                    Text(
+                                        text = displayName,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                     )
+                                    SourceSyncStatusLine(
+                                        status = syncStatus,
+                                        lastSyncedAtMs = lastSyncedAtMs,
+                                        modifier = Modifier.padding(start = Spacing.sm),
+                                    )
+                                    if (canPick) {
+                                        Icon(
+                                            imageVector = CinemaIcons.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                                            modifier = Modifier.padding(start = Spacing.xs),
+                                        )
+                                    }
                                 }
                             }
-                        },
-                        confirmButton = {
-                            CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
-                                androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaAccent)
-                            }
-                        },
-                    )
+                        }
+                        if (hasEpgData) {
+                            CinemaIconButton(
+                                onClick = { leaveTo(RETURN_EPG_BROWSER, onEpgBrowser) },
+                                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
+                                icon = {
+                                    Icon(
+                                        imageVector = CinemaIcons.MenuBook,
+                                        contentDescription = stringResource(R.string.epg_browser_title),
+                                        tint = CinemaTextPrimary,
+                                    )
+                                },
+                            )
+                        }
+                        CinemaIconButton(
+                            onClick = { leaveTo(RETURN_SEARCH, onSearch) },
+                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SEARCH),
+                            icon = {
+                                Icon(
+                                    imageVector = CinemaIcons.Search,
+                                    contentDescription = stringResource(R.string.content_search_all_description),
+                                    tint = CinemaTextPrimary,
+                                )
+                            },
+                        )
+                        // Always shown, even with one profile, so profiles are discoverable.
+                        activeProfile?.let { profile ->
+                            val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
+                            CinemaIconButton(
+                                onClick = { leaveTo(RETURN_PROFILE, onChooseProfile) },
+                                modifier =
+                                    Modifier
+                                        .semantics { contentDescription = switchLabel }
+                                        .navReturnFocusTarget(returnFocus, RETURN_PROFILE),
+                                icon = {
+                                    ProfileAvatar(
+                                        name = profile.name,
+                                        colorIndex = profile.colorIndex,
+                                        size = TvDimensions.iconMedium,
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                    )
+                                },
+                            )
+                        }
+                        CinemaIconButton(
+                            onClick = { leaveTo(RETURN_SETTINGS, onSettings) },
+                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SETTINGS),
+                            icon = {
+                                Icon(
+                                    imageVector = CinemaIcons.Settings,
+                                    contentDescription = stringResource(R.string.settings_title),
+                                    tint = CinemaTextPrimary,
+                                )
+                            },
+                        )
+                    }
                 }
+
+                if (needsSignIn) {
+                    JellyfinSignInPanel(
+                        providerName = providerName,
+                        onSignIn = { leaveTo(RETURN_SIGN_IN) { onSignInRequired(activeProviderId) } },
+                        scale = scale,
+                        signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
+                    )
+                } else {
+                    // Section tiles, then the shelf (TV home overhaul plan, Phase 2). Scrollable: on a
+                    // lower-density TV the shelf can still run past the bottom edge.
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                            verticalAlignment = Alignment.CenterVertically,
+                            // Up from a row comes back to the tile focused last, not the one
+                            // geometrically above the card.
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .focusRestorer(headerDownCard?.let(heroCardFocus::getValue) ?: FocusRequester.Default)
+                                    .focusGroup(),
+                        ) {
+                            val isDevMode = appSettings.isDevMode
+                            var cardIndex = 1
+                            val heroCardModifier: (String) -> Modifier = { key ->
+                                Modifier
+                                    .focusRequester(heroCardFocus.getValue(key))
+                                    .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
+                                    // Left on the first focusable tile and Right on the last stay
+                                    // put: with Live TV dimmed, the search left from Movies fell
+                                    // through to the shelf below.
+                                    .focusProperties {
+                                        if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
+                                        if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
+                                    }
+                            }
+                            if (ContentType.LIVE_TV in supportedContentTypes) {
+                                SectionTile(
+                                    title = stringResource(R.string.provider_live_tv_label),
+                                    icon = CinemaIcons.LiveTv,
+                                    categoryCounts = liveTvCounts,
+                                    showCount = isDevMode,
+                                    showLivePulse = !liveTvEmpty,
+                                    emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
+                                    gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
+                                    onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .then(heroCardModifier(RETURN_LIVE_TV))
+                                            .staggeredEntrance(cardIndex++)
+                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
+                                )
+                            }
+
+                            if (ContentType.MOVIES in supportedContentTypes) {
+                                SectionTile(
+                                    title = stringResource(R.string.provider_movies_label),
+                                    icon = CinemaIcons.Movie,
+                                    categoryCounts = moviesCounts,
+                                    showCount = isDevMode,
+                                    gradientColors = listOf(CinemaAccent, CinemaAccentDark),
+                                    onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .then(heroCardModifier(RETURN_MOVIES))
+                                            .staggeredEntrance(cardIndex++)
+                                            .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
+                                )
+                            }
+
+                            if (ContentType.TV_SHOWS in supportedContentTypes) {
+                                SectionTile(
+                                    title = stringResource(R.string.provider_tv_shows_label),
+                                    icon = CinemaIcons.Tv,
+                                    categoryCounts = tvShowsCounts,
+                                    showCount = isDevMode,
+                                    gradientColors = listOf(CinemaAccentLight, CinemaAccent),
+                                    onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .then(heroCardModifier(RETURN_TV_SHOWS))
+                                            .staggeredEntrance(cardIndex++)
+                                            .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
+                                )
+                            }
+                        }
+
+                        if (continueWatchingItems.isNotEmpty()) {
+                            TvContinueWatchingShelf(
+                                items = continueWatchingItems,
+                                firstItemFocus = shelfFirstFocus,
+                                onItemSelected = { item ->
+                                    leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
+                                },
+                                listState = shelfListState,
+                                itemModifier = { item ->
+                                    Modifier
+                                        .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
+                                        .then(artOnFocus(item.thumbnailUrl))
+                                },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xl.scaled(scale)),
+                            )
+                        }
+
+                        if (liveRowEntries.isNotEmpty()) {
+                            TvLiveRow(
+                                entries = liveRowEntries,
+                                nowPlaying = liveNowPlaying,
+                                onEntrySelected = { entry ->
+                                    val listId =
+                                        if (entry.fromFavorites) {
+                                            CategoryViewModel.FAVORITES_CATEGORY_ID
+                                        } else {
+                                            CategoryViewModel.RECENT_CATEGORY_ID
+                                        }
+                                    leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.id) { onLiveChannelSelected(entry.item.id, listId) }
+                                },
+                                firstItemFocus = liveRowFirstFocus,
+                                listState = liveRowListState,
+                                itemModifier = { entry ->
+                                    Modifier
+                                        .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
+                                        .then(artOnFocus(entry.item.thumbnailUrl))
+                                },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xl.scaled(scale)),
+                            )
+                        }
+
+                        if (favoriteMovies.isNotEmpty()) {
+                            TvFavoritesRow(
+                                title = stringResource(R.string.home_favorite_movies),
+                                items = favoriteMovies,
+                                thumbnailType = ThumbnailContentType.MOVIE,
+                                onItemSelected = { item ->
+                                    leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
+                                },
+                                firstItemFocus = favoriteMoviesFirstFocus,
+                                listState = favoriteMoviesListState,
+                                itemModifier = { item ->
+                                    Modifier
+                                        .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
+                                        .then(artOnFocus(item.thumbnailUrl))
+                                },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xl.scaled(scale)),
+                            )
+                        }
+
+                        if (favoriteShows.isNotEmpty()) {
+                            TvFavoritesRow(
+                                title = stringResource(R.string.home_favorite_shows),
+                                items = favoriteShows,
+                                thumbnailType = ThumbnailContentType.TV_SHOW,
+                                onItemSelected = { item ->
+                                    leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
+                                },
+                                firstItemFocus = favoriteShowsFirstFocus,
+                                listState = favoriteShowsListState,
+                                itemModifier = { item ->
+                                    Modifier
+                                        .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
+                                        .then(artOnFocus(item.thumbnailUrl))
+                                },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xl.scaled(scale)),
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (showProviderPicker && allProviders.size > 1) {
+                // A new dialog window starts with focus on the Close button *below* the list, so
+                // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
+                // current provider's row instead (F-38).
+                val pickerInitialFocus = remember { FocusRequester() }
+                val pickerFocusId = (allProviders.firstOrNull { it.id == activeProviderId } ?: allProviders.first()).id
+                CinemaAlertDialog(
+                    initialFocus = pickerInitialFocus,
+                    onDismissRequest = { showProviderPicker = false },
+                    containerColor = CinemaSurface,
+                    titleContentColor = CinemaTextPrimary,
+                    textContentColor = CinemaTextSecondary,
+                    title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
+                    text = {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
+                            // The pill only says "Update failed"; the reason is here. It already
+                            // carries the raw detail in developer mode (ProviderSyncRunner).
+                            lastSyncError?.takeIf { !syncing }?.let { error ->
+                                androidx.compose.material3.Text(
+                                    text = stringResource(R.string.home_source_update_failed_detail, error),
+                                    color = CinemaError,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = Spacing.sm),
+                                )
+                            }
+                            allProviders.forEach { provider ->
+                                val isActive = provider.id == activeProviderId
+                                val label =
+                                    if (appSettings.isDevMode) {
+                                        "${provider.name} (${provider.type})"
+                                    } else {
+                                        provider.name
+                                    }
+                                TvOptionRow(
+                                    title = label,
+                                    selected = isActive,
+                                    activeLabel = stringResource(R.string.provider_active_label),
+                                    onClick = {
+                                        if (!isActive) {
+                                            coroutineScope.launch {
+                                                val providerRepo = ProviderRepository(context.applicationContext)
+                                                providerRepo.pickProvider(provider.id)
+                                                showProviderPicker = false
+                                                refreshTrigger++
+                                                onProviderChanged()
+                                            }
+                                        } else {
+                                            showProviderPicker = false
+                                        }
+                                    },
+                                    modifier =
+                                        if (provider.id ==
+                                            pickerFocusId
+                                        ) {
+                                            Modifier.focusRequester(pickerInitialFocus)
+                                        } else {
+                                            Modifier
+                                        },
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
+                            androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaAccent)
+                        }
+                    },
+                )
             }
         }
     }

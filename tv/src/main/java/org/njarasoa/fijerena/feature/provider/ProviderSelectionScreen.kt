@@ -88,12 +88,6 @@ fun TvProviderSelectionScreen(
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var copyFromProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var actionsMenuProvider by remember { mutableStateOf<ProviderEntity?>(null) }
-    val appSettings =
-        remember {
-            org.njarasoa.fijerena.core.network
-                .AppSettings(context.applicationContext)
-        }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     // Refresh provider list when screen is shown (e.g., after adding a provider)
     LaunchedEffect(Unit) {

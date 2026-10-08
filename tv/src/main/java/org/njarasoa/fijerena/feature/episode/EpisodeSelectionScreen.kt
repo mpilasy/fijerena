@@ -46,7 +46,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -188,7 +187,6 @@ fun EpisodeSelectionScreen(
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
     val viewModel: SeriesDetailsViewModel =
         viewModel(
             factory =
@@ -211,49 +209,47 @@ fun EpisodeSelectionScreen(
     (uiState as? SeriesDetailsViewModel.UiState.Success)?.let { lastSuccess = it }
     val isRefreshing = uiState is SeriesDetailsViewModel.UiState.Loading && lastSuccess != null
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        val state = uiState
-        val shown = lastSuccess
-        when {
-            state is SeriesDetailsViewModel.UiState.Error -> {
-                TvErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.loadSeriesInfo() },
-                    title = stringResource(R.string.series_error_loading),
-                    onBack = onBack,
-                    backLabel = stringResource(R.string.series_back_to_list),
-                )
-            }
+    val state = uiState
+    val shown = lastSuccess
+    when {
+        state is SeriesDetailsViewModel.UiState.Error -> {
+            TvErrorState(
+                message = state.message,
+                onRetry = { viewModel.loadSeriesInfo() },
+                title = stringResource(R.string.series_error_loading),
+                onBack = onBack,
+                backLabel = stringResource(R.string.series_back_to_list),
+            )
+        }
 
-            shown != null -> {
-                EpisodeListContent(
-                    seriesDetail = shown.seriesDetail,
-                    relatedTitles = relatedTitles,
-                    tmdbTitle = tmdbTitle,
-                    logoUrl = logoUrl,
-                    backdropUrl = backdropUrl,
-                    alternateStreams = alternateStreams,
-                    seriesName = shown.streamName,
-                    categoryId = shown.categoryId,
-                    mediaRepository = viewModel.mediaRepository!!,
-                    initialEpisodeId = initialEpisodeId,
-                    isFavorite = shown.isFavorite,
-                    categoryName = shown.categoryName,
-                    isRefreshing = isRefreshing,
-                    onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
-                    onEpisodeSelected = onEpisodeSelected,
-                    onCategorySelected = { onCategorySelected(shown.categoryId) },
-                    onRefresh = { viewModel.refreshSeriesInfo() },
-                    onBack = onBack,
-                    onRelatedTitleSelected = onRelatedTitleSelected,
-                    onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
-                    sectionRoot = sectionRoot,
-                )
-            }
+        shown != null -> {
+            EpisodeListContent(
+                seriesDetail = shown.seriesDetail,
+                relatedTitles = relatedTitles,
+                tmdbTitle = tmdbTitle,
+                logoUrl = logoUrl,
+                backdropUrl = backdropUrl,
+                alternateStreams = alternateStreams,
+                seriesName = shown.streamName,
+                categoryId = shown.categoryId,
+                mediaRepository = viewModel.mediaRepository!!,
+                initialEpisodeId = initialEpisodeId,
+                isFavorite = shown.isFavorite,
+                categoryName = shown.categoryName,
+                isRefreshing = isRefreshing,
+                onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
+                onEpisodeSelected = onEpisodeSelected,
+                onCategorySelected = { onCategorySelected(shown.categoryId) },
+                onRefresh = { viewModel.refreshSeriesInfo() },
+                onBack = onBack,
+                onRelatedTitleSelected = onRelatedTitleSelected,
+                onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                sectionRoot = sectionRoot,
+            )
+        }
 
-            else -> {
-                LoadingScreen()
-            }
+        else -> {
+            LoadingScreen()
         }
     }
 }

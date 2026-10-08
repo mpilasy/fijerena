@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -149,7 +148,6 @@ fun TvAddProviderScreen(
             org.njarasoa.fijerena.core.network
                 .AppSettings(context.applicationContext)
         }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
@@ -378,619 +376,617 @@ fun TvAddProviderScreen(
             }
         }
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        val scale = LocalUiScale.current
-        val typography = MaterialTheme.typography
-        val scaledDisplaySmall =
-            remember(scale, typography) {
-                typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-            }
-        val scaledBodyMedium =
-            remember(scale, typography) {
-                typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-            }
-
-        // Type, name and the type's own fields: the same in both modes. In edit mode the type is
-        // read-only and skipped by focus, the name field takes [nameModifier] and the type's
-        // fields sit in one focus stop of the Connection pane ([fieldsModifier]).
-        val nameFocusRequester = remember { FocusRequester() }
-        val connectionFields: @Composable (Modifier, Modifier?) -> Unit = { nameModifier, fieldsModifier ->
-            // Provider type dropdown (D-pad friendly). Read-only and skipped by focus
-            // when editing: the type of an existing source cannot change, so the first
-            // D-pad stop is the Name field's edit button.
-            ProviderTypeDropdown(
-                types = addSourceTypes(isDevMode, editedType),
-                selectedType = selectedType,
-                onTypeSelected = { selectedType = it },
-                enabled = !isEditMode,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
-
-            ReadOnlyFieldWithEdit(
-                value = name,
-                onValueChange = {
-                    name = it
-                    error = null
-                },
-                label = stringResource(R.string.provider_name_label),
-                placeholder = stringResource(R.string.provider_name_placeholder_xtream),
-                modifier = nameModifier,
-                editButtonFocusRequester = if (isEditMode) nameFocusRequester else null,
-            )
-
-            val typeFields: @Composable () -> Unit = {
-                when (selectedType) {
-                    ProviderType.XTREAM -> {
-                        XtreamForm(
-                            url = url,
-                            onUrlChange = { url = it },
-                            username = username,
-                            onUsernameChange = { username = it },
-                            password = password,
-                            onPasswordChange = { password = it },
-                            onErrorChange = { error = it },
-                            onOutputFormatChange = { streamOutputFormat = it },
-                            onPlaylistTypeChange = { playlistType = it },
-                        )
-                    }
-
-                    ProviderType.JELLYFIN -> {
-                        JellyfinForm(
-                            url = url,
-                            onUrlChange = { url = it },
-                            username = username,
-                            onUsernameChange = { username = it },
-                            password = password,
-                            onPasswordChange = { password = it },
-                            isEditMode = isEditMode,
-                            isBusy = isBusy,
-                            onErrorChange = { error = it },
-                            onQuickConnectClick = {
-                                showQuickConnectDialog = true
-                            },
-                        )
-                    }
-
-                    ProviderType.SMB -> {
-                        SmbForm(
-                            host = host,
-                            onHostChange = { host = it },
-                            shareName = shareName,
-                            onShareNameChange = { shareName = it },
-                            username = username,
-                            onUsernameChange = { username = it },
-                            password = password,
-                            onPasswordChange = { password = it },
-                            onErrorChange = { error = it },
-                        )
-                    }
-
-                    ProviderType.LOCAL -> {
-                        // LOCAL type only requires name - folder/file picker will be added later
-                    }
-
-                    ProviderType.REMOTE_M3U -> {
-                        RemoteM3uForm(
-                            url = url,
-                            onUrlChange = { url = it },
-                            onErrorChange = { error = it },
-                        )
-                    }
-                }
-            }
-            if (fieldsModifier != null) {
-                Column(modifier = fieldsModifier.fillMaxWidth()) { typeFields() }
-            } else {
-                typeFields()
-            }
+    val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledDisplaySmall =
+        remember(scale, typography) {
+            typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+        }
+    val scaledBodyMedium =
+        remember(scale, typography) {
+            typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
         }
 
-        val errorText: @Composable () -> Unit = {
-            error?.let { errorMsg ->
-                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                Text(
-                    text = errorMsg,
-                    style = scaledBodyMedium,
-                    color = CinemaError,
-                )
-            }
-        }
+    // Type, name and the type's own fields: the same in both modes. In edit mode the type is
+    // read-only and skipped by focus, the name field takes [nameModifier] and the type's
+    // fields sit in one focus stop of the Connection pane ([fieldsModifier]).
+    val nameFocusRequester = remember { FocusRequester() }
+    val connectionFields: @Composable (Modifier, Modifier?) -> Unit = { nameModifier, fieldsModifier ->
+        // Provider type dropdown (D-pad friendly). Read-only and skipped by focus
+        // when editing: the type of an existing source cannot change, so the first
+        // D-pad stop is the Name field's edit button.
+        ProviderTypeDropdown(
+            types = addSourceTypes(isDevMode, editedType),
+            selectedType = selectedType,
+            onTypeSelected = { selectedType = it },
+            enabled = !isEditMode,
+        )
 
-        Surface(modifier = Modifier.fillMaxSize()) {
-            if (isEditMode) {
-                // Back with unsaved connection edits asks first. Taken at the root
-                // (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"): the press is claimed
-                // on its way back up (onKeyEvent), so a field being edited still gets it first
-                // and cancels its edit, and acted on in onPreviewKeyEvent on release, before
-                // anything below can swallow it. The BackHandler stays as the fallback.
-                var backClaimed by remember { mutableStateOf(false) }
-                BackHandler(enabled = hasUnsavedConnectionEdits) { showDiscardDialog = true }
+        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-                val connectionPane = rememberPaneFocus()
-                val settingsPane = rememberPaneFocus()
-                connectionPane.bind(selectedKey = null, firstKey = KEY_NAME, listState = null, indexOf = { -1 })
-                settingsPane.bind(selectedKey = null, firstKey = EDIT_SOURCE_FIRST_SETTING_KEY, listState = null, indexOf = { -1 })
-                val cancelFocusRequester = remember { FocusRequester() }
-                val saveFocusRequester = remember { FocusRequester() }
+        ReadOnlyFieldWithEdit(
+            value = name,
+            onValueChange = {
+                name = it
+                error = null
+            },
+            label = stringResource(R.string.provider_name_label),
+            placeholder = stringResource(R.string.provider_name_placeholder_xtream),
+            modifier = nameModifier,
+            editButtonFocusRequester = if (isEditMode) nameFocusRequester else null,
+        )
 
-                // First focus once the source has loaded: the Name edit button (T-12).
-                val connectionLoaded = loadedConnection != null
-                // Back from the guide sources lands on Guide sources, once the source has loaded.
-                NavReturnFocusEffect(returnFocus, prepare = { snapshotFlow { currentProvider != null }.first { it } })
-                LaunchedEffect(connectionLoaded) {
-                    if (connectionLoaded && !returnFocus.isReturn) nameFocusRequester.requestFocusWithRetry()
-                }
-
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .onPreviewKeyEvent { event ->
-                                if (event.key == Key.Back && event.type == KeyEventType.KeyUp && backClaimed) {
-                                    backClaimed = false
-                                    showDiscardDialog = true
-                                    true
-                                } else {
-                                    false
-                                }
-                            }.onKeyEvent { event ->
-                                if (event.key == Key.Back && event.type == KeyEventType.KeyDown && hasUnsavedConnectionEdits) {
-                                    backClaimed = true
-                                    true
-                                } else {
-                                    false
-                                }
-                            }.padding(
-                                horizontal = Spacing.tvSafeMarginHorizontal,
-                                vertical = Spacing.tvSafeMarginVertical,
-                            ),
-                ) {
-                    Text(
-                        text = stringResource(R.string.provider_edit_title),
-                        style = scaledDisplaySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+        val typeFields: @Composable () -> Unit = {
+            when (selectedType) {
+                ProviderType.XTREAM -> {
+                    XtreamForm(
+                        url = url,
+                        onUrlChange = { url = it },
+                        username = username,
+                        onUsernameChange = { username = it },
+                        password = password,
+                        onPasswordChange = { password = it },
+                        onErrorChange = { error = it },
+                        onOutputFormatChange = { streamOutputFormat = it },
+                        onPlaylistTypeChange = { playlistType = it },
                     )
-
-                    Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        // Connection: the only part that needs saving, with its buttons right under it.
-                        GlassPanel(
-                            modifier =
-                                Modifier
-                                    .weight(CONNECTION_COLUMN_WEIGHT)
-                                    .tvPane(connectionPane, exitRight = settingsPane, exitUp = false),
-                        ) {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(Spacing.lg.scaled(scale)),
-                            ) {
-                                ProviderSectionTitle(title = stringResource(R.string.provider_section_connection))
-                                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                                connectionFields(
-                                    Modifier.paneItem(connectionPane, KEY_NAME),
-                                    Modifier.paneItem(connectionPane, KEY_FIELDS),
-                                )
-
-                                errorText()
-
-                                Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-
-                                // Down from the last field lands on Cancel, not on whichever
-                                // button happens to sit under the field's edit button.
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .focusProperties {
-                                                onEnter = {
-                                                    if (requestedFocusDirection == FocusDirection.Down) {
-                                                        cancelFocusRequester.requestFocus(FocusDirection.Enter)
-                                                    }
-                                                }
-                                            }.focusGroup(),
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                ) {
-                                    CinemaSecondaryButton(
-                                        onClick = onBack,
-                                        enabled = !isBusy,
-                                        text = stringResource(R.string.common_cancel),
-                                        modifier =
-                                            Modifier
-                                                .paneItem(connectionPane, KEY_CANCEL)
-                                                .focusRequester(cancelFocusRequester)
-                                                .rowNeighbours(right = saveFocusRequester),
-                                    )
-                                    CinemaPrimaryButton(
-                                        onClick = submitConnection,
-                                        enabled = !isBusy,
-                                        text = submitLabel,
-                                        modifier =
-                                            Modifier
-                                                .paneItem(connectionPane, KEY_SAVE)
-                                                .focusRequester(saveFocusRequester)
-                                                .rowNeighbours(left = cancelFocusRequester),
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(Spacing.lg.scaled(scale)))
-
-                        // Everything that applies on its own, then the destructive actions last.
-                        GlassPanel(
-                            modifier =
-                                Modifier
-                                    .weight(SETTINGS_COLUMN_WEIGHT)
-                                    .tvPane(settingsPane, exitLeft = connectionPane, exitUp = false),
-                        ) {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(Spacing.lg.scaled(scale)),
-                            ) {
-                                ProviderSettingsSection(
-                                    providerType = selectedType,
-                                    providerSettings = providerSettings,
-                                    onUpdateSettings = { newSettings ->
-                                        coroutineScope.launch {
-                                            providerRepo.updateProviderSettings(editId, newSettings)
-                                            providerSettings = newSettings
-                                            streamOutputFormat = newSettings.streamOutputFormat
-                                            playlistType = newSettings.playlistType
-                                        }
-                                    },
-                                    pane = settingsPane,
-                                )
-
-                                if (editedType == ProviderType.XTREAM) {
-                                    val loginsViewModel: ExtraLoginsViewModel =
-                                        viewModel(
-                                            key = "extraLogins-$editId",
-                                            factory = ExtraLoginsViewModel.Factory(context, editId),
-                                        )
-                                    SectionDivider()
-                                    ProviderLoginsSection(
-                                        viewModel = loginsViewModel,
-                                        pane = settingsPane,
-                                        onMainLoginChanged = { mainUsername ->
-                                            // Make main / Remove changed the main login: take it
-                                            // into the login fields and their loaded values, so
-                                            // Save connection doesn't write the old one back.
-                                            if (loadedConnection?.getOrNull(2)?.let { it != mainUsername } == true) {
-                                                coroutineScope.launch { reloadMainLogin() }
-                                            }
-                                        },
-                                    )
-                                }
-
-                                if (currentProvider?.let { MediaProviderFactory.hasLiveTv(it) } == true) {
-                                    SectionDivider()
-                                    ProviderGuideSection(
-                                        providerId = editId,
-                                        showProvidesGuide = selectedType == ProviderType.XTREAM,
-                                        providerSettings = providerSettings,
-                                        onProvidesGuideChange = { enabled ->
-                                            providerSettings = providerSettings.copy(providesGuide = enabled, providesGuideSetByUser = true)
-                                            viewModel.setProvidesGuide(editId, enabled)
-                                        },
-                                        onGuideSourcesClick = {
-                                            val open = {
-                                                returnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
-                                                onGuideSources(editId)
-                                            }
-                                            if (hasUnsavedConnectionEdits) discardThen = open else open()
-                                        },
-                                        pane = settingsPane,
-                                        guideSourcesModifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_GUIDE_SOURCES),
-                                    )
-                                }
-
-                                SectionDivider()
-                                CacheManagementSection(
-                                    cacheStats = cacheStats,
-                                    pane = settingsPane,
-                                    syncState = syncState,
-                                    isXtream = selectedType == ProviderType.XTREAM,
-                                    lastSyncedAtMs = currentProvider?.lastSyncedAtMs ?: 0L,
-                                    lastSyncDurationMs = currentProvider?.lastSyncDurationMs ?: 0L,
-                                    lastSyncError = currentProvider?.lastSyncError,
-                                    lastSyncInserted = currentProvider?.lastSyncInserted ?: 0,
-                                    lastSyncUpdated = currentProvider?.lastSyncUpdated ?: 0,
-                                    lastSyncDeleted = currentProvider?.lastSyncDeleted ?: 0,
-                                    onSyncClick = { viewModel.syncProvider(editId) },
-                                )
-
-                                SectionDivider()
-                                ProviderDangerZoneSection(
-                                    cacheStats = cacheStats,
-                                    pane = settingsPane,
-                                    onClearFavoritesClick = { showClearFavoritesDialog = true },
-                                    onClearProgressClick = { showClearProgressDialog = true },
-                                    onClearAllCacheClick = { showClearCacheDialog = true },
-                                    onClearLiveTvClick = { showClearLiveTvCacheDialog = true },
-                                    onClearMoviesClick = { showClearMoviesCacheDialog = true },
-                                    onClearTvShowsClick = { showClearTvShowsCacheDialog = true },
-                                )
-                            }
-                        }
-                    }
                 }
-            } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(
-                                horizontal = Spacing.tvSafeMarginHorizontal,
-                                vertical = Spacing.tvSafeMarginVertical,
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    GlassPanel(modifier = Modifier.width(TvDimensions.formFieldWidth.scaled(scale))) {
+
+                ProviderType.JELLYFIN -> {
+                    JellyfinForm(
+                        url = url,
+                        onUrlChange = { url = it },
+                        username = username,
+                        onUsernameChange = { username = it },
+                        password = password,
+                        onPasswordChange = { password = it },
+                        isEditMode = isEditMode,
+                        isBusy = isBusy,
+                        onErrorChange = { error = it },
+                        onQuickConnectClick = {
+                            showQuickConnectDialog = true
+                        },
+                    )
+                }
+
+                ProviderType.SMB -> {
+                    SmbForm(
+                        host = host,
+                        onHostChange = { host = it },
+                        shareName = shareName,
+                        onShareNameChange = { shareName = it },
+                        username = username,
+                        onUsernameChange = { username = it },
+                        password = password,
+                        onPasswordChange = { password = it },
+                        onErrorChange = { error = it },
+                    )
+                }
+
+                ProviderType.LOCAL -> {
+                    // LOCAL type only requires name - folder/file picker will be added later
+                }
+
+                ProviderType.REMOTE_M3U -> {
+                    RemoteM3uForm(
+                        url = url,
+                        onUrlChange = { url = it },
+                        onErrorChange = { error = it },
+                    )
+                }
+            }
+        }
+        if (fieldsModifier != null) {
+            Column(modifier = fieldsModifier.fillMaxWidth()) { typeFields() }
+        } else {
+            typeFields()
+        }
+    }
+
+    val errorText: @Composable () -> Unit = {
+        error?.let { errorMsg ->
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+            Text(
+                text = errorMsg,
+                style = scaledBodyMedium,
+                color = CinemaError,
+            )
+        }
+    }
+
+    Surface(modifier = Modifier.fillMaxSize()) {
+        if (isEditMode) {
+            // Back with unsaved connection edits asks first. Taken at the root
+            // (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"): the press is claimed
+            // on its way back up (onKeyEvent), so a field being edited still gets it first
+            // and cancels its edit, and acted on in onPreviewKeyEvent on release, before
+            // anything below can swallow it. The BackHandler stays as the fallback.
+            var backClaimed by remember { mutableStateOf(false) }
+            BackHandler(enabled = hasUnsavedConnectionEdits) { showDiscardDialog = true }
+
+            val connectionPane = rememberPaneFocus()
+            val settingsPane = rememberPaneFocus()
+            connectionPane.bind(selectedKey = null, firstKey = KEY_NAME, listState = null, indexOf = { -1 })
+            settingsPane.bind(selectedKey = null, firstKey = EDIT_SOURCE_FIRST_SETTING_KEY, listState = null, indexOf = { -1 })
+            val cancelFocusRequester = remember { FocusRequester() }
+            val saveFocusRequester = remember { FocusRequester() }
+
+            // First focus once the source has loaded: the Name edit button (T-12).
+            val connectionLoaded = loadedConnection != null
+            // Back from the guide sources lands on Guide sources, once the source has loaded.
+            NavReturnFocusEffect(returnFocus, prepare = { snapshotFlow { currentProvider != null }.first { it } })
+            LaunchedEffect(connectionLoaded) {
+                if (connectionLoaded && !returnFocus.isReturn) nameFocusRequester.requestFocusWithRetry()
+            }
+
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .onPreviewKeyEvent { event ->
+                            if (event.key == Key.Back && event.type == KeyEventType.KeyUp && backClaimed) {
+                                backClaimed = false
+                                showDiscardDialog = true
+                                true
+                            } else {
+                                false
+                            }
+                        }.onKeyEvent { event ->
+                            if (event.key == Key.Back && event.type == KeyEventType.KeyDown && hasUnsavedConnectionEdits) {
+                                backClaimed = true
+                                true
+                            } else {
+                                false
+                            }
+                        }.padding(
+                            horizontal = Spacing.tvSafeMarginHorizontal,
+                            vertical = Spacing.tvSafeMarginVertical,
+                        ),
+            ) {
+                Text(
+                    text = stringResource(R.string.provider_edit_title),
+                    style = scaledDisplaySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // Connection: the only part that needs saving, with its buttons right under it.
+                    GlassPanel(
+                        modifier =
+                            Modifier
+                                .weight(CONNECTION_COLUMN_WEIGHT)
+                                .tvPane(connectionPane, exitRight = settingsPane, exitUp = false),
+                    ) {
                         Column(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .verticalScroll(rememberScrollState())
                                     .padding(Spacing.lg.scaled(scale)),
-                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text(
-                                text = stringResource(R.string.provider_add_title),
-                                style = scaledDisplaySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                            ProviderSectionTitle(title = stringResource(R.string.provider_section_connection))
+                            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                            connectionFields(
+                                Modifier.paneItem(connectionPane, KEY_NAME),
+                                Modifier.paneItem(connectionPane, KEY_FIELDS),
                             )
-
-                            Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
-
-                            connectionFields(Modifier, null)
 
                             errorText()
 
-                            Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+                            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 
+                            // Down from the last field lands on Cancel, not on whichever
+                            // button happens to sit under the field's edit button.
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale), Alignment.CenterHorizontally),
+                                modifier =
+                                    Modifier
+                                        .focusProperties {
+                                            onEnter = {
+                                                if (requestedFocusDirection == FocusDirection.Down) {
+                                                    cancelFocusRequester.requestFocus(FocusDirection.Enter)
+                                                }
+                                            }
+                                        }.focusGroup(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                             ) {
                                 CinemaSecondaryButton(
                                     onClick = onBack,
                                     enabled = !isBusy,
                                     text = stringResource(R.string.common_cancel),
+                                    modifier =
+                                        Modifier
+                                            .paneItem(connectionPane, KEY_CANCEL)
+                                            .focusRequester(cancelFocusRequester)
+                                            .rowNeighbours(right = saveFocusRequester),
                                 )
-
                                 CinemaPrimaryButton(
                                     onClick = submitConnection,
                                     enabled = !isBusy,
                                     text = submitLabel,
+                                    modifier =
+                                        Modifier
+                                            .paneItem(connectionPane, KEY_SAVE)
+                                            .focusRequester(saveFocusRequester)
+                                            .rowNeighbours(left = cancelFocusRequester),
                                 )
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(Spacing.lg.scaled(scale)))
+
+                    // Everything that applies on its own, then the destructive actions last.
+                    GlassPanel(
+                        modifier =
+                            Modifier
+                                .weight(SETTINGS_COLUMN_WEIGHT)
+                                .tvPane(settingsPane, exitLeft = connectionPane, exitUp = false),
+                    ) {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(Spacing.lg.scaled(scale)),
+                        ) {
+                            ProviderSettingsSection(
+                                providerType = selectedType,
+                                providerSettings = providerSettings,
+                                onUpdateSettings = { newSettings ->
+                                    coroutineScope.launch {
+                                        providerRepo.updateProviderSettings(editId, newSettings)
+                                        providerSettings = newSettings
+                                        streamOutputFormat = newSettings.streamOutputFormat
+                                        playlistType = newSettings.playlistType
+                                    }
+                                },
+                                pane = settingsPane,
+                            )
+
+                            if (editedType == ProviderType.XTREAM) {
+                                val loginsViewModel: ExtraLoginsViewModel =
+                                    viewModel(
+                                        key = "extraLogins-$editId",
+                                        factory = ExtraLoginsViewModel.Factory(context, editId),
+                                    )
+                                SectionDivider()
+                                ProviderLoginsSection(
+                                    viewModel = loginsViewModel,
+                                    pane = settingsPane,
+                                    onMainLoginChanged = { mainUsername ->
+                                        // Make main / Remove changed the main login: take it
+                                        // into the login fields and their loaded values, so
+                                        // Save connection doesn't write the old one back.
+                                        if (loadedConnection?.getOrNull(2)?.let { it != mainUsername } == true) {
+                                            coroutineScope.launch { reloadMainLogin() }
+                                        }
+                                    },
+                                )
+                            }
+
+                            if (currentProvider?.let { MediaProviderFactory.hasLiveTv(it) } == true) {
+                                SectionDivider()
+                                ProviderGuideSection(
+                                    providerId = editId,
+                                    showProvidesGuide = selectedType == ProviderType.XTREAM,
+                                    providerSettings = providerSettings,
+                                    onProvidesGuideChange = { enabled ->
+                                        providerSettings = providerSettings.copy(providesGuide = enabled, providesGuideSetByUser = true)
+                                        viewModel.setProvidesGuide(editId, enabled)
+                                    },
+                                    onGuideSourcesClick = {
+                                        val open = {
+                                            returnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
+                                            onGuideSources(editId)
+                                        }
+                                        if (hasUnsavedConnectionEdits) discardThen = open else open()
+                                    },
+                                    pane = settingsPane,
+                                    guideSourcesModifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_GUIDE_SOURCES),
+                                )
+                            }
+
+                            SectionDivider()
+                            CacheManagementSection(
+                                cacheStats = cacheStats,
+                                pane = settingsPane,
+                                syncState = syncState,
+                                isXtream = selectedType == ProviderType.XTREAM,
+                                lastSyncedAtMs = currentProvider?.lastSyncedAtMs ?: 0L,
+                                lastSyncDurationMs = currentProvider?.lastSyncDurationMs ?: 0L,
+                                lastSyncError = currentProvider?.lastSyncError,
+                                lastSyncInserted = currentProvider?.lastSyncInserted ?: 0,
+                                lastSyncUpdated = currentProvider?.lastSyncUpdated ?: 0,
+                                lastSyncDeleted = currentProvider?.lastSyncDeleted ?: 0,
+                                onSyncClick = { viewModel.syncProvider(editId) },
+                            )
+
+                            SectionDivider()
+                            ProviderDangerZoneSection(
+                                cacheStats = cacheStats,
+                                pane = settingsPane,
+                                onClearFavoritesClick = { showClearFavoritesDialog = true },
+                                onClearProgressClick = { showClearProgressDialog = true },
+                                onClearAllCacheClick = { showClearCacheDialog = true },
+                                onClearLiveTvClick = { showClearLiveTvCacheDialog = true },
+                                onClearMoviesClick = { showClearMoviesCacheDialog = true },
+                                onClearTvShowsClick = { showClearTvShowsCacheDialog = true },
+                            )
+                        }
+                    }
                 }
             }
+        } else {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            horizontal = Spacing.tvSafeMarginHorizontal,
+                            vertical = Spacing.tvSafeMarginVertical,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                GlassPanel(modifier = Modifier.width(TvDimensions.formFieldWidth.scaled(scale))) {
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(Spacing.lg.scaled(scale)),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.provider_add_title),
+                            style = scaledDisplaySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
 
-            // Discard unsaved connection edits (edit mode, Back)
-            if (showDiscardDialog || discardThen != null) {
-                CinemaAlertDialog(
-                    onDismissRequest = {
-                        showDiscardDialog = false
-                        discardThen = null
-                    },
-                    title = { Text(stringResource(R.string.provider_discard_changes_title), color = CinemaTextPrimary) },
-                    text = { Text(stringResource(R.string.provider_discard_changes_message), color = CinemaTextSecondary) },
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                val then = discardThen
-                                showDiscardDialog = false
-                                discardThen = null
-                                if (then != null) then() else onBack()
-                            },
-                            colors =
-                                androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = CinemaError,
-                                    contentColor = CinemaTextPrimary,
-                                ),
-                        ) { Text(stringResource(R.string.provider_discard_button)) }
-                    },
-                    dismissButton = {
-                        CinemaDialogActionButton(
-                            onClick = {
-                                showDiscardDialog = false
-                                discardThen = null
-                            },
-                            colors =
-                                androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = CinemaSurfaceVariant,
-                                    contentColor = CinemaTextPrimary,
-                                ),
-                        ) { Text(stringResource(R.string.provider_keep_editing_button)) }
-                    },
-                    containerColor = CinemaSurface,
-                )
-            }
+                        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-            val failedState = saveState as? SaveState.ValidationFailed
-            if (failedState != null) {
-                val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
-                val saveConfig =
-                    if (selectedType == ProviderType.SMB) {
-                        smbSourceConfig(host.trim(), shareName.trim())
-                    } else {
-                        ""
+                        connectionFields(Modifier, null)
+
+                        errorText()
+
+                        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale), Alignment.CenterHorizontally),
+                        ) {
+                            CinemaSecondaryButton(
+                                onClick = onBack,
+                                enabled = !isBusy,
+                                text = stringResource(R.string.common_cancel),
+                            )
+
+                            CinemaPrimaryButton(
+                                onClick = submitConnection,
+                                enabled = !isBusy,
+                                text = submitLabel,
+                            )
+                        }
                     }
-
-                CinemaAlertDialog(
-                    onDismissRequest = { viewModel.resetSaveState() },
-                    title = {
-                        Text(
-                            "Connection Failed",
-                            color = CinemaTextPrimary,
-                        )
-                    },
-                    text = {
-                        Text(
-                            failedState.errorMessage,
-                            color = CinemaTextSecondary,
-                        )
-                    },
-                    confirmButton = {
-                        CinemaDangerButton(
-                            onClick = {
-                                viewModel.forceSave(
-                                    id = if (isEditMode) editId else null,
-                                    name = name.trim(),
-                                    url = saveUrl,
-                                    username = username.trim(),
-                                    password = password.trim(),
-                                    type = selectedType.name,
-                                    config = saveConfig,
-                                    onComplete = onSuccess,
-                                    initialSettings =
-                                        ProviderSettings(
-                                            streamOutputFormat = streamOutputFormat,
-                                            playlistType = playlistType,
-                                        ),
-                                )
-                            },
-                            text = stringResource(R.string.provider_save_anyway),
-                        )
-                    },
-                    dismissButton = {
-                        CinemaSecondaryButton(
-                            onClick = { viewModel.resetSaveState() },
-                            text = stringResource(R.string.provider_go_back),
-                        )
-                    },
-                    containerColor = CinemaSurface,
-                )
+                }
             }
+        }
 
-            if (showClearCacheDialog) {
-                ConfirmActionDialog(
-                    title = stringResource(R.string.provider_clear_cache_all_title),
-                    text = stringResource(R.string.provider_clear_cache_all_message),
-                    confirmText = stringResource(R.string.provider_clear_all_button),
-                    onConfirm = {
-                        coroutineScope.launch {
-                            providerRepo.clearAllCacheForProvider(editId)
-                            cacheRefreshTrigger++
-                            showClearCacheDialog = false
-                        }
-                    },
-                    onDismiss = { showClearCacheDialog = false },
-                )
-            }
+        // Discard unsaved connection edits (edit mode, Back)
+        if (showDiscardDialog || discardThen != null) {
+            CinemaAlertDialog(
+                onDismissRequest = {
+                    showDiscardDialog = false
+                    discardThen = null
+                },
+                title = { Text(stringResource(R.string.provider_discard_changes_title), color = CinemaTextPrimary) },
+                text = { Text(stringResource(R.string.provider_discard_changes_message), color = CinemaTextSecondary) },
+                confirmButton = {
+                    CinemaDialogActionButton(
+                        onClick = {
+                            val then = discardThen
+                            showDiscardDialog = false
+                            discardThen = null
+                            if (then != null) then() else onBack()
+                        },
+                        colors =
+                            androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = CinemaError,
+                                contentColor = CinemaTextPrimary,
+                            ),
+                    ) { Text(stringResource(R.string.provider_discard_button)) }
+                },
+                dismissButton = {
+                    CinemaDialogActionButton(
+                        onClick = {
+                            showDiscardDialog = false
+                            discardThen = null
+                        },
+                        colors =
+                            androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = CinemaSurfaceVariant,
+                                contentColor = CinemaTextPrimary,
+                            ),
+                    ) { Text(stringResource(R.string.provider_keep_editing_button)) }
+                },
+                containerColor = CinemaSurface,
+            )
+        }
 
-            if (showClearLiveTvCacheDialog) {
-                ConfirmActionDialog(
-                    title = stringResource(R.string.provider_clear_cache_live_title),
-                    text = stringResource(R.string.provider_clear_cache_live_message),
-                    confirmText = stringResource(R.string.provider_clear_button),
-                    onConfirm = {
-                        coroutineScope.launch {
-                            providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
-                            cacheRefreshTrigger++
-                            showClearLiveTvCacheDialog = false
-                        }
-                    },
-                    onDismiss = { showClearLiveTvCacheDialog = false },
-                )
-            }
+        val failedState = saveState as? SaveState.ValidationFailed
+        if (failedState != null) {
+            val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
+            val saveConfig =
+                if (selectedType == ProviderType.SMB) {
+                    smbSourceConfig(host.trim(), shareName.trim())
+                } else {
+                    ""
+                }
 
-            if (showClearMoviesCacheDialog) {
-                ConfirmActionDialog(
-                    title = stringResource(R.string.provider_clear_cache_movies_title),
-                    text = stringResource(R.string.provider_clear_cache_movies_message),
-                    confirmText = stringResource(R.string.provider_clear_button),
-                    onConfirm = {
-                        coroutineScope.launch {
-                            providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
-                            cacheRefreshTrigger++
-                            showClearMoviesCacheDialog = false
-                        }
-                    },
-                    onDismiss = { showClearMoviesCacheDialog = false },
-                )
-            }
+            CinemaAlertDialog(
+                onDismissRequest = { viewModel.resetSaveState() },
+                title = {
+                    Text(
+                        "Connection Failed",
+                        color = CinemaTextPrimary,
+                    )
+                },
+                text = {
+                    Text(
+                        failedState.errorMessage,
+                        color = CinemaTextSecondary,
+                    )
+                },
+                confirmButton = {
+                    CinemaDangerButton(
+                        onClick = {
+                            viewModel.forceSave(
+                                id = if (isEditMode) editId else null,
+                                name = name.trim(),
+                                url = saveUrl,
+                                username = username.trim(),
+                                password = password.trim(),
+                                type = selectedType.name,
+                                config = saveConfig,
+                                onComplete = onSuccess,
+                                initialSettings =
+                                    ProviderSettings(
+                                        streamOutputFormat = streamOutputFormat,
+                                        playlistType = playlistType,
+                                    ),
+                            )
+                        },
+                        text = stringResource(R.string.provider_save_anyway),
+                    )
+                },
+                dismissButton = {
+                    CinemaSecondaryButton(
+                        onClick = { viewModel.resetSaveState() },
+                        text = stringResource(R.string.provider_go_back),
+                    )
+                },
+                containerColor = CinemaSurface,
+            )
+        }
 
-            if (showClearTvShowsCacheDialog) {
-                ConfirmActionDialog(
-                    title = stringResource(R.string.provider_clear_cache_tvshows_title),
-                    text = stringResource(R.string.provider_clear_cache_tvshows_message),
-                    confirmText = stringResource(R.string.provider_clear_button),
-                    onConfirm = {
-                        coroutineScope.launch {
-                            providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
-                            cacheRefreshTrigger++
-                            showClearTvShowsCacheDialog = false
-                        }
-                    },
-                    onDismiss = { showClearTvShowsCacheDialog = false },
-                )
-            }
+        if (showClearCacheDialog) {
+            ConfirmActionDialog(
+                title = stringResource(R.string.provider_clear_cache_all_title),
+                text = stringResource(R.string.provider_clear_cache_all_message),
+                confirmText = stringResource(R.string.provider_clear_all_button),
+                onConfirm = {
+                    coroutineScope.launch {
+                        providerRepo.clearAllCacheForProvider(editId)
+                        cacheRefreshTrigger++
+                        showClearCacheDialog = false
+                    }
+                },
+                onDismiss = { showClearCacheDialog = false },
+            )
+        }
 
-            if (showClearFavoritesDialog) {
-                ConfirmActionDialog(
-                    title = stringResource(R.string.provider_clear_favorites_title),
-                    text = stringResource(R.string.provider_clear_favorites_message),
-                    confirmText = stringResource(R.string.provider_clear_all_button),
-                    onConfirm = {
-                        coroutineScope.launch {
-                            // The live per-provider store, not a fresh XtreamRepository on provider 0:
-                            // going through AppContainer keeps the cached instance's in-memory
-                            // favorites view consistent with what was just removed from disk.
-                            AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
-                        }
-                        showClearFavoritesDialog = false
-                    },
-                    onDismiss = { showClearFavoritesDialog = false },
-                )
-            }
+        if (showClearLiveTvCacheDialog) {
+            ConfirmActionDialog(
+                title = stringResource(R.string.provider_clear_cache_live_title),
+                text = stringResource(R.string.provider_clear_cache_live_message),
+                confirmText = stringResource(R.string.provider_clear_button),
+                onConfirm = {
+                    coroutineScope.launch {
+                        providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
+                        cacheRefreshTrigger++
+                        showClearLiveTvCacheDialog = false
+                    }
+                },
+                onDismiss = { showClearLiveTvCacheDialog = false },
+            )
+        }
 
-            if (showClearProgressDialog) {
-                ConfirmActionDialog(
-                    title = stringResource(R.string.provider_clear_progress_title),
-                    text = stringResource(R.string.provider_clear_progress_message),
-                    confirmText = stringResource(R.string.provider_clear_all_button),
-                    onConfirm = {
-                        coroutineScope.launch {
-                            AppContainer.getInstance(context).getMediaRepository(editId).clearWatchHistory()
-                        }
-                        showClearProgressDialog = false
-                    },
-                    onDismiss = { showClearProgressDialog = false },
-                )
-            }
+        if (showClearMoviesCacheDialog) {
+            ConfirmActionDialog(
+                title = stringResource(R.string.provider_clear_cache_movies_title),
+                text = stringResource(R.string.provider_clear_cache_movies_message),
+                confirmText = stringResource(R.string.provider_clear_button),
+                onConfirm = {
+                    coroutineScope.launch {
+                        providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
+                        cacheRefreshTrigger++
+                        showClearMoviesCacheDialog = false
+                    }
+                },
+                onDismiss = { showClearMoviesCacheDialog = false },
+            )
+        }
 
-            if (showQuickConnectDialog) {
-                QuickConnectDialog(
-                    url = url,
-                    onSuccess = { nameVal, usernameVal, token, userId ->
-                        showQuickConnectDialog = false
-                        viewModel.quickConnectSave(
-                            // Editing: sign this profile in to this provider rather
-                            // than add a second one, as whoever Jellyfin says it is.
-                            id = if (isEditMode) editId else null,
-                            name = name.ifBlank { nameVal },
-                            url = url.trimEnd('/'),
-                            username = if (isEditMode) usernameVal else username.ifBlank { usernameVal },
-                            token = token,
-                            userId = userId,
-                            onComplete = onSuccess,
-                        )
-                    },
-                    onDismiss = { showQuickConnectDialog = false },
-                )
-            }
+        if (showClearTvShowsCacheDialog) {
+            ConfirmActionDialog(
+                title = stringResource(R.string.provider_clear_cache_tvshows_title),
+                text = stringResource(R.string.provider_clear_cache_tvshows_message),
+                confirmText = stringResource(R.string.provider_clear_button),
+                onConfirm = {
+                    coroutineScope.launch {
+                        providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
+                        cacheRefreshTrigger++
+                        showClearTvShowsCacheDialog = false
+                    }
+                },
+                onDismiss = { showClearTvShowsCacheDialog = false },
+            )
+        }
+
+        if (showClearFavoritesDialog) {
+            ConfirmActionDialog(
+                title = stringResource(R.string.provider_clear_favorites_title),
+                text = stringResource(R.string.provider_clear_favorites_message),
+                confirmText = stringResource(R.string.provider_clear_all_button),
+                onConfirm = {
+                    coroutineScope.launch {
+                        // The live per-provider store, not a fresh XtreamRepository on provider 0:
+                        // going through AppContainer keeps the cached instance's in-memory
+                        // favorites view consistent with what was just removed from disk.
+                        AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
+                    }
+                    showClearFavoritesDialog = false
+                },
+                onDismiss = { showClearFavoritesDialog = false },
+            )
+        }
+
+        if (showClearProgressDialog) {
+            ConfirmActionDialog(
+                title = stringResource(R.string.provider_clear_progress_title),
+                text = stringResource(R.string.provider_clear_progress_message),
+                confirmText = stringResource(R.string.provider_clear_all_button),
+                onConfirm = {
+                    coroutineScope.launch {
+                        AppContainer.getInstance(context).getMediaRepository(editId).clearWatchHistory()
+                    }
+                    showClearProgressDialog = false
+                },
+                onDismiss = { showClearProgressDialog = false },
+            )
+        }
+
+        if (showQuickConnectDialog) {
+            QuickConnectDialog(
+                url = url,
+                onSuccess = { nameVal, usernameVal, token, userId ->
+                    showQuickConnectDialog = false
+                    viewModel.quickConnectSave(
+                        // Editing: sign this profile in to this provider rather
+                        // than add a second one, as whoever Jellyfin says it is.
+                        id = if (isEditMode) editId else null,
+                        name = name.ifBlank { nameVal },
+                        url = url.trimEnd('/'),
+                        username = if (isEditMode) usernameVal else username.ifBlank { usernameVal },
+                        token = token,
+                        userId = userId,
+                        onComplete = onSuccess,
+                    )
+                },
+                onDismiss = { showQuickConnectDialog = false },
+            )
         }
     }
 }

@@ -11,9 +11,15 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiScale as CoreLocalUiScale
  * The single instance lives in `core:ui` so shared components there — dialogs above all, which
  * lose the scaled density when they open their own window — can read the factor back.
  *
- * Note: Scaling is applied globally via LocalDensity in MainActivity.
- * The .scaled() extension functions are kept for compatibility but now return
- * the original value to avoid double scaling.
+ * "Text & grid size" is applied in one place: `MainActivity` provides this factor and a
+ * [androidx.compose.ui.platform.LocalDensity] scaled by it around the whole nav host, so every
+ * `dp` and `sp` on every screen (the player and Settings included) follows it, and dialogs and
+ * popups restore it in their own window with
+ * [org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity]. Screens don't provide it again.
+ *
+ * The `.scaled()` extensions below return their receiver unchanged: the density already scales
+ * the value, so multiplying it again would shrink it twice. They remain only for existing call
+ * sites; new code doesn't call them.
  */
 val LocalUiScale: ProvidableCompositionLocal<Float>
     get() = CoreLocalUiScale
