@@ -1,6 +1,6 @@
 # Phone UI audit and polish
 
-**Status:** Plan written 2026-10-08 at the user's request ("do the same exercise on the phone" — the
+**Status:** Done 2026-10-08 on the phone emulator. All findings fixed except #13 (device detection, not looks). Left: the TV Guide grid, PiP, the landscape dock split and Add Source were not captured; the player's buttons are still filled circles (switching them to plain icons with tooltips changes their look — not decided); its resolution / codec line shows outside developer mode.
 TV audit, `archive/20261007_tv-ui-audit-plan.md`); capture and findings done; decisions recorded; fixes in progress.
 
 ## Goal
@@ -138,5 +138,5 @@ Live sync's page, the track sheets, safe mode. Severity: **B** broken, **R** rou
 | Capture | Done 2026-10-08: 24 shots | |
 | Findings | Done: 9 shared causes, 13 per-screen rows | |
 | Review with the user | Done 2026-10-08: decisions above | |
-| Fixes | In progress (agents A–D) | |
-| Verify + spot checks | Not started | |
+| Fixes | Done: A lists + dock (5110bd0e, f22405fa), B details + episodes (b11e3aa5, aebea1d5), C player (a3bc7b35, dc2372fb), D search / settings / sources / header (19bb9abe, 3a423abd, a15f8f79, 608aaa61, 91a88808, 925c5451); plus plurals for counts (06645625) | |
+| Verify + spot checks | Done: re-captures of every area; system font 130 % (detail action labels ran together — fixed, faba9ef1); 360 dp width (fine); Malagasy / French (Recent, Favorites… stayed in the phone's language — the application context wasn't localised; fixed app-wide, a8994fc4); themes Amethyst / Teal / AMOLED (AMOLED buttons unreadable, the selected tab orange in every theme — fixed, 94de0db8); unit tests, ktlint, Lint (4 modules), gates. Emulator restored: font 100 %, density, English, Deep Night | |

@@ -1,5 +1,20 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Phone UI polish
+**Release Date:** 2026-10-08
+
+A pass over every phone screen (`docs/plans/archive/20261008_phone-ui-audit-plan.md`):
+- **Lists:** titles in white (the accent only for what's playing), 16:9 thumbnails with the resume bar on them, channel logos whole, year · length · rating under films and shows, "1 channel / 7 films" counts, plain empty states; provider separator rows are headings.
+- **Browsing modes:** Recent, Favorites and Recent Categories are tabs with icons; categories are plain chips — hold one to add it to or take it off your favourite categories (the ☆ on every chip is gone).
+- **Live TV dock:** Recent | Favorites tabs to switch the list; swiping a row only reveals its actions, and an open row closes when you swipe another, change list or close the dock.
+- **Film and show pages:** the title in the top bar instead of printed on the picture, "8.2/10" and an outlined age rating in the facts line, a check for watched, aligned Overview rows, the category as a link, the facts line wrapping instead of running off the screen, season chips that scroll to the selected season, a clearer Resume ("Resume S02E10 · 28:17 left").
+- **Player:** the title above the seek bar, subtitles above the controls, a star for favourite, full screen without the status bar.
+- **Search:** "Search films, shows and channels", a plain field, the category name under each result.
+- **Settings and sources:** "Applies to this device only" said once per section, Export / Import as rows, Device info and Diagnostics' actions as top-bar icons (clearing the log asks first), Edit Source's choices as rows with a picker, no chevron next to ⋮ on Sources, no bottom bar on guide sources, centred empty states.
+- **Large font sizes:** the detail actions' labels wrap instead of running into each other.
+- **Languages:** Recent, Favorites and other names no longer stay in the phone's language when the app is set to another; changing the language updates them straight away (TV too).
+- **Themes:** buttons on a light accent use dark text (AMOLED Black's were unreadable, TV too); the selected tab takes the theme's colour instead of orange.
+
 ## Version: TV UI polish
 **Release Date:** 2026-10-08
 
