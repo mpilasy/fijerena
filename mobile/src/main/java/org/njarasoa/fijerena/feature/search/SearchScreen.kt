@@ -87,6 +87,7 @@ fun MobileSearchScreen(
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
     initialQuery: String? = null,
+    initialTypeFilter: String? = null,
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -104,7 +105,8 @@ fun MobileSearchScreen(
     // unmounts SearchResults entirely. A plain rememberSaveable inside it doesn't survive that
     // disposal (same gotcha as tab content resetting without a SaveableStateHolder), so the
     // filter would silently reset to "All" every time the user kept typing.
-    var selectedTypeFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    // A section's Search arrives with its own section selected; All is one tap away.
+    var selectedTypeFilter by rememberSaveable { mutableStateOf(initialTypeFilter) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
@@ -470,6 +472,13 @@ private fun SearchResults(
                     buildGroupedSearchResults(categoryResults, results)
                 }
 
+            // A section with no results has no chip: show everything (All selected) rather than an
+            // empty list for the section a tab's Search arrived with.
+            val effectiveFilter =
+                selectedTypeFilter?.takeIf { filter ->
+                    groupedByType.any { (type, cats, streams) -> type == filter && (cats.isNotEmpty() || streams.isNotEmpty()) }
+                }
+
             // Scope filter chips — only meaningful for Global Search, where results already span
             // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
             // only ever has one type of result to begin with. Selection is hoisted to the caller (see
@@ -486,7 +495,7 @@ private fun SearchResults(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     CinemaFilterChip(
-                        selected = selectedTypeFilter == null,
+                        selected = effectiveFilter == null,
                         onClick = { onTypeFilterChange(null) },
                         label = { Text("${stringResource(R.string.content_type_all_label)} ($totalCount)") },
                     )
@@ -494,8 +503,8 @@ private fun SearchResults(
                         val count = cats.size + streams.size
                         if (count > 0) {
                             CinemaFilterChip(
-                                selected = selectedTypeFilter == type,
-                                onClick = { onTypeFilterChange(if (selectedTypeFilter == type) null else type) },
+                                selected = effectiveFilter == type,
+                                onClick = { onTypeFilterChange(if (effectiveFilter == type) null else type) },
                                 label = { Text("${localizedContentTypeLabel(type)} ($count)") },
                             )
                         }
@@ -503,7 +512,7 @@ private fun SearchResults(
                 }
             }
             val visibleGroups =
-                selectedTypeFilter?.let { filter -> groupedByType.filter { it.first == filter } } ?: groupedByType
+                effectiveFilter?.let { filter -> groupedByType.filter { it.first == filter } } ?: groupedByType
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),

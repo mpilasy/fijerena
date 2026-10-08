@@ -130,6 +130,8 @@ sealed interface Screen {
     data class Search(
         val contentType: String,
         val initialQuery: String? = null,
+        // Phone: a section's Search opens "ALL" with this section's filter chip selected.
+        val initialTypeFilter: String? = null,
     ) : Screen
 
     /**

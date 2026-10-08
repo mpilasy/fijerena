@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.contentselection.ActiveSource
@@ -655,6 +656,7 @@ fun MobileNavHost(
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 MobileSearchScreen(
                     contentType = searchScreen.contentType,
+                    initialTypeFilter = searchScreen.initialTypeFilter,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         when (contentType) {
                             ContentType.TV_SHOWS -> {
@@ -910,7 +912,8 @@ private fun CategoryListDestination(
             }
         },
         onSearchClick = {
-            navController.navigateOnce(Screen.Search(route.contentType))
+            // Everything, with this section's chip selected (one tap widens to All).
+            navController.navigateOnce(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL, initialTypeFilter = route.contentType))
         },
         onEpgClick = { categoryId, categoryName ->
             navController.navigateOnce(
