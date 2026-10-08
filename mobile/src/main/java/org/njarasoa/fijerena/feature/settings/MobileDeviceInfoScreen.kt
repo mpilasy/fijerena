@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,7 +32,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
-import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
  * Settings → About → Device info on mobile, shareable as plain text. See
@@ -54,6 +56,21 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
+                },
+                actions = {
+                    IconAction(onClick = viewModel::reload, icon = CinemaIcons.Refresh, label = stringResource(R.string.common_refresh))
+                    IconAction(
+                        onClick = {
+                            val send =
+                                Intent(Intent.ACTION_SEND)
+                                    .setType("text/plain")
+                                    .putExtra(Intent.EXTRA_TEXT, DeviceInfoViewModel.asText(sections.orEmpty(), context))
+                            context.startActivity(Intent.createChooser(send, shareTitle))
+                        },
+                        icon = Icons.Rounded.Share,
+                        label = shareTitle,
+                        enabled = !sections.isNullOrEmpty(),
+                    )
                 },
             )
         },
@@ -80,21 +97,6 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
-                }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                    CinemaOutlinedButton(onClick = viewModel::reload) { Text(stringResource(R.string.common_refresh)) }
-                    CinemaOutlinedButton(
-                        onClick = {
-                            val send =
-                                Intent(Intent.ACTION_SEND)
-                                    .setType("text/plain")
-                                    .putExtra(Intent.EXTRA_TEXT, DeviceInfoViewModel.asText(sections.orEmpty(), context))
-                            context.startActivity(Intent.createChooser(send, shareTitle))
-                        },
-                        enabled = !sections.isNullOrEmpty(),
-                    ) { Text(shareTitle) }
                 }
             }
             items(sections.orEmpty()) { section ->

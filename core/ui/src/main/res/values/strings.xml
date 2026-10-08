@@ -1132,4 +1132,6 @@
     <!-- TV polish: settings and sources -->
     <string name="settings_scope_device_section">Applies to this device only</string>
     <string name="epg_management_screen_title">Guide sources</string>
+    <!-- phone polish: search, settings, sources -->
+    <string name="settings_diagnostics_clear_confirm_title">Clear the log?</string>
 </resources>

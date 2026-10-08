@@ -1135,4 +1135,6 @@
     <!-- TV polish: settings and sources -->
     <string name="settings_scope_device_section">S\'applique à cet appareil uniquement</string>
     <string name="epg_management_screen_title">Sources de guide</string>
+    <!-- phone polish: search, settings, sources -->
+    <string name="settings_diagnostics_clear_confirm_title">Effacer le journal ?</string>
 </resources>
