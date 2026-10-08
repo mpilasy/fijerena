@@ -62,7 +62,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
@@ -77,6 +76,16 @@ private fun localizedContentTypeLabel(contentType: String): String =
         ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
         ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
         else -> contentType.asContentTypeLabel()
+    }
+
+/** The field's hint names what the search covers, as on the TV. */
+@Composable
+private fun searchPlaceholder(contentType: String): String =
+    when (contentType) {
+        ContentType.LIVE_TV -> stringResource(R.string.tv_search_placeholder_channels)
+        ContentType.MOVIES -> stringResource(R.string.tv_search_placeholder_films)
+        ContentType.TV_SHOWS -> stringResource(R.string.tv_search_placeholder_shows)
+        else -> stringResource(R.string.tv_search_placeholder_all)
     }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -175,9 +184,14 @@ fun MobileSearchScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        stringResource(R.string.search_title_format, localizedContentTypeLabel(contentType)),
-                    )
+                    Column {
+                        Text(stringResource(R.string.common_search))
+                        Text(
+                            text = localizedContentTypeLabel(contentType),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -193,7 +207,7 @@ fun MobileSearchScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            // Search bar — search triggers on magnifying glass tap or keyboard search action
+            // Search bar — searches as you type; the keyboard's search action runs it at once.
             val keyboardController = LocalSoftwareKeyboardController.current
             OutlinedTextField(
                 value = searchQuery,
@@ -202,23 +216,13 @@ fun MobileSearchScreen(
                     Modifier
                         .fillMaxWidth()
                         .padding(Spacing.md),
-                placeholder = { Text(stringResource(R.string.search_streams_placeholder), color = CinemaTextPrimary.copy(alpha = 0.6f)) },
+                placeholder = { Text(searchPlaceholder(contentType), color = CinemaTextPrimary.copy(alpha = 0.6f)) },
                 shape = androidx.compose.foundation.shape.CircleShape,
                 leadingIcon = {
-                    CinemaIconButton(
-                        onClick = {
-                            if (searchQuery.isNotBlank()) {
-                                viewModel.performSearch(searchQuery)
-                                keyboardController?.hide()
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Search,
-                                contentDescription = stringResource(R.string.common_search),
-                                tint = CinemaTextPrimary,
-                            )
-                        },
+                    Icon(
+                        imageVector = CinemaIcons.Search,
+                        contentDescription = null,
+                        tint = CinemaTextPrimary.copy(alpha = 0.6f),
                     )
                 },
                 trailingIcon = {
@@ -228,19 +232,18 @@ fun MobileSearchScreen(
                             color = CinemaTextPrimary,
                         )
                     } else if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
-                        CinemaIconButton(
+                        IconButton(
                             onClick = {
                                 searchQuery = ""
                                 viewModel.clearSearch()
                             },
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Close,
-                                    contentDescription = stringResource(R.string.provider_clear_button),
-                                    tint = CinemaTextPrimary,
-                                )
-                            },
-                        )
+                        ) {
+                            Icon(
+                                imageVector = CinemaIcons.Close,
+                                contentDescription = stringResource(R.string.provider_clear_button),
+                                tint = CinemaTextPrimary,
+                            )
+                        }
                     }
                 },
                 singleLine = true,
@@ -848,6 +851,7 @@ private fun CategoryResultCard(
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -882,16 +886,14 @@ private fun SearchResultCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
+            // 16:9 at the card's full inner height; a channel's logo drawn whole.
+            val isChannel = result.contentType == ContentType.LIVE_TV
             CinemaThumbnail(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),
-                contentType = ThumbnailContentType.DEFAULT,
-                overlayGradient = true,
-                modifier =
-                    Modifier.size(
-                        width = MobileDimensions.posterWidth,
-                        height = MobileDimensions.posterHeight,
-                    ),
+                contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
+                overlayGradient = !isChannel,
+                modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
             )
             Column(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
@@ -906,14 +908,17 @@ private fun SearchResultCard(
                     Text(
                         text = parsedTitle.title.ifBlank { result.streamName },
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Text(
-                    text = stringResource(R.string.search_result_category_format, result.categoryName),
+                    text = result.categoryName,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
