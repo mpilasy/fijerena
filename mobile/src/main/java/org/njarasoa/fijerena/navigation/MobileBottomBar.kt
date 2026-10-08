@@ -57,7 +57,11 @@ fun NavController.currentTab(): MobileTab? =
         }
     }
 
-/** Screens inside a tab that still hide the bar: the player, and Settings with what it opens. */
+/**
+ * Screens inside a tab that still hide the bar: the player, and Settings with what it opens —
+ * guide sources included, also when reached from Search the guide. The guide screens a tab opens
+ * (Search the guide, TV Guide) keep it.
+ */
 fun hidesBottomBar(destination: NavDestination?): Boolean =
     destination != null &&
         (
@@ -65,6 +69,7 @@ fun hidesBottomBar(destination: NavDestination?): Boolean =
                 destination.hasRoute<Screen.Settings>() ||
                 destination.hasRoute<Screen.AddProvider>() ||
                 destination.hasRoute<Screen.ProviderSelection>() ||
+                destination.hasRoute<Screen.EpgManagement>() ||
                 destination.hasRoute<Screen.ProfileEdit>() ||
                 destination.hasRoute<Screen.SyncSettings>() ||
                 destination.hasRoute<Screen.Diagnostics>() ||

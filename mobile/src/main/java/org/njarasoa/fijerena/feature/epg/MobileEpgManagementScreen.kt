@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -117,6 +118,15 @@ fun MobileEpgManagementScreen(
         },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
+            // No guide sources: the shared empty state, centred, with the one action.
+            if (sources?.isEmpty() == true) {
+                MobileEmptyState(
+                    message = stringResource(R.string.epg_summary_no_sources),
+                    actionLabel = stringResource(R.string.epg_add_source),
+                    onAction = { showAddDialog = true },
+                )
+                return@Box
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(CinemaSpacing.md),
@@ -144,27 +154,6 @@ fun MobileEpgManagementScreen(
                                 ) {
                                     Text(stringResource(R.string.epg_retry_failed_btn, failedSourceCount))
                                 }
-                            }
-                        }
-                    }
-                }
-
-                if (sources?.isEmpty() == true) {
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(top = CinemaSpacing.lg),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-                        ) {
-                            Text(
-                                stringResource(R.string.epg_summary_no_sources),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                            )
-                            CinemaButton(onClick = { showAddDialog = true }) {
-                                Icon(CinemaIcons.Add, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text(stringResource(R.string.epg_add_source))
                             }
                         }
                     }
