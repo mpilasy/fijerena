@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -177,7 +178,7 @@ fun MobileCategoryListScreen(
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
-    /** Leaves for Home — after a remote Stop of the Live TV dock. */
+    /** Leaves for the Live TV tab's root — after a remote Stop of the Live TV dock. */
     onHome: () -> Unit = {},
     /**
      * Reports the Live TV dock to the phone's bottom bar: [stopDock] stops it (null while nothing is
@@ -185,6 +186,11 @@ fun MobileCategoryListScreen(
      * picture-in-picture, the landscape split).
      */
     onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
+    /**
+     * Set on a bottom-bar tab's root: its top bar (the source's, see `MobileSourceTopBar`) in place
+     * of the section title and back arrow, given this section's own actions to show first.
+     */
+    sourceTopBar: (@Composable (sectionActions: @Composable RowScope.() -> Unit) -> Unit)? = null,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -416,8 +422,8 @@ fun MobileCategoryListScreen(
         }
 
         // Another device of the sync group stopped this playback — docked or promoted to full
-        // screen alike: finalise, stop the dock as its close button does, then go Home. See
-        // docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
+        // screen alike: finalise, stop the dock as its close button does, then go to the Live TV
+        // tab's root. See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
         if (dockLoader != null) {
             RemoteStopEffect {
                 finalizeSessionAndAwait(dockPlayback.playbackState.value, dockLoader)
@@ -535,67 +541,72 @@ fun MobileCategoryListScreen(
                 // video pane needs, and none of its actions (EPG, search, category nav) apply while
                 // docked anyway (category chips are hidden here too, see below).
                 if (!(isLiveTv && target != null && isLandscape)) {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                when (contentType) {
-                                    ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
-                                    ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
-                                    ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
-                                    else -> contentType.replace("_", " ")
-                                },
-                            )
-                        },
-                        navigationIcon = {
-                            CinemaIconButton(
-                                onClick = { stopDockThen(onBack) },
-                                icon = {
-                                    Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
-                                },
-                            )
-                        },
-                        actions = {
-                            // EPG button - show for Live TV when native EPG or XMLTV file is available
-                            if (contentType == ContentType.LIVE_TV) {
-                                val state = uiState
-                                if (state is CategoryViewModel.UiState.Success) {
-                                    val selectedCatId = state.selectedCategoryId
-                                    val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
-                                    val hasEpgData =
-                                        supportsNativeEpg ||
-                                            epgIndexState is EpgIndexState.Indexed
-                                    if (selectedCatId != null && selectedCatName != null && hasEpgData) {
-                                        // Names the category it opens (G-M4): the selected chip may
-                                        // sit under the dock, out of sight. Long-press shows it.
-                                        val guideLabel = stringResource(R.string.epg_guide_header_title_format, selectedCatName)
-                                        TooltipBox(
-                                            positionProvider =
-                                                TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-                                            tooltip = { PlainTooltip { Text(guideLabel) } },
-                                            state = rememberTooltipState(),
-                                        ) {
-                                            CinemaIconButton(
-                                                onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
-                                                icon = {
-                                                    Icon(
-                                                        CinemaIcons.DateRange,
-                                                        guideLabel,
-                                                        tint = CinemaTextPrimary,
-                                                    )
-                                                },
-                                            )
-                                        }
+                    val sectionActions: @Composable RowScope.() -> Unit = {
+                        // EPG button - show for Live TV when native EPG or XMLTV file is available
+                        if (contentType == ContentType.LIVE_TV) {
+                            val state = uiState
+                            if (state is CategoryViewModel.UiState.Success) {
+                                val selectedCatId = state.selectedCategoryId
+                                val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
+                                val hasEpgData =
+                                    supportsNativeEpg ||
+                                        epgIndexState is EpgIndexState.Indexed
+                                if (selectedCatId != null && selectedCatName != null && hasEpgData) {
+                                    // Names the category it opens (G-M4): the selected chip may
+                                    // sit under the dock, out of sight. Long-press shows it.
+                                    val guideLabel = stringResource(R.string.epg_guide_header_title_format, selectedCatName)
+                                    TooltipBox(
+                                        positionProvider =
+                                            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                                        tooltip = { PlainTooltip { Text(guideLabel) } },
+                                        state = rememberTooltipState(),
+                                    ) {
+                                        CinemaIconButton(
+                                            onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
+                                            icon = {
+                                                Icon(
+                                                    CinemaIcons.DateRange,
+                                                    guideLabel,
+                                                    tint = CinemaTextPrimary,
+                                                )
+                                            },
+                                        )
                                     }
                                 }
                             }
-                            CinemaIconButton(
-                                onClick = { stopDockThen(onSearchClick) },
-                                icon = {
-                                    Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
-                                },
-                            )
-                        },
-                    )
+                        }
+                        CinemaIconButton(
+                            onClick = { stopDockThen(onSearchClick) },
+                            icon = {
+                                Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
+                            },
+                        )
+                    }
+                    if (sourceTopBar != null) {
+                        sourceTopBar(sectionActions)
+                    } else {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    when (contentType) {
+                                        ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+                                        ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+                                        ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+                                        else -> contentType.replace("_", " ")
+                                    },
+                                )
+                            },
+                            navigationIcon = {
+                                CinemaIconButton(
+                                    onClick = { stopDockThen(onBack) },
+                                    icon = {
+                                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
+                                    },
+                                )
+                            },
+                            actions = sectionActions,
+                        )
+                    }
                 }
             },
         ) { paddingValues ->

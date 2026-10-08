@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.navigation
 
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,10 +17,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -34,6 +38,7 @@ import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -41,12 +46,17 @@ import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
-import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
+import org.njarasoa.fijerena.feature.contentselection.ActiveSource
+import org.njarasoa.fijerena.feature.contentselection.JellyfinSignInPanel
+import org.njarasoa.fijerena.feature.contentselection.MobileSourceTopBar
+import org.njarasoa.fijerena.feature.contentselection.loadActiveSource
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgManagementScreen
 import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
@@ -61,6 +71,7 @@ import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
@@ -71,11 +82,15 @@ fun MobileNavHost(
     onUiStyleChanged: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val coroutineScope = rememberCoroutineScope()
 
-    // The bottom bar (docs/plans/20261007_phone-home-overhaul-plan.md → Bottom navigation bar).
-    // The section types the active source has, as Home reports them: null until it has, and while
-    // a Jellyfin source waits for its sign-in (Home reports nothing then), so the bar shows Home alone.
-    var supportedTypes by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    // No Home on the phone (docs/plans/20261007_phone-home-overhaul-plan.md → Redesign: no Home on
+    // the phone): the bottom bar's tabs are the active source's sections, read at startup, on each
+    // visit to a tab's root and after every switch.
+    var activeSource by remember { mutableStateOf<ActiveSource?>(null) }
+    // The graph's start destination, decided once at startup.
+    var openingTab by remember { mutableStateOf(MobileTab.LIVE_TV) }
     // The Live TV tab's dock as its screen reports it: stopped before the bar leaves the tab (the
     // engine is Activity-scoped), and the bar hides while the video takes the screen.
     var stopLiveDock by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -84,7 +99,6 @@ fun MobileNavHost(
     // Back-Stack Rule 4's switches also drop every tab's saved back stack: a later tab tap would
     // otherwise restore a screen holding the previous source's (closed) repository.
     fun clearTabStacks() {
-        supportedTypes = null
         navController.clearBackStack<Screen.LiveTvTab>()
         navController.clearBackStack<Screen.MoviesTab>()
         navController.clearBackStack<Screen.TvShowsTab>()
@@ -92,27 +106,67 @@ fun MobileNavHost(
 
     // Each tab keeps its place: leaving one saves its back stack, coming back restores it. Tapping
     // the tab you're on pops back to its root. The bar only shows on a tab's root, so the tab
-    // being left is the current destination's.
+    // being left is the current destination's. Only one tab's stack is ever on the back stack, so
+    // Back on a tab's root leaves the app.
     fun selectTab(tab: MobileTab) {
         val current = MobileTab.rootedAt(navController.currentDestination)
         if (tab == current) {
             navController.popBackStack(tab.route, inclusive = false)
         } else {
             if (current == MobileTab.LIVE_TV) stopLiveDock?.invoke()
-            if (tab == MobileTab.HOME) {
-                navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
-            } else {
-                navController.navigate(tab.route) {
-                    popUpTo(Screen.ContentTypeSelection) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
+            navController.navigate(tab.route) {
+                popUpTo(navController.graph.id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+
+    // A tab root's top bar leaves it: the Live TV dock is stopped first, as the bar does.
+    fun leaveTabRoot(go: () -> Unit) {
+        stopLiveDock?.invoke()
+        go()
+    }
+
+    // Starts over on [tab]'s root as the only screen, every tab's saved place dropped.
+    fun restartOn(tab: MobileTab) {
+        stopLiveDock?.invoke()
+        clearTabStacks()
+        navController.navigate(tab.route) {
+            popUpTo(navController.graph.id) { inclusive = true }
+        }
+    }
+
+    // Back-Stack Rule 4's switches (source, profile, live sync, Settings' source change): every
+    // screen may hold the previous one's repository, so start over on the new profile's last tab,
+    // or the first the source has.
+    suspend fun startOver() {
+        val source = loadActiveSource(context)
+        activeSource = source
+        restartOn(startTab(appSettings.lastTab, source?.supportedTypes))
+    }
+
+    // Each visit to a tab's root re-reads the source, as Home did: back from signing in to it, or
+    // from renaming it.
+    fun refreshSource() {
+        coroutineScope.launch { activeSource = loadActiveSource(context, known = activeSource) }
+    }
+
+    // Remote Stop (live sync) leaves the screen that was playing for the Live TV tab's root — the
+    // start tab when the source has no Live TV.
+    fun openLiveTvRoot() {
+        val types = activeSource?.supportedTypes
+        val tab = if (types == null || ContentType.LIVE_TV in types) MobileTab.LIVE_TV else startTab(appSettings.lastTab, types)
+        if (!navController.popBackStack(tab.route, inclusive = false)) {
+            navController.clearBackStack(tab.route)
+            navController.navigate(tab.route) {
+                popUpTo(navController.graph.id) { inclusive = true }
             }
         }
     }
 
     // Live sync moved this device off a profile or a provider another device deleted: every screen
-    // may hold the old one's repository, so start over from home — what the profile picker does.
+    // may hold the old one's repository, so start over — what the profile picker does.
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
@@ -120,18 +174,13 @@ fun MobileNavHost(
             .collect {
                 // Before the graph exists (very first frames) there is nothing to rebuild.
                 if (navController.currentBackStackEntry == null) return@collect
-                navController.navigate(Screen.ContentTypeSelection) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                }
-                clearTabStacks()
+                startOver()
             }
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
-    val coroutineScope = rememberCoroutineScope()
 
     // Async initialization: migrate legacy creds, determine start destination
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
-    var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
     suspend fun initializeStartup() {
         val providerRepo = ProviderRepository(context.applicationContext)
@@ -140,14 +189,19 @@ fun MobileNavHost(
             val legacyCreds = accountManager.exportForMigration()
             if (legacyCreds != null) {
                 val (url, username, password) = legacyCreds
-                val name =
-                    org.njarasoa.fijerena.core.network
-                        .AppSettings(context.applicationContext)
-                        .providerName
+                val name = appSettings.providerName
                 providerRepo.addProvider(name, url, username, password)
             }
         }
-        hasProvider = providerRepo.getProviderCount() > 0
+        val anyProvider = providerRepo.getProviderCount() > 0
+        if (anyProvider) {
+            // The tab the app opens on depends on the source's sections: read them before the
+            // graph exists, rather than open on a tab the source doesn't have.
+            val source = loadActiveSource(context)
+            activeSource = source
+            openingTab = startTab(appSettings.lastTab, source?.supportedTypes)
+        }
+        hasProvider = anyProvider
     }
 
     LaunchedEffect(Unit) {
@@ -184,7 +238,7 @@ fun MobileNavHost(
         } else if (SafeMode.isActive) {
             Screen.SafeMode
         } else if (hasProvider == true) {
-            Screen.ContentTypeSelection
+            openingTab.route
         } else {
             Screen.Settings
         }
@@ -213,9 +267,50 @@ fun MobileNavHost(
         }
     }
 
-    // The bar shows on Home and on a section tab's root, nowhere else.
+    // The bar shows on a tab's root, nowhere else — and not with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentTab = MobileTab.rootedAt(currentEntry?.destination)
+    val tabs = visibleTabs(activeSource?.supportedTypes)
+
+    // The app opens next time on the tab used last. A tab the source doesn't have (opened while its
+    // sections were unknown, before a Jellyfin sign-in) gives way to one it has.
+    LaunchedEffect(currentTab, activeSource) {
+        val types = activeSource?.supportedTypes ?: return@LaunchedEffect
+        val tab = currentTab ?: return@LaunchedEffect
+        if (tab.contentType in types) {
+            appSettings.lastTab = tab.contentType
+        } else {
+            restartOn(startTab(appSettings.lastTab, types))
+        }
+    }
+
+    // The top bar of every tab's root: the source, its sync status, the profile and Settings.
+    val sourceTopBar: @Composable (@Composable RowScope.() -> Unit) -> Unit = { sectionActions ->
+        MobileSourceTopBar(
+            source = activeSource,
+            sectionActions = sectionActions,
+            onSourcePicked = { coroutineScope.launch { startOver() } },
+            onSearchGuide = { leaveTabRoot { navController.navigateOnce(Screen.EpgBrowser()) } },
+            onChooseProfile = { leaveTabRoot { navController.navigateOnce(Screen.ProfilePicker) } },
+            onSettings = { leaveTabRoot { navController.navigateOnce(Screen.Settings) } },
+        )
+    }
+    // The section's list under that top bar — or, while this profile has no login for the active
+    // Jellyfin server, the sign-in panel.
+    val tabRoot: @Composable (@Composable () -> Unit) -> Unit = { section ->
+        TabRoot(
+            source = activeSource,
+            topBar = sourceTopBar,
+            onEnter = ::refreshSource,
+            onSignIn = { providerId ->
+                // Plain navigate, not navigateOnce: this fires from the tab's first frames, often
+                // while it is still entering after a switch — not RESUMED yet, so navigateOnce's
+                // double-tap guard would drop it (and the prompt is only offered once per process).
+                navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
+            },
+            section = section,
+        )
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surface,
@@ -223,8 +318,8 @@ fun MobileNavHost(
         // takes in the navigation bar) is padded off and consumed below.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (currentTab != null && !(currentTab == MobileTab.LIVE_TV && liveDockCoversScreen)) {
-                MobileBottomBar(tabs = visibleTabs(supportedTypes), selected = currentTab, onSelect = ::selectTab)
+            if (currentTab != null && tabs.isNotEmpty() && !(currentTab == MobileTab.LIVE_TV && liveDockCoversScreen)) {
+                MobileBottomBar(tabs = tabs, selected = currentTab, onSelect = ::selectTab)
             }
         },
     ) { barPadding ->
@@ -279,97 +374,6 @@ fun MobileNavHost(
                 }
             },
         ) {
-            composable<Screen.ContentTypeSelection> {
-                // A section opens as its tab, so Home's own shortcuts land where the bar would.
-                val navigateToContentType: (String) -> Unit = { contentType ->
-                    MobileTab.forContentType(contentType)?.let(::selectTab)
-                }
-                MobileContentTypeSelectionScreen(
-                    onContentTypeSelected = navigateToContentType,
-                    onCapabilitiesResolved = { types ->
-                        supportedTypes = types.toList()
-                        // Skip the picker tap entirely when the active provider only supports
-                        // one content type — but only on the very first resolve per NavHost
-                        // lifetime, so Back-navigation into this screen later still lands on a
-                        // real, interactive Home (Settings/Search/EPG/provider-switch all live
-                        // here and nowhere else).
-                        if (!hasAutoSkippedSingleContentType) {
-                            hasAutoSkippedSingleContentType = true
-                            if (types.size == 1) {
-                                navigateToContentType(types.first())
-                            }
-                        }
-                    },
-                    // Home's own source picker switched source in place: no screen of the old one
-                    // is on the stack, but the tabs' saved ones are.
-                    onProviderChanged = { clearTabStacks() },
-                    onSettings = {
-                        navController.navigateOnce(Screen.Settings)
-                    },
-                    onChooseProfile = {
-                        navController.navigateOnce(Screen.ProfilePicker)
-                    },
-                    onSignInRequired = { providerId ->
-                        // Plain navigate, not navigateOnce: this fires from home's load, often
-                        // while home is still entering after a profile switch — not RESUMED yet,
-                        // so navigateOnce's double-tap guard would drop it (and the prompt is
-                        // only offered once per process).
-                        navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
-                    },
-                    onSearch = {
-                        navController.navigateOnce(Screen.Search("ALL"))
-                    },
-                    onEpgBrowser = {
-                        navController.navigateOnce(Screen.EpgBrowser())
-                    },
-                    onContinueWatchingSelected = { item ->
-                        // Same dispatch as Screen.CategoryList's onStreamSelected below — a shelf
-                        // card is just another resumable entry, and should route exactly like one.
-                        when (val target = item.target) {
-                            is BrowseTarget.Series -> {
-                                navController.navigateOnce(
-                                    Screen.EpisodeSelection(
-                                        seriesId = target.seriesId.raw,
-                                        seriesName = item.name,
-                                        categoryId = item.categoryId,
-                                        initialEpisodeId = target.resumeEpisodeId?.raw,
-                                    ),
-                                )
-                            }
-
-                            is BrowseTarget.Episode -> {
-                                navController.navigateOnce(
-                                    Screen.Player(
-                                        streamId = target.episodeId.raw,
-                                        streamName = item.name,
-                                        categoryId = item.categoryId,
-                                        contentType = ContentType.TV_SHOWS,
-                                        episodeId = target.episodeId.raw,
-                                        episodeExtension = target.extension,
-                                        seriesId = target.seriesId?.raw,
-                                        seriesName = target.seriesName,
-                                    ),
-                                )
-                            }
-
-                            is BrowseTarget.Movie -> {
-                                navController.navigateOnce(
-                                    Screen.MovieDetails(
-                                        movieId = target.movieId,
-                                        movieName = item.name,
-                                        categoryId = item.categoryId,
-                                    ),
-                                )
-                            }
-
-                            is BrowseTarget.Channel, is BrowseTarget.CategoryRef -> {
-                                Unit
-                            }
-                        }
-                    },
-                )
-            }
-
             composable<Screen.EpgBrowser> { backStackEntry ->
                 val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                 MobileEpgBrowserScreen(
@@ -398,24 +402,45 @@ fun MobileNavHost(
             }
 
             composable<Screen.CategoryList> { backStackEntry ->
-                CategoryListDestination(navController, backStackEntry.toRoute<Screen.CategoryList>())
+                CategoryListDestination(navController, backStackEntry.toRoute<Screen.CategoryList>(), onHome = ::openLiveTvRoot)
             }
 
-            // The section tabs' roots: the section's list as Home opened it before the bar. Live
-            // TV's reports its dock, which the bar stops on leaving the tab and hides under.
+            // The tabs' roots: the section's list under the source's top bar. Live TV's reports
+            // its dock, which the bar stops on leaving the tab and hides under.
             composable<Screen.LiveTvTab> {
-                CategoryListDestination(navController, Screen.CategoryList(ContentType.LIVE_TV)) { stopDock, coversScreen ->
-                    stopLiveDock = stopDock
-                    liveDockCoversScreen = coversScreen
+                tabRoot {
+                    CategoryListDestination(
+                        navController,
+                        Screen.CategoryList(ContentType.LIVE_TV),
+                        onHome = ::openLiveTvRoot,
+                        sourceTopBar = sourceTopBar,
+                    ) { stopDock, coversScreen ->
+                        stopLiveDock = stopDock
+                        liveDockCoversScreen = coversScreen
+                    }
                 }
             }
 
             composable<Screen.MoviesTab> {
-                CategoryListDestination(navController, Screen.CategoryList(ContentType.MOVIES))
+                tabRoot {
+                    CategoryListDestination(
+                        navController,
+                        Screen.CategoryList(ContentType.MOVIES),
+                        onHome = ::openLiveTvRoot,
+                        sourceTopBar = sourceTopBar,
+                    )
+                }
             }
 
             composable<Screen.TvShowsTab> {
-                CategoryListDestination(navController, Screen.CategoryList(ContentType.TV_SHOWS))
+                tabRoot {
+                    CategoryListDestination(
+                        navController,
+                        Screen.CategoryList(ContentType.TV_SHOWS),
+                        onHome = ::openLiveTvRoot,
+                        sourceTopBar = sourceTopBar,
+                    )
+                }
             }
 
             // Player Screen — vertical slide, not the lateral push used by list/detail screens:
@@ -460,7 +485,7 @@ fun MobileNavHost(
                     onBack = {
                         navController.navigateUp()
                     },
-                    onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
+                    onHome = ::openLiveTvRoot,
                 )
             }
 
@@ -506,12 +531,7 @@ fun MobileNavHost(
                                 }
                             }
 
-                            // Navigate to content selection for all provider types
-                            navController.navigateOnce(Screen.ContentTypeSelection) {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                            clearTabStacks()
+                            startOver()
                         }
                     },
                     onAddProvider = {
@@ -533,11 +553,8 @@ fun MobileNavHost(
                 ProfilePickerScreen(
                     onProfileChosen = {
                         // Every screen below may hold the previous profile's repository; start
-                        // over from home rather than returning to any of them.
-                        navController.navigate(Screen.ContentTypeSelection) {
-                            popUpTo(navController.graph.id) { inclusive = true }
-                        }
-                        clearTabStacks()
+                        // over on its last tab rather than returning to any of them.
+                        coroutineScope.launch { startOver() }
                     },
                 )
             }
@@ -553,11 +570,8 @@ fun MobileNavHost(
                     onBack = { navController.navigateUp() },
                     onProfileSwitched = {
                         // As after the profile picker: every screen below may hold the previous
-                        // profile's repository, so start over from home.
-                        navController.navigate(Screen.ContentTypeSelection) {
-                            popUpTo(navController.graph.id) { inclusive = true }
-                        }
-                        clearTabStacks()
+                        // profile's repository, so start over on its last tab.
+                        coroutineScope.launch { startOver() }
                     },
                 )
             }
@@ -609,11 +623,7 @@ fun MobileNavHost(
                                 }
                             }
 
-                            navController.navigateOnce(Screen.ContentTypeSelection) {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                            clearTabStacks()
+                            startOver()
                         }
                     },
                 )
@@ -828,13 +838,15 @@ fun MobileNavHost(
 
 /**
  * A section's category list: a [Screen.CategoryList] entry, or a bottom-bar tab's root
- * ([Screen.LiveTvTab]…) with [route] built from its section. [onDockChanged]: see
- * [MobileCategoryListScreen].
+ * ([Screen.LiveTvTab]…) with [route] built from its section. [onHome], [sourceTopBar] and
+ * [onDockChanged]: see [MobileCategoryListScreen].
  */
 @Composable
 private fun CategoryListDestination(
     navController: NavHostController,
     route: Screen.CategoryList,
+    onHome: () -> Unit,
+    sourceTopBar: (@Composable (sectionActions: @Composable RowScope.() -> Unit) -> Unit)? = null,
     onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
 ) {
     MobileCategoryListScreen(
@@ -912,9 +924,51 @@ private fun CategoryListDestination(
         onBack = {
             navController.navigateUp()
         },
-        onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
+        onHome = onHome,
         onDockChanged = onDockChanged,
+        sourceTopBar = sourceTopBar,
     )
+}
+
+/**
+ * A bottom-bar tab's root: [section] — or, while this profile has no login for the active Jellyfin
+ * server, a sign-in panel under [topBar], the sign-in screen opening by itself the first time per
+ * process ([AppContainer.shouldPromptSignIn]). [onEnter] runs on each visit.
+ */
+@Composable
+private fun TabRoot(
+    source: ActiveSource?,
+    topBar: @Composable (@Composable RowScope.() -> Unit) -> Unit,
+    onEnter: () -> Unit,
+    onSignIn: (providerId: Long) -> Unit,
+    section: @Composable () -> Unit,
+) {
+    LaunchedEffect(Unit) { onEnter() }
+    if (source?.needsSignIn == true) {
+        val context = LocalContext.current
+        val prompt = stringResource(R.string.profile_jellyfin_sign_in_prompt, source.name)
+        LaunchedEffect(source.id) {
+            if (AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(source.id)) {
+                Toast.makeText(context, prompt, Toast.LENGTH_LONG).show()
+                onSignIn(source.id)
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            AmbientBackdrop(modifier = Modifier.fillMaxSize())
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = { topBar {} },
+            ) { paddingValues ->
+                JellyfinSignInPanel(
+                    providerName = source.name,
+                    onSignIn = { onSignIn(source.id) },
+                    modifier = Modifier.padding(paddingValues),
+                )
+            }
+        }
+    } else {
+        section()
+    }
 }
 
 /** Either side of this transition is [Screen.Player] — see the NavHost default transitions above. */

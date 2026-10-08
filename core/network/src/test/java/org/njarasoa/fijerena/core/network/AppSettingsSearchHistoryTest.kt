@@ -5,12 +5,13 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
-/** Search and EPG search history are per profile. */
+/** Search and EPG search history, and the phone's last tab, are per profile. */
 class AppSettingsSearchHistoryTest {
     private lateinit var prefs: FakeSharedPreferences
     private lateinit var settings: AppSettings
@@ -38,6 +39,21 @@ class AppSettingsSearchHistoryTest {
         settings.activeProfileId = ProfileEntity.DEFAULT_ID
         assertEquals(listOf("dune"), settings.getSearchHistory())
         assertEquals(listOf("news"), settings.getEpgSearchHistory())
+    }
+
+    @Test
+    fun `each profile has its own last tab`() {
+        settings.activeProfileId = ProfileEntity.DEFAULT_ID
+        settings.lastTab = "MOVIES"
+
+        settings.activeProfileId = OTHER
+        assertNull(settings.lastTab)
+        settings.lastTab = "LIVE_TV"
+        settings.removeLastTab(OTHER)
+        assertNull(settings.lastTab)
+
+        settings.activeProfileId = ProfileEntity.DEFAULT_ID
+        assertEquals("MOVIES", settings.lastTab)
     }
 
     @Test

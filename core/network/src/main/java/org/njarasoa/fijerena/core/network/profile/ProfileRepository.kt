@@ -96,6 +96,7 @@ class ProfileRepository(
                     AppSettings(context).removeLastProvider(id)
                     AppSettings(context).removeAutoplayNextEpisode(id)
                     AppSettings(context).removeProfileSearchHistory(id)
+                    AppSettings(context).removeLastTab(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
                     val settingsDb = SettingsDatabase.getInstance(context)

@@ -32,7 +32,6 @@ object CinemaAlpha {
     const val focusedGlow = 0.4f // Glow elevation color
 
     // Hero cards (Content Type Selection)
-    const val heroSheen = 0.12f // Diagonal gloss highlight over a hero card's gradient fill
     const val heroChipBackground = 0.18f // Frosted chip behind a hero card's icon or count
 
     // TV detail hero backdrop (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md)

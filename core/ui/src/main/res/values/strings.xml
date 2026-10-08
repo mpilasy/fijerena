@@ -650,8 +650,6 @@
     <string name="settings_ui_style_desc">Select a look and feel</string>
 
     <!-- Content Type Selection -->
-    <string name="content_select_type_title">Home</string>
-    <string name="home_tab_label">Home</string>
     <string name="content_switch_provider_title">Switch Source</string>
     <string name="content_switch_provider_description_format">Switch Source, current source: %1$s</string>
     <string name="home_source_updating">Updating…</string>
@@ -662,9 +660,6 @@
     <string name="home_live_last_watched">Last watched</string>
     <string name="home_favorite_movies">Favorite movies</string>
     <string name="home_favorite_shows">Favorite shows</string>
-    <string name="content_type_live_tv_description">Watch live television channels</string>
-    <string name="content_type_movies_description">Browse on-demand movies</string>
-    <string name="content_type_tv_shows_description">Watch series and episodes</string>
 
     <!-- Category -->
     <string name="category_live_preview_badge">LIVE PREVIEW</string>
@@ -753,7 +748,6 @@
     <string name="player_stats_device_type_format">Device: %1$s | Type: %2$s</string>
     <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
     <string name="category_now_playing_badge">▶ Playing</string>
-    <string name="category_of_total_format">of %1$d</string>
     <string name="settings_ui_scale_section_title">Text &amp; grid size</string>
     <string name="settings_ui_scale_desc">Adjust font, spacing, and element sizes for category/grid views</string>
 

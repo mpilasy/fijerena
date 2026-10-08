@@ -110,7 +110,7 @@ fun MobilePlayerScreen(
     categoryId: String,
     contentType: String,
     onBack: () -> Unit,
-    /** Leaves the player for Home — after a remote Stop from another device of the sync group. */
+    /** Leaves the player for the Live TV tab's root — after a remote Stop from another device of the sync group. */
     onHome: () -> Unit,
     episodeId: String? = null,
     episodeExtension: String? = null,
@@ -156,7 +156,7 @@ fun MobilePlayerScreen(
     }
 
     // Another device of the sync group stopped this playback: the explicit Back path below, but
-    // landing on Home. See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    // landing on the Live TV tab's root. See docs/plans/archive/20261001_live-sync-now-playing-plan.md → Remote Stop.
     RemoteStopEffect {
         finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
         activityScopedViewModel.stop()

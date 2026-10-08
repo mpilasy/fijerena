@@ -10,7 +10,6 @@ object MobileDimensions {
     val safeMarginHorizontal: Dp = 16.dp
     val safeMarginVertical: Dp = 16.dp
     val buttonHeight: Dp = 56.dp
-    val contentTypeCardHeight: Dp = 100.dp
     val iconSmall: Dp = 20.dp
     val iconDefault: Dp = 24.dp
     val iconMedium: Dp = 28.dp
@@ -38,11 +37,6 @@ object MobileDimensions {
      * than a draggable knob. Round (equal width/height) and sized for a thumb, not a tick mark. */
     val playerScrubberThumbSize: Dp = 20.dp
 
-    /** Content Type Selection hero cards — resting/pressed elevation so a card reads as a raised
-     * surface, not a flat gradient rectangle. */
-    val heroCardElevation: Dp = 8.dp
-    val heroCardPressedElevation: Dp = 3.dp
-
     /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */
     val resumeBarHeight: Dp = 5.dp
 
@@ -58,10 +52,7 @@ object MobileDimensions {
     val epgProgramHeight: Dp = 64.dp
     val epgChannelHeaderHeight: Dp = 44.dp
 
-    /** "Jump Back In" shelf card — a touch-sized 16:9 thumbnail card, narrower than TV's. */
-    val continueWatchingCardWidth: Dp = 160.dp
-
-    /** Home's top bar with the status line under the source name: the name plus a 48 dp touch row. */
+    /** A tab root's top bar with the status line under the source name: the name plus a 48 dp touch row. */
     val homeTopBarHeight: Dp = 84.dp
 
     /** Avatar on the "Who's watching?" profile picker. */

@@ -43,6 +43,7 @@ class AppSettings(
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
+        private const val KEY_LAST_TAB = "last_tab"
         private const val KEY_LANGUAGE = "app_language"
         private const val KEY_SHARE_NOW_PLAYING = "share_now_playing"
         private const val KEY_LAST_SHRINK_AT_MS = "last_shrink_at_ms"
@@ -459,6 +460,17 @@ class AppSettings(
             remove(historyKey(KEY_SEARCH_HISTORY, profileId))
             remove(historyKey(KEY_EPG_SEARCH_HISTORY, profileId))
         }
+
+    /**
+     * The section (a `ContentType`) the active profile last had open in the phone's bottom bar,
+     * which the app opens on next time. Per device and never synced, like the search history.
+     */
+    var lastTab: String?
+        get() = prefs.getString(profileKey(KEY_LAST_TAB, activeProfileId), null)
+        set(value) = prefs.edit { putString(profileKey(KEY_LAST_TAB, activeProfileId), value) }
+
+    /** Drops a deleted profile's last tab. */
+    fun removeLastTab(profileId: String) = prefs.edit { remove(profileKey(KEY_LAST_TAB, profileId)) }
 
     private fun historyKey(
         key: String,

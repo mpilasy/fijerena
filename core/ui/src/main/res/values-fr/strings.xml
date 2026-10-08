@@ -612,8 +612,6 @@
     <string name="settings_ui_style_desc">Choisir une apparence</string>
 
     <!-- Content Type Selection -->
-    <string name="content_select_type_title">Accueil</string>
-    <string name="home_tab_label">Accueil</string>
     <string name="content_switch_provider_title">Changer de source</string>
     <string name="content_switch_provider_description_format">Changer de source, source actuelle : %1$s</string>
     <string name="home_source_updating">Mise à jour…</string>
@@ -624,9 +622,6 @@
     <string name="home_live_last_watched">Dernière regardée</string>
     <string name="home_favorite_movies">Films favoris</string>
     <string name="home_favorite_shows">Séries favorites</string>
-    <string name="content_type_live_tv_description">Regarder des chaînes de télévision en direct</string>
-    <string name="content_type_movies_description">Parcourir les films à la demande</string>
-    <string name="content_type_tv_shows_description">Regarder des séries et des épisodes</string>
 
     <!-- Category -->
     <string name="category_live_preview_badge">APERÇU EN DIRECT</string>
@@ -715,7 +710,6 @@
     <string name="player_stats_device_type_format">Appareil : %1$s | Type : %2$s</string>
     <string name="epg_browser_index_stats_format">Index EPG : %1$s</string>
     <string name="category_now_playing_badge">▶ Lecture en cours</string>
-    <string name="category_of_total_format">sur %1$d</string>
     <string name="settings_ui_scale_section_title">Taille du texte et de la grille</string>
     <string name="settings_ui_scale_desc">Ajuster la police, l\'espacement et la taille des éléments pour les vues catégorie/grille</string>
 

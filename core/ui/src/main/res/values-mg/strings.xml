@@ -504,8 +504,6 @@
     <string name="settings_ui_style_desc">Safidio ny fomba fisehony</string>
 
     <!-- Content Type Selection -->
-    <string name="content_select_type_title">Fandraisana</string>
-    <string name="home_tab_label">Fandraisana</string>
     <string name="content_switch_provider_title">Ovao ny loharano</string>
     <string name="content_switch_provider_description_format">Ovao ny loharano, loharano ampiasaina izao: %1$s</string>
     <string name="home_source_updating">Manavao…</string>
@@ -516,9 +514,6 @@
     <string name="home_live_last_watched">Vao nojerena farany</string>
     <string name="home_favorite_movies">Sarimihetsika ankafizina</string>
     <string name="home_favorite_shows">Andian-tantara ankafizina</string>
-    <string name="content_type_live_tv_description">Jereo ny fantsona TV mivantana</string>
-    <string name="content_type_movies_description">Jereo ireo sarimihetsika</string>
-    <string name="content_type_tv_shows_description">Jereo ireo tantara an-tsary</string>
 
     <!-- Category -->
     <string name="category_live_preview_badge">JERY MIVANTANA</string>
@@ -607,7 +602,6 @@
     <string name="player_stats_device_type_format">Fitaovana: %1$s | Karazany: %2$s</string>
     <string name="epg_browser_index_stats_format">Fanondroana EPG: %1$s</string>
     <string name="category_now_playing_badge">▶ Mandeha</string>
-    <string name="category_of_total_format">amin\'ny %1$d</string>
     <string name="settings_ui_scale_section_title">Haben\'ny soratra sy ny tabilao</string>
     <string name="settings_ui_scale_desc">Ovay ny endri-tsoratra, ny elanelana, ary ny haben\'ny singa ho an\'ny sokajy/tabilao</string>
 

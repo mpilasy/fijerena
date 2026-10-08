@@ -15,29 +15,24 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
- * The phone's bottom bar tabs (docs/plans/20261007_phone-home-overhaul-plan.md → Bottom navigation
- * bar), in bar order. [route] is the tab's root destination; [contentType] the section it opens,
- * null for Home.
+ * The phone's bottom bar tabs (docs/plans/20261007_phone-home-overhaul-plan.md → Redesign: no Home
+ * on the phone), in bar order. [route] is the tab's root destination; [contentType] the section it
+ * opens.
  */
 enum class MobileTab(
     val route: Screen,
-    val contentType: String?,
+    val contentType: String,
 ) {
-    HOME(Screen.ContentTypeSelection, null),
     LIVE_TV(Screen.LiveTvTab, ContentType.LIVE_TV),
     MOVIES(Screen.MoviesTab, ContentType.MOVIES),
     TV_SHOWS(Screen.TvShowsTab, ContentType.TV_SHOWS),
     ;
 
     companion object {
-        /** The section tab that opens [contentType]; null for anything else. */
-        fun forContentType(contentType: String): MobileTab? = entries.firstOrNull { it.contentType == contentType }
-
         /** The tab [destination] is the root of; null for every other screen, which hides the bar. */
         fun rootedAt(destination: NavDestination?): MobileTab? =
             when {
                 destination == null -> null
-                destination.hasRoute<Screen.ContentTypeSelection>() -> HOME
                 destination.hasRoute<Screen.LiveTvTab>() -> LIVE_TV
                 destination.hasRoute<Screen.MoviesTab>() -> MOVIES
                 destination.hasRoute<Screen.TvShowsTab>() -> TV_SHOWS
@@ -47,12 +42,29 @@ enum class MobileTab(
 }
 
 /**
- * The tabs the bar shows: Home, then the sections the active source has. [supportedTypes] is null
- * until Home has resolved the source — and stays null while a Jellyfin source waits for its
- * sign-in, so the section tabs only appear once there is a library to open.
+ * The tabs the bar shows: the sections the active source has — none, so no bar, when it has only
+ * one. [supportedTypes] is null until the source is resolved, and stays null while a Jellyfin
+ * source waits for its sign-in: there is no library to open yet.
  */
 fun visibleTabs(supportedTypes: Collection<String>?): List<MobileTab> =
-    MobileTab.entries.filter { tab -> tab.contentType == null || (supportedTypes != null && tab.contentType in supportedTypes) }
+    MobileTab.entries
+        .filter { supportedTypes != null && it.contentType in supportedTypes }
+        .takeIf { it.size > 1 }
+        .orEmpty()
+
+/**
+ * The tab the app opens on: [lastTab] (the section the profile last had open) when the source has
+ * it, else the first the source has in bar order — Live TV, Movies, TV Shows. With the source's
+ * sections not known ([supportedTypes] null or empty), [lastTab] or Live TV.
+ */
+fun startTab(
+    lastTab: String?,
+    supportedTypes: Collection<String>?,
+): MobileTab {
+    val candidates =
+        if (supportedTypes.isNullOrEmpty()) MobileTab.entries else MobileTab.entries.filter { it.contentType in supportedTypes }
+    return candidates.firstOrNull { it.contentType == lastTab } ?: candidates.first()
+}
 
 /** Material's navigation bar: icon with its name under it on every tab, [selected] highlighted. */
 @Composable
@@ -76,7 +88,6 @@ fun MobileBottomBar(
 @Composable
 private fun MobileTab.icon(): ImageVector =
     when (this) {
-        MobileTab.HOME -> CinemaIcons.Home
         MobileTab.LIVE_TV -> CinemaIcons.LiveTv
         MobileTab.MOVIES -> CinemaIcons.Movie
         MobileTab.TV_SHOWS -> CinemaIcons.Tv
@@ -85,7 +96,6 @@ private fun MobileTab.icon(): ImageVector =
 @Composable
 private fun MobileTab.label(): String =
     when (this) {
-        MobileTab.HOME -> stringResource(R.string.home_tab_label)
         MobileTab.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
         MobileTab.MOVIES -> stringResource(R.string.provider_movies_label)
         MobileTab.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)

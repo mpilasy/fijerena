@@ -52,7 +52,7 @@ fun MobileSourceStatusLine(
     modifier: Modifier = Modifier,
 ) {
     if (status == SourceSyncStatus.NONE) return
-    // Ticks so "Updated 2 minutes ago" keeps counting while Home stays up; only this line recomposes.
+    // Ticks so "Updated 2 minutes ago" keeps counting while the tab stays up; only this line recomposes.
     val now = rememberMinuteTick()
     val text =
         when (status) {

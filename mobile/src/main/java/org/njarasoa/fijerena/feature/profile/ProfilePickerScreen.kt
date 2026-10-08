@@ -44,7 +44,7 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileAddDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * "Who's watching?" — pick the profile this phone uses. Reached from the home header's avatar;
+ * "Who's watching?" — pick the profile this phone uses. Reached from the avatar on a tab's top bar;
  * mobile doesn't show it at launch. See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
  * [onProfileChosen] runs once the switch has happened; the caller rebuilds the back stack.
  */
