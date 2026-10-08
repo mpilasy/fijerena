@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /*
  * The one Settings layout (TV UI audit #17): a section is a title and a description over its rows;
- * a row is its title and a one-line description on the left, its value and a chevron on the right,
+ * a row is its title and a short description on the left, its value and a chevron on the right,
  * so every value sits in the same column. Where a setting applies (this device, this source) is
  * said once, in the section's description, not on every row.
  *
@@ -73,7 +73,7 @@ fun SettingsNote(
 }
 
 /**
- * One focusable settings row: [title] and a one-line [description] on the left, [value] and a
+ * One focusable settings row: [title] and a short [description] on the left, [value] and a
  * chevron on the right (`Theme · Deep Night ›`); without a [value], the chevron alone. OK runs
  * [onClick] — it opens the row's picker or page, it never changes the value itself (plan Part I,
  * B, T-6). [leading] holds an avatar or an icon; [supporting] replaces the description when the
@@ -112,7 +112,7 @@ fun SettingsRow(
                         text = it,
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        maxLines = 1,
+                        maxLines = DESCRIPTION_MAX_LINES,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -121,3 +121,6 @@ fun SettingsRow(
         Text(text = title, style = MaterialTheme.typography.titleSmall)
     }
 }
+
+/** A row's description wraps once (Edit Source's narrower column), then ends in "…". */
+private const val DESCRIPTION_MAX_LINES = 2

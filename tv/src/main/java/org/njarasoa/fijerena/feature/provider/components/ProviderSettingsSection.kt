@@ -1,24 +1,12 @@
 package org.njarasoa.fijerena.feature.provider.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -26,7 +14,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -35,17 +22,14 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.feature.settings.components.PickerOption
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
+import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
-import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.paneItem
-import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
-import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /** Entry row of the Edit Source settings column (its first focus stop). */
@@ -94,14 +78,42 @@ internal fun ProviderSectionTitle(
 }
 
 /**
+ * The Behaviour choices that drill into a picker in place of the settings column, as Settings'
+ * choice rows do (TV UI audit, X5): Recent row size, stream format, playlist type. [paneKey] is
+ * the row's key in the settings pane.
+ */
+enum class EditSourcePicker(
+    val paneKey: String,
+) {
+    HISTORY_SIZE("history"),
+    STREAM_FORMAT("format"),
+    PLAYLIST_TYPE("playlist"),
+}
+
+private val STREAM_FORMATS = listOf("m3u8", "ts")
+private val PLAYLIST_TYPES = listOf("m3u_plus", "simple")
+
+// The 25 default (ProviderSettings.watchHistorySize) is one of them, so a new source shows it selected.
+private val HISTORY_SIZE_OPTIONS = listOf(5, 10, 15, 20, 25, 30, 40, 50, 75, 100)
+
+/** The stored size as shown: a preset as is, anything else (set before the picker, 1–100) marked custom. */
+@Composable
+private fun historySizeLabel(size: Int): String =
+    if (size in HISTORY_SIZE_OPTIONS) size.toString() else stringResource(R.string.settings_custom_value_format, size.toString())
+
+/**
  * Behaviour: this source's playback and caching settings, each saved as soon as it changes
- * (A-7). Every control is a row of [pane], the settings column of Edit Source.
+ * (A-7). Every control is a row of [pane], the settings column of Edit Source. The choice rows
+ * call [onOpenPicker]; [pickerRowFocus] gives each its requester, for focus to come back to it
+ * when its picker closes.
  */
 @Composable
 fun ProviderSettingsSection(
     providerType: ProviderType,
     providerSettings: ProviderSettings,
     onUpdateSettings: (ProviderSettings) -> Unit,
+    onOpenPicker: (EditSourcePicker) -> Unit,
+    pickerRowFocus: (EditSourcePicker) -> FocusRequester,
     pane: PaneFocusState,
 ) {
     val scale = LocalUiScale.current
@@ -122,42 +134,40 @@ fun ProviderSettingsSection(
         modifier = Modifier.paneItem(pane, EDIT_SOURCE_FIRST_SETTING_KEY),
     )
 
-    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+    val choiceRow: @Composable (EditSourcePicker, String, String, String) -> Unit = { picker, title, description, value ->
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        SettingsRow(
+            title = title,
+            description = description,
+            value = value,
+            onClick = { onOpenPicker(picker) },
+            modifier = Modifier.paneItem(pane, picker.paneKey),
+            focusRequester = pickerRowFocus(picker),
+        )
+    }
 
-    WatchHistorySizeSetting(
-        currentSize = providerSettings.watchHistorySize,
-        onSizeChanged = { size ->
-            onUpdateSettings(providerSettings.copy(watchHistorySize = size))
-        },
-        pane = pane,
+    choiceRow(
+        EditSourcePicker.HISTORY_SIZE,
+        stringResource(R.string.provider_watch_history_size_label),
+        stringResource(R.string.provider_watch_history_size_desc),
+        historySizeLabel(providerSettings.watchHistorySize),
     )
 
     if (providerType == ProviderType.XTREAM) {
-        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-        ChoiceSetting(
-            title = stringResource(R.string.provider_stream_format_label),
-            description = stringResource(R.string.provider_stream_format_desc),
-            options = listOf("m3u8", "ts"),
-            selected = providerSettings.streamOutputFormat,
-            onSelect = { format -> onUpdateSettings(providerSettings.copy(streamOutputFormat = format)) },
-            pane = pane,
-            keyPrefix = "format",
+        choiceRow(
+            EditSourcePicker.STREAM_FORMAT,
+            stringResource(R.string.provider_stream_format_label),
+            stringResource(R.string.provider_stream_format_desc),
+            providerSettings.streamOutputFormat,
+        )
+        choiceRow(
+            EditSourcePicker.PLAYLIST_TYPE,
+            stringResource(R.string.provider_playlist_type_label),
+            stringResource(R.string.provider_playlist_type_desc),
+            providerSettings.playlistType,
         )
 
-        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-        ChoiceSetting(
-            title = stringResource(R.string.provider_playlist_type_label),
-            description = stringResource(R.string.provider_playlist_type_desc),
-            options = listOf("m3u_plus", "simple"),
-            selected = providerSettings.playlistType,
-            onSelect = { type -> onUpdateSettings(providerSettings.copy(playlistType = type)) },
-            pane = pane,
-            keyPrefix = "playlist",
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+        Spacer(modifier = Modifier.height(Spacing.xs))
 
         TvSwitchRow(
             checked = providerSettings.cachingEnabled,
@@ -171,147 +181,53 @@ fun ProviderSettingsSection(
     }
 }
 
-/** A choice between a few values: title, description, then one left-aligned row of options. */
+/**
+ * The open [EditSourcePicker], drawn in place of the settings column: Settings' picker (radio
+ * rows, focus on the current value; OK applies and closes, Left and Back close unchanged).
+ */
 @Composable
-private fun ChoiceSetting(
-    title: String,
-    description: String,
-    options: List<String>,
-    selected: String,
-    onSelect: (String) -> Unit,
-    pane: PaneFocusState,
-    keyPrefix: String,
+fun EditSourcePickerPane(
+    picker: EditSourcePicker,
+    providerSettings: ProviderSettings,
+    onUpdateSettings: (ProviderSettings) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val titleSmall = remember(scale, typography) { typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale)) }
-    val bodySmall = remember(scale, typography) { typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale)) }
-    val requesters = remember(options) { options.map { FocusRequester() } }
-    Column {
-        Text(text = title, style = titleSmall, color = MaterialTheme.colorScheme.onSurface)
-        Text(
-            text = description,
-            style = bodySmall,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-            options.forEachIndexed { index, option ->
-                TvSelectableButton(
-                    selected = option == selected,
-                    onSelect = { onSelect(option) },
-                    text = option,
-                    modifier =
-                        Modifier
-                            .paneItem(pane, "$keyPrefix:$option")
-                            .focusRequester(requesters[index])
-                            .rowNeighbours(
-                                left = requesters.getOrNull(index - 1),
-                                right = requesters.getOrNull(index + 1),
-                            ),
-                )
-            }
+    when (picker) {
+        EditSourcePicker.HISTORY_SIZE -> {
+            val current = providerSettings.watchHistorySize
+            // A stored value outside the presets is kept as its own checked option, so nothing is lost.
+            val sizes = (HISTORY_SIZE_OPTIONS + current).distinct().sorted()
+            SettingsPickerPane(
+                title = stringResource(R.string.provider_watch_history_size_label),
+                options = sizes.map { PickerOption(historySizeLabel(it), it) },
+                selectedValue = current,
+                onPick = { size -> if (size != current) onUpdateSettings(providerSettings.copy(watchHistorySize = size)) },
+                onBack = onBack,
+                modifier = modifier,
+            )
         }
-    }
-}
 
-@Composable
-private fun WatchHistorySizeSetting(
-    currentSize: Int,
-    onSizeChanged: (Int) -> Unit,
-    pane: PaneFocusState,
-) {
-    val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val styles =
-        remember(scale, typography) {
-            object {
-                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-                val titleLarge = typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            }
+        EditSourcePicker.STREAM_FORMAT -> {
+            SettingsPickerPane(
+                title = stringResource(R.string.provider_stream_format_label),
+                options = STREAM_FORMATS.map { PickerOption(it, it) },
+                selectedValue = providerSettings.streamOutputFormat,
+                onPick = { format -> onUpdateSettings(providerSettings.copy(streamOutputFormat = format)) },
+                onBack = onBack,
+                modifier = modifier,
+            )
         }
-    var isEditing by remember { mutableStateOf(false) }
-    var newSize by remember { mutableStateOf("") }
 
-    // Leaving edit mode destroys the focused TextField; without a hand-off Compose drops focus to
-    // the window root and the next D-pad press restarts at the top of the form.
-    val editButtonFocusRequester = rememberFocusReturn(active = isEditing)
-    val cancelFocusRequester = remember { FocusRequester() }
-    val saveFocusRequester = remember { FocusRequester() }
-
-    Column {
-        Text(
-            text = stringResource(R.string.provider_watch_history_size_label),
-            style = styles.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(R.string.provider_watch_history_size_desc),
-            style = styles.bodySmall,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
-        if (!isEditing) {
-            // Value then Edit, left-aligned, so Up/Down through the column stays on its left edge.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = currentSize.toString(),
-                    style = styles.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                CinemaSecondaryButton(
-                    onClick = {
-                        isEditing = true
-                        newSize = currentSize.toString()
-                    },
-                    text = stringResource(R.string.provider_edit_button),
-                    modifier = Modifier.paneItem(pane, "history").focusRequester(editButtonFocusRequester),
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextField(
-                    value = newSize,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                            newSize = newValue
-                        }
-                    },
-                    label = { Text(stringResource(R.string.provider_queue_size_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)).tvDpadEscape(),
-                )
-                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                CinemaSecondaryButton(
-                    onClick = {
-                        isEditing = false
-                        newSize = ""
-                    },
-                    text = stringResource(R.string.common_cancel),
-                    modifier = Modifier.focusRequester(cancelFocusRequester).rowNeighbours(right = saveFocusRequester),
-                )
-                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                CinemaPrimaryButton(
-                    onClick = {
-                        val size = newSize.toIntOrNull()
-                        if (size != null && size in 1..100) {
-                            onSizeChanged(size)
-                            isEditing = false
-                            newSize = ""
-                        }
-                    },
-                    enabled = newSize.toIntOrNull()?.let { it in 1..100 } == true,
-                    text = stringResource(R.string.provider_save_button),
-                    modifier = Modifier.focusRequester(saveFocusRequester).rowNeighbours(left = cancelFocusRequester),
-                )
-            }
+        EditSourcePicker.PLAYLIST_TYPE -> {
+            SettingsPickerPane(
+                title = stringResource(R.string.provider_playlist_type_label),
+                options = PLAYLIST_TYPES.map { PickerOption(it, it) },
+                selectedValue = providerSettings.playlistType,
+                onPick = { type -> onUpdateSettings(providerSettings.copy(playlistType = type)) },
+                onBack = onBack,
+                modifier = modifier,
+            )
         }
     }
 }

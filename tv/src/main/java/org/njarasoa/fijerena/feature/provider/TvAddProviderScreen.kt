@@ -78,6 +78,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.provider.components.CacheManagementSection
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.feature.provider.components.EDIT_SOURCE_FIRST_SETTING_KEY
+import org.njarasoa.fijerena.feature.provider.components.EditSourcePicker
+import org.njarasoa.fijerena.feature.provider.components.EditSourcePickerPane
 import org.njarasoa.fijerena.feature.provider.components.JellyfinForm
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderGuideSection
@@ -91,6 +93,7 @@ import org.njarasoa.fijerena.feature.provider.components.SmbForm
 import org.njarasoa.fijerena.feature.provider.components.XtreamForm
 import org.njarasoa.fijerena.feature.provider.components.rowNeighbours
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -402,7 +405,7 @@ fun TvAddProviderScreen(
             enabled = !isEditMode,
         )
 
-        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
         ReadOnlyFieldWithEdit(
             value = name,
@@ -511,6 +514,21 @@ fun TvAddProviderScreen(
             val cancelFocusRequester = remember { FocusRequester() }
             val saveFocusRequester = remember { FocusRequester() }
 
+            // A Behaviour choice's picker, drawn in place of the settings column (as Settings'
+            // pickers replace the group's rows); on close, focus goes back to the row that opened
+            // it, and the column keeps its scroll.
+            var settingsPicker by remember { mutableStateOf<EditSourcePicker?>(null) }
+            var pickerReturn by remember { mutableStateOf<EditSourcePicker?>(null) }
+            val pickerRowFocus = remember { EditSourcePicker.entries.associateWith { FocusRequester() } }
+            val settingsScroll = rememberScrollState()
+            LaunchedEffect(settingsPicker) {
+                val returnTo = pickerReturn
+                if (settingsPicker == null && returnTo != null) {
+                    pickerRowFocus.getValue(returnTo).requestFocusWithRetry()
+                    pickerReturn = null
+                }
+            }
+
             // First focus once the source has loaded: the Name edit button (T-12).
             val connectionLoaded = loadedConnection != null
             // Back from the guide sources lands on Guide sources, once the source has loaded.
@@ -543,13 +561,7 @@ fun TvAddProviderScreen(
                             vertical = Spacing.tvSafeMarginVertical,
                         ),
             ) {
-                Text(
-                    text = stringResource(R.string.provider_edit_title),
-                    style = scaledDisplaySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                TvScreenHeader(title = stringResource(R.string.provider_edit_title))
 
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Connection: the only part that needs saving, with its buttons right under it.
@@ -625,24 +637,41 @@ fun TvAddProviderScreen(
                                 .weight(SETTINGS_COLUMN_WEIGHT)
                                 .tvPane(settingsPane, exitLeft = connectionPane, exitUp = false),
                     ) {
+                        val updateSettings: (ProviderSettings) -> Unit = { newSettings ->
+                            coroutineScope.launch {
+                                providerRepo.updateProviderSettings(editId, newSettings)
+                                providerSettings = newSettings
+                                streamOutputFormat = newSettings.streamOutputFormat
+                                playlistType = newSettings.playlistType
+                            }
+                        }
+                        val openPicker = settingsPicker
+                        if (openPicker != null) {
+                            EditSourcePickerPane(
+                                picker = openPicker,
+                                providerSettings = providerSettings,
+                                onUpdateSettings = updateSettings,
+                                onBack = {
+                                    pickerReturn = openPicker
+                                    settingsPicker = null
+                                },
+                                modifier = Modifier.padding(Spacing.lg.scaled(scale)),
+                            )
+                            return@GlassPanel
+                        }
                         Column(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
+                                    .verticalScroll(settingsScroll)
                                     .padding(Spacing.lg.scaled(scale)),
                         ) {
                             ProviderSettingsSection(
                                 providerType = selectedType,
                                 providerSettings = providerSettings,
-                                onUpdateSettings = { newSettings ->
-                                    coroutineScope.launch {
-                                        providerRepo.updateProviderSettings(editId, newSettings)
-                                        providerSettings = newSettings
-                                        streamOutputFormat = newSettings.streamOutputFormat
-                                        playlistType = newSettings.playlistType
-                                    }
-                                },
+                                onUpdateSettings = updateSettings,
+                                onOpenPicker = { settingsPicker = it },
+                                pickerRowFocus = { pickerRowFocus.getValue(it) },
                                 pane = settingsPane,
                             )
 

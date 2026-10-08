@@ -5,11 +5,11 @@ package org.njarasoa.fijerena.ui.components
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -28,6 +28,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
@@ -42,14 +44,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * A text field that displays as read-only text with an edit pencil icon.
- * Clicking the pencil toggles to an editable OutlinedTextField.
+ * A text field shown as a row — label, then the value and a pencil — like a Settings row.
+ * OK on the row toggles to an editable OutlinedTextField.
  * Pressing Enter confirms, Escape/Back cancels, returning to read-only mode.
  *
  * Designed for TV/D-pad: prevents accidental keyboard trigger on focus.
@@ -149,45 +152,41 @@ fun ReadOnlyFieldWithEdit(
             editFocusRequester.requestFocusWithRetry()
         }
     } else {
-        Row(
-            modifier = modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "$label: ",
-                style = MaterialTheme.typography.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-            Text(
-                text = displayText.ifEmpty { placeholder },
-                style = MaterialTheme.typography.bodyLarge,
-                color =
-                    if (displayText.isNotEmpty()) {
-                        CinemaTextPrimary
-                    } else {
-                        CinemaTextSecondary
-                    },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            CinemaIconButton(
-                onClick = {
-                    editValue = value
-                    isEditing = true
-                },
-                modifier =
-                    Modifier
-                        .focusRequester(returnFocusRequester)
-                        .then(if (editButtonFocusRequester != null) Modifier.focusRequester(editButtonFocusRequester) else Modifier),
-                icon = {
-                    Icon(
-                        CinemaIcons.Edit,
-                        contentDescription = stringResource(R.string.common_edit_field_description_format, label),
+        // One focus stop, laid out like a Settings row: the label on the left, the value and a
+        // pencil on the right; OK opens the editor (TV UI audit, X5).
+        val editDescription = stringResource(R.string.common_edit_field_description_format, label)
+        TvInputListItem(
+            selected = false,
+            onClick = {
+                editValue = value
+                isEditing = true
+            },
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .focusRequester(returnFocusRequester)
+                    .then(if (editButtonFocusRequester != null) Modifier.focusRequester(editButtonFocusRequester) else Modifier)
+                    .semantics { contentDescription = editDescription },
+            trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = displayText.ifEmpty { placeholder },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (displayText.isNotEmpty()) CinemaTextPrimary else CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = TvDimensions.settingsInputWidth),
                     )
-                },
-            )
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Icon(
+                        imageVector = CinemaIcons.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(TvDimensions.iconSmall),
+                    )
+                }
+            },
+        ) {
+            Text(text = label, style = MaterialTheme.typography.titleSmall)
         }
     }
 }
