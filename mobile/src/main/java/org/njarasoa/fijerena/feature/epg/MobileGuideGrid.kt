@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -291,6 +292,7 @@ private fun GuideRow(
                         key(cell.program.id) {
                             ProgramCell(
                                 cell = cell,
+                                scrollState = scrollState,
                                 nowEpochSeconds = nowEpochSeconds,
                                 onClick = { onProgramClick(cell.program) },
                             )
@@ -354,6 +356,7 @@ private enum class CellPhase { PAST, ON_AIR, UPCOMING }
 @Composable
 private fun ProgramCell(
     cell: GuideCell,
+    scrollState: ScrollState,
     nowEpochSeconds: State<Long>,
     onClick: () -> Unit,
 ) {
@@ -392,11 +395,18 @@ private fun ProgramCell(
             )
         }
         if (cell.labelFits) {
+            // The label follows the left edge while the programme's start is scrolled off screen:
+            // a long programme on air since before the visible window (opened at "now") showed a
+            // blank bar, its title off to the left (phone UI audit, TV guide on bears). Read in
+            // graphicsLayer, so scrolling moves it at draw time without recomposing the row.
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(horizontal = CinemaSpacing.xxs, vertical = CinemaSpacing.xxs),
+                        .graphicsLayer {
+                            val hidden = scrollState.value - cell.x
+                            translationX = hidden.coerceIn(0f, (cell.width - size.width * LABEL_MIN_SHARE).coerceAtLeast(0f))
+                        }.padding(horizontal = CinemaSpacing.xxs, vertical = CinemaSpacing.xxs),
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
@@ -418,3 +428,6 @@ private fun ProgramCell(
         }
     }
 }
+
+/** How much of a cell's width its label keeps visible when it slides to stay on screen. */
+private const val LABEL_MIN_SHARE = 0.3f

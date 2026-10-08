@@ -70,6 +70,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -1471,6 +1472,7 @@ private fun GuideRow(
                             val key = programKey(channelId, cell.program.id)
                             ProgramCell(
                                 cell = cell,
+                                scrollState = scrollState,
                                 timeOnly = cell.width < timeOnlyBelowPx,
                                 nowEpochSeconds = nowEpochSeconds,
                                 cardStyle = cardStyle,
@@ -1727,6 +1729,7 @@ private enum class CellPhase { PAST, ON_AIR, UPCOMING }
 @Composable
 private fun ProgramCell(
     cell: GuideCell,
+    scrollState: ScrollState,
     /** Too narrow for a readable title: the start time alone ("10:45"). */
     timeOnly: Boolean,
     nowEpochSeconds: State<Long>,
@@ -1792,11 +1795,17 @@ private fun ProgramCell(
                     )
                 }
             } else if (cell.labelFits) {
+                // The label follows the left edge while the programme's start is scrolled off
+                // screen, so a long programme on air since before the window shows its title, not
+                // a blank card. Read in graphicsLayer: scrolling moves it at draw time only.
                 Column(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xs.scaled(scale))
+                            .graphicsLayer {
+                                val hidden = scrollState.value - cell.x
+                                translationX = hidden.coerceIn(0f, (cell.width - size.width * LABEL_MIN_SHARE).coerceAtLeast(0f))
+                            }.padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xs.scaled(scale))
                             .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f),
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -1820,6 +1829,9 @@ private fun ProgramCell(
         }
     }
 }
+
+/** How much of a cell's width its label keeps visible when it slides to stay on screen. */
+private const val LABEL_MIN_SHARE = 0.3f
 
 /** A start time without its AM / PM ("10:45", or "22:45" on a 24-hour clock): the ruler above says which. */
 @Composable
