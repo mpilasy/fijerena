@@ -1102,4 +1102,13 @@
     <string name="device_info_job_succeeded">Nahomby</string>
     <string name="device_info_job_failed">Tsy nahomby</string>
     <string name="device_info_job_cancelled">Nofoanana</string>
+    <!-- TV polish: browse and Live TV -->
+    <string name="browse_channel_count_format">Fantsona %1$d</string>
+    <string name="browse_film_count_format">Sarimihetsika %1$d</string>
+    <string name="browse_show_count_format">Andian-tantara %1$d</string>
+    <string name="browse_no_films">Tsy misy sarimihetsika amin\'ity sokajy ity</string>
+    <string name="browse_no_shows">Tsy misy andian-tantara amin\'ity sokajy ity</string>
+    <string name="browse_select_to_view_films">Misafidiana sokajy hijerena ny sarimihetsika</string>
+    <string name="browse_select_to_view_shows">Misafidiana sokajy hijerena ny andian-tantara</string>
+    <!-- /TV polish: browse and Live TV -->
 </resources>

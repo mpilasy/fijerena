@@ -1,10 +1,9 @@
 package org.njarasoa.fijerena.feature.category.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,9 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -50,7 +48,6 @@ import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
-import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -62,39 +59,31 @@ import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.theme.CornerRadius
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.scaled
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun CategoryList(
     categories: ImmutableCategoryList,
     selectedCategoryId: String?,
-    categoriesRefreshing: Boolean,
     contentType: String,
     categoryViewModel: CategoryViewModel,
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     onCategorySelected: (String) -> Unit,
-    onRefreshCategories: () -> Unit,
     /** This column's pane; Right leaves it for [itemsPane] (see `Modifier.tvPane`). */
     paneFocus: PaneFocusState,
     itemsPane: PaneFocusState?,
@@ -136,29 +125,7 @@ internal fun CategoryList(
         if (selectedCategoryId != null) paneFocus.focusKey(selectedCategoryId)
     }
 
-    var targetRotation by remember { mutableStateOf(0f) }
-
-    // Keyed on the flag, not Unit: the loop below never returns, so as a collector body it could
-    // never observe refreshing going false again — the spinner kept turning for the lifetime of the
-    // screen after the first refresh. As an effect key, a false value cancels it. Same shape as
-    // StreamList's identical loop.
-    LaunchedEffect(categoriesRefreshing) {
-        if (categoriesRefreshing) {
-            while (true) {
-                targetRotation = (targetRotation + 360f) % 3600f
-                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-            }
-        }
-    }
-
-    val rotation by animateFloatAsState(
-        targetValue = targetRotation,
-        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation",
-    )
-
-    val scale = LocalUiScale.current
-    val cardStyle = categoryCardStyle(scale)
+    val cardStyle = categoryCardStyle()
 
     // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a category opens
     // this menu, in place of the hidden ★ that was an extra Right stop before the items (F-C-5).
@@ -176,11 +143,6 @@ internal fun CategoryList(
             onDismiss = { actionsCategory = null },
         )
     }
-    val typography = MaterialTheme.typography
-    val scaledTitleLarge =
-        remember(scale, typography) {
-            typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
-        }
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
@@ -205,33 +167,13 @@ internal fun CategoryList(
         }
 
     Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.padding(bottom = Spacing.md.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-        ) {
-            Text(
-                text = stringResource(R.string.search_tab_categories),
-                style = scaledTitleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            CinemaIconButton(
-                onClick = onRefreshCategories,
-                enabled = !categoriesRefreshing,
-                size = TvDimensions.iconLarge,
-                icon = {
-                    Icon(
-                        imageVector = CinemaIcons.Refresh,
-                        contentDescription = stringResource(R.string.category_refresh_description),
-                        tint = CinemaTextPrimary,
-                        modifier =
-                            Modifier
-                                .size(TvDimensions.iconMedium.scaled(scale))
-                                .rotate(rotation),
-                    )
-                },
-            )
-        }
+        // The pane's title; the screen's one Refresh is in the header (TV UI audit #5).
+        Text(
+            text = stringResource(R.string.search_tab_categories),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = Spacing.md),
+        )
 
         Box(
             modifier =
@@ -245,26 +187,25 @@ internal fun CategoryList(
                         brush = borderBrush,
                         shape = panelShape,
                     )
-                    // The header row above (title, Refresh) stays outside the pane: Up from the
-                    // first category reaches it. Left goes nowhere (F-C-4).
+                    // The screen header above stays outside the pane: Up from the first category
+                    // reaches it. Left goes nowhere (F-C-4).
                     .tvPane(paneFocus, exitRight = itemsPane),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (virtualCategories.isNotEmpty()) {
+                    // Recent, Favourites and the category lists are ways to browse, not
+                    // categories of the source (TV UI audit #5): each row leads with its icon,
+                    // and the divider below closes the group.
                     Column(
-                        modifier = Modifier.padding(Spacing.sm.scaled(scale)),
-                        verticalArrangement =
-                            Arrangement.spacedBy(
-                                LocalUiStyle.current.grid.spacing
-                                    .scaled(scale),
-                            ),
+                        modifier = Modifier.padding(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
                     ) {
                         virtualCategories.forEach { category ->
                             CategoryItem(
                                 category = category,
                                 isSelected = category.id == selectedCategoryId,
                                 cardStyle = cardStyle,
-                                isFavorite = false,
+                                icon = virtualCategoryIcon(category.id),
                                 onClick = { onCategorySelected(category.id) },
                                 cardModifier = Modifier.paneItem(paneFocus, category.id),
                             )
@@ -275,52 +216,61 @@ internal fun CategoryList(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(TvDimensions.borderFocused.scaled(scale))
-                                .padding(horizontal = Spacing.md.scaled(scale))
+                                .height(TvDimensions.borderFocused)
+                                .padding(horizontal = Spacing.md)
                                 .background(CinemaAccent.copy(alpha = CinemaAlpha.tint)),
                     )
 
-                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                 }
 
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
-                    verticalArrangement =
-                        Arrangement.spacedBy(
-                            LocalUiStyle.current.grid.spacing
-                                .scaled(scale),
-                        ),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    itemsIndexed(
-                        items = regularCategories,
-                        key = { _, category -> category.id },
-                        contentType = { _, _ -> "category" },
-                    ) { index, category ->
-                        CategoryItem(
-                            category = category,
-                            isSelected = category.id == selectedCategoryId,
-                            cardStyle = cardStyle,
-                            isFavorite = category.id in favoriteCategoryIds,
-                            onClick = { onCategorySelected(category.id) },
-                            onOpenActions = { actionsCategory = category },
-                            cardModifier = Modifier.paneItem(paneFocus, category.id),
-                            modifier =
-                                // See StreamList: remember-scoped so recomposition of a visible row
-                                // doesn't drop the modifier and cancel the animation mid-flight.
-                                if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
-                                    Modifier.staggeredEntrance(index)
-                                } else {
-                                    Modifier
-                                },
-                        )
+                // See MinimalBringIntoView: the list keeps its first row whole when it opens.
+                CompositionLocalProvider(LocalBringIntoViewSpec provides MinimalBringIntoView) {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(
+                            items = regularCategories,
+                            key = { _, category -> category.id },
+                            contentType = { _, _ -> "category" },
+                        ) { index, category ->
+                            CategoryItem(
+                                category = category,
+                                isSelected = category.id == selectedCategoryId,
+                                cardStyle = cardStyle,
+                                isFavorite = category.id in favoriteCategoryIds,
+                                onClick = { onCategorySelected(category.id) },
+                                onOpenActions = { actionsCategory = category },
+                                cardModifier = Modifier.paneItem(paneFocus, category.id),
+                                modifier =
+                                    // See StreamList: remember-scoped so recomposition of a visible row
+                                    // doesn't drop the modifier and cancel the animation mid-flight.
+                                    if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
+                                        Modifier.staggeredEntrance(index)
+                                    } else {
+                                        Modifier
+                                    },
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/** The icon that marks a virtual category as a mode of browsing (Recent, Favourites…). */
+@Composable
+private fun virtualCategoryIcon(categoryId: String): ImageVector =
+    when (categoryId) {
+        CategoryViewModel.RECENT_CATEGORY_ID -> CinemaIcons.Replay
+        CategoryViewModel.FAVORITES_CATEGORY_ID -> CinemaIcons.Star
+        CategoryViewModel.FAVORITE_CATEGORIES_ID -> CinemaIcons.StarBorder
+        else -> CinemaIcons.Folder
+    }
 
 /**
  * Row card styling, built once per list composition instead of once per row.
@@ -343,23 +293,15 @@ private data class CategoryCardStyle(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun categoryCardStyle(
-    scale: Float,
-    typography: androidx.tv.material3.Typography = MaterialTheme.typography,
-): CategoryCardStyle {
-    val scaledTitleMedium =
-        remember(scale, typography) {
-            typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-        }
-    return CategoryCardStyle(
+private fun categoryCardStyle(): CategoryCardStyle =
+    CategoryCardStyle(
         colors = TvListRowDefaults.colors(),
         border = TvListRowDefaults.border(),
         cardScale = TvListRowDefaults.scale(),
         glow = TvListRowDefaults.glow(),
         shape = TvListRowDefaults.shape(),
-        titleMedium = scaledTitleMedium,
+        titleMedium = MaterialTheme.typography.titleMedium,
     )
-}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -368,6 +310,8 @@ private fun CategoryItem(
     isSelected: Boolean,
     cardStyle: CategoryCardStyle,
     isFavorite: Boolean = false,
+    /** A virtual category's mark (Recent, Favourites…); null for the source's own categories. */
+    icon: ImageVector? = null,
     onClick: () -> Unit,
     /** Long-press OK or the Menu key: open the row's action menu (P3). Null (virtual categories) means no menu. */
     onOpenActions: (() -> Unit)? = null,
@@ -375,9 +319,6 @@ private fun CategoryItem(
     cardModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
 ) {
-    val scale = LocalUiScale.current
-    val scaledTitleMedium = cardStyle.titleMedium
-
     // Marquee only while focused — same reasoning as StreamItem: BounceMarqueeNode runs a
     // withFrameNanos loop that invalidates draw every frame for as long as its text overflows, and
     // IPTV category names overflow constantly, so unconditionally every visible row kept its own
@@ -390,7 +331,7 @@ private fun CategoryItem(
         onLongClick = onOpenActions,
         modifier =
             modifier
-                .padding(horizontal = Spacing.md.scaled(scale))
+                .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .then(cardModifier)
                 .onFocusChanged { isFocused = it.isFocused }
@@ -410,20 +351,28 @@ private fun CategoryItem(
                 Modifier
                     .fillMaxWidth()
                     .currentIndicator(isSelected)
-                    .padding(Spacing.md.scaled(scale)),
+                    .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = TvListRowDefaults.titleColor(isCurrent = isSelected, isFocused = isFocused),
+                    modifier = Modifier.size(TvDimensions.iconSmall),
+                )
+            }
             if (isFavorite) {
                 Text(
-                    text = "\u2605",
-                    style = scaledTitleMedium,
+                    text = "★",
+                    style = cardStyle.titleMedium,
                     color = CinemaAccent,
                 )
             }
             Text(
                 text = category.name,
-                style = scaledTitleMedium,
+                style = cardStyle.titleMedium,
                 color = TvListRowDefaults.titleColor(isCurrent = isSelected, isFocused = isFocused),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

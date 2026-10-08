@@ -1,15 +1,13 @@
 package org.njarasoa.fijerena.feature.category.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,22 +17,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -43,6 +38,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardBorder
 import androidx.tv.material3.CardColors
@@ -51,7 +47,6 @@ import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
-import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -61,7 +56,10 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.extractYear
+import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
@@ -69,7 +67,6 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -77,7 +74,7 @@ import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -85,28 +82,27 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
-import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Row card styling, built once per list composition instead of once per row.
  * `TvListRowDefaults.colors` is `@Composable`, so it cannot be wrapped in `remember` — hoisting the
  * calls out of the item body is what stops a `CardColors`/`CardBorder`/`CardScale`/`CardGlow`/`CardShape` set
- * being allocated per visible row per recomposition. A data class so a fresh instance (e.g. from
- * the refresh-spinner rotation) still compares equal and lets rows skip.
+ * being allocated per visible row per recomposition. A data class so a fresh instance still
+ * compares equal and lets rows skip.
+ *
+ * One type hierarchy for every row (TV UI audit): the title in `titleMedium`, every line under it
+ * in `bodyMedium`.
  */
 @Immutable
 private data class StreamCardStyle(
@@ -116,35 +112,23 @@ private data class StreamCardStyle(
     val glow: CardGlow,
     val shape: CardShape,
     val titleMedium: TextStyle,
-    val bodySmall: TextStyle,
+    val bodyMedium: TextStyle,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun streamCardStyle(
-    scale: Float,
-    typography: androidx.tv.material3.Typography = MaterialTheme.typography,
-): StreamCardStyle {
-    val scaledTitleMedium =
-        remember(scale, typography) {
-            typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-        }
-    val scaledBodySmall =
-        remember(scale, typography) {
-            typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-        }
-    return StreamCardStyle(
+private fun streamCardStyle(): StreamCardStyle =
+    StreamCardStyle(
         colors = TvListRowDefaults.colors(),
         border = TvListRowDefaults.border(),
         cardScale = TvListRowDefaults.scale(),
         glow = TvListRowDefaults.glow(),
         shape = TvListRowDefaults.shape(),
-        titleMedium = scaledTitleMedium,
-        bodySmall = scaledBodySmall,
+        titleMedium = MaterialTheme.typography.titleMedium,
+        bodyMedium = MaterialTheme.typography.bodyMedium,
     )
-}
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun StreamList(
     streams: ImmutableMediaList?,
@@ -176,7 +160,7 @@ internal fun StreamList(
      * channel that was playing, LT6). D-pad entry still lands on the remembered row.
      */
     takeEntryFocus: Boolean = true,
-    /** The title / Refresh / count header above the rows. The Live TV preview panel draws its tab row instead (LT2). */
+    /** The title and count above the rows. The Live TV preview panel draws its tab row instead (LT2). */
     showHeader: Boolean = true,
     /**
      * An empty list shows this text alone — no Refresh button, nothing focusable — so focus
@@ -184,29 +168,20 @@ internal fun StreamList(
      */
     emptyMessage: String? = null,
 ) {
-    var targetRotation by remember { mutableStateOf(0f) }
-
-    LaunchedEffect(streamsLoading) {
-        if (streamsLoading) {
-            while (true) {
-                targetRotation = (targetRotation + 360f) % 3600f
-                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-            }
-        }
-    }
-
-    val rotation by animateFloatAsState(
-        targetValue = targetRotation,
-        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation",
-    )
     val listState = rememberLazyListState()
 
-    val scale = LocalUiScale.current
-    val cardStyle = streamCardStyle(scale)
+    val cardStyle = streamCardStyle()
     val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
     val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
     val canRemoveFromRecent = isRecentList && categoryViewModel.supportsRemoveFromRecent
+
+    // Separator rows from the provider ("####### ETHIOPIA VIP #######", TV UI audit #24) are
+    // headings, not channels: drawn as non-focusable section headers, never a focus or play
+    // target. Up/Down pass over them, as over any non-focusable item.
+    val markerIds =
+        remember(streams) {
+            streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.id }.orEmpty()
+        }
 
     // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a row opens this
     // menu for it, in place of the hidden trailing ★/✓/🗑 buttons that used to be extra Right
@@ -252,7 +227,8 @@ internal fun StreamList(
     // series only: Live TV keeps following lastPlayedItemId, which tracks channel zapping in the
     // player.
     var openedItemId by rememberSaveable(selectedCategoryId) { mutableStateOf<String?>(null) }
-    val focusTargetId = openedItemId ?: lastPlayedItemId
+    // A separator is never a focus target, even when it was once played (before #24).
+    val focusTargetId = (openedItemId ?: lastPlayedItemId)?.takeUnless { it in markerIds }
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
@@ -269,9 +245,10 @@ internal fun StreamList(
     val pane = paneFocus ?: rememberPaneFocus()
     pane.bind(
         selectedKey = focusTargetId,
-        firstKey = streams?.firstOrNull()?.id,
+        // Entry lands on the first channel, never on a separator above it.
+        firstKey = streams?.firstOrNull { it.id !in markerIds }?.id,
         listState = listState,
-        indexOf = { key -> streams?.indexOfFirst { it.id == key } ?: -1 },
+        indexOf = { key -> if (key in markerIds) -1 else streams?.indexOfFirst { it.id == key } ?: -1 },
     )
     // Entry focus (F-C-1): a pane's list takes focus once per composition when it first has rows,
     // even with no target — on the remembered row (a Back return), else the first.
@@ -307,14 +284,12 @@ internal fun StreamList(
     Column(modifier = modifier) {
         if (showHeader) {
             StreamListHeader(
-                streams = streams,
-                streamsLoading = streamsLoading,
+                itemCount = streams?.let { it.size - markerIds.size },
                 selectedCategoryId = selectedCategoryId,
                 selectedCategoryName = selectedCategoryName,
+                contentType = contentType,
                 categoryViewModel = categoryViewModel,
                 isDevMode = isDevMode,
-                rotation = rotation,
-                onRefreshStreams = onRefreshStreams,
             )
         }
 
@@ -326,127 +301,101 @@ internal fun StreamList(
                         color = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.tint),
                         shape = RoundedCornerShape(CornerRadius.small),
                     ).then(
-                        // The header above (title, Refresh) stays outside the pane: Up from the
-                        // first row reaches it. Right goes nowhere (R1).
+                        // The screen header above stays outside the pane: Up from the first row
+                        // reaches it. Right goes nowhere (R1).
                         if (paneFocus != null) Modifier.tvPane(paneFocus, exitLeft = categoriesPane) else Modifier,
                     ),
         ) {
             when {
                 streamsLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(Spacing.sm.scaled(scale)),
+                        modifier = Modifier.fillMaxSize().padding(Spacing.sm),
                     ) {
                         SkeletonList(
                             rowCount = 6,
-                            rowHeight = (TvDimensions.cardHeight).scaled(scale),
-                            thumbnailWidth = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
-                            thumbnailHeight = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
-                            verticalSpacing =
-                                LocalUiStyle.current.grid.spacing
-                                    .scaled(scale),
+                            rowHeight = TvDimensions.cardHeight,
+                            thumbnailWidth = TvDimensions.posterWidth * thumbnailScale,
+                            thumbnailHeight = TvDimensions.posterHeight * thumbnailScale,
+                            verticalSpacing = LocalUiStyle.current.grid.spacing,
                         )
                     }
                 }
 
                 streams.isNullOrEmpty() && emptyMessage != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize().padding(Spacing.md.scaled(scale)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = emptyMessage,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = CinemaTextSecondary,
+                    // Nothing focusable: focus stays on the panel's tab row (L-10).
+                    TvEmptyState(
+                        message = emptyMessage,
+                        icon = sectionIcon(contentType),
+                    )
+                }
+
+                streams.isNullOrEmpty() -> {
+                    // Removing the last item from an already-loaded category (e.g. unfavoriting
+                    // the only favorite) left D-pad focus with nowhere to land: the focused Card
+                    // was gone, nothing here claimed it, so it fell to the window root and stopped
+                    // responding to D-pad input. The empty state's Refresh takes focus — on each
+                    // category (keyed) — which both fixes that and gives an actionable retry for
+                    // a genuinely empty category.
+                    key(selectedCategoryId) {
+                        TvEmptyState(
+                            message = if (streams == null) selectCategoryText(contentType) else noItemsText(contentType),
+                            icon = sectionIcon(contentType),
+                            actionLabel = selectedCategoryId?.let { stringResource(R.string.common_refresh) },
+                            onAction = selectedCategoryId?.let { categoryId -> { onRefreshStreams(categoryId) } },
                         )
                     }
                 }
 
-                streams.isNullOrEmpty() -> {
-                    // Nothing else in this branch is focusable. Removing the last item from an already-loaded category (e.g.
-                    // unfavoriting the only favorite) left D-pad focus with nowhere to land: the
-                    // focused Card was gone, nothing here claimed it, so it fell to the window
-                    // root and stopped responding to D-pad input. A refresh action here both
-                    // fixes that and gives an actionable retry for a genuinely empty category.
-                    val emptyStateFocusRequester = remember { FocusRequester() }
-                    if (selectedCategoryId != null) {
-                        // Not keyed on `streams`: an empty list re-emitted would relaunch it.
-                        LaunchedEffect(selectedCategoryId) {
-                            emptyStateFocusRequester.requestFocusWithRetry()
-                        }
-                    }
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text =
-                                    if (streams == null) {
-                                        stringResource(R.string.category_select_to_view_channels)
-                                    } else {
-                                        stringResource(R.string.category_no_channels)
-                                    },
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = CinemaTextSecondary,
-                            )
-                            if (selectedCategoryId != null) {
-                                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                                CinemaSecondaryButton(
-                                    onClick = { onRefreshStreams(selectedCategoryId) },
-                                    text = stringResource(R.string.common_refresh),
-                                    modifier = Modifier.focusRequester(emptyStateFocusRequester),
-                                )
-                            }
-                        }
-                    }
-                }
-
                 else -> {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
-                        verticalArrangement =
-                            Arrangement.spacedBy(
-                                LocalUiStyle.current.grid.spacing
-                                    .scaled(scale),
-                            ),
-                    ) {
-                        itemsIndexed(
-                            items = streams,
-                            key = { _, item -> item.id },
-                            contentType = { _, _ -> "stream" },
-                        ) { index, item ->
-                            StreamItem(
-                                item = item,
-                                isFavorite = item.id in favoriteIds,
-                                watchProgress = watchProgress[item.id] ?: 0f,
-                                isWatched = item.id in watchedIds,
-                                nowPlayingProgram = nowPlaying[item.id],
-                                isCurrent = item.id == lastPlayedItemId,
-                                onClick = {
-                                    if (isWatchable) {
-                                        // Already focused: mark handled too, so the effect above
-                                        // doesn't scroll this row to the top as the screen leaves.
-                                        lastFocusedItemId = item.id
-                                        openedItemId = item.id
-                                    }
-                                    onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
-                                },
-                                onOpenActions = { actionsItem = item },
-                                cardModifier = Modifier.paneItem(pane, item.id),
-                                thumbnailScale = thumbnailScale,
-                                cardStyle = cardStyle,
-                                modifier =
-                                    // remember-scoped so a recomposition of an already-visible item
-                                    // reuses the same answer. Called bare, add() returned false on
-                                    // the first recomposition and dropped staggeredEntrance from the
-                                    // chain mid-animation, detaching the node.
-                                    if (remember(item.id) { enteredStreamIds.add(item.id) }) {
-                                        Modifier.staggeredEntrance(index)
-                                    } else {
-                                        Modifier
-                                    },
-                            )
+                    // See MinimalBringIntoView: the list opens with its first row whole, and a row
+                    // focused below the fold scrolls in only as far as it must.
+                    CompositionLocalProvider(LocalBringIntoViewSpec provides MinimalBringIntoView) {
+                        LazyColumn(
+                            state = listState,
+                            contentPadding = PaddingValues(Spacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
+                        ) {
+                            itemsIndexed(
+                                items = streams,
+                                key = { _, item -> item.id },
+                                contentType = { _, item -> if (item.id in markerIds) "separator" else "stream" },
+                            ) { index, item ->
+                                if (item.id in markerIds) {
+                                    SeparatorRow(name = item.name)
+                                } else {
+                                    StreamItem(
+                                        item = item,
+                                        isFavorite = item.id in favoriteIds,
+                                        watchProgress = watchProgress[item.id] ?: 0f,
+                                        isWatched = item.id in watchedIds,
+                                        nowPlayingProgram = nowPlaying[item.id],
+                                        isCurrent = item.id == lastPlayedItemId,
+                                        onClick = {
+                                            if (isWatchable) {
+                                                // Already focused: mark handled too, so the effect above
+                                                // doesn't scroll this row to the top as the screen leaves.
+                                                lastFocusedItemId = item.id
+                                                openedItemId = item.id
+                                            }
+                                            onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
+                                        },
+                                        onOpenActions = { actionsItem = item },
+                                        cardModifier = Modifier.paneItem(pane, item.id),
+                                        thumbnailScale = thumbnailScale,
+                                        cardStyle = cardStyle,
+                                        modifier =
+                                            // remember-scoped so a recomposition of an already-visible item
+                                            // reuses the same answer. Called bare, add() returned false on
+                                            // the first recomposition and dropped staggeredEntrance from the
+                                            // chain mid-animation, detaching the node.
+                                            if (remember(item.id) { enteredStreamIds.add(item.id) }) {
+                                                Modifier.staggeredEntrance(index)
+                                            } else {
+                                                Modifier
+                                            },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -455,59 +404,36 @@ internal fun StreamList(
     }
 }
 
-/** The title, Refresh icon and row count above a [StreamList]'s rows. */
+/** The list's title and its count above a [StreamList]'s rows; the screen's Refresh is in its header. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StreamListHeader(
-    streams: ImmutableMediaList?,
-    streamsLoading: Boolean,
+    /** Rows that are channels, films or shows (separators left out); null before a list is loaded. */
+    itemCount: Int?,
     selectedCategoryId: String?,
     selectedCategoryName: String?,
+    contentType: String,
     categoryViewModel: CategoryViewModel,
     isDevMode: Boolean,
-    rotation: Float,
-    onRefreshStreams: (String) -> Unit,
 ) {
-    val scale = LocalUiScale.current
-    Column(modifier = Modifier.padding(bottom = Spacing.md.scaled(scale))) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-        ) {
-            Text(
-                text = selectedCategoryName ?: stringResource(R.string.category_select_category),
-                style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleLarge.fontSize
-                                .scaled(scale),
-                    ),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            selectedCategoryId?.let { categoryId ->
-                CinemaIconButton(
-                    onClick = { onRefreshStreams(categoryId) },
-                    enabled = !streamsLoading,
-                    size = TvDimensions.iconLarge,
-                    icon = {
-                        Icon(
-                            imageVector = CinemaIcons.Refresh,
-                            contentDescription = stringResource(R.string.category_refresh_streams_description),
-                            tint = CinemaTextPrimary,
-                            modifier =
-                                Modifier
-                                    .size(TvDimensions.iconMedium.scaled(scale))
-                                    .rotate(rotation),
-                        )
-                    },
-                )
-            }
-        }
-        if (streams != null) {
-            val streamsLabel = stringResource(R.string.stream_count_format, streams.size)
-            val streamCountText =
+    // One line, title then count, so this pane starts level with the categories pane beside it.
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Text(
+            text = selectedCategoryName ?: stringResource(R.string.category_select_category),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
+        )
+        if (itemCount != null) {
+            val countLabel = itemCountText(contentType, itemCount)
+            val countText =
                 buildString {
-                    append(streamsLabel)
+                    append(countLabel)
                     if (isDevMode && selectedCategoryId != null) {
                         categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
                             append(" | $it")
@@ -518,17 +444,35 @@ private fun StreamListHeader(
                     }
                 }
             Text(
-                text = streamCountText,
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.labelSmall.fontSize
-                                .scaled(scale),
-                    ),
+                text = countText,
+                style = MaterialTheme.typography.bodyMedium,
                 color = CinemaTextSecondary,
+                maxLines = 1,
+                modifier = Modifier.alignByBaseline(),
             )
         }
     }
+}
+
+/**
+ * A provider's separator row ("####### ETHIOPIA VIP #######") as what it is: a heading over the
+ * channels that follow, text only, never focusable (TV UI audit #24).
+ */
+@Composable
+private fun SeparatorRow(name: String) {
+    Text(
+        text =
+            name
+                .trim()
+                .trim('#')
+                .trim()
+                .ifEmpty { name.trim() },
+        style = MaterialTheme.typography.titleSmall,
+        color = CinemaTextSecondary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = Spacing.md + Spacing.sm, end = Spacing.md, top = Spacing.sm),
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -550,7 +494,6 @@ private fun StreamItem(
     cardStyle: StreamCardStyle,
     modifier: Modifier = Modifier,
 ) {
-    val scale = LocalUiScale.current
     // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
     // draw every frame for as long as its text overflows, and IPTV channel names overflow
     // constantly — with it applied unconditionally, every visible row kept two such loops running
@@ -564,7 +507,7 @@ private fun StreamItem(
         onLongClick = onOpenActions,
         modifier =
             modifier
-                .padding(horizontal = Spacing.md.scaled(scale))
+                .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .then(cardModifier)
                 .onFocusChanged { isFocused = it.isFocused }
@@ -579,101 +522,128 @@ private fun StreamItem(
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
     ) {
-        Column(modifier = Modifier.currentIndicator(isCurrent)) {
-            Row(
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .currentIndicator(isCurrent)
+                    .padding(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+            val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
+            // The resume bar sits on the thumbnail's bottom edge, inside its row (TV UI audit
+            // #11) — under the row it read as the next row's.
+            val thumbnailRadius = CinemaCornerRadius.medium
+            val thumbnailShape = remember(thumbnailRadius) { RoundedCornerShape(thumbnailRadius) }
+            Box(
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.sm.scaled(scale)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                        .size(
+                            width = TvDimensions.posterWidth * thumbnailScale,
+                            height = TvDimensions.posterHeight * thumbnailScale,
+                        ).clip(thumbnailShape),
             ) {
                 // A channel's logo is drawn whole on a neutral tile; the shading under artwork
                 // would only dim it.
                 val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
                 CinemaThumbnail(
                     url = item.thumbnailUrl,
-                    fallbackLetter = item.name.firstOrNull(),
+                    // The clean title's first letter or digit, so a name that opens with a tag,
+                    // a space or a symbol still gets its letter tile (TV UI audit #7).
+                    fallbackLetter = displayTitle.firstOrNull { it.isLetterOrDigit() } ?: displayTitle.firstOrNull(),
                     contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
                     overlayGradient = !isChannel,
-                    modifier =
-                        Modifier
-                            .size(
-                                width = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
-                                height = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
-                            ),
+                    modifier = Modifier.fillMaxSize(),
                 )
-
-                val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (isFavorite) {
-                            Text(
-                                text = "\u2605",
-                                style = cardStyle.titleMedium,
-                                color = CinemaAccent,
-                            )
-                        }
-
-                        if (isWatched) {
-                            Icon(
-                                imageVector = CinemaIcons.CheckCircle,
-                                contentDescription = stringResource(R.string.content_watched_badge),
-                                tint = CinemaSuccess,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        }
-
-                        parsedTitle.badge?.let { LanguageBadge(it) }
-
-                        Text(
-                            // See mobile's StreamCard — provider data occasionally sends a blank
-                            // name (e.g. "EN -  (US)" with nothing between the dashes).
-                            text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-                            style = cardStyle.titleMedium,
-                            color = TvListRowDefaults.titleColor(isCurrent = isCurrent, isFocused = isFocused),
-                            maxLines = 1,
-                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
-                        )
-                    }
-                    item.metadata.rating?.let { rating ->
-                        RatingBadge(
-                            rating = rating,
-                            textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                            style = cardStyle.bodySmall,
-                        )
-                    }
-                    nowPlayingProgram?.let { program ->
-                        Text(
-                            text = stringResource(R.string.epg_now_prefix, program.title),
-                            style = cardStyle.bodySmall,
-                            color = CinemaOrangeLight,
-                            maxLines = 1,
-                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
-                        )
-                    }
+                if (watchProgress > 0f) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { watchProgress },
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(TvDimensions.resumeBarHeight),
+                        color = CinemaAccent,
+                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                        drawStopIndicator = {},
+                        gapSize = Spacing.none,
+                    )
                 }
-
-                // Discoverability hint for the action menu: a glyph, not a focus stop, on the
-                // focused row only (plan Decisions 1).
-                if (isFocused) RowActionsHint()
             }
 
-            if (watchProgress > 0f) {
-                androidx.compose.material3.LinearProgressIndicator(
-                    progress = { watchProgress },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = TvDimensions.borderFocused.scaled(scale))
-                            .height(TvDimensions.resumeBarHeight.scaled(scale)),
-                    color = CinemaAccent,
-                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isFavorite) {
+                        Text(
+                            text = "★",
+                            style = cardStyle.titleMedium,
+                            color = CinemaAccent,
+                        )
+                    }
+
+                    if (isWatched) {
+                        Icon(
+                            imageVector = CinemaIcons.CheckCircle,
+                            contentDescription = stringResource(R.string.content_watched_badge),
+                            tint = CinemaSuccess,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                        )
+                    }
+
+                    parsedTitle.badge?.let { LanguageBadge(it) }
+
+                    Text(
+                        // See mobile's StreamCard — provider data occasionally sends a blank
+                        // name (e.g. "EN -  (US)" with nothing between the dashes).
+                        text = displayTitle,
+                        style = cardStyle.titleMedium,
+                        color = TvListRowDefaults.titleColor(isCurrent = isCurrent, isFocused = isFocused),
+                        maxLines = 1,
+                        modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                    )
+                }
+                // Films and shows: what the row already carries — year · length · rating (TV UI
+                // audit #11). The rating is a plain number: a star here means favourite (X9).
+                val metaLine =
+                    remember(item.metadata) {
+                        listOfNotNull(
+                            extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
+                            item.metadata.duration
+                                ?.takeIf(::hasMeaningfulDuration)
+                                ?.let(::formatDuration),
+                            item.metadata.rating
+                                ?.takeIf { it.isNotBlank() && it.trim().toDoubleOrNull() != 0.0 }
+                                ?.let(::formatRating),
+                        ).joinToString(" · ")
+                    }
+                if (metaLine.isNotEmpty()) {
+                    Text(
+                        text = metaLine,
+                        style = cardStyle.bodyMedium,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                nowPlayingProgram?.let { program ->
+                    Text(
+                        text = stringResource(R.string.epg_now_prefix, program.title),
+                        style = cardStyle.bodyMedium,
+                        color = CinemaOrangeLight,
+                        maxLines = 1,
+                        modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                    )
+                }
             }
+
+            // Discoverability hint for the action menu: a glyph, not a focus stop, on the
+            // focused row only (plan Decisions 1).
+            if (isFocused) RowActionsHint()
         }
     }
 }
@@ -685,6 +655,6 @@ internal fun RowActionsHint() {
         imageVector = CinemaIcons.MoreVert,
         contentDescription = stringResource(R.string.row_actions_hint),
         tint = CinemaTextSecondary,
-        modifier = Modifier.size(TvDimensions.iconSmall.scaled(LocalUiScale.current)),
+        modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }
