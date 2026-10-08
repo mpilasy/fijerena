@@ -1,6 +1,6 @@
 # TV UI audit and polish
 
-**Status:** Phase 1 done; Phase 2a–2e in progress. User said proceed until done (2026-10-07). Plan written 2026-10-07 at the user's request ("the UI still looks like
+**Status:** Phases 1 and 2a–2e done and merged; verify in progress (focus walks, spot checks). User said proceed until done (2026-10-07). Plan written 2026-10-07 at the user's request ("the UI still looks like
 crap on the TV … walk through the whole app and audit every single section and every single
 widget … and make it better"; then "first make a plan"). Waits for the user's go-ahead.
 
@@ -194,5 +194,9 @@ Phase 2 agents start from Phase 1 merged on main; I merge them one at a time and
 | Findings | Done 2026-10-07: 10 shared causes, 21 per-screen rows | |
 | Review with the user | Done 2026-10-07: decisions above | |
 | Phase 1 — tokens + shared components | Done: X1 turned out already app-wide (MainActivity scales LocalDensity; `.scaled()` is a no-op) — the uneven sizes are per-screen type choices, moved to Phase 2; seven stale per-screen scale providers removed; X2 `TvListRowDefaults` on StreamList / CategoryList (browse, channel panels); X3 logos `Fit` on a tile (TV lists, Search, Home, phone guide); `TvScreenHeader`, `TvEmptyState`, TV Guide no-channels empty state. Checked on the TV emulator: Home Channels and Live TV browse show whole logos and the white-outline focused row | 90347565, 85cea555, 5e2d4131, fbea290d |
-| Phase 2a–2e — per area | In progress (five agents) | |
+| Phase 2a — browse + Live TV | Done: shared header, one Refresh, mode icons, channels/films/shows counts and empty states, lists open with the first row whole, resume bar on the thumbnail, year · length · rating, separators as headings never played; preview hint and type order. Plus the full-screen channel panel at 0.9 opacity (in the player file, done at merge). Checked: Movies browse on jellyxtream | 28130f95, 8cac57c8, 7960c5e7 |
+| Phase 2b — details + episodes | Done: title text when the logo fails, hero fade, rating in the facts line, aligned Details, Similar without heading and two-line titles, check icon for watched, season chips, hero kept in view, 1h 33m; main button stronger focused (`CinemaPrimaryButton`, app-wide). Checked: The Matrix shows its title | 0f55fce2, d05e378b, 14c3d3fb |
+| Phase 2c — player | Done: title above the timeline, subtitles lifted over the controls, Pause → seek bar → first button, star, standard icon buttons, top gradient, readable Stats. Checked: The Matrix OSD and its focus order | 9f351e2d, 251c06ad |
+| Phase 2d — settings + sources | Done: white focus for input rows app-wide (`TvInputDefaults`), one Settings row layout and full-height pane, scope once per section, Edit Source rows + pickers (queue size presets), Sources full-width rows with fixed slots, empty states, headers on Live sync / Device info / Diagnostics. Checked: Settings, Sources, Edit Source. Kept as is: the Sources focus outline covers only the row's name area, since each slot is its own button | 17caa64b, 6b37cddb, 2acb1307, c9a6a47a, a2b829e5, b4568997 |
+| Phase 2e — search, guide, home, profiles | Done: profile picker larger, Home section titles / live dot / episode line, source picker, Search (header, field text, no extra button, list rows, 16:9), Search the guide (header, layout, dev counters), TV Guide (header, opens 30 min before now, short cells, No listings, logos). Checked: profile picker, Home, Search | b7f85117, 847453fb, d1b6ab75, 3a44b8c6, c27e4956 |
 | Verify + spot checks | Not started | |
