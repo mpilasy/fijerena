@@ -498,7 +498,6 @@
 
     <!-- EPG Browser -->
     <string name="epg_browser_title">Search the guide</string>
-    <string name="epg_browser_title_with_provider">Search the guide — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Refresh stale guide sources</string>
     <string name="epg_browser_matched_label">Matched</string>
     <string name="epg_browser_search_titles_placeholder">Search titles…</string>

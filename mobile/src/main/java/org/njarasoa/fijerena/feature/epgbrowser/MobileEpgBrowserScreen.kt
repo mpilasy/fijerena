@@ -164,37 +164,17 @@ fun MobileEpgBrowserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                // The source as a subtitle, as on Search; the guide's status goes below the bar.
                 title = {
                     Column {
-                        val providerName = activeProviderName
-                        Text(
-                            if (providerName != null) {
-                                stringResource(R.string.epg_browser_title_with_provider, providerName)
-                            } else {
-                                stringResource(R.string.epg_browser_title)
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        val freshnessText =
-                            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
-                        val freshnessColor =
-                            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
-                                (oldestIngestedAtMs == null && hasOffSources)
-                            ) {
-                                CinemaWarning
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        Text(
-                            text = freshnessText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = freshnessColor,
-                        )
-                        if (isDevMode && epgDbStats != null) {
+                        Text(stringResource(R.string.epg_browser_title))
+                        activeProviderName?.let { providerName ->
                             Text(
-                                text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
-                                style = MaterialTheme.typography.labelSmall,
+                                text = providerName,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
@@ -250,52 +230,33 @@ fun MobileEpgBrowserScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            // Filters row: Matched only checkbox
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { matchedOnly = !matchedOnly },
+            // The guide's status, one line; the index counters only in developer mode.
+            val freshnessText =
+                freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
+            val freshnessColor =
+                if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
+                    (oldestIngestedAtMs == null && hasOffSources)
                 ) {
-                    Checkbox(
-                        checked = matchedOnly,
-                        onCheckedChange = { matchedOnly = it },
-                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                    )
-                    Text(
-                        text = stringResource(R.string.epg_browser_matched_label),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
+                    CinemaWarning
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
                 }
-            }
-
-            // "In <category> only" (GD5): its own row — the filters row has no room left on a phone.
-            if (contextName != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .padding(horizontal = Spacing.md)
-                            .clickable { inContextOnly = !inContextOnly },
-                ) {
-                    Checkbox(
-                        checked = inContextOnly,
-                        onCheckedChange = { inContextOnly = it },
-                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                    )
-                    Text(
-                        text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            Text(
+                text = freshnessText,
+                style = MaterialTheme.typography.bodySmall,
+                color = freshnessColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = Spacing.md),
+            )
+            if (isDevMode && epgDbStats != null) {
+                Text(
+                    text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = Spacing.md),
+                )
             }
 
             val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
@@ -342,6 +303,54 @@ fun MobileEpgBrowserScreen(
                     ),
                 shape = RoundedCornerShape(CinemaCornerRadius.medium),
             )
+
+            // Filters, below the search field: Matched only checkbox
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { matchedOnly = !matchedOnly },
+                ) {
+                    Checkbox(
+                        checked = matchedOnly,
+                        onCheckedChange = { matchedOnly = it },
+                        modifier = Modifier.size(MobileDimensions.iconLarge),
+                    )
+                    Text(
+                        text = stringResource(R.string.epg_browser_matched_label),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+
+            // "In <category> only" (GD5): its own row — the filters row has no room left on a phone.
+            if (contextName != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .padding(horizontal = Spacing.md)
+                            .clickable { inContextOnly = !inContextOnly },
+                ) {
+                    Checkbox(
+                        checked = inContextOnly,
+                        onCheckedChange = { inContextOnly = it },
+                        modifier = Modifier.size(MobileDimensions.iconLarge),
+                    )
+                    Text(
+                        text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
 
             // Indexing progress banner
             val currentIndexState = indexState

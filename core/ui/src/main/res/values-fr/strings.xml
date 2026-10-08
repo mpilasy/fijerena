@@ -491,7 +491,6 @@
 
     <!-- EPG Browser -->
     <string name="epg_browser_title">Rechercher dans le guide</string>
-    <string name="epg_browser_title_with_provider">Rechercher dans le guide — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Actualiser les sources de guide obsolètes</string>
     <string name="epg_browser_matched_label">Correspondants</string>
     <string name="epg_browser_search_titles_placeholder">Rechercher des titres…</string>

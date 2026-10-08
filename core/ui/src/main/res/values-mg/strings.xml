@@ -421,7 +421,6 @@
 
     <!-- EPG Browser -->
     <string name="epg_browser_title">Hikaroka ao amin\'ny fandaharana</string>
-    <string name="epg_browser_title_with_provider">Hikaroka ao amin\'ny fandaharana — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Havaozina ireo loharanon\'ny fitarihana lany andro</string>
     <string name="epg_browser_matched_label">Mifanaraka</string>
     <string name="epg_browser_search_titles_placeholder">Karohy ny lohateny…</string>
