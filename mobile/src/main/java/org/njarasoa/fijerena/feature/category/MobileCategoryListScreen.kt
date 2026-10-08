@@ -100,6 +100,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -1676,9 +1677,9 @@ private fun itemCountText(
     count: Int,
 ): String =
     when (contentType) {
-        ContentType.MOVIES -> stringResource(R.string.browse_film_count_format, count)
-        ContentType.TV_SHOWS -> stringResource(R.string.browse_show_count_format, count)
-        else -> stringResource(R.string.browse_channel_count_format, count)
+        ContentType.MOVIES -> pluralStringResource(R.plurals.browse_film_count, count, count)
+        ContentType.TV_SHOWS -> pluralStringResource(R.plurals.browse_show_count, count, count)
+        else -> pluralStringResource(R.plurals.browse_channel_count, count, count)
     }
 
 /** An empty list, in the section's words. */

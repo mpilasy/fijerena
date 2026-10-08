@@ -8,6 +8,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -66,9 +67,9 @@ internal fun itemCountText(
     count: Int,
 ): String =
     when (contentType) {
-        ContentType.MOVIES -> stringResource(R.string.browse_film_count_format, count)
-        ContentType.TV_SHOWS -> stringResource(R.string.browse_show_count_format, count)
-        else -> stringResource(R.string.browse_channel_count_format, count)
+        ContentType.MOVIES -> pluralStringResource(R.plurals.browse_film_count, count, count)
+        ContentType.TV_SHOWS -> pluralStringResource(R.plurals.browse_show_count, count, count)
+        else -> pluralStringResource(R.plurals.browse_channel_count, count, count)
     }
 
 /** An empty category, in the section's words (TV UI audit X8). */

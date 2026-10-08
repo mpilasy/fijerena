@@ -1108,9 +1108,18 @@
     <string name="device_info_job_failed">Failed</string>
     <string name="device_info_job_cancelled">Cancelled</string>
     <!-- TV polish: browse and Live TV -->
-    <string name="browse_channel_count_format">%1$d channels</string>
-    <string name="browse_film_count_format">%1$d films</string>
-    <string name="browse_show_count_format">%1$d shows</string>
+    <plurals name="browse_channel_count">
+        <item quantity="one">%1$d channel</item>
+        <item quantity="other">%1$d channels</item>
+    </plurals>
+    <plurals name="browse_film_count">
+        <item quantity="one">%1$d film</item>
+        <item quantity="other">%1$d films</item>
+    </plurals>
+    <plurals name="browse_show_count">
+        <item quantity="one">%1$d show</item>
+        <item quantity="other">%1$d shows</item>
+    </plurals>
     <string name="browse_no_films">No films in this category</string>
     <string name="browse_no_shows">No shows in this category</string>
     <string name="browse_select_to_view_films">Select a category to see its films</string>

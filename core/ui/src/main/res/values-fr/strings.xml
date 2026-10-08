@@ -1111,9 +1111,18 @@
     <string name="device_info_job_failed">Échouée</string>
     <string name="device_info_job_cancelled">Annulée</string>
     <!-- TV polish: browse and Live TV -->
-    <string name="browse_channel_count_format">%1$d chaînes</string>
-    <string name="browse_film_count_format">%1$d films</string>
-    <string name="browse_show_count_format">%1$d séries</string>
+    <plurals name="browse_channel_count">
+        <item quantity="one">%1$d chaîne</item>
+        <item quantity="other">%1$d chaînes</item>
+    </plurals>
+    <plurals name="browse_film_count">
+        <item quantity="one">%1$d film</item>
+        <item quantity="other">%1$d films</item>
+    </plurals>
+    <plurals name="browse_show_count">
+        <item quantity="one">%1$d série</item>
+        <item quantity="other">%1$d séries</item>
+    </plurals>
     <string name="browse_no_films">Aucun film dans cette catégorie</string>
     <string name="browse_no_shows">Aucune série dans cette catégorie</string>
     <string name="browse_select_to_view_films">Sélectionnez une catégorie pour voir ses films</string>
