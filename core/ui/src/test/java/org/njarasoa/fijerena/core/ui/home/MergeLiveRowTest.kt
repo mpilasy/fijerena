@@ -41,4 +41,13 @@ class MergeLiveRowTest {
         assertEquals("r1", rows.first().item.id)
         assertEquals(false, rows.first().lastWatched)
     }
+
+    @Test
+    fun separatorRowsNeverShow() {
+        val separator = channel("sep").copy(name = "####### ETHOPIA VIP #######")
+        val rows = mergeLiveRow(lastItemId = "sep", recent = listOf(separator, channel("r1")), favorites = emptyList())
+
+        assertEquals(listOf("r1"), rows.map { it.item.id })
+        assertEquals(false, rows.first().lastWatched)
+    }
 }

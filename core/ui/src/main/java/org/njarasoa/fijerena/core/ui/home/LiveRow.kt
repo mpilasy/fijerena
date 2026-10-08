@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.ui.home
 
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 
 /**
  * A channel on Home's Live row (TV home overhaul plan, Phase 4). [fromFavorites] picks the list it
@@ -24,8 +25,11 @@ fun mergeLiveRow(
     max: Int = LIVE_ROW_MAX,
 ): List<LiveRowEntry> {
     val entries = mutableListOf<LiveRowEntry>()
-    val seen = HashSet<String>()
-    val last = lastItemId?.let { id -> recent.firstOrNull { it.id == id } ?: favorites.firstOrNull { it.id == id } }
+    // Provider separator rows (`#### SPORTS ####`) aren't channels: one tuned before they became
+    // headings could still sit in Recent and come back here as "Last watched".
+    val seen = (recent + favorites).filter { it.isCategoryMarker }.mapTo(HashSet()) { it.id }
+    val last =
+        lastItemId?.takeIf { it !in seen }?.let { id -> recent.firstOrNull { it.id == id } ?: favorites.firstOrNull { it.id == id } }
     if (last != null) {
         entries += LiveRowEntry(last, fromFavorites = false, lastWatched = true)
         seen += last.id

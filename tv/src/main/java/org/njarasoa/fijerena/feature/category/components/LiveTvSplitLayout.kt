@@ -157,8 +157,13 @@ internal fun LiveTvSplitLayout(
         if (seed == null && (guideReturnStreamId != null || initialStreamId != null)) return@LaunchedEffect
         hasSeeded = true
         // A separator row is a heading, never played — not even one recorded as watched before
-        // they were headings (TV UI audit #24): the list alone then, until OK picks a channel.
-        if (seed != null && !seed.isSeparatorRow) previewTarget = seed
+        // they were headings (TV UI audit #24). Asked to open on one (Home → Live TV with it as
+        // the last channel), the preview closes as Back would: browse, not an empty preview.
+        when {
+            seed == null -> Unit
+            !seed.isSeparatorRow -> previewTarget = seed
+            seed.id == initialStreamId -> onBack()
+        }
     }
 
     // No setContentType(LIVE_TV) effect here: StreamingPlaybackService.playStream() picks the
