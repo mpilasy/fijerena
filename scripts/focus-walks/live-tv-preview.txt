@@ -1,6 +1,6 @@
 # Live TV preview (LiveTvSplitLayout + LiveTvChannelPanel), TV emulator, source iptv with at
 # least one favourite channel.
-# Start: Home → Live TV, which opens the preview on the last played channel with context
+# Start: Home → Live TV (the rail), which opens the preview on the last played channel with context
 # Recent (LT1 + LT2); focus is on the current channel row — the first row of Recent, since
 # Recent is newest-first. Its text varies, so there is no @start.
 # Covers L-2, L-4, L-10, L-13 as LT2 leaves them: a tab row (Category when the channel was
@@ -9,7 +9,7 @@
 # channel when the new list has it, else its first row); an empty tab keeps focus on the tab.
 # None of these keys changes the channel (P8). OK on a row plays it in the preview, OK on the
 # playing row goes full screen; neither is walked here (live-tv-back.txt walks both).
-# Ends in browse: Left on the first tab leaves the preview as Back does (Live TV target item 8),
+# Ends in browse: Left on the first tab stays put (it left the preview until 2026-10-09), then Back
 # so nothing after it is in the panel.
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # Up from the first row lands on the selected tab, not on the Refresh icon.
@@ -31,6 +31,7 @@ RIGHT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 LEFT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 # Up from the first row lands on the selected tab.
 UP	Recent
-# Left on the first tab leaves the preview as Back does: browse, focus on the playing
-# channel's row (the current channel the walk started on).
-LEFT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
+# Left on the first tab stays put (it left the preview until 2026-10-09); Back leaves it:
+# browse, focus on the playing channel's row (the current channel the walk started on).
+LEFT	Recent
+BACK	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions

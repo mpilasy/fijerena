@@ -318,7 +318,6 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = onStreamSelected,
                 onStreamPromote = { item -> previewTarget = item },
                 onRefresh = refreshContext,
-                onLeftFromFirstTab = onBack,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
         }
@@ -731,7 +730,6 @@ internal fun LiveTvSplitLayout(
                         fullScreen = true
                     }
                 },
-                onLeftFromFirstTab = onBack,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
         }

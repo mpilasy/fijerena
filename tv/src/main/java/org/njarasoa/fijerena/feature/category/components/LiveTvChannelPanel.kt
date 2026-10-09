@@ -52,8 +52,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
  *
  * Keys: Up from the first row lands on the selected tab, whichever node above it Compose's
  * geometric search picked; Left/Right on the tabs switch the list (focus follows selection, as
- * [TvSectionTabs] does everywhere), and Left on the first tab of the docked panel is Back
- * ([onLeftFromFirstTab]); Left/Right on a row switch to the previous / next tab too, focus staying
+ * [TvSectionTabs] does everywhere), and Left on the first tab stays put — only Back leaves the
+ * preview (user, 2026-10-09: Left leaving it was a surprise); Left/Right on a row switch to the
+ * previous / next tab too, focus staying
  * in the rows (on the current channel when the new list has it) — Recent ↔ Favourites in one press
  * from anywhere in the list, without climbing to the tabs; Down from the tabs enters the rows on the current channel when the list
  * has it, else the first row; OK on a row promotes it to full screen, or tunes it in full
@@ -88,7 +89,6 @@ internal fun LiveTvChannelPanel(
      * plan Part II Live TV target item 8). Null (full screen, where Back closes the panel) keeps
      * focus on the tab.
      */
-    onLeftFromFirstTab: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -128,10 +128,6 @@ internal fun LiveTvChannelPanel(
                 rowsFocusPending = true
                 onContextSelected(next)
             }
-
-            key == Key.DirectionLeft -> {
-                onLeftFromFirstTab?.invoke()
-            }
         }
         true
     }
@@ -156,16 +152,10 @@ internal fun LiveTvChannelPanel(
                 entryFocusRequester = tabsEntry,
                 endFocusRequester = refreshFocus,
                 // On the tabs only, not Refresh: focus follows selection, so a focused tab is the
-                // selected one.
+                // selected one. Left on the first stays put.
                 modifier =
                     Modifier.weight(1f).onPreviewKeyEvent { event ->
-                        val leave =
-                            onLeftFromFirstTab != null &&
-                                selectedIndex == 0 &&
-                                event.type == KeyEventType.KeyDown &&
-                                event.key == Key.DirectionLeft
-                        if (leave) onLeftFromFirstTab?.invoke()
-                        leave
+                        selectedIndex == 0 && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft
                     },
             )
             CinemaIconButton(
