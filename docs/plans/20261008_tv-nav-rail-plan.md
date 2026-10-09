@@ -1,6 +1,6 @@
 # TV navigation rail
 
-**Status:** Planned 2026-10-08; not started. Design agreed with the user 2026-10-08: a thin rail on
+**Status:** Planned 2026-10-08; Phase 0 in progress (user: "go all the way", no bears). Design agreed with the user 2026-10-08: a thin rail on
 the left edge, faint icons at rest that slide out into icons + labels on focus; Home stays; the TV
 Guide is *not* a rail item; each section keeps its place. Open questions answered the same day:
 Search = current section, first-launch hint yes, Home's tiles stay; parallel layout agreed. TV
@@ -151,7 +151,7 @@ walks (one TV emulator).
 
 | Phase | State | Commit |
 |---|---|---|
-| 0 | Not started | |
+| 0 | In progress | |
 | 1 | Not started | |
 | 2 | Not started | |
 | 3 + 4 A Home | Not started | |
