@@ -1150,4 +1150,7 @@
     <string name="series_resume_code_left_format">▶ Reprendre S%1$02dE%2$02d · reste %3$s</string>
     <string name="series_resume_code_from_format">▶ Reprendre S%1$02dE%2$02d · à %3$s</string>
     <string name="series_play_code_format">▶ Lire S%1$02dE%2$02d</string>
+    <!-- TV navigation rail -->
+    <string name="tv_nav_rail_home">Accueil</string>
+    <string name="tv_nav_rail_hint">Appuyez sur Gauche pour les sections</string>
 </resources>

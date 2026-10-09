@@ -51,6 +51,14 @@ class TvNavRailState {
     /** Whether focus is inside the rail (it is slid out). Set by the rail itself. */
     var expanded by mutableStateOf(false)
 
+    /**
+     * The active profile's name and colour, for [RailItem.PROFILE]'s label, content description and
+     * avatar colour. Optional: without them the rail labels the avatar with its initial and draws it
+     * in the first profile colour.
+     */
+    var profileName by mutableStateOf<String?>(null)
+    var profileColorIndex by mutableIntStateOf(0)
+
     private var hideCount by mutableIntStateOf(0)
 
     /** False while any screen holds [HideTvNavRail]. */

@@ -1147,4 +1147,7 @@
     <string name="series_resume_code_left_format">▶ Resume S%1$02dE%2$02d · %3$s left</string>
     <string name="series_resume_code_from_format">▶ Resume S%1$02dE%2$02d · from %3$s</string>
     <string name="series_play_code_format">▶ Play S%1$02dE%2$02d</string>
+    <!-- TV navigation rail -->
+    <string name="tv_nav_rail_home">Home</string>
+    <string name="tv_nav_rail_hint">Press Left for sections</string>
 </resources>
