@@ -190,7 +190,7 @@ internal fun CategoryList(
                     )
                     // The screen header above stays outside the pane: Up from the first category
                     // reaches it. Left from a row goes to the rail, whose Right comes back to it.
-                    .tvPane(paneFocus, exitRight = itemsPane),
+                    .tvPane(paneFocus, exitRight = itemsPane, leftToRail = true),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (virtualCategories.isNotEmpty()) {

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,6 +86,8 @@ fun TvNavHost(
 
     // Profile, source and live-sync switches start over from Home: every section's saved place may
     // hold the previous one's repository, so it goes too.
+    var railSourceVersion by remember { mutableIntStateOf(0) }
+
     fun clearSectionStacks() = TvSection.entries.forEach { navController.clearBackStack(it.route) }
 
     // Live sync moved this device off a profile or a provider another device deleted: every screen
@@ -203,6 +206,12 @@ fun TvNavHost(
                 if (!navController.popBackStack(Screen.Settings, inclusive = false)) {
                     navController.navigate(Screen.Settings) { launchSingleTop = true }
                 }
+            }
+
+            // From Settings (or Search) opened over a section, that section's item goes back to
+            // where you were in it — the film, not the section's start.
+            section != null && section == navController.currentSection() && rail.current != item -> {
+                if (navController.currentDestination?.isSettingsTree() == true) popSettingsTree() else navController.popBackStack()
             }
 
             // The section you are in: back to its start.
@@ -483,7 +492,10 @@ fun TvNavHost(
                                 },
                                 // Home's source pill switched the source: the sections' saved places
                                 // hold the old source's lists (its Movies showed under the new one).
-                                onProviderChanged = { clearSectionStacks() },
+                                onProviderChanged = {
+                                    clearSectionStacks()
+                                    railSourceVersion++
+                                },
                                 onSignInRequired = { providerId ->
                                     // Plain navigate, not navigateOnce: this fires from home's load, often
                                     // while home is still entering after a profile switch — not RESUMED yet,
@@ -989,7 +1001,12 @@ fun TvNavHost(
                         }
                     }
                     // After the NavHost, so it draws over the screen and its scrim covers it.
-                    TvSectionRail(rail = rail, navController = navController, onSelect = ::selectRailItem)
+                    TvSectionRail(
+                        rail = rail,
+                        navController = navController,
+                        onSelect = ::selectRailItem,
+                        sourceVersion = railSourceVersion,
+                    )
                 }
             }
         } else {

@@ -194,19 +194,23 @@ fun rememberPaneFocus(): PaneFocusState {
  * keeps its Left/Right inside the row. Down at the end of the pane stays put; Up at the top
  * leaves to whatever is above (the screen header) unless [exitUp] is false. Programmatic focus
  * requests ([requestFocusWithRetry], `NavReturnFocus`) are not D-pad moves and pass through.
+ *
+ * [leftToRail]: a pane at the screen's left edge with no [exitLeft] lets Left through instead of
+ * keeping it, so its rows' `leftToRail()` reaches the navigation rail (browse's categories column).
  */
 fun Modifier.tvPane(
     state: PaneFocusState,
     exitLeft: PaneFocusState? = null,
     exitRight: PaneFocusState? = null,
     exitUp: Boolean = true,
+    leftToRail: Boolean = false,
 ): Modifier =
     this
         .onKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
             val neighbour =
                 when (event.key) {
-                    Key.DirectionLeft -> exitLeft
+                    Key.DirectionLeft -> exitLeft ?: if (leftToRail) return@onKeyEvent false else null
                     Key.DirectionRight -> exitRight
                     else -> return@onKeyEvent false
                 }

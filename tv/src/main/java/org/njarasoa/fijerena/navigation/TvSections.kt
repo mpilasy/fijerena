@@ -166,6 +166,9 @@ internal fun TvSectionRail(
     rail: TvNavRailState,
     navController: NavController,
     onSelect: (RailItem) -> Unit,
+    // Bumped when the source changes without a screen change (Home's source pill): the rail
+    // re-reads its sections then too, not only on navigation.
+    sourceVersion: Int = 0,
 ) {
     val context = LocalContext.current
     val entry by navController.currentBackStackEntryAsState()
@@ -175,7 +178,7 @@ internal fun TvSectionRail(
     val profiles by remember { ProfileRepository(context.applicationContext).observeProfiles() }
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
-    LaunchedEffect(entry?.id) {
+    LaunchedEffect(entry?.id, sourceVersion) {
         val destination = entry?.destination ?: return@LaunchedEffect
         rail.current = railCurrent(destination.topScreen(), navController.currentSection())
         homeOnStack = navController.isOnBackStack(Screen.ContentTypeSelection)
