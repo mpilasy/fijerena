@@ -44,7 +44,7 @@ fun ProfileAvatar(
  * First character of [name], uppercased. By code point, not `Char`: an emoji is two UTF-16 units,
  * and taking only one of them renders a broken glyph.
  */
-internal fun initialOf(name: String): String {
+fun initialOf(name: String): String {
     val trimmed = name.trim()
     return if (trimmed.isEmpty()) "" else String(Character.toChars(trimmed.codePointAt(0))).uppercase()
 }

@@ -66,11 +66,12 @@ sealed interface Screen {
      * (mobile). Null means no specific stream was picked to get here.
      * @param showPreviewPane TV only: true (the default) makes this entry the preview-pane split
      * layout (video + list) alone, opened on [initialStreamId] from search or a guide — Back
-     * leaves it for the screen that pushed it. False is the Live TV browse entry Home pushes: the
-     * classic categories-left/streams-right layout also used by Movies/TV Shows, with the preview
-     * (and full screen) as a layer over it — open on entry when [initialStreamId] is set (Home
-     * passes the last channel), opened by OK on a channel, closed by Back, so Back from the
-     * preview lands on browse instead of exiting Live TV outright. Ignored for Movies/TV Shows
+     * leaves it for the screen that pushed it. False is Live TV browse (on TV, the Live TV
+     * section's root, [LiveTvTab]): the classic categories-left/streams-right layout also used by
+     * Movies/TV Shows, with the preview (and full screen) as a layer over it — open on entry when
+     * [initialStreamId] is set (a fresh Live TV passes the last channel), opened by OK on a
+     * channel, closed by Back, so Back from the preview lands on browse instead of exiting Live TV
+     * outright. Ignored for Movies/TV Shows
      * (always classic layout) and by mobile, whose docked mini-player is the same kind of layer.
      */
     @Serializable
@@ -82,11 +83,12 @@ sealed interface Screen {
     ) : Screen
 
     /**
-     * Mobile only: the roots of the bottom bar's section tabs, each the section's [CategoryList]
-     * with no category or channel picked (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Bottom
-     * navigation bar). Three destinations, not [CategoryList] with an argument: Navigation saves a
-     * tab's back stack under its root's destination, so one destination for all three would
-     * restore Movies when Live TV is asked for.
+     * The roots of the sections — the phone's bottom bar tabs, the TV's rail sections — each the
+     * section's [CategoryList] with no category or channel picked
+     * (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Bottom navigation bar,
+     * docs/plans/20261008_tv-nav-rail-plan.md). Three destinations, not [CategoryList] with an
+     * argument: Navigation saves a section's back stack under its root's destination, so one
+     * destination for all three would restore Movies when Live TV is asked for.
      */
     @Serializable
     data object LiveTvTab : Screen

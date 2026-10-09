@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -55,6 +57,7 @@ import org.njarasoa.fijerena.feature.category.components.LoadingScreen
 import org.njarasoa.fijerena.feature.category.components.TwoColumnLayout
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.TvErrorState
+import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -73,6 +76,12 @@ fun TvCategoryGridScreen(
      * preview as a layer over it (LT7) — open on entry when [initialStreamId] is set.
      */
     showPreviewPane: Boolean = true,
+    /**
+     * Live TV browse, back from another section: a preview layer saved open (under the TV Guide its
+     * full screen opened) stays closed — coming back never starts video on its own
+     * (docs/plans/20261008_tv-nav-rail-plan.md → Risks).
+     */
+    closeSavedLivePreview: Boolean = false,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit = {},
     /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
@@ -150,6 +159,7 @@ fun TvCategoryGridScreen(
         contentType = contentType,
         initialStreamId = initialStreamId,
         showPreviewPane = showPreviewPane,
+        closeSavedLivePreview = closeSavedLivePreview,
         sectionRoot = sectionRoot,
     )
 }
@@ -174,6 +184,7 @@ private fun CategoryGridContent(
     contentType: String,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
+    closeSavedLivePreview: Boolean = false,
     sectionRoot: SectionRoot? = null,
 ) {
     val scale = LocalUiScale.current
@@ -203,6 +214,20 @@ private fun CategoryGridContent(
     // lands on it (LT6), and a preview rebuilt after process death comes back on it. Cleared when
     // the preview closes, so the next one starts on the channel it is opened on.
     var livePlayingChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Each opening of the layer is keyed by this count, so a layer dropped while saved open
+    // (closeSavedLivePreview) leaves its saved state — full screen, the guide's return channel —
+    // behind instead of handing it to the next opening.
+    var livePreviewOpening by rememberSaveable { mutableIntStateOf(0) }
+    // Once, before anything reads them: the layer must not compose (and start playing) first.
+    var dropSavedPreview by remember { mutableStateOf(closeSavedLivePreview) }
+    if (dropSavedPreview) {
+        dropSavedPreview = false
+        if (livePreviewChannelId != null) {
+            livePreviewChannelId = null
+            livePlayingChannelId = null
+            livePreviewOpening++
+        }
+    }
     // Plain remember, as the nav hand-off it replaces was taken once: a return from Search or the
     // TV Guide rebuilds browse without it.
     var returnedLiveChannelId by remember { mutableStateOf<String?>(null) }
@@ -278,6 +303,8 @@ private fun CategoryGridContent(
                     val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
                     val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
                     if (showLivePreview) {
+                        // The preview and its full screen take the screen, and Left has a job there.
+                        HideTvNavRail()
                         val ctx = LocalContext.current
                         val devMode =
                             remember {
@@ -288,32 +315,34 @@ private fun CategoryGridContent(
                         CompositionLocalProvider(
                             LocalViewModelStoreOwner provides rememberLayerOwner(previewViewModels.store()),
                         ) {
-                            LiveTvSplitLayout(
-                                categoryViewModel = catViewModel,
-                                categories = immutableCategories,
-                                selectedCategoryId = state.selectedCategoryId,
-                                streams = immutableStreams,
-                                streamsLoading = state.streamsLoading,
-                                categoriesRefreshing = state.categoriesRefreshing,
-                                lastPlayedItemId = state.lastPlayedItemId,
-                                nowPlaying = nowPlaying,
-                                contentType = contentType,
-                                isDevMode = devMode,
-                                favoriteIds = favoriteIds,
-                                favoriteCategoryIds = favoriteCategoryIds,
-                                watchProgress = watchProgress,
-                                watchedIds = watchedIds,
-                                onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
-                                onStreamSelected = onStreamSelected,
-                                onRefreshCategories = { catViewModel.refreshCategories() },
-                                onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
-                                onBack = if (isLiveBrowse) closeLivePreview else onBack,
-                                onHome = onHome,
-                                initialStreamId = if (isLiveBrowse) livePlayingChannelId ?: livePreviewChannelId else initialStreamId,
-                                onPlayingChannel = { streamId -> livePlayingChannelId = streamId },
-                                // The player's Guide button (GD5), only when the source has a guide.
-                                onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
-                            )
+                            key(livePreviewOpening) {
+                                LiveTvSplitLayout(
+                                    categoryViewModel = catViewModel,
+                                    categories = immutableCategories,
+                                    selectedCategoryId = state.selectedCategoryId,
+                                    streams = immutableStreams,
+                                    streamsLoading = state.streamsLoading,
+                                    categoriesRefreshing = state.categoriesRefreshing,
+                                    lastPlayedItemId = state.lastPlayedItemId,
+                                    nowPlaying = nowPlaying,
+                                    contentType = contentType,
+                                    isDevMode = devMode,
+                                    favoriteIds = favoriteIds,
+                                    favoriteCategoryIds = favoriteCategoryIds,
+                                    watchProgress = watchProgress,
+                                    watchedIds = watchedIds,
+                                    onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
+                                    onStreamSelected = onStreamSelected,
+                                    onRefreshCategories = { catViewModel.refreshCategories() },
+                                    onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
+                                    onBack = if (isLiveBrowse) closeLivePreview else onBack,
+                                    onHome = onHome,
+                                    initialStreamId = if (isLiveBrowse) livePlayingChannelId ?: livePreviewChannelId else initialStreamId,
+                                    onPlayingChannel = { streamId -> livePlayingChannelId = streamId },
+                                    // The player's Guide button (GD5), only when the source has a guide.
+                                    onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
+                                )
+                            }
                         }
                     } else {
                         AmbientBackdrop(modifier = Modifier.fillMaxSize())
