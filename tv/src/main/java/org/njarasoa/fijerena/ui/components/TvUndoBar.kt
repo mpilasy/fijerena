@@ -39,7 +39,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * What a [TvUndoBar] shows: the last removal and how to take it back
- * (docs/plans/20261009_tv-recents-favorites-plan.md → A, "No confirmation dialog; Undo instead").
+ * (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A, "No confirmation dialog; Undo instead").
  *
  * ```
  * val undoBar = rememberUndoBarState()

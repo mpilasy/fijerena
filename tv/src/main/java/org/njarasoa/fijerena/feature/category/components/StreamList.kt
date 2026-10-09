@@ -174,7 +174,7 @@ internal fun StreamList(
     undoBar: UndoBarState,
     /**
      * Edit mode of the Recent / Favourites list (browse only): OK on a row removes it at once, a
-     * ✕ on the focused row in place of the ⋮ (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     * ✕ on the focused row in place of the ⋮ (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A).
      */
     editMode: Boolean = false,
 ) {
@@ -195,7 +195,7 @@ internal fun StreamList(
             streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.id }.orEmpty()
         }
 
-    // A removal (docs/plans/20261009_tv-recents-favorites-plan.md → A): done at once, with an Undo
+    // A removal (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A): done at once, with an Undo
     // bar instead of a confirmation. When the row leaves this list, focus goes to the row that took
     // its place once the new list is on screen (rowFocusAfterChange below); the Undo brings the
     // row back in its place and focus to it.

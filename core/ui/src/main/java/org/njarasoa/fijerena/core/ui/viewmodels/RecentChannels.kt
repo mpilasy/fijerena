@@ -40,7 +40,7 @@ fun List<MediaItem>.inDisplayOrderOf(displayed: List<MediaItem>): List<MediaItem
  * The display order [order] (row ids) extended with this list: ids it doesn't know yet go first,
  * in this list's order; known ids keep their places — including ids no longer in the list, so a
  * row removed and then put back by an Undo returns to where it was, not to the top
- * (docs/plans/20261009_tv-recents-favorites-plan.md → B, "The list doesn't move while you use it").
+ * (docs/plans/archive/20261009_tv-recents-favorites-plan.md → B, "The list doesn't move while you use it").
  */
 fun List<MediaItem>.stableOrder(order: List<String>): List<String> {
     val known = order.toHashSet()

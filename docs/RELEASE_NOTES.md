@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV Recent and Favorites
+**Release Date:** 2026-10-09
+
+- **Removing is one press and never loses your place.** After Remove from Recent / Remove from Favorites, focus goes to the next row (it used to vanish, leaving the remote dead until Back). The menu opens on the removal in Recent and Favorites. No more "are you sure" for favourites: a bar says "Removed X · Press Menu to undo" for 10 s.
+- **Edit mode** for Recent and Favorites (pencil in the list's header): OK removes each row in turn. **Clear Recent** clears one section's Recent (asks once).
+- **Home cards have actions:** hold OK or Menu on Continue Watching, Channels and favourite cards — remove (with Undo), favourite, mark as watched.
+- **Live TV Recent stops filling up while you zap:** a channel you only zap onto counts after a minute on it (a channel you pick, after the usual 10 s). The list keeps its order while you use it.
+- **Home:** Channels shows the last watched channel then Recent; favourite channels have their own **Favorite channels** row.
+- Phone: the zap rule applies to swipes too.
+
 ## Version: Jellyfin sign-in burst
 **Release Date:** 2026-10-09
 

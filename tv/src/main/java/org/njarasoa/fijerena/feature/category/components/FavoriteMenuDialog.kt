@@ -30,7 +30,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * The list a row's menu was opened in, which decides the menu's first action
- * (docs/plans/20261009_tv-recents-favorites-plan.md → A): on Recent, Remove from Recent; on
+ * (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A): on Recent, Remove from Recent; on
  * Favourites, the favourite toggle (there always Remove from Favorites); elsewhere the favourite
  * toggle as before.
  */

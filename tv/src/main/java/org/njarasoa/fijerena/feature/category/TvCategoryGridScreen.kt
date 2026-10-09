@@ -236,7 +236,7 @@ private fun CategoryGridContent(
         livePreviewChannelId = null
         // What resuming the browse entry did on Back from a preview entry, and Recent reloaded as
         // the fresh browse under Home's preview loaded it — after the preview recorded its channels.
-        // Live TV's Recent keeps its order for the visit (docs/plans/20261009_tv-recents-favorites-plan.md
+        // Live TV's Recent keeps its order for the visit (docs/plans/archive/20261009_tv-recents-favorites-plan.md
         // → B): the channels the preview recorded come in at the top, the rows already there stay put.
         catViewModel.refreshLastPlayedItem()
         catViewModel.refreshWatchStateOnResume()

@@ -202,7 +202,7 @@ class CategoryViewModel(
     private var currentStreams: List<MediaItem> = emptyList()
     private var currentCategoryId: String? = null
 
-    // Live TV's Recent keeps its order for the visit (docs/plans/20261009_tv-recents-favorites-plan.md
+    // Live TV's Recent keeps its order for the visit (docs/plans/archive/20261009_tv-recents-favorites-plan.md
     // → B): the row ids in display order, removed ones included so an Undo puts a row back in its
     // place. Reset on Refresh and when the section is entered again ([reloadRecentOnEntry]).
     private var liveRecentOrder: List<String> = emptyList()
@@ -652,7 +652,7 @@ class CategoryViewModel(
     /**
      * Removes [item] from the favourites (a stream, or the category of a Favorite Categories row),
      * its row leaving the Favourites list in place, and returns the Undo: the favourite back as it
-     * was, and its row back where it was on that list (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     * was, and its row back where it was on that list (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A).
      */
     fun removeFavorite(
         item: MediaItem,
@@ -705,7 +705,7 @@ class CategoryViewModel(
     /**
      * Removes an item (or all episodes of a series) from the Recent list.
      * Updates the local UI state streams list if the current category is RECENT_CATEGORY_ID.
-     * Returns the Undo, which puts back what was removed (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     * Returns the Undo, which puts back what was removed (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A).
      */
     fun removeFromRecent(
         itemId: String,

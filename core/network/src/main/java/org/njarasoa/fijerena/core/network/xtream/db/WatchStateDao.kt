@@ -180,7 +180,7 @@ interface WatchStateDao {
 
     /**
      * [clearRecentSeries], returning what it cleared, so an Undo can put it back with
-     * [restoreRecentPlays] (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     * [restoreRecentPlays] (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A).
      */
     @Transaction
     suspend fun takeRecentSeries(

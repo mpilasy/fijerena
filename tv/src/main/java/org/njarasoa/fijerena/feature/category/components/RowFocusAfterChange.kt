@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.feature.category.components
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 
 /**
- * A row removal or an Undo waiting for its list to come back (docs/plans/20261009_tv-recents-favorites-plan.md
+ * A row removal or an Undo waiting for its list to come back (docs/plans/archive/20261009_tv-recents-favorites-plan.md
  * → A, "Fix focus after a removal"): once the list on screen is no longer [from], focus goes to
  * [rowAfterChange] of [key] in it. The removed row's card is gone by then, and focus with it.
  */

@@ -24,7 +24,7 @@ internal data class HomeCard(
 /**
  * The card that takes focus once [key] left [shelf] (or came back to it with an Undo), the shelf's
  * keys being [oldKeys] at the time and every shelf's keys being [rows] now
- * (docs/plans/20261009_tv-recents-favorites-plan.md → A, "Home's cards"): [key] itself when it is
+ * (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A, "Home's cards"): [key] itself when it is
  * there, else the card that took its place in the same row ([rowAfterChange]); when the row is
  * empty (and gone from Home), the first card of the next row that has one, else of the nearest row
  * above; null when Home has no card left (the navigation rail takes focus).

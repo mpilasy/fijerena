@@ -339,7 +339,7 @@ class EpgViewModel(
 
     /**
      * The Undo of a favourite removed with [toggleFavoriteChannel]: [channel] a favourite again, as it
-     * was (docs/plans/20261009_tv-recents-favorites-plan.md → A). Returns whether the rows reload —
+     * was (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A). Returns whether the rows reload —
      * the Favourites guide gets the channel back in its place.
      */
     fun restoreFavoriteChannel(channel: MediaItem): Boolean {

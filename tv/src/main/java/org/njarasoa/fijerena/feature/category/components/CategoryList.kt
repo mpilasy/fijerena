@@ -94,7 +94,7 @@ internal fun CategoryList(
      * item pane already has rows to land on (a Back return): its own hand-back has the last word.
      */
     focusSelectedOnOpen: Boolean,
-    /** Shows the Undo of a favourite category removed here (docs/plans/20261009_tv-recents-favorites-plan.md → A). */
+    /** Shows the Undo of a favourite category removed here (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A). */
     undoBar: UndoBarState,
     modifier: Modifier = Modifier,
 ) {

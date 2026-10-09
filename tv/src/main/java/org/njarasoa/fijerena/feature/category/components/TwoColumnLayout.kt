@@ -152,7 +152,7 @@ internal fun TwoColumnLayout(
         label = "refresh_rotation",
     )
 
-    // A removal's Undo (docs/plans/20261009_tv-recents-favorites-plan.md → A): the bar at the
+    // A removal's Undo (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A): the bar at the
     // screen's foot, Menu undoes while it shows. Gone when another list is picked.
     val undoBar = rememberUndoBarState()
     LaunchedEffect(selectedCategoryId) { undoBar.dismiss() }

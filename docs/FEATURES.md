@@ -171,12 +171,14 @@ Listed before the source's categories:
 
 | Category | Shown | Contents |
 |----------|-------|----------|
-| **Recent** | Always | Everything watched, resumable items first, then the rest, newest first; one card per series. Live: added after the watch delay (10 s by default); VOD: after 2 %. Per-source size, 1–100 (default 25) |
+| **Recent** | Always | Everything watched, resumable items first, then the rest, newest first; one card per series. Live: a channel you pick is added after the watch delay (10 s by default), one you only zapped onto (Up/Down in full screen, a phone swipe) after a minute on it; on TV, Live TV's Recent keeps its order while you're in the section (re-sorted when you come back or Refresh). VOD: after 2 %. Per-source size, 1–100 (default 25) |
 | **Favorites** | Always | Starred items, newest first, no limit |
 | **Favorite Categories** | When there are any | Favourited categories |
 | **Recent Categories** | When there are any | Recently browsed categories, up to 20, deduplicated |
 
 Recent and Favorites live in `xtream_v2.db` (`watch_state`, `favorite_state`); Recent Categories in per-source SharedPreferences. All are per profile. Storage: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
+
+**Removing on TV.** Hold OK or press Menu on a row or a Home card: in Recent the menu opens on **Remove from Recent**, in Favorites on **Remove from Favorites**. It goes at once — no confirmation — focus moves to the next row or card, and a bar shows "Removed X · Press Menu to undo" for 10 s (Menu puts it back, in its place). Recent and Favorites lists have an **edit mode** (pencil in the header): OK removes the focused row, Back ends it; Recent's edit mode adds **Clear Recent** (this section only, asks once). Home's Continue Watching, Channels and favourite rows have the same menu (Mark as watched too on films).
 
 ---
 

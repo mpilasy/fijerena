@@ -473,7 +473,7 @@ fun ContentTypeSelectionScreen(
         navigate()
     }
 
-    // Hold OK / Menu on a card (docs/plans/20261009_tv-recents-favorites-plan.md → A, "Home's
+    // Hold OK / Menu on a card (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A, "Home's
     // cards"): the list rows' menu. A removal takes the card out of its row at once, focus going
     // to the card that took its place (cardAfterChange), with the Undo bar; Menu while it shows
     // puts the card back, focus on it.
