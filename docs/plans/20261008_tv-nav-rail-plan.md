@@ -1,6 +1,6 @@
 # TV navigation rail
 
-**Status:** Planned 2026-10-08; Phase 0 in progress (user: "go all the way", no bears). Design agreed with the user 2026-10-08: a thin rail on
+**Status:** Planned 2026-10-08; Phase 0 done; Phases 1–2 in progress (user: "go all the way", no bears). Design agreed with the user 2026-10-08: a thin rail on
 the left edge, faint icons at rest that slide out into icons + labels on focus; Home stays; the TV
 Guide is *not* a rail item; each section keeps its place. Open questions answered the same day:
 Search = current section, first-launch hint yes, Home's tiles stay; parallel layout agreed. TV
@@ -126,6 +126,47 @@ for live; bears only if the user allows).
 | 5 | Polish and checks: first-launch hint, themes, French and Malagasy labels, 100 % Text & grid size, overscan on the Bravia, Shield check | Screens captured; Shields / Bravia only when the user says |
 | 6 | Docs: NAVIGATION_GUIDE (rail, saved sections, Back), FEATURES, AGENTS focus contract (the rail rule: leftmost Left goes to the rail, exceptions), RELEASE_NOTES; archive this plan | — |
 
+## Phase 0 findings (2026-10-08)
+
+- **Margins:** every TV screen pads its content with `Spacing.tvSafeMarginHorizontal` (56 dp):
+  Home, browse and the Live TV split, Search, Search the guide, the TV Guide grid, Settings, Sources,
+  Add / Edit Source, Guide sources, Live sync, Device info, Diagnostics, the profile picker, safe
+  mode. Movie details and episodes keep 56 dp on their content but their hero picture is
+  full-bleed: there the rail sits over the picture, so the rail at rest gets a dark left-edge
+  gradient behind its icons. No screen needs re-fitting.
+- **Drawer:** a custom overlay, not tv-material's `ModalNavigationDrawer` (present in 1.0.0-alpha10).
+  Chosen on reading its API, not on a prototype: its collapsed width comes from
+  `NavigationDrawerItem`'s 56 dp item plus padding (wider than the margin), its items aren't faint at
+  rest, and it has no way to return focus to the item focus came from. The custom one is a `Box`
+  overlay: a ~40 dp column at rest, ~200 dp with labels and a scrim on focus.
+- **Interface** (committed in Phase 0, `tv/.../ui/components/rail/`):
+  - `RailItem` — PROFILE, HOME, LIVE_TV, MOVIES, TV_SHOWS, SEARCH, SETTINGS.
+  - `TvNavRailState` — `entry` (focus enters there), `current`, `expanded`, `visible`, `returnTo`,
+    `focusRail()`; provided as `LocalTvNavRail` (null without a rail: everything no-ops).
+  - `Modifier.leftToRail()` — on a screen's leftmost item: Left → rail, and it becomes `returnTo`.
+  - `HideTvNavRail()` — hides the rail while composed.
+  - `TvNavRail(state, items, profileInitial, onSelect, modifier)` — the rail (placeholder in
+    Phase 0).
+- **Navigation rules** (lane N):
+  - Sections are the tab routes the phone already uses (`Screen.LiveTvTab`, `MoviesTab`,
+    `TvShowsTab`), each hosting `TvCategoryGridScreen`; Home navigates to them too, so the tiles
+    and the rail share one saved place per section.
+  - Picking a section: drop Settings-tree entries on top (Settings, Sources, Add / Edit Source,
+    Guide sources, Live sync, Device info, Diagnostics — they aren't a section's place), then
+    `navigate(section) { popUpTo(Home) { saveState = true }; launchSingleTop = true;
+    restoreState = true }`. Picking the current section: back to its start.
+  - Home: `popBackStack(Home, inclusive = false, saveState = true)`.
+  - Search: `Screen.Search(current section's type, or ALL)` on top. Settings: on top (or back to
+    Settings' start if already in it). Profile: the profile picker.
+  - `current`: the section whose tab route is in the back stack; HOME on Home; SETTINGS while a
+    Settings-tree screen is on top; SEARCH while Search is on top.
+  - Back at a section's start (browse, no layer open) → `focusRail()`; Back in the rail → Home;
+    on Home, Back in the rail returns to the content.
+  - Hidden: Player, the Live TV preview layer, Profile picker, Add Source, Safe mode, Newer data,
+    and whenever there is no source.
+  - The section-root button and `sectionRootFor` go in lane N (the rail's current-section pick does
+    its job); screens drop their `sectionRoot` parameter there, so lanes A–D don't touch it.
+
 ## How the work runs
 
 Five steps; phases 3 and 4 touch the same screen files, so they are split by screen group, not by
@@ -151,9 +192,9 @@ walks (one TV emulator).
 
 | Phase | State | Commit |
 |---|---|---|
-| 0 | In progress | |
-| 1 | Not started | |
-| 2 | Not started | |
+| 0 | Done (findings above; interface in `ui/components/rail/`) | |
+| 1 | In progress (lane R) | |
+| 2 | In progress (lane N) | |
 | 3 + 4 A Home | Not started | |
 | 3 + 4 B browse, guide | Not started | |
 | 3 + 4 C details, episodes, Search | Not started | |
