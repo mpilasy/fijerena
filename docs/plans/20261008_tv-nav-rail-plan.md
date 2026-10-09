@@ -32,8 +32,8 @@ time with the remote, without costing screen space.
 - The rail slides out over the content (overlay, no push) to ~200 dp: icons + labels, on a
   near-opaque surface; the screen behind dims (scrim).
 - Focus lands on the current section's item.
-- Up / Down move through the items; OK opens one; **Right** or **Back** slide it back in and return
-  focus where it came from.
+- Up / Down move through the items; OK opens one; **Right** slides it back in and returns focus
+  where it came from; **Back** goes to Home (on Home: back to the content), see Back below.
 
 ### Items, top to bottom
 
