@@ -569,13 +569,13 @@ internal fun LiveTvSplitLayout(
                 onNextChannel = {
                     neighborChannel(contextStreams, target.id, +1)?.let { newItem ->
                         previewTarget = newItem
-                        loader.loadStream(newItem)
+                        loader.loadStream(newItem, zapped = true)
                     }
                 },
                 onPreviousChannel = {
                     neighborChannel(contextStreams, target.id, -1)?.let { newItem ->
                         previewTarget = newItem
-                        loader.loadStream(newItem)
+                        loader.loadStream(newItem, zapped = true)
                     }
                 },
             )

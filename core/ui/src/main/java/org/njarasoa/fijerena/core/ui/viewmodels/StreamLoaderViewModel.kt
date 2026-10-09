@@ -117,6 +117,7 @@ class StreamLoaderViewModel(
 
     // Retain last request for error retry
     private var lastLoadRequest: MediaItem? = null
+    private var lastLoadZapped = false
 
     /**
      * Stream this loader has most recently been asked to resolve, whether or not that resolution
@@ -195,6 +196,8 @@ class StreamLoaderViewModel(
         // Watch history is NOT gated on this — a preview that lasts past the watch delay is a
         // real view and is recorded like one (see the history job below).
         notifyProviderStarted: Boolean = true,
+        // Reached by zapping (Up/Down, a swipe) rather than chosen: Recent waits longer for it.
+        zapped: Boolean = false,
     ) {
         val repo = mediaRepository ?: return
 
@@ -284,7 +287,7 @@ class StreamLoaderViewModel(
                     if (contentType == ContentType.LIVE_TV) {
                         historyJob =
                             viewModelScope.launchGuarded("StreamLoaderViewModel.liveHistory", Dispatchers.IO) {
-                                delay(AppSettings(context).watchDelaySeconds * 1000L)
+                                delay(recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped))
                                 repo.saveLastPlayedItem(
                                     categoryId = currentCategoryId,
                                     itemId = streamId,
@@ -451,8 +454,17 @@ class StreamLoaderViewModel(
         enrichJob?.cancel()
     }
 
-    fun loadStream(item: MediaItem) {
+    /**
+     * Plays [item]. [zapped] is true for a channel reached by stepping through the list (Up/Down
+     * in full screen, a swipe on the phone) rather than chosen: it goes into Recent only once it
+     * has settled (see [recentRecordDelayMs]).
+     */
+    fun loadStream(
+        item: MediaItem,
+        zapped: Boolean = false,
+    ) {
         lastLoadRequest = item
+        lastLoadZapped = zapped
         requestedStreamId = item.id
         cancelLoads()
         loadJob =
@@ -465,7 +477,7 @@ class StreamLoaderViewModel(
                 val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else channels.value.items
 
                 // Fast path: start loading stream immediately
-                loadStreamInternal(item.id, item.name, currentStreams)
+                loadStreamInternal(item.id, item.name, currentStreams, zapped = zapped)
                 // Superseded while resolving: leave the category state to the load that replaced us.
                 ensureActive()
 
@@ -517,6 +529,7 @@ class StreamLoaderViewModel(
      */
     fun loadStreamLight(item: MediaItem) {
         lastLoadRequest = item
+        lastLoadZapped = false
         requestedStreamId = item.id
         cancelLoads()
         loadJob =
@@ -534,7 +547,7 @@ class StreamLoaderViewModel(
 
     fun retryLastLoad() {
         if (lastLoadRequest != null) {
-            loadStream(lastLoadRequest!!)
+            loadStream(lastLoadRequest!!, lastLoadZapped)
         } else {
             // Failed on the very first load before a stream was selected
             initializeAndLoad()
@@ -542,11 +555,11 @@ class StreamLoaderViewModel(
     }
 
     fun nextChannel() {
-        channels.updateAndGet { it.next() }.current?.let(::loadStream)
+        channels.updateAndGet { it.next() }.current?.let { loadStream(it, zapped = true) }
     }
 
     fun prevChannel() {
-        channels.updateAndGet { it.previous() }.current?.let(::loadStream)
+        channels.updateAndGet { it.previous() }.current?.let { loadStream(it, zapped = true) }
     }
 
     fun toggleFavorite() {
@@ -859,6 +872,22 @@ class StreamLoaderViewModelFactory(
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
+}
+
+/** How long a channel reached by zapping must play before it goes into Recent. */
+internal const val ZAP_SETTLE_MS = 60_000L
+
+/**
+ * How long a live channel plays before it goes into Recent: the watch delay for a channel chosen
+ * on purpose; for one reached by zapping, [ZAP_SETTLE_MS] or the watch delay if that is longer,
+ * so zapping through a category doesn't fill Recent.
+ */
+internal fun recentRecordDelayMs(
+    watchDelaySeconds: Int,
+    zapped: Boolean,
+): Long {
+    val watchDelayMs = watchDelaySeconds * 1000L
+    return if (zapped) maxOf(watchDelayMs, ZAP_SETTLE_MS) else watchDelayMs
 }
 
 /** The synopsis to show for [episode]: its own plot, or null — never the series' plot. */
