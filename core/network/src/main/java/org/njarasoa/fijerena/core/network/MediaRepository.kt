@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.RecentPlay
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -116,6 +117,12 @@ private fun WatchStateEntity.toWatchedItem(): WatchedItem =
         audioTrackIndex = audioTrackIndex,
         subtitleTrackIndex = subtitleTrackIndex,
     )
+
+/** What [MediaRepository.removeFromRecent] took out of Recent, for [MediaRepository.restoreRecent]. */
+data class RecentRemoval(
+    val contentType: String,
+    val plays: List<RecentPlay>,
+)
 
 @Serializable
 data class FavoriteItem(
@@ -1963,18 +1970,44 @@ class MediaRepository(
      * [WatchStateEntity.lastPlayedAt] timestamp in `watch_state`, preserving any saved position
      * and completion status. Refreshes the published [recentItems] StateFlow upon completion.
      *
+     * Returns what it cleared, for [restoreRecent] (the Undo after a removal, docs/plans/
+     * 20261009_tv-recents-favorites-plan.md → A).
+     *
      * Server-backed providers own their own recency list and don't support removal — see
      * [supportsRemoveFromRecent]. Callers must check that before offering this action; this
-     * returns `false` without touching anything if they don't.
+     * returns null without touching anything if they don't.
      */
     suspend fun removeFromRecent(
         itemId: String,
         contentType: String,
         seriesId: String? = null,
-    ): Boolean {
-        if (usesServerUserData) return false
+    ): RecentRemoval? {
+        if (usesServerUserData) return null
         val now = System.currentTimeMillis()
-        watchStateDao.clearRecentSeries(providerId, profileId, seriesId ?: itemId, contentType, now)
+        val plays = watchStateDao.takeRecentSeries(providerId, profileId, seriesId ?: itemId, contentType, now)
+        refreshRecentItems(contentType)
+        return RecentRemoval(contentType, plays)
+    }
+
+    /**
+     * Undoes [removeFromRecent]: each row it cleared gets its previous `lastPlayedAt` back, so the
+     * entry returns to its place in Recent. A row played again in between keeps its newer time.
+     * Synced like the removal: `updatedAt` moves on.
+     */
+    suspend fun restoreRecent(removal: RecentRemoval) {
+        watchStateDao.restoreRecentPlays(providerId, profileId, removal.contentType, removal.plays, System.currentTimeMillis())
+        refreshRecentItems(removal.contentType)
+    }
+
+    /**
+     * Clear Recent for one section: every [contentType] row leaves the Recent list, keeping its
+     * position and completion, for this source and profile — unlike [clearWatchHistory], which
+     * wipes every section's progress. Synced like [removeFromRecent]. False (nothing done) for a
+     * source that keeps its own history ([supportsRemoveFromRecent]).
+     */
+    suspend fun clearRecent(contentType: String): Boolean {
+        if (usesServerUserData) return false
+        watchStateDao.clearRecent(providerId, profileId, contentType, System.currentTimeMillis())
         refreshRecentItems(contentType)
         return true
     }

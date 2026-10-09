@@ -165,6 +165,78 @@ interface WatchStateDao {
         now: Long,
     )
 
+    /** The rows [clearRecentSeries] takes out of Recent, each with the `lastPlayedAt` it had. */
+    @Query(
+        "SELECT itemId, lastPlayedAt FROM watch_state " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND (seriesId = :seriesId OR itemId = :seriesId) " +
+            "AND contentType = :contentType AND lastPlayedAt IS NOT NULL",
+    )
+    suspend fun getRecentSeriesPlays(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+    ): List<RecentPlay>
+
+    /**
+     * [clearRecentSeries], returning what it cleared, so an Undo can put it back with
+     * [restoreRecentPlays] (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     */
+    @Transaction
+    suspend fun takeRecentSeries(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+        now: Long,
+    ): List<RecentPlay> {
+        val plays = getRecentSeriesPlays(providerId, profileId, seriesId, contentType)
+        clearRecentSeries(providerId, profileId, seriesId, contentType, now)
+        return plays
+    }
+
+    /**
+     * Puts one row back in Recent at the time it was last played. A row played again since its
+     * removal keeps its newer time. `updatedAt` moves to [now] so live sync carries the change.
+     */
+    @Query(
+        "UPDATE watch_state SET lastPlayedAt = :lastPlayedAt, updatedAt = :now " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType " +
+            "AND lastPlayedAt IS NULL",
+    )
+    suspend fun restoreLastPlayedAt(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        lastPlayedAt: Long,
+        now: Long,
+    )
+
+    /** Undo of [takeRecentSeries]: every row it cleared, in one transaction. */
+    @Transaction
+    suspend fun restoreRecentPlays(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        plays: List<RecentPlay>,
+        now: Long,
+    ) {
+        plays.forEach { restoreLastPlayedAt(providerId, profileId, it.itemId, contentType, it.lastPlayedAt, now) }
+    }
+
+    /** Clear Recent for one content type: every row leaves the Recent list, progress and completion stay. */
+    @Query(
+        "UPDATE watch_state SET lastPlayedAt = NULL, updatedAt = :now " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType AND lastPlayedAt IS NOT NULL",
+    )
+    suspend fun clearRecent(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        now: Long,
+    )
+
     /** Tier 2: every row for the content type, uncapped. Position/completion are stream attributes, not history. */
     @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType")
     suspend fun getByContentType(
@@ -335,6 +407,12 @@ interface WatchStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun restoreAll(entities: List<WatchStateEntity>)
 }
+
+/** A row's place in Recent: what [WatchStateDao.takeRecentSeries] clears and an Undo restores. */
+data class RecentPlay(
+    val itemId: String,
+    val lastPlayedAt: Long,
+)
 
 data class SeriesCompletedCount(
     val seriesId: String,

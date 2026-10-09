@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.fixtures
 
 import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.xtream.db.RecentPlay
 import org.njarasoa.fijerena.core.network.xtream.db.SeriesCompletedCount
 import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
@@ -126,6 +127,50 @@ class FakeWatchStateDao : WatchStateDao {
                 existing.profileId == profileId &&
                 existing.contentType == contentType &&
                 (existing.seriesId == seriesId || existing.itemId == seriesId)
+            ) {
+                rows[k] = existing.copy(lastPlayedAt = null, updatedAt = now)
+            }
+        }
+    }
+
+    override suspend fun getRecentSeriesPlays(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+    ): List<RecentPlay> =
+        rows.values
+            .filter {
+                it.providerId == providerId &&
+                    it.profileId == profileId &&
+                    it.contentType == contentType &&
+                    (it.seriesId == seriesId || it.itemId == seriesId)
+            }.mapNotNull { row -> row.lastPlayedAt?.let { RecentPlay(row.itemId, it) } }
+
+    override suspend fun restoreLastPlayedAt(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        lastPlayedAt: Long,
+        now: Long,
+    ) {
+        val k = Key(providerId, profileId, itemId, contentType)
+        val existing = rows[k] ?: return
+        if (existing.lastPlayedAt == null) rows[k] = existing.copy(lastPlayedAt = lastPlayedAt, updatedAt = now)
+    }
+
+    override suspend fun clearRecent(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        now: Long,
+    ) {
+        for ((k, existing) in rows.entries) {
+            if (existing.providerId == providerId &&
+                existing.profileId == profileId &&
+                existing.contentType == contentType &&
+                existing.lastPlayedAt != null
             ) {
                 rows[k] = existing.copy(lastPlayedAt = null, updatedAt = now)
             }

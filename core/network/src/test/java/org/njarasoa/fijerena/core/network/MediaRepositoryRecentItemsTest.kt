@@ -10,9 +10,11 @@ import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
@@ -219,5 +221,89 @@ class MediaRepositoryRecentItemsTest {
         }
 
         assertEquals(listOf("s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+    }
+
+    @Test
+    fun restoreRecentPutsAnItemBackInItsPlace() {
+        val repository = repositoryWith(channel("bbc"), channel("cnn"), channel("arte"))
+
+        val removal = runBlocking { repository.removeFromRecent("cnn", ContentType.LIVE_TV) }
+        assertEquals(listOf("bbc", "arte"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+
+        runBlocking { repository.restoreRecent(checkNotNull(removal)) }
+
+        assertEquals(listOf("bbc", "cnn", "arte"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+        // Synced like the removal: updatedAt moved on, lastPlayedAt is the old one.
+        val row = watchStateDao.all().single { it.itemId == "cnn" }
+        assertEquals(999_999L, row.lastPlayedAt)
+        assertTrue(row.updatedAt > 1_000_000L)
+    }
+
+    @Test
+    fun restoreRecentPutsEverySeriesEpisodeBack() {
+        val repository =
+            repositoryWith(
+                episode("s1e2", seriesId = "s1"),
+                episode("s2e1", seriesId = "s2"),
+                episode("s1e1", seriesId = "s1"),
+            )
+
+        val removal = runBlocking { repository.removeFromRecent("s1", ContentType.TV_SHOWS, seriesId = "s1") }
+        assertEquals(listOf("s1e1", "s1e2"), checkNotNull(removal).plays.map { it.itemId }.sorted())
+
+        runBlocking { repository.restoreRecent(removal) }
+
+        assertEquals(listOf("s1", "s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+        assertEquals(
+            mapOf("s1e2" to 1_000_000L, "s2e1" to 999_999L, "s1e1" to 999_998L),
+            watchStateDao.all().associate { it.itemId to it.lastPlayedAt },
+        )
+    }
+
+    @Test
+    fun restoreRecentKeepsANewerPlay() {
+        val repository = repositoryWith(channel("bbc"), channel("cnn"))
+
+        val removal = runBlocking { repository.removeFromRecent("cnn", ContentType.LIVE_TV) }
+        // Played again before the Undo: that play is the newer truth.
+        watchStateDao.upsertRecency(
+            1L,
+            ProfileEntity.DEFAULT_ID,
+            "cnn",
+            ContentType.LIVE_TV,
+            null,
+            null,
+            2_000_000L,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+        )
+
+        runBlocking { repository.restoreRecent(checkNotNull(removal)) }
+
+        assertEquals(2_000_000L, watchStateDao.all().single { it.itemId == "cnn" }.lastPlayedAt)
+        assertEquals(listOf("cnn", "bbc"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+    }
+
+    @Test
+    fun clearRecentEmptiesOneSectionAndKeepsProgress() {
+        val repository =
+            repositoryWith(
+                movie("film", position = 50L, duration = 100L),
+                channel("bbc"),
+                channel("cnn"),
+            )
+
+        val cleared = runBlocking { repository.clearRecent(ContentType.LIVE_TV) }
+
+        assertTrue(cleared)
+        assertEquals(emptyList<String>(), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+        assertEquals(listOf("film"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+        assertEquals(emptyList<MediaItem>(), runBlocking { repository.recentItems(ContentType.LIVE_TV).first() })
+        // The rows stay: only their place in Recent goes.
+        assertEquals(3, watchStateDao.all().size)
     }
 }
