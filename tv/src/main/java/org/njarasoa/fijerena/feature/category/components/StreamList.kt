@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -75,6 +76,7 @@ import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -83,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.UndoBarState
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
@@ -167,11 +170,20 @@ internal fun StreamList(
      * stays where it was (the preview panel's tab row, L-10). Null keeps the focusable Refresh.
      */
     emptyMessage: String? = null,
+    /** Shows the Undo of a removal made here; the screen or panel holding the list draws it. */
+    undoBar: UndoBarState,
+    /**
+     * Edit mode of the Recent / Favourites list (browse only): OK on a row removes it at once, a
+     * ✕ on the focused row in place of the ⋮ (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     */
+    editMode: Boolean = false,
 ) {
     val listState = rememberLazyListState()
 
     val cardStyle = streamCardStyle()
     val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
+    val isFavoritesList =
+        selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID || selectedCategoryId == CategoryViewModel.FAVORITE_CATEGORIES_ID
     val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
     val canRemoveFromRecent = isRecentList && categoryViewModel.supportsRemoveFromRecent
 
@@ -183,11 +195,37 @@ internal fun StreamList(
             streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.id }.orEmpty()
         }
 
+    // A removal (docs/plans/20261009_tv-recents-favorites-plan.md → A): done at once, with an Undo
+    // bar instead of a confirmation. When the row leaves this list, focus goes to the row that took
+    // its place once the new list is on screen (rowFocusAfterChange below); the Undo brings the
+    // row back in its place and focus to it.
+    val currentStreams by rememberUpdatedState(streams)
+    var rowFocusAfterChange by remember { mutableStateOf<RowFocusAfterChange?>(null) }
+    val rowKeys: (ImmutableMediaList?) -> List<String> = { list ->
+        list?.mapNotNull { it.id.takeUnless(markerIds::contains) }.orEmpty()
+    }
+    val showUndo: (MediaItem, () -> Unit, Boolean) -> Unit = { item, undo, rowLeaves ->
+        if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(streams, item.id, rowKeys(streams))
+        undoBar.show(parseDisplayTitle(item.name).title.ifBlank { item.name }) {
+            undo()
+            if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(currentStreams, item.id, rowKeys(currentStreams))
+        }
+    }
+    val removeFromRecent: (MediaItem) -> Unit = { item ->
+        showUndo(item, categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId), true)
+    }
+    val removeFavorite: (MediaItem) -> Unit = { item ->
+        showUndo(item, categoryViewModel.removeFavorite(item, contentType), isFavoritesList)
+    }
+
     // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a row opens this
     // menu for it, in place of the hidden trailing ★/✓/🗑 buttons that used to be extra Right
     // stops. The target is rebuilt from the live sets so the menu shows the row's current state.
     var actionsItem by remember { mutableStateOf<MediaItem?>(null) }
     actionsItem?.let { item ->
+        // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
+        // the browse list's favoriteIds may not cover) the repository says.
+        val isFavorite = isFavoritesList || item.id in favoriteIds || categoryViewModel.isFavorite(item.id, contentType)
         FavoriteContextMenuDialog(
             target =
                 FavoriteMenuTarget.Stream(
@@ -195,16 +233,27 @@ internal fun StreamList(
                     itemName = item.name,
                     categoryId = item.categoryId,
                     contentType = contentType,
-                    isFavorite = item.id in favoriteIds,
+                    isFavorite = isFavorite,
                     isWatched = if (isWatchable) item.id in watchedIds else null,
                     isInRecent = canRemoveFromRecent,
                     seriesId = item.seriesId,
                 ),
-            onConfirm = { categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType) },
+            onConfirm = {
+                if (isFavorite) {
+                    removeFavorite(item)
+                } else {
+                    categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+                }
+            },
             onDismiss = { actionsItem = null },
             onToggleWatched = if (isWatchable) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
-            onRemoveFromRecent =
-                if (canRemoveFromRecent) ({ categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId) }) else null,
+            onRemoveFromRecent = if (canRemoveFromRecent) ({ removeFromRecent(item) }) else null,
+            list =
+                when {
+                    isRecentList -> RowMenuList.RECENT
+                    isFavoritesList -> RowMenuList.FAVORITES
+                    else -> RowMenuList.OTHER
+                },
         )
     }
 
@@ -281,6 +330,14 @@ internal fun StreamList(
         }
     }
 
+    LaunchedEffect(streams, streamsLoading, rowFocusAfterChange) {
+        val change = rowFocusAfterChange
+        if (change == null || streamsLoading || streams === change.from) return@LaunchedEffect
+        rowFocusAfterChange = null
+        // Null: the list is empty now; its empty state (or the panel's tab row) takes focus.
+        rowAfterChange(change.oldKeys, change.key, rowKeys(streams))?.let { pane.focusKey(it) }
+    }
+
     Column(modifier = modifier) {
         if (showHeader) {
             StreamListHeader(
@@ -290,6 +347,17 @@ internal fun StreamList(
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
                 isDevMode = isDevMode,
+            )
+        }
+        if (editMode) {
+            // What the mode does, under the list's title (plan → A, "Edit" mode).
+            Text(
+                text = stringResource(if (isRecentList) R.string.edit_recent_hint else R.string.edit_favorites_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaAccent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = Spacing.sm),
             )
         }
 
@@ -370,14 +438,27 @@ internal fun StreamList(
                                         isWatched = item.id in watchedIds,
                                         nowPlayingProgram = nowPlaying[item.id],
                                         isCurrent = item.id == lastPlayedItemId,
+                                        editMode = editMode,
                                         onClick = {
-                                            if (isWatchable) {
-                                                // Already focused: mark handled too, so the effect above
-                                                // doesn't scroll this row to the top as the screen leaves.
-                                                lastFocusedItemId = item.id
-                                                openedItemId = item.id
+                                            when {
+                                                editMode && isRecentList -> {
+                                                    removeFromRecent(item)
+                                                }
+
+                                                editMode -> {
+                                                    removeFavorite(item)
+                                                }
+
+                                                else -> {
+                                                    if (isWatchable) {
+                                                        // Already focused: mark handled too, so the effect above
+                                                        // doesn't scroll this row to the top as the screen leaves.
+                                                        lastFocusedItemId = item.id
+                                                        openedItemId = item.id
+                                                    }
+                                                    onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
+                                                }
                                             }
-                                            onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
                                         },
                                         onOpenActions = { actionsItem = item },
                                         cardModifier = Modifier.paneItem(pane, item.id),
@@ -485,6 +566,8 @@ private fun StreamItem(
     nowPlayingProgram: EpgProgram? = null,
     /** The channel playing / the last played item: the P5 "current" bar and title colour. */
     isCurrent: Boolean = false,
+    /** Edit mode: OK removes the row, and the focused row shows a ✕ instead of the ⋮. */
+    editMode: Boolean = false,
     onClick: () -> Unit,
     /** Long-press OK or the Menu key: open the row's action menu (P3). */
     onOpenActions: () -> Unit,
@@ -643,7 +726,10 @@ private fun StreamItem(
 
             // Discoverability hint for the action menu: a glyph, not a focus stop, on the
             // focused row only (plan Decisions 1).
-            if (isFocused) RowActionsHint()
+            when {
+                isFocused && editMode -> RowRemoveHint()
+                isFocused -> RowActionsHint()
+            }
         }
     }
 }
@@ -655,6 +741,17 @@ internal fun RowActionsHint() {
         imageVector = CinemaIcons.MoreVert,
         contentDescription = stringResource(R.string.row_actions_hint),
         tint = CinemaTextSecondary,
+        modifier = Modifier.size(TvDimensions.iconSmall),
+    )
+}
+
+/** The ✕ at the end of a focused row in edit mode: OK removes it. A glyph, not a focus stop. */
+@Composable
+private fun RowRemoveHint() {
+    Icon(
+        imageVector = CinemaIcons.Close,
+        contentDescription = stringResource(R.string.edit_remove_row),
+        tint = CinemaError,
         modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }

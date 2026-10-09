@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -163,6 +164,11 @@ class CategoryViewModel(
     private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
 
+    // Bumped on every favourite change made here, so a list held outside [uiState] (the Live TV
+    // panel's Favourites tab) re-reads it: a removed row goes, an Undo puts it back.
+    private val _favoritesVersion = MutableStateFlow(0)
+    val favoritesVersion: StateFlow<Int> = _favoritesVersion.asStateFlow()
+
     private val _favoriteCategoryIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteCategoryIds: StateFlow<Set<String>> = _favoriteCategoryIds.asStateFlow()
 
@@ -195,6 +201,11 @@ class CategoryViewModel(
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
     private var currentCategoryId: String? = null
+
+    // Live TV's Recent keeps its order for the visit (docs/plans/20261009_tv-recents-favorites-plan.md
+    // → B): the row ids in display order, removed ones included so an Undo puts a row back in its
+    // place. Reset on Refresh and when the section is entered again ([reloadRecentOnEntry]).
+    private var liveRecentOrder: List<String> = emptyList()
     private var isInitialLoad = true
     private var initialLoadRetried = false
     private var categoriesRetried = false
@@ -412,7 +423,8 @@ class CategoryViewModel(
         val handledVirtual =
             when (categoryId) {
                 RECENT_CATEGORY_ID, FAVORITES_CATEGORY_ID -> {
-                    emitStreams(checkNotNull(virtualCategoryItems(repo, categoryId, contentType)))
+                    val items = checkNotNull(virtualCategoryItems(repo, categoryId, contentType))
+                    emitStreams(if (categoryId == RECENT_CATEGORY_ID) inRecentOrder(items) else items)
                     loadNowPlaying(currentStreams)
                     true
                 }
@@ -625,14 +637,51 @@ class CategoryViewModel(
         } else if (repo != null) {
             if (repo.isFavorite(itemId, contentType)) {
                 repo.removeFavorite(itemId, contentType)
+                // The Favourites list loses the row at once, the rest staying where they are.
+                if (currentCategoryId == FAVORITES_CATEGORY_ID) currentStreams = currentStreams.filterNot { it.id == itemId }
             } else {
                 repo.addFavorite(itemId, itemName, categoryId, contentType)
             }
+            _favoritesVersion.value++
             viewModelScope.launchGuarded("CategoryViewModel.refreshPerItemData") { refreshPerItemData() }
             // Local rebuild only — no network fetch needed for a local favorite change
             refreshCategoriesLocal()
         }
     }
+
+    /**
+     * Removes [item] from the favourites (a stream, or the category of a Favorite Categories row),
+     * its row leaving the Favourites list in place, and returns the Undo: the favourite back as it
+     * was, and its row back where it was on that list (docs/plans/20261009_tv-recents-favorites-plan.md → A).
+     */
+    fun removeFavorite(
+        item: MediaItem,
+        contentType: String,
+    ): () -> Unit {
+        val index = currentStreams.indexOfFirst { it.id == item.id }
+        val listId = currentCategoryId
+        if (isFavoriteRow(item, contentType)) toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+        return {
+            if (!isFavoriteRow(item, contentType)) {
+                if (listId == FAVORITES_CATEGORY_ID && currentCategoryId == listId && index >= 0 &&
+                    currentStreams.none { it.id == item.id }
+                ) {
+                    currentStreams = currentStreams.toMutableList().apply { add(index.coerceAtMost(size), item) }
+                }
+                toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+            }
+        }
+    }
+
+    private fun isFavoriteRow(
+        item: MediaItem,
+        contentType: String,
+    ): Boolean =
+        if (item.id.startsWith(FAVORITE_CATEGORY_ROW_PREFIX)) {
+            isFavoriteCategory(item.id.removePrefix(FAVORITE_CATEGORY_ROW_PREFIX), contentType)
+        } else {
+            isFavorite(item.id, contentType)
+        }
 
     /**
      * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md), same
@@ -656,27 +705,88 @@ class CategoryViewModel(
     /**
      * Removes an item (or all episodes of a series) from the Recent list.
      * Updates the local UI state streams list if the current category is RECENT_CATEGORY_ID.
+     * Returns the Undo, which puts back what was removed (docs/plans/20261009_tv-recents-favorites-plan.md → A).
      */
     fun removeFromRecent(
         itemId: String,
         contentType: String,
         seriesId: String? = null,
-    ) {
-        viewModelScope.launchGuarded("CategoryViewModel.removeFromRecent") {
-            // The Recent row (unlike category streams) can be visible before loadCategories()
-            // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
-            // into — so this can race ahead of the repository's assignment.
-            // awaitRepository() below waits for it rather than dropping the removal.
+    ): () -> Unit {
+        var removal: RecentRemoval? = null
+        val removing =
+            viewModelScope.launchGuarded("CategoryViewModel.removeFromRecent") {
+                // The Recent row (unlike category streams) can be visible before loadCategories()
+                // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
+                // into — so this can race ahead of the repository's assignment.
+                // awaitRepository() below waits for it rather than dropping the removal.
+                val repo = awaitRepository()
+                removal = repo.removeFromRecent(itemId, contentType, seriesId)
+                showRecentChange(repo)
+            }
+        return {
+            viewModelScope.launchGuarded("CategoryViewModel.undoRemoveFromRecent") {
+                removing.join()
+                val repo = awaitRepository()
+                removal?.let { repo.restoreRecent(it) }
+                showRecentChange(repo)
+            }
+        }
+    }
+
+    /**
+     * Clear Recent (edit mode): this section's whole Recent list, after the screen's one
+     * confirmation. Progress and watched marks stay.
+     */
+    fun clearRecent() {
+        viewModelScope.launchGuarded("CategoryViewModel.clearRecent") {
             val repo = awaitRepository()
-            repo.removeFromRecent(itemId, contentType, seriesId)
-            val currentState = _uiState.value
-            if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
-                val updatedStreams = repo.recentItems(contentType).value
-                _uiState.value =
-                    currentState.copy(
-                        streams = updatedStreams,
-                        streamsLoading = false,
-                    )
+            repo.clearRecent(contentType)
+            showRecentChange(repo)
+        }
+    }
+
+    /** Recent on screen after a removal, an Undo or a clear: the repository's list, in place for Live TV. */
+    private fun showRecentChange(repo: MediaRepository) {
+        val currentState = _uiState.value
+        if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
+            val updatedStreams = inRecentOrder(repo.recentItems(contentType).value.orEmpty())
+            currentStreams = updatedStreams
+            _uiState.value =
+                currentState.copy(
+                    streams = updatedStreams,
+                    streamsLoading = false,
+                )
+        }
+    }
+
+    /**
+     * Live TV's Recent in the order it had on screen this visit (new rows first); other sections'
+     * Recent as the repository orders it.
+     */
+    private fun inRecentOrder(items: List<MediaItem>): List<MediaItem> =
+        if (contentType == ContentType.LIVE_TV) {
+            liveRecentOrder = items.stableOrder(liveRecentOrder)
+            items.inStableOrder(liveRecentOrder)
+        } else {
+            items
+        }
+
+    /**
+     * The Live TV section entered again (back from another section, Home, the TV Guide or Search):
+     * Recent on screen reloads in the repository's order, last watched first. Not on returning from
+     * the preview layer, which keeps the order ([loadStreams] on Recent). The rows are replaced
+     * in place, with no loading state: the screen's own focus hand-back (a header button, a row)
+     * has already run on the list it found.
+     */
+    fun reloadRecentOnEntry() {
+        val state = _uiState.value
+        val onRecent = state is UiState.Success && state.selectedCategoryId == RECENT_CATEGORY_ID && !state.streamsLoading
+        if (contentType == ContentType.LIVE_TV && onRecent) {
+            viewModelScope.launchGuarded("CategoryViewModel.reloadRecentOnEntry") {
+                val repo = awaitRepository()
+                repo.refreshRecentItems(contentType)
+                liveRecentOrder = emptyList()
+                showRecentChange(repo)
             }
         }
     }
@@ -821,6 +931,8 @@ class CategoryViewModel(
     }
 
     fun refreshStreams(categoryId: String) {
+        // Refresh is the viewer asking for the current truth: Recent re-sorts.
+        if (categoryId == RECENT_CATEGORY_ID) liveRecentOrder = emptyList()
         loadStreamsJob?.cancel()
         nowPlayingJob?.cancel()
         loadStreamsJob =

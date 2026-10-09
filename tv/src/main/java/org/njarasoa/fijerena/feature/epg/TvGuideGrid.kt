@@ -109,6 +109,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -135,7 +136,9 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.feature.category.components.RowMenuList
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
+import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -149,6 +152,8 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
+import org.njarasoa.fijerena.ui.components.rememberUndoBarState
+import org.njarasoa.fijerena.ui.components.undoOnMenuKey
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -268,8 +273,13 @@ fun TvGuideGrid(
     isFavoriteChannel: suspend (channelId: String) -> Boolean,
     /** Returns whether the rows reload without the channel (a favourite removed in the Favourites guide). */
     onToggleFavorite: (MediaItem) -> Boolean,
-    /** Null where Remove from Recent is not offered (not the Recent guide, or the source keeps the history). */
-    onRemoveFromRecent: ((MediaItem) -> Unit)?,
+    /**
+     * Null where Remove from Recent is not offered (not the Recent guide, or the source keeps the
+     * history). Returns the removal's Undo.
+     */
+    onRemoveFromRecent: ((MediaItem) -> () -> Unit)?,
+    /** The Undo of a favourite removed with [onToggleFavorite]; returns whether the rows reload. */
+    onRestoreFavorite: (MediaItem) -> Boolean = { false },
     focusChannelId: String? = null,
 ) {
     val scale = LocalUiScale.current
@@ -303,119 +313,138 @@ fun TvGuideGrid(
     headerPane.bind(selectedKey = null, firstKey = HEADER_PREV, listState = null, indexOf = { HEADER_KEYS.indexOf(it) })
     focus.onExitUp = { scope.launch { headerPane.focusEntry() } }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(
-                    horizontal = Spacing.tvSafeMarginHorizontal,
-                    vertical = Spacing.tvSafeMarginVertical,
-                ).onPreviewKeyEvent { event ->
-                    // Back is taken here, before any focused button can swallow it (NAVIGATION_GUIDE
-                    // → "TV Back on Detail Screens"): it leaves the guide. Both edges are consumed;
-                    // the action runs on the release.
-                    val isBack = event.key == Key.Back
-                    if (isBack && event.type == KeyEventType.KeyUp) onBack()
-                    isBack
-                },
-    ) {
-        GuideHeader(
-            categoryName = categoryName,
-            state = state,
-            selectedDate = lastDate,
-            showDevStats = showDevStats,
-            focus = focus,
-            headerPane = headerPane,
-            returnFocus = returnFocus,
-            isRefreshing = isRefreshing,
-            onPreviousDay = onPreviousDay,
-            onNextDay = onNextDay,
-            onJumpToNow = {
-                if (ready != null && ready.selectedDate == today) {
-                    scope.launch { focus.focusNow(animate = true) }
-                } else {
-                    jumpToNowPending = true
-                    onJumpToNow()
-                }
-            },
-            onRefresh = onRefresh,
-            onSearch = {
-                returnFocus.leaveFrom(HEADER_SEARCH, verticalListState)
-                onSearch()
-            },
-            // Down from the header lands on what is under it: the grid's last cell, or the
-            // "No listings" Refresh; while loading it stays.
-            onDownIntoGrid = {
-                scope.launch {
-                    when {
-                        state is EpgViewModel.UiState.Ready -> focus.focusRemembered()
-                        state is EpgViewModel.UiState.NoListings -> noListingsRefreshRequester.requestFocusWithRetry()
+    // A removal's Undo (plan → A): the bar at the guide's foot, Menu undoes while it shows.
+    val undoBar = rememberUndoBarState()
+
+    Box(modifier = Modifier.fillMaxSize().undoOnMenuKey(undoBar)) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ).onPreviewKeyEvent { event ->
+                        // Back is taken here, before any focused button can swallow it (NAVIGATION_GUIDE
+                        // → "TV Back on Detail Screens"): it leaves the guide. Both edges are consumed;
+                        // the action runs on the release.
+                        val isBack = event.key == Key.Back
+                        if (isBack && event.type == KeyEventType.KeyUp) onBack()
+                        isBack
+                    },
+        ) {
+            GuideHeader(
+                categoryName = categoryName,
+                state = state,
+                selectedDate = lastDate,
+                showDevStats = showDevStats,
+                focus = focus,
+                headerPane = headerPane,
+                returnFocus = returnFocus,
+                isRefreshing = isRefreshing,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+                onJumpToNow = {
+                    if (ready != null && ready.selectedDate == today) {
+                        scope.launch { focus.focusNow(animate = true) }
+                    } else {
+                        jumpToNowPending = true
+                        onJumpToNow()
                     }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+                },
+                onRefresh = onRefresh,
+                onSearch = {
+                    returnFocus.leaveFrom(HEADER_SEARCH, verticalListState)
+                    onSearch()
+                },
+                // Down from the header lands on what is under it: the grid's last cell, or the
+                // "No listings" Refresh; while loading it stays.
+                onDownIntoGrid = {
+                    scope.launch {
+                        when {
+                            state is EpgViewModel.UiState.Ready -> focus.focusRemembered()
+                            state is EpgViewModel.UiState.NoListings -> noListingsRefreshRequester.requestFocusWithRetry()
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-        when {
-            state is EpgViewModel.UiState.Ready -> {
-                GuideBody(
-                    state = state,
-                    focus = focus,
-                    scrollState = scrollState,
-                    verticalListState = verticalListState,
-                    returnFocus = returnFocus,
-                    onProgramSelected = onProgramSelected,
-                    onChannelSelected = onChannelSelected,
-                    onRowsVisible = onRowsVisible,
-                    isFavoriteChannel = isFavoriteChannel,
-                    // A favourite removed in the Favourites guide, and Remove from Recent: the rows
-                    // reload without the channel, so its cell goes: focus lands again, as on first
-                    // open, on the row that took its place.
-                    onToggleFavorite = { channel -> if (onToggleFavorite(channel)) entryFocusDone = false },
-                    onRemoveFromRecent =
-                        onRemoveFromRecent?.let { remove ->
-                            { channel ->
-                                entryFocusDone = false
-                                remove(channel)
+            when {
+                state is EpgViewModel.UiState.Ready -> {
+                    GuideBody(
+                        state = state,
+                        focus = focus,
+                        scrollState = scrollState,
+                        verticalListState = verticalListState,
+                        returnFocus = returnFocus,
+                        onProgramSelected = onProgramSelected,
+                        onChannelSelected = onChannelSelected,
+                        onRowsVisible = onRowsVisible,
+                        isFavoriteChannel = isFavoriteChannel,
+                        // A favourite removed in the Favourites guide, and Remove from Recent: the rows
+                        // reload without the channel, so its cell goes: focus lands again, as on first
+                        // open, on the row that took its place. Both removals come with an Undo
+                        // (plan → A), which reloads them with the channel back in its place.
+                        onToggleFavorite = { channel, wasFavorite ->
+                            if (onToggleFavorite(channel)) entryFocusDone = false
+                            if (wasFavorite) {
+                                undoBar.show(parseDisplayTitle(channel.name).title.ifBlank { channel.name }) {
+                                    if (onRestoreFavorite(channel)) entryFocusDone = false
+                                }
                             }
                         },
-                )
-                LaunchedEffect(state) {
-                    // Back from a preview or the browser: NavReturnFocus hands focus to the cell
-                    // or the Search button that opened it.
-                    if (returnFocus.key != null) return@LaunchedEffect
-                    if (!entryFocusDone) {
-                        entryFocusDone = true
-                        focus.focusNow(animate = false)
-                    } else if (jumpToNowPending && state.selectedDate == today) {
-                        jumpToNowPending = false
-                        focus.focusNow(animate = true)
+                        onRemoveFromRecent =
+                            onRemoveFromRecent?.let { remove ->
+                                { channel ->
+                                    entryFocusDone = false
+                                    val undo = remove(channel)
+                                    undoBar.show(parseDisplayTitle(channel.name).title.ifBlank { channel.name }) {
+                                        entryFocusDone = false
+                                        undo()
+                                    }
+                                }
+                            },
+                    )
+                    LaunchedEffect(state) {
+                        // Back from a preview or the browser: NavReturnFocus hands focus to the cell
+                        // or the Search button that opened it.
+                        if (returnFocus.key != null) return@LaunchedEffect
+                        if (!entryFocusDone) {
+                            entryFocusDone = true
+                            focus.focusNow(animate = false)
+                        } else if (jumpToNowPending && state.selectedDate == today) {
+                            jumpToNowPending = false
+                            focus.focusNow(animate = true)
+                        }
                     }
                 }
-            }
 
-            state is EpgViewModel.UiState.NoListings -> {
-                // GuideBody's hand-back is not composed here: Back from the browser lands on Search.
-                NavReturnFocusEffect(returnFocus)
-                NoListingsBody(
-                    state = state,
-                    refreshRequester = noListingsRefreshRequester,
-                    // This button goes away with the reload, so whatever comes back takes focus again.
-                    onRefresh = {
-                        entryFocusDone = false
-                        onRefresh()
-                    },
-                    takeFocus = !entryFocusDone,
-                    onFocusTaken = { entryFocusDone = true },
-                )
-            }
+                state is EpgViewModel.UiState.NoListings -> {
+                    // GuideBody's hand-back is not composed here: Back from the browser lands on Search.
+                    NavReturnFocusEffect(returnFocus)
+                    NoListingsBody(
+                        state = state,
+                        refreshRequester = noListingsRefreshRequester,
+                        // This button goes away with the reload, so whatever comes back takes focus again.
+                        onRefresh = {
+                            entryFocusDone = false
+                            onRefresh()
+                        },
+                        takeFocus = !entryFocusDone,
+                        onFocusTaken = { entryFocusDone = true },
+                    )
+                }
 
-            else -> {
-                LoadingBody()
+                else -> {
+                    LoadingBody()
+                }
             }
         }
+        // Over the screen, not inside its padded column: kept off the overscan edge here.
+        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.tvSafeMarginVertical))
     }
 }
 
@@ -929,7 +958,8 @@ private fun GuideBody(
     onChannelSelected: (String, String, String) -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
     isFavoriteChannel: suspend (channelId: String) -> Boolean,
-    onToggleFavorite: (MediaItem) -> Unit,
+    /** The channel, and whether it was a favourite when its menu opened. */
+    onToggleFavorite: (MediaItem, Boolean) -> Unit,
     onRemoveFromRecent: ((MediaItem) -> Unit)?,
 ) {
     val scale = LocalUiScale.current
@@ -1246,9 +1276,11 @@ private fun GuideBody(
                     isFavorite = isFavorite,
                     isInRecent = onRemoveFromRecent != null,
                 ),
-            onConfirm = { onToggleFavorite(channel) },
+            onConfirm = { onToggleFavorite(channel, isFavorite) },
             onDismiss = { actions = null },
             onRemoveFromRecent = onRemoveFromRecent?.let { remove -> { remove(channel) } },
+            // Offered on the Recent guide only, where it comes first (plan → A).
+            list = if (onRemoveFromRecent != null) RowMenuList.RECENT else RowMenuList.OTHER,
         )
     }
     val openActions: (MediaItem) -> Unit = { channel -> scope.launch { actions = channel to isFavoriteChannel(channel.id) } }

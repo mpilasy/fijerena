@@ -34,15 +34,28 @@ enum class CurrentChannelPolicy {
  * about to press jumps somewhere else. Freezing the order while the list is displayed keeps it
  * predictable; it is re-sorted the next time the list is opened or explicitly refreshed.
  */
-fun List<MediaItem>.inDisplayOrderOf(displayed: List<MediaItem>): List<MediaItem> {
-    val positions = displayed.withIndex().associate { (index, item) -> item.id to index }
-    val (known, fresh) = partition { it.id in positions }
-    return fresh + known.sortedBy { positions.getValue(it.id) }
+fun List<MediaItem>.inDisplayOrderOf(displayed: List<MediaItem>): List<MediaItem> = inStableOrder(stableOrder(displayed.map { it.id }))
+
+/**
+ * The display order [order] (row ids) extended with this list: ids it doesn't know yet go first,
+ * in this list's order; known ids keep their places — including ids no longer in the list, so a
+ * row removed and then put back by an Undo returns to where it was, not to the top
+ * (docs/plans/20261009_tv-recents-favorites-plan.md → B, "The list doesn't move while you use it").
+ */
+fun List<MediaItem>.stableOrder(order: List<String>): List<String> {
+    val known = order.toHashSet()
+    return mapNotNull { it.id.takeUnless(known::contains) } + order
+}
+
+/** This list sorted by [order] (from [stableOrder]); ids missing from it go first. */
+fun List<MediaItem>.inStableOrder(order: List<String>): List<MediaItem> {
+    val positions = order.withIndex().associate { (index, id) -> id to index }
+    return sortedBy { positions[it.id] ?: -1 }
 }
 
 /**
  * [items] held in a stable display order for as long as this surface is showing them — see
- * [inDisplayOrderOf]. Changing [resetKey] (the list being reopened, or an explicit refresh)
+ * [stableOrder]. Changing [resetKey] (the list being reopened, or an explicit refresh)
  * adopts the incoming order as-is.
  */
 @Composable
@@ -50,9 +63,11 @@ fun rememberStableRecentOrder(
     items: List<MediaItem>,
     resetKey: Any? = Unit,
 ): List<MediaItem> {
+    var order by remember(resetKey) { mutableStateOf(items.map { it.id }) }
     var displayed by remember(resetKey) { mutableStateOf(items) }
     LaunchedEffect(items, resetKey) {
-        displayed = items.inDisplayOrderOf(displayed)
+        order = items.stableOrder(order)
+        displayed = items.inStableOrder(order)
     }
     return displayed
 }

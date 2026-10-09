@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -332,30 +333,61 @@ class EpgViewModel(
             repository.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
         }
         val reload = removing && categoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
-        if (reload) {
-            loadJob?.cancel()
-            loadJob =
-                viewModelScope.launchGuarded("EpgViewModel.toggleFavoriteChannel", onError = ::showError) {
-                    channels = null
-                    loadEpgDataInternal(currentDate)
-                }
-        }
+        if (reload) reloadRows("EpgViewModel.toggleFavoriteChannel")
         return reload
+    }
+
+    /**
+     * The Undo of a favourite removed with [toggleFavoriteChannel]: [channel] a favourite again, as it
+     * was (docs/plans/20261009_tv-recents-favorites-plan.md → A). Returns whether the rows reload —
+     * the Favourites guide gets the channel back in its place.
+     */
+    fun restoreFavoriteChannel(channel: MediaItem): Boolean {
+        val restoring = !repository.isFavorite(channel.id, ContentType.LIVE_TV)
+        if (restoring) repository.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
+        val reload = restoring && categoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
+        if (reload) reloadRows("EpgViewModel.restoreFavoriteChannel")
+        return reload
+    }
+
+    /** The rows again, on the same day, after a favourite or Recent change. */
+    private fun reloadRows(name: String) {
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launchGuarded(name, onError = ::showError) {
+                channels = null
+                loadEpgDataInternal(currentDate)
+            }
     }
 
     /** Remove from Recent: on the Recent guide, for a source that keeps its own history. */
     val canRemoveFromRecent: Boolean
         get() = categoryId == CategoryViewModel.RECENT_CATEGORY_ID && ::repository.isInitialized && repository.supportsRemoveFromRecent
 
-    /** Removes [channel] from Recent and reloads the rows without it, on the same day. */
-    fun removeFromRecent(channel: MediaItem) {
+    /**
+     * Removes [channel] from Recent and reloads the rows without it, on the same day. Returns the
+     * Undo, which puts it back in its place and reloads them again.
+     */
+    fun removeFromRecent(channel: MediaItem): () -> Unit {
+        var removal: RecentRemoval? = null
         loadJob?.cancel()
-        loadJob =
+        val removing =
             viewModelScope.launchGuarded("EpgViewModel.removeFromRecent", onError = ::showError) {
-                repository.removeFromRecent(channel.id, ContentType.LIVE_TV)
+                removal = repository.removeFromRecent(channel.id, ContentType.LIVE_TV)
                 channels = null
                 loadEpgDataInternal(currentDate)
             }
+        loadJob = removing
+        return {
+            loadJob?.takeIf { it !== removing }?.cancel()
+            loadJob =
+                viewModelScope.launchGuarded("EpgViewModel.undoRemoveFromRecent", onError = ::showError) {
+                    removing.join()
+                    removal?.let { repository.restoreRecent(it) }
+                    channels = null
+                    loadEpgDataInternal(currentDate)
+                }
+        }
     }
 
     fun selectPreviousDay() = loadEpgData(currentDate.minusDays(1))

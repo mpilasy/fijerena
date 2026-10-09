@@ -83,4 +83,24 @@ class RecentChannelsTest {
         assertEquals(recent, recent.withCurrentChannel(null, CurrentChannelPolicy.INCLUDE))
         assertEquals(recent, recent.withCurrentChannel(null, CurrentChannelPolicy.EXCLUDE))
     }
+
+    @Test
+    fun stableOrderPutsARemovedRowBackInItsPlace() {
+        val shown = listOf(channel("bbc"), channel("cnn"), channel("arte"))
+        val order = shown.stableOrder(emptyList())
+        // cnn removed: the order still knows it.
+        val afterRemoval = listOf(channel("bbc"), channel("arte"))
+        val keptOrder = afterRemoval.stableOrder(order)
+        assertEquals(listOf("bbc", "arte"), afterRemoval.inStableOrder(keptOrder).map { it.id })
+        // Undo: the repository now lists it first (or anywhere); it goes back between the two.
+        val restored = listOf(channel("cnn"), channel("bbc"), channel("arte"))
+        assertEquals(listOf("bbc", "cnn", "arte"), restored.inStableOrder(restored.stableOrder(keptOrder)).map { it.id })
+    }
+
+    @Test
+    fun stableOrderPutsNewRowsFirstAndKeepsTheRest() {
+        val order = listOf("bbc", "cnn")
+        val republished = listOf(channel("cnn"), channel("tf1"), channel("bbc"))
+        assertEquals(listOf("tf1", "bbc", "cnn"), republished.inStableOrder(republished.stableOrder(order)).map { it.id })
+    }
 }

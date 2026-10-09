@@ -66,6 +66,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
+import org.njarasoa.fijerena.ui.components.UndoBarState
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
@@ -93,6 +94,8 @@ internal fun CategoryList(
      * item pane already has rows to land on (a Back return): its own hand-back has the last word.
      */
     focusSelectedOnOpen: Boolean,
+    /** Shows the Undo of a favourite category removed here (docs/plans/20261009_tv-recents-favorites-plan.md → A). */
+    undoBar: UndoBarState,
     modifier: Modifier = Modifier,
 ) {
     val (virtualCategories, regularCategories) =
@@ -140,7 +143,18 @@ internal fun CategoryList(
                     contentType = contentType,
                     isFavorite = category.id in favoriteCategoryIds,
                 ),
-            onConfirm = { categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType) },
+            onConfirm = {
+                val removing = category.id in favoriteCategoryIds
+                categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                // Not confirmed any more: removed at once, with an Undo.
+                if (removing) {
+                    undoBar.show(category.name) {
+                        if (!categoryViewModel.isFavoriteCategory(category.id, contentType)) {
+                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                        }
+                    }
+                }
+            },
             onDismiss = { actionsCategory = null },
         )
     }

@@ -150,8 +150,6 @@
     <!-- Favorites -->
     <string name="favorite_add">Ampidiro amin\'ny ankafizina</string>
     <string name="favorite_remove">Esory amin\'ny ankafizina</string>
-    <string name="favorite_remove_confirm_title">Esory amin\'ny ankafizina?</string>
-    <string name="favorite_remove_confirm_message">Tena te-hesorina amin\'ny ankafizina ve i \'%1$s\'?</string>
     <string name="recent_remove">Esory amin\'ny vao haingana</string>
     <string name="watched_mark">Mariho ho efa nojerena</string>
     <string name="watched_unmark">Mariho ho mbola tsy nojerena</string>
@@ -1145,4 +1143,14 @@
     <string name="tv_nav_rail_hint">Tsindrio Ankavia hahitana ny sokajy</string>
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Fantsona ankafizina</string>
+    <!-- TV Recent and Favorites -->
+    <string name="undo_removed_format">Nesorina i %1$s · Tsindrio Menu hanafoanana</string>
+    <string name="edit_list_action">Hanova ny lisitra</string>
+    <string name="edit_list_done">Vita ny fanovana</string>
+    <string name="edit_recent_hint">Fanovana ny vao haingana · OK manala · Hiverina rehefa vita</string>
+    <string name="edit_favorites_hint">Fanovana ny ankafizina · OK manala · Hiverina rehefa vita</string>
+    <string name="edit_remove_row">Esory</string>
+    <string name="recent_clear">Fafao ny vao haingana</string>
+    <string name="recent_clear_confirm_title">Hofafana ve ny vao haingana?</string>
+    <string name="recent_clear_confirm_message">Hiala avokoa ny ao amin\'ny lisitry ny vao haingana amin\'ity fizarana ity. Tsy voakitika kosa ny fandrosoana sy ny marika hoe efa nojerena.</string>
 </resources>

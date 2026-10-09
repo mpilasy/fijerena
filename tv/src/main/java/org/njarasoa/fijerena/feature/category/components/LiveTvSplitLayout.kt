@@ -233,7 +233,10 @@ internal fun LiveTvSplitLayout(
     var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
+    // Again after each favourite change: a row removed from the Favourites tab goes, and its Undo
+    // puts it back in its place (the list is sorted by name).
+    val favoritesVersion by categoryViewModel.favoritesVersion.collectAsStateWithLifecycle()
+    LaunchedEffect(favoritesVersion) {
         favoriteStreams = categoryViewModel.getFavoritesSnapshot()
         favoriteStreamsLoading = false
     }

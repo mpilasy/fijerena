@@ -104,6 +104,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
+import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -115,6 +116,8 @@ import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
+import org.njarasoa.fijerena.ui.components.rememberUndoBarState
+import org.njarasoa.fijerena.ui.components.undoOnMenuKey
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -180,6 +183,9 @@ fun SearchScreen(
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
     val longPressScope = rememberCoroutineScope()
 
+    // A favourite removed from a result's menu: at once, with an Undo (plan → A) — Menu undoes
+    // while the bar shows.
+    val undoBar = rememberUndoBarState()
     favoriteMenuTarget?.let { target ->
         FavoriteContextMenuDialog(
             target = target,
@@ -192,6 +198,11 @@ fun SearchScreen(
                             target.contentType,
                             target.isFavorite,
                         )
+                        if (target.isFavorite) {
+                            undoBar.show(target.categoryName) {
+                                viewModel.toggleFavoriteCategory(target.categoryId, target.categoryName, target.contentType, false)
+                            }
+                        }
                     }
 
                     is FavoriteMenuTarget.Stream -> {
@@ -202,6 +213,11 @@ fun SearchScreen(
                             target.contentType,
                             target.isFavorite,
                         )
+                        if (target.isFavorite) {
+                            undoBar.show(parseDisplayTitle(target.itemName).title.ifBlank { target.itemName }) {
+                                viewModel.toggleFavorite(target.itemId, target.itemName, target.categoryId, target.contentType, false)
+                            }
+                        }
                     }
                 }
             },
@@ -214,7 +230,7 @@ fun SearchScreen(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().undoOnMenuKey(undoBar),
     ) {
         Column(
             modifier =
@@ -311,6 +327,8 @@ fun SearchScreen(
                 }
             }
         }
+        // Over the screen, not inside its padded column: kept off the overscan edge here.
+        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.tvSafeMarginVertical))
     }
 }
 

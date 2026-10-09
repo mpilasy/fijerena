@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.category.components
 
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,9 +37,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
+import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rememberUndoBarState
+import org.njarasoa.fijerena.ui.components.undoOnMenuKey
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -132,94 +136,103 @@ internal fun LiveTvChannelPanel(
         true
     }
 
-    Column(modifier = modifier) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = Spacing.sm.scaled(scale))
-                    // Entering this row from the list lands on the selected tab, not on
-                    // whichever tab or the Refresh icon geometry preferred. focusProperties
-                    // directly before focusGroup, as Modifier.tvPane does.
-                    .focusProperties { onEnter = { tabsEntry.requestFocus() } }
-                    .focusGroup(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TvSectionTabs(
-                tabs = labels,
-                selectedIndex = selectedIndex,
-                onTabSelected = { index -> tabs.getOrNull(index)?.let(onContextSelected) },
-                entryFocusRequester = tabsEntry,
-                endFocusRequester = refreshFocus,
-                // On the tabs only, not Refresh: focus follows selection, so a focused tab is the
-                // selected one. Left on the first stays put.
+    // A removal's Undo (plan → A): the bar at the panel's foot, Menu undoes while it shows. Gone
+    // when another tab is picked.
+    val undoBar = rememberUndoBarState()
+    LaunchedEffect(context) { undoBar.dismiss() }
+
+    Box(modifier = modifier.undoOnMenuKey(undoBar)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
                 modifier =
-                    Modifier.weight(1f).onPreviewKeyEvent { event ->
-                        selectedIndex == 0 && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = Spacing.sm.scaled(scale))
+                        // Entering this row from the list lands on the selected tab, not on
+                        // whichever tab or the Refresh icon geometry preferred. focusProperties
+                        // directly before focusGroup, as Modifier.tvPane does.
+                        .focusProperties { onEnter = { tabsEntry.requestFocus() } }
+                        .focusGroup(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TvSectionTabs(
+                    tabs = labels,
+                    selectedIndex = selectedIndex,
+                    onTabSelected = { index -> tabs.getOrNull(index)?.let(onContextSelected) },
+                    entryFocusRequester = tabsEntry,
+                    endFocusRequester = refreshFocus,
+                    // On the tabs only, not Refresh: focus follows selection, so a focused tab is the
+                    // selected one. Left on the first stays put.
+                    modifier =
+                        Modifier.weight(1f).onPreviewKeyEvent { event ->
+                            selectedIndex == 0 && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft
+                        },
+                )
+                CinemaIconButton(
+                    onClick = onRefresh,
+                    enabled = !streamsLoading,
+                    size = TvDimensions.iconLarge,
+                    modifier = Modifier.focusRequester(refreshFocus),
+                    icon = {
+                        Icon(
+                            imageVector = CinemaIcons.Refresh,
+                            contentDescription = stringResource(R.string.category_refresh_streams_description),
+                            tint = CinemaTextPrimary,
+                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                        )
                     },
-            )
-            CinemaIconButton(
-                onClick = onRefresh,
-                enabled = !streamsLoading,
-                size = TvDimensions.iconLarge,
-                modifier = Modifier.focusRequester(refreshFocus),
-                icon = {
-                    Icon(
-                        imageVector = CinemaIcons.Refresh,
-                        contentDescription = stringResource(R.string.category_refresh_streams_description),
-                        tint = CinemaTextPrimary,
-                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                    )
+                )
+            }
+
+            StreamList(
+                streams = streams,
+                streamsLoading = streamsLoading,
+                selectedCategoryId = context.id,
+                selectedCategoryName = null,
+                lastPlayedItemId = lastPlayedItemId,
+                nowPlaying = nowPlaying,
+                contentType = contentType,
+                categoryViewModel = categoryViewModel,
+                isDevMode = isDevMode,
+                favoriteIds = favoriteIds,
+                watchProgress = watchProgress,
+                watchedIds = watchedIds,
+                onStreamSelected = { streamId, streamName, categoryId, target ->
+                    if (target is BrowseTarget.CategoryRef) {
+                        onCategorySelected(target.categoryId)
+                    } else {
+                        val item = streams?.firstOrNull { it.id == streamId }
+                        if (item != null) {
+                            onStreamPromote(item)
+                        } else {
+                            // Not resolvable from the current list (shouldn't normally happen) — fall
+                            // back to the caller's own handling.
+                            onStreamSelected(streamId, streamName, categoryId, target)
+                        }
+                    }
                 },
+                onRefreshStreams = { onRefresh() },
+                modifier =
+                    Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        when (event.key) {
+                            Key.DirectionLeft, Key.DirectionRight -> switchTabFromRow(event.key)
+                            else -> false
+                        }
+                    },
+                thumbnailScale = 0.5f,
+                paneFocus = rowsPane,
+                showHeader = false,
+                emptyMessage =
+                    if (context is ChannelContext.Favorites) {
+                        stringResource(R.string.live_panel_no_favorites)
+                    } else {
+                        stringResource(R.string.category_no_channels)
+                    },
+                undoBar = undoBar,
             )
         }
-
-        StreamList(
-            streams = streams,
-            streamsLoading = streamsLoading,
-            selectedCategoryId = context.id,
-            selectedCategoryName = null,
-            lastPlayedItemId = lastPlayedItemId,
-            nowPlaying = nowPlaying,
-            contentType = contentType,
-            categoryViewModel = categoryViewModel,
-            isDevMode = isDevMode,
-            favoriteIds = favoriteIds,
-            watchProgress = watchProgress,
-            watchedIds = watchedIds,
-            onStreamSelected = { streamId, streamName, categoryId, target ->
-                if (target is BrowseTarget.CategoryRef) {
-                    onCategorySelected(target.categoryId)
-                } else {
-                    val item = streams?.firstOrNull { it.id == streamId }
-                    if (item != null) {
-                        onStreamPromote(item)
-                    } else {
-                        // Not resolvable from the current list (shouldn't normally happen) — fall
-                        // back to the caller's own handling.
-                        onStreamSelected(streamId, streamName, categoryId, target)
-                    }
-                }
-            },
-            onRefreshStreams = { onRefresh() },
-            modifier =
-                Modifier.fillMaxSize().onPreviewKeyEvent { event ->
-                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                    when (event.key) {
-                        Key.DirectionLeft, Key.DirectionRight -> switchTabFromRow(event.key)
-                        else -> false
-                    }
-                },
-            thumbnailScale = 0.5f,
-            paneFocus = rowsPane,
-            showHeader = false,
-            emptyMessage =
-                if (context is ChannelContext.Favorites) {
-                    stringResource(R.string.live_panel_no_favorites)
-                } else {
-                    stringResource(R.string.category_no_channels)
-                },
-        )
+        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter))
     }
 }
 

@@ -102,6 +102,7 @@ fun TvEpgGuideScreen(
                     onRowsVisible = viewModel::onRowsVisible,
                     isFavoriteChannel = viewModel::isFavoriteChannel,
                     onToggleFavorite = viewModel::toggleFavoriteChannel,
+                    onRestoreFavorite = viewModel::restoreFavoriteChannel,
                     onRemoveFromRecent = if (viewModel.canRemoveFromRecent) viewModel::removeFromRecent else null,
                     focusChannelId = focusChannelId,
                 )

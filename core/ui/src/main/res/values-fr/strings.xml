@@ -150,8 +150,6 @@
     <!-- Favorites -->
     <string name="favorite_add">Ajouter aux favoris</string>
     <string name="favorite_remove">Retirer des favoris</string>
-    <string name="favorite_remove_confirm_title">Retirer des favoris\u00A0?</string>
-    <string name="favorite_remove_confirm_message">Voulez-vous vraiment retirer \'%1$s\' de vos favoris\u00A0?</string>
     <string name="recent_remove">Retirer des récents</string>
     <string name="watched_mark">Marquer comme vu</string>
     <string name="watched_unmark">Marquer comme non vu</string>
@@ -1153,4 +1151,14 @@
     <string name="tv_nav_rail_hint">Appuyez sur Gauche pour les sections</string>
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Chaînes favorites</string>
+    <!-- TV Recent and Favorites -->
+    <string name="undo_removed_format">Retiré de la liste\u00A0: %1$s · Appuyez sur Menu pour annuler</string>
+    <string name="edit_list_action">Modifier la liste</string>
+    <string name="edit_list_done">Terminer la modification</string>
+    <string name="edit_recent_hint">Modifier les récents · OK retire · Retour pour terminer</string>
+    <string name="edit_favorites_hint">Modifier les favoris · OK retire · Retour pour terminer</string>
+    <string name="edit_remove_row">Retirer</string>
+    <string name="recent_clear">Vider les récents</string>
+    <string name="recent_clear_confirm_title">Vider les récents\u00A0?</string>
+    <string name="recent_clear_confirm_message">Tout quitte la liste des récents de cette section. La progression et les marques «\u00A0vu\u00A0» sont conservées.</string>
 </resources>

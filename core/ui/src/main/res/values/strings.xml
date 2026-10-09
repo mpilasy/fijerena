@@ -154,8 +154,6 @@
     <!-- Favorites -->
     <string name="favorite_add">Add to Favorites</string>
     <string name="favorite_remove">Remove from Favorites</string>
-    <string name="favorite_remove_confirm_title">Remove from Favorites?</string>
-    <string name="favorite_remove_confirm_message">Are you sure you want to remove \'%1$s\' from your favorites?</string>
     <string name="recent_remove">Remove from Recent</string>
     <string name="watched_mark">Mark as watched</string>
     <string name="watched_unmark">Mark as unwatched</string>
@@ -1150,4 +1148,14 @@
     <string name="tv_nav_rail_hint">Press Left for sections</string>
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Favorite channels</string>
+    <!-- TV Recent and Favorites -->
+    <string name="undo_removed_format">Removed %1$s · Press Menu to undo</string>
+    <string name="edit_list_action">Edit list</string>
+    <string name="edit_list_done">Finish editing</string>
+    <string name="edit_recent_hint">Edit Recent · OK removes · Back to finish</string>
+    <string name="edit_favorites_hint">Edit Favorites · OK removes · Back to finish</string>
+    <string name="edit_remove_row">Remove</string>
+    <string name="recent_clear">Clear Recent</string>
+    <string name="recent_clear_confirm_title">Clear Recent?</string>
+    <string name="recent_clear_confirm_message">Everything leaves this section\'s Recent list. Progress and watched marks stay.</string>
 </resources>
