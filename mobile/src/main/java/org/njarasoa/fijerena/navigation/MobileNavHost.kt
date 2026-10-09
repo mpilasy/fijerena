@@ -131,6 +131,26 @@ fun MobileNavHost(
         }
     }
 
+    // A Search result opens in its own section's tab: a film picked from a search started on Live TV
+    // opens in Movies, with Movies highlighted and Back going to the Movies tab. The tab left is cut
+    // back to its root first, so its saved place doesn't keep the search. Same section, or a section
+    // the bar doesn't show (a single-section source): opened where it is, as before.
+    fun openInSectionTab(
+        contentType: String,
+        screen: Screen,
+    ) {
+        val target = MobileTab.entries.firstOrNull { it.contentType == contentType }
+        val current = navController.currentTab()
+        val tabs = visibleTabs(activeSource?.sections)
+        if (target == null || current == null || target == current || target !in tabs) {
+            navController.navigateOnce(screen)
+            return
+        }
+        navController.popBackStack(current.route, inclusive = false)
+        selectTab(target)
+        navController.navigate(screen)
+    }
+
     // A tab root's top bar leaves it: the Live TV dock is stopped first, as the bar does.
     fun leaveTabRoot(go: () -> Unit) {
         stopLiveDocks()
@@ -675,41 +695,38 @@ fun MobileNavHost(
                     contentType = searchScreen.contentType,
                     initialTypeFilter = searchScreen.initialTypeFilter,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
-                        when (contentType) {
-                            ContentType.TV_SHOWS -> {
-                                navController.navigateOnce(
+                        val screen =
+                            when (contentType) {
+                                ContentType.TV_SHOWS -> {
                                     Screen.EpisodeSelection(
                                         seriesId = itemId,
                                         seriesName = itemName,
                                         categoryId = categoryId,
-                                    ),
-                                )
-                            }
+                                    )
+                                }
 
-                            ContentType.MOVIES -> {
-                                navController.navigateOnce(
+                                ContentType.MOVIES -> {
                                     Screen.MovieDetails(
                                         movieId = itemId,
                                         movieName = itemName,
                                         categoryId = categoryId,
-                                    ),
-                                )
-                            }
+                                    )
+                                }
 
-                            else -> {
-                                // Live TV: land on the docked mini-player, not full-screen.
-                                navController.navigateOnce(
+                                else -> {
+                                    // Live TV: land on the docked mini-player, not full-screen.
                                     Screen.CategoryList(
                                         contentType = contentType,
                                         initialCategoryId = categoryId,
                                         initialStreamId = itemId,
-                                    ),
-                                )
+                                    )
+                                }
                             }
-                        }
+                        openInSectionTab(contentType, screen)
                     },
                     onCategorySelected = { categoryId, contentType ->
-                        navController.navigateOnce(
+                        openInSectionTab(
+                            contentType,
                             Screen.CategoryList(
                                 contentType = contentType,
                                 initialCategoryId = categoryId,
