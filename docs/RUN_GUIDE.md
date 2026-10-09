@@ -353,8 +353,10 @@ after the fixes). After the navigation rail and the Home change (2026-10-08 / 09
 and `settings.txt` match on their rail steps but depend on the device's recent searches and on a
 profile page that needs another source; `details.txt`, `live-tv-browse.txt`, `guide.txt` and
 `epg-management.txt` were edited by hand for the rail and not yet re-run (`guide.txt` and
-`epg-management.txt` need a source with a guide). Some file headers still say "not yet recorded"
-from before those rounds.
+`epg-management.txt` need a source with a guide). The Recent and Favorites rework (2026-10-09:
+immediate removal with Undo, edit mode, Home card actions, the Favorite channels row) was walked by
+hand on the emulator; no walk covers it yet, and `home.txt` / `home-rows.txt` were not re-run after
+it. Some file headers still say "not yet recorded" from before those rounds.
 
 ---
 
