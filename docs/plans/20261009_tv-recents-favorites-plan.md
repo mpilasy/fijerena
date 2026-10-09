@@ -96,7 +96,7 @@ to it too.
 
 | Lane | State | Commits |
 |---|---|---|
-| A — removal, edit mode, stable order | In progress | |
+| A — removal, edit mode, stable order | Done; walked on the emulator: remove from Recent → focus on the next row, bar, Menu undoes (10 s, was 5 — too short with a remote); favourite removed with no dialog, empty list's Refresh focused, undo; edit mode (hint, ✕, OK×2, undo, Back ends it); Clear Recent asks once; panel removal → next row, undo. Fixed: leaving edit mode from Clear Recent lost focus; bar text cut in the panels | f4cf15e8, 6d3a577b, a7df370f → main + fix |
 | B — settle rule, Home order | Done; walked on the emulator: 5 zaps of ~3 s and 15 s on the last recorded nothing, 65 s on it recorded it at the top; Home shows Channels (last watched, then Recent) and Favorite channels | 9c291e07, 41726778 → main |
-| C — Home card actions | Not started | |
+| C — Home card actions | In progress | |
 | Docs, walks, archive | Not started | |
