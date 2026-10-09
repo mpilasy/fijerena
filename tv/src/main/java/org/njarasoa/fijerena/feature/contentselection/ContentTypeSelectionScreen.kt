@@ -908,7 +908,8 @@ fun ContentTypeSelectionScreen(
                         Column(
                             modifier =
                                 Modifier
-                                    .fillMaxSize()
+                                    .fillMaxWidth()
+                                    .weight(1f)
                                     .verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
@@ -1056,9 +1057,9 @@ fun ContentTypeSelectionScreen(
                         }
                     }
                 }
+                // Under the rows, taking its own room, not over the bottom row's cards.
+                TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
             }
-
-            TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter))
 
             if (showProviderPicker && allProviders.size > 1) {
                 // A new dialog window starts with focus on the Close button *below* the list, so

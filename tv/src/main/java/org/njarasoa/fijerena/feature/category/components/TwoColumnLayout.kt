@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -283,7 +284,9 @@ internal fun TwoColumnLayout(
             }
 
             Row(
-                modifier = Modifier.fillMaxSize(),
+                // Leaves room for the Undo bar under it while the bar shows, instead of the bar
+                // covering the list's bottom row.
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
                 CategoryList(
@@ -339,8 +342,8 @@ internal fun TwoColumnLayout(
                             .fillMaxHeight(),
                 )
             }
+            TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
         }
-        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter))
     }
 }
 

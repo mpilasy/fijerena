@@ -213,7 +213,7 @@ internal fun LiveTvChannelPanel(
                 },
                 onRefreshStreams = { onRefresh() },
                 modifier =
-                    Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                    Modifier.fillMaxWidth().weight(1f).onPreviewKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                         when (event.key) {
                             Key.DirectionLeft, Key.DirectionRight -> switchTabFromRow(event.key)
@@ -231,8 +231,9 @@ internal fun LiveTvChannelPanel(
                     },
                 undoBar = undoBar,
             )
+            // Below the rows, taking its own room, not over the last row.
+            TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
         }
-        TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter))
     }
 }
 
