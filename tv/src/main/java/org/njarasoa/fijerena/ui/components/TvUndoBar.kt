@@ -151,7 +151,7 @@ fun TvUndoBar(
             text = stringResource(R.string.undo_removed_format, entry.name),
             style = MaterialTheme.typography.bodyMedium,
             color = CinemaTextPrimary,
-            maxLines = 1,
+            maxLines = 2, // the panels are narrow: "Press Menu to undo" must not be cut off
             overflow = TextOverflow.Ellipsis,
         )
     }

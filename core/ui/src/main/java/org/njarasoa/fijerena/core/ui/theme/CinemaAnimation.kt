@@ -17,7 +17,7 @@ object CinemaAnimation {
     const val hintsDismissMs = 7_000L
 
     /** How long an Undo bar stays up after a removal (TV Recent and Favorites). */
-    const val undoBarDismissMs = 5_000L
+    const val undoBarDismissMs = 10_000L
     const val statsUpdateMs = 1_000L
     const val loadingDebounceMs = 600L
     const val searchDebounceMs = 300L

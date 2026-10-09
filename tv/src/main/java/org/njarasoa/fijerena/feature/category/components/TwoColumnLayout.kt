@@ -19,6 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -55,6 +58,7 @@ import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
 import org.njarasoa.fijerena.ui.components.undoOnMenuKey
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -160,6 +164,19 @@ internal fun TwoColumnLayout(
             (selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID && categoryViewModel.supportsRemoveFromRecent)
     var editMode by remember(selectedCategoryId) { mutableStateOf(false) }
     var confirmClearRecent by remember { mutableStateOf(false) }
+    // Clear Recent exists only in edit mode: ending the mode while it has focus (Back, from the
+    // header) removed the focused button and left nothing focused. Focus goes to the pencil then.
+    // Read at the Back press: the button's own focus callback has already said "not focused" by
+    // the time an effect could look.
+    var clearRecentFocused by remember { mutableStateOf(false) }
+    var refocusEditAction by remember { mutableStateOf(false) }
+    val editActionFocus = remember { FocusRequester() }
+    LaunchedEffect(editMode, refocusEditAction) {
+        if (!editMode && refocusEditAction) {
+            refocusEditAction = false
+            editActionFocus.requestFocusWithRetry()
+        }
+    }
     if (confirmClearRecent) {
         ClearRecentDialog(
             onConfirm = {
@@ -180,7 +197,10 @@ internal fun TwoColumnLayout(
                     // BackHandler misses the first press while a row holds focus (NAVIGATION_GUIDE →
                     // "TV Back on Detail Screens"). Both edges are consumed; the release acts.
                     val isBack = editMode && event.key == Key.Back
-                    if (isBack && event.type == KeyEventType.KeyUp) editMode = false
+                    if (isBack && event.type == KeyEventType.KeyUp) {
+                        refocusEditAction = clearRecentFocused
+                        editMode = false
+                    }
                     isBack
                 },
     ) {
@@ -214,6 +234,7 @@ internal fun TwoColumnLayout(
                         icon = CinemaIcons.DeleteForever,
                         label = stringResource(R.string.recent_clear),
                         danger = true,
+                        modifier = Modifier.onFocusChanged { clearRecentFocused = it.isFocused },
                     )
                 }
                 if (canEdit) {
@@ -221,6 +242,7 @@ internal fun TwoColumnLayout(
                         onClick = { editMode = !editMode },
                         icon = CinemaIcons.Edit,
                         label = stringResource(if (editMode) R.string.edit_list_done else R.string.edit_list_action),
+                        modifier = Modifier.focusRequester(editActionFocus),
                     )
                 }
                 TvIconAction(
