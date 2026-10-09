@@ -81,7 +81,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -108,7 +107,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -131,8 +129,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
 import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
 import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
@@ -147,6 +143,7 @@ import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -158,8 +155,6 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 @Composable
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (NavContentType) -> Unit,
-    onSettings: () -> Unit,
-    onSearch: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
@@ -169,13 +164,10 @@ fun ContentTypeSelectionScreen(
     onLiveChannelSelected: (streamId: String, contextCategoryId: String) -> Unit = { _, _ -> },
     // A favourite movie (ContentType.MOVIES) or show (ContentType.TV_SHOWS) from its Home row.
     onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
-    onChooseProfile: () -> Unit = {},
     onSignInRequired: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val signInResources = LocalResources.current
-    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
-    val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
     var providerName by remember { mutableStateOf("") }
@@ -546,9 +538,10 @@ fun ContentTypeSelectionScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                     ) {
                         // Shown with one source too, for its sync status; only a picker (and
-                        // focusable) with two or more.
+                        // focusable) with two or more. The header's first focusable item hands Left
+                        // to the navigation rail: the pill when it can pick, else Search the guide.
+                        val canPick = providerName.isNotEmpty() && allProviders.size > 1
                         if (providerName.isNotEmpty()) {
-                            val canPick = allProviders.size > 1
                             val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
                             val displayName =
                                 if (appSettings.isDevMode && providerType.isNotEmpty()) {
@@ -584,6 +577,7 @@ fun ContentTypeSelectionScreen(
                                         ).then(
                                             if (canPick) {
                                                 Modifier
+                                                    .leftToRail()
                                                     .onFocusChanged { providerPillFocused = it.isFocused }
                                                     .clickable(role = Role.DropdownList) { showProviderPicker = true }
                                                     .semantics { contentDescription = switchProviderDescription }
@@ -627,7 +621,10 @@ fun ContentTypeSelectionScreen(
                         if (hasEpgData) {
                             CinemaIconButton(
                                 onClick = { leaveTo(RETURN_EPG_BROWSER, onEpgBrowser) },
-                                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
+                                modifier =
+                                    Modifier
+                                        .then(if (canPick) Modifier else Modifier.leftToRail())
+                                        .navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
                                 icon = {
                                     Icon(
                                         imageVector = CinemaIcons.MenuBook,
@@ -637,47 +634,6 @@ fun ContentTypeSelectionScreen(
                                 },
                             )
                         }
-                        CinemaIconButton(
-                            onClick = { leaveTo(RETURN_SEARCH, onSearch) },
-                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SEARCH),
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Search,
-                                    contentDescription = stringResource(R.string.content_search_all_description),
-                                    tint = CinemaTextPrimary,
-                                )
-                            },
-                        )
-                        // Always shown, even with one profile, so profiles are discoverable.
-                        activeProfile?.let { profile ->
-                            val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
-                            CinemaIconButton(
-                                onClick = { leaveTo(RETURN_PROFILE, onChooseProfile) },
-                                modifier =
-                                    Modifier
-                                        .semantics { contentDescription = switchLabel }
-                                        .navReturnFocusTarget(returnFocus, RETURN_PROFILE),
-                                icon = {
-                                    ProfileAvatar(
-                                        name = profile.name,
-                                        colorIndex = profile.colorIndex,
-                                        size = TvDimensions.iconMedium,
-                                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                                    )
-                                },
-                            )
-                        }
-                        CinemaIconButton(
-                            onClick = { leaveTo(RETURN_SETTINGS, onSettings) },
-                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SETTINGS),
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Settings,
-                                    contentDescription = stringResource(R.string.settings_title),
-                                    tint = CinemaTextPrimary,
-                                )
-                            },
-                        )
                     }
                 }
 
@@ -718,9 +674,12 @@ fun ContentTypeSelectionScreen(
                                     Modifier
                                         .focusRequester(heroCardFocus.getValue(key))
                                         .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
-                                        // Left on the first focusable tile and Right on the last stay
-                                        // put: with Live TV dimmed, the search left from Movies fell
-                                        // through to the shelf below.
+                                        // Left on the first focusable tile goes to the navigation
+                                        // rail, and Right on the last stays put: with Live TV dimmed,
+                                        // the search left from Movies fell through to the shelf below.
+                                        // leftToRail is outside the focusProperties, so it wins while
+                                        // the rail shows; without one, Left stays put.
+                                        .then(if (key == heroCards.firstOrNull()) Modifier.leftToRail() else Modifier)
                                         .focusProperties {
                                             if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
                                             if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
@@ -964,9 +923,6 @@ private const val RETURN_LIVE_TV = "liveTv"
 private const val RETURN_MOVIES = "movies"
 private const val RETURN_TV_SHOWS = "tvShows"
 private const val RETURN_EPG_BROWSER = "epgBrowser"
-private const val RETURN_SEARCH = "search"
-private const val RETURN_PROFILE = "profile"
-private const val RETURN_SETTINGS = "settings"
 private const val RETURN_SIGN_IN = "signIn"
 private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
 private const val RETURN_LIVE_ROW_PREFIX = "live:"
@@ -1199,7 +1155,8 @@ private fun JellyfinSignInPanel(
         CinemaPrimaryButton(
             onClick = onSignIn,
             text = stringResource(R.string.profile_jellyfin_sign_in_button),
-            modifier = signInButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+            // Home's only focusable item besides the header: Left goes to the navigation rail.
+            modifier = (signInButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier).leftToRail(),
         )
     }
 }

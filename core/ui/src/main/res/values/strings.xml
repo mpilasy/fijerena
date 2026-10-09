@@ -716,7 +716,6 @@
     <!-- TV Category/Search misc -->
     <string name="category_refresh_description">Refresh categories</string>
     <string name="category_refresh_streams_description">Refresh streams</string>
-    <string name="content_search_all_description">Search All</string>
     <string name="common_edit_field_description_format">Edit %1$s</string>
     <string name="common_loading">Loading…</string>
     <string name="search_stream_name_placeholder">Enter stream name…</string>

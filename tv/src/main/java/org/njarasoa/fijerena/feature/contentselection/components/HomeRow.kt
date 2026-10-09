@@ -19,13 +19,14 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * One titled row of cards on Home (TV home overhaul plan, Phase 3). Focus coming in from above or
  * below lands on the card this row had last ([focusRestorer]), else on its first card
- * ([firstItemFocus]); Left on the first card and Right on the last stay put, so the search never
- * falls out of the row onto the header or another row.
+ * ([firstItemFocus]); Left on the first card goes to the navigation rail and Right on the last
+ * stays put, so the search never falls out of the row onto the header or another row.
  */
 @Composable
 fun <T> HomeRow(
@@ -56,7 +57,9 @@ fun <T> HomeRow(
                 itemContent(
                     item,
                     Modifier
-                        .then(if (index == 0) Modifier.focusRequester(firstItemFocus) else Modifier)
+                        .then(if (index == 0) Modifier.focusRequester(firstItemFocus).leftToRail() else Modifier)
+                        // leftToRail is outside these, so it wins while the rail shows; without
+                        // one, Left on the first card stays put.
                         .focusProperties {
                             if (index == 0) left = FocusRequester.Cancel
                             if (index == items.lastIndex) right = FocusRequester.Cancel

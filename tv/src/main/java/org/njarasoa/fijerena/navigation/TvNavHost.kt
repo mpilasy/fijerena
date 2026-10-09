@@ -471,8 +471,7 @@ fun TvNavHost(
                                     // Skip the picker tap entirely when the active provider only supports
                                     // one content type — but only on the very first resolve per NavHost
                                     // lifetime, so Back-navigation into this screen later still lands on a
-                                    // real, interactive Home (Settings/Search/EPG/provider-switch all live
-                                    // here and nowhere else).
+                                    // real, interactive Home (the source switch lives here).
                                     if (!hasAutoSkippedSingleContentType) {
                                         hasAutoSkippedSingleContentType = true
                                         if (supportedTypes.size == 1) {
@@ -481,12 +480,6 @@ fun TvNavHost(
                                                 ?.let(navigateToContentType)
                                         }
                                     }
-                                },
-                                onSettings = {
-                                    navController.navigateOnce(Screen.Settings)
-                                },
-                                onChooseProfile = {
-                                    navController.navigateOnce(Screen.ProfilePicker)
                                 },
                                 // Home's source pill switched the source: the sections' saved places
                                 // hold the old source's lists (its Movies showed under the new one).
@@ -497,9 +490,6 @@ fun TvNavHost(
                                     // so navigateOnce's double-tap guard would drop it (and the prompt is
                                     // only offered once per process).
                                     navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
-                                },
-                                onSearch = {
-                                    navController.navigateOnce(Screen.Search("ALL"))
                                 },
                                 onEpgBrowser = {
                                     navController.navigateOnce(Screen.EpgBrowser())

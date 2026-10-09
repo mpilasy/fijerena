@@ -678,7 +678,6 @@
     <!-- TV Category/Search misc -->
     <string name="category_refresh_description">Actualiser les catégories</string>
     <string name="category_refresh_streams_description">Actualiser les flux</string>
-    <string name="content_search_all_description">Tout rechercher</string>
     <string name="common_edit_field_description_format">Modifier %1$s</string>
     <string name="common_loading">Chargement…</string>
     <string name="search_stream_name_placeholder">Entrez le nom du flux…</string>
