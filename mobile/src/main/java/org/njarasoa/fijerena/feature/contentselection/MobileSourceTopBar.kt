@@ -169,7 +169,6 @@ fun MobileSourceTopBar(
     onSearch: (() -> Unit)?,
     onSearchGuide: (() -> Unit)?,
     onProfileChosen: () -> Unit,
-    onSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -286,10 +285,6 @@ fun MobileSourceTopBar(
         ProfileSheet(
             viewModel = profilesViewModel,
             onProfileChosen = onProfileChosen,
-            onSettings = {
-                showProfileSheet = false
-                onSettings()
-            },
             onDismiss = { showProfileSheet = false },
         )
     }

@@ -29,7 +29,14 @@ enum class MobileTab(
     LIVE_TV(Screen.LiveTvTab, ContentType.LIVE_TV),
     MOVIES(Screen.MoviesTab, ContentType.MOVIES),
     TV_SHOWS(Screen.TvShowsTab, ContentType.TV_SHOWS),
+
+    // Not a section: Settings with what it opens (sources, guide sources, Live sync…), last on the
+    // bar whenever the bar shows. [contentType] matches no section.
+    SETTINGS(Screen.Settings, "SETTINGS"),
     ;
+
+    /** A section of the source (Live TV, Movies, TV Shows), as opposed to Settings. */
+    val isSection: Boolean get() = this != SETTINGS
 
     companion object {
         /** The tab [destination] is the root of; null for every other screen, which hides the bar. */
@@ -39,6 +46,7 @@ enum class MobileTab(
                 destination.hasRoute<Screen.LiveTvTab>() -> LIVE_TV
                 destination.hasRoute<Screen.MoviesTab>() -> MOVIES
                 destination.hasRoute<Screen.TvShowsTab>() -> TV_SHOWS
+                destination.hasRoute<Screen.Settings>() -> SETTINGS
                 else -> null
             }
     }
@@ -60,34 +68,28 @@ fun NavController.currentTab(): MobileTab? =
     }
 
 /**
- * Screens inside a tab that still hide the bar: the player, and Settings with what it opens —
- * guide sources included, also when reached from Search the guide. The guide screens a tab opens
- * (Search the guide, TV Guide) keep it.
+ * Screens inside a tab that still hide the bar: the player, and the two forms (Add / Edit Source,
+ * a profile's page), which have their own Save. Settings and what else it opens keep it — Settings
+ * is a tab.
  */
 fun hidesBottomBar(destination: NavDestination?): Boolean =
     destination != null &&
         (
             destination.hasRoute<Screen.Player>() ||
-                destination.hasRoute<Screen.Settings>() ||
                 destination.hasRoute<Screen.AddProvider>() ||
-                destination.hasRoute<Screen.ProviderSelection>() ||
-                destination.hasRoute<Screen.EpgManagement>() ||
-                destination.hasRoute<Screen.ProfileEdit>() ||
-                destination.hasRoute<Screen.SyncSettings>() ||
-                destination.hasRoute<Screen.Diagnostics>() ||
-                destination.hasRoute<Screen.DeviceInfo>()
+                destination.hasRoute<Screen.ProfileEdit>()
         )
 
 /**
- * The tabs the bar shows: the sections the active source has — none, so no bar, when it has only
- * one. [supportedTypes] is null until the source is resolved, and stays null while a Jellyfin
- * source waits for its sign-in: there is no library to open yet.
+ * The tabs the bar shows: the sections the active source has, then Settings — none, so no bar,
+ * when the source has no section yet. [supportedTypes] is null until the source is resolved, and
+ * stays null while a Jellyfin source waits for its sign-in: there is no library to open yet. A
+ * single section still shows the bar, for Settings.
  */
-fun visibleTabs(supportedTypes: Collection<String>?): List<MobileTab> =
-    MobileTab.entries
-        .filter { supportedTypes != null && it.contentType in supportedTypes }
-        .takeIf { it.size > 1 }
-        .orEmpty()
+fun visibleTabs(supportedTypes: Collection<String>?): List<MobileTab> {
+    val sections = MobileTab.entries.filter { it.isSection && supportedTypes != null && it.contentType in supportedTypes }
+    return if (sections.isEmpty()) emptyList() else sections + MobileTab.SETTINGS
+}
 
 /**
  * The tab the app opens on: [lastTab] (the section the profile last had open) when the source has
@@ -98,8 +100,9 @@ fun startTab(
     lastTab: String?,
     supportedTypes: Collection<String>?,
 ): MobileTab {
+    val sections = MobileTab.entries.filter { it.isSection }
     val candidates =
-        if (supportedTypes.isNullOrEmpty()) MobileTab.entries else MobileTab.entries.filter { it.contentType in supportedTypes }
+        if (supportedTypes.isNullOrEmpty()) sections else sections.filter { it.contentType in supportedTypes }
     return candidates.firstOrNull { it.contentType == lastTab } ?: candidates.first()
 }
 
@@ -136,6 +139,7 @@ private fun MobileTab.icon(): ImageVector =
         MobileTab.LIVE_TV -> CinemaIcons.LiveTv
         MobileTab.MOVIES -> CinemaIcons.Movie
         MobileTab.TV_SHOWS -> CinemaIcons.Tv
+        MobileTab.SETTINGS -> CinemaIcons.Settings
     }
 
 @Composable
@@ -144,4 +148,5 @@ fun MobileTab.label(): String =
         MobileTab.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
         MobileTab.MOVIES -> stringResource(R.string.provider_movies_label)
         MobileTab.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+        MobileTab.SETTINGS -> stringResource(R.string.settings_title)
     }

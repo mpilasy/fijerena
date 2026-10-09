@@ -1,5 +1,11 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Phone Settings tab
+**Release Date:** 2026-10-08
+
+- **Settings is a tab on the phone's bottom bar**, after the sections, and keeps its place like the others (open Sources, switch to Movies and back: you're still on Sources). The profile menu now only switches profiles.
+- The bar now shows with a single section too, so Settings is always one tap away; it stays on Settings' screens, except Add / Edit Source and a profile's page.
+
 ## Version: TV navigation rail
 **Release Date:** 2026-10-08
 

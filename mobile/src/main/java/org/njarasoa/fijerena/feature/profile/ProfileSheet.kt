@@ -38,7 +38,6 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun ProfileSheet(
     viewModel: ProfilesViewModel,
     onProfileChosen: () -> Unit,
-    onSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
@@ -93,13 +92,6 @@ fun ProfileSheet(
                                 },
                         )
                     }
-                    HorizontalDivider()
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.settings_title)) },
-                        leadingContent = { Icon(CinemaIcons.Settings, contentDescription = null) },
-                        colors = rowColors,
-                        modifier = Modifier.clickable(onClick = onSettings),
-                    )
                 }
             }
         }

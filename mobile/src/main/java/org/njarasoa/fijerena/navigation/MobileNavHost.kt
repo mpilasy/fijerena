@@ -110,6 +110,7 @@ fun MobileNavHost(
         navController.clearBackStack<Screen.LiveTvTab>()
         navController.clearBackStack<Screen.MoviesTab>()
         navController.clearBackStack<Screen.TvShowsTab>()
+        navController.clearBackStack<Screen.Settings>()
     }
 
     // Each tab keeps its place: leaving one saves its back stack, coming back restores it. Tapping
@@ -315,7 +316,8 @@ fun MobileNavHost(
     // sections were unknown, before a Jellyfin sign-in) gives way to one it has.
     LaunchedEffect(currentTab, activeSource) {
         val types = activeSource?.sections ?: return@LaunchedEffect
-        val tab = currentTab ?: return@LaunchedEffect
+        // Settings is a tab but not a section: never the tab the app opens on.
+        val tab = currentTab?.takeIf { it.isSection } ?: return@LaunchedEffect
         if (tab.contentType in types) {
             appSettings.lastTab = tab.contentType
         } else {
@@ -324,7 +326,7 @@ fun MobileNavHost(
     }
 
     // The top bar of [tab]'s root: the section's name over the source and its sync status; Search
-    // the guide on Live TV, the section's Search, and the profile avatar (profiles and Settings).
+    // the guide on Live TV, the section's Search, and the profile avatar (profiles; Settings is a tab).
     fun sourceTopBar(tab: MobileTab): @Composable ((() -> Unit)?) -> Unit =
         { onSearch ->
             MobileSourceTopBar(
@@ -341,7 +343,6 @@ fun MobileNavHost(
                 // Every screen may hold the previous profile's repository: start over on its last
                 // tab, as after the profile page's switch.
                 onProfileChosen = { coroutineScope.launch { startOver() } },
-                onSettings = { leaveTabRoot { navController.navigateOnce(Screen.Settings) } },
             )
         }
 
@@ -621,11 +622,10 @@ fun MobileNavHost(
                 )
             }
 
+            // A tab root (the bar's Settings tab): no back arrow, Back leaves the app as on the others.
             composable<Screen.Settings> {
                 MobileSettingsScreen(
-                    onBack = {
-                        navController.navigateUp()
-                    },
+                    onBack = null,
                     onThemeChanged = onThemeChanged,
                     onUiStyleChanged = onUiStyleChanged,
                     onManageProviders = {

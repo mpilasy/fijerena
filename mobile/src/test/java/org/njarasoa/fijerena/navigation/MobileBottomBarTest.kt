@@ -9,22 +9,28 @@ class MobileBottomBarTest {
     @Test
     fun `every section in bar order whatever order the source lists them in`() {
         assertEquals(
-            listOf(MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS),
+            listOf(MobileTab.LIVE_TV, MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS),
             visibleTabs(listOf(ContentType.TV_SHOWS, ContentType.LIVE_TV, ContentType.MOVIES)),
         )
     }
 
     @Test
-    fun `only the sections the source has`() {
+    fun `only the sections the source has, then Settings`() {
         assertEquals(
-            listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS),
+            listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS),
             visibleTabs(listOf(ContentType.MOVIES, ContentType.TV_SHOWS)),
         )
     }
 
     @Test
-    fun `single content type shows no bar`() {
-        assertEquals(emptyList<MobileTab>(), visibleTabs(listOf(ContentType.MOVIES)))
+    fun `a single section still shows the bar, for Settings`() {
+        assertEquals(listOf(MobileTab.MOVIES, MobileTab.SETTINGS), visibleTabs(listOf(ContentType.MOVIES)))
+    }
+
+    @Test
+    fun `Settings is never the tab the app opens on`() {
+        assertEquals(MobileTab.LIVE_TV, startTab(MobileTab.SETTINGS.contentType, ALL))
+        assertEquals(MobileTab.LIVE_TV, startTab(MobileTab.SETTINGS.contentType, null))
     }
 
     @Test
@@ -62,7 +68,7 @@ class MobileBottomBarTest {
     @Test
     fun `no Live TV tab for a source without channels`() {
         val source = ActiveSource(1L, "jellyxtream", "XTREAM", needsSignIn = false, supportedTypes = ALL.toSet(), noChannels = true)
-        assertEquals(listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS), visibleTabs(source.sections))
+        assertEquals(listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SETTINGS), visibleTabs(source.sections))
         assertEquals(MobileTab.MOVIES, startTab(ContentType.LIVE_TV, source.sections))
         assertEquals(ALL.toSet(), source.copy(noChannels = false).sections)
     }

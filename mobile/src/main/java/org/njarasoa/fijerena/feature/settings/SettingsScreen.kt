@@ -58,7 +58,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileSettingsScreen(
-    onBack: () -> Unit,
+    // Null when Settings is a tab root (no back arrow).
+    onBack: (() -> Unit)?,
     onThemeChanged: (String) -> Unit = {},
     onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
@@ -255,8 +256,10 @@ fun MobileSettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
+                        }
                     }
                 },
             )
