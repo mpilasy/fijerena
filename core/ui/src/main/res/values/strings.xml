@@ -1148,4 +1148,6 @@
     <!-- TV navigation rail -->
     <string name="tv_nav_rail_home">Home</string>
     <string name="tv_nav_rail_hint">Press Left for sections</string>
+    <!-- TV Recent and Favorites (lane B) -->
+    <string name="home_favorite_channels">Favorite channels</string>
 </resources>

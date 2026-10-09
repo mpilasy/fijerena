@@ -42,8 +42,10 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
+/** A row of channel cards on Home: Channels (last watched, then Recent) or Favorite channels. */
 @Composable
 fun TvLiveRow(
+    title: String,
     entries: List<LiveRowEntry>,
     nowPlaying: Map<String, EpgProgram>,
     onEntrySelected: (LiveRowEntry) -> Unit,
@@ -53,7 +55,7 @@ fun TvLiveRow(
     itemModifier: (LiveRowEntry) -> Modifier = { Modifier },
 ) {
     HomeRow(
-        title = stringResource(R.string.home_live_row_title),
+        title = title,
         items = entries,
         key = { it.item.id },
         listState = listState,

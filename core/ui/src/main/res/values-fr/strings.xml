@@ -1151,4 +1151,6 @@
     <!-- TV navigation rail -->
     <string name="tv_nav_rail_home">Accueil</string>
     <string name="tv_nav_rail_hint">Appuyez sur Gauche pour les sections</string>
+    <!-- TV Recent and Favorites (lane B) -->
+    <string name="home_favorite_channels">Chaînes favorites</string>
 </resources>
