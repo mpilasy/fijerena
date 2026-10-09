@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -95,7 +96,7 @@ fun DiagnosticsScreen() {
             // to it) with the standard focus border.
             Surface(
                 onClick = {},
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().leftToRail(),
                 shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(CornerRadius.large)),
                 colors =
                     ClickableSurfaceDefaults.colors(

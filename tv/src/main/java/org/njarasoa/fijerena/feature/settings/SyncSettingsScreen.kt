@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -108,12 +109,18 @@ fun SyncSettingsScreen() {
                 devMode = viewModel.devMode,
                 onSyncNow = viewModel::syncNow,
             )
-            CinemaPrimaryButton(onClick = viewModel::showInvite, text = stringResource(R.string.live_sync_add_device), enabled = !ui.busy)
+            CinemaPrimaryButton(
+                onClick = viewModel::showInvite,
+                text = stringResource(R.string.live_sync_add_device),
+                enabled = !ui.busy,
+                modifier = Modifier.leftToRail(),
+            )
             TvSwitchRow(
                 checked = shareNowPlaying,
                 onCheckedChange = viewModel::setShareNowPlaying,
                 label = stringResource(R.string.live_sync_share_playing),
                 description = stringResource(R.string.live_sync_share_playing_desc),
+                modifier = Modifier.leftToRail(),
             )
             // Up from Leave goes to the last Remove: it sits at the far right of its row, outside the
             // left-aligned Leave button's beam, so plain focus search skipped it for the share switch.
@@ -129,7 +136,7 @@ fun SyncSettingsScreen() {
             ProviderDangerButton(
                 onClick = { confirmLeave = true },
                 text = stringResource(R.string.live_sync_leave),
-                modifier = if (hasRemovable) Modifier.focusProperties { up = lastRemoveFocus } else Modifier,
+                modifier = (if (hasRemovable) Modifier.focusProperties { up = lastRemoveFocus } else Modifier).leftToRail(),
             )
         } else {
             SetupPanel(ui, viewModel)
@@ -182,12 +189,14 @@ private fun SetupPanel(
                 onValueChange = viewModel::onServerUrlChanged,
                 label = stringResource(R.string.live_sync_server_label),
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
+                modifier = Modifier.leftToRail(),
             )
             if (!ui.serverChecked) {
                 CinemaPrimaryButton(
                     onClick = viewModel::checkServer,
                     text = stringResource(R.string.live_sync_check_server),
                     enabled = ui.serverUrl.isNotBlank() && !ui.busy,
+                    modifier = Modifier.leftToRail(),
                 )
             } else {
                 Text(stringResource(R.string.live_sync_server_found), color = CinemaAccent)
@@ -201,11 +210,12 @@ private fun SetupPanel(
                             androidx.compose.ui.text.input
                                 .PasswordVisualTransformation(),
                         displayText = "•".repeat(setupSecret.length),
+                        modifier = Modifier.leftToRail(),
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                     CinemaPrimaryButton(
-                        modifier = Modifier.focusRequester(joinFocus),
+                        modifier = Modifier.focusRequester(joinFocus).leftToRail(),
                         onClick = viewModel::startHandoff,
                         text = stringResource(R.string.live_sync_join_show_code),
                         enabled = !ui.busy,
@@ -238,7 +248,8 @@ private fun PairingPanel(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 Text(instructions, style = MaterialTheme.typography.bodyLarge, color = CinemaTextPrimary)
                 Text(stringResource(R.string.live_sync_waiting), style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
-                CinemaSecondaryButton(onClick = onClose, text = stringResource(R.string.common_cancel))
+                // The panel's only control: Left from it goes to the navigation rail.
+                CinemaSecondaryButton(onClick = onClose, text = stringResource(R.string.common_cancel), modifier = Modifier.leftToRail())
             }
         }
     }
@@ -274,7 +285,12 @@ private fun LinkedPanel(
                 color = CinemaTextSecondary,
             )
             Spacer(Modifier.height(Spacing.xs.scaled(scale)))
-            CinemaSecondaryButton(onClick = onSyncNow, text = stringResource(R.string.live_sync_now), enabled = !status.syncing)
+            CinemaSecondaryButton(
+                onClick = onSyncNow,
+                text = stringResource(R.string.live_sync_now),
+                enabled = !status.syncing,
+                modifier = Modifier.leftToRail(),
+            )
         }
     }
 }

@@ -71,6 +71,7 @@ import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.*
 
 @Composable
@@ -355,7 +356,8 @@ private fun ProviderList(
                         Modifier
                             .weight(1f)
                             .then(if (provider.id == entryId) Modifier.focusRequester(entryRowFocusRequester) else Modifier)
-                            .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id),
+                            .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id)
+                            .leftToRail(),
                     headlineContent = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = provider.name, style = MaterialTheme.typography.titleSmall)

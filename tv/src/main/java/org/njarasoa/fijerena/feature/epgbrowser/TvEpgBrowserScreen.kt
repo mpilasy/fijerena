@@ -127,6 +127,7 @@ import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -407,6 +408,7 @@ private fun EpgBrowserContent(
             focusRequester = searchFocusRequester,
             editing = editing,
             onEditingChange = { editing = it },
+            restingFieldModifier = Modifier.leftToRail(),
             showClearButton = localQuery.isNotEmpty() || hasResults,
         )
 
@@ -423,12 +425,14 @@ private fun EpgBrowserContent(
                     .then(if (showsHistory) Modifier.focusProperties { down = historyFocusRequester } else Modifier),
         ) {
             // A bare Material3 Checkbox draws focus through LocalIndication, a ripple —
-            // invisible without a pointer on TV — so the toggles are selectable buttons.
+            // invisible without a pointer on TV — so the toggles are selectable buttons. The first
+            // of them hands Left to the navigation rail.
             if (contextName != null) {
                 TvSelectableButton(
                     selected = inContextOnly,
                     onSelect = { inContextOnly = !inContextOnly },
                     text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                    modifier = Modifier.leftToRail(),
                 )
             }
 
@@ -436,6 +440,7 @@ private fun EpgBrowserContent(
                 selected = matchedOnly,
                 onSelect = { matchedOnly = !matchedOnly },
                 text = stringResource(R.string.epg_browser_matched_only_label),
+                modifier = if (contextName == null) Modifier.leftToRail() else Modifier,
             )
         }
 
@@ -657,11 +662,13 @@ private fun EpgSearchHistorySection(
             history.forEachIndexed { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
+                    // The first recent search starts the first line: Left from it goes to the navigation
+                    // rail (where the wrapped lines start isn't known here).
                     modifier =
-                        if (index == 0 && firstItemFocusRequester != null) {
-                            Modifier.focusRequester(firstItemFocusRequester)
-                        } else {
-                            Modifier
+                        when {
+                            index != 0 -> Modifier
+                            firstItemFocusRequester != null -> Modifier.focusRequester(firstItemFocusRequester).leftToRail()
+                            else -> Modifier.leftToRail()
                         },
                     colors =
                         CardDefaults.colors(
@@ -822,8 +829,9 @@ private fun ResultsContent(
                                 sourceLabels = sourceLabels,
                                 onNavigateToPlayer = onNavigateToPlayer,
                                 onAiringLeave = { airingIndex -> returnFocus.leaveFrom(returnKeyPrefix + airingIndex, listState) },
+                                // Every airing row spans the list, so each hands Left to the navigation rail.
                                 airingModifier = { airingIndex ->
-                                    Modifier.navReturnFocusTarget(returnFocus, returnKeyPrefix + airingIndex)
+                                    Modifier.navReturnFocusTarget(returnFocus, returnKeyPrefix + airingIndex).leftToRail()
                                 },
                                 modifier =
                                     if (isFirstItem && index == 0) {

@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -175,13 +176,15 @@ fun TvEpgManagementScreen(
             TvScreenHeader(title = stringResource(R.string.epg_management_screen_title), subtitle = providerName)
 
             // No guide source: one sentence and the one thing to do here, centred (TV UI audit #20).
-            // The action takes focus itself.
+            // The action takes focus itself; Left from it goes to the navigation rail (leftToRail
+            // here reaches the action, the only focusable inside).
             if (sources?.isEmpty() == true) {
                 TvEmptyState(
                     message = stringResource(R.string.epg_summary_no_sources),
                     icon = CinemaIcons.DateRange,
                     actionLabel = stringResource(R.string.epg_add_source),
                     onAction = { showAddDialog = true },
+                    modifier = Modifier.leftToRail(),
                 )
             } else {
                 LazyColumn(
@@ -200,7 +203,7 @@ fun TvEpgManagementScreen(
                                 CinemaPrimaryButton(
                                     onClick = { showAddDialog = true },
                                     text = stringResource(R.string.epg_add_source),
-                                    modifier = Modifier.focusRequester(addFocus),
+                                    modifier = Modifier.focusRequester(addFocus).leftToRail(),
                                 )
 
                                 if (staleSourceCount > 0) {
@@ -252,6 +255,7 @@ fun TvEpgManagementScreen(
                                         onCheckedChange = { viewModel.setSourceEnabled(source, it) },
                                         modifier =
                                             (if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier)
+                                                .leftToRail()
                                                 .semantics { contentDescription = useLabel },
                                         // P5: checked keeps the resting container and shows the
                                         // check glyph in the current colour; only focus lifts it.
@@ -345,6 +349,7 @@ fun TvEpgManagementScreen(
                                         onClick = { viewModel.refreshSource(source.id) },
                                         icon = CinemaIcons.Refresh,
                                         label = stringResource(R.string.common_refresh),
+                                        modifier = Modifier.leftToRail(),
                                     )
                                     TvIconAction(
                                         onClick = { editingSource = source },

@@ -14,14 +14,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +57,7 @@ import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.input.tvPane
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -183,6 +187,7 @@ fun SettingsScreen(
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
     val railPane = rememberPaneFocus()
     val contentPane = rememberPaneFocus()
+    val focusManager = LocalFocusManager.current
     // One list state per group: a group change starts its pane at the top, and the Back
     // round trip restores the scroll of the group it left.
     val listState = rememberSaveable(selectedGroup, saver = LazyListState.Saver) { LazyListState() }
@@ -286,7 +291,9 @@ fun SettingsScreen(
             )
 
             Row(modifier = Modifier.fillMaxSize()) {
-                // Rail: Up/Down swap the pane live, Right (or OK) enters it on its first row.
+                // Rail: Up/Down swap the pane live, Right (or OK) enters it on its first row, Left
+                // goes to the navigation rail. tvPane takes Left (no pane on that side), so each row
+                // moves focus itself, along its leftToRail.
                 Column(
                     modifier =
                         Modifier
@@ -306,7 +313,12 @@ fun SettingsScreen(
                                 Modifier
                                     .fillMaxWidth()
                                     .paneItem(railPane, group.name)
-                                    .onFocusChanged { if (it.isFocused) selectedGroup = group },
+                                    .onFocusChanged { if (it.isFocused) selectedGroup = group }
+                                    .onKeyEvent { event ->
+                                        val isLeft = event.key == Key.DirectionLeft && event.type == KeyEventType.KeyDown
+                                        if (isLeft) focusManager.moveFocus(FocusDirection.Left)
+                                        isLeft
+                                    }.leftToRail(),
                             headlineContent = { Text(stringResource(group.titleRes)) },
                         )
                     }
