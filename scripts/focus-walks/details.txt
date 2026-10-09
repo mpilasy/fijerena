@@ -9,8 +9,12 @@
 # Lines marked (-r) depend on the title's data (which tabs it has, the episode's place in the
 # list) and are left unchecked or checked loosely until recorded.
 #
-# Walk 1 — Movie details: labelled actions, Up from the tabs → Play (F-MD-2, F-MD-3).
+# Walk 1 — Movie details: labelled actions, Up from the tabs → Play (F-MD-2, F-MD-3); Left from
+# Play and from the first tab opens the navigation rail on Movies, Right comes back (rail Phase 3,
+# not yet recorded).
 @start ▶ Play Movie
+LEFT	Movies
+RIGHT	▶ Play Movie
 RIGHT	Favorite
 RIGHT	Watched
 # Refresh info is no longer in the row: More is the last button (a trailer icon would sit before it).
@@ -18,6 +22,8 @@ RIGHT	More
 LEFT	Watched
 # Down from any action → the selected tab (Cast when the movie has cast, else Details) (-r).
 DOWN	Cast
+LEFT	Movies
+RIGHT	Cast
 # Up from a tab → Play, not the button above the tab.
 UP	▶ Play Movie
 DOWN	Cast
@@ -28,11 +34,9 @@ UP	▶ Play Movie
 BACK	Anatomy of a Fall / ★ 7.6 / Hold OK or press Menu for actions
 WAIT 15	E03 / By the Pricking of My Thumbs / Miss Marple joins forces with Tommy and Tuppence Beresford to find the murderer of Tommy's Aunt Ada. / 01:32:59
 #
-# Walk 2 — Episodes: focus on the continue-watching episode; Left → the season tabs (F-E-1, F-E-2).
+# Walk 2 — Episodes: focus on the continue-watching episode. Left → the navigation rail on TV
+# Shows, Right → back on the same episode (rail Phase 3; Left went to the season tabs before,
+# F-E-2 — Up from the first episode still does).
 @start E03 / By the Pricking of My Thumbs / Miss Marple joins forces with Tommy and Tuppence Beresford to find the murderer of Tommy's Aunt Ada. / 01:32:59
-LEFT	Season 2
-# Up from the season tabs → Play next in the compact header ("▶ Play: <title>", or "▶ Resume:")
-# when the hero is scrolled away; the section tab "Episodes" when the hero is on screen (-r).
-UP	Episodes
-# Up from Play next → the section tab row, scrolled back into view.
-UP	▶ Play: The Body in the Library
+LEFT	TV Shows
+RIGHT	E03 / By the Pricking of My Thumbs

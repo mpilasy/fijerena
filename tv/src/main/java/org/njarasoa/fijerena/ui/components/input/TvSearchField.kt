@@ -78,6 +78,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * [editing] is hoisted so a screen can open on the keyboard (a first search with no history).
  * [focusRequester] targets the resting field; the caller's [modifier] goes on the whole row, so
  * `focusProperties { down = … }` there applies to the field and the clear button.
+ * [restingFieldModifier] goes on the resting field alone (not the clear button), e.g.
+ * `Modifier.leftToRail()` where the field starts at the screen's left edge.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -92,6 +94,7 @@ fun TvSearchField(
     onEditingChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     showClearButton: Boolean = query.isNotEmpty(),
+    restingFieldModifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -198,7 +201,8 @@ fun TvSearchField(
                     Modifier
                         .weight(1f)
                         .heightIn(min = OutlinedTextFieldDefaults.MinHeight)
-                        .focusRequester(focusRequester),
+                        .focusRequester(focusRequester)
+                        .then(restingFieldModifier),
                 shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
                 colors =
                     ClickableSurfaceDefaults.colors(

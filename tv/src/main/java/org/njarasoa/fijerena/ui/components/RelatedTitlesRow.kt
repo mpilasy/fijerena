@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -94,12 +95,16 @@ fun RelatedTitlesRow(
             contentPadding = PaddingValues(horizontal = FOCUS_BLEED, vertical = FOCUS_BLEED),
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            items(items, key = { it.id }) { item ->
+            itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                 RelatedTitleCard(
                     item = item,
                     cardStyle = cardStyle,
                     onClick = { onItemClick(item) },
-                    modifier = if (item.id == focusTargetId) focusTargetModifier else Modifier,
+                    // The first card is at the screen's left edge: Left from it opens the TV
+                    // navigation rail.
+                    modifier =
+                        (if (item.id == focusTargetId) focusTargetModifier else Modifier)
+                            .then(if (index == 0) Modifier.leftToRail() else Modifier),
                 )
             }
         }

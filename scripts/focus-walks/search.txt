@@ -4,8 +4,14 @@
 # Written 2026-10-03 from the plan, not yet recorded — re-record with -r on the emulator.
 # The recent-search chip shows the term only, so its line is left unchecked until recorded.
 @start Search films, shows and channels
+# Left from the field and from the first recent search → the navigation rail (on Search), Right
+# → back (rail Phase 3, not yet recorded).
+LEFT	Search
+RIGHT	Search films, shows and channels
 # Down from the field → the first recent search, not the "Clear all" icon (F-S-2).
 DOWN	the
+LEFT	Search
+RIGHT	the
 UP	Search films, shows and channels
 # No search button beside the field (TV UI audit #14): the field searches on its own, and the
 # clear × only shows with text.

@@ -106,6 +106,7 @@ import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -471,7 +472,13 @@ private fun MovieDetailsContent(
                             CinemaPrimaryButton(
                                 onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
                                 text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                                modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
+                                modifier =
+                                    Modifier
+                                        .focusRequester(
+                                            playButtonFocusRequester,
+                                        ).then(downToTabRow)
+                                        .then(upScrollToTop)
+                                        .leftToRail(),
                             )
                             CinemaIconButton(
                                 onClick = playFromStart,
@@ -492,7 +499,13 @@ private fun MovieDetailsContent(
                             CinemaPrimaryButton(
                                 onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
                                 text = stringResource(R.string.movie_play_action),
-                                modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
+                                modifier =
+                                    Modifier
+                                        .focusRequester(
+                                            playButtonFocusRequester,
+                                        ).then(downToTabRow)
+                                        .then(upScrollToTop)
+                                        .leftToRail(),
                             )
                         }
                         // Labelled, not bare icons (UX overhaul Part II Phase 6, F-MD-2): the icon carries
@@ -571,6 +584,7 @@ private fun MovieDetailsContent(
                                     }
                                 },
                         entryFocusRequester = tabRowFocusRequester,
+                        firstTabModifier = Modifier.leftToRail(),
                     )
                 }
 
@@ -857,7 +871,7 @@ private fun DetailsTabContent(
             CinemaSecondaryButton(
                 onClick = onCategorySelected,
                 text = stringResource(R.string.details_category_format, categoryName),
-                modifier = categoryButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                modifier = (categoryButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier).leftToRail(),
             )
         }
     }
@@ -915,6 +929,7 @@ private fun StreamNamePicker(
                             Modifier
                         },
                     ).focusRequester(focusRequester)
+                    .leftToRail()
                     .onFocusChanged {
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)

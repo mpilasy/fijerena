@@ -55,7 +55,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
  *
  * Right on the last tab goes to [endFocusRequester] when given (a control at the end of the
  * row), else stays put: left to geometric search it escaped the row — on a movie with only a
- * Details tab it jumped up to Play.
+ * Details tab it jumped up to Play. *
+ * [firstTabModifier] goes on the first tab only: a screen whose tab row starts at its left edge
+ * passes `Modifier.leftToRail()` there, so Left from the first tab opens the TV navigation rail.
  */
 @Composable
 fun TvSectionTabs(
@@ -65,6 +67,7 @@ fun TvSectionTabs(
     modifier: Modifier = Modifier,
     entryFocusRequester: FocusRequester? = null,
     endFocusRequester: FocusRequester? = null,
+    firstTabModifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     // One FocusRequester per tab, explicitly wired to its left/right neighbor below — Compose's
@@ -95,6 +98,7 @@ fun TvSectionTabs(
                 // Second requester on the same node, alongside `focusRequester` above — only the
                 // selected tab gets it, and it moves with selection as `selectedIndex` changes.
                 entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
+                modifier = if (index == 0) firstTabModifier else Modifier,
             )
         }
     }
@@ -109,6 +113,7 @@ private fun SectionTab(
     previousTabFocusRequester: FocusRequester?,
     nextTabFocusRequester: FocusRequester,
     entryFocusRequester: FocusRequester?,
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     var isFocused by remember { mutableStateOf(false) }
@@ -139,7 +144,7 @@ private fun SectionTab(
 
     Box(
         modifier =
-            Modifier
+            modifier
                 .focusRequester(focusRequester)
                 .then(entryFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
                 .focusProperties {

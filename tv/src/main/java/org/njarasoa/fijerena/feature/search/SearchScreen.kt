@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -438,6 +439,7 @@ private fun SearchContent(
             editing = editing,
             onEditingChange = { editing = it },
             showClearButton = localQuery.isNotEmpty() || results.isNotEmpty() || categoryResults.isNotEmpty(),
+            restingFieldModifier = Modifier.leftToRail(),
         )
 
         Spacer(modifier = Modifier.height(Spacing.lg))
@@ -522,9 +524,11 @@ private fun SearchHistorySection(
             history.forEachIndexed { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
+                    // The first chip is at the screen's left edge: Left from it opens the TV
+                    // navigation rail.
                     modifier =
-                        if (index == 0 && firstItemFocusRequester != null) {
-                            Modifier.focusRequester(firstItemFocusRequester)
+                        if (index == 0) {
+                            (firstItemFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier).leftToRail()
                         } else {
                             Modifier
                         },
@@ -889,8 +893,11 @@ private fun CollapsibleHeader(
 ) {
     Card(
         onClick = onToggle,
+        // Group headers and result rows span the list from the screen's left edge: Left from any
+        // of them opens the TV navigation rail.
         modifier =
             Modifier
+                .leftToRail()
                 .fillMaxWidth()
                 .padding(vertical = Spacing.xs),
         // A section title that folds its group: no fill at rest, the content rows' focus look
@@ -970,6 +977,7 @@ private fun CategoryResultItem(
         onClick = onClick,
         modifier =
             modifier
+                .leftToRail()
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight)
@@ -1011,6 +1019,7 @@ private fun SearchResultItem(
         onClick = onClick,
         modifier =
             modifier
+                .leftToRail()
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight)

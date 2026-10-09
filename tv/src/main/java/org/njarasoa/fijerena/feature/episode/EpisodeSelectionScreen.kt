@@ -159,6 +159,7 @@ import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -516,9 +517,10 @@ internal fun EpisodeListContent(
 
     // The episodes header (UX overhaul Part II Phase 6, F-E-1/F-E-2): the sticky row above the
     // episode cards. Once the hero has scrolled away it also carries a compact line — show title ·
-    // season · Play next — so an episode deep in the list still has its context on screen. Left
-    // from any episode lands in this header: the selected season tab, else Play next, else (hero
-    // still on screen, one season) the section tab row.
+    // season · Play next — so an episode deep in the list still has its context on screen. Up from
+    // the first episode lands in this header: the selected season tab, else Play next, else (hero
+    // still on screen, one season) the section tab row. (Left from an episode opens the TV
+    // navigation rail: the episode rows are the screen's left edge.)
     val compactHeaderShown by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
     val compactPlayFocusRequester = remember { FocusRequester() }
     val scrollToTabRow: () -> Unit = {
@@ -975,7 +977,8 @@ internal fun EpisodeListContent(
                                             "hero_play_button",
                                         ).focusRequester(playButtonFocusRequester)
                                         .then(downToTabRow)
-                                        .then(upScrollToTop),
+                                        .then(upScrollToTop)
+                                        .leftToRail(),
                             )
                             if (hasResume) {
                                 CinemaIconButton(
@@ -1076,6 +1079,7 @@ internal fun EpisodeListContent(
                                         }
                                     },
                             entryFocusRequester = tabRowFocusRequester,
+                            firstTabModifier = Modifier.leftToRail(),
                         )
                     }
 
@@ -1093,7 +1097,7 @@ internal fun EpisodeListContent(
                             // tabs when there are several (D-pad left/right moves focus between them,
                             // which selects immediately — see SeasonTab), and once the hero is off
                             // screen a compact "title · season · Play next" line above them (Phase 6).
-                            // Left from any episode comes back here; Right steps to the next season.
+                            // Up from the first episode comes back here.
                             stickyHeader(key = "season_tabs", contentType = "header") {
                                 Column(
                                     modifier =
@@ -1134,7 +1138,7 @@ internal fun EpisodeListContent(
                                                                 false
                                                             }
                                                         }
-                                                    },
+                                                    }.leftToRail(),
                                         )
                                     }
                                     if (hasMultipleSeasons) {
@@ -1208,12 +1212,14 @@ internal fun EpisodeListContent(
                                             .onPreviewKeyEvent { event ->
                                                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                 when {
-                                                    // Left from any episode, or Up from the first, goes
-                                                    // back to the episodes header in one press (Phase 6,
-                                                    // F-E-2) — an explicit request, since plain focus
-                                                    // search into the season tabs grabbed the wrong pill
-                                                    // and, via its focus-follow-select, changed season.
-                                                    event.key == Key.DirectionLeft || (index == 0 && event.key == Key.DirectionUp) -> {
+                                                    // Up from the first episode goes back to the episodes
+                                                    // header in one press (Phase 6, F-E-2) — an explicit
+                                                    // request, since plain focus search into the season
+                                                    // tabs grabbed the wrong pill and, via its
+                                                    // focus-follow-select, changed season. Left is the
+                                                    // rail's (leftToRail below): every episode row starts
+                                                    // at the screen's left edge.
+                                                    index == 0 && event.key == Key.DirectionUp -> {
                                                         focusEpisodesHeader()
                                                         true
                                                     }
@@ -1236,7 +1242,8 @@ internal fun EpisodeListContent(
                                                 } else {
                                                     Modifier
                                                 },
-                                            ).testTag("episode_${episode.id}"),
+                                            ).testTag("episode_${episode.id}")
+                                            .leftToRail(),
                                     onClick = {
                                         selectedEpisode = episode
                                     },
@@ -1411,7 +1418,7 @@ private fun SeriesDetailsTabContent(
                 onSelect = onStreamSelected,
                 focusRequester = streamNameFocusRequester,
                 onFocusedChanged = onStreamFocusedChanged,
-                modifier = topFocusModifier,
+                modifier = topFocusModifier.leftToRail(),
             )
         }
         TvDetailRow(
@@ -1430,7 +1437,8 @@ private fun SeriesDetailsTabContent(
                 // alternates, the picker above is plain Text and this button is it instead.
                 modifier =
                     (if (alternateStreams.isEmpty()) topFocusModifier else Modifier)
-                        .then(categoryButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
+                        .then(categoryButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+                        .leftToRail(),
             )
         }
     }
@@ -1770,7 +1778,7 @@ private fun EpisodeDetailPanel(
                     CinemaPrimaryButton(
                         onClick = { onPlay(episode.id, episode.title, extension, false) },
                         text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                        modifier = Modifier.focusRequester(playButtonFocusRequester),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester).leftToRail(),
                     )
                     CinemaIconButton(
                         onClick = { onPlay(episode.id, episode.title, extension, true) },
@@ -1787,7 +1795,7 @@ private fun EpisodeDetailPanel(
                     CinemaPrimaryButton(
                         onClick = { onPlay(episode.id, episode.title, extension, false) },
                         text = stringResource(R.string.series_play_episode_action),
-                        modifier = Modifier.focusRequester(playButtonFocusRequester),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester).leftToRail(),
                     )
                 }
                 // Step to the adjacent episode without leaving this screen. These used to be a text
@@ -1987,7 +1995,13 @@ private fun SeasonTabs(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         seasons.forEachIndexed { index, season ->
-            Box(modifier = Modifier.onPlaced { tabStarts[index] = it.positionInParent().x.roundToInt() }) {
+            // The first chip is at the screen's left edge: Left from it opens the TV navigation rail.
+            Box(
+                modifier =
+                    Modifier
+                        .onPlaced { tabStarts[index] = it.positionInParent().x.roundToInt() }
+                        .then(if (index == 0) Modifier.leftToRail() else Modifier),
+            ) {
                 SeasonTab(
                     season = season,
                     isSelected = season.seasonNumber == selectedSeason,
