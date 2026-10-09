@@ -132,12 +132,15 @@ fun MobileNavHost(
     }
 
     // A Search result opens in its own section's tab: a film picked from a search started on Live TV
-    // opens in Movies, with Movies highlighted and Back going to the Movies tab. The tab left is cut
-    // back to its root first, so its saved place doesn't keep the search. Same section, or a section
-    // the bar doesn't show (a single-section source): opened where it is, as before.
+    // opens in Movies, with Movies highlighted. The search comes along — pushed again in that tab
+    // with the same query and the result's section chip — so Back returns to the results, then to
+    // the tab's start. The tab left is cut back to its root, so its saved place doesn't keep the
+    // search. Same section, or a section the bar doesn't show (a single-section source): opened
+    // where it is, as before.
     fun openInSectionTab(
         contentType: String,
         screen: Screen,
+        query: String,
     ) {
         val target = MobileTab.entries.firstOrNull { it.contentType == contentType }
         val current = navController.currentTab()
@@ -148,6 +151,11 @@ fun MobileNavHost(
         }
         navController.popBackStack(current.route, inclusive = false)
         selectTab(target)
+        if (query.isNotBlank()) {
+            navController.navigate(
+                Screen.Search(SearchViewModel.CONTENT_TYPE_ALL, initialQuery = query, initialTypeFilter = contentType),
+            )
+        }
         navController.navigate(screen)
     }
 
@@ -691,9 +699,12 @@ fun MobileNavHost(
 
             composable<Screen.Search> { backStackEntry ->
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
+                var openingQuery by remember { mutableStateOf("") }
                 MobileSearchScreen(
+                    onResultOpening = { openingQuery = it },
                     contentType = searchScreen.contentType,
                     initialTypeFilter = searchScreen.initialTypeFilter,
+                    initialQuery = searchScreen.initialQuery,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         val screen =
                             when (contentType) {
@@ -722,7 +733,7 @@ fun MobileNavHost(
                                     )
                                 }
                             }
-                        openInSectionTab(contentType, screen)
+                        openInSectionTab(contentType, screen, openingQuery)
                     },
                     onCategorySelected = { categoryId, contentType ->
                         openInSectionTab(
@@ -731,6 +742,7 @@ fun MobileNavHost(
                                 contentType = contentType,
                                 initialCategoryId = categoryId,
                             ),
+                            openingQuery,
                         )
                     },
                     onBack = { navController.navigateUp() },

@@ -94,6 +94,9 @@ fun MobileSearchScreen(
     contentType: String,
     onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
+    // Told the query just before a result opens, so a result opened in another tab can bring the
+    // search along (MobileNavHost.openInSectionTab) and Back still returns to these results.
+    onResultOpening: (query: String) -> Unit = {},
     onBack: () -> Unit,
     initialQuery: String? = null,
     initialTypeFilter: String? = null,
@@ -315,6 +318,7 @@ fun MobileSearchScreen(
                             onHistoryItemRemove = { viewModel.removeSearchHistoryEntry(it) },
                             onClearHistory = { viewModel.clearSearchHistory() },
                             onResultClick = { result ->
+                                onResultOpening(searchQuery)
                                 onStreamSelected(
                                     result.itemId,
                                     result.streamName,
@@ -333,6 +337,7 @@ fun MobileSearchScreen(
                                     )
                             },
                             onCategoryClick = { catResult ->
+                                onResultOpening(searchQuery)
                                 onCategorySelected(catResult.categoryId, catResult.contentType)
                             },
                             onCategoryLongPress = { catResult ->
