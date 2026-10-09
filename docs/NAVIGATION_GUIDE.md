@@ -14,7 +14,10 @@ sealed interface Screen {
     @Serializable data object ProfilePicker : Screen  // "Who's watching?"
     @Serializable data class ProfileEdit(val profileId: String) : Screen  // a profile's page (mobile; TV shows it inside Settings)
     @Serializable data object ContentTypeSelection : Screen  // Home
-    @Serializable data object Settings : Screen
+    @Serializable data object Settings : Screen  // also the phone's Settings tab
+    @Serializable data object LiveTvTab : Screen  // a section's root: phone tab, TV rail section
+    @Serializable data object MoviesTab : Screen
+    @Serializable data object TvShowsTab : Screen
     @Serializable data class CategoryList(
         val contentType: String, val initialCategoryId: String? = null,
         val initialStreamId: String? = null, val showPreviewPane: Boolean = true,
@@ -24,7 +27,10 @@ sealed interface Screen {
         val initialEpisodeId: String? = null,
     ) : Screen
     @Serializable data class MovieDetails(val movieId: String, val movieName: String, val categoryId: String) : Screen
-    @Serializable data class Search(val contentType: String, val initialQuery: String? = null) : Screen
+    @Serializable data class Search(
+        val contentType: String, val initialQuery: String? = null,
+        val initialTypeFilter: String? = null,  // phone: the section chip preselected
+    ) : Screen
     @Serializable data class EpgGuide(val categoryId: String, val categoryName: String, val focusChannelId: String? = null) : Screen  // TV Guide
     @Serializable data class EpgBrowser(val categoryId: String? = null, val categoryName: String? = null) : Screen  // "Search the guide"
     @Serializable data class EpgManagement(val providerId: Long) : Screen  // one source's guide sources
@@ -53,22 +59,30 @@ App start
 ├─ no source ─→ Settings
 ├─ TV, a source and 2+ profiles ─→ ProfilePicker ─→ ContentTypeSelection
 ├─ TV otherwise ─→ ContentTypeSelection
-└─ phone ─→ the last tab used (LiveTvTab | MoviesTab | TvShowsTab), see Back-Stack Rule 7
+└─ phone ─→ the last tab used (LiveTvTab | MoviesTab | TvShowsTab; never the Settings tab), see Back-Stack Rule 7
 
-ContentTypeSelection (Home)
-├─→ CategoryList(LIVE_TV | MOVIES | TV_SHOWS)
+TV navigation rail (every screen but the player, the Live TV preview and first-run screens; Back-Stack Rule 6)
+├─→ ProfilePicker
+├─→ ContentTypeSelection                 Home (sections saved)
+├─→ LiveTvTab | MoviesTab | TvShowsTab   each a saved stack hosting the section's browse (CategoryList's screen)
+├─→ Search(current section | "ALL")
+└─→ Settings
+
+Phone bottom bar: LiveTvTab | MoviesTab | TvShowsTab | Settings, each a saved stack (Back-Stack Rule 7)
+
+ContentTypeSelection (Home, TV)
+├─→ LiveTvTab | MoviesTab | TvShowsTab   only the single-section auto-skip (the sections are on the rail)
 ├─→ EpgBrowser()                         Search the guide button, when the EPG index is ready
-├─→ Search("ALL")
-├─→ ProfilePicker                        header avatar
-├─→ Settings
 ├─→ AddProvider(editId)                  the active source needs a sign-in
+├─→ CategoryList(LIVE_TV, list, channel) a Channels row card
+├─→ MovieDetails | EpisodeSelection      a favourite
 └─→ Continue Watching card ─→ EpisodeSelection(initialEpisodeId) | Player (an episode) | MovieDetails
 
-CategoryList
+LiveTvTab | MoviesTab | TvShowsTab | CategoryList (a section's browse; CategoryList when pushed)
 ├─  Live TV: preview + full screen (TV) or dock + full screen (mobile) are layers, not entries
-├─→ EpgGuide(category)                   Live TV header button
+├─→ EpgGuide(category)                   Live TV header button (TV) / calendar at the end of the chips (phone)
 ├─→ EpgGuide(list, focusChannelId)       TV full screen: the OSD's Guide
-├─→ Search(contentType)
+├─→ Search(contentType)                  phone header (TV: the rail)
 ├─→ MovieDetails                         Movies
 ├─→ EpisodeSelection                     TV Shows (a Recent series card: with initialEpisodeId)
 └─→ Player                               a Recent episode card
@@ -113,9 +127,9 @@ On TV, Home opens the only content type straight away when the active source has
 
 ### Live TV Preview / Dock Back-Stack
 
-Live TV always shows a channel playing alongside the browse list ([FEATURES.md](FEATURES.md#live-tv)). Home → Live TV is one `CategoryList` entry and the preview is a layer on it, so Back never skips past the browse screen and out of Live TV.
+Live TV always shows a channel playing alongside the browse list ([FEATURES.md](FEATURES.md#live-tv)). The Live TV section (`LiveTvTab`) is one entry and the preview is a layer on it, so Back never skips past the browse screen and out of Live TV.
 
-- **TV** (`TvCategoryGridScreen.kt`, UX overhaul plan Part II LT7): Home pushes `CategoryList(showPreviewPane = false, initialStreamId = <last channel>)` with `popUpTo(ContentTypeSelection)` — the browse entry. The preview (`LiveTvSplitLayout`), with full screen promoted in place inside it, is a layer over browse: it is open while `livePreviewChannelId` (`rememberSaveable`) names the channel it opened on — the last channel on entry (no last channel: the entry opens on browse), or the channel OK was pressed on in browse. Back is a chain of stopovers in `LiveTvSplitLayout`'s `BackHandler`: full screen → preview (`fullScreen -> false`, the video keeps playing), then preview → browse (`livePreviewChannelId -> null`; the preview's player is stopped and released as it leaves composition), and only then does Back reach the nav host and pop the entry to Home. Left on the first tab stays put: only Back leaves the preview (Left did too, Live TV target item 8, until the user dropped it 2026-10-09). Browse is not composed under the preview — its rows would stay in the focus tree, and its focus effects run, behind an opaque preview or the full-screen player — so it is rebuilt on Back like a destination, its saved state (pane memories, scroll) kept in a `SaveableStateHolder`, with the same `CategoryViewModel` the preview used. The preview's own ViewModels (`PlaybackViewModel`, `StreamLoaderViewModel`) live in a store of the layer's (`LivePreviewViewModels`, held by the entry): they survive a trip to the TV Guide and back and an activity recreate, and are cleared when the layer closes, so a channel previewed for less than the watch delay is not written into Recent afterwards. **Entries opened on one channel push their own entry:** Home's Live row (with `initialCategoryId` = the virtual `favorites` or `recent`, so the context list is the one the card came from), Search (a Live TV result), the EPG Browser and the TV Guide (a channel or programme — including the guide opened from full screen's Guide button) push `CategoryList(initialCategoryId, initialStreamId)` with `showPreviewPane = true` (the default): that entry is the preview alone, with no browse layer, and Back from it pops back to the screen that opened it. After process death the layer comes back as it was: on the list it was on (kept with the screen's saved state and put back if the recreated `CategoryViewModel` lands on Recent) and on the channel last playing (`livePlayingChannelId`, saveable, cleared when the layer closes); the preview's seed waits for a list that has the channel.
+- **TV** (`TvCategoryGridScreen.kt`, UX overhaul plan Part II LT7): The rail (or Home's single-section auto-skip) opens the `LiveTvTab` section — the browse entry, `showPreviewPane = false`, opened fresh on the last channel (`liveTvOpenOn`, read once; a restored section keeps its saved state and doesn't force the preview). The preview (`LiveTvSplitLayout`), with full screen promoted in place inside it, is a layer over browse: it is open while `livePreviewChannelId` (`rememberSaveable`) names the channel it opened on — the last channel on entry (no last channel: the entry opens on browse), or the channel OK was pressed on in browse. Back is a chain of stopovers in `LiveTvSplitLayout`'s `BackHandler`: full screen → preview (`fullScreen -> false`, the video keeps playing), then preview → browse (`livePreviewChannelId -> null`; the preview's player is stopped and released as it leaves composition), and only then does Back reach the nav host and pop the entry to Home. Left on the first tab stays put: only Back leaves the preview (Left did too, Live TV target item 8, until the user dropped it 2026-10-09). Browse is not composed under the preview — its rows would stay in the focus tree, and its focus effects run, behind an opaque preview or the full-screen player — so it is rebuilt on Back like a destination, its saved state (pane memories, scroll) kept in a `SaveableStateHolder`, with the same `CategoryViewModel` the preview used. The preview's own ViewModels (`PlaybackViewModel`, `StreamLoaderViewModel`) live in a store of the layer's (`LivePreviewViewModels`, held by the entry): they survive a trip to the TV Guide and back and an activity recreate, and are cleared when the layer closes, so a channel previewed for less than the watch delay is not written into Recent afterwards. **Entries opened on one channel push their own entry:** Home's Live row (with `initialCategoryId` = the virtual `favorites` or `recent`, so the context list is the one the card came from), Search (a Live TV result), the EPG Browser and the TV Guide (a channel or programme — including the guide opened from full screen's Guide button) push `CategoryList(initialCategoryId, initialStreamId)` with `showPreviewPane = true` (the default): that entry is the preview alone, with no browse layer, and Back from it pops back to the screen that opened it. After process death the layer comes back as it was: on the list it was on (kept with the screen's saved state and put back if the recreated `CategoryViewModel` lands on Recent) and on the channel last playing (`livePlayingChannelId`, saveable, cleared when the layer closes); the preview's seed waits for a list that has the channel.
 - **Mobile** (`MobileCategoryListScreen.kt`): the dock and its full screen are local state (`dockTarget`, `fullScreen`), not routes. The dock seeds itself on entry — `initialStreamId` when given, else the last-played channel when the first list shown has it — so Live TV rarely opens on a bare list. Two `BackHandler`s give the stopovers: `fullScreen -> false` (full screen collapses to the dock), then `dockTarget -> null` (the dock stops and clears to the bare list). Only a third Back reaches `onBack` and leaves the screen. The toolbar's Back, Search and TV Guide leave without those handlers, so each stops the dock first (the engine is Activity-scoped and would keep playing behind the next screen). Search, the TV Guide and the EPG Browser push their own `CategoryList` entry on the chosen channel, as on TV.
 
 When touching either flow, keep "Back always has a real stopover before exiting" — it is why both are more than a single `navigate()` call.

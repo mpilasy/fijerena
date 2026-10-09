@@ -330,10 +330,10 @@ there. Each file's header comments name the start screen, the source it expects 
 
 | Walk | Screen |
 |------|--------|
-| `home.txt` | Home (atr, iptv): opens on the last channel watched, tiles, header buttons, Down back to the last tile |
-| `home-rows.txt` | Home (atr, jellyxtream): Continue Watching and favourites rows — ends stay put, Up/Down keep each row's card and the tile focused last |
+| `home.txt` | Home (atr, iptv): opens on the last channel watched, Left to the rail and back, header buttons, Down back to the row |
+| `home-rows.txt` | Home (atr, jellyxtream): Continue Watching and favourites rows — Left from a first card to the rail and back, Up/Down keep each row's card, Up from the first row to the header |
 | `live-tv-browse.txt` | Live TV browse: categories and channels as two panes |
-| `live-tv-preview.txt` | Live TV preview: the docked channel panel's tabs and rows |
+| `live-tv-preview.txt` | Live TV preview: the docked channel panel's tabs and rows; Left on the first tab stays, Back leaves |
 | `live-tv-fullscreen.txt` | Live TV full screen: the channel panel over the video |
 | `live-tv-osd.txt` | Live TV full screen: the OSD button row |
 | `live-tv-back.txt` | Back from the preview to browse, on the playing channel |
@@ -348,9 +348,13 @@ there. Each file's header comments name the start screen, the source it expects 
 | `live-sync.txt` | Live sync screen |
 
 All fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches
-after the fixes). Still open: `epg-management.txt` needs a source that has guide sources, and
-`live-tv-preview.txt` gained a final Left step afterwards that has not been re-recorded. Some file
-headers still say "not yet recorded" from before that round.
+after the fixes). After the navigation rail and the Home change (2026-10-08 / 09): `home.txt`,
+`home-rows.txt`, `sources.txt` and `live-tv-preview.txt` re-run with 0 mismatches; `search.txt`
+and `settings.txt` match on their rail steps but depend on the device's recent searches and on a
+profile page that needs another source; `details.txt`, `live-tv-browse.txt`, `guide.txt` and
+`epg-management.txt` were edited by hand for the rail and not yet re-run (`guide.txt` and
+`epg-management.txt` need a source with a guide). Some file headers still say "not yet recorded"
+from before those rounds.
 
 ---
 

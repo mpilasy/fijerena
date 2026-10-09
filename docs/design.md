@@ -183,7 +183,7 @@ No back buffer (a seek back re-downloads). Byte caps bound memory: live 32 MB; V
 
 ### Jellyfin Playback
 
-**Auth:** `JellyfinApiService` adds `Authorization: MediaBrowser …` and, once signed in, `X-Emby-Token` to every request through an `HttpSend` interceptor. Sign-in body: `{"Username": "...", "Pw": "..."}`. Quick Connect stores only the token.
+**Auth:** `JellyfinApiService` adds `Authorization: MediaBrowser …` and, once signed in, `X-Emby-Token` to every request through an `HttpSend` interceptor. Sign-in body: `{"Username": "...", "Password": "...", "Pw": "..."}`. Quick Connect stores only the token. `JellyfinMediaProvider.connect()` signs in one request at a time (a `Mutex`): requests that find the session gone share one sign-in. A refused login (401 / 403, `JellyfinLoginRejectedException`) is the answer for 30 s (`REJECTED_LOGIN_RETRY_MS`) instead of being sent again; saving the source builds a new provider, so a corrected login is tried at once. A token refused mid-session is cleared only by the first request that finds it so (2026-10-09: five refused logins in half a second on a phone).
 
 Before each playback the app negotiates the stream with `POST /Items/{id}/PlaybackInfo`:
 
@@ -338,7 +338,8 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Home | `feature/contentselection/ContentTypeSelectionScreen.kt` (+ `components/TvContinueWatchingShelf.kt`) | Content types, header buttons, Continue Watching |
+| Home | `feature/contentselection/ContentTypeSelectionScreen.kt` (+ `components/TvContinueWatchingShelf.kt`) | Header (clock, source, Search the guide), Continue Watching, Channels and favourites rows; no section tiles (the rail) |
+| Navigation rail | `ui/components/rail/TvNavRail.kt`, `TvNavRailState.kt`; `navigation/TvSections.kt` | Profile, Home, sections, Search, Settings down the left edge, over every screen but the player and the Live TV preview |
 | Category screen | `feature/category/TvCategoryGridScreen.kt` | Categories and items in two panes; Live TV preview layer |
 | Movie details | `feature/movie/MovieDetailsScreen.kt` | Hero, Play / Resume, tabs, related titles |
 | Episodes | `feature/episode/EpisodeSelectionScreen.kt` | Season tabs, episode list, episode detail panel |
