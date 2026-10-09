@@ -55,6 +55,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -477,7 +478,10 @@ fun ContentTypeSelectionScreen(
     // to the card that took its place (cardAfterChange), with the Undo bar; Menu while it shows
     // puts the card back, focus on it.
     var cardMenu by remember { mutableStateOf<HomeCardMenu?>(null) }
-    val cardFocus = remember { FocusRequester() }
+    // One requester per card, attached for good: attaching one only while a request was pending,
+    // then taking it off, changed the focused card's modifiers and focus fell back to the row's
+    // first card (the removal's neighbour got focus, then lost it).
+    val cardFocus = remember { mutableMapOf<HomeCard, FocusRequester>() }
     var cardFocusRequest by remember { mutableStateOf<CardFocusRequest?>(null) }
     val shelfKeys: (HomeShelf) -> List<String> = { shelf ->
         when (shelf) {
@@ -504,6 +508,10 @@ fun ContentTypeSelectionScreen(
     // nothing focused.
     LaunchedEffect(cardFocusRequest) {
         val request = cardFocusRequest ?: return@LaunchedEffect
+        // After the card menu has closed: its window hands focus back to Home as it goes, and a
+        // request made while it was still up landed, then fell back to the row's first card.
+        snapshotFlow { cardMenu == null }.first { it }
+        repeat(2) { withFrameNanos { } }
         val card = request.card
         if (card == null) {
             rail?.entry?.requestFocusWithRetry()
@@ -511,12 +519,18 @@ fun ContentTypeSelectionScreen(
             val listState = listStateOf(card.shelf)
             val index = shelfKeys(card.shelf).indexOf(card.key)
             if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
-            cardFocus.requestFocusWithRetry(fallback = rail?.entry)
+            val requester = cardFocus.getOrPut(card) { FocusRequester() }
+            requester.requestFocusWithRetry(fallback = rail?.entry)
+            // Coming from outside the row (the menu had focus), the request enters the row's
+            // focusRestorer, which hands it to the card it remembers — the one just removed — or
+            // the first card. Asked again from inside the row, it lands on the card.
+            withFrameNanos { }
+            requester.requestFocus()
         }
         cardFocusRequest = null
     }
     val cardFocusTarget: (HomeShelf, String) -> Modifier = { shelf, key ->
-        if (cardFocusRequest?.card == HomeCard(shelf, key)) Modifier.focusRequester(cardFocus) else Modifier
+        Modifier.focusRequester(cardFocus.getOrPut(HomeCard(shelf, key)) { FocusRequester() })
     }
 
     // Takes the card out of its row (returns how to put it back where it was).
