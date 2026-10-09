@@ -2,7 +2,9 @@
 
 **Status:** Planned 2026-10-08; not started. Design agreed with the user 2026-10-08: a thin rail on
 the left edge, faint icons at rest that slide out into icons + labels on focus; Home stays; the TV
-Guide is *not* a rail item; each section keeps its place. TV only; the phone keeps its bottom bar.
+Guide is *not* a rail item; each section keeps its place. Open questions answered the same day:
+Search = current section, first-launch hint yes, Home's tiles stay; parallel layout agreed. TV
+only; the phone keeps its bottom bar.
 
 ## Problem
 
@@ -100,15 +102,14 @@ the avatar**. It keeps the title, the source line and the screen's own actions (
 guide's day buttons, Search the guide, TV Guide). Home's header keeps the clock and the source
 pill.
 
-## Open questions
+## Decisions (2026-10-08)
 
-- **Q1. Search on the rail:** opens Search for the current section (what the header's Search does
-  now: Live TV search on Live TV), and everything from Home / Settings? Or always everything?
-  Proposed: the current section, everything elsewhere — same as the header today.
-- **Q2. First-launch hint:** slide the rail out once on first launch with "Press Left for sections"?
-  Proposed: yes, once per device.
-- **Q3. Home's section tiles:** stay (rail and tiles both go to the sections) or go? Proposed: stay
-  for now; decide after using it.
+- **Search on the rail** opens Search for the current section (Live TV search in Live TV, Movies in
+  Movies…), everything from Home, Settings and other non-section screens — what the header's Search
+  does today.
+- **First-launch hint:** once per device, the rail slides out on its own with "Press Left for
+  sections", then slides back in.
+- **Home's section tiles stay** for now; revisit after using the rail.
 
 ## Phases
 
@@ -122,8 +123,29 @@ for live; bears only if the user allows).
 | 2 | Section roots and saved stacks in `TvNavHost`; rail wired into the nav host scaffold; Home stays start; same-section pick = section start; Back at section start → rail | Walk: Home → Movies → film → rail → Live TV → rail → Movies lands on the film |
 | 3 | Left hands over to the rail on every screen in the table; guide exception; rail hidden on player / preview / first-run screens | `scripts/focus-walks/` walk per screen; `check-focus-retry.sh` |
 | 4 | Headers drop Search / Settings / avatar; `SectionRootButton` removed (and `sectionRootFor` if unused) | Every header at 60 / 100 / 120 % |
-| 5 | Polish and checks: first-launch hint (Q2), themes, French and Malagasy labels, 100 % Text & grid size, overscan on the Bravia, Shield check | Screens captured; Shields / Bravia only when the user says |
+| 5 | Polish and checks: first-launch hint, themes, French and Malagasy labels, 100 % Text & grid size, overscan on the Bravia, Shield check | Screens captured; Shields / Bravia only when the user says |
 | 6 | Docs: NAVIGATION_GUIDE (rail, saved sections, Back), FEATURES, AGENTS focus contract (the rail rule: leftmost Left goes to the rail, exceptions), RELEASE_NOTES; archive this plan | — |
+
+## How the work runs
+
+Five steps; phases 3 and 4 touch the same screen files, so they are split by screen group, not by
+phase. Agents work in their own worktrees and run the gates (compile, ktlint, lint, unit tests,
+`check-*.sh`); the coordinator merges one lane at a time and runs the emulator checks and focus
+walks (one TV emulator).
+
+1. **Phase 0** alone. Ends by fixing the rail's interface (items, current item, the "Left goes to
+   the rail" hook) in this plan.
+2. **Phases 1 and 2** in parallel: lane R (the rail component) and lane N (section roots, saved
+   stacks, Back, the scaffold), against the interface from step 1.
+3. **Phases 3 + 4** in parallel, one lane per screen group, each doing the Left hand-over and the
+   header cleanup for its screens:
+   - **A** Home;
+   - **B** Live TV / Movies / TV Shows browse, the TV Guide (exception);
+   - **C** movie details, episodes, Search;
+   - **D** Settings, Sources, Edit Source, Guide sources, Live sync, Device info, Diagnostics,
+     Search the guide.
+4. **Phase 5** checks, after every lane is merged.
+5. **Phase 6** docs and archive.
 
 ## Progress
 
@@ -132,8 +154,10 @@ for live; bears only if the user allows).
 | 0 | Not started | |
 | 1 | Not started | |
 | 2 | Not started | |
-| 3 | Not started | |
-| 4 | Not started | |
+| 3 + 4 A Home | Not started | |
+| 3 + 4 B browse, guide | Not started | |
+| 3 + 4 C details, episodes, Search | Not started | |
+| 3 + 4 D Settings and the rest | Not started | |
 | 5 | Not started | |
 | 6 | Not started | |
 
