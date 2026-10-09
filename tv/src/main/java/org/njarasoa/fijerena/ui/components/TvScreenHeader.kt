@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  *
  * [actions] holds the screen's icon buttons ([org.njarasoa.fijerena.ui.components.buttons.TvIconAction],
  * which name themselves while focused), spaced for you; never text buttons. [leading] is for what
- * sits before the title — the section-root button, say — and is usually left out. The header
+ * sits before the title, and is usually left out. The header
  * itself is not focusable: focus moves between the buttons in it, and the screen decides how
  * Down / Up cross between the header and its content (AGENTS.md → focus contract).
  *

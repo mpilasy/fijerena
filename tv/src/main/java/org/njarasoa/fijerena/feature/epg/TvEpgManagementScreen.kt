@@ -36,7 +36,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
-import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -50,7 +49,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
-import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -76,8 +74,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun TvEpgManagementScreen(
     providerId: Long,
     onBack: () -> Unit,
-    /** The section-root button (P6), at the end of the title row; null hides it. */
-    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val viewModel: EpgManagementViewModel =
@@ -176,10 +172,7 @@ fun TvEpgManagementScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            // Up from Add (the list's first row) reaches the section-root button.
-            TvScreenHeader(title = stringResource(R.string.epg_management_screen_title), subtitle = providerName) {
-                SectionRootButton(sectionRoot)
-            }
+            TvScreenHeader(title = stringResource(R.string.epg_management_screen_title), subtitle = providerName)
 
             // No guide source: one sentence and the one thing to do here, centred (TV UI audit #20).
             // The action takes focus itself.

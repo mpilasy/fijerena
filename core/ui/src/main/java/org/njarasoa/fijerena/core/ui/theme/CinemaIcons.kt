@@ -61,7 +61,6 @@ import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Tv
-import androidx.compose.material.icons.outlined.VerticalAlignTop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.rounded.Add
@@ -106,7 +105,6 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Tv
-import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.sharp.Add
@@ -151,7 +149,6 @@ import androidx.compose.material.icons.sharp.SwapHoriz
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material.icons.sharp.Tune
 import androidx.compose.material.icons.sharp.Tv
-import androidx.compose.material.icons.sharp.VerticalAlignTop
 import androidx.compose.material.icons.sharp.Visibility
 import androidx.compose.material.icons.sharp.VisibilityOff
 import androidx.compose.runtime.Composable
@@ -417,9 +414,4 @@ object CinemaIcons {
     val MoreVert: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.MoreVert, Icons.Outlined.MoreVert, Icons.Sharp.MoreVert)
-
-    /** The section-root button (back to Movies, Settings… from four screens deep). */
-    val VerticalAlignTop: ImageVector
-        @Composable @ReadOnlyComposable
-        get() = pick(Icons.Rounded.VerticalAlignTop, Icons.Outlined.VerticalAlignTop, Icons.Sharp.VerticalAlignTop)
 }

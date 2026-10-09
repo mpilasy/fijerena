@@ -47,8 +47,6 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.di.AppContainer
-import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
-import org.njarasoa.fijerena.core.ui.navigation.sectionRootFor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
@@ -323,10 +321,8 @@ fun TvNavHost(
         initialStreamId: String? = null,
         showPreviewPane: Boolean = true,
         closeSavedLivePreview: Boolean = false,
-        sectionRoot: SectionRoot? = null,
     ) {
         TvCategoryGridScreen(
-            sectionRoot = sectionRoot,
             contentType = contentType,
             initialCategoryId = initialCategoryId,
             initialStreamId = initialStreamId,
@@ -465,9 +461,6 @@ fun TvNavHost(
                         popEnterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                         popExitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                     ) {
-                        // sectionRoot: the button back to the section's first screen, shown 4 or more
-                        // entries above Home (sectionRootFor, D4). Passed to every screen that can sit that
-                        // deep; not to the player, and the Live TV preview layer never draws it.
                         composable<Screen.ContentTypeSelection> {
                             // Prevent back button from exiting the app on the root screen
                             BackHandler {}
@@ -611,7 +604,6 @@ fun TvNavHost(
                         composable<Screen.EpgBrowser> { backStackEntry ->
                             val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                             TvEpgBrowserScreen(
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                                 categoryId = browserScreen.categoryId,
                                 categoryName = browserScreen.categoryName,
                                 onBack = { navController.navigateUp() },
@@ -644,7 +636,6 @@ fun TvNavHost(
                                 initialCategoryId = categoryListScreen.initialCategoryId,
                                 initialStreamId = categoryListScreen.initialStreamId,
                                 showPreviewPane = categoryListScreen.showPreviewPane,
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                             )
                         }
 
@@ -662,7 +653,6 @@ fun TvNavHost(
                         composable<Screen.Search> { backStackEntry ->
                             val searchScreen = backStackEntry.toRoute<Screen.Search>()
                             SearchScreen(
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                                 contentType = searchScreen.contentType,
                                 onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
                                     when (streamContentType) {
@@ -715,7 +705,6 @@ fun TvNavHost(
                         composable<Screen.MovieDetails> { backStackEntry ->
                             val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
                             MovieDetailsScreen(
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                                 movieId = movieDetailsScreen.movieId,
                                 movieName = movieDetailsScreen.movieName,
                                 categoryId = movieDetailsScreen.categoryId,
@@ -757,7 +746,6 @@ fun TvNavHost(
                         composable<Screen.EpisodeSelection> { backStackEntry ->
                             val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
                             EpisodeSelectionScreen(
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                                 seriesId = episodeSelectionScreen.seriesId,
                                 seriesName = episodeSelectionScreen.seriesName,
                                 categoryId = episodeSelectionScreen.categoryId,
@@ -803,7 +791,6 @@ fun TvNavHost(
                         composable<Screen.EpgGuide> { backStackEntry ->
                             val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
                             TvEpgGuideScreen(
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                                 categoryId = epgScreen.categoryId,
                                 categoryName = epgScreen.categoryName,
                                 focusChannelId = epgScreen.focusChannelId,
@@ -931,7 +918,6 @@ fun TvNavHost(
                         composable<Screen.EpgManagement> { backStackEntry ->
                             val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                             TvEpgManagementScreen(
-                                sectionRoot = sectionRootFor(navController, backStackEntry),
                                 providerId = epgScreen.providerId,
                                 onBack = { navController.navigateUp() },
                             )
