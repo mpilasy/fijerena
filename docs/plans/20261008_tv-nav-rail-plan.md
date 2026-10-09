@@ -1,6 +1,6 @@
 # TV navigation rail
 
-**Status:** Planned 2026-10-08; Phase 0 done; Phases 1–2 in progress (user: "go all the way", no bears). Design agreed with the user 2026-10-08: a thin rail on
+**Status:** Planned 2026-10-08; Phases 0–2 done; Phases 3 + 4 in progress (lanes A–D) (user: "go all the way", no bears). Design agreed with the user 2026-10-08: a thin rail on
 the left edge, faint icons at rest that slide out into icons + labels on focus; Home stays; the TV
 Guide is *not* a rail item; each section keeps its place. Open questions answered the same day:
 Search = current section, first-launch hint yes, Home's tiles stay; parallel layout agreed. TV
@@ -193,12 +193,12 @@ walks (one TV emulator).
 | Phase | State | Commit |
 |---|---|---|
 | 0 | Done (findings above; interface in `ui/components/rail/`) | |
-| 1 | In progress (lane R) | |
-| 2 | In progress (lane N) | |
-| 3 + 4 A Home | Not started | |
-| 3 + 4 B browse, guide | Not started | |
-| 3 + 4 C details, episodes, Search | Not started | |
-| 3 + 4 D Settings and the rest | Not started | |
+| 1 | Done (lane R) | 5c5002dd → main |
+| 2 | Done (lane N) + fixes from the emulator walk: the first-launch hint was spent while the profile picker hid the rail (now shown after 1.5 s on screen, recorded once shown in full); the profile item said "A" (now the name and colour); Home's source switch kept the old source's saved sections (now cleared). Walked: hint, rail at rest, Back at a section start → rail, Right back, sections keep their place, Live TV preview hides the rail, video stops on leaving and doesn't restart on return, Back on the rail → Home | a665803d, 5998e5fb → main |
+| 3 + 4 A Home | In progress | |
+| 3 + 4 B browse, guide | In progress | |
+| 3 + 4 C details, episodes, Search | In progress | |
+| 3 + 4 D Settings and the rest | In progress | |
 | 5 | Not started | |
 | 6 | Not started | |
 

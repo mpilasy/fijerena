@@ -184,12 +184,11 @@ internal fun TvSectionRail(
     }
 
     if (source == null || !homeOnStack) HideTvNavRail()
-    val profileInitial =
-        profiles
-            .firstOrNull { it.id == activeProfileId }
-            ?.name
-            ?.let(::initialOf)
-            .orEmpty()
+    val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
+    val profileInitial = activeProfile?.name?.let(::initialOf).orEmpty()
+    // The avatar's label and colour, as the Home header draws it ("A" alone said nothing).
+    rail.profileName = activeProfile?.name
+    rail.profileColorIndex = activeProfile?.colorIndex ?: 0
     TvNavRail(
         state = rail,
         items = railItems(source?.sections),

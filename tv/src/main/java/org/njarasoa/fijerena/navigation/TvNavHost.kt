@@ -491,6 +491,9 @@ fun TvNavHost(
                                 onChooseProfile = {
                                     navController.navigateOnce(Screen.ProfilePicker)
                                 },
+                                // Home's source pill switched the source: the sections' saved places
+                                // hold the old source's lists (its Movies showed under the new one).
+                                onProviderChanged = { clearSectionStacks() },
                                 onSignInRequired = { providerId ->
                                     // Plain navigate, not navigateOnce: this fires from home's load, often
                                     // while home is still entering after a profile switch — not RESUMED yet,

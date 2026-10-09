@@ -134,6 +134,9 @@ internal fun railEntryItem(
 private const val HINT_PREFS = "tv_nav_rail"
 private const val KEY_HINT_SHOWN = "hint_shown"
 
+/** How long the rail stays on screen before the first-launch hint shows (the screen has settled). */
+private const val HINT_SETTLE_MS = 1_500L
+
 @Composable
 private fun RailOverlay(
     state: TvNavRailState,
@@ -266,7 +269,7 @@ private fun RailOverlay(
                 maxLines = 1,
                 modifier =
                     Modifier
-                        .background(panel, RoundedCornerShape(CornerRadius.large))
+                        .background(panel.copy(alpha = 1f), RoundedCornerShape(CornerRadius.large))
                         .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             )
         }
@@ -393,7 +396,10 @@ private fun RailItem.icon(): ImageVector =
 
 /**
  * Whether the first-launch hint is up: true for [TvNavRailDefaults.hintDurationMs] the first time
- * the rail is composed on this device, then never again (recorded as it shows).
+ * the rail has stayed on screen for [HINT_SETTLE_MS] on this device, then never again. The rail is
+ * composed only while visible, so a screen that hides it right away (the profile picker at launch
+ * hides it one frame after it first shows) cancels this before the hint is spent; it is recorded
+ * only once it has been shown in full.
  */
 @Composable
 private fun rememberFirstLaunchHint(): Boolean {
@@ -402,10 +408,11 @@ private fun rememberFirstLaunchHint(): Boolean {
     LaunchedEffect(Unit) {
         val prefs = context.getSharedPreferences(HINT_PREFS, Context.MODE_PRIVATE)
         if (!prefs.getBoolean(KEY_HINT_SHOWN, false)) {
-            prefs.edit { putBoolean(KEY_HINT_SHOWN, true) }
+            delay(HINT_SETTLE_MS)
             showing = true
             delay(TvNavRailDefaults.hintDurationMs)
             showing = false
+            prefs.edit { putBoolean(KEY_HINT_SHOWN, true) }
         }
     }
     return showing
