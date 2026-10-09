@@ -82,7 +82,6 @@ fun TvCategoryGridScreen(
      */
     closeSavedLivePreview: Boolean = false,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
-    onSearchClick: () -> Unit = {},
     /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
     onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit = { _, _, _ -> },
     onBack: () -> Unit = {},
@@ -149,7 +148,6 @@ fun TvCategoryGridScreen(
         configuration = configuration,
         catViewModel = viewModel,
         onStreamSelected = onStreamSelected,
-        onSearchClick = onSearchClick,
         onEpgClick = onEpgClick,
         onBack = onBack,
         onHome = onHome,
@@ -173,7 +171,6 @@ private fun CategoryGridContent(
     configuration: android.content.res.Configuration,
     catViewModel: CategoryViewModel,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
-    onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit,
     onBack: () -> Unit,
     onHome: () -> Unit,
@@ -380,7 +377,6 @@ private fun CategoryGridContent(
                                     onRefreshStreams = { categoryId ->
                                         catViewModel.refreshStreams(categoryId)
                                     },
-                                    onSearchClick = onSearchClick,
                                     onEpgClick = { categoryId, categoryName -> onEpgClick(categoryId, categoryName, null) },
                                     onBack = onBack,
                                 )

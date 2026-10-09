@@ -148,6 +148,7 @@ import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -177,9 +178,11 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * answers the D-pad. Left/Right step by programme within the row; Up/Down keep the *time*: the
  * target row's cell under the focused cell's visible start (an anchor that sticks across rows);
  * Channel Up/Down page rows; Left from the first programme lands on the channel cell, Left from
- * a channel cell stays; Up leaves the grid only from the first row, into the header's labelled
- * buttons; "Now" scrolls to now and focuses the on-air cell. Back leaves the guide. Opened from
- * the player (GD5), entry focus goes to the playing channel's row instead of the first one on air.
+ * a channel cell goes to the navigation rail (only the channel column hands Left to the rail:
+ * inside the grid Left is earlier in time); Up leaves the grid only from the first row, into the
+ * header's labelled buttons; "Now" scrolls to now and focuses the on-air cell. Back leaves the
+ * guide. Opened from the player (GD5), entry focus goes to the playing channel's row instead of
+ * the first one on air.
  *
  * OK on a programme opens its details panel, whose Watch channel opens the channel's preview, as
  * OK on a channel does. Long-press OK or the Menu key on either
@@ -853,6 +856,8 @@ private class GuideFocus {
         if (focusedRow < 0) return false
         return when (event.key) {
             Key.DirectionLeft -> {
+                // On a channel cell, with no move under way, Left is left to the cell: the rail.
+                if (focusedProgram == null && rememberedKey?.startsWith(KEY_CHANNEL_PREFIX) == true) return false
                 movers.stepInRow(-1)
                 true
             }
@@ -1080,7 +1085,7 @@ private fun GuideBody(
                     if (current == null) {
                         // Right from the channel cell: the on-air cell when now is on screen, else
                         // the cell at the canvas's left edge — not the day's first programme (G-T4).
-                        // Left on a channel cell stays.
+                        // Left on a channel cell goes to the rail (onKey lets it through).
                         if (step > 0) {
                             val visible = layout.visibleRange(scrollState.value.toFloat(), viewport())
                             val now = nowEpochSeconds.value
@@ -1439,6 +1444,7 @@ private fun GuideRow(
                 Modifier
                     .width(channelColumnWidth)
                     .guideCell(focus, chKey, rowIndex, program = null)
+                    .leftToRail()
                     .navReturnFocusTarget(returnFocus, chKey)
                     .then(if (returnChannelRequester != null) Modifier.focusRequester(returnChannelRequester) else Modifier),
         )

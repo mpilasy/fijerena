@@ -7,10 +7,12 @@
 # the two columns are panes, Left/Right move between them, Up/Down stay in a column — and
 # Phase 3 (P3): rows have no hidden trailing buttons; long-press OK / Menu opens a row's menu.
 # Updated 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
-# Up from the first stream reaches the header (the browse header has one Refresh, with Search and
-# TV Guide; Up goes to the nearest button, Search). Nothing is above the header.
-UP	Search
-UP	Search
+# Updated 2026-10-08 (TV navigation rail, Phases 3 + 4): the header's Search is gone (the rail has
+# it); Left from a category goes to the rail, and Right comes back to that category.
+# Up from the first stream reaches the header (the browse header keeps TV Guide, shown only with a
+# guide, and Refresh: here Refresh alone). Nothing is above the header.
+UP	Refresh
+UP	Refresh
 # Down from the header returns to the item pane's first row; Left from there lands on the
 # selected category ("Recent" is selected when the screen opened on it).
 DOWN	Arena Sport 1
@@ -26,8 +28,9 @@ DOWN	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 # Changed (F-C-3, R1/R2): Left from an item lands on the selected category, not the one level
 # with it ("Recent Categories" before).
 LEFT	Recent
-# Changed (F-C-4, R1): Left from a category goes nowhere; focus stays on it ("Search" before).
-LEFT	Recent
-LEFT	Recent
+# Changed (rail, Phase 3): Left from a category goes to the rail, on the current section
+# (it went nowhere before, F-C-4); Right returns to the category it came from.
+LEFT	Live TV
+RIGHT	Recent
 # F-C-2 (Down at the end of the item list stays on the last row) is not walked: the list
 # length varies per source.

@@ -67,7 +67,6 @@ internal fun TwoColumnLayout(
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
-    onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -92,7 +91,7 @@ internal fun TwoColumnLayout(
     // The source's own categories: Recent, Favourites and the like are modes, not categories.
     val categoryCount = remember(categories) { categories.count { !it.isVirtual } }
 
-    // Back from Search or the TV Guide lands on the header button that opened it. Runs once the
+    // Back from the TV Guide lands on the header button that opened it. Runs once the
     // screen is RESUMED, after CategoryList's and StreamList's own focus effects, so it has the
     // last word. Rows opened from the stream list are StreamList's own business (openedItemId).
     val returnFocus = rememberNavReturnFocus()
@@ -141,15 +140,6 @@ internal fun TwoColumnLayout(
             title = sectionTitle(contentType),
             subtitle = "$providerName · ${stringResource(R.string.category_count_format, categoryCount)}",
         ) {
-            TvIconAction(
-                onClick = {
-                    returnFocus.leaveFrom(RETURN_SEARCH)
-                    onSearchClick()
-                },
-                icon = CinemaIcons.Search,
-                label = stringResource(R.string.common_search),
-                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SEARCH),
-            )
             val hasEpgData =
                 supportsNativeEpg ||
                     epgIndexState is EpgIndexState.Indexed
@@ -262,5 +252,4 @@ internal fun TwoColumnLayout(
 }
 
 // Keys for the header buttons that navigate away — see rememberNavReturnFocus.
-private const val RETURN_SEARCH = "search"
 private const val RETURN_TV_GUIDE = "tvGuide"

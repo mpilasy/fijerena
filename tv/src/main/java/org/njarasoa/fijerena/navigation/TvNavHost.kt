@@ -390,9 +390,6 @@ fun TvNavHost(
                     }
                 }
             },
-            onSearchClick = {
-                navController.navigateOnce(Screen.Search(contentType))
-            },
             onEpgClick = { categoryId, categoryName, focusChannelId ->
                 // The TV Guide for a category (the header button), or for the playing
                 // channel's list from the player's Guide button, on that channel's row.

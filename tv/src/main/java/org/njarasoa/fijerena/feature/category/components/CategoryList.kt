@@ -71,6 +71,7 @@ import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.tvPane
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -188,7 +189,7 @@ internal fun CategoryList(
                         shape = panelShape,
                     )
                     // The screen header above stays outside the pane: Up from the first category
-                    // reaches it. Left goes nowhere (F-C-4).
+                    // reaches it. Left from a row goes to the rail, whose Right comes back to it.
                     .tvPane(paneFocus, exitRight = itemsPane),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -207,7 +208,7 @@ internal fun CategoryList(
                                 cardStyle = cardStyle,
                                 icon = virtualCategoryIcon(category.id),
                                 onClick = { onCategorySelected(category.id) },
-                                cardModifier = Modifier.paneItem(paneFocus, category.id),
+                                cardModifier = Modifier.paneItem(paneFocus, category.id).leftToRail(),
                             )
                         }
                     }
@@ -244,7 +245,7 @@ internal fun CategoryList(
                                 isFavorite = category.id in favoriteCategoryIds,
                                 onClick = { onCategorySelected(category.id) },
                                 onOpenActions = { actionsCategory = category },
-                                cardModifier = Modifier.paneItem(paneFocus, category.id),
+                                cardModifier = Modifier.paneItem(paneFocus, category.id).leftToRail(),
                                 modifier =
                                     // See StreamList: remember-scoped so recomposition of a visible row
                                     // doesn't drop the modifier and cancel the animation mid-flight.
