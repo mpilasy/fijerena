@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Jellyfin sign-in burst
+**Release Date:** 2026-10-09
+
+- **Jellyfin: one sign-in at a time.** When the session was gone, every request a screen started signed in on its own — five logins in half a second on a phone, all refused, a burst that counts toward the server's failed-login lockout. Requests now share one sign-in; a refused username / password is not sent again for 30 seconds (saving the source tries a corrected one straight away); an expired session is cleared only once.
+
 ## Version: TV Home without section tiles; Left stays in the preview
 **Release Date:** 2026-10-09
 

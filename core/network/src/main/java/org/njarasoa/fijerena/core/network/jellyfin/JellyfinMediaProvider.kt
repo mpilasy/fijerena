@@ -4,6 +4,8 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.njarasoa.fijerena.core.network.TtlCache
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -36,6 +38,7 @@ class JellyfinMediaProvider(
     private val onSessionSaved: ((token: String, userId: String) -> Unit)? = null,
     private val onSessionCleared: (() -> Unit)? = null,
     injectedApi: JellyfinApiService? = null,
+    private val now: () -> Long = System::currentTimeMillis,
 ) : MediaProvider {
     private val api =
         injectedApi ?: JellyfinApiService(serverUrl, deviceId).also {
@@ -68,18 +71,44 @@ class JellyfinMediaProvider(
             supportsServerUserData = true,
         )
 
-    override suspend fun connect(): Result<Unit> {
-        if (isConnected()) return Result.success(Unit)
-        return api
-            .authenticate(username, password)
-            .also { result ->
-                result.onSuccess {
-                    val token = api.getAccessToken()
-                    val uid = api.getUserId()
-                    if (token != null && uid != null) onSessionSaved?.invoke(token, uid)
-                }
-            }.map { }
-    }
+    // One sign-in at a time: every request that finds the session gone calls connect(), and a
+    // screen starts several at once — five logins in half a second on a OnePlus (2026-10-09),
+    // all refused, a burst that also counts toward the server's failed-login lockout.
+    private val connectMutex = Mutex()
+
+    // A refused login is the answer for [REJECTED_LOGIN_RETRY_MS]: the requests waiting behind it,
+    // and any that come right after, fail at once instead of sending the same username and
+    // password again. Editing the source builds a new provider, so a corrected login is tried
+    // straight away.
+    private var rejectedAtMs: Long? = null
+    private var rejection: Throwable? = null
+
+    override suspend fun connect(): Result<Unit> =
+        connectMutex.withLock {
+            if (isConnected()) return@withLock Result.success(Unit)
+            val rejectedAt = rejectedAtMs
+            val lastRejection = rejection
+            if (rejectedAt != null && lastRejection != null && now() - rejectedAt < REJECTED_LOGIN_RETRY_MS) {
+                return@withLock Result.failure(lastRejection)
+            }
+            api
+                .authenticate(username, password)
+                .also { result ->
+                    result.onSuccess {
+                        rejectedAtMs = null
+                        rejection = null
+                        val token = api.getAccessToken()
+                        val uid = api.getUserId()
+                        if (token != null && uid != null) onSessionSaved?.invoke(token, uid)
+                    }
+                    result.onFailure { e ->
+                        if (e is JellyfinLoginRejectedException) {
+                            rejectedAtMs = now()
+                            rejection = e
+                        }
+                    }
+                }.map { }
+        }
 
     override suspend fun disconnect() {
         api.disconnect()
@@ -564,13 +593,20 @@ class JellyfinMediaProvider(
     }
 
     private suspend fun <T> withAutoReconnect(block: suspend () -> Result<T>): Result<T> {
+        val tokenUsed = api.getAccessToken()
         val result = block()
         if (result.isFailure) {
             val cause = result.exceptionOrNull()
             if (cause is ClientRequestException && cause.response.status == HttpStatusCode.Unauthorized) {
-                // Token is invalid — clear persisted session and re-authenticate
-                onSessionCleared?.invoke()
-                api.disconnect()
+                // Token is invalid — clear persisted session and re-authenticate. Only the first
+                // request to find it so clears it: the others, refused with the same token, find a
+                // fresh one (or none) by the time they get the lock, and keep it.
+                connectMutex.withLock {
+                    if (api.getAccessToken() == tokenUsed) {
+                        onSessionCleared?.invoke()
+                        api.disconnect()
+                    }
+                }
                 val reconnect = connect()
                 if (reconnect.isSuccess) {
                     return block()
@@ -720,3 +756,6 @@ class JellyfinMediaProvider(
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
     }
 }
+
+/** How long a refused login is the answer before connect() tries the server again. */
+internal const val REJECTED_LOGIN_RETRY_MS = 30_000L

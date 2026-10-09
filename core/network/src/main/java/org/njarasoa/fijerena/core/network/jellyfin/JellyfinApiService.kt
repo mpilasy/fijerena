@@ -135,13 +135,11 @@ class JellyfinApiService(
             Result.success(response)
         } catch (e: io.ktor.client.plugins.ClientRequestException) {
             Log.e(TAG, "Auth client error: ${e.response.status}", e)
-            val message =
-                when (e.response.status.value) {
-                    401 -> "Invalid username or password"
-                    403 -> "Access denied. Account may be disabled."
-                    else -> "Authentication failed (${e.response.status})"
-                }
-            Result.failure(Exception(message, e))
+            when (e.response.status.value) {
+                401 -> Result.failure(JellyfinLoginRejectedException("Invalid username or password", e))
+                403 -> Result.failure(JellyfinLoginRejectedException("Access denied. Account may be disabled.", e))
+                else -> Result.failure(Exception("Authentication failed (${e.response.status})", e))
+            }
         } catch (e: io.ktor.client.plugins.ServerResponseException) {
             Log.e(TAG, "Auth server error: ${e.response.status}", e)
             if (e.response.status.value == 500 && password.isNotBlank()) {
@@ -803,3 +801,9 @@ class JellyfinApiService(
         private const val REQUEST_TIMEOUT_MS = 60_000L
     }
 }
+
+/** The server refused the username and password (401 / 403): trying them again won't help. */
+class JellyfinLoginRejectedException(
+    message: String,
+    cause: Throwable? = null,
+) : Exception(message, cause)
