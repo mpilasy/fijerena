@@ -1,6 +1,6 @@
 # TV Recent and Favorites: removal and Live TV Recent
 
-**Status:** Proposed 2026-10-09, not started. Written from a walk on the TV emulator (iptv, atr) after
+**Status:** In progress 2026-10-09 (user: "drop the cap, then go all the way"); lanes A and B running, C after them. Written from a walk on the TV emulator (iptv, atr) after
 the user said removing from Recent / Favorites is "a chore and error-prone" and Live TV's Recent "a
 disaster", and asked for a proposal without questions.
 
@@ -62,8 +62,8 @@ Set-up: six News channels played ~13 s each in the preview, then zapped through 
 - **One order everywhere:** last watched first, then most recent. Home's Channels row stops
   mixing favourites in front: it shows Recent in that order, and favourite channels get their own
   "Favorite channels" row like Favorite movies / shows.
-- **A smaller cap for Live TV** (12 instead of the source's 25): a channel list you scan, not an
-  archive. Films and shows keep the source's Recent row size.
+- **No extra cap** (dropped 2026-10-09): the settle rule keeps zapped channels out, and the
+  source's Recent row size (Edit Source, 25 by default) already limits the list.
 
 ## Phases
 
@@ -73,11 +73,30 @@ Set-up: six News channels played ~13 s each in the preview, then zapped through 
 | 2 | Menu order by list; Undo bar replacing the favourites dialog |
 | 3 | Edit mode on Recent / Favorites lists, Clear Recent (per section) |
 | 4 | Home cards: Hold OK / Menu actions |
-| 5 | Live TV Recent: settle rule for zapped channels, stable order per visit, one order everywhere, Home's Favorite channels row, cap 12 |
+| 5 | Live TV Recent: settle rule for zapped channels, stable order per visit, one order everywhere, Home's Favorite channels row |
 | 6 | Docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), focus walks, archive |
 
 Phase 1 is a bug fix on its own; 2–4 change how removal looks and feels; 5 changes what Recent
 records. No model or database change: the settle rule is when `watch_state` is written, the cap is
-the query's limit, the stable order is UI state. The phone is out of scope (its swipe-to-reveal
-rows don't have the focus problem), except that the settle rule and the Live TV cap live in shared
-code and apply to it too.
+the stable order is UI state. The phone is out of scope (its swipe-to-reveal
+rows don't have the focus problem), except that the settle rule lives in shared code and applies
+to it too.
+
+## How the work runs
+
+- **Lane A** (phases 1, 2, 3 and the stable order of phase 5): `StreamList`, `CategoryList`,
+  `TwoColumnLayout`, `LiveTvChannelPanel`, `FavoriteMenuDialog`, a new Undo bar, `CategoryViewModel`,
+  `MediaRepository` / `WatchStateDao` (undo of a Recent removal), the TV Guide's removal.
+- **Lane B** (phase 5's settle rule and Home's order): `StreamLoaderViewModel` and the zap callers
+  (TV and phone), `core/ui/.../home/LiveRow.kt`, Home's Channels and new Favorite channels rows.
+- **Lane C** (phase 4, Home card actions) after A and B are merged: it uses A's menu and Undo bar
+  on B's Home.
+
+## Progress
+
+| Lane | State | Commits |
+|---|---|---|
+| A — removal, edit mode, stable order | In progress | |
+| B — settle rule, Home order | In progress | |
+| C — Home card actions | Not started | |
+| Docs, walks, archive | Not started | |
