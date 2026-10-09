@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -117,6 +118,8 @@ private fun NavController.isOnBackStack(route: Screen): Boolean =
 private data class RailSource(
     val providerId: Long,
     val sections: Set<String>?,
+    /** An Xtream source synced with no live categories: Live TV is left off the rail. */
+    val noChannels: Boolean = false,
 )
 
 /**
@@ -150,7 +153,20 @@ private suspend fun loadRailSource(
                         ?.supportedContentTypes
                 }
             }
-        RailSource(provider.id, sections)
+        // Live TV leaves the rail when the source has no channels — what Home's dimmed Live TV tile
+        // used to say. Re-read every time (a later sync may bring them), as the phone does: only for
+        // Xtream once it has synced, a count of its stored live categories, no network call.
+        val noChannels =
+            provider.type == "XTREAM" &&
+                provider.lastSyncedAtMs > 0 &&
+                sections?.contains(ContentType.LIVE_TV) == true &&
+                (
+                    AppContainer
+                        .getInstance(context.applicationContext)
+                        .getMediaRepository(provider.id)
+                        .getProvider() as? XtreamMediaProvider
+                )?.getCategoryTotalCount(ContentType.LIVE_TV) == 0
+        RailSource(provider.id, sections, noChannels)
     }
 
 /**
@@ -194,7 +210,7 @@ internal fun TvSectionRail(
     rail.profileColorIndex = activeProfile?.colorIndex ?: 0
     TvNavRail(
         state = rail,
-        items = railItems(source?.sections),
+        items = railItems(source?.let { if (it.noChannels) it.sections?.minus(ContentType.LIVE_TV) else it.sections }),
         profileInitial = profileInitial,
         onSelect = onSelect,
     )

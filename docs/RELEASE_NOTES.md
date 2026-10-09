@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV Home without section tiles
+**Release Date:** 2026-10-09
+
+- **Home on TV loses its Live TV / Movies / TV Shows tiles**: the navigation rail opens the sections, so Continue Watching and the other rows move up. With nothing to show yet, Home opens on the rail.
+- **Live TV leaves the rail** when the source has no channels (what the dimmed tile used to say).
+- After a profile or source switch, Home now always lands focus on a row (it could end with nothing focused).
+
 ## Version: Phone Settings tab
 **Release Date:** 2026-10-08
 

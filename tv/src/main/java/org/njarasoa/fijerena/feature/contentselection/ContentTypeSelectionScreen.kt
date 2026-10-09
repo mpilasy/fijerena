@@ -50,6 +50,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -143,6 +144,7 @@ import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -154,7 +156,6 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
 @Composable
 fun ContentTypeSelectionScreen(
-    onContentTypeSelected: (NavContentType) -> Unit,
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
@@ -194,9 +195,6 @@ fun ContentTypeSelectionScreen(
     val syncing = activeProviderId in runningSyncs
 
     // Category counts per content type: Pair(filtered, total) — null while loading
-    var liveTvCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
     var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
@@ -233,10 +231,6 @@ fun ContentTypeSelectionScreen(
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
     LaunchedEffect(refreshTrigger) {
-        // Reset counts so stale values don't linger during provider switch
-        liveTvCounts = null
-        moviesCounts = null
-        tvShowsCounts = null
         val resolvedTypes =
             withContext(Dispatchers.IO) {
                 val providerRepo = ProviderRepository(context.applicationContext)
@@ -314,33 +308,6 @@ fun ContentTypeSelectionScreen(
         }
     }
 
-    LaunchedEffect(mediaProviderRef) {
-        val mp = mediaProviderRef ?: return@LaunchedEffect
-        // getCategories() already excludes filtered-out categories at the DB layer, so its size
-        // IS the visible count — the total (for "X of Y") needs the unfiltered count separately.
-        val xtream = mp as? org.njarasoa.fijerena.core.network.XtreamMediaProvider
-        withContext(Dispatchers.IO) {
-            if (ContentType.LIVE_TV in mp.capabilities.supportedContentTypes) {
-                mp.getCategories(ContentType.LIVE_TV).onSuccess { cats ->
-                    val total = xtream?.getCategoryTotalCount(ContentType.LIVE_TV) ?: cats.size
-                    liveTvCounts = Pair(cats.size, total)
-                }
-            }
-            if (ContentType.MOVIES in mp.capabilities.supportedContentTypes) {
-                mp.getCategories(ContentType.MOVIES).onSuccess { cats ->
-                    val total = xtream?.getCategoryTotalCount(ContentType.MOVIES) ?: cats.size
-                    moviesCounts = Pair(cats.size, total)
-                }
-            }
-            if (ContentType.TV_SHOWS in mp.capabilities.supportedContentTypes) {
-                mp.getCategories(ContentType.TV_SHOWS).onSuccess { cats ->
-                    val total = xtream?.getCategoryTotalCount(ContentType.TV_SHOWS) ?: cats.size
-                    tvShowsCounts = Pair(cats.size, total)
-                }
-            }
-        }
-    }
-
     // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
     // on every ON_RESUME, so returning from playback immediately reflects updated progress.
     LaunchedEffect(mediaRepositoryRef) {
@@ -395,20 +362,6 @@ fun ContentTypeSelectionScreen(
     val returnFocus = rememberNavReturnFocus()
     val shelfListState = rememberLazyListState()
 
-    // The hero cards' focus (UX overhaul plan Part II Phase 4). Home opens on the first card with
-    // content, not the "Switch Source" chip (F-H-1). Down from any header button goes back to the
-    // card focused last, default the leftmost: the buttons sit top-right, so the geometric search
-    // picked the rightmost card and Up/Down were not reversible (F-H-2, R8). A Live TV card with
-    // no channels is dimmed and cannot take focus (F-H-3).
-    val heroCardFocus =
-        remember {
-            mapOf(RETURN_LIVE_TV to FocusRequester(), RETURN_MOVIES to FocusRequester(), RETURN_TV_SHOWS to FocusRequester())
-        }
-    var lastHeroCard by rememberSaveable { mutableStateOf<String?>(null) }
-    val liveTvEmpty = liveTvCounts?.first == 0
-    val heroCards = focusableHeroCards(supportedContentTypes, liveTvCounts)
-    val headerDownCard = lastHeroCard?.takeIf { it in heroCards } ?: heroCards.firstOrNull()
-    val heroFallbackFocus = heroCards.firstOrNull()?.let(heroCardFocus::getValue)
     // The first card of each row: where focus enters a row it has not been in yet (HomeRow).
     val shelfFirstFocus = remember { FocusRequester() }
     val liveRowFirstFocus = remember { FocusRequester() }
@@ -417,31 +370,40 @@ fun ContentTypeSelectionScreen(
     val favoriteMoviesListState = rememberLazyListState()
     val favoriteShowsFirstFocus = remember { FocusRequester() }
     val favoriteShowsListState = rememberLazyListState()
+    // The first card of the first row that has one: where focus opens and where Down from the header
+    // goes. Null with no row at all; the sections are on the navigation rail then.
+    val firstRowFocus =
+        when {
+            continueWatchingItems.isNotEmpty() -> shelfFirstFocus
+            liveRowEntries.isNotEmpty() -> liveRowFirstFocus
+            favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
+            favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
+            else -> null
+        }
+    val rail = LocalTvNavRail.current
+    // Read by the entry focus below after it has waited for the rows: the value from its launch
+    // was from before they loaded (null: no focus at all after a profile switch).
+    val currentFirstRowFocus by rememberUpdatedState(firstRowFocus)
     LaunchedEffect(Unit) {
         // Back hands focus to the control that was left (NavReturnFocusEffect below).
         if (returnFocus.isReturn) return@LaunchedEffect
-        // Wait for the Live TV count, so an empty Live TV card is not the one focused, and for the
-        // shelf, which takes entry focus when it has something (TV home overhaul plan, Phase 3).
+        // Wait for the shelf and the Live row, which take entry focus when they have something
+        // (TV home overhaul plan, Phase 3).
         withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
-            snapshotFlow {
-                needsSignIn ||
-                    ((ContentType.LIVE_TV !in supportedContentTypes || liveTvCounts != null) && continueWatchingLoaded && liveRowLoaded)
-            }.first { it }
+            snapshotFlow { needsSignIn || (continueWatchingLoaded && liveRowLoaded) }.first { it }
         }
         if (needsSignIn) return@LaunchedEffect
-        val firstTile =
-            focusableHeroCards(supportedContentTypes, liveTvCounts)
-                .firstOrNull()
-                ?.let(heroCardFocus::getValue)
-        when {
-            continueWatchingItems.isNotEmpty() -> shelfFirstFocus.requestFocusWithRetry(fallback = firstTile)
-            liveRowEntries.isNotEmpty() -> liveRowFirstFocus.requestFocusWithRetry(fallback = firstTile)
-            favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus.requestFocusWithRetry(fallback = firstTile)
-            favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus.requestFocusWithRetry(fallback = firstTile)
-            else -> firstTile?.requestFocusWithRetry()
-        }
+        // No row at all (a new source, nothing watched yet): the sections are on the rail, so
+        // focus starts there.
+        // After a profile or source switch the rows can come later than that wait: keep waiting
+        // for one, then the rail (hidden by the profile picker a moment ago, so retried until it
+        // is back).
+        val target =
+            currentFirstRowFocus
+                ?: withTimeoutOrNull(LATE_ROWS_WAIT_MS) { snapshotFlow { currentFirstRowFocus }.first { it != null } }
+        if (target != null) target.requestFocusWithRetry() else rail?.entry?.requestFocusWithRetry()
     }
-    NavReturnFocusEffect(returnFocus, fallback = heroFallbackFocus) { key ->
+    NavReturnFocusEffect(returnFocus, fallback = firstRowFocus) { key ->
         if (key.startsWith(RETURN_CONTINUE_WATCHING_PREFIX)) {
             val itemId = key.removePrefix(RETURN_CONTINUE_WATCHING_PREFIX)
             val items =
@@ -528,10 +490,10 @@ fun ContentTypeSelectionScreen(
                                 .weight(1f)
                                 .padding(start = Spacing.md)
                                 .then(
-                                    if (needsSignIn || headerDownCard == null) {
+                                    if (needsSignIn || firstRowFocus == null) {
                                         Modifier
                                     } else {
-                                        Modifier.focusProperties { down = heroCardFocus.getValue(headerDownCard) }
+                                        Modifier.focusProperties { down = firstRowFocus }
                                     },
                                 ),
                         verticalAlignment = Alignment.CenterVertically,
@@ -645,10 +607,10 @@ fun ContentTypeSelectionScreen(
                         signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
                     )
                 } else {
-                    // Section tiles, then the shelf (TV home overhaul plan, Phase 2). Scrollable: on a
-                    // lower-density TV the shelf can still run past the bottom edge. Scrolled only as
-                    // far as the focused card needs: Android TV's default pulls it a third of the way
-                    // down, which at a large Text & grid size slid the tiles under the header on open.
+                    // The rows (TV home overhaul plan, Phase 2; the section tiles went 2026-10-09, the
+                    // navigation rail opens the sections). Scrollable: on a lower-density TV the rows
+                    // can run past the bottom edge. Scrolled only as far as the focused card needs:
+                    // Android TV's default pulls it a third of the way down.
                     CompositionLocalProvider(LocalBringIntoViewSpec provides MinimalBringIntoView) {
                         Column(
                             modifier =
@@ -657,88 +619,6 @@ fun ContentTypeSelectionScreen(
                                     .verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically,
-                                // Up from a row comes back to the tile focused last, not the one
-                                // geometrically above the card.
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .focusRestorer(headerDownCard?.let(heroCardFocus::getValue) ?: FocusRequester.Default)
-                                        .focusGroup(),
-                            ) {
-                                val isDevMode = appSettings.isDevMode
-                                var cardIndex = 1
-                                val heroCardModifier: (String) -> Modifier = { key ->
-                                    Modifier
-                                        .focusRequester(heroCardFocus.getValue(key))
-                                        .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
-                                        // Left on the first focusable tile goes to the navigation
-                                        // rail, and Right on the last stays put: with Live TV dimmed,
-                                        // the search left from Movies fell through to the shelf below.
-                                        // leftToRail is outside the focusProperties, so it wins while
-                                        // the rail shows; without one, Left stays put.
-                                        .then(if (key == heroCards.firstOrNull()) Modifier.leftToRail() else Modifier)
-                                        .focusProperties {
-                                            if (key == heroCards.firstOrNull()) left = FocusRequester.Cancel
-                                            if (key == heroCards.lastOrNull()) right = FocusRequester.Cancel
-                                        }
-                                }
-                                if (ContentType.LIVE_TV in supportedContentTypes) {
-                                    SectionTile(
-                                        title = stringResource(R.string.provider_live_tv_label),
-                                        icon = CinemaIcons.LiveTv,
-                                        categoryCounts = liveTvCounts,
-                                        showCount = isDevMode,
-                                        showLivePulse = !liveTvEmpty,
-                                        emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
-                                        gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                                        onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .then(heroCardModifier(RETURN_LIVE_TV))
-                                                .staggeredEntrance(cardIndex++)
-                                                .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
-                                    )
-                                }
-
-                                if (ContentType.MOVIES in supportedContentTypes) {
-                                    SectionTile(
-                                        title = stringResource(R.string.provider_movies_label),
-                                        icon = CinemaIcons.Movie,
-                                        categoryCounts = moviesCounts,
-                                        showCount = isDevMode,
-                                        gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                                        onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .then(heroCardModifier(RETURN_MOVIES))
-                                                .staggeredEntrance(cardIndex++)
-                                                .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
-                                    )
-                                }
-
-                                if (ContentType.TV_SHOWS in supportedContentTypes) {
-                                    SectionTile(
-                                        title = stringResource(R.string.provider_tv_shows_label),
-                                        icon = CinemaIcons.Tv,
-                                        categoryCounts = tvShowsCounts,
-                                        showCount = isDevMode,
-                                        gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                                        onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .then(heroCardModifier(RETURN_TV_SHOWS))
-                                                .staggeredEntrance(cardIndex++)
-                                                .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
-                                    )
-                                }
-                            }
-
                             if (continueWatchingItems.isNotEmpty()) {
                                 TvContinueWatchingShelf(
                                     items = continueWatchingItems,
@@ -919,9 +799,6 @@ fun ContentTypeSelectionScreen(
 }
 
 // Keys for the controls that navigate away from Home — see rememberNavReturnFocus.
-private const val RETURN_LIVE_TV = "liveTv"
-private const val RETURN_MOVIES = "movies"
-private const val RETURN_TV_SHOWS = "tvShows"
 private const val RETURN_EPG_BROWSER = "epgBrowser"
 private const val RETURN_SIGN_IN = "signIn"
 private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
@@ -947,164 +824,11 @@ private suspend fun loadLiveRow(repo: MediaRepository): List<LiveRowEntry> =
 /** How long Back waits for the Continue Watching shelf to reload before giving up on its card. */
 private const val RETURN_SHELF_WAIT_MS = 2_000L
 
-/** How long a fresh open waits for the Live TV count before focusing the first card anyway. */
+/** How long a fresh open waits for the rows before focusing anyway. */
 private const val ENTRY_FOCUS_WAIT_MS = 2_000L
 
-/** The hero cards that can take focus, left to right: Live TV only when it has channels (or is still loading). */
-private fun focusableHeroCards(
-    supportedContentTypes: Set<String>,
-    liveTvCounts: Pair<Int, Int>?,
-): List<String> =
-    buildList {
-        if (ContentType.LIVE_TV in supportedContentTypes && liveTvCounts?.first != 0) add(RETURN_LIVE_TV)
-        if (ContentType.MOVIES in supportedContentTypes) add(RETURN_MOVIES)
-        if (ContentType.TV_SHOWS in supportedContentTypes) add(RETURN_TV_SHOWS)
-    }
-
-/**
- * A section tile on Home: Live TV, Movies or TV Shows (TV home overhaul plan, Phase 2). The category
- * count is developer information, shown only in developer mode.
- */
-@Composable
-private fun SectionTile(
-    title: String,
-    icon: ImageVector,
-    categoryCounts: Pair<Int, Int>?,
-    showCount: Boolean = false,
-    showLivePulse: Boolean = false,
-    gradientColors: List<androidx.compose.ui.graphics.Color>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    // Non-null: nothing to open (Live TV with no channels). The tile is dimmed, shows this in
-    // place of the count and cannot take focus.
-    emptyLabel: String? = null,
-) {
-    val scale = LocalUiScale.current
-    val shape = RoundedCornerShape(CinemaCornerRadius.large)
-    Card(
-        onClick = onClick,
-        modifier =
-            modifier
-                .then(if (emptyLabel != null) Modifier.focusProperties { canFocus = false }.alpha(CinemaAlpha.textFaint) else Modifier)
-                .height(TvDimensions.homeSectionTileHeight.scaled(scale)),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaSurface,
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleSubtle,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        shape = CardDefaults.shape(shape = shape),
-        border =
-            CardDefaults.border(
-                border = Border(border = BorderStroke(TvFocusTokens.borderThin, CinemaGlassBorder), shape = shape),
-                focusedBorder = Border(border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTextPrimary), shape = shape),
-            ),
-        glow = CardDefaults.glow(glow = TvFocusTokens.restingGlow, focusedGlow = TvFocusTokens.focusedGlow),
-    ) {
-        val brush = remember(gradientColors) { Brush.horizontalGradient(colors = gradientColors) }
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(brush = brush, shape = shape)
-                    .padding(horizontal = Spacing.md.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = CinemaTextPrimary,
-                modifier = Modifier.size(TvDimensions.homeSectionTileIconSize.scaled(scale)),
-            )
-            Text(
-                text = title,
-                style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleLarge.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextPrimary,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                modifier = Modifier.padding(start = Spacing.sm.scaled(scale)),
-            )
-            if (showLivePulse) {
-                val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
-                val pulseAlpha by pulseTransition.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 0.3f,
-                    animationSpec =
-                        infiniteRepeatable(
-                            animation = tween(CinemaAnimation.shimmerDurationMs),
-                            repeatMode = RepeatMode.Reverse,
-                        ),
-                    label = "live_pulse_alpha",
-                )
-                // pulseAlpha is read inside graphicsLayer's lambda, never in the composable
-                // body. Read from the body it invalidates *composition* every animation frame —
-                // and since this runs forever, Home recomposed at 60fps with nothing on screen
-                // changing: 242 recompositions per 4 idle seconds, measured on a Shield, versus
-                // 0 on every other screen. In the lambda the read is deferred to draw.
-                // White, after the title (TV UI audit #2): the live red on the tile's orange
-                // gradient, tucked against the icon, could not be seen.
-                Box(
-                    modifier =
-                        Modifier
-                            .padding(start = Spacing.sm.scaled(scale))
-                            .size(TvDimensions.liveDotSize.scaled(scale))
-                            .graphicsLayer { alpha = pulseAlpha }
-                            .background(CinemaTextPrimary, shape = CircleShape),
-                )
-            }
-            val countText =
-                when {
-                    emptyLabel != null -> {
-                        emptyLabel
-                    }
-
-                    !showCount || categoryCounts == null -> {
-                        null
-                    }
-
-                    categoryCounts.first < categoryCounts.second -> {
-                        stringResource(R.string.category_filtered_of_total_format, categoryCounts.first, categoryCounts.second)
-                    }
-
-                    else -> {
-                        stringResource(R.string.category_count_format, categoryCounts.first)
-                    }
-                }
-            // The rest of the tile, the chip at its end: cut with "…" when the tile is too narrow
-            // for it (a large Text & grid size squeezed it to "No").
-            if (countText != null) {
-                Text(
-                    text = countText,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .padding(start = Spacing.sm)
-                            .wrapContentWidth(Alignment.End)
-                            .background(
-                                CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
-                                shape = RoundedCornerShape(CinemaCornerRadius.small),
-                            ).padding(horizontal = Spacing.sm, vertical = Spacing.xxs),
-                )
-            }
-        }
-    }
-}
+/** How much longer focus waits for a row that comes late (a source switch) before going to the rail. */
+private const val LATE_ROWS_WAIT_MS = 6_000L
 
 /**
  * Home's backdrop: the focused card's art once focus has rested on it for [BACKDROP_SETTLE_MS]

@@ -475,7 +475,6 @@ fun TvNavHost(
                                 TvSection.of(contentType.name)?.let(::openSection)
                             }
                             ContentTypeSelectionScreen(
-                                onContentTypeSelected = navigateToContentType,
                                 onCapabilitiesResolved = { supportedTypes ->
                                     // Skip the picker tap entirely when the active provider only supports
                                     // one content type — but only on the very first resolve per NavHost

@@ -5,27 +5,22 @@
 # Phase 4: start on the first card, not the Switch Source chip.
 # TV home overhaul Phase 4: home opens on the first card of the first row (Continue Watching, else
 # the Live row); atr on iptv has no Continue Watching, so the last channel watched. Up reaches the tiles.
-@start Last watched
 # TV navigation rail, Phase 3: Left on a row's first card goes to the rail (Home), Right comes back.
-LEFT	Home
-RIGHT	Last watched
-UP	Live TV
-UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
 # P7: Search the guide (needs iptv's guide index); the TV Guide button is gone (the grid opens
 # from Search the guide's header). TV navigation rail, Phase 4: Search, the avatar and Settings
 # left the header (the rail has them).
+# Phase 3: Left on the header's first item goes to the rail, Right comes back.
+# Phase 4: the card focused last (Live TV), not the rightmost.
+# Phase 3: Left on the first focusable tile goes to the rail, Right comes back.
+# Up from Movies: whichever header button is above it (geometric) — not asserted.
+# Phase 4: back down to the card focused last (Movies).
+# 2026-10-09: the section tiles are gone (the rail opens the sections); Up from the first row reaches the header, Down from the header the first row.
+@start Last watched
+LEFT	Home
+RIGHT	Last watched
+UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
 RIGHT	Search the guide
 LEFT	Switch Source
-# Phase 3: Left on the header's first item goes to the rail, Right comes back.
 LEFT	Home
 RIGHT	Switch Source
-# Phase 4: the card focused last (Live TV), not the rightmost.
-DOWN	Live TV
-# Phase 3: Left on the first focusable tile goes to the rail, Right comes back.
-LEFT	Home
-RIGHT	Live TV
-RIGHT	Movies
-# Up from Movies: whichever header button is above it (geometric) — not asserted.
-UP	
-# Phase 4: back down to the card focused last (Movies).
-DOWN	Movies
+DOWN	Last watched

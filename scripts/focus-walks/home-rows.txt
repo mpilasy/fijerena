@@ -3,35 +3,28 @@
 # Favorite shows (Agatha Christie's Marple); Live TV has no channels, so its tile is dimmed and
 # there is no Channels row. Start: a fresh launch, atr picked.
 # Entry focus: the first Continue Watching card.
-@start The Matrix / 2h 12m remaining
 # Left on a row's first card goes to the navigation rail (Home), Right comes back; Right walks the
 # row and stays put on its last card.
+# Up from the row: the first focusable tile (Live TV is dimmed), not the tile above the card.
+# Right on the last tile stays put.
+# Down: back to the card the row had last (the fourth), not the one under TV Shows.
+# Down through the favourites rows and back up: each row keeps its card.
+# Up from the row: the tile focused last (TV Shows).
+# Left on the first focusable tile (Live TV is dimmed) goes to the rail, Right comes back.
+# Down from the header: the tile focused last (Movies).
+# 2026-10-09: no section tiles; Up from Continue Watching reaches the header, Down from it the first row (lines marked by -r recording).
+@start The Matrix / 2h 12m remaining
 LEFT	Home
 RIGHT	The Matrix / 2h 12m remaining
 RIGHT	101 Dalmatians II: Patch's London Adventure / 1h 5m remaining
 RIGHT	The Godfather / 2h 46m remaining
 RIGHT	The Godfather / 2h 42m remaining
 RIGHT	The Godfather / 2h 42m remaining
-# Up from the row: the first focusable tile (Live TV is dimmed), not the tile above the card.
-UP	Movies / 4 categories
-RIGHT	TV Shows / 2 categories
-# Right on the last tile stays put.
-RIGHT	TV Shows / 2 categories
-# Down: back to the card the row had last (the fourth), not the one under TV Shows.
-DOWN	The Godfather / 2h 42m remaining
-# Down through the favourites rows and back up: each row keeps its card.
 DOWN	The Godfather
 LEFT	Home
 RIGHT	The Godfather
 DOWN	Agatha Christie's Marple
 UP	The Godfather
 UP	The Godfather / 2h 42m remaining
-# Up from the row: the tile focused last (TV Shows).
-UP	TV Shows / 2 categories
-LEFT	Movies / 4 categories
-# Left on the first focusable tile (Live TV is dimmed) goes to the rail, Right comes back.
-LEFT	Home
-RIGHT	Movies / 4 categories
 UP	Switch Source, current source: jellyxtream (XTREAM)
-# Down from the header: the tile focused last (Movies).
-DOWN	Movies / 4 categories
+DOWN	The Godfather / 2h 42m remaining
