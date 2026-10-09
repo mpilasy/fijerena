@@ -1,0 +1,14 @@
+# TV Recent and Favorites, TV emulator, source iptv, profile atr: Home with a Channels row of at
+# least three cards and a Favorite channels row. Start: Home just opened, focus on the first
+# Channels card ("Last watched").
+# Covers: Menu on a Channels card opens on Remove from Recent; the card leaves, focus on the next
+# card, Menu undoes (card back, focused); a Favorite channels card opens on Remove from
+# Favorites; Back closes the menu on the card.
+@start 2 / 22Scope News (1080p) / Hold OK or press Menu for actions / Last watched
+RIGHT	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions
+MENU	Remove from Recent
+REMOVE	2 / 24 Horas (Chile) (1080p) / Hold OK or press Menu for actions
+MENU	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions
+DOWN	9 / 9 Plus News (1080p) / Hold OK or press Menu for actions
+MENU	Remove from Favorites
+BACK	9 / 9 Plus News (1080p) / Hold OK or press Menu for actions

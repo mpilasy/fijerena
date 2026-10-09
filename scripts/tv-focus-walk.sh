@@ -9,6 +9,10 @@
 # MENU, or `WAIT <seconds>`. `expected` is a substring of the focused node's text; leave it
 # empty to send the key without checking. A first line `@start <substring>` checks focus
 # before any key is sent. `#` comments and blank lines are ignored.
+# REMOVE is OK for a removal that the Undo bar takes back (TV Recent and Favorites, 2026-10-09):
+# sent only while focus is on "Remove from Recent", "Remove from Favorites" or an edit-mode row
+# (its ✕ reads "Remove"), never on Clear / Delete / anything else; the walk's next line must be
+# MENU (the undo), and if anything after it mismatches the script presses Menu at once to undo.
 # CENTER is never sent while focus is on a destructive control (Delete, Clear, Remove, Purge,
 # Shrink, Reset, Leave the sync group): the walk stops there, in check and record mode.
 # After the first mismatch a check run no longer sends CENTER (the walk is off its path and OK
@@ -85,6 +89,7 @@ for walk in "$@"; do
     # After a mismatch the walk is off its path: OK would press whatever is focused instead (an
     # extra Settings row once made it press Shrink Database), so CENTER is no longer sent.
     derailed=false
+    pending_undo=false
     while IFS= read -r line || [ -n "$line" ]; do
         line="${line%$'\r'}"
         case "$line" in
@@ -121,7 +126,21 @@ for walk in "$@"; do
                    adb -s "$SERIAL" shell input keyevent "$(keycode "$key")" </dev/null
                    sleep "$DELAY"
                    step=$((step + 1)) ;;
+            REMOVE) step=$((step + 1))
+                   before="$(focused_text)"
+                   if [ "$derailed" = true ] ||
+                       ! printf '%s' "$before" | grep -qE '^(Remove from Recent|Remove from Favorites)$|/ Remove$' ||
+                       printf '%s' "$before" | grep -qiE 'clear|delete|purge|shrink|reset|leave the sync'; then
+                       printf '%-3s %-8s →  %s\n' "$step" "$key" "REFUSED: not an undoable removal ($before)"
+                       derailed=true
+                       mismatch=$((mismatch + 1))
+                       continue
+                   fi
+                   adb -s "$SERIAL" shell input keyevent KEYCODE_DPAD_CENTER </dev/null
+                   pending_undo=true
+                   sleep "$DELAY" ;;
             *) code="$(keycode "$key")"
+               [ "$key" = MENU ] && pending_undo=false
                adb -s "$SERIAL" shell input keyevent "$code" </dev/null
                sleep "$DELAY"
                step=$((step + 1)) ;;
@@ -143,10 +162,20 @@ for walk in "$@"; do
                 verdict="MISMATCH (expected \"$expected\")"
                 mismatch=$((mismatch + 1))
                 derailed=true
+                if [ "$pending_undo" = true ]; then
+                    # Off the path with a removal still undoable: take it back now.
+                    adb -s "$SERIAL" shell input keyevent KEYCODE_MENU </dev/null
+                    pending_undo=false
+                    verdict="$verdict — Menu sent to undo the removal"
+                fi
             fi
         fi
         printf '%-3s %-8s →  %s%s\n' "$step" "$key" "$got" "${verdict:+  $verdict}"
     done < "$walk"
+    if [ "$pending_undo" = true ]; then
+        adb -s "$SERIAL" shell input keyevent KEYCODE_MENU </dev/null
+        echo "-- a removal was left without its MENU line: Menu sent to undo it"
+    fi
 
     if [ "$RECORD" = true ]; then
         printf '%s' "$recorded" > "$walk"

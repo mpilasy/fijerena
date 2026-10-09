@@ -321,7 +321,11 @@ new expectations (comments kept), which is how a change to focus order updates i
 commit. Record only from a start state a check run has matched. In both modes it never sends `CENTER` while focus
 is on a destructive control (Delete, Clear, Remove, Purge, Shrink, Reset, Leave the sync group): it
 counts a mismatch and stops pressing OK, since a walk started in the wrong place once pressed a
-library-data Clear button while recording.
+library-data Clear button while recording. The one exception is the `REMOVE` step, for removals the
+Undo bar takes back: it presses OK only while focus is on "Remove from Recent", "Remove from
+Favorites" or an edit-mode row (its ✕ reads "Remove") — never Clear / Delete / anything else — the
+walk's next line must be `MENU` (the undo), and on any mismatch while a removal is still undoable,
+or a walk ending without its `MENU`, the script presses Menu itself to undo it.
 
 One driver per emulator: the script, a person with the remote, and any other script sending keys
 must never share a device at the same time, or the focus read after each key belongs to someone
@@ -346,6 +350,10 @@ there. Each file's header comments name the start screen, the source it expects 
 | `edit-source.txt` | Edit Source, two columns |
 | `epg-management.txt` | Guide sources of one source, a row's Auto-refresh picker |
 | `live-sync.txt` | Live sync screen |
+| `recent-remove.txt` | Live TV browse, Recent (iptv): menu opens on Remove from Recent, removal → next row, Menu undoes; edit mode (pencil, OK removes, Menu undoes), Back from Clear Recent → the pencil |
+| `favorites-remove.txt` | Live TV browse, Favorites (iptv, one favourite): Remove from Favorites with no confirmation, the empty list's Refresh focused, Menu undoes |
+| `live-panel-remove.txt` | Live TV preview's channel panel, Recent tab (iptv): removal → next row (not the tabs), Menu undoes |
+| `home-card-actions.txt` | Home (iptv): a Channels card's menu, removal → next card, Menu undoes; a Favorite channels card opens on Remove from Favorites, Back keeps focus |
 
 All fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches
 after the fixes). After the navigation rail and the Home change (2026-10-08 / 09): `home.txt`,
@@ -355,8 +363,8 @@ profile page that needs another source; `details.txt`, `live-tv-browse.txt`, `gu
 `epg-management.txt` were edited by hand for the rail and not yet re-run (`guide.txt` and
 `epg-management.txt` need a source with a guide). The Recent and Favorites rework (2026-10-09:
 immediate removal with Undo, edit mode, Home card actions, the Favorite channels row) was walked by
-hand on the emulator; no walk covers it yet, and `home.txt` / `home-rows.txt` were not re-run after
-it. Some file headers still say "not yet recorded" from before those rounds.
+hand on the emulator, then the four walks above were recorded (2026-10-09, 0 mismatches each) and
+`home.txt` re-run (0 mismatches); `home-rows.txt` not re-run after it. Some file headers still say "not yet recorded" from before those rounds.
 
 ---
 

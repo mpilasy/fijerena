@@ -1,0 +1,8 @@
+# TV Recent and Favorites, TV emulator, source iptv, profile atr, with exactly one favourite
+# channel (9 Plus News). Start: Live TV browse, Favorites selected, focus on that channel's row.
+# Covers: the menu opens on Remove from Favorites; no confirmation; the list empties and its
+# Refresh takes focus; Menu undoes, the row back and focused.
+@start 9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
+MENU	Remove from Favorites
+REMOVE	Refresh
+MENU	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions

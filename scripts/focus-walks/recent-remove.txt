@@ -1,0 +1,27 @@
+# TV Recent and Favorites (docs/plans/archive/20261009_tv-recents-favorites-plan.md), TV emulator,
+# source iptv, profile atr, with at least three channels in Live TV Recent.
+# Start: Live TV browse with Recent selected, focus on the header's TV Guide button (Up from the
+# list until it stays there).
+# Covers: the menu opens on Remove from Recent; a removal moves focus to the next row and Menu
+# undoes it (row back, focused); Back closes the menu on the row; edit mode (pencil): OK removes the
+# focused row (REMOVE), Menu undoes, Back from Clear Recent ends the mode with focus on the pencil.
+@start TV Guide
+DOWN	2 / 22Scope News (1080p) / Hold OK or press Menu for actions
+MENU	Remove from Recent
+REMOVE	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions
+MENU	2 / 22Scope News (1080p) / Hold OK or press Menu for actions
+MENU	Remove from Recent
+BACK	2 / 22Scope News (1080p) / Hold OK or press Menu for actions
+UP	TV Guide
+UP	TV Guide
+UP	TV Guide
+RIGHT	Edit list
+CENTER	Finish editing
+DOWN	2 / 22Scope News (1080p) / Remove
+REMOVE	2 / 24/7 Canal de Noticias / Remove
+MENU	2 / 22Scope News (1080p) / Remove
+UP	TV Guide
+UP	TV Guide
+UP	TV Guide
+RIGHT	Clear Recent
+BACK	Edit list
