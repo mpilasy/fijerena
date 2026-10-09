@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -99,10 +100,12 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -115,6 +118,7 @@ import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
 import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
 import org.njarasoa.fijerena.core.ui.home.sourceSyncStatus
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -130,14 +134,18 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
+import org.njarasoa.fijerena.feature.category.components.RowMenuList
 import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
 import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
@@ -147,6 +155,8 @@ import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
+import org.njarasoa.fijerena.ui.components.rememberUndoBarState
+import org.njarasoa.fijerena.ui.components.undoOnMenuKey
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -222,6 +232,9 @@ fun ContentTypeSelectionScreen(
     // Favourite movies and shows rows (Phase 5), loaded with the Live row.
     var favoriteMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+
+    // The Undo of a card's removal (Hold OK / Menu on a card, below).
+    val undoBar = rememberUndoBarState()
 
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
@@ -314,6 +327,8 @@ fun ContentTypeSelectionScreen(
     // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
     // on every ON_RESUME, so returning from playback immediately reflects updated progress.
     LaunchedEffect(mediaRepositoryRef) {
+        // A removal's Undo belongs to the source it was made on.
+        undoBar.dismiss()
         val repo = mediaRepositoryRef ?: return@LaunchedEffect
         continueWatchingItems = repo.getContinueWatchingItems()
         continueWatchingLoaded = true
@@ -457,9 +472,258 @@ fun ContentTypeSelectionScreen(
         navigate()
     }
 
+    // Hold OK / Menu on a card (docs/plans/20261009_tv-recents-favorites-plan.md → A, "Home's
+    // cards"): the list rows' menu. A removal takes the card out of its row at once, focus going
+    // to the card that took its place (cardAfterChange), with the Undo bar; Menu while it shows
+    // puts the card back, focus on it.
+    var cardMenu by remember { mutableStateOf<HomeCardMenu?>(null) }
+    val cardFocus = remember { FocusRequester() }
+    var cardFocusRequest by remember { mutableStateOf<CardFocusRequest?>(null) }
+    val shelfKeys: (HomeShelf) -> List<String> = { shelf ->
+        when (shelf) {
+            HomeShelf.CONTINUE_WATCHING -> continueWatchingItems.map { it.id }
+            HomeShelf.CHANNELS -> liveRowEntries.map { it.item.id }
+            HomeShelf.FAVORITE_CHANNELS -> favoriteChannelEntries.map { it.item.id }
+            HomeShelf.FAVORITE_MOVIES -> favoriteMovies.map { it.id }
+            HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.id }
+        }
+    }
+    val listStateOf: (HomeShelf) -> LazyListState = { shelf ->
+        when (shelf) {
+            HomeShelf.CONTINUE_WATCHING -> shelfListState
+            HomeShelf.CHANNELS -> liveRowListState
+            HomeShelf.FAVORITE_CHANNELS -> favoriteChannelsListState
+            HomeShelf.FAVORITE_MOVIES -> favoriteMoviesListState
+            HomeShelf.FAVORITE_SHOWS -> favoriteShowsListState
+        }
+    }
+    val focusAfterChange: (HomeShelf, List<String>, String) -> Unit = { shelf, oldKeys, key ->
+        cardFocusRequest = CardFocusRequest(cardAfterChange(shelf, oldKeys, key, HomeShelf.entries.associateWith(shelfKeys)))
+    }
+    // The card asked for, scrolled into its row when off screen; no card left: the rail. Never
+    // nothing focused.
+    LaunchedEffect(cardFocusRequest) {
+        val request = cardFocusRequest ?: return@LaunchedEffect
+        val card = request.card
+        if (card == null) {
+            rail?.entry?.requestFocusWithRetry()
+        } else {
+            val listState = listStateOf(card.shelf)
+            val index = shelfKeys(card.shelf).indexOf(card.key)
+            if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
+            cardFocus.requestFocusWithRetry(fallback = rail?.entry)
+        }
+        cardFocusRequest = null
+    }
+    val cardFocusTarget: (HomeShelf, String) -> Modifier = { shelf, key ->
+        if (cardFocusRequest?.card == HomeCard(shelf, key)) Modifier.focusRequester(cardFocus) else Modifier
+    }
+
+    // Takes the card out of its row (returns how to put it back where it was).
+    fun <T> takeOut(
+        before: List<T>,
+        key: String,
+        keyOf: (T) -> String,
+        current: () -> List<T>,
+        set: (List<T>) -> Unit,
+    ): () -> Unit {
+        set(before.filterNot { keyOf(it) == key })
+        return { set(current().withCardPutBack(before, key, keyOf)) }
+    }
+
+    fun takeOut(
+        shelf: HomeShelf,
+        key: String,
+    ): () -> Unit =
+        when (shelf) {
+            HomeShelf.CONTINUE_WATCHING -> {
+                takeOut(continueWatchingItems, key, { it.id }, { continueWatchingItems }) {
+                    continueWatchingItems =
+                        it
+                }
+            }
+
+            HomeShelf.CHANNELS -> {
+                takeOut(liveRowEntries, key, { it.item.id }, { liveRowEntries }) { liveRowEntries = it }
+            }
+
+            HomeShelf.FAVORITE_CHANNELS -> {
+                takeOut(favoriteChannelEntries, key, { it.item.id }, { favoriteChannelEntries }) {
+                    favoriteChannelEntries =
+                        it
+                }
+            }
+
+            HomeShelf.FAVORITE_MOVIES -> {
+                takeOut(favoriteMovies, key, { it.id }, { favoriteMovies }) { favoriteMovies = it }
+            }
+
+            HomeShelf.FAVORITE_SHOWS -> {
+                takeOut(favoriteShows, key, { it.id }, { favoriteShows }) { favoriteShows = it }
+            }
+        }
+
+    // A card leaving its row: out at once, focus on its neighbour, then [remove] (which returns
+    // its own undo); the Undo bar puts the card back, focus on it, and runs that undo.
+    fun removeCard(
+        shelf: HomeShelf,
+        key: String,
+        name: String,
+        remove: suspend () -> (suspend () -> Unit),
+    ) {
+        val oldKeys = shelfKeys(shelf)
+        val putBack = takeOut(shelf, key)
+        focusAfterChange(shelf, oldKeys, key)
+        var undo: (suspend () -> Unit)? = null
+        val removing = coroutineScope.launchGuarded("Home.removeCard") { undo = remove() }
+        undoBar.show(parseDisplayTitle(name).title.ifBlank { name }) {
+            val keysNow = shelfKeys(shelf)
+            putBack()
+            focusAfterChange(shelf, keysNow, key)
+            coroutineScope.launchGuarded("Home.undoRemoveCard") {
+                removing.join()
+                undo?.invoke()
+            }
+        }
+    }
+
+    val reloadFavorites: suspend (MediaRepository, String) -> Unit = { repo, contentType ->
+        when (contentType) {
+            ContentType.LIVE_TV -> favoriteChannelEntries = loadFavoriteChannels(repo)
+            ContentType.MOVIES -> favoriteMovies = loadFavorites(repo, contentType, supportedContentTypes)
+            ContentType.TV_SHOWS -> favoriteShows = loadFavorites(repo, contentType, supportedContentTypes)
+        }
+    }
+    // The shelf again after a watched mark; a card it no longer has hands focus on (an episode's
+    // card turns into its show's "Up next" and stays).
+    val reloadContinueWatching: suspend (MediaRepository, String?) -> Unit = { repo, focusedKey ->
+        val oldKeys = shelfKeys(HomeShelf.CONTINUE_WATCHING)
+        continueWatchingItems = repo.getContinueWatchingItems()
+        if (focusedKey != null && focusedKey in oldKeys && focusedKey !in shelfKeys(HomeShelf.CONTINUE_WATCHING)) {
+            focusAfterChange(HomeShelf.CONTINUE_WATCHING, oldKeys, focusedKey)
+        }
+    }
+
+    // Opens the menu once the card's favourite and watched states are known.
+    val openCardMenu: (HomeShelf, HomeCardItem) -> Unit = { shelf, ref ->
+        mediaRepositoryRef?.let { repo ->
+            coroutineScope.launchGuarded("Home.openCardMenu") {
+                val isFavorite = shelf.isFavorites || repo.isFavoriteSuspend(ref.id, ref.contentType)
+                val isWatched =
+                    when {
+                        ref.watchedItemId == null -> {
+                            null
+                        }
+
+                        shelf == HomeShelf.CONTINUE_WATCHING -> {
+                            false
+                        }
+
+                        else -> {
+                            repo.getPlaybackPositions(listOf(ref.watchedItemId), ref.contentType)[ref.watchedItemId]?.isCompleted ==
+                                true
+                        }
+                    }
+                cardMenu =
+                    HomeCardMenu(
+                        shelf = shelf,
+                        ref = ref,
+                        target =
+                            FavoriteMenuTarget.Stream(
+                                itemId = ref.id,
+                                itemName = ref.name,
+                                categoryId = ref.categoryId,
+                                contentType = ref.contentType,
+                                isFavorite = isFavorite,
+                                isWatched = isWatched,
+                                // A source that keeps its own history (Jellyfin) has no Remove from Recent.
+                                isInRecent = !shelf.isFavorites && repo.supportsRemoveFromRecent,
+                            ),
+                    )
+            }
+        }
+    }
+    cardMenu?.let { menu ->
+        val repo = mediaRepositoryRef
+        val ref = menu.ref
+        FavoriteContextMenuDialog(
+            target = menu.target,
+            onConfirm = {
+                when {
+                    repo == null -> {}
+
+                    menu.shelf.isFavorites -> {
+                        removeCard(menu.shelf, ref.id, ref.name) {
+                            repo.removeFavoriteSuspend(ref.id, ref.contentType)
+                            suspend { repo.addFavoriteSuspend(ref.id, ref.name, ref.categoryId, ref.contentType) }
+                        }
+                    }
+
+                    menu.target.isFavorite -> {
+                        // The card stays in its row; its favourite leaves the favourites row below.
+                        coroutineScope.launchGuarded("Home.removeFavorite") {
+                            repo.removeFavoriteSuspend(ref.id, ref.contentType)
+                            reloadFavorites(repo, ref.contentType)
+                        }
+                        undoBar.show(parseDisplayTitle(ref.name).title.ifBlank { ref.name }) {
+                            coroutineScope.launchGuarded("Home.undoRemoveFavorite") {
+                                repo.addFavoriteSuspend(ref.id, ref.name, ref.categoryId, ref.contentType)
+                                reloadFavorites(repo, ref.contentType)
+                            }
+                        }
+                    }
+
+                    else -> {
+                        coroutineScope.launchGuarded("Home.addFavorite") {
+                            repo.addFavoriteSuspend(ref.id, ref.name, ref.categoryId, ref.contentType)
+                            reloadFavorites(repo, ref.contentType)
+                        }
+                    }
+                }
+            },
+            onDismiss = { cardMenu = null },
+            onToggleWatched =
+                ref.watchedItemId?.let { watchedItemId ->
+                    {
+                        when {
+                            repo == null -> {}
+
+                            // A film watched leaves Continue Watching: a removal, with its Undo.
+                            menu.shelf == HomeShelf.CONTINUE_WATCHING && ref.contentType == ContentType.MOVIES -> {
+                                removeCard(menu.shelf, ref.id, ref.name) {
+                                    repo.setWatched(watchedItemId, ref.contentType, true)
+                                    suspend { repo.setWatched(watchedItemId, ref.contentType, false) }
+                                }
+                            }
+
+                            else -> {
+                                coroutineScope.launchGuarded("Home.toggleWatched") {
+                                    repo.setWatched(watchedItemId, ref.contentType, menu.target.isWatched != true)
+                                    reloadContinueWatching(repo, ref.id.takeIf { menu.shelf == HomeShelf.CONTINUE_WATCHING })
+                                }
+                            }
+                        }
+                    }
+                },
+            onRemoveFromRecent =
+                if (menu.target.isInRecent && repo != null) {
+                    {
+                        removeCard(menu.shelf, ref.id, ref.name) {
+                            val removal = repo.removeFromRecent(ref.id, ref.contentType)
+                            suspend { removal?.let { repo.restoreRecent(it) } }
+                        }
+                    }
+                } else {
+                    null
+                },
+            list = if (menu.shelf.isFavorites) RowMenuList.FAVORITES else RowMenuList.RECENT,
+        )
+    }
+
     val scale = LocalUiScale.current
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Menu undoes the last removal while its bar shows.
+    Box(modifier = Modifier.fillMaxSize().undoOnMenuKey(undoBar)) {
         HomeBackdrop(fallbackUrl = backdropImageUrl, focusedUrl = { focusedArtUrl })
         Box(
             modifier =
@@ -641,10 +905,12 @@ fun ContentTypeSelectionScreen(
                                     onItemSelected = { item ->
                                         leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
                                     },
+                                    onOpenActions = { item -> openCardMenu(HomeShelf.CONTINUE_WATCHING, item.toCardItem()) },
                                     listState = shelfListState,
                                     itemModifier = { item ->
                                         Modifier
                                             .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
+                                            .then(cardFocusTarget(HomeShelf.CONTINUE_WATCHING, item.id))
                                             .then(artOnFocus(item.thumbnailUrl))
                                     },
                                     modifier =
@@ -665,10 +931,17 @@ fun ContentTypeSelectionScreen(
                                         }
                                     },
                                     firstItemFocus = liveRowFirstFocus,
+                                    onOpenActions = { entry ->
+                                        openCardMenu(
+                                            HomeShelf.CHANNELS,
+                                            HomeCardItem(entry.item.id, entry.item.name, entry.item.categoryId, ContentType.LIVE_TV),
+                                        )
+                                    },
                                     listState = liveRowListState,
                                     itemModifier = { entry ->
                                         Modifier
                                             .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
+                                            .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.id))
                                             .then(artOnFocus(entry.item.thumbnailUrl))
                                     },
                                     modifier =
@@ -689,10 +962,17 @@ fun ContentTypeSelectionScreen(
                                         }
                                     },
                                     firstItemFocus = favoriteChannelsFirstFocus,
+                                    onOpenActions = { entry ->
+                                        openCardMenu(
+                                            HomeShelf.FAVORITE_CHANNELS,
+                                            HomeCardItem(entry.item.id, entry.item.name, entry.item.categoryId, ContentType.LIVE_TV),
+                                        )
+                                    },
                                     listState = favoriteChannelsListState,
                                     itemModifier = { entry ->
                                         Modifier
                                             .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.id)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_CHANNELS, entry.item.id))
                                             .then(artOnFocus(entry.item.thumbnailUrl))
                                     },
                                     modifier =
@@ -711,10 +991,17 @@ fun ContentTypeSelectionScreen(
                                         leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
                                     },
                                     firstItemFocus = favoriteMoviesFirstFocus,
+                                    onOpenActions = { item ->
+                                        openCardMenu(
+                                            HomeShelf.FAVORITE_MOVIES,
+                                            HomeCardItem(item.id, item.name, item.categoryId, ContentType.MOVIES, watchedItemId = item.id),
+                                        )
+                                    },
                                     listState = favoriteMoviesListState,
                                     itemModifier = { item ->
                                         Modifier
                                             .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_MOVIES, item.id))
                                             .then(artOnFocus(item.thumbnailUrl))
                                     },
                                     modifier =
@@ -733,10 +1020,17 @@ fun ContentTypeSelectionScreen(
                                         leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
                                     },
                                     firstItemFocus = favoriteShowsFirstFocus,
+                                    onOpenActions = { item ->
+                                        openCardMenu(
+                                            HomeShelf.FAVORITE_SHOWS,
+                                            HomeCardItem(item.id, item.name, item.categoryId, ContentType.TV_SHOWS),
+                                        )
+                                    },
                                     listState = favoriteShowsListState,
                                     itemModifier = { item ->
                                         Modifier
                                             .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_SHOWS, item.id))
                                             .then(artOnFocus(item.thumbnailUrl))
                                     },
                                     modifier =
@@ -749,6 +1043,8 @@ fun ContentTypeSelectionScreen(
                     }
                 }
             }
+
+            TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter))
 
             if (showProviderPicker && allProviders.size > 1) {
                 // A new dialog window starts with focus on the Close button *below* the list, so
@@ -842,6 +1138,43 @@ private const val RETURN_LIVE_ROW_PREFIX = "live:"
 private const val RETURN_FAVORITE_CHANNELS_PREFIX = "favLive:"
 private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
 private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
+
+/** What a card's menu acts on. */
+private class HomeCardItem(
+    val id: String,
+    val name: String,
+    val categoryId: String,
+    val contentType: String,
+    /** What Mark as watched marks: the film, or the episode a show's card resumes; null: no such action. */
+    val watchedItemId: String? = null,
+)
+
+/** A Continue Watching card: Mark as watched on a film and on an episode to resume, not on an "Up next" one. */
+private fun ContinueWatchingItem.toCardItem(): HomeCardItem =
+    HomeCardItem(
+        id = id,
+        name = name,
+        categoryId = categoryId,
+        contentType = contentType,
+        watchedItemId =
+            when (val browseTarget = target) {
+                is BrowseTarget.Series -> browseTarget.resumeEpisodeId?.raw
+                is BrowseTarget.Episode -> browseTarget.episodeId.raw
+                else -> id
+            }.takeUnless { upNext },
+    )
+
+/** The card whose actions menu is open, and what the menu shows. */
+private class HomeCardMenu(
+    val shelf: HomeShelf,
+    val ref: HomeCardItem,
+    val target: FavoriteMenuTarget.Stream,
+)
+
+/** Focus to move to [card] (null: the navigation rail). A class, not a data class: each request is new. */
+private class CardFocusRequest(
+    val card: HomeCard?,
+)
 
 /** The active profile's favourites of [contentType], none when the source doesn't have that type. */
 private suspend fun loadFavorites(

@@ -13,10 +13,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -33,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -45,6 +50,8 @@ fun TvFavoritesRow(
     items: List<MediaItem>,
     thumbnailType: ThumbnailContentType,
     onItemSelected: (MediaItem) -> Unit,
+    /** Long-press OK or the Menu key on a card: its actions menu. */
+    onOpenActions: (MediaItem) -> Unit,
     firstItemFocus: FocusRequester,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -62,6 +69,7 @@ fun TvFavoritesRow(
             item = item,
             thumbnailType = thumbnailType,
             onClick = { onItemSelected(item) },
+            onOpenActions = { onOpenActions(item) },
             modifier = itemModifier(item).then(rowModifier),
         )
     }
@@ -72,12 +80,19 @@ private fun TvFavoriteCard(
     item: MediaItem,
     thumbnailType: ThumbnailContentType,
     onClick: () -> Unit,
+    onOpenActions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(CinemaCornerRadius.medium)
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
-        modifier = modifier.width(TvDimensions.continueWatchingCardWidth),
+        onLongClick = onOpenActions,
+        modifier =
+            modifier
+                .width(TvDimensions.continueWatchingCardWidth)
+                .onFocusChanged { isFocused = it.isFocused }
+                .openActionsOnMenuKey(onOpenActions),
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
@@ -123,7 +138,10 @@ private fun TvFavoriteCard(
                         color = CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
+                    // The row-actions hint, as on the focused list row.
+                    if (isFocused) RowActionsHint()
                 }
                 Text(
                     // A line even when empty, so cards in the row line up.

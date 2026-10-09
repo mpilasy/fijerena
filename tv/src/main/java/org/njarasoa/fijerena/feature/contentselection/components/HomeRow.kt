@@ -15,6 +15,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -69,3 +74,14 @@ fun <T> HomeRow(
         }
     }
 }
+
+/**
+ * The Menu key on a Home card opens its actions, as long-press OK does (row actions, AGENTS.md →
+ * D-Pad & Focus). While an Undo bar shows, the screen's `undoOnMenuKey` takes the key first.
+ */
+internal fun Modifier.openActionsOnMenuKey(onOpenActions: () -> Unit): Modifier =
+    onKeyEvent { event ->
+        val opens = event.type == KeyEventType.KeyDown && event.key == Key.Menu
+        if (opens) onOpenActions()
+        opens
+    }

@@ -20,11 +20,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
@@ -48,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -61,6 +66,8 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 fun TvContinueWatchingShelf(
     items: List<ContinueWatchingItem>,
     onItemSelected: (ContinueWatchingItem) -> Unit,
+    /** Long-press OK or the Menu key on a card: its actions menu. */
+    onOpenActions: (ContinueWatchingItem) -> Unit,
     firstItemFocus: FocusRequester,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -77,6 +84,7 @@ fun TvContinueWatchingShelf(
         TvContinueWatchingCard(
             item = item,
             onClick = { onItemSelected(item) },
+            onOpenActions = { onOpenActions(item) },
             modifier = itemModifier(item).then(rowModifier),
         )
     }
@@ -86,11 +94,18 @@ fun TvContinueWatchingShelf(
 private fun TvContinueWatchingCard(
     item: ContinueWatchingItem,
     onClick: () -> Unit,
+    onOpenActions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
-        modifier = modifier.width(TvDimensions.continueWatchingCardWidth),
+        onLongClick = onOpenActions,
+        modifier =
+            modifier
+                .width(TvDimensions.continueWatchingCardWidth)
+                .onFocusChanged { isFocused = it.isFocused }
+                .openActionsOnMenuKey(onOpenActions),
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
@@ -151,7 +166,10 @@ private fun TvContinueWatchingCard(
                         color = CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
+                    // The row-actions hint, as on the focused list row.
+                    if (isFocused) RowActionsHint()
                 }
                 // An episode's title repeats the series' raw name, which the line above already shows;
                 // on a card's width only its number fits beside the time left ("S18E01 • 35m left",
