@@ -97,6 +97,6 @@ to it too.
 | Lane | State | Commits |
 |---|---|---|
 | A — removal, edit mode, stable order | In progress | |
-| B — settle rule, Home order | In progress | |
+| B — settle rule, Home order | Done; walked on the emulator: 5 zaps of ~3 s and 15 s on the last recorded nothing, 65 s on it recorded it at the top; Home shows Channels (last watched, then Recent) and Favorite channels | 9c291e07, 41726778 → main |
 | C — Home card actions | Not started | |
 | Docs, walks, archive | Not started | |
