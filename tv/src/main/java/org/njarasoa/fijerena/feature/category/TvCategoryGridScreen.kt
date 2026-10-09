@@ -78,7 +78,7 @@ fun TvCategoryGridScreen(
     /**
      * Live TV browse, back from another section: a preview layer saved open (under the TV Guide its
      * full screen opened) stays closed — coming back never starts video on its own
-     * (docs/plans/20261008_tv-nav-rail-plan.md → Risks).
+     * (docs/plans/archive/20261008_tv-nav-rail-plan.md → Risks).
      */
     closeSavedLivePreview: Boolean = false,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,

@@ -16,7 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-08 | [TV navigation rail](./20261008_tv-nav-rail-plan.md) | A thin rail of faint icons on the TV's left edge (avatar, Home, sections, Search, Settings) that slides out on Left from anywhere; sections keep their place; replaces the section-root button | Not started; decisions made, parallel layout agreed |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real bears) needs a second bears login |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
@@ -25,6 +24,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-08 | [TV navigation rail](./archive/20261008_tv-nav-rail-plan.md) | A thin rail of faint icons on the TV's left edge (profile, Home, sections, Search, Settings) that slides out on Left from any screen; sections keep their place; replaces the section-root button; Search, Settings and the avatar left the headers | Done on the TV emulator; guide channel column, Malagasy, themes and the Shields / Bravia not checked |
 | 2026-10-08 | [Phone UI audit](./archive/20261008_phone-ui-audit-plan.md) | Every phone screen audited (24 shots) and polished: list rows, mode tabs and chips, the dock's tabs, details, player, Search, Settings and sources; large-font, language and theme fixes found in spot checks | Done; TV Guide grid, PiP, landscape dock, Add Source not captured |
 | 2026-10-07 | [TV UI audit](./archive/20261007_tv-ui-audit-plan.md) | Every TV screen audited (47 shots) and polished: one header, one focused-row look, logos whole, empty states, player title / subtitles / focus, details, Settings and Edit Source rows, TV Guide, Search; large-text overflow fixed | Done; Malagasy, two looks, two themes and three walks not checked |
 | 2026-10-07 | [TV home overhaul](./archive/20261007_tv-home-overhaul-plan.md) | TV home: compact section tiles, Continue watching / Live / favourite rows, source sync status, clock, backdrop follows focus | Done on the TV emulator; Shield check never done |

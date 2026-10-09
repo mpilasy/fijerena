@@ -85,7 +85,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * The TV navigation rail (docs/plans/20261008_tv-nav-rail-plan.md).
+ * The TV navigation rail (docs/plans/archive/20261008_tv-nav-rail-plan.md).
  *
  * - **At rest:** a column of faint [TvNavRailDefaults.itemSize] items inside the screen's empty
  *   left margin ([TvNavRailDefaults.restWidth]), [TvNavRailDefaults.edgeInset] from the edge, on a

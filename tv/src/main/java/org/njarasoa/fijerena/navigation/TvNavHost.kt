@@ -116,7 +116,7 @@ fun TvNavHost(
     var pickProfileAtLaunch by remember { mutableStateOf(false) }
     var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
-    // The navigation rail (docs/plans/20261008_tv-nav-rail-plan.md): drawn over the NavHost, given to
+    // The navigation rail (docs/plans/archive/20261008_tv-nav-rail-plan.md): drawn over the NavHost, given to
     // every screen as LocalTvNavRail.
     val rail = remember { TvNavRailState() }
     // A fresh Live TV opens its preview on this channel (see openSection): read once by the
@@ -175,7 +175,7 @@ fun TvNavHost(
         }
     }
 
-    // The rail's picks (docs/plans/20261008_tv-nav-rail-plan.md → Phase 0 findings → Navigation rules).
+    // The rail's picks (docs/plans/archive/20261008_tv-nav-rail-plan.md → Phase 0 findings → Navigation rules).
     fun selectRailItem(item: RailItem) {
         val section = TvSection.of(item)
         when {

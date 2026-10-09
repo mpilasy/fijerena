@@ -1,10 +1,11 @@
 # TV navigation rail
 
-**Status:** Planned 2026-10-08; Phases 0–2 done; Phases 3 + 4 in progress (lanes A–D) (user: "go all the way", no bears). Design agreed with the user 2026-10-08: a thin rail on
-the left edge, faint icons at rest that slide out into icons + labels on focus; Home stays; the TV
-Guide is *not* a rail item; each section keeps its place. Open questions answered the same day:
-Search = current section, first-launch hint yes, Home's tiles stay; parallel layout agreed. TV
-only; the phone keeps its bottom bar.
+**Status:** Done 2026-10-08 on the TV emulator (jellyxtream and iptv; no bears, at the user's
+request). Not checked: the TV Guide's channel column → rail (no guide source on the emulator
+without bears), Search the guide with results, Malagasy labels, themes other than Deep Night, the
+Shields / Bravia (overscan). Design agreed with the user 2026-10-08: thin rail, faint icons at
+rest; Home stays; the TV Guide is not a rail item; each section keeps its place; Search = current
+section, first-launch hint, Home's tiles stay.
 
 ## Problem
 
@@ -195,12 +196,12 @@ walks (one TV emulator).
 | 0 | Done (findings above; interface in `ui/components/rail/`) | |
 | 1 | Done (lane R) | 5c5002dd → main |
 | 2 | Done (lane N) + fixes from the emulator walk: the first-launch hint was spent while the profile picker hid the rail (now shown after 1.5 s on screen, recorded once shown in full); the profile item said "A" (now the name and colour); Home's source switch kept the old source's saved sections (now cleared). Walked: hint, rail at rest, Back at a section start → rail, Right back, sections keep their place, Live TV preview hides the rail, video stops on leaving and doesn't restart on return, Back on the rail → Home | a665803d, 5998e5fb → main |
-| 3 + 4 A Home | In progress | |
-| 3 + 4 B browse, guide | In progress | |
-| 3 + 4 C details, episodes, Search | In progress | |
-| 3 + 4 D Settings and the rest | In progress | |
-| 5 | Not started | |
-| 6 | Not started | |
+| 3 + 4 A Home | Done; walked: Left from the first card of each row, the first tile and the header → rail, Right back; `home.txt` 14 steps and `home-rows.txt` 22 steps, 0 mismatches | 8ad0557f → main |
+| 3 + 4 B browse, guide | Done + fix: the categories column's pane kept Left (`tvPane(leftToRail = true)` lets it through). Walked: Left from a category → rail, Right back to that category; header Refresh only. Guide channel column not walked (no guide on the emulator without bears) | b3e40fb3 → main, 633822fd |
+| 3 + 4 C details, episodes, Search | Done; walked: details Resume and the first tab → rail and back; Movies → film → TV Shows → Movies lands on the film; Search from the rail searches the section; `search.txt` rail steps OK (3 mismatches on recent-search data). Fix: from Settings or Search over a section, its item returns to where you were | 405139b9 → main, 633822fd |
+| 3 + 4 D Settings and the rest | Done; walked: Settings groups and Sources rows → rail and back; `sources.txt` 8 steps, 0 mismatches; `settings.txt` first 34 steps OK (then a profile page that needs another source) | e4b2c2a7 → main |
+| 5 | Done: rail at 100 % Text & grid size and in French; rail sections follow Home's source switch (fix, 633822fd); emulator restored (English, 60 %) | |
+| 6 | Done: NAVIGATION_GUIDE (Rule 6, episodes, Home, panes, adding a screen), AGENTS, FEATURES, RELEASE_NOTES | |
 
 ## Risks
 

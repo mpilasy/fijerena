@@ -6,7 +6,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.ui.theme.Spacing
 
-/** Sizes, alphas and timings of [TvNavRail] (docs/plans/20261008_tv-nav-rail-plan.md → Design). */
+/** Sizes, alphas and timings of [TvNavRail] (docs/plans/archive/20261008_tv-nav-rail-plan.md → Design). */
 internal object TvNavRailDefaults {
     /** The rail at rest: the screen's empty left margin, so it takes no content width. */
     val restWidth: Dp = Spacing.tvSafeMarginHorizontal

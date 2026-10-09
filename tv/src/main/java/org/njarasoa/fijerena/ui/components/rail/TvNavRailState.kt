@@ -18,7 +18,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 
 /**
- * The TV navigation rail's shared interface (docs/plans/20261008_tv-nav-rail-plan.md, Phase 0).
+ * The TV navigation rail's shared interface (docs/plans/archive/20261008_tv-nav-rail-plan.md, Phase 0).
  *
  * - The nav host owns one [TvNavRailState], provides it as [LocalTvNavRail] around the NavHost and
  *   draws `TvNavRail` over the content's left margin.

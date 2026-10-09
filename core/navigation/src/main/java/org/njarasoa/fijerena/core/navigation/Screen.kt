@@ -86,7 +86,7 @@ sealed interface Screen {
      * The roots of the sections — the phone's bottom bar tabs, the TV's rail sections — each the
      * section's [CategoryList] with no category or channel picked
      * (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Bottom navigation bar,
-     * docs/plans/20261008_tv-nav-rail-plan.md). Three destinations, not [CategoryList] with an
+     * docs/plans/archive/20261008_tv-nav-rail-plan.md). Three destinations, not [CategoryList] with an
      * argument: Navigation saves a section's back stack under its root's destination, so one
      * destination for all three would restore Movies when Live TV is asked for.
      */

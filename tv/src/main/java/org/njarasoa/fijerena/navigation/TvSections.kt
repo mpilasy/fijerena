@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.ui.components.rail.TvNavRail
 import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 
 /**
- * The TV's sections (docs/plans/20261008_tv-nav-rail-plan.md → Sections keep their place): their
+ * The TV's sections (docs/plans/archive/20261008_tv-nav-rail-plan.md → Sections keep their place): their
  * rail item, their root destination and the content type they browse. The roots are the phone's tab
  * routes: Navigation saves a section's back stack under its root, so each needs its own.
  */

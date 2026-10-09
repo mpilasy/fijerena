@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV navigation rail
+**Release Date:** 2026-10-08
+
+- **Get anywhere from anywhere on TV:** a thin rail of faint icons sits in the left margin of every screen — your profile, Home, Live TV, Movies, TV Shows, Search and Settings. Press Left from the leftmost item and it slides out with names; Right takes you back.
+- **Sections keep their place:** Movies, Live TV and TV Shows each remember where you were — switch from a film to Live TV and back, and you're on the film again. Picking the section you're in goes back to its start (this replaces the "back to the section" button).
+- **Back:** at the start of a section, Back opens the rail; Back again goes Home.
+- **Simpler headers:** Search, Settings and the profile avatar moved from the headers to the rail; Search there searches the section you're in.
+- **Shown once:** on first launch the rail slides out with "Press Left for sections".
+- Not on the player or over the Live TV preview; leaving Live TV stops its video and coming back doesn't start it again.
+
 ## Version: Phone UI polish
 **Release Date:** 2026-10-08
 
