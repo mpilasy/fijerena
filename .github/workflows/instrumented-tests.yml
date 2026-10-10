@@ -75,7 +75,7 @@ jobs:
           # -PallowConnectedTest: the build refuses connected tests without it (they uninstall the app); a CI
           # emulator has no data to lose. The emulator is then killed outright: the TV image ignores the
           # runner's shutdown and the job hung until its timeout.
-          script: ./gradlew ${{ matrix.tasks }} -PallowConnectedTest=true; status=$?; pkill -9 -f qemu-system || true; exit $status
+          script: ./gradlew ${{ matrix.tasks }} -PallowConnectedTest=true; status=$?; pkill -9 qemu-system || true; exit $status
 
       - name: Upload test reports
         if: always()
