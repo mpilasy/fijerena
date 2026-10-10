@@ -1,7 +1,7 @@
 # Catch-up TV Plan
 
-**Status:** Exploration done, not started (written 2026-10-10). Per-source differences are detected, not configured (see "Detected per source"); Phase 0 (measuring a real panel) confirms the detection
-before code relies on it.
+**Status:** Phase 0 done (bears measured 2026-10-10, see "Facts measured"); Phase 1 next. Per-source
+differences are detected, not configured (see "Detected per source").
 
 ## Goal
 
@@ -59,6 +59,39 @@ Nothing plays catch-up, but several pieces are already there.
   so login swapping (`XtreamLoginPicker`, shared logins) and credential masking cover catch-up URLs
   with no change.
 - No timeshift URL builder, no programme / start-time argument on any route.
+
+## Facts measured (2026-10-10, bears login `1fb5318f4d`, from the host on the home ISP address)
+
+Login and hosts taken from the TV emulator's sources (`bears` = `cf.bearsp.xyz`, `bearstv` =
+`bearstv.online`). A few KB per request (`Range: bytes=0-1023`), no full playback.
+
+- **Archive flags:** 978 of 54,148 live streams have `tv_archive = 1`; `tv_archive_duration` is `3`
+  (921) or `7` (57).
+- **Time zone:** `server_info.timezone = Europe/Amsterdam`; `time_now` (19:15) minus
+  `timestamp_now` (17:15 UTC) = +2 h, which agrees with the name (CEST). The timeshift `start`
+  is read in that **panel local time**: a start written as 18:56 played (past in Amsterdam, future
+  in UTC); 19:21 and later gave 404 at 19:16 Amsterdam time.
+- **Native EPG times are UTC:** in `get_simple_data_table`, the `start` / `end` strings equal
+  `start_timestamp` / `stop_timestamp` in UTC (15:15 = 1791645300). Building the URL from the
+  `start` string without converting gives a programme 2 h early. Always go from the epoch.
+- **`has_archive`:** present and mixed per programme (RTP 1, a 3-day channel: 69 of 187 listings;
+  a 7-day channel: 200 of 443). The native EPG reaches back ~4 days and ahead ~5 for both, so a
+  7-day archive has only ~4 days of guide from it.
+- **URL form depends on the host:** on `cf.bearsp.xyz` the path form (`.ts` and `.m3u8`) and
+  `streaming/timeshift.php` all answer (302 to a stream server with a token, then the video). On
+  `bearstv.online` all three give **404**. A 404 on every form means "this source has no
+  catch-up", not "keep trying the other form".
+- **`.ts`:** `206 Partial Content`, `video/mp2t`, `Content-Range: bytes 0-1023/624975872`,
+  `Accept-Ranges` set: byte-range seeking works, so bears doesn't need seek-by-new-URL.
+- **`.m3u8`:** a VOD playlist (`#EXT-X-PLAYLIST-TYPE:VOD`) of 60 s segments named by start minute,
+  so HLS seeks too.
+- **Out of range:** a start older than the channel's days (4 days back on a 3-day channel) gives
+  404; a start in the future gives 404. A channel **without** archive gives `200` with an empty
+  body — treat it as "not available", not as a stream that ended.
+- **Connection slot:** the requests take the login's one slot (`active_cons` 1), and it stayed
+  taken **~5 minutes** after the last (partial) request (12:17, free at 12:22). A real play that
+  closes its connection may free it sooner (live `.ts` frees at once, HLS ~1 min); check in
+  Phase 4. Until then, going from catch-up to live on another address can hit 460.
 
 ## Design
 
@@ -210,8 +243,6 @@ guide work on both apps.
 
 ## Decisions waiting on the user
 
-- Does bears report `tv_archive = 1`, and can Phase 0 use a login? Without one, Phases 1–2 start
-  against the bridge.
 - Does any M3U playlist in use carry `catchup` attributes? If not, Phase 5 is dropped.
 - First version as above, or the full Phases 1–4?
 
@@ -219,7 +250,7 @@ guide work on both apps.
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | Measure a real panel (bears): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Not started — needs the user's login |
+| 0 | Measure a real panel (bears): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Done 2026-10-10 (see "Facts measured") |
 | 1 | Data: `archiveDays` into `providerData` (Xtream mapper); store the panel time zone; `supportsCatchup`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Not started |
 | 2 | Player: `PlaybackMode`, `Screen.Player` catch-up arguments, `resolveCatchupStream`, every `isLive` branch reviewed; seek-by-new-URL if Phase 0 says so; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | Not started |
 | 3 | Guide: past retention, replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | Not started |
