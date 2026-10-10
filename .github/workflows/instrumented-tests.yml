@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   # Also runs when this file changes, so an edit is tried before the next night.
   push:
+    branches: [main]
     paths:
       - '.github/workflows/instrumented-tests.yml'
 

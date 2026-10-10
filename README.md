@@ -173,7 +173,7 @@ are in **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
 scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
 ```
 
-GitHub Actions runs these on every push: `checks.yml` (the gates), `android-build.yml` (tests,
+GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml` (tests,
 lint, the Room schema check, both debug APKs) and `server.yml` (the sync server's tests, when
 `server/` changes).
 

@@ -86,7 +86,7 @@ scripts/check-viewmodel-launch.sh   # no new bare viewModelScope.launch (use lau
 scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateException)
 ```
 
-CI runs on every push, or by hand (`workflow_dispatch`), in three workflows under `.github/workflows/`:
+CI runs on every push to `main`, or by hand (`workflow_dispatch`), in three workflows under `.github/workflows/`:
 - `checks.yml`: a grep for blanket destructive Room fallbacks and the three gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
   Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then

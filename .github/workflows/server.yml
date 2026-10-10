@@ -2,6 +2,7 @@ name: Sync server
 
 on:
   push:
+    branches: [main]
     paths:
       - 'server/**'
       - '.github/workflows/server.yml'
