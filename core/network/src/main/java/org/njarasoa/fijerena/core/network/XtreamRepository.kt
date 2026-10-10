@@ -192,6 +192,14 @@ class XtreamRepository(
         extension: String,
     ): Result<String> = contentManager.buildEpisodeStreamUrl(episodeId, extension)
 
+    fun buildTimeshiftUrl(
+        streamId: Int,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): Result<String> = contentManager.buildTimeshiftUrl(streamId, startEpochSec, durationSec)
+
+    suspend fun getArchiveDays(streamIds: Collection<Int>): Map<Int, Int> = contentManager.getArchiveDays(streamIds)
+
     suspend fun getStreamName(
         streamId: Int,
         contentType: String,

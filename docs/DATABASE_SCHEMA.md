@@ -365,7 +365,7 @@ XMLTV index has nothing for a channel. A row is fresh for 6 hours
 |--------|------|-------------|
 | `providerId` | INTEGER (PK)| Foreign key to `providers.id` |
 | `streamId` | INTEGER (PK)| Provider stream ID |
-| `payload` | TEXT | JSON string of EPG listings |
+| `payload` | TEXT | JSON of the app's `EpgResponse`: epoch-second times, decoded titles, `has_archive` (since 2026-10-10; older rows held the panel's raw text times and base64 titles and age out within the 6 hours) |
 | `updatedAt` | INTEGER | Timestamp when cached |
 
 ### Table: `watch_state` (added v15)

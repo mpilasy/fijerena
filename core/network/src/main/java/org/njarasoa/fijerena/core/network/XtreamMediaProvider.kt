@@ -72,6 +72,7 @@ class XtreamMediaProvider(
             supportsAuthentication = true,
             supportsProgressSync = false,
             supportsAutoplayNextEpisode = true,
+            supportsCatchup = true,
         )
 
     override suspend fun connect(): kotlin.Result<Unit> =
@@ -656,6 +657,38 @@ class XtreamMediaProvider(
             }
         }
     }
+
+    override suspend fun resolveCatchupStream(
+        itemId: String,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): kotlin.Result<PlayableStream> {
+        val streamId =
+            itemId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid stream ID: $itemId"),
+            )
+        val streamName = repository.getStreamName(streamId, ContentType.LIVE_TV) ?: ""
+        return when (val result = repository.buildTimeshiftUrl(streamId, startEpochSec, durationSec)) {
+            is Result.Success -> {
+                kotlin.Result.success(
+                    PlayableStream(
+                        uri = XtreamLoginPicker.forPlayback(providerId, result.data),
+                        isLive = false,
+                        title = streamName,
+                    ),
+                )
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> =
+        repository
+            .getArchiveDays(itemIds.mapNotNull { it.toIntOrNull() })
+            .mapKeys { (streamId, _) -> streamId.toString() }
 
     override fun getItemsIfCached(
         categoryId: String,

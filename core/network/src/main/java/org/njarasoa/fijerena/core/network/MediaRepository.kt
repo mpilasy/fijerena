@@ -634,6 +634,19 @@ class MediaRepository(
         provider?.resolvePlayableStream(itemId, contentType, episodeId, extension)
             ?: kotlin.Result.failure(Exception("No provider set"))
 
+    /** See [MediaProvider.resolveCatchupStream]. */
+    suspend fun resolveCatchupStream(
+        itemId: String,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): kotlin.Result<PlayableStream> =
+        provider?.resolveCatchupStream(itemId, startEpochSec, durationSec)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /** See [MediaProvider.getCatchupDays]. Empty when the source has no catch-up. */
+    suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> =
+        provider?.takeIf { it.capabilities.supportsCatchup }?.getCatchupDays(itemIds).orEmpty()
+
     suspend fun search(
         query: String,
         contentType: String,

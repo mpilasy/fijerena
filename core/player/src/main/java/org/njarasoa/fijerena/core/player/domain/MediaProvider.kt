@@ -63,6 +63,23 @@ interface MediaProvider {
         extension: String? = null,
     ): Result<PlayableStream>
 
+    /**
+     * The live channel [itemId]'s archive from [startEpochSec] for [durationSec] (catch-up), as a
+     * stream that seeks and pauses like a film. Fails for a provider without
+     * [ProviderCapabilities.supportsCatchup]. See docs/plans/20261010_catchup-plan.md.
+     */
+    suspend fun resolveCatchupStream(
+        itemId: String,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): Result<PlayableStream> = Result.failure(UnsupportedOperationException("Catch-up is not supported by this source"))
+
+    /**
+     * How many days back each live channel among [itemIds] keeps an archive, for the channels that
+     * have one; a channel missing from the map has none. Local, no network call.
+     */
+    suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> = emptyMap()
+
     /** Returns cached items for a category or null if not cached. Never hits the network. */
     fun getItemsIfCached(
         categoryId: String,

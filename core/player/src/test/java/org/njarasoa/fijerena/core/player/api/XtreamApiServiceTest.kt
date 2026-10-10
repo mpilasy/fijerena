@@ -56,4 +56,19 @@ class XtreamApiServiceTest {
         val url = service.buildEpisodeStreamUrl("ep/123", "mp4")
         assertEquals("http://example.com/series/user/pass/ep%2F123.mp4", url)
     }
+
+    @Test
+    fun testBuildTimeshiftUrl_pathFormInTheLiveOutputFormat() {
+        val hls = XtreamApiService(baseUrl = "http://example.com/", username = "user", password = "p/w")
+        val ts = XtreamApiService(baseUrl = "example.com", username = "user", password = "pw", streamOutputFormat = "ts")
+
+        assertEquals(
+            "http://example.com/timeshift/user/p%2Fw/62/2026-10-10:17-13/386405.m3u8",
+            hls.buildTimeshiftUrl(386405, "2026-10-10:17-13", 62),
+        )
+        assertEquals(
+            "http://example.com/timeshift/user/pw/62/2026-10-10:17-13/386405.ts",
+            ts.buildTimeshiftUrl(386405, "2026-10-10:17-13", 62),
+        )
+    }
 }

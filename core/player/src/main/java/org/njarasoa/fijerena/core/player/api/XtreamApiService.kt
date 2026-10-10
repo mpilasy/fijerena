@@ -26,8 +26,10 @@ import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
+import org.njarasoa.fijerena.core.player.model.XtreamEpgAnswer
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.model.toEpgResponse
 import org.njarasoa.fijerena.core.player.model.withName
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
@@ -374,6 +376,21 @@ class XtreamApiService(
         return "$normalizedUrl/series/${encode(username)}/${encode(password)}/${encode(episodeId)}.${encode(extension)}"
     }
 
+    /**
+     * Builds a catch-up URL: [durationMin] minutes of live stream [streamId]'s archive from
+     * [start], the panel's wall-clock time as `YYYY-MM-DD:HH-MM` ([XtreamPanelClock.timeshiftStart]).
+     *
+     * Format: http://url:port/timeshift/username/password/durationMin/start/streamId.[format]
+     */
+    fun buildTimeshiftUrl(
+        streamId: Int,
+        start: String,
+        durationMin: Long,
+    ): String {
+        val normalizedUrl = normalizeBaseUrl(baseUrl)
+        return "$normalizedUrl/timeshift/${encode(username)}/${encode(password)}/$durationMin/$start/$streamId.$streamOutputFormat"
+    }
+
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 
     /** A catalogue download: only OkHttp's per-read timeouts apply, not the overall deadline. */
@@ -391,7 +408,7 @@ class XtreamApiService(
                 parameter("action", "get_simple_data_table")
                 parameter("stream_id", streamId)
             }
-        return json.decodeFromString(response.bodyAsText())
+        return json.decodeFromString<XtreamEpgAnswer>(response.bodyAsText()).toEpgResponse()
     }
 
     /**
@@ -410,7 +427,7 @@ class XtreamApiService(
                 parameter("stream_id", streamId)
                 parameter("limit", limit)
             }
-        return json.decodeFromString(response.bodyAsText())
+        return json.decodeFromString<XtreamEpgAnswer>(response.bodyAsText()).toEpgResponse()
     }
 
     /**

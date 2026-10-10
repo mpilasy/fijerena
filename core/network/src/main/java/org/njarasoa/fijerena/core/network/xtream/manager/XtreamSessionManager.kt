@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
+import org.njarasoa.fijerena.core.player.api.XtreamPanelClock
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 
@@ -34,6 +35,14 @@ class XtreamSessionManager(
     }
 
     var apiService: XtreamApiService? = null
+        private set
+
+    /**
+     * The panel's wall clock as its last login answer gave it ([XtreamPanelClock.from]); catch-up
+     * URLs are written in it. Set with [apiService], so it always belongs to the session in use.
+     */
+    @Volatile
+    var panelClock: XtreamPanelClock = XtreamPanelClock.UTC
         private set
 
     // Guards every method that reads-then-replaces apiService. Without it, two callers hitting
@@ -72,7 +81,7 @@ class XtreamSessionManager(
 
                         // Store the API service for future use, closing whatever it replaces so its
                         // HttpClient (own Dispatcher + ConnectionPool, see XtreamApiService) doesn't leak.
-                        replaceApiService(service)
+                        replaceApiService(service, authResponse)
                         serviceAssigned = true
 
                         // One automatic XMLTV guide source, while the account has live channels
@@ -135,7 +144,7 @@ class XtreamSessionManager(
                             rememberMe = true,
                         )
 
-                        replaceApiService(service)
+                        replaceApiService(service, authResponse)
                         serviceAssigned = true
 
                         // One automatic XMLTV guide source, while the account has live channels
@@ -193,7 +202,7 @@ class XtreamSessionManager(
                         // Clear all cached data since it's from the old provider
                         onClearCache()
 
-                        replaceApiService(service)
+                        replaceApiService(service, authResponse)
                         serviceAssigned = true
 
                         // One automatic XMLTV guide source, carried over from the old server
@@ -299,7 +308,7 @@ class XtreamSessionManager(
                             throw Exception("Account is not active: ${authResponse.userInfo.status}")
                         }
 
-                        replaceApiService(service)
+                        replaceApiService(service, authResponse)
                         serviceAssigned = true
                         authResponse
                     } finally {
@@ -347,8 +356,12 @@ class XtreamSessionManager(
      * Caller must hold [sessionMutex] — see its kdoc for why an unsynchronized swap here is
      * exactly the race that broke category loading and playback with "executor rejected".
      */
-    private fun replaceApiService(newService: XtreamApiService?) {
+    private fun replaceApiService(
+        newService: XtreamApiService?,
+        authResponse: XtreamAuthResponse? = null,
+    ) {
         apiService?.close()
+        panelClock = XtreamPanelClock.from(authResponse?.serverInfo)
         apiService = newService
     }
 

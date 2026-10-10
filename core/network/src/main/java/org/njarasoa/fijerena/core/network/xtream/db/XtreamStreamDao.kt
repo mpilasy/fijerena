@@ -218,6 +218,20 @@ interface XtreamStreamDao {
         String,
     >
 
+    /** Archive days of the channels among [ids] that have an archive (`tv_archive` = 1). */
+    @Query(
+        "SELECT streamId, tvArchiveDuration FROM xtream_streams WHERE providerId = :providerId AND type = 'LIVE' AND streamId IN (:ids) AND tvArchive = 1 AND tvArchiveDuration > 0",
+    )
+    fun getArchiveDaysByIds(
+        providerId: Long,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "streamId")
+        Int,
+        @MapColumn(columnName = "tvArchiveDuration")
+        Int,
+    >
+
     @Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)")
     fun deleteByIds(
         providerId: Long,

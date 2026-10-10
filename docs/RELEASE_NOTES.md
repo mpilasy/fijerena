@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: The source's own guide reads properly
+**Release Date:** 2026-10-10
+
+- **Xtream: the guide a source gives for its own channels now shows.** It is used where no XMLTV guide source knows a channel. Its programmes never appeared, because panels send the times as text (with the epoch in separate fields) and the titles in base64; both are read now.
+
 ## Version: TV tab labels on one line
 **Release Date:** 2026-10-10
 

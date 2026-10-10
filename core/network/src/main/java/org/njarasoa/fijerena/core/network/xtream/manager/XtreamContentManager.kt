@@ -118,6 +118,8 @@ class XtreamContentManager(
         // catalog shrank"; abort the delete phase rather than wipe out everything it didn't see.
         private const val MIN_EXISTING_COUNT_FOR_PURGE_GUARD = 50
         private const val MIN_SYNC_SURVIVAL_RATIO = 0.2
+
+        private const val SECONDS_PER_MINUTE = 60L
     }
 
     /** True if [seenCount] out of [existingCount] previously-known items is too small a
@@ -1102,6 +1104,31 @@ class XtreamContentManager(
         resultOf {
             val service = sessionManager.apiService ?: throw Exception("Not authenticated")
             service.buildSeriesStreamUrl(episodeId.toInt(), extension)
+        }
+
+    /**
+     * The catch-up URL for [durationSec] of live stream [streamId] from [startEpochSec], written in
+     * the panel's clock (rounded down to the minute; the duration rounded up). See
+     * docs/plans/20261010_catchup-plan.md.
+     */
+    fun buildTimeshiftUrl(
+        streamId: Int,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): Result<String> =
+        resultOf {
+            val service = sessionManager.apiService ?: throw Exception("Not authenticated")
+            val minutes = ((durationSec + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE).coerceAtLeast(1)
+            service.buildTimeshiftUrl(streamId, sessionManager.panelClock.timeshiftStart(startEpochSec), minutes)
+        }
+
+    /** Archive days of the live channels among [streamIds] that have an archive. */
+    suspend fun getArchiveDays(streamIds: Collection<Int>): Map<Int, Int> =
+        withContext(Dispatchers.IO) {
+            streamIds
+                .distinct()
+                .chunked(SQLITE_MAX_VARIABLES)
+                .fold(HashMap<Int, Int>()) { all, chunk -> all.apply { putAll(streamDao.getArchiveDaysByIds(providerId, chunk)) } }
         }
 
     suspend fun getStreamName(

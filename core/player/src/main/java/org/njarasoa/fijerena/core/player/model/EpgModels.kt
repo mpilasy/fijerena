@@ -15,7 +15,9 @@ data class EpgProgram(
     @SerialName("end") val end: String,
     @SerialName("description") val description: String? = null,
     @SerialName("channel_id") val channelId: String? = null,
-    @SerialName("has_archive") val hasArchive: Int? = 0,
+    // 1 in the channel's archive, 0 not (yet), null unknown (XMLTV has no such flag). Only the
+    // panel's own guide sets it. See CatchupAvailability.
+    @SerialName("has_archive") val hasArchive: Int? = null,
 ) {
     val startTime: Long get() = start.toLongOrNull() ?: 0L
     val endTime: Long get() = end.toLongOrNull() ?: 0L
