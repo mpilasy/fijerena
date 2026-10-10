@@ -173,9 +173,9 @@ are in **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
 scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
 ```
 
-The GitHub Actions workflow (`.github/workflows/android-build.yml`) runs these, the Room schema
-check and the sync server's tests, then builds both debug APKs; it is started by hand
-(`workflow_dispatch`).
+GitHub Actions runs these on every push: `checks.yml` (the gates), `android-build.yml` (tests,
+lint, the Room schema check, both debug APKs) and `server.yml` (the sync server's tests, when
+`server/` changes).
 
 ```bash
 # Instrumentation tests (requires a connected device/emulator).

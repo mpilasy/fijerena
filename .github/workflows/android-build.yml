@@ -1,30 +1,40 @@
 name: Android Build
 
 on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'server/**'
+      - 'scripts/focus-walks/**'
+      - '.github/workflows/checks.yml'
+      - '.github/workflows/server.yml'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      # gradle/gradle-daemon-jvm.properties asks for a JDK 25 daemon, and auto-download is off.
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -32,35 +42,15 @@ jobs:
       - name: Remove local Java home from gradle.properties
         run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest
-
       - name: Lint
         run: ./gradlew ktlintCheck
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
 
       # Existing warnings live in each module's lint-baseline.xml; only new issues fail the build.
       - name: Android Lint
         run: ./gradlew lintDebug
-
-      # docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
-      - name: User-data databases have no blanket destructive fallback
-        run: |
-          if grep -rnE 'fallbackToDestructiveMigration(OnDowngrade)?\(' --include='*.kt' core/network/src/main | grep -v 'EpgIndexDatabase'; then
-            echo "xtream_v2.db / providers.db hold user data: use fallbackToDestructiveMigrationFrom(<pre-user-data versions>) only."
-            exit 1
-          fi
-
-      # docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-27.
-      - name: Suspend code does not swallow cancellation
-        run: scripts/check-cancellation.sh
-
-      # docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
-      - name: ViewModel coroutines have an exception boundary
-        run: scripts/check-viewmodel-launch.sh
-
-      # docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-05.
-      - name: TV focus requests retry on the result, not an exception
-        run: scripts/check-focus-retry.sh
 
       - name: Room schemas are committed and current
         run: |
@@ -70,22 +60,11 @@ jobs:
             exit 1
           fi
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: server/package-lock.json
-
-      - name: Sync server tests
-        working-directory: server
-        run: npm ci && npm test
-
       - name: Build debug APKs
         run: ./gradlew assembleDebug
 
       - name: Upload mobile APK
-        if: success()
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: mobile-debug-apk
@@ -93,7 +72,7 @@ jobs:
           retention-days: 14
 
       - name: Upload TV APK
-        if: success()
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: tv-debug-apk
