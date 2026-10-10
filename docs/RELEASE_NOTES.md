@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-10
 
 - **TV: a long category name no longer crushes the other tabs.** In the Live TV channel panel, "FR| FRANCE SPORT VIP RAW" left Favorites a column one letter wide. Tab labels stay on one line, and the longest one is shortened with "…" when the row is too narrow.
+- **TV: Recent and Favorites in the Live TV channel panel are icons** (↺ and ★, as on the rail and in browse), named when focused; the category tab keeps its name, which now has room to show in full.
 
 ## Version: Xtream lists with a nameless entry
 **Release Date:** 2026-10-09

@@ -157,6 +157,16 @@ internal fun LiveTvChannelPanel(
             ) {
                 TvSectionTabs(
                     tabs = labels,
+                    // Recent and Favorites as icons (the rail's and browse's), the label on focus;
+                    // the category keeps its name.
+                    icons =
+                        tabs.map {
+                            when (it) {
+                                ChannelContext.Recent -> CinemaIcons.Replay
+                                ChannelContext.Favorites -> CinemaIcons.Star
+                                else -> null
+                            }
+                        },
                     selectedIndex = selectedIndex,
                     onTabSelected = { index -> tabs.getOrNull(index)?.let(onContextSelected) },
                     entryFocusRequester = tabsEntry,

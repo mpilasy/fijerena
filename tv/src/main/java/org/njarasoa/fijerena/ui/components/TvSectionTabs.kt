@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,7 +26,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -37,6 +40,7 @@ import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -69,6 +73,11 @@ fun TvSectionTabs(
     entryFocusRequester: FocusRequester? = null,
     endFocusRequester: FocusRequester? = null,
     firstTabModifier: Modifier = Modifier,
+    /**
+     * An icon per tab (null: the label as text). A tab with an icon shows the icon alone and its
+     * label only while focused, as TV icon buttons do; [tabs] stays its accessible name.
+     */
+    icons: List<ImageVector?> = emptyList(),
 ) {
     val scale = LocalUiScale.current
     // One FocusRequester per tab, explicitly wired to its left/right neighbor below — Compose's
@@ -96,6 +105,7 @@ fun TvSectionTabs(
             val giveWay = if (index == longest) Modifier.weight(1f, fill = false) else Modifier
             SectionTab(
                 label = label,
+                icon = icons.getOrNull(index),
                 isSelected = index == selectedIndex,
                 onSelected = { onTabSelected(index) },
                 focusRequester = focusRequesters[index],
@@ -113,6 +123,7 @@ fun TvSectionTabs(
 @Composable
 private fun SectionTab(
     label: String,
+    icon: ImageVector?,
     isSelected: Boolean,
     onSelected: () -> Unit,
     focusRequester: FocusRequester,
@@ -183,17 +194,35 @@ private fun SectionTab(
                 .padding(horizontal = Spacing.md.scaled(scale), vertical = Spacing.sm.scaled(scale)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style =
-                MaterialTheme.typography.titleMedium.copy(
-                    fontSize =
-                        MaterialTheme.typography.titleMedium.fontSize
-                            .scaled(scale),
-                ),
-            color = textColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        val text: @Composable () -> Unit = {
+            Text(
+                text = label,
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (icon == null) {
+            text()
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = if (isFocused) null else label,
+                    tint = textColor,
+                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                )
+                if (isFocused) text()
+            }
+        }
     }
 }
