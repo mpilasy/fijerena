@@ -1,6 +1,6 @@
 # Catch-up TV Plan
 
-**Status:** In progress — Phase 3 (guide). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
+**Status:** In progress — Phase 4 (checks on the emulators). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
 (Phase 5 dropped), checked on the emulators only. Per-source differences are detected, not configured
 (see "Detected per source"); "Decided while building" overrides the design where they differ.
 
@@ -280,9 +280,27 @@ These replace the design above where the two differ.
 | 0 | Measure a real panel (bears): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Done 2026-10-10 (see "Facts measured") |
 | 1 | Data: `getCatchupDays` (by channel id); the panel clock from each login; `supportsCatchup`; `resolveCatchupStream`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Done 2026-10-10 (`7013da3e`). Also fixed: the panel's own guide never showed (text times, base64 titles); it now reads `start_timestamp` / `stop_timestamp` and decodes the text. A start-over window past now gets a playlist that ends at now (bears) — Phase 2 continues it |
 | 2 | Player: catch-up plays with `isLive = false` (decision 3), `Screen.Player` catch-up arguments, every `isLive` and Live-TV content-type branch reviewed; a start-over that reaches now fetches the window again and carries on; "not available to replay" with no retries; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | Done 2026-10-10 (`6613f53f`); checked on the emulators in Phase 4 (nothing opens catch-up before Phase 3) |
-| 3 | Guide: past hours on archive channels from the panel's guide (decision 4), replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | In progress |
-| 4 | Check on the emulators against the bridge, then bears on the Shield and a phone; docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | Not started |
+| 3 | Guide: past hours on archive channels from the panel's guide (decision 4), replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | Done 2026-10-10 (`cdd1f05e`); checked on the TV emulator. Found and fixed while checking: the player hand-off between screens (see AGENTS.md → "Handing the player to another screen"), a stale index hiding the programme on air, the replayed programme's description picked by time from the other guide |
+| 4 | Check on the emulators against the bridge, bears from the TV and phone emulators (decision 2026-10-10: emulators only); docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | In progress |
 | 5 | Remote M3U catch-up (attribute reader, modes, templates) | Dropped 2026-10-10 (Xtream only) |
+
+## Phase 4 checks (2026-10-10, emulators, bears)
+
+TV emulator (Television_1080p), source `bears`, PT: RTP 1 HD (3-day archive):
+
+- Start over from the live controls: `/timeshift/…/277/2026-10-10:17-28/386405.m3u8` — 10:28 on the
+  emulator's clock (UTC−5) for a programme at 10:30, so the panel clock is right. Ready in 20–25 s
+  (bears' timeshift is slow to answer; live starts in 1–3 s). Controls: "CATCH-UP · Estrelas ao
+  Sábado · PT: RTP 1 HD ◉ · Today 10:30 AM", seek bar, Watch live first, no Favorite.
+- Seek: fast-forward to 3:30 and OK — plays from 3:30. The length grew (2:54 → 3:02) as the
+  programme on air was asked for again.
+- Watch live: back on the preview, live ready in 1.8 s. Back from catch-up: live again in 3 s.
+- Guide, yesterday: RTP 1 HD / 2 HD / 3 HD past programmes carry the replay mark, plain RTP 1
+  doesn't. Watch from start is the focused button; "Bom Dia Portugal" played from
+  `…/247/2026-10-09:06-58/…` with the whole 4:07 window. Today's page showed "No listings": the
+  emulator's XMLTV guide was two days old (today isn't filled from the source's guide, by design).
+- Not checked on a device: "This programme is not available to replay" (bearstv, the host that
+  answers 404, can't log in on the emulator: "Session expired"); reaching the end of a programme.
 
 ## Risks and open questions
 
