@@ -422,14 +422,14 @@ internal fun EpisodeListContent(
     // Episodes with that season selected — exactly what the season pills atop the Episodes tab
     // already do directly, one D-pad press instead of two.
     val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
-    val hasSimilar = relatedTitles.moreLikeThis.isNotEmpty()
+    val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
     val tabs =
-        remember(hasCast, hasSimilar) {
+        remember(hasCast, hasMoreLikeThis) {
             buildList {
                 add(SeriesDetailTab.EPISODES)
+                if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
                 if (hasCast) add(SeriesDetailTab.CAST)
                 add(SeriesDetailTab.DETAILS)
-                if (hasSimilar) add(SeriesDetailTab.SIMILAR)
             }
         }
     // Episodes, not the first tab: the episode list is this screen's primary content, so it
@@ -1317,7 +1317,7 @@ internal fun EpisodeListContent(
                             }
                         }
 
-                        SeriesDetailTab.SIMILAR -> {
+                        SeriesDetailTab.MORE_LIKE_THIS -> {
                             item(key = "tab-section-similar") {
                                 Box(
                                     modifier =
@@ -1328,7 +1328,7 @@ internal fun EpisodeListContent(
                                             .then(upToTabRow)
                                             .onFocusChanged { if (it.hasFocus) focusInSection = true },
                                 ) {
-                                    // No heading: the Similar tab above already says what this row is.
+                                    // No heading: the More Like This tab above already says what this row is.
                                     RelatedTitlesRow(
                                         title = null,
                                         items = relatedTitles.moreLikeThis,
@@ -1359,7 +1359,7 @@ internal fun EpisodeListContent(
 private enum class EpisodeStep { PREVIOUS, NEXT }
 
 /** Phase 5 tab shell (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md) — mirrors MovieDetailTab. */
-private enum class SeriesDetailTab { EPISODES, CAST, DETAILS, SIMILAR }
+private enum class SeriesDetailTab { EPISODES, MORE_LIKE_THIS, CAST, DETAILS }
 
 @Composable
 private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
@@ -1367,7 +1367,7 @@ private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
         SeriesDetailTab.EPISODES -> stringResource(R.string.series_episodes_header)
         SeriesDetailTab.CAST -> stringResource(R.string.details_tab_cast)
         SeriesDetailTab.DETAILS -> stringResource(R.string.details_tab_details)
-        SeriesDetailTab.SIMILAR -> stringResource(R.string.details_tab_similar)
+        SeriesDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
     }
 
 /** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
@@ -1385,7 +1385,7 @@ private fun SeriesCastTabContent(cast: String) {
 }
 
 /**
- * Details tab: diagnostics rather than headline facts, one label/value row each — the stream-name
+ * Details tab: full synopsis, then diagnostics rather than headline facts, one label/value row each — the stream-name
  * picker, TMDB id, director and the source last — then the category button. Cast lives in its own
  * tab ([SeriesCastTabContent]), not repeated here.
  */
@@ -1411,6 +1411,10 @@ private fun SeriesDetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
+        seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
+            Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+        }
         TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
             StreamNamePicker(
                 currentName = seriesName,
@@ -1421,10 +1425,14 @@ private fun SeriesDetailsTabContent(
                 modifier = topFocusModifier.leftToRail(),
             )
         }
-        TvDetailRow(
-            label = stringResource(R.string.details_label_tmdb),
-            value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
-        )
+        val context = LocalContext.current
+        val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+        if (isDevMode) {
+            TvDetailRow(
+                label = stringResource(R.string.details_label_tmdb),
+                value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+            )
+        }
         seriesDetail.metadata.director?.let { TvDetailRow(label = stringResource(R.string.details_label_director), value = it) }
         TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 

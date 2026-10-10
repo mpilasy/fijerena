@@ -799,9 +799,6 @@
     <string name="details_collection_fallback">Fitambarana</string>
     <string name="details_tab_cast">Mpilalao</string>
     <string name="details_tab_details">Antsipiriany</string>
-    <string name="details_tab_overview">Famintinana</string>
-    <string name="details_tab_versions">Dika</string>
-    <string name="details_tab_similar">Mitovitovy</string>
     <string name="details_tab_seasons">Vanim-potoana</string>
     <string name="details_more_like_this">Mitovitovy amin\'ity</string>
     <string name="details_no_link_handler">Tsy misy rindrankajy amin\'ity fitaovana ity afaka manokatra io rohy io</string>

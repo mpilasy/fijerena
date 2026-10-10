@@ -86,10 +86,17 @@ scripts/check-viewmodel-launch.sh   # no new bare viewModelScope.launch (use lau
 scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateException)
 ```
 
-CI is `.github/workflows/android-build.yml`, started by hand (`workflow_dispatch`): unit tests,
-ktlint, Android Lint, a grep for blanket destructive Room fallbacks, the three gates above, a check
-that the build left `core/network/schemas` unchanged, the sync server's `npm ci && npm test`, then
-`assembleDebug` with both APKs uploaded as artifacts.
+CI runs on every push, or by hand (`workflow_dispatch`), in three workflows under `.github/workflows/`:
+- `checks.yml`: a grep for blanket destructive Room fallbacks and the three gates above.
+- `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
+  Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
+  `assembleDebugAndroidTest` so the instrumented tests keep compiling.
+  Both APKs are uploaded as artifacts from `main` and manual runs only. Gradle runs on JDK 25
+  (`gradle/gradle-daemon-jvm.properties`).
+- `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
+- `instrumented-tests.yml`, nightly at 06:17 UTC or by hand: `connectedDebugAndroidTest` for
+  `core:network` and `mobile` on a phone emulator and for `tv` on an Android TV emulator (API 34),
+  with the test reports uploaded as artifacts.
 
 `./gradlew connectedAndroidTest` uninstalls the app and wipes its data on every connected device —
 only with real devices disconnected, or one emulator targeted with `ANDROID_SERIAL`.

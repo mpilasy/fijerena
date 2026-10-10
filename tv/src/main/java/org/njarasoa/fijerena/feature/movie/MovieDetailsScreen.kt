@@ -277,15 +277,13 @@ private fun MovieDetailsContent(
     // single-column screen composed cast, tech rows and up to three related rows on every visit,
     // whether on screen or not.
     val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
-    val hasSimilar = relatedTitles.moreLikeThis.isNotEmpty()
-    val hasCollection = relatedTitles.collection.isNotEmpty()
+    val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
     val tabs =
-        remember(hasCast, hasSimilar, hasCollection) {
+        remember(hasCast, hasMoreLikeThis) {
             buildList {
+                if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
                 if (hasCast) add(MovieDetailTab.CAST)
                 add(MovieDetailTab.DETAILS)
-                if (hasSimilar) add(MovieDetailTab.SIMILAR)
-                if (hasCollection) add(MovieDetailTab.COLLECTION)
             }
         }
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
@@ -635,39 +633,48 @@ private fun MovieDetailsContent(
                                 )
                             }
 
-                            MovieDetailTab.SIMILAR -> {
-                                // No heading: the Similar tab above already says what this row is.
-                                RelatedTitlesRow(
-                                    title = null,
-                                    items = relatedTitles.moreLikeThis,
-                                    onItemClick = { item ->
-                                        returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
-                                        onRelatedTitleSelected(item)
-                                    },
-                                    focusTargetId = relatedReturnId,
-                                    focusTargetModifier =
-                                        Modifier.navReturnFocusTarget(
-                                            returnFocus,
-                                            RETURN_RELATED_PREFIX + relatedReturnId,
-                                        ),
-                                )
-                            }
-
-                            MovieDetailTab.COLLECTION -> {
-                                RelatedTitlesRow(
-                                    title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
-                                    items = relatedTitles.collection,
-                                    onItemClick = { item ->
-                                        returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
-                                        onRelatedTitleSelected(item)
-                                    },
-                                    focusTargetId = relatedReturnId,
-                                    focusTargetModifier =
-                                        Modifier.navReturnFocusTarget(
-                                            returnFocus,
-                                            RETURN_RELATED_PREFIX + relatedReturnId,
-                                        ),
-                                )
+                            MovieDetailTab.MORE_LIKE_THIS -> {
+                                Column {
+                                    RelatedTitlesRow(
+                                        title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
+                                        items = relatedTitles.collection,
+                                        onItemClick = { item ->
+                                            returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
+                                            onRelatedTitleSelected(item)
+                                        },
+                                        focusTargetId = relatedReturnId,
+                                        focusTargetModifier =
+                                            Modifier.navReturnFocusTarget(
+                                                returnFocus,
+                                                RETURN_RELATED_PREFIX + relatedReturnId,
+                                            ),
+                                    )
+                                    RelatedTitlesRow(
+                                        title =
+                                            if (relatedTitles.collection.isNotEmpty()) {
+                                                stringResource(R.string.details_more_like_this)
+                                            } else {
+                                                null
+                                            },
+                                        items = relatedTitles.moreLikeThis,
+                                        onItemClick = { item ->
+                                            returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
+                                            onRelatedTitleSelected(item)
+                                        },
+                                        focusTargetId = relatedReturnId,
+                                        focusTargetModifier =
+                                            Modifier.navReturnFocusTarget(
+                                                returnFocus,
+                                                RETURN_RELATED_PREFIX + relatedReturnId,
+                                            ),
+                                        modifier =
+                                            if (relatedTitles.collection.isNotEmpty()) {
+                                                Modifier.padding(top = Spacing.lg.scaled(scale))
+                                            } else {
+                                                Modifier
+                                            },
+                                    )
+                                }
                             }
 
                             null -> {
@@ -720,15 +727,14 @@ private fun LoadingScreen() {
 
 /** Section tabs built from what a movie actually has (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md
  * Phase 4) — [DETAILS] is the only one always present. */
-private enum class MovieDetailTab { CAST, DETAILS, SIMILAR, COLLECTION }
+private enum class MovieDetailTab { MORE_LIKE_THIS, CAST, DETAILS }
 
 @Composable
 private fun movieDetailTabLabel(tab: MovieDetailTab): String =
     when (tab) {
         MovieDetailTab.CAST -> stringResource(R.string.details_tab_cast)
         MovieDetailTab.DETAILS -> stringResource(R.string.details_tab_details)
-        MovieDetailTab.SIMILAR -> stringResource(R.string.details_tab_similar)
-        MovieDetailTab.COLLECTION -> stringResource(R.string.details_collection_fallback)
+        MovieDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
     }
 
 /** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
@@ -746,7 +752,7 @@ private fun CastTabContent(cast: String) {
 }
 
 /**
- * Details tab: diagnostics rather than headline facts, one label/value row each — release date,
+ * Details tab: full synopsis, then diagnostics rather than headline facts, one label/value row each — release date,
  * director, technical stream info, the stream-name picker, TMDB id and the source last — then the
  * category button. Cast lives in its own tab ([CastTabContent]), not repeated here.
  */
@@ -768,6 +774,10 @@ private fun DetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
+        movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
+            Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+        }
         val displayRelease =
             movieDetail.metadata.releaseDate
                 ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
@@ -860,10 +870,14 @@ private fun DetailsTabContent(
                 onFocusedChanged = onStreamFocusedChanged,
             )
         }
-        TvDetailRow(
-            label = stringResource(R.string.details_label_tmdb),
-            value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
-        )
+        val context = LocalContext.current
+        val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+        if (isDevMode) {
+            TvDetailRow(
+                label = stringResource(R.string.details_label_tmdb),
+                value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+            )
+        }
         TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {

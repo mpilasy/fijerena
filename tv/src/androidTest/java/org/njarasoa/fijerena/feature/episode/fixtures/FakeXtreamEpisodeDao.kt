@@ -75,6 +75,4 @@ class FakeXtreamEpisodeDao : XtreamEpisodeDao {
         plot: String,
         fetchedAt: Long,
     ) = Unit
-
-    override fun deleteOrphaned(validProviderIds: List<Long>): Int = 0
 }

@@ -20,15 +20,16 @@ RIGHT	Watched
 # Refresh info is no longer in the row: More is the last button (a trailer icon would sit before it).
 RIGHT	More
 LEFT	Watched
-# Down from any action → the selected tab (Cast when the movie has cast, else Details) (-r).
-DOWN	Cast
+# Down from any action → the selected tab: the first one, More Like This when the movie has
+# related titles (its collection or similar ones), else Cast or Details (-r).
+DOWN	More Like This
 LEFT	Movies
-RIGHT	Cast
+RIGHT	More Like This
 # Up from a tab → Play, not the button above the tab.
 UP	▶ Play Movie
-DOWN	Cast
-# The next tab, then Up again → Play (-r for the tab name).
-RIGHT	Details
+DOWN	More Like This
+# The next tab, then Up again → Play (-r for the tab name: Cast or Details).
+RIGHT	Cast
 UP	▶ Play Movie
 # Leave the movie for walk 2.
 BACK	Anatomy of a Fall / ★ 7.6 / Hold OK or press Menu for actions

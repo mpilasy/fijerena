@@ -95,6 +95,9 @@ class SearchViewModel(
 
     private var searchJob: Job? = null
 
+    // History entry added by the current as-you-type session; replaced on the next keystroke.
+    private var typedHistoryEntry: String? = null
+
     companion object {
         private const val PARALLEL_BATCH_SIZE = 20
         private const val TARGET_RESULTS = 200
@@ -169,11 +172,13 @@ class SearchViewModel(
         }
     }
 
-    /** Called when the user presses the Search button or keyboard search action. */
-    fun performSearch(query: String) {
+    /** [asYouType]: a debounced search while typing; keeps one history entry per typing session. */
+    fun performSearch(
+        query: String,
+        asYouType: Boolean = false,
+    ) {
         if (query.isBlank() || query.length < 2) return
-        appSettings.addSearchHistory(query)
-        _searchHistory.value = appSettings.getSearchHistory()
+        recordHistory(query, asYouType)
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -181,7 +186,33 @@ class SearchViewModel(
             }
     }
 
+    private fun recordHistory(
+        query: String,
+        asYouType: Boolean,
+    ) {
+        val term = query.trim()
+        val previous = typedHistoryEntry
+        if (previous != null && !previous.equals(term, ignoreCase = true)) {
+            appSettings.removeSearchHistory(previous)
+        }
+        typedHistoryEntry =
+            when {
+                !asYouType -> null
+                previous.equals(term, ignoreCase = true) -> previous
+                appSettings.getSearchHistory().any { it.equals(term, ignoreCase = true) } -> null
+                else -> term
+            }
+        appSettings.addSearchHistory(term)
+        _searchHistory.value = appSettings.getSearchHistory()
+    }
+
+    /** Keeps the typed term in the history (the user opened one of its results). */
+    fun keepTypedSearch() {
+        typedHistoryEntry = null
+    }
+
     fun clearSearch() {
+        typedHistoryEntry = null
         searchJob?.cancel()
         _uiState.value =
             UiState.Success(

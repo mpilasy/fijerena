@@ -357,12 +357,6 @@ class FakeWatchStateDao : WatchStateDao {
         rows.keys.filter { it.providerId == providerId }.forEach { rows.remove(it) }
     }
 
-    override suspend fun deleteOrphaned(validProviderIds: List<Long>): Int {
-        val toRemove = rows.keys.filter { it.providerId !in validProviderIds }
-        toRemove.forEach { rows.remove(it) }
-        return toRemove.size
-    }
-
     override suspend fun restoreAll(entities: List<WatchStateEntity>) {
         entities.forEach { seed(it) }
     }
