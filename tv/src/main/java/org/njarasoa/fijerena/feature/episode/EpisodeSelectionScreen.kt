@@ -427,9 +427,9 @@ internal fun EpisodeListContent(
         remember(hasCast, hasSimilar) {
             buildList {
                 add(SeriesDetailTab.EPISODES)
+                if (hasSimilar) add(SeriesDetailTab.SIMILAR)
                 if (hasCast) add(SeriesDetailTab.CAST)
                 add(SeriesDetailTab.DETAILS)
-                if (hasSimilar) add(SeriesDetailTab.SIMILAR)
             }
         }
     // Episodes, not the first tab: the episode list is this screen's primary content, so it
@@ -1359,7 +1359,7 @@ internal fun EpisodeListContent(
 private enum class EpisodeStep { PREVIOUS, NEXT }
 
 /** Phase 5 tab shell (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md) — mirrors MovieDetailTab. */
-private enum class SeriesDetailTab { EPISODES, CAST, DETAILS, SIMILAR }
+private enum class SeriesDetailTab { EPISODES, SIMILAR, CAST, DETAILS }
 
 @Composable
 private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
@@ -1385,7 +1385,7 @@ private fun SeriesCastTabContent(cast: String) {
 }
 
 /**
- * Details tab: diagnostics rather than headline facts, one label/value row each — the stream-name
+ * Details tab: the full synopsis, then diagnostics rather than headline facts, one label/value row each — the stream-name
  * picker, TMDB id, director and the source last — then the category button. Cast lives in its own
  * tab ([SeriesCastTabContent]), not repeated here.
  */
@@ -1411,6 +1411,11 @@ private fun SeriesDetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
+        // The hero cuts the synopsis to three lines; this is where it can be read in full.
+        seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
+            Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+        }
         TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
             StreamNamePicker(
                 currentName = seriesName,

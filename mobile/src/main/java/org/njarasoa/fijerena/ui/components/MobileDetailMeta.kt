@@ -16,10 +16,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
@@ -173,3 +179,33 @@ fun MobileCategoryLinkRow(
 
 /** Wide enough for "Container:" / "Réalisateur :"; a longer label wraps under itself. */
 private val DETAIL_LABEL_WIDTH = 112.dp
+
+/**
+ * The synopsis under the hero's actions, always on screen like the streaming apps show it: cut to
+ * [collapsedLines] lines, a tap shows the rest (and a second tap folds it back). Only clickable
+ * when there's more to show.
+ */
+@Composable
+fun ExpandablePlot(
+    plot: String,
+    modifier: Modifier = Modifier,
+    collapsedLines: Int = 3,
+) {
+    var expanded by rememberSaveable(plot) { mutableStateOf(false) }
+    var overflows by remember(plot) { mutableStateOf(false) }
+    Text(
+        text = plot,
+        style = MaterialTheme.typography.bodyLarge,
+        maxLines = if (expanded) Int.MAX_VALUE else collapsedLines,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { result ->
+            if (!expanded) overflows = result.hasVisualOverflow
+        },
+        modifier =
+            if (overflows || expanded) {
+                modifier.clickable { expanded = !expanded }
+            } else {
+                modifier
+            },
+    )
+}

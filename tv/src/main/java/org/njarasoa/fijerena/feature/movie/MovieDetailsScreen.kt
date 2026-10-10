@@ -275,17 +275,17 @@ private fun MovieDetailsContent(
     // Tabbed sections (Phase 4, docs/plans/archive/20260902_tv-detail-hero-ui-plan.md): built from what this movie
     // actually has, never a fixed list. Only the selected tab's content composes below — the old
     // single-column screen composed cast, tech rows and up to three related rows on every visit,
-    // whether on screen or not.
+    // whether on screen or not. Related titles first and Details last, like the streaming apps.
     val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
     val hasSimilar = relatedTitles.moreLikeThis.isNotEmpty()
     val hasCollection = relatedTitles.collection.isNotEmpty()
     val tabs =
         remember(hasCast, hasSimilar, hasCollection) {
             buildList {
-                if (hasCast) add(MovieDetailTab.CAST)
-                add(MovieDetailTab.DETAILS)
                 if (hasSimilar) add(MovieDetailTab.SIMILAR)
                 if (hasCollection) add(MovieDetailTab.COLLECTION)
+                if (hasCast) add(MovieDetailTab.CAST)
+                add(MovieDetailTab.DETAILS)
             }
         }
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
@@ -720,7 +720,7 @@ private fun LoadingScreen() {
 
 /** Section tabs built from what a movie actually has (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md
  * Phase 4) — [DETAILS] is the only one always present. */
-private enum class MovieDetailTab { CAST, DETAILS, SIMILAR, COLLECTION }
+private enum class MovieDetailTab { SIMILAR, COLLECTION, CAST, DETAILS }
 
 @Composable
 private fun movieDetailTabLabel(tab: MovieDetailTab): String =
@@ -746,7 +746,7 @@ private fun CastTabContent(cast: String) {
 }
 
 /**
- * Details tab: diagnostics rather than headline facts, one label/value row each — release date,
+ * Details tab: the full synopsis, then diagnostics rather than headline facts, one label/value row each — release date,
  * director, technical stream info, the stream-name picker, TMDB id and the source last — then the
  * category button. Cast lives in its own tab ([CastTabContent]), not repeated here.
  */
@@ -768,6 +768,11 @@ private fun DetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
+        // The hero cuts the synopsis to three lines; this is where it can be read in full.
+        movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
+            Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+        }
         val displayRelease =
             movieDetail.metadata.releaseDate
                 ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()

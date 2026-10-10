@@ -77,6 +77,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
+import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
 import org.njarasoa.fijerena.ui.components.MetaText
@@ -447,22 +448,23 @@ private fun EpisodeListContent(
     // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
     // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
     // Episodes is the always-present, always-first tab: it's the reason this screen exists, not
-    // one option among equals. The screen still opens on Overview, like the movie details, so the
-    // description is what you see first; Play already resumes the next episode.
+    // one option among equals. The synopsis isn't a tab: it sits in the hero above, always on
+    // screen, and Details (last, like the streaming apps) holds the reference rows.
     val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
             buildList {
                 add(SeriesDetailTab.EPISODES)
-                add(SeriesDetailTab.OVERVIEW)
-                if (hasCast) add(SeriesDetailTab.CAST)
                 if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
+                if (hasCast) add(SeriesDetailTab.CAST)
+                add(SeriesDetailTab.DETAILS)
             }
         }
-    var selectedTabIndex by rememberSaveable { mutableStateOf(tabs.indexOf(SeriesDetailTab.OVERVIEW)) }
-    val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
-    val selectedTab = tabs.getOrNull(safeTabIndex)
+    // Kept as the tab, not its index: More Like This arrives after the screen opens and shifts the
+    // tabs after it, which would otherwise move the selection to a different tab.
+    var pickedTab by rememberSaveable { mutableStateOf(SeriesDetailTab.EPISODES) }
+    val selectedTab = pickedTab.takeIf { it in tabs } ?: SeriesDetailTab.EPISODES
 
     LazyColumn(
         state = listState,
@@ -475,7 +477,7 @@ private fun EpisodeListContent(
                 // of tapping a season tab. Vertical scrolling is untouched: this only fires on
                 // a horizontal drag, same technique EpisodeDetailContent below uses for
                 // prev/next episode. Gated on the Episodes detail-tab too — without it, a swipe
-                // made while looking at Overview/Cast/More Like This silently changed the season
+                // made while looking at Details/Cast/More Like This silently changed the season
                 // selection in the background, invisible until switching back to Episodes.
                 .pointerInput(hasMultipleSeasons, previousSeason, nextSeason, selectedTab) {
                     if (!hasMultipleSeasons || selectedTab != SeriesDetailTab.EPISODES) return@pointerInput
@@ -637,22 +639,27 @@ private fun EpisodeListContent(
                     }
                 }
 
+                seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    ExpandablePlot(plot = plot, modifier = Modifier.fillMaxWidth())
+                }
+
                 // Segmented detail sections — tab state is hoisted above the LazyColumn (see
                 // there); this item only reads it.
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                PrimaryTabRow(selectedTabIndex = safeTabIndex) {
-                    tabs.forEachIndexed { index, tab ->
+                PrimaryTabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
+                    tabs.forEach { tab ->
                         Tab(
-                            selected = index == safeTabIndex,
-                            onClick = { selectedTabIndex = index },
+                            selected = tab == selectedTab,
+                            onClick = { pickedTab = tab },
                             text = { Text(seriesDetailTabLabel(tab)) },
                         )
                     }
                 }
 
-                if (selectedTab == SeriesDetailTab.OVERVIEW) {
+                if (selectedTab == SeriesDetailTab.DETAILS) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                    SeriesOverviewTabContent(
+                    SeriesDetailsTabContent(
                         seriesDetail = seriesDetail,
                         seriesName = seriesName,
                         alternateStreams = alternateStreams,
@@ -720,25 +727,25 @@ private fun EpisodeListContent(
     }
 }
 
-/** Section tabs — [EPISODES] is always present and always the initial selection. */
-private enum class SeriesDetailTab { EPISODES, OVERVIEW, CAST, MORE_LIKE_THIS }
+/** Section tabs, in display order — [EPISODES] is always present and always the initial selection. */
+private enum class SeriesDetailTab { EPISODES, MORE_LIKE_THIS, CAST, DETAILS }
 
 @Composable
 private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
     when (tab) {
         SeriesDetailTab.EPISODES -> stringResource(R.string.series_episodes_header)
-        SeriesDetailTab.OVERVIEW -> stringResource(R.string.details_tab_overview)
+        SeriesDetailTab.DETAILS -> stringResource(R.string.details_tab_details)
         SeriesDetailTab.CAST -> stringResource(R.string.details_tab_cast)
         SeriesDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
     }
 
 /**
- * Overview tab: plot, director, the stream-name picker (alternate cached instances of this
+ * Details tab: director, the stream-name picker (alternate cached instances of this
  * series), TMDB id, then the category button. Cast lives in its own tab (see
  * [CastChipsTabContent]); episodes live in the always-present Episodes tab.
  */
 @Composable
-private fun SeriesOverviewTabContent(
+private fun SeriesDetailsTabContent(
     seriesDetail: SeriesDetail,
     seriesName: String,
     alternateStreams: List<MediaItem>,
@@ -747,27 +754,6 @@ private fun SeriesOverviewTabContent(
     onCategorySelected: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        seriesDetail.metadata.plot?.let { plot ->
-            var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
-            var plotOverflows by remember(plot) { mutableStateOf(false) }
-            Text(
-                text = plot,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = if (plotExpanded) Int.MAX_VALUE else 3,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { result ->
-                    if (!plotExpanded) plotOverflows = result.hasVisualOverflow
-                },
-                modifier =
-                    if (plotOverflows || plotExpanded) {
-                        Modifier.clickable { plotExpanded = !plotExpanded }
-                    } else {
-                        Modifier
-                    },
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-        }
-
         // Label / value rows, every value starting at the same place (phone UI audit, #2).
         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
             seriesDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
@@ -806,7 +792,7 @@ private fun CastChipsTabContent(cast: String) {
 }
 
 /**
- * The value of the Overview tab's "Stream name" row. Plain text when [alternates] is empty — most
+ * The value of the Details tab's "Stream name" row. Plain text when [alternates] is empty — most
  * titles have no other cached instance. Becomes a tappable dropdown once there is at least one
  * other local catalogue entry sharing the same TMDB id, letting the user switch to that instance's
  * detail screen.
