@@ -55,6 +55,10 @@ data class PlayerMetadata(
     // Live TV: the EPG programme on air, once the guide lookup resolves and as it rolls over.
     // Null for VOD and for channels without guide data. Only live sync's "now playing" reads it.
     val programTitle: String? = null,
+    // Catch-up (a programme from a live channel's archive, played like a film): the line under the
+    // programme title, "Channel · Yesterday 17:15". Null for everything else. A catch-up stream
+    // that can't start fails at once, without retries. See docs/plans/20261010_catchup-plan.md.
+    val catchupLabel: String? = null,
 )
 
 data class AudioTrackInfo(

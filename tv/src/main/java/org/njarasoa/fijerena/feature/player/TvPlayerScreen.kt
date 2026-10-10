@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -65,6 +66,12 @@ fun TvPlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
+    // Catch-up: this archive window of channel [streamId], the programme [programTitle]; null
+    // plays the stream itself. See docs/plans/20261010_catchup-plan.md.
+    catchup: CatchupWindow? = null,
+    programTitle: String? = null,
+    // Catch-up's Watch live: leaves for the channel live.
+    onWatchLive: () -> Unit = {},
     playbackViewModel: PlaybackViewModel = viewModel(),
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
@@ -80,6 +87,8 @@ fun TvPlayerScreen(
                     seriesId = seriesId,
                     seriesName = seriesName,
                     startFromBeginning = startFromBeginning,
+                    catchup = catchup,
+                    programTitle = programTitle,
                 ),
         ),
 ) {
@@ -141,21 +150,7 @@ fun TvPlayerScreen(
                         val restart = state is PlaybackState.Idle || (liveWasPlaying && state is PlaybackState.Paused)
                         liveWasPlaying = false
                         if (restart && success != null) {
-                            playbackViewModel.playStream(
-                                PlayerMetadata(
-                                    title = success.streamName,
-                                    channelName = success.streamName,
-                                    description = success.description,
-                                    streamUrl = success.streamUrl,
-                                    isLive = success.isLive,
-                                    headers = success.streamHeaders,
-                                    showTitle = success.seriesName,
-                                    episodeLabel = success.episodeLabel,
-                                    logoUrl = success.logoUrl,
-                                    programTitle = success.currentEpgProgram?.title,
-                                ),
-                                lastKnownPositionMs ?: success.resumePosition,
-                            )
+                            playbackViewModel.playStream(success.playerMetadata(), lastKnownPositionMs ?: success.resumePosition)
                         }
                     }
 
@@ -192,8 +187,11 @@ fun TvPlayerScreen(
     LaunchedEffect(contentType) {
         val playerContentType =
             when (contentType) {
-                ContentType.LIVE_TV -> PlayerConfigFactory.ContentType.LIVE_TV
+                // Catch-up plays a live channel's archive like a film.
+                ContentType.LIVE_TV -> if (catchup == null) PlayerConfigFactory.ContentType.LIVE_TV else PlayerConfigFactory.ContentType.VOD
+
                 ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
+
                 else -> PlayerConfigFactory.ContentType.VOD
             }
         StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
@@ -211,23 +209,30 @@ fun TvPlayerScreen(
         }
     }
 
+    // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
+    // for (bears), so reaching its end asks again and carries on from there, until the window has
+    // been asked for in full. See docs/plans/20261010_catchup-plan.md → Phase 2.
+    var catchupAskedAtSec by remember { mutableStateOf(0L) }
+    val continueCatchup: (() -> Boolean)? =
+        catchup?.let { window ->
+            {
+                val success = lastSuccessState
+                val ended = playbackViewModel.playbackState.value as? PlaybackState.Ended
+                val windowEndSec = window.startEpochSec + window.durationSec
+                val more = success != null && ended != null && ended.duration > 0L && catchupAskedAtSec < windowEndSec
+                if (more) {
+                    catchupAskedAtSec = System.currentTimeMillis() / 1000
+                    playbackViewModel.playStream(success.playerMetadata(), ended.duration)
+                }
+                more
+            }
+        }
+
     LaunchedEffect(currentStreamId) {
         val state = streamState
         if (state is StreamLoaderViewModel.StreamState.Success) {
-            val metadata =
-                PlayerMetadata(
-                    title = state.streamName,
-                    channelName = state.streamName,
-                    description = state.description,
-                    streamUrl = state.streamUrl,
-                    isLive = state.isLive,
-                    headers = state.streamHeaders,
-                    showTitle = state.seriesName,
-                    episodeLabel = state.episodeLabel,
-                    logoUrl = state.logoUrl,
-                    programTitle = state.currentEpgProgram?.title,
-                )
-            playbackViewModel.playStream(metadata, state.resumePosition)
+            catchupAskedAtSec = System.currentTimeMillis() / 1000
+            playbackViewModel.playStream(state.playerMetadata(), state.resumePosition)
 
             // Restore saved track settings when player is ready
             if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
@@ -290,7 +295,7 @@ fun TvPlayerScreen(
             if (previous == null) {
                 LoadingScreen()
             } else {
-                PlayerContent(previous, playbackViewModel, loaderViewModel, onBack, upNextState)
+                PlayerContent(previous, playbackViewModel, loaderViewModel, onBack, upNextState, continueCatchup, onWatchLive)
             }
         }
 
@@ -306,7 +311,7 @@ fun TvPlayerScreen(
         }
 
         is StreamLoaderViewModel.StreamState.Success -> {
-            PlayerContent(state, playbackViewModel, loaderViewModel, onBack, upNextState)
+            PlayerContent(state, playbackViewModel, loaderViewModel, onBack, upNextState, continueCatchup, onWatchLive)
         }
     }
 }
@@ -318,8 +323,11 @@ private fun PlayerContent(
     loaderViewModel: StreamLoaderViewModel,
     onBack: () -> Unit,
     upNextState: UpNextState,
+    continueCatchup: (() -> Boolean)?,
+    onWatchLive: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val isCatchup = data.catchupLabel != null
     PlayerScreen(
         viewModel = playbackViewModel,
         currentStreamId = data.streamId,
@@ -340,9 +348,13 @@ private fun PlayerContent(
         isFavorite = data.isFavorite,
         currentEpgProgram = data.currentEpgProgram,
         nextEpgProgram = data.nextEpgProgram,
-        onToggleFavorite = {
-            loaderViewModel.toggleFavorite()
-        },
+        // Not on catch-up: the favourite would be the channel, under the programme's name.
+        onToggleFavorite =
+            if (isCatchup) {
+                null
+            } else {
+                { loaderViewModel.toggleFavorite() }
+            },
         nextEpisode = data.nextEpisode,
         onPlayNextEpisode = { nextEp ->
             // Awaited: playNextEpisode() flips loaderViewModel's state to Loading in its own
@@ -355,8 +367,37 @@ private fun PlayerContent(
         },
         autoplayNextSupported = data.supportsAutoplayNext,
         upNextState = upNextState,
+        continueOnEnd = continueCatchup,
+        onWatchLive =
+            if (isCatchup) {
+                {
+                    scope.launch {
+                        finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+                        playbackViewModel.stopAndRelease()
+                        onWatchLive()
+                    }
+                }
+            } else {
+                null
+            },
     )
 }
+
+/** What the player shows and plays for [this] stream. */
+private fun StreamLoaderViewModel.StreamState.Success.playerMetadata(): PlayerMetadata =
+    PlayerMetadata(
+        title = streamName,
+        channelName = streamName,
+        description = description,
+        streamUrl = streamUrl,
+        isLive = isLive,
+        headers = streamHeaders,
+        showTitle = seriesName,
+        episodeLabel = episodeLabel,
+        logoUrl = logoUrl,
+        programTitle = currentEpgProgram?.title,
+        catchupLabel = catchupLabel,
+    )
 
 @Composable
 private fun LoadingScreen() {

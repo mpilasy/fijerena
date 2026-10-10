@@ -203,6 +203,10 @@ sealed interface Screen {
      * @param episodeExtension Optional container extension for episode playback (e.g., "mp4", "mkv")
      * @param seriesId Optional series ID for TV shows (used for watch history tracking)
      * @param seriesName Optional series name for TV shows (used for watch history tracking)
+     * @param catchupStartSec Catch-up: the archive window of live channel [streamId] to play, from
+     *   this epoch second for [catchupDurationSec], starting [catchupOffsetSec] in (the programme's
+     *   start); [programTitle] is the programme. Null plays [streamId] as it is. See
+     *   docs/plans/20261010_catchup-plan.md.
      */
     @Serializable
     data class Player(
@@ -215,5 +219,9 @@ sealed interface Screen {
         val seriesId: String? = null,
         val seriesName: String? = null,
         val startFromBeginning: Boolean = false,
+        val catchupStartSec: Long? = null,
+        val catchupDurationSec: Long = 0L,
+        val catchupOffsetSec: Long = 0L,
+        val programTitle: String? = null,
     ) : Screen
 }

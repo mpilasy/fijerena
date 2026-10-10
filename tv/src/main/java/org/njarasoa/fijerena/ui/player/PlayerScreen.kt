@@ -116,6 +116,11 @@ fun PlayerScreen(
     // Whether the provider lets episodes roll on to [nextEpisode] — Xtream, not Jellyfin.
     autoplayNextSupported: Boolean = false,
     upNextState: UpNextState = remember { UpNextState() },
+    // Catch-up: called when the stream ends; true when it carries on (a programme still on air was
+    // asked for again), so the player stays. Null leaves the player at the end as for a film.
+    continueOnEnd: (() -> Boolean)? = null,
+    // Catch-up: the OSD's Watch live, to the channel live. Null leaves the button out.
+    onWatchLive: (() -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -380,7 +385,7 @@ fun PlayerScreen(
                 val startingFrom = upNextState.startingFrom
                 if (startingFrom != null) {
                     if (currentPs !is PlaybackState.Ended && currentStreamId != startingFrom) upNextState.startingFrom = null
-                } else if (currentPs is PlaybackState.Ended) {
+                } else if (currentPs is PlaybackState.Ended && continueOnEnd?.invoke() != true) {
                     val next =
                         upNextOnEnd(autoplayNext, autoplayNextSupported, nextEpisode, upNextDismissed)
                             ?.takeIf { onPlayNextEpisode != null }
@@ -534,6 +539,7 @@ fun PlayerScreen(
                         }
                     },
                 onShowGuide = onShowGuide,
+                onWatchLive = onWatchLive,
                 onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },

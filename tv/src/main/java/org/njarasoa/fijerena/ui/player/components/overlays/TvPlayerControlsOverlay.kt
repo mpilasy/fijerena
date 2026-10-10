@@ -123,6 +123,8 @@ fun TvPlayerControlsOverlay(
     onShowChannels: (() -> Unit)? = null,
     // Live TV with a guide: opens the TV Guide on the playing channel (GD5). Null leaves Guide out.
     onShowGuide: (() -> Unit)? = null,
+    // Catch-up: Watch live, first in the row. Null leaves it out.
+    onWatchLive: (() -> Unit)? = null,
     onShowAudioTrackSelector: () -> Unit,
     onShowSubtitleSelector: () -> Unit,
     onShowQualitySelector: () -> Unit,
@@ -396,6 +398,34 @@ fun TvPlayerControlsOverlay(
                             modifier = Modifier.padding(start = Spacing.xs),
                             textModifier = Modifier.bounceMarquee(),
                         )
+                    } else if (metadata.catchupLabel != null) {
+                        // Catch-up: CATCH-UP · the programme · its channel and day, time.
+                        Icon(
+                            imageVector = CinemaIcons.Replay,
+                            contentDescription = null,
+                            tint = CinemaAccentLight,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                        )
+                        Text(
+                            text = stringResource(R.string.player_catchup),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = CinemaTextPrimary,
+                        )
+                        BadgedTitle(
+                            raw = metadata.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaTextPrimary,
+                            modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xs),
+                            textModifier = Modifier.bounceMarquee(),
+                        )
+                        Text(
+                            text = "· ${metadata.catchupLabel}",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
                     } else {
                         // Some providers' episode titles already embed the show name and number
                         // ("EN - Show - S01E22 - Pilot"): only the episode's own name is shown, and
@@ -645,6 +675,14 @@ fun TvPlayerControlsOverlay(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = CenterVertically,
                     ) {
+                        if (onWatchLive != null) {
+                            OsdButton(
+                                icon = CinemaIcons.LiveTv,
+                                label = stringResource(R.string.player_osd_watch_live),
+                                onClick = onWatchLive,
+                            )
+                        }
+
                         if (onShowChannels != null) {
                             OsdButton(
                                 icon = CinemaIcons.LiveTv,

@@ -46,6 +46,8 @@
     <string name="player_subtitles_off">Désactivé</string>
     <string name="player_active">Actif</string>
     <string name="player_live">EN DIRECT</string>
+    <string name="player_catchup">REPLAY</string>
+    <string name="player_osd_watch_live">Regarder en direct</string>
     <string name="player_error">Erreur de lecture</string>
     <string name="player_retry">Réessayer</string>
     <string name="player_back">Retour</string>
@@ -963,6 +965,7 @@
     <string name="epg_guide_header_title_format">Guide TV · %1$s</string>
     <string name="epg_tab_today">Aujourd\'hui</string>
     <string name="epg_tab_tomorrow">Demain</string>
+    <string name="epg_tab_yesterday">Hier</string>
     <string name="epg_details_watch_channel">Regarder la chaîne</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Chaînes</string>

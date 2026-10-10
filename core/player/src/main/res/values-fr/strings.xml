@@ -15,6 +15,7 @@
     <string name="player_error_http_401">HTTP 401 — Échec de l\'authentification. Vérifiez vos identifiants.</string>
     <string name="player_error_http_403">HTTP 403 — Accès refusé. Votre abonnement a peut-être expiré.</string>
     <string name="player_error_http_404">HTTP 404 — Flux introuvable. La chaîne est peut-être hors ligne.</string>
+    <string name="player_error_catchup_unavailable">Ce programme n\'est pas disponible en replay.</string>
     <string name="player_error_http_connection_limit_format">HTTP %1$d — Limite de connexions atteinte. Fermez les autres flux actifs sur ce compte.</string>
     <string name="player_error_account_busy_waiting_format">Ce compte diffuse déjà sur un autre appareil (HTTP %1$d). Après l\'arrêt d\'un flux, le fournisseur peut le compter encore quelques minutes. Nouvel essai toutes les 20 secondes — la lecture démarre d\'elle-même.</string>
     <string name="player_error_account_busy_gave_up_format">Ce compte diffuse toujours sur un autre appareil (HTTP %1$d). Arrêtez la lecture là-bas, patientez quelques minutes, puis appuyez sur Réessayer.</string>

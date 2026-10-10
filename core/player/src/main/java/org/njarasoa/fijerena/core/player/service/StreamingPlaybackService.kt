@@ -541,6 +541,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
                 onFinalError = ::handleFinalError,
                 onAccountBusy = ::handleAccountBusy,
+                isCatchup = { _currentMetadata.value.catchupLabel != null },
                 streamStartTimeMs = { _streamStartTimeMs.value },
             )
         player.addListener(playerListener!!)
@@ -970,6 +971,13 @@ class StreamingPlaybackService : MediaSessionService() {
 
     internal fun handleStreamEndedOrError(errorMessage: String?) {
         val metadata = _currentMetadata.value
+        val endedEmpty = (getPlayer()?.duration ?: C.TIME_UNSET).let { it == C.TIME_UNSET || it <= 0L }
+        if (errorMessage == null && metadata.catchupLabel != null && endedEmpty) {
+            // A catch-up answer with nothing in it (bears: a channel without an archive answers
+            // 200 with an empty body) is not a programme that ended.
+            handleFinalError(getString(R.string.player_error_catchup_unavailable))
+            return
+        }
         if (errorMessage == null && !metadata.isLive) {
             // Natural end of VOD content — not a fault, never retried. Grab the duration while
             // the player still has it: finalizeSession runs after teardown, when it reads 0.
@@ -1443,6 +1451,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
         private val onFinalError: (message: String, exception: Exception?) -> Unit = { _, _ -> },
         private val onAccountBusy: (httpStatus: Int) -> Unit = {},
+        private val isCatchup: () -> Boolean = { false },
         // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
         // after a new stream can log total prepare-to-ready latency.
         private val streamStartTimeMs: () -> Long = { 0L },
@@ -1547,6 +1556,13 @@ class StreamingPlaybackService : MediaSessionService() {
                 onAccountBusy(httpStatus)
                 return
             }
+            // Catch-up the panel can't serve (outside the archive, a channel without one): no retry
+            // will change that. See docs/plans/20261010_catchup-plan.md → "Facts measured".
+            if (isCatchup() && !renderedFirstFrame && isMissingArchive(error.errorCode, httpStatus)) {
+                Log.w(TAG, "Catch-up unavailable (${error.errorCodeName}, HTTP $httpStatus) — not retrying.")
+                onFinalError(context.getString(R.string.player_error_catchup_unavailable), error)
+                return
+            }
             val errorMessage = parsePlaybackError(error)
             val formatSupport = (error as? ExoPlaybackException)?.rendererFormatSupport ?: C.FORMAT_HANDLED
             if (isFinalCodecError(error.errorCode, formatSupport, renderedFirstFrame)) {
@@ -1556,6 +1572,17 @@ class StreamingPlaybackService : MediaSessionService() {
             }
             onStreamEndedOrError(errorMessage)
         }
+
+        private fun isMissingArchive(
+            errorCode: Int,
+            httpStatus: Int?,
+        ): Boolean =
+            (httpStatus != null && httpStatus in 400..499) ||
+                errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED
 
         private fun parsePlaybackError(error: PlaybackException): String =
             when (error.errorCode) {

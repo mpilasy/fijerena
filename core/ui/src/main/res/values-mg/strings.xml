@@ -46,6 +46,8 @@
     <string name="player_subtitles_off">Tsy mandeha</string>
     <string name="player_active">Mandeha</string>
     <string name="player_live">Mivantana</string>
+    <string name="player_catchup">Averina</string>
+    <string name="player_osd_watch_live">Hijery mivantana</string>
     <string name="player_error">Nisy fahadisoana ny famakiana</string>
     <string name="player_retry">Andramo indray</string>
     <string name="player_back">Miverena</string>
@@ -770,6 +772,7 @@
     <string name="epg_guide_header_title_format">Fandaharana · %1$s</string>
     <string name="epg_tab_today">Anio</string>
     <string name="epg_tab_tomorrow">Rahampitso</string>
+    <string name="epg_tab_yesterday">Omaly</string>
     <string name="epg_details_watch_channel">Hijery ny fantsona</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Fantsona</string>

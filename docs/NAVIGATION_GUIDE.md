@@ -44,6 +44,11 @@ sealed interface Screen {
         val episodeId: String? = null, val episodeExtension: String? = null,
         val seriesId: String? = null, val seriesName: String? = null,
         val startFromBeginning: Boolean = false,
+        // Catch-up: the archive window of live channel streamId (contentType LIVE_TV), played like a
+        // film; null plays the stream itself. Watch live replaces the player with the channel's
+        // preview (TV) / dock (phone), so Back returns where the catch-up was opened from.
+        val catchupStartSec: Long? = null, val catchupDurationSec: Long = 0L,
+        val catchupOffsetSec: Long = 0L, val programTitle: String? = null,
     ) : Screen
 }
 ```

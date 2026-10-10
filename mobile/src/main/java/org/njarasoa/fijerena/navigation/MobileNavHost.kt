@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
@@ -538,6 +539,22 @@ fun MobileNavHost(
                     seriesId = playerScreen.seriesId,
                     seriesName = playerScreen.seriesName,
                     startFromBeginning = playerScreen.startFromBeginning,
+                    catchup =
+                        playerScreen.catchupStartSec?.let {
+                            CatchupWindow(it, playerScreen.catchupDurationSec, playerScreen.catchupOffsetSec)
+                        },
+                    programTitle = playerScreen.programTitle,
+                    // Catch-up's Watch live: the channel in the docked mini-player in place of the
+                    // player, so Back returns where the catch-up was opened from.
+                    onWatchLive = {
+                        navController.navigateOnce(
+                            Screen.CategoryList(
+                                contentType = ContentType.LIVE_TV,
+                                initialCategoryId = playerScreen.categoryId,
+                                initialStreamId = playerScreen.streamId,
+                            ),
+                        ) { popUpTo<Screen.Player> { inclusive = true } }
+                    },
                     onBack = {
                         navController.navigateUp()
                     },

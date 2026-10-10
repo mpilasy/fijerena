@@ -46,6 +46,8 @@
     <string name="player_subtitles_off">Off</string>
     <string name="player_active">Active</string>
     <string name="player_live">LIVE</string>
+    <string name="player_catchup">CATCH-UP</string>
+    <string name="player_osd_watch_live">Watch live</string>
     <string name="player_error">Playback Error</string>
     <string name="player_retry">Retry</string>
     <string name="player_back">Back</string>
@@ -996,6 +998,7 @@
     <string name="epg_guide_header_title_format">TV Guide · %1$s</string>
     <string name="epg_tab_today">Today</string>
     <string name="epg_tab_tomorrow">Tomorrow</string>
+    <string name="epg_tab_yesterday">Yesterday</string>
     <string name="epg_details_watch_channel">Watch channel</string>
     <!-- Phase 6 -->
     <string name="details_action_favorite">Favorite</string>

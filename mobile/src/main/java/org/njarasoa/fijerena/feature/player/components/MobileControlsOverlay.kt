@@ -76,6 +76,7 @@ import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -107,11 +108,14 @@ fun MobileControlsOverlay(
     onAudioTrack: () -> Unit,
     onSubtitle: () -> Unit,
     onQuality: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    // Null leaves the favourite button out (catch-up: it would be the channel's).
+    onToggleFavorite: (() -> Unit)?,
     onFastForward: (() -> Unit)? = null,
     onRewind: (() -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
+    // Catch-up: Watch live, first in the row. Null leaves it out.
+    onWatchLive: (() -> Unit)? = null,
     // The bottom panel's height in px, for the player to lift the subtitles above it.
     onPanelHeightChanged: (Int) -> Unit = {},
 ) {
@@ -346,6 +350,33 @@ fun MobileControlsOverlay(
                                     color = CinemaTextPrimary,
                                     modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
                                 )
+                            } else if (metadata.catchupLabel != null) {
+                                // Catch-up: CATCH-UP · the programme · its channel and day, time.
+                                Icon(
+                                    imageVector = CinemaIcons.Replay,
+                                    contentDescription = null,
+                                    tint = CinemaAccentLight,
+                                    modifier = Modifier.size(MobileDimensions.iconSmall),
+                                )
+                                Text(
+                                    text = stringResource(R.string.player_catchup),
+                                    style = typography.labelLarge,
+                                    color = CinemaTextPrimary,
+                                )
+                                BadgedTitle(
+                                    raw = metadata.title,
+                                    style = typography.titleMedium,
+                                    color = CinemaTextPrimary,
+                                    modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
+                                )
+                                Text(
+                                    text = "· ${metadata.catchupLabel}",
+                                    style = typography.titleMedium,
+                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
                             } else {
                                 // Some providers' episode titles already embed the show name and
                                 // number ("A+ - Silo (2023) (US) - S03E01 - Who Are You?"): only the
@@ -509,6 +540,15 @@ fun MobileControlsOverlay(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (onWatchLive != null) {
+                            CinemaIconButton(
+                                onClick = onWatchLive,
+                                icon = {
+                                    Icon(CinemaIcons.LiveTv, stringResource(R.string.player_osd_watch_live), tint = CinemaTextPrimary)
+                                },
+                            )
+                        }
+
                         if (audioTrackCount > 1) {
                             CinemaIconButton(
                                 onClick = onAudioTrack,
@@ -536,22 +576,24 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        CinemaIconButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onToggleFavorite()
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                    contentDescription =
-                                        stringResource(
-                                            if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
-                                        ),
-                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                                )
-                            },
-                        )
+                        if (onToggleFavorite != null) {
+                            CinemaIconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onToggleFavorite()
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                        contentDescription =
+                                            stringResource(
+                                                if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
+                                            ),
+                                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                                    )
+                                },
+                            )
+                        }
 
                         // Stats for nerds (always visible)
                         CinemaIconButton(

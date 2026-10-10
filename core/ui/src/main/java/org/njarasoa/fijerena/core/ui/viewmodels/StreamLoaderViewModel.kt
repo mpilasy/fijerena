@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -51,7 +52,14 @@ class StreamLoaderViewModel(
     private val seriesId: String? = null,
     private val seriesName: String? = null,
     private val startFromBeginning: Boolean = false,
+    // Catch-up: plays this archive window of live channel [initialStreamId] instead of the channel,
+    // like a film (seek, pause, no Recent, no zapping); [programTitle] is the programme.
+    private val catchup: CatchupWindow? = null,
+    private val programTitle: String? = null,
 ) : ViewModel() {
+    // Live TV as it airs; false for catch-up, which plays a live channel's archive like a film.
+    private val isLiveTv = contentType == ContentType.LIVE_TV && catchup == null
+
     private var currentEpisodeId: String? = episodeId
     private var currentEpisodeExtension: String? = episodeExtension
     private val episode: EpisodeId?
@@ -88,6 +96,8 @@ class StreamLoaderViewModel(
             // Whether the provider lets episodes roll on to [nextEpisode] (autoplay next episode):
             // Xtream yes, Jellyfin no. Set with [nextEpisode].
             val supportsAutoplayNext: Boolean = false,
+            // Catch-up: "Channel · Yesterday 17:15" under the programme title ([streamName]).
+            val catchupLabel: String? = null,
         ) : StreamState()
 
         data class Error(
@@ -159,7 +169,7 @@ class StreamLoaderViewModel(
             val repo = container.getMediaRepository()
             mediaRepository = repo
 
-            if (contentType == ContentType.LIVE_TV) {
+            if (isLiveTv) {
                 launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
                 repo.refreshRecentItems(contentType)
             }
@@ -171,7 +181,7 @@ class StreamLoaderViewModel(
                 currentStreams = emptyList(),
             )
 
-            if (contentType == ContentType.LIVE_TV) {
+            if (isLiveTv) {
                 launch {
                     val result = repo.getItems(currentCategoryId, contentType)
                     result.fold(
@@ -202,13 +212,18 @@ class StreamLoaderViewModel(
         val repo = mediaRepository ?: return
 
         try {
+            val window = catchup
             val result =
-                repo.resolvePlayableStream(
-                    itemId = streamId,
-                    contentType = contentType,
-                    episodeId = currentEpisodeId,
-                    extension = currentEpisodeExtension,
-                )
+                if (window != null) {
+                    repo.resolveCatchupStream(streamId, window.startEpochSec, window.durationSec)
+                } else {
+                    repo.resolvePlayableStream(
+                        itemId = streamId,
+                        contentType = contentType,
+                        episodeId = currentEpisodeId,
+                        extension = currentEpisodeExtension,
+                    )
+                }
 
             result.fold(
                 onSuccess = { playable ->
@@ -233,6 +248,9 @@ class StreamLoaderViewModel(
                             }
                         }
                     }
+
+                    // Catch-up opens on the programme, past the window's lead-in.
+                    if (window != null) resumePos = window.programOffsetSec * MILLIS_PER_SECOND
 
                     // An episode with no saved choice of its own inherits the series' most
                     // recent one — a fresh episode of a show you've already picked a language/
@@ -261,10 +279,10 @@ class StreamLoaderViewModel(
                         StreamState.Success(
                             streamUrl = playable.uri,
                             streamHeaders = playable.headers,
-                            streamName = streamName,
+                            streamName = programTitle?.takeIf { window != null } ?: streamName,
                             streamId = streamId,
                             resumePosition = resumePos,
-                            isLive = contentType == ContentType.LIVE_TV,
+                            isLive = isLiveTv,
                             description = null,
                             categoryStreams = activeStreams,
                             currentEpgProgram = null,
@@ -273,6 +291,7 @@ class StreamLoaderViewModel(
                             savedAudioTrackIndex = savedAudioIndex,
                             savedSubtitleTrackIndex = savedSubtitleIndex,
                             seriesName = if (contentType == ContentType.TV_SHOWS) seriesName else null,
+                            catchupLabel = window?.let { catchupLabel(context, streamName, it.startEpochSec + it.programOffsetSec) },
                         )
 
                     // Notify provider that playback started (e.g. for Jellyfin session tracking)
@@ -284,7 +303,7 @@ class StreamLoaderViewModel(
 
                     // Schedule history update (Recent) after the configured delay — LIVE TV ONLY.
                     historyJob?.cancel()
-                    if (contentType == ContentType.LIVE_TV) {
+                    if (isLiveTv) {
                         historyJob =
                             viewModelScope.launchGuarded("StreamLoaderViewModel.liveHistory", Dispatchers.IO) {
                                 delay(recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped))
@@ -308,7 +327,7 @@ class StreamLoaderViewModel(
                     enrichJob =
                         viewModelScope.launchGuarded("StreamLoaderViewModel.enrich", Dispatchers.IO) {
                             enrichStreamMetadata(streamId, streamName, activeStreams)
-                            if (contentType == ContentType.LIVE_TV) followProgrammes(streamId, streamName, activeStreams)
+                            if (isLiveTv) followProgrammes(streamId, streamName, activeStreams)
                         }
                 },
                 onFailure = { error ->
@@ -344,8 +363,9 @@ class StreamLoaderViewModel(
 
             val epgData = repo.getEpgBulkForItems(listOf(currentItem)).getOrNull()
             val listings = epgData?.get(streamId)?.listings ?: emptyList()
-            val now = System.currentTimeMillis() / 1000
-            currentProgram = listings.firstOrNull { now in it.startTime..it.endTime }
+            // Catch-up: the programme being replayed, not the one on air.
+            val at = catchup?.let { it.startEpochSec + it.programOffsetSec } ?: (System.currentTimeMillis() / 1000)
+            currentProgram = listings.firstOrNull { at in it.startTime until it.endTime }
             nextProgram =
                 if (currentProgram != null) {
                     listings.firstOrNull { it.startTime >= currentProgram.endTime }
@@ -482,7 +502,7 @@ class StreamLoaderViewModel(
                 ensureActive()
 
                 // If category changed, refresh category stream list asynchronously in background
-                if (item.categoryId != currentCategoryId && contentType == ContentType.LIVE_TV) {
+                if (item.categoryId != currentCategoryId && isLiveTv) {
                     currentCategoryId = item.categoryId
                     categoryListJob?.cancel()
                     categoryListJob =
@@ -754,6 +774,44 @@ class StreamLoaderViewModel(
 /** After a programme's end time, so the guide lookup lands on the next one. */
 private const val PROGRAMME_ROLLOVER_MARGIN_MS = 5_000L
 
+private const val MILLIS_PER_SECOND = 1_000L
+
+/** "Channel · Yesterday 17:15": the catch-up programme's channel, day and start time. */
+internal fun catchupLabel(
+    context: Context,
+    channelName: String,
+    programStartSec: Long,
+): String {
+    val zone = java.time.ZoneId.systemDefault()
+    val day =
+        java.time.Instant
+            .ofEpochSecond(programStartSec)
+            .atZone(zone)
+            .toLocalDate()
+    val today = java.time.LocalDate.now(zone)
+    val dayLabel =
+        when (day) {
+            today -> {
+                context.getString(R.string.epg_tab_today)
+            }
+
+            today.minusDays(1) -> {
+                context.getString(R.string.epg_tab_yesterday)
+            }
+
+            else -> {
+                day.format(
+                    java.time.format.DateTimeFormatter
+                        .ofPattern("EEE d MMM"),
+                )
+            }
+        }
+    val time =
+        org.njarasoa.fijerena.core.player.model.TimeFormat
+            .formatTime(context, programStartSec)
+    return listOf(channelName, "$dayLabel $time").filter { it.isNotBlank() }.joinToString(" · ")
+}
+
 @OptIn(UnstableApi::class)
 private class FinalizeSessionSnapshot(
     val position: Long,
@@ -850,6 +908,8 @@ class StreamLoaderViewModelFactory(
     private val seriesId: String? = null,
     private val seriesName: String? = null,
     private val startFromBeginning: Boolean = false,
+    private val catchup: CatchupWindow? = null,
+    private val programTitle: String? = null,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
@@ -868,6 +928,8 @@ class StreamLoaderViewModelFactory(
                 seriesId,
                 seriesName,
                 startFromBeginning,
+                catchup,
+                programTitle,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

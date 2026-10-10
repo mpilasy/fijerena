@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -125,6 +126,12 @@ fun MobilePlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
+    // Catch-up: this archive window of channel [streamId], the programme [programTitle]; null
+    // plays the stream itself. See docs/plans/20261010_catchup-plan.md.
+    catchup: CatchupWindow? = null,
+    programTitle: String? = null,
+    // Catch-up's Watch live: leaves for the channel live.
+    onWatchLive: () -> Unit = {},
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -139,6 +146,8 @@ fun MobilePlayerScreen(
                     seriesId = seriesId,
                     seriesName = seriesName,
                     startFromBeginning = startFromBeginning,
+                    catchup = catchup,
+                    programTitle = programTitle,
                 ),
         ),
 ) {
@@ -172,10 +181,42 @@ fun MobilePlayerScreen(
     }
 
     val scope = rememberCoroutineScope()
+
+    // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
+    // for (bears), so reaching its end asks again and carries on from there, until the window has
+    // been asked for in full. See docs/plans/20261010_catchup-plan.md → Phase 2.
+    var catchupAskedAtSec by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
+    val continueCatchup: (() -> Boolean)? =
+        catchup?.let { window ->
+            {
+                val ended = activityScopedViewModel.playbackState.value as? PlaybackState.Ended
+                val more = ended != null && ended.duration > 0L && catchupAskedAtSec < window.startEpochSec + window.durationSec
+                if (more) {
+                    catchupAskedAtSec = System.currentTimeMillis() / 1000
+                    activityScopedViewModel.playStream(activityScopedViewModel.currentMetadata.value, ended.duration)
+                }
+                more
+            }
+        }
+
     MobilePlayerContent(
         viewModel = activityScopedViewModel,
         loaderViewModel = loaderViewModel,
         contentType = contentType,
+        isCatchup = catchup != null,
+        continueOnEnd = continueCatchup,
+        onWatchLive =
+            if (catchup != null) {
+                {
+                    scope.launch {
+                        finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
+                        activityScopedViewModel.stop()
+                        onWatchLive()
+                    }
+                }
+            } else {
+                null
+            },
         onBack = {
             // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
             // straight back to the episode-selection screen — its own watch-history read can
@@ -203,6 +244,12 @@ fun MobilePlayerContent(
     loaderViewModel: StreamLoaderViewModel,
     contentType: String,
     onBack: () -> Unit,
+    // Catch-up: a live channel's archive played like a film (VOD buffering, no favourite).
+    isCatchup: Boolean = false,
+    // Catch-up: called when the stream ends; true when it carries on (see MobilePlayerScreen).
+    continueOnEnd: (() -> Boolean)? = null,
+    // Catch-up: the controls' Watch live. Null leaves the button out.
+    onWatchLive: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -421,7 +468,7 @@ fun MobilePlayerContent(
     // for Ended), unless the profile plays the next episode automatically, there is one and its
     // card wasn't cancelled: then it plays at once (once the app is at least STARTED — PiP is).
     LaunchedEffect(currentPs) {
-        if (currentPs is PlaybackState.Ended && upNextStartingFrom == null) {
+        if (currentPs is PlaybackState.Ended && upNextStartingFrom == null && continueOnEnd?.invoke() != true) {
             val next =
                 upNextOnEnd(
                     autoplayNext,
@@ -496,8 +543,11 @@ fun MobilePlayerContent(
     LaunchedEffect(contentType) {
         val playerContentType =
             when (contentType) {
-                ContentType.LIVE_TV -> PlayerConfigFactory.ContentType.LIVE_TV
+                // Catch-up plays a live channel's archive like a film.
+                ContentType.LIVE_TV -> if (isCatchup) PlayerConfigFactory.ContentType.VOD else PlayerConfigFactory.ContentType.LIVE_TV
+
                 ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
+
                 else -> PlayerConfigFactory.ContentType.VOD
             }
         StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
@@ -540,6 +590,7 @@ fun MobilePlayerContent(
                         episodeLabel = state.episodeLabel,
                         logoUrl = state.logoUrl,
                         programTitle = state.currentEpgProgram?.title,
+                        catchupLabel = state.catchupLabel,
                     )
                 viewModel.playStream(metadata, state.resumePosition)
 
@@ -857,9 +908,14 @@ fun MobilePlayerContent(
                         onAudioTrack = { showAudioTrackSelector = true },
                         onSubtitle = { showSubtitleSelector = true },
                         onQuality = { showQualitySelector = true },
-                        onToggleFavorite = {
-                            loaderViewModel.toggleFavorite()
-                        },
+                        // Not on catch-up: the favourite would be the channel, under the programme's name.
+                        onToggleFavorite =
+                            if (isCatchup) {
+                                null
+                            } else {
+                                { loaderViewModel.toggleFavorite() }
+                            },
+                        onWatchLive = onWatchLive,
                         nextEpisode = state.nextEpisode,
                         onPlayNextEpisode = { nextEp ->
                             // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
