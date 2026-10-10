@@ -1385,7 +1385,7 @@ private fun SeriesCastTabContent(cast: String) {
 }
 
 /**
- * Details tab: the full synopsis, then diagnostics rather than headline facts, one label/value row each — the stream-name
+ * Details tab: full synopsis, then diagnostics rather than headline facts, one label/value row each — the stream-name
  * picker, TMDB id, director and the source last — then the category button. Cast lives in its own
  * tab ([SeriesCastTabContent]), not repeated here.
  */
@@ -1411,7 +1411,6 @@ private fun SeriesDetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        // The hero cuts the synopsis to three lines; this is where it can be read in full.
         seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
             Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -1426,7 +1425,6 @@ private fun SeriesDetailsTabContent(
                 modifier = topFocusModifier.leftToRail(),
             )
         }
-        // The TMDB id is for developers only, as on the phone.
         val context = LocalContext.current
         val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
         if (isDevMode) {

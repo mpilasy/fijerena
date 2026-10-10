@@ -275,9 +275,8 @@ private fun MovieDetailsContent(
     // Tabbed sections (Phase 4, docs/plans/archive/20260902_tv-detail-hero-ui-plan.md): built from what this movie
     // actually has, never a fixed list. Only the selected tab's content composes below — the old
     // single-column screen composed cast, tech rows and up to three related rows on every visit,
-    // whether on screen or not. Related titles first and Details last, like the streaming apps.
+    // whether on screen or not.
     val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
-    // The movie's collection and similar titles share one tab, as on the phone.
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
@@ -635,8 +634,6 @@ private fun MovieDetailsContent(
                             }
 
                             MovieDetailTab.MORE_LIKE_THIS -> {
-                                // The collection row (headed by its name) first, then similar titles —
-                                // headed only when there's a collection row to tell them apart from.
                                 Column {
                                     RelatedTitlesRow(
                                         title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
@@ -755,7 +752,7 @@ private fun CastTabContent(cast: String) {
 }
 
 /**
- * Details tab: the full synopsis, then diagnostics rather than headline facts, one label/value row each — release date,
+ * Details tab: full synopsis, then diagnostics rather than headline facts, one label/value row each — release date,
  * director, technical stream info, the stream-name picker, TMDB id and the source last — then the
  * category button. Cast lives in its own tab ([CastTabContent]), not repeated here.
  */
@@ -777,7 +774,6 @@ private fun DetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        // The hero cuts the synopsis to three lines; this is where it can be read in full.
         movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
             Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -874,7 +870,6 @@ private fun DetailsTabContent(
                 onFocusedChanged = onStreamFocusedChanged,
             )
         }
-        // The TMDB id is for developers only, as on the phone.
         val context = LocalContext.current
         val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
         if (isDevMode) {

@@ -447,9 +447,7 @@ private fun EpisodeListContent(
     // Segmented detail sections (docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase
     // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
     // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
-    // Episodes is the always-present, always-first tab: it's the reason this screen exists, not
-    // one option among equals. The synopsis isn't a tab: it sits in the hero above, always on
-    // screen, and Details (last, like the streaming apps) holds the reference rows.
+    // Episodes is the always-present, always-first tab.
     val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
     val tabs =
@@ -461,8 +459,7 @@ private fun EpisodeListContent(
                 add(SeriesDetailTab.DETAILS)
             }
         }
-    // Kept as the tab, not its index: More Like This arrives after the screen opens and shifts the
-    // tabs after it, which would otherwise move the selection to a different tab.
+    // Kept by tab, not index: More Like This loads late and shifts the tabs after it.
     var pickedTab by rememberSaveable { mutableStateOf(SeriesDetailTab.EPISODES) }
     val selectedTab = pickedTab.takeIf { it in tabs } ?: SeriesDetailTab.EPISODES
 
@@ -727,7 +724,7 @@ private fun EpisodeListContent(
     }
 }
 
-/** Section tabs, in display order — [EPISODES] is always present and always the initial selection. */
+/** Section tabs, in display order. */
 private enum class SeriesDetailTab { EPISODES, MORE_LIKE_THIS, CAST, DETAILS }
 
 @Composable

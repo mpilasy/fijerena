@@ -95,9 +95,7 @@ class SearchViewModel(
 
     private var searchJob: Job? = null
 
-    // The history entry the current as-you-type session added, so the next keystroke's search
-    // replaces it instead of piling up "go", "godf", "godfa"… Null when the session hasn't added
-    // one, or its term was already in the history (that entry isn't ours to remove).
+    // History entry added by the current as-you-type session; replaced on the next keystroke.
     private var typedHistoryEntry: String? = null
 
     companion object {
@@ -174,11 +172,7 @@ class SearchViewModel(
         }
     }
 
-    /**
-     * Runs a search. [asYouType] is the debounced search fired while the user is still typing: it
-     * keeps one history entry for the whole typing session, updated to the latest term. The search
-     * button, keyboard search action and history taps leave [asYouType] false.
-     */
+    /** [asYouType]: a debounced search while typing; keeps one history entry per typing session. */
     fun performSearch(
         query: String,
         asYouType: Boolean = false,
@@ -212,7 +206,7 @@ class SearchViewModel(
         _searchHistory.value = appSettings.getSearchHistory()
     }
 
-    /** The user opened a result of the typed term: it stays in the history, whatever they type next. */
+    /** Keeps the typed term in the history (the user opened one of its results). */
     fun keepTypedSearch() {
         typedHistoryEntry = null
     }

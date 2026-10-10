@@ -321,8 +321,6 @@ private fun MovieDetailsContent(
                         }
                     }
 
-                    // The synopsis is always on screen, not a tab — what Netflix, Prime Video, Hulu and Disney+
-                    // do; Details (last) keeps the reference rows.
                     movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                         ExpandablePlot(plot = plot, modifier = Modifier.fillMaxWidth())
@@ -342,8 +340,7 @@ private fun MovieDetailsContent(
                                 add(MovieDetailTab.DETAILS)
                             }
                         }
-                    // Opens on the first tab; a tab the user picks is kept as the tab, not its index,
-                    // since More Like This arrives after the screen opens and shifts the ones after it.
+                    // Kept by tab, not index: More Like This loads late and shifts the tabs after it.
                     var pickedTab by rememberSaveable { mutableStateOf<MovieDetailTab?>(null) }
                     val selectedTab = pickedTab?.takeIf { it in tabs } ?: tabs.first()
 
@@ -412,7 +409,7 @@ private fun MovieDetailsContent(
     }
 }
 
-/** Section tabs built from what a movie actually has, in display order — [DETAILS] is the only one always present. */
+/** Section tabs, in display order. */
 private enum class MovieDetailTab { MORE_LIKE_THIS, CAST, DETAILS }
 
 @Composable
@@ -423,11 +420,7 @@ private fun movieDetailTabLabel(tab: MovieDetailTab): String =
         MovieDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
     }
 
-/**
- * Details tab: label / value rows — release date, director, the stream-name picker (alternate
- * instances of this movie), technical stream info, the TMDB id (developer mode) and the category
- * link. Cast lives in its own tab (see [CastChipsTabContent]).
- */
+/** Details tab: label / value rows, then the category link. */
 @Composable
 private fun MovieDetailsTabContent(
     movieDetail: MovieDetail,
@@ -442,9 +435,7 @@ private fun MovieDetailsTabContent(
         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
             movieDetail.metadata.releaseDate?.let { MobileDetailRow(label = stringResource(R.string.details_label_released), value = it) }
             movieDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
-            // The catalogue's raw name, not movieDetail.name — some providers' detail API returns a
-            // cleaned-up name inconsistent with the raw name alternates are listed under. Same row
-            // as the series Details tab.
+            // The catalogue's raw name: alternates are listed under it, not under movieDetail.name.
             MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
                 StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
             }

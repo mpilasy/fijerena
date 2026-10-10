@@ -180,11 +180,7 @@ fun MobileCategoryLinkRow(
 /** Wide enough for "Container:" / "Réalisateur :"; a longer label wraps under itself. */
 private val DETAIL_LABEL_WIDTH = 112.dp
 
-/**
- * The synopsis under the hero's actions, always on screen like the streaming apps show it: cut to
- * [collapsedLines] lines, a tap shows the rest (and a second tap folds it back). Only clickable
- * when there's more to show.
- */
+/** Synopsis cut to [collapsedLines] lines; tap to expand or collapse. */
 @Composable
 fun ExpandablePlot(
     plot: String,
