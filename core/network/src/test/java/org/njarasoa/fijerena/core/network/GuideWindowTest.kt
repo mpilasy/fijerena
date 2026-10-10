@@ -73,7 +73,8 @@ class GuideWindowTest {
                         listOf(
                             program("day_before", windowStart - 7_200, windowStart - 3_600),
                             program("morning", windowStart + 3_600, windowStart + 7_200),
-                            program("native_evening", windowStart + 60_000, windowStart + 63_600),
+                            // The same programme as the index's first, placed 20 minutes earlier.
+                            program("native_evening", windowStart + 58_800, windowStart + 62_400),
                         ),
                     ),
                 "2" to EpgResponse(listOf(program("only_native", windowStart + 100, windowStart + 3_700))),

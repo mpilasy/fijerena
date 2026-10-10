@@ -215,6 +215,11 @@ fun MobilePlayerScreen(
         }
     }
 
+    // System Back on catch-up hands the player on too: left to the nav host, the screen would leave
+    // as a film does and its dispose stop the dock that starts on the same player (seen on the
+    // phone emulator, 2026-10-10). Declared before the content, so its own Back handlers win.
+    BackHandler(enabled = catchup != null && !handedOff) { leaveCatchup(onBack) }
+
     MobilePlayerContent(
         viewModel = activityScopedViewModel,
         loaderViewModel = loaderViewModel,

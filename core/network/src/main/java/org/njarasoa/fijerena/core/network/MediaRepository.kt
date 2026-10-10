@@ -223,8 +223,9 @@ internal const val INDEX_PAST_REACH_SEC = 12 * 60 * 60L
 
 /**
  * [index]'s window listings per channel, with [native]'s programmes in the window ahead of them: for
- * each channel [native] answers, the ones that start before the index's first programme in the
- * window (all of them when the index has none), then the index's.
+ * each channel [native] answers, the ones that end by the index's first programme in the window
+ * (all of them when the index has none), then the index's. Ending, not starting: the two guides can
+ * place one programme twenty minutes apart, and both copies would overlap in the grid.
  */
 internal fun archivePast(
     index: Map<String, EpgResponse>,
@@ -236,7 +237,7 @@ internal fun archivePast(
     for ((id, response) in native) {
         val indexed = index[id]?.listings.orEmpty()
         val indexStart = indexed.minOfOrNull { it.startTime } ?: Long.MAX_VALUE
-        val before = windowListings(response.listings, windowStartSec, windowEndSec).filter { it.startTime < indexStart }
+        val before = windowListings(response.listings, windowStartSec, windowEndSec).filter { it.endTime <= indexStart }
         if (before.isNotEmpty()) merged[id] = EpgResponse((before + indexed).sortedBy { it.startTime })
     }
     return merged

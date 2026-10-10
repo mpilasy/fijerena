@@ -58,7 +58,7 @@ class XtreamApiServiceTest {
     }
 
     @Test
-    fun testBuildTimeshiftUrl_pathFormInTheLiveOutputFormat() {
+    fun testBuildTimeshiftUrl_pathFormAlwaysHls() {
         val hls = XtreamApiService(baseUrl = "http://example.com/", username = "user", password = "p/w")
         val ts = XtreamApiService(baseUrl = "example.com", username = "user", password = "pw", streamOutputFormat = "ts")
 
@@ -67,7 +67,7 @@ class XtreamApiServiceTest {
             hls.buildTimeshiftUrl(386405, "2026-10-10:17-13", 62),
         )
         assertEquals(
-            "http://example.com/timeshift/user/pw/62/2026-10-10:17-13/386405.ts",
+            "http://example.com/timeshift/user/pw/62/2026-10-10:17-13/386405.m3u8",
             ts.buildTimeshiftUrl(386405, "2026-10-10:17-13", 62),
         )
     }

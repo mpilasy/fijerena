@@ -130,9 +130,8 @@ fun MobileEpgGuideScreen(
     var entryRowPending by rememberSaveable { mutableStateOf(focusChannelId != null) }
 
     val state = uiState
-    // Kept across loads, so the past tabs don't come and go while a day loads.
-    var catchupDays by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-    if (state is EpgViewModel.UiState.Ready) catchupDays = state.catchupDays
+    // Looked up with the channels, so known on a day without listings too (a stale guide).
+    val catchupDays by viewModel.archiveDays.collectAsStateWithLifecycle()
     val pastDayTabs = remember(catchupDays) { (catchupDays.values.maxOrNull() ?: 0).coerceAtMost(MAX_PAST_DAY_TABS) }
     val shownDate =
         when (state) {

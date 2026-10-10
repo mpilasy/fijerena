@@ -111,8 +111,11 @@ class EpgViewModel(
     // Refresh resolves it again. Listings come per page, cached per (day, page) by the pager.
     private var channels: List<MediaItem>? = null
 
-    // Archive days of [channels] that keep an archive (catch-up), looked up with them.
+    // Archive days of [channels] that keep an archive (catch-up), looked up with them. Also a flow
+    // of its own: the phone's past date tabs need it on a day with no listings (a stale guide).
     private var catchupDays: Map<String, Int> = emptyMap()
+    private val _archiveDays = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val archiveDays: StateFlow<Map<String, Int>> = _archiveDays.asStateFlow()
     private val pager = GuidePager(PAGE_SIZE) { date, items -> loadPage(date, items) }
 
     // The rows the grid last showed, so a day change loads the pages the user is looking at.
@@ -171,6 +174,7 @@ class EpgViewModel(
                     channels = it
                     pager.channels = it
                     catchupDays = repository.getCatchupDays(it.map { channel -> channel.id })
+                    _archiveDays.value = catchupDays
                 }
             }
         if (items.isEmpty()) {
