@@ -250,7 +250,7 @@ scripts/deploy-tv-ip.sh <ip> [<ip>...]  # Build + install on network TVs (playba
 scripts/deploy-mobile-usb.sh [serial]   # Build + install on a USB phone (backup)
 ```
 
-CI runs on every push (and by hand). `checks.yml`: the destructive-fallback grep and the three `scripts/check-*.sh` gates. `android-build.yml` (skipped for docs-only, server-only and focus-walk changes): ktlint, unit tests, Android Lint, the Room schema check, then `assembleDebug`; APKs are uploaded only from `main` or a manual run. `server.yml` (only when `server/` changes): the sync server's tests. `instrumented-tests.yml` runs nightly (and by hand): `connectedDebugAndroidTest` for `core:network` and `mobile` on a phone emulator, `tv` on an Android TV emulator. Build, deploy and debugging details are in `docs/RUN_GUIDE.md`.
+CI runs on every push (and by hand). `checks.yml`: the destructive-fallback grep and the three `scripts/check-*.sh` gates. `android-build.yml` (skipped for docs-only, server-only and focus-walk changes): ktlint, unit tests, Android Lint, the Room schema check, `assembleDebug`, then compiles the instrumented tests; APKs are uploaded only from `main` or a manual run. `server.yml` (only when `server/` changes): the sync server's tests. `instrumented-tests.yml` runs nightly (and by hand): `connectedDebugAndroidTest` for `core:network` and `mobile` on a phone emulator, `tv` on an Android TV emulator. Build, deploy and debugging details are in `docs/RUN_GUIDE.md`.
 
 ### Deployment Rules
 

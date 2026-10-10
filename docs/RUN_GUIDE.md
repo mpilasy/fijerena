@@ -89,7 +89,8 @@ scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateExc
 CI runs on every push, or by hand (`workflow_dispatch`), in three workflows under `.github/workflows/`:
 - `checks.yml`: a grep for blanket destructive Room fallbacks and the three gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
-  Android Lint, a check that the build left `core/network/schemas` unchanged, then `assembleDebug`.
+  Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
+  `assembleDebugAndroidTest` so the instrumented tests keep compiling.
   Both APKs are uploaded as artifacts from `main` and manual runs only. Gradle runs on JDK 25
   (`gradle/gradle-daemon-jvm.properties`).
 - `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
