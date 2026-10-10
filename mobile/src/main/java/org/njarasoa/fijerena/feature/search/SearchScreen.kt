@@ -177,7 +177,7 @@ fun MobileSearchScreen(
     LaunchedEffect(searchQuery) {
         if (searchQuery.length >= 2) {
             delay(CinemaAnimation.searchDebounceMs)
-            viewModel.performSearch(searchQuery)
+            viewModel.performSearch(searchQuery, asYouType = true)
         } else if (searchQuery.isEmpty()) {
             viewModel.clearSearch()
         }
@@ -319,6 +319,7 @@ fun MobileSearchScreen(
                             onClearHistory = { viewModel.clearSearchHistory() },
                             onResultClick = { result ->
                                 onResultOpening(searchQuery)
+                                viewModel.keepTypedSearch()
                                 onStreamSelected(
                                     result.itemId,
                                     result.streamName,
@@ -338,6 +339,7 @@ fun MobileSearchScreen(
                             },
                             onCategoryClick = { catResult ->
                                 onResultOpening(searchQuery)
+                                viewModel.keepTypedSearch()
                                 onCategorySelected(catResult.categoryId, catResult.contentType)
                             },
                             onCategoryLongPress = { catResult ->

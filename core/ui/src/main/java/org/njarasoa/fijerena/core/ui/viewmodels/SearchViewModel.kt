@@ -95,6 +95,11 @@ class SearchViewModel(
 
     private var searchJob: Job? = null
 
+    // The history entry the current as-you-type session added, so the next keystroke's search
+    // replaces it instead of piling up "go", "godf", "godfa"… Null when the session hasn't added
+    // one, or its term was already in the history (that entry isn't ours to remove).
+    private var typedHistoryEntry: String? = null
+
     companion object {
         private const val PARALLEL_BATCH_SIZE = 20
         private const val TARGET_RESULTS = 200
@@ -169,11 +174,17 @@ class SearchViewModel(
         }
     }
 
-    /** Called when the user presses the Search button or keyboard search action. */
-    fun performSearch(query: String) {
+    /**
+     * Runs a search. [asYouType] is the debounced search fired while the user is still typing: it
+     * keeps one history entry for the whole typing session, updated to the latest term. The search
+     * button, keyboard search action and history taps leave [asYouType] false.
+     */
+    fun performSearch(
+        query: String,
+        asYouType: Boolean = false,
+    ) {
         if (query.isBlank() || query.length < 2) return
-        appSettings.addSearchHistory(query)
-        _searchHistory.value = appSettings.getSearchHistory()
+        recordHistory(query, asYouType)
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -181,7 +192,33 @@ class SearchViewModel(
             }
     }
 
+    private fun recordHistory(
+        query: String,
+        asYouType: Boolean,
+    ) {
+        val term = query.trim()
+        val previous = typedHistoryEntry
+        if (previous != null && !previous.equals(term, ignoreCase = true)) {
+            appSettings.removeSearchHistory(previous)
+        }
+        typedHistoryEntry =
+            when {
+                !asYouType -> null
+                previous.equals(term, ignoreCase = true) -> previous
+                appSettings.getSearchHistory().any { it.equals(term, ignoreCase = true) } -> null
+                else -> term
+            }
+        appSettings.addSearchHistory(term)
+        _searchHistory.value = appSettings.getSearchHistory()
+    }
+
+    /** The user opened a result of the typed term: it stays in the history, whatever they type next. */
+    fun keepTypedSearch() {
+        typedHistoryEntry = null
+    }
+
     fun clearSearch() {
+        typedHistoryEntry = null
         searchJob?.cancel()
         _uiState.value =
             UiState.Success(
