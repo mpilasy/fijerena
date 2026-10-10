@@ -1,7 +1,8 @@
 # Catch-up TV Plan
 
-**Status:** Phase 0 done (bears measured 2026-10-10, see "Facts measured"); Phase 1 next. Per-source
-differences are detected, not configured (see "Detected per source").
+**Status:** In progress — Phase 1 (data). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
+(Phase 5 dropped), checked on the emulators only. Per-source differences are detected, not configured
+(see "Detected per source"); "Decided while building" overrides the design where they differ.
 
 ## Goal
 
@@ -241,21 +242,42 @@ guide work on both apps.
 - Left for later: **Start over** in the live OSD, the replay icon, mobile past-day chips, the
   seek-by-new-URL path, longer XMLTV past retention, Remote M3U.
 
-## Decisions waiting on the user
+## Decided (2026-10-10)
 
-- Does any M3U playlist in use carry `catchup` attributes? If not, Phase 5 is dropped.
-- First version as above, or the full Phases 1–4?
+- The full Phases 1–4, not the first version. Xtream only: Phase 5 (Remote M3U) is dropped.
+- Checked on the emulators only (bears and the bridge from the emulators), not on the Shields.
+
+## Decided while building
+
+These replace the design above where the two differ.
+
+1. **Archive days are looked up by channel id**, not carried in `MediaItem.providerData`:
+   `MediaProvider.getCatchupDays(itemIds)` reads `tv_archive` / `tv_archive_duration` from
+   `xtream_streams`. Recent and Favourites channels are rebuilt from watch history and favourites
+   rows, so a value set by the mapper would be missing exactly there.
+2. **The panel clock is kept in memory**, from the `server_info` of each login (`connect()` always
+   logs in). No column, no `providers.db` migration. Catch-up needs the panel online anyway.
+3. **No `PlaybackMode` enum.** Catch-up plays with `isLive = false`, so every existing `isLive`
+   branch already takes the VOD side (seek bar, pause, VOD buffer, VOD retry, no zapping). A
+   catch-up window on the loader marks the few places that differ: no watch position, no Recent,
+   the OSD title and the **Live** action.
+4. **The XMLTV past cutoff stays at 12 h.** Past hours on channels with an archive come from the
+   panel's own guide (`get_simple_data_table`), which also says programme by programme what is in
+   the archive. Keeping 7 days in the index would multiply it on the TVs for little gain.
+5. **One URL form:** the path form `/timeshift/…`, with the source's live output (`m3u8` or `ts`;
+   bears seeks in both). A 404 or an empty answer is "This programme is not available to replay",
+   with no retries. No `timeshift.php` fallback: on bears every host answers both forms or neither.
 
 ## Phases
 
 | Phase | What | Status |
 |---|---|---|
 | 0 | Measure a real panel (bears): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Done 2026-10-10 (see "Facts measured") |
-| 1 | Data: `archiveDays` into `providerData` (Xtream mapper); store the panel time zone; `supportsCatchup`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Not started |
+| 1 | Data: `getCatchupDays` (by channel id); the panel clock from each login; `supportsCatchup`; `resolveCatchupStream`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | In progress |
 | 2 | Player: `PlaybackMode`, `Screen.Player` catch-up arguments, `resolveCatchupStream`, every `isLive` branch reviewed; seek-by-new-URL if Phase 0 says so; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | Not started |
 | 3 | Guide: past retention, replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | Not started |
 | 4 | Check on the emulators against the bridge, then bears on the Shield and a phone; docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | Not started |
-| 5 | Remote M3U catch-up (attribute reader, modes, templates) | Not started; only if a playlist in use has `catchup` attributes |
+| 5 | Remote M3U catch-up (attribute reader, modes, templates) | Dropped 2026-10-10 (Xtream only) |
 
 ## Risks and open questions
 
