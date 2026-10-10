@@ -9,6 +9,7 @@ on:
       - 'scripts/focus-walks/**'
       - '.github/workflows/checks.yml'
       - '.github/workflows/server.yml'
+      - '.github/workflows/instrumented-tests.yml'
   workflow_dispatch:
 
 concurrency:

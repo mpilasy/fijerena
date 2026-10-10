@@ -93,6 +93,9 @@ CI runs on every push, or by hand (`workflow_dispatch`), in three workflows unde
   Both APKs are uploaded as artifacts from `main` and manual runs only. Gradle runs on JDK 25
   (`gradle/gradle-daemon-jvm.properties`).
 - `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
+- `instrumented-tests.yml`, nightly at 06:17 UTC or by hand: `connectedDebugAndroidTest` for
+  `core:network` and `mobile` on a phone emulator and for `tv` on an Android TV emulator (API 34),
+  with the test reports uploaded as artifacts.
 
 `./gradlew connectedAndroidTest` uninstalls the app and wipes its data on every connected device —
 only with real devices disconnected, or one emulator targeted with `ANDROID_SERIAL`.
