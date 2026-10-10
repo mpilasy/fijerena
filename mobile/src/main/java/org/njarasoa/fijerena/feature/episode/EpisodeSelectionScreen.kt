@@ -447,7 +447,8 @@ private fun EpisodeListContent(
     // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
     // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
     // Episodes is the always-present, always-first tab: it's the reason this screen exists, not
-    // one option among equals.
+    // one option among equals. The screen still opens on Overview, like the movie details, so the
+    // description is what you see first; Play already resumes the next episode.
     val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
     val tabs =
@@ -459,7 +460,7 @@ private fun EpisodeListContent(
                 if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
             }
         }
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(tabs.indexOf(SeriesDetailTab.OVERVIEW)) }
     val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
     val selectedTab = tabs.getOrNull(safeTabIndex)
 
