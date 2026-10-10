@@ -349,8 +349,6 @@
     <string name="details_collection_fallback">Collection</string>
     <string name="details_tab_cast">Cast</string>
     <string name="details_tab_details">Details</string>
-    <string name="details_tab_versions">Versions</string>
-    <string name="details_tab_similar">Similar</string>
     <string name="details_tab_seasons">Seasons</string>
     <string name="details_more_like_this">More Like This</string>
     <string name="details_no_link_handler">No app on this device can open that link</string>

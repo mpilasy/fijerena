@@ -331,16 +331,14 @@ private fun MovieDetailsContent(
                     // Segmented detail sections (docs/plans/archive/20260923_ui-ux-transitions-flow-uplift-plan.md,
                     // Phase 4 3c) — mirrors TV's own tabbed layout (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md
                     // Phase 4): built from what this movie actually has, not a fixed list, so a title with no
-                    // cast/related-titles/alternate-instances doesn't show an empty tab for it.
+                    // cast/related-titles doesn't show an empty tab for it.
                     val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
                     val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
-                    val hasVersions = alternateStreams.isNotEmpty()
                     val tabs =
-                        remember(hasCast, hasMoreLikeThis, hasVersions) {
+                        remember(hasCast, hasMoreLikeThis) {
                             buildList {
                                 if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
                                 if (hasCast) add(MovieDetailTab.CAST)
-                                if (hasVersions) add(MovieDetailTab.VERSIONS)
                                 add(MovieDetailTab.DETAILS)
                             }
                         }
@@ -348,9 +346,9 @@ private fun MovieDetailsContent(
                     // since More Like This arrives after the screen opens and shifts the ones after it.
                     var pickedTab by rememberSaveable { mutableStateOf<MovieDetailTab?>(null) }
                     val selectedTab = pickedTab?.takeIf { it in tabs } ?: tabs.first()
-                
+
                     Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                    // A single-tab strip (a title with no cast/related-titles/alternate-instances, leaving
+                    // A single-tab strip (a title with no cast/related-titles, leaving
                     // only Details) has nothing to switch between — skip the strip entirely rather than
                     // render dead chrome for a tab the user can't leave.
                     if (tabs.size > 1) {
@@ -369,6 +367,9 @@ private fun MovieDetailsContent(
                         MovieDetailTab.DETAILS -> {
                             MovieDetailsTabContent(
                                 movieDetail = movieDetail,
+                                movieName = movieName,
+                                alternateStreams = alternateStreams,
+                                onAlternateStreamSelected = onAlternateStreamSelected,
                                 categoryName = categoryName,
                                 onCategorySelected = onCategorySelected,
                             )
@@ -404,13 +405,6 @@ private fun MovieDetailsContent(
                                 }
                             }
                         }
-
-                        MovieDetailTab.VERSIONS -> {
-                            // The catalogue's raw name, not movieDetail.name — some providers' detail API
-                            // returns a cleaned-up name inconsistent with the raw name alternates are listed
-                            // under, so use the same source as alternates to keep the picker consistent.
-                            StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
-                        }
                     }
                 }
             }
@@ -419,7 +413,7 @@ private fun MovieDetailsContent(
 }
 
 /** Section tabs built from what a movie actually has, in display order — [DETAILS] is the only one always present. */
-private enum class MovieDetailTab { MORE_LIKE_THIS, CAST, VERSIONS, DETAILS }
+private enum class MovieDetailTab { MORE_LIKE_THIS, CAST, DETAILS }
 
 @Composable
 private fun movieDetailTabLabel(tab: MovieDetailTab): String =
@@ -427,18 +421,19 @@ private fun movieDetailTabLabel(tab: MovieDetailTab): String =
         MovieDetailTab.DETAILS -> stringResource(R.string.details_tab_details)
         MovieDetailTab.CAST -> stringResource(R.string.details_tab_cast)
         MovieDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
-        MovieDetailTab.VERSIONS -> stringResource(R.string.details_tab_versions)
     }
 
 /**
- * Details tab: label / value rows — release date, director, technical stream info, the
- * TMDB id (developer mode) and the category link. Cast lives in its own tab
- * (see [CastChipsTabContent]); alternate stream
- * instances live in the Versions tab.
+ * Details tab: label / value rows — release date, director, the stream-name picker (alternate
+ * instances of this movie), technical stream info, the TMDB id (developer mode) and the category
+ * link. Cast lives in its own tab (see [CastChipsTabContent]).
  */
 @Composable
 private fun MovieDetailsTabContent(
     movieDetail: MovieDetail,
+    movieName: String,
+    alternateStreams: List<MediaItem>,
+    onAlternateStreamSelected: (MediaItem) -> Unit,
     categoryName: String?,
     onCategorySelected: () -> Unit,
 ) {
@@ -447,6 +442,12 @@ private fun MovieDetailsTabContent(
         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
             movieDetail.metadata.releaseDate?.let { MobileDetailRow(label = stringResource(R.string.details_label_released), value = it) }
             movieDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+            // The catalogue's raw name, not movieDetail.name — some providers' detail API returns a
+            // cleaned-up name inconsistent with the raw name alternates are listed under. Same row
+            // as the series Details tab.
+            MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
+                StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
+            }
 
             movieDetail.videoInfo?.let { video ->
                 val videoText =

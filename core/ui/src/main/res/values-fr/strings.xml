@@ -985,8 +985,6 @@
     <string name="details_community_rating">Note du public</string>
     <string name="details_tab_cast">Distribution</string>
     <string name="details_tab_details">Détails</string>
-    <string name="details_tab_versions">Versions</string>
-    <string name="details_tab_similar">Similaires</string>
     <string name="details_tab_seasons">Saisons</string>
     <string name="series_details_title">Détails de la série</string>
     <string name="series_seasons_and_episodes_format">%1$d saisons · %2$d épisodes</string>
