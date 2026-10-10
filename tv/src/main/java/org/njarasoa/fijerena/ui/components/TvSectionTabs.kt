@@ -25,6 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -87,7 +88,12 @@ fun TvSectionTabs(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // When the row is too narrow, the longest label gives way (one line, "…") instead of the
+        // tabs after it: a long category tab ("FR| FRANCE SPORT VIP RAW") left Favorites a column one
+        // letter wide in the Live TV panel. Weighted children are measured after the others.
+        val longest = tabs.indices.maxByOrNull { tabs[it].length } ?: -1
         tabs.forEachIndexed { index, label ->
+            val giveWay = if (index == longest) Modifier.weight(1f, fill = false) else Modifier
             SectionTab(
                 label = label,
                 isSelected = index == selectedIndex,
@@ -98,7 +104,7 @@ fun TvSectionTabs(
                 // Second requester on the same node, alongside `focusRequester` above — only the
                 // selected tab gets it, and it moves with selection as `selectedIndex` changes.
                 entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
-                modifier = if (index == 0) firstTabModifier else Modifier,
+                modifier = giveWay.then(if (index == 0) firstTabModifier else Modifier),
             )
         }
     }
@@ -186,6 +192,8 @@ private fun SectionTab(
                             .scaled(scale),
                 ),
             color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV tab labels on one line
+**Release Date:** 2026-10-10
+
+- **TV: a long category name no longer crushes the other tabs.** In the Live TV channel panel, "FR| FRANCE SPORT VIP RAW" left Favorites a column one letter wide. Tab labels stay on one line, and the longest one is shortened with "…" when the row is too narrow.
+
 ## Version: Xtream lists with a nameless entry
 **Release Date:** 2026-10-09
 
