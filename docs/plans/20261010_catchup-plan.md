@@ -1,7 +1,7 @@
 # Catch-up TV Plan
 
-**Status:** Exploration done, not started (written 2026-10-10). Phase 0 (measuring a real panel) is
-needed before any code: the timeshift URL shape and the server's time zone differ between panels.
+**Status:** Exploration done, not started (written 2026-10-10). Per-source differences are detected, not configured (see "Detected per source"); Phase 0 (measuring a real panel) confirms the detection
+before code relies on it.
 
 ## Goal
 
@@ -111,6 +111,26 @@ over) && program.start >= now - catchupDays*86400 && program.hasArchive != 0-whe
 One function, `CatchupAvailability.isPlayable(channel, program, now)` in `core:player/domain`, used
 by every screen so they can't disagree. Unit-tested.
 
+### Detected per source, not configured
+
+Each Xtream panel can differ in every way below, so two sources can need different handling. Each
+one is detected and kept per source (or per stream), never asked of the user:
+
+| What differs | How it's detected | When |
+|---|---|---|
+| Which channels have an archive, how many days | `tv_archive` / `tv_archive_duration` per stream | Every catalog sync (already stored) |
+| Which programmes are really in it | `has_archive` per programme (native EPG); unknown for XMLTV, so the channel's days decide | Guide load |
+| Panel time zone | Each `authenticate()` returns `timestamp_now` (UTC epoch) and `time_now` (panel wall clock). Their difference is the panel's real UTC offset, even when the `timezone` name is missing or wrong. Keep the zone name when its offset agrees (it handles DST inside the archive window); otherwise keep the measured offset | Every login check (no extra request) |
+| URL form (path or `timeshift.php`) | On a source's first catch-up play, try the path form; on 404 or a non-video answer, try the php form; remember the one that played | First play, on the user's request only |
+| Container (`.ts` / `.m3u8`) | `user_info.allowed_output_formats` (already parsed) plus the source's live `output` | Login |
+| Seeking | After prepare, `player.isCurrentMediaItemSeekable` (true when the panel sends `Content-Length` and accepts ranges). If false, seeking uses the "new URL with a later start" path | Each play |
+
+A detected value is a cache: it is re-detected when it fails (the remembered URL form gets a 404, the
+offset changes at the next login), never trusted forever. There are no background probes. A probe
+would use a connection slot, and bears punishes a second address with HTTP 460, so detection
+happens only inside a play the user asked for. Phase 0 still measures one real panel, to confirm the
+detection is right, not to hard-code its answers.
+
 ### Xtream timeshift URL
 
 Two shapes are in the wild; Phase 0 decides which this source uses:
@@ -123,9 +143,9 @@ The start is in the **panel's local time zone** (`server_info.timezone`), not UT
 device's. That is the single most common catch-up bug in IPTV apps (programmes off by the zone
 difference). So:
 
-- Store `server_info.timezone` per source when `authenticate()` succeeds (a providers-table column, so
-  a `providers.db` migration, or the source's prefs — decide in Phase 1). Fallback when missing or
-  invalid: UTC, plus a per-source minutes offset in Edit Source only if Phase 0 shows it's needed.
+- Store the detected zone / offset per source when `authenticate()` succeeds (see "Detected per
+  source"; a providers-table column, so a `providers.db` migration, or the source's prefs — decide
+  in Phase 1). A manual per-source offset in Edit Source only if detection proves wrong somewhere.
 - Duration: programme length + a small margin (start 2 min early, end 5 min late), rounded up to
   whole minutes; the player starts at the margin's offset so the programme begins on screen.
 - `.ts` by default. Try `.m3u8` only if Phase 0 shows the panel serves it with seeking.
