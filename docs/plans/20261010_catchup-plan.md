@@ -192,6 +192,29 @@ Templates are unit-tested against examples from public playlists. `RemoteM3uMedi
 `supportsEpg = false` today, so M3U catch-up only shows where an XMLTV guide source is matched to
 its channels.
 
+## Size and first version
+
+Medium: roughly 30–40 files, 2–3k lines with tests (an estimate). The data and URL work is small;
+the cost is the player mode split (every `isLive` branch in the code that keeps live stable) and the
+guide work on both apps.
+
+**First version** (about half; still carries the player split, the one risk that can't be skipped):
+
+- Xtream only, from the panel's native EPG (it returns past programmes with `has_archive`), so the
+  XMLTV past cutoff stays at 12 h for now.
+- **Watch from start** in the TV `ProgramDetailsDialog` and the mobile `ProgramDetailsSheet` only.
+- Catch-up plays as VOD without resume or Recent; pause and play; seeking only where the panel
+  answers ranges (`isCurrentMediaItemSeekable`).
+- Left for later: **Start over** in the live OSD, the replay icon, mobile past-day chips, the
+  seek-by-new-URL path, longer XMLTV past retention, Remote M3U.
+
+## Decisions waiting on the user
+
+- Does bears report `tv_archive = 1`, and can Phase 0 use a login? Without one, Phases 1–2 start
+  against the bridge.
+- Does any M3U playlist in use carry `catchup` attributes? If not, Phase 5 is dropped.
+- First version as above, or the full Phases 1–4?
+
 ## Phases
 
 | Phase | What | Status |
