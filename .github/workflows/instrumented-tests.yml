@@ -72,8 +72,10 @@ jobs:
           profile: ${{ matrix.profile }}
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          # The build refuses connected tests without this (they uninstall the app); a CI emulator has no data to lose.
-          script: ./gradlew ${{ matrix.tasks }} -PallowConnectedTest=true
+          # -PallowConnectedTest: the build refuses connected tests without it (they uninstall the app); a CI
+          # emulator has no data to lose. The emulator is then killed outright: the TV image ignores the
+          # runner's shutdown and the job hung until its timeout.
+          script: ./gradlew ${{ matrix.tasks }} -PallowConnectedTest=true; status=$?; pkill -9 -f qemu-system || true; exit $status
 
       - name: Upload test reports
         if: always()
