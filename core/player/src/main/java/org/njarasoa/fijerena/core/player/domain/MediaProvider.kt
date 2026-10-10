@@ -66,7 +66,7 @@ interface MediaProvider {
     /**
      * The live channel [itemId]'s archive from [startEpochSec] for [durationSec] (catch-up), as a
      * stream that seeks and pauses like a film. Fails for a provider without
-     * [ProviderCapabilities.supportsCatchup]. See docs/plans/20261010_catchup-plan.md.
+     * [ProviderCapabilities.supportsCatchup]. See docs/plans/archive/20261010_catchup-plan.md.
      */
     suspend fun resolveCatchupStream(
         itemId: String,

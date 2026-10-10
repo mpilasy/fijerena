@@ -575,7 +575,7 @@ class PlaybackViewModel(
         // Stops the shared player only while it still plays this ViewModel's stream: by the time a
         // screen's ViewModel is cleared, the screen it left for may already play its own on it
         // (catch-up's Watch live and Back hand the player to the live preview — the preview was
-        // stopped here, seen on the emulator 2026-10-10, docs/plans/20261010_catchup-plan.md).
+        // stopped here, seen on the emulator 2026-10-10, docs/plans/archive/20261010_catchup-plan.md).
         val service = StreamingPlaybackService.getInstance()
         val own = ownStreamUrl
         val ownsPlayback = service == null || own == null || XtreamStreamUrl.sameStream(service.currentMetadata.value.streamUrl, own)

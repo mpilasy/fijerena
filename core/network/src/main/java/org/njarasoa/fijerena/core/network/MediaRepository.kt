@@ -804,7 +804,7 @@ class MediaRepository(
      * programmes ended 12 h before it was built) filled in from the source's own guide, for the
      * channels whose archive reaches them — the programmes catch-up can replay. Only for a window
      * that is entirely past and starts before the index's reach: today's page asks nothing more.
-     * See docs/plans/20261010_catchup-plan.md → "Decided while building" 4.
+     * See docs/plans/archive/20261010_catchup-plan.md → "Decided while building" 4.
      */
     private suspend fun withArchivePast(
         items: List<MediaItem>,

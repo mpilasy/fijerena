@@ -16,7 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-10 | [Catch-up TV](./20261010_catchup-plan.md) | Replay past programmes (and start over) from the guide on channels whose source keeps an archive: Xtream timeshift first, Remote M3U `catchup` later | Phase 0 done (bears measured 2026-10-10); Phase 1 next |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real bears) needs a second bears login |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
@@ -25,6 +24,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-10 | [Catch-up TV](./archive/20261010_catchup-plan.md) | Xtream catch-up: past programmes (and start over) play from a channel's archive like a film — Watch from start in the guide (TV and phone, replay marks, phone past-day tabs), Start over in the live player, panel clock measured at login, always HLS; the source's own guide now reads properly | Done on the TV and phone emulators against bears; "not available to replay" and a programme reaching its end not checked on a device; Remote M3U dropped |
 | 2026-10-09 | [TV Recent and Favorites](./archive/20261009_tv-recents-favorites-plan.md) | Removal in one press with focus kept and Undo (Menu, 10 s), edit mode and Clear Recent, Home card actions; Live TV Recent records zapped channels after 60 s and keeps its order; Home: Channels + Favorite channels rows | Done on the TV emulator; TV Guide removal and phone zap not walked |
 | 2026-10-08 | [TV navigation rail](./archive/20261008_tv-nav-rail-plan.md) | A thin rail of faint icons on the TV's left edge (profile, Home, sections, Search, Settings) that slides out on Left from any screen; sections keep their place; replaces the section-root button; Search, Settings and the avatar left the headers | Done on the TV emulator; guide channel column, Malagasy, themes and the Shields / Bravia not checked |
 | 2026-10-08 | [Phone UI audit](./archive/20261008_phone-ui-audit-plan.md) | Every phone screen audited (24 shots) and polished: list rows, mode tabs and chips, the dock's tabs, details, player, Search, Settings and sources; large-font, language and theme fixes found in spot checks | Done; TV Guide grid, PiP, landscape dock, Add Source not captured |

@@ -20,7 +20,7 @@ class XtreamPanelClockTest {
         timeNow = timeNow,
     )
 
-    // bears, 2026-10-10 (docs/plans/20261010_catchup-plan.md → "Facts measured").
+    // bears, 2026-10-10 (docs/plans/archive/20261010_catchup-plan.md → "Facts measured").
     private val bears = info("Europe/Amsterdam", 1791652504, "2026-10-10 19:15:04")
 
     @Test

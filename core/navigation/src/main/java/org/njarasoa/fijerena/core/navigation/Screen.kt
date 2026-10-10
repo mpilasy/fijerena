@@ -206,7 +206,7 @@ sealed interface Screen {
      * @param catchupStartSec Catch-up: the archive window of live channel [streamId] to play, from
      *   this epoch second for [catchupDurationSec], starting [catchupOffsetSec] in (the programme's
      *   start); [programTitle] is the programme. Null plays [streamId] as it is. See
-     *   docs/plans/20261010_catchup-plan.md.
+     *   docs/plans/archive/20261010_catchup-plan.md.
      */
     @Serializable
     data class Player(

@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 
 /**
  * The player route that replays [program] from [channel]'s archive (catch-up), from the start of
- * its window ([CatchupAvailability.window]). See docs/plans/20261010_catchup-plan.md.
+ * its window ([CatchupAvailability.window]). See docs/plans/archive/20261010_catchup-plan.md.
  */
 fun catchupRoute(
     program: EpgProgram,

@@ -15,7 +15,7 @@ import java.util.Base64
  * are text ("2026-10-10 15:15:00", UTC on the panels seen so far), the epoch is in
  * `start_timestamp` / `stop_timestamp`, and title and description are base64. [toEpgResponse]
  * turns it into the app's [EpgResponse] (epoch seconds, plain text). See
- * docs/plans/20261010_catchup-plan.md → "Facts measured".
+ * docs/plans/archive/20261010_catchup-plan.md → "Facts measured".
  */
 @Serializable
 internal data class XtreamEpgAnswer(

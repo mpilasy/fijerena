@@ -1109,7 +1109,7 @@ class XtreamContentManager(
     /**
      * The catch-up URL for [durationSec] of live stream [streamId] from [startEpochSec], written in
      * the panel's clock (rounded down to the minute; the duration rounded up). See
-     * docs/plans/20261010_catchup-plan.md.
+     * docs/plans/archive/20261010_catchup-plan.md.
      */
     fun buildTimeshiftUrl(
         streamId: Int,

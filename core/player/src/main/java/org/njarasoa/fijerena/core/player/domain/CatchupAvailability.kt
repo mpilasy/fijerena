@@ -15,7 +15,7 @@ data class CatchupWindow(
 
 /**
  * Which guide programmes can be replayed from their channel's archive, and the window that
- * replays one. Every screen asks here so they can't disagree. See docs/plans/20261010_catchup-plan.md.
+ * replays one. Every screen asks here so they can't disagree. See docs/plans/archive/20261010_catchup-plan.md.
  */
 object CatchupAvailability {
     private const val SECONDS_PER_DAY = 86_400L

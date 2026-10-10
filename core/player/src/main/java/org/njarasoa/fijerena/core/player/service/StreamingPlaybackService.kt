@@ -1557,7 +1557,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 return
             }
             // Catch-up the panel can't serve (outside the archive, a channel without one): no retry
-            // will change that. See docs/plans/20261010_catchup-plan.md → "Facts measured".
+            // will change that. See docs/plans/archive/20261010_catchup-plan.md → "Facts measured".
             if (isCatchup() && !renderedFirstFrame && isMissingArchive(error.errorCode, httpStatus)) {
                 Log.w(TAG, "Catch-up unavailable (${error.errorCodeName}, HTTP $httpStatus) — not retrying.")
                 onFinalError(context.getString(R.string.player_error_catchup_unavailable), error)

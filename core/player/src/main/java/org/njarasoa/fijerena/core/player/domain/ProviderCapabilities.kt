@@ -11,6 +11,6 @@ data class ProviderCapabilities(
     // only: Jellyfin keeps its own play state and up-next server-side.
     val supportsAutoplayNextEpisode: Boolean = false,
     // Past programmes (and the one on air from its start) play from a channel's archive. Xtream
-    // only. See docs/plans/20261010_catchup-plan.md.
+    // only. See docs/plans/archive/20261010_catchup-plan.md.
     val supportsCatchup: Boolean = false,
 )

@@ -384,7 +384,7 @@ class XtreamApiService(
      * (~6 s per hour of window: 2 s for 15 min, 25 s for 4 h), but then seeks are segment requests.
      * `.ts` answers in a second, yet has no index: every seek is a binary search of range requests
      * (~20 s on bears), and a window still on air has no end to measure, so it never seeks at all.
-     * Measured 2026-10-10, docs/plans/20261010_catchup-plan.md → "Facts measured".
+     * Measured 2026-10-10, docs/plans/archive/20261010_catchup-plan.md → "Facts measured".
      *
      * Format: http://url:port/timeshift/username/password/durationMin/start/streamId.m3u8
      */

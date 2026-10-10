@@ -1,6 +1,6 @@
 # Catch-up TV Plan
 
-**Status:** In progress — Phase 4 (checks on the emulators). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
+**Status:** Done 2026-10-10. Phases 1–4 on `main`, Xtream only (Phase 5 dropped). Checked on the TV and phone emulators against bears; not checked on a device: the "not available to replay" message and the end of a programme still on air (see "Phase 4 checks"). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
 (Phase 5 dropped), checked on the emulators only. Per-source differences are detected, not configured
 (see "Detected per source"); "Decided while building" overrides the design where they differ.
 
@@ -264,9 +264,14 @@ These replace the design above where the two differ.
 4. **The XMLTV past cutoff stays at 12 h.** Past hours on channels with an archive come from the
    panel's own guide (`get_simple_data_table`), which also says programme by programme what is in
    the archive. Keeping 7 days in the index would multiply it on the TVs for little gain.
-5. **One URL form:** the path form `/timeshift/…`, with the source's live output (`m3u8` or `ts`;
-   bears seeks in both). A 404 or an empty answer is "This programme is not available to replay",
-   with no retries. No `timeshift.php` fallback: on bears every host answers both forms or neither.
+5. **One URL form, always HLS:** the path form `/timeshift/…/<id>.m3u8`, whatever the source's
+   live output. Measured on bears (2026-10-10, from the host): the playlist takes ~6 s per hour of
+   window to arrive (15 min: 2 s, 4 h: 25 s), but seeks are quick segment requests. `.ts` answers
+   in under a second, but has no index: each seek is a binary search of range requests (~23 s for
+   5 min on the phone emulator), and a window still on air (start over) has no end to measure, so
+   it never becomes seekable and the opening jump past the lead-in never happens. A 404 or an
+   empty answer is "This programme is not available to replay", with no retries. No
+   `timeshift.php` fallback: on bears every host answers both forms or neither.
 6. **No end card for catch-up.** A replayed programme that ends leaves the player, as a film does.
    **Watch live** in the controls replaces the player with the channel's preview (TV) or dock
    (phone). A programme still on air carries on past the point it was asked for (see Phase 2).
@@ -281,7 +286,7 @@ These replace the design above where the two differ.
 | 1 | Data: `getCatchupDays` (by channel id); the panel clock from each login; `supportsCatchup`; `resolveCatchupStream`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Done 2026-10-10 (`7013da3e`). Also fixed: the panel's own guide never showed (text times, base64 titles); it now reads `start_timestamp` / `stop_timestamp` and decodes the text. A start-over window past now gets a playlist that ends at now (bears) — Phase 2 continues it |
 | 2 | Player: catch-up plays with `isLive = false` (decision 3), `Screen.Player` catch-up arguments, every `isLive` and Live-TV content-type branch reviewed; a start-over that reaches now fetches the window again and carries on; "not available to replay" with no retries; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | Done 2026-10-10 (`6613f53f`); checked on the emulators in Phase 4 (nothing opens catch-up before Phase 3) |
 | 3 | Guide: past hours on archive channels from the panel's guide (decision 4), replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | Done 2026-10-10 (`cdd1f05e`); checked on the TV emulator. Found and fixed while checking: the player hand-off between screens (see AGENTS.md → "Handing the player to another screen"), a stale index hiding the programme on air, the replayed programme's description picked by time from the other guide |
-| 4 | Check on the emulators against the bridge, bears from the TV and phone emulators (decision 2026-10-10: emulators only); docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | In progress |
+| 4 | Check on the emulators against the bridge, bears from the TV and phone emulators (decision 2026-10-10: emulators only); docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | Done 2026-10-10 (`d6c9c07a`): found and fixed the phone's system Back skipping the hand-off, the past date tabs missing on a stale guide, doubled programmes in the merge, and switched to HLS for good (decision 5) |
 | 5 | Remote M3U catch-up (attribute reader, modes, templates) | Dropped 2026-10-10 (Xtream only) |
 
 ## Phase 4 checks (2026-10-10, emulators, bears)
@@ -301,6 +306,24 @@ TV emulator (Television_1080p), source `bears`, PT: RTP 1 HD (3-day archive):
   emulator's XMLTV guide was two days old (today isn't filled from the source's guide, by design).
 - Not checked on a device: "This programme is not available to replay" (bearstv, the host that
   answers 404, can't log in on the emulator: "Session expired"); reaching the end of a programme.
+
+Phone emulator (Pixel_10), same source and channel (a tester agent, then by hand):
+
+- Start over from the dock's full screen, seek bar and Watch live: pass. System Back from catch-up
+  left the dock on a spinner (fixed in `d6c9c07a`): live ready in 2 s after the fix.
+- Guide: with a stale XMLTV guide the past date tabs were missing (fixed); after the fix 7 Wed,
+  8 Thu, Yesterday (3-day archive) before Today. Yesterday: replay marks on RTP 1 HD, none on ANT1;
+  the sheet's Watch from start plays.
+- Seen, not from catch-up: the phone keeps the landscape split after the full-screen player; two
+  XMLTV guide sources listing the same channel show overlapping programmes; bears' live streams
+  often fail from the emulators ("unexpected end of stream") while the host plays them.
+
+## Follow-ups (not in this plan)
+
+- Keep the XMLTV index's past as far back as the source's longest archive, for channels with an
+  archive only (asked by the user, 2026-10-10): one guide for past and present, days 5–7 of
+  7-day archives, today's morning on a stale guide. Measure index size and import time on bears
+  first.
 
 ## Risks and open questions
 

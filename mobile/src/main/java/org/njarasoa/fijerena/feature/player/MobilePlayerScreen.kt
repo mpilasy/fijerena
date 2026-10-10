@@ -127,7 +127,7 @@ fun MobilePlayerScreen(
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
     // Catch-up: this archive window of channel [streamId], the programme [programTitle]; null
-    // plays the stream itself. See docs/plans/20261010_catchup-plan.md.
+    // plays the stream itself. See docs/plans/archive/20261010_catchup-plan.md.
     catchup: CatchupWindow? = null,
     programTitle: String? = null,
     // Catch-up's Watch live: leaves for the channel live.
@@ -188,7 +188,7 @@ fun MobilePlayerScreen(
 
     // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
     // for (bears), so reaching its end asks again and carries on from there, until the window has
-    // been asked for in full. See docs/plans/20261010_catchup-plan.md → Phase 2.
+    // been asked for in full. See docs/plans/archive/20261010_catchup-plan.md → Phase 2.
     var catchupAskedAtSec by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
     val continueCatchup: (() -> Boolean)? =
         catchup?.let { window ->

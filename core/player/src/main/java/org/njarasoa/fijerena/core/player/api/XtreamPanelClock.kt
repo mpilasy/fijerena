@@ -14,7 +14,7 @@ import kotlin.math.roundToLong
  * guide gives UTC). Measured at each login from `server_info`: `time_now` (panel wall clock) minus
  * `timestamp_now` (UTC epoch) is the panel's real offset, even when the `timezone` name is missing
  * or wrong. The name is kept when it agrees with that offset, so a DST change inside the archive
- * window is still right. See docs/plans/20261010_catchup-plan.md → "Detected per source".
+ * window is still right. See docs/plans/archive/20261010_catchup-plan.md → "Detected per source".
  */
 class XtreamPanelClock internal constructor(
     val zone: ZoneId,
