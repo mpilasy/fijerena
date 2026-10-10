@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -876,6 +877,8 @@ fun MobileNavHost(
                             ),
                         )
                     },
+                    // Catch-up: the programme from the channel's archive, full screen.
+                    onWatchFromStart = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
                     onChannelSelected = { streamId, _, categoryId ->
                         navController.navigateOnce(
                             Screen.CategoryList(
@@ -986,6 +989,8 @@ private fun CategoryListDestination(
                 ),
             )
         },
+        // Start over (catch-up): the programme on air from its start, full screen.
+        onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
         onBack = {
             navController.navigateUp()
         },

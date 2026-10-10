@@ -218,6 +218,30 @@ internal fun windowListings(
     windowEndSec: Long,
 ): List<EpgProgram> = listings.filter { it.endTime > windowStartSec && it.startTime < windowEndSec }
 
+/** How far back the XMLTV index keeps programmes (see EpgIndexer: ended more than 12 h ago are skipped). */
+internal const val INDEX_PAST_REACH_SEC = 12 * 60 * 60L
+
+/**
+ * [index]'s window listings per channel, with [native]'s programmes in the window ahead of them: for
+ * each channel [native] answers, the ones that start before the index's first programme in the
+ * window (all of them when the index has none), then the index's.
+ */
+internal fun archivePast(
+    index: Map<String, EpgResponse>,
+    native: Map<String, EpgResponse>,
+    windowStartSec: Long,
+    windowEndSec: Long,
+): Map<String, EpgResponse> {
+    val merged = HashMap(index)
+    for ((id, response) in native) {
+        val indexed = index[id]?.listings.orEmpty()
+        val indexStart = indexed.minOfOrNull { it.startTime } ?: Long.MAX_VALUE
+        val before = windowListings(response.listings, windowStartSec, windowEndSec).filter { it.startTime < indexStart }
+        if (before.isNotEmpty()) merged[id] = EpgResponse((before + indexed).sortedBy { it.startTime })
+    }
+    return merged
+}
+
 /**
  * Whether a source can have a guide: its own EPG ([supportsNativeEpg]; null while the source is not
  * loaded, which never claims "no guide"), or at least one enabled guide source attached to it.
@@ -749,8 +773,9 @@ class MediaRepository(
             val window = xmltvEpgService.getEpgForChannelsInWindow(items, windowStartSec, windowEndSec)
             if (window != null) {
                 val indexedAtMs = (EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed)?.indexedAtMs
+                val epg = withArchivePast(items, window.epg, windowStartSec, windowEndSec)
                 logPage("the index")
-                return kotlin.Result.success(GuideData(window.epg, GuideSource.XMLTV, indexedAtMs, window.latestEndSec))
+                return kotlin.Result.success(GuideData(epg, GuideSource.XMLTV, indexedAtMs, window.latestEndSec))
             }
         } catch (e: CancellationException) {
             throw e
@@ -771,6 +796,42 @@ class MediaRepository(
                     latestEndSec = latestEnd?.takeIf { it != Long.MIN_VALUE },
                 )
             }.also { logPage("the source EPG") }
+    }
+
+    /**
+     * A past day's page from the index ([index]), with the hours the index no longer keeps (it drops
+     * programmes ended 12 h before it was built) filled in from the source's own guide, for the
+     * channels whose archive reaches them — the programmes catch-up can replay. Only for a window
+     * that is entirely past and starts before the index's reach: today's page asks nothing more.
+     * See docs/plans/20261010_catchup-plan.md → "Decided while building" 4.
+     */
+    private suspend fun withArchivePast(
+        items: List<MediaItem>,
+        index: Map<String, EpgResponse>,
+        windowStartSec: Long,
+        windowEndSec: Long,
+    ): Map<String, EpgResponse> {
+        val nowSec = System.currentTimeMillis() / 1000
+        val archived =
+            if (windowEndSec <= nowSec && windowStartSec < nowSec - INDEX_PAST_REACH_SEC) {
+                getCatchupDays(items.map { it.id }).keys
+            } else {
+                emptySet()
+            }
+        val native =
+            if (archived.isEmpty()) {
+                null
+            } else {
+                try {
+                    provider?.getEpgBulk(archived.toList())?.getOrNull()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(GUIDE_TAG, "The source's guide for the archive's past failed; the index alone", e)
+                    null
+                }
+            }
+        return if (native.isNullOrEmpty()) index else archivePast(index, native, windowStartSec, windowEndSec)
     }
 
     /**

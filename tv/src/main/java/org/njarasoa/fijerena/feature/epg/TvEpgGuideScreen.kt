@@ -29,12 +29,14 @@ import org.njarasoa.fijerena.ui.components.TvErrorState
  * [focusChannelId] (opened from the player, GD5) is the row entry focus lands on; [onSearch] opens
  * "Search the guide" on this guide's channels — the grid has no search of its own (G-9).
  * [onProgramSelected] is the details panel's Watch channel (GD6); OK on a programme opens the panel.
+ * [onWatchFromStart] is its Watch from start, for a programme the channel's archive holds (catch-up).
  */
 @Composable
 fun TvEpgGuideScreen(
     categoryId: String,
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
+    onWatchFromStart: (program: EpgProgram, channel: MediaItem) -> Unit,
     onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onSearch: () -> Unit,
     onBack: () -> Unit,
@@ -91,6 +93,7 @@ fun TvEpgGuideScreen(
                     state = state,
                     showDevStats = appSettings.isDevMode,
                     onProgramSelected = onProgramSelected,
+                    onWatchFromStart = onWatchFromStart,
                     onChannelSelected = onChannelSelected,
                     onPreviousDay = { viewModel.selectPreviousDay() },
                     onNextDay = { viewModel.selectNextDay() },

@@ -121,6 +121,11 @@ fun TvPlayerScreen(
     // *before this viewing session*, not 45:00.
     var lastKnownPositionMs by remember(currentStreamId) { mutableStateOf<Long?>(null) }
 
+    // Set when catch-up has saved, stopped the player and left (Back, Watch live): the screen it
+    // goes to (often the channel's live preview) starts on that same player at once, so from then
+    // on this one must not pause, stop or release it.
+    var handedOff by remember { mutableStateOf(false) }
+
     // Observe app focus/lifecycle to pause on background and stop after timeout
     // Live only: whether the stream was playing as the screen paused — see ON_RESUME below.
     var liveWasPlaying by remember { mutableStateOf(false) }
@@ -129,10 +134,12 @@ fun TvPlayerScreen(
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
-                        val state = playbackViewModel.playbackState.value
-                        liveWasPlaying =
-                            lastSuccessState?.isLive == true && (state is PlaybackState.Playing || state is PlaybackState.Buffering)
-                        playbackViewModel.onFocusLost(false)
+                        if (!handedOff) {
+                            val state = playbackViewModel.playbackState.value
+                            liveWasPlaying =
+                                lastSuccessState?.isLive == true && (state is PlaybackState.Playing || state is PlaybackState.Buffering)
+                            playbackViewModel.onFocusLost(false)
+                        }
                     }
 
                     Lifecycle.Event.ON_RESUME -> {
@@ -163,11 +170,30 @@ fun TvPlayerScreen(
         }
     }
 
+    // Leaving catch-up (Back, Watch live): the session saved and the player stopped, then [then].
+    // Stopped, not released: a release also ends the playback service, and the live preview that
+    // starts on it at once is released with it. Stopped now, not through the view model's
+    // coroutine, which could land after that preview has started. Both seen on the emulator,
+    // 2026-10-10.
+    val scope = rememberCoroutineScope()
+    val leaveCatchup: (then: () -> Unit) -> Unit = { then ->
+        scope.launch {
+            finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+            StreamingPlaybackService.getInstance()?.stop()
+            handedOff = true
+            then()
+        }
+    }
+    val watchLive: (() -> Unit)? = catchup?.let { { leaveCatchup(onWatchLive) } }
+    val catchupBack: (() -> Unit)? = catchup?.let { { leaveCatchup(onBack) } }
+
     // Stop and fully release playback when leaving the player screen. TV has no
     // background-playback/PiP feature, so the service (and its native decoder/renderer
-    // buffers) has no reason to outlive this screen — see stopAndRelease's kdoc.
+    // buffers) has no reason to outlive this screen — see stopAndRelease's kdoc. Not once catch-up
+    // has handed the player on (see leaveCatchup).
     DisposableEffect(Unit) {
         onDispose {
+            if (handedOff) return@onDispose
             // The teardown's own final position save finds no collector by now (the
             // positionSaves effect below has left composition): finalizeSession is that save.
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
@@ -295,7 +321,16 @@ fun TvPlayerScreen(
             if (previous == null) {
                 LoadingScreen()
             } else {
-                PlayerContent(previous, playbackViewModel, loaderViewModel, onBack, upNextState, continueCatchup, onWatchLive)
+                PlayerContent(
+                    previous,
+                    playbackViewModel,
+                    loaderViewModel,
+                    catchupBack ?: onBack,
+                    catchupBack != null,
+                    upNextState,
+                    continueCatchup,
+                    watchLive,
+                )
             }
         }
 
@@ -305,13 +340,22 @@ fun TvPlayerScreen(
                 onRetry = { loaderViewModel.retryLastLoad() },
                 title = stringResource(R.string.player_error),
                 retryLabel = stringResource(R.string.player_retry),
-                onBack = onBack,
+                onBack = catchupBack ?: onBack,
                 backLabel = stringResource(R.string.player_back_to_categories),
             )
         }
 
         is StreamLoaderViewModel.StreamState.Success -> {
-            PlayerContent(state, playbackViewModel, loaderViewModel, onBack, upNextState, continueCatchup, onWatchLive)
+            PlayerContent(
+                state,
+                playbackViewModel,
+                loaderViewModel,
+                catchupBack ?: onBack,
+                catchupBack != null,
+                upNextState,
+                continueCatchup,
+                watchLive,
+            )
         }
     }
 }
@@ -322,9 +366,11 @@ private fun PlayerContent(
     playbackViewModel: PlaybackViewModel,
     loaderViewModel: StreamLoaderViewModel,
     onBack: () -> Unit,
+    // Catch-up: [onBack] saves and stops itself (leaveCatchup in TvPlayerScreen).
+    onBackStops: Boolean,
     upNextState: UpNextState,
     continueCatchup: (() -> Boolean)?,
-    onWatchLive: () -> Unit,
+    onWatchLive: (() -> Unit)?,
 ) {
     val scope = rememberCoroutineScope()
     val isCatchup = data.catchupLabel != null
@@ -337,10 +383,14 @@ private fun PlayerContent(
             // otherwise win the race against an unawaited write and land on the wrong resume
             // season. See finalizeSessionAndAwait's kdoc and
             // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
-            scope.launch {
-                finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
-                playbackViewModel.stopAndRelease()
+            if (onBackStops) {
                 onBack()
+            } else {
+                scope.launch {
+                    finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+                    playbackViewModel.stopAndRelease()
+                    onBack()
+                }
             }
         },
         onNextChannel = { loaderViewModel.nextChannel() },
@@ -368,18 +418,7 @@ private fun PlayerContent(
         autoplayNextSupported = data.supportsAutoplayNext,
         upNextState = upNextState,
         continueOnEnd = continueCatchup,
-        onWatchLive =
-            if (isCatchup) {
-                {
-                    scope.launch {
-                        finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
-                        playbackViewModel.stopAndRelease()
-                        onWatchLive()
-                    }
-                }
-            } else {
-                null
-            },
+        onWatchLive = onWatchLive,
     )
 }
 

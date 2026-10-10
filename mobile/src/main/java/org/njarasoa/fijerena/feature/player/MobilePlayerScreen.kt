@@ -163,9 +163,13 @@ fun MobilePlayerScreen(
     // the docked mini-player) — unlike the dock's promoted view, actually leaving this screen
     // means the watch session is over, so finalize + stop here. Mirrors TV's
     // TvPlayerScreen.kt, which owns this same responsibility instead of PlayerScreen.kt.
+    // Set when catch-up has saved, stopped the player and left (Back, Watch live): the screen it
+    // goes to (often the channel's dock) starts on that same player at once, so from then on this
+    // one must not stop it.
+    var handedOff by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
         onDispose {
-            if (!activityScopedViewModel.isInPictureInPictureMode.value) {
+            if (!handedOff && !activityScopedViewModel.isInPictureInPictureMode.value) {
                 finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
                 activityScopedViewModel.stop()
             }
@@ -199,34 +203,40 @@ fun MobilePlayerScreen(
             }
         }
 
+    // Leaving catch-up (Back, Watch live): the session saved and the player stopped, then [then].
+    // Stopped now, not through the view model's coroutine, which could land after the dock has
+    // started its stream on the same player (seen on the TV emulator, 2026-10-10).
+    val leaveCatchup: (then: () -> Unit) -> Unit = { then ->
+        scope.launch {
+            finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
+            StreamingPlaybackService.getInstance()?.stop()
+            handedOff = true
+            then()
+        }
+    }
+
     MobilePlayerContent(
         viewModel = activityScopedViewModel,
         loaderViewModel = loaderViewModel,
         contentType = contentType,
         isCatchup = catchup != null,
+        handedOff = { handedOff },
         continueOnEnd = continueCatchup,
-        onWatchLive =
-            if (catchup != null) {
-                {
-                    scope.launch {
-                        finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
-                        activityScopedViewModel.stop()
-                        onWatchLive()
-                    }
-                }
-            } else {
-                null
-            },
+        onWatchLive = catchup?.let { { leaveCatchup(onWatchLive) } },
         onBack = {
-            // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
-            // straight back to the episode-selection screen — its own watch-history read can
-            // otherwise win the race against an unawaited write and land on the wrong resume
-            // season. See finalizeSessionAndAwait's kdoc and
-            // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
-            scope.launch {
-                finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
-                activityScopedViewModel.stop()
-                onBack()
+            if (catchup != null) {
+                leaveCatchup(onBack)
+            } else {
+                // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
+                // straight back to the episode-selection screen — its own watch-history read can
+                // otherwise win the race against an unawaited write and land on the wrong resume
+                // season. See finalizeSessionAndAwait's kdoc and
+                // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
+                scope.launch {
+                    finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
+                    activityScopedViewModel.stop()
+                    onBack()
+                }
             }
         },
     )
@@ -250,6 +260,11 @@ fun MobilePlayerContent(
     continueOnEnd: (() -> Boolean)? = null,
     // Catch-up: the controls' Watch live. Null leaves the button out.
     onWatchLive: (() -> Unit)? = null,
+    // Live TV: the controls' Start over, the programme on air from its start. Null leaves it out.
+    onStartOver: (() -> Unit)? = null,
+    // True once the player has been handed to another screen (Watch live, Start over): leaving
+    // this one must then not pause or stop it.
+    handedOff: () -> Boolean = { false },
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -265,7 +280,7 @@ fun MobilePlayerContent(
                 when (event) {
                     // ON_STOP, not ON_PAUSE — see onAppStopped's kdoc.
                     Lifecycle.Event.ON_STOP -> {
-                        viewModel.onAppStopped()
+                        if (!handedOff()) viewModel.onAppStopped()
                     }
 
                     Lifecycle.Event.ON_RESUME -> {
@@ -916,6 +931,7 @@ fun MobilePlayerContent(
                                 { loaderViewModel.toggleFavorite() }
                             },
                         onWatchLive = onWatchLive,
+                        onStartOver = onStartOver,
                         nextEpisode = state.nextEpisode,
                         onPlayNextEpisode = { nextEp ->
                             // Awaited: playNextEpisode() flips loaderViewModel's state to Loading

@@ -58,6 +58,8 @@ class EpgViewModel(
             val lastListingEndSec: Long? = null,
             /** Indexes of the pages loaded; null: all of them. */
             val loadedPages: Set<Int>? = null,
+            /** Archive days per channel id, for the channels whose programmes can be replayed (catch-up). */
+            val catchupDays: Map<String, Int> = emptyMap(),
         ) : UiState() {
             /** Whether row [index]'s page has loaded, so an empty row means "no listings", not "not yet". */
             fun isRowLoaded(index: Int): Boolean = loadedPages?.contains(index / PAGE_SIZE) ?: true
@@ -108,6 +110,9 @@ class EpgViewModel(
     // The whole channel list (ids, names, logos), resolved once and kept across day changes;
     // Refresh resolves it again. Listings come per page, cached per (day, page) by the pager.
     private var channels: List<MediaItem>? = null
+
+    // Archive days of [channels] that keep an archive (catch-up), looked up with them.
+    private var catchupDays: Map<String, Int> = emptyMap()
     private val pager = GuidePager(PAGE_SIZE) { date, items -> loadPage(date, items) }
 
     // The rows the grid last showed, so a day change loads the pages the user is looking at.
@@ -165,6 +170,7 @@ class EpgViewModel(
                 loaded.also {
                     channels = it
                     pager.channels = it
+                    catchupDays = repository.getCatchupDays(it.map { channel -> channel.id })
                 }
             }
         if (items.isEmpty()) {
@@ -239,6 +245,7 @@ class EpgViewModel(
             loadedCount = guide.loadedCount,
             lastListingEndSec = guide.lastListingEndSec,
             loadedPages = pager.pages(date).keys,
+            catchupDays = catchupDays,
         )
     }
 

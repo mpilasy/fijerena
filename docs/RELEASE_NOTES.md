@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Catch-up TV
+**Release Date:** 2026-10-10
+
+- **Watch a programme that already aired (Xtream).** On channels whose source keeps an archive, open a past programme in the TV Guide and choose **Watch from start**; in the live player, **Start over** plays the programme on air from its beginning. It plays like a film: seek, pause, fast-forward. The controls say "CATCH-UP · programme · channel · day and time", and **Watch live** goes back to the channel.
+- **The guide shows what can be replayed:** a replay mark on past programmes the archive holds. On the phone, the guide's date tabs go back as many days as the longest archive (a week at most).
+- A programme the source can't serve says "This programme is not available to replay" at once, instead of retrying.
+
 ## Version: The source's own guide reads properly
 **Release Date:** 2026-10-10
 

@@ -125,6 +125,8 @@ fun TvPlayerControlsOverlay(
     onShowGuide: (() -> Unit)? = null,
     // Catch-up: Watch live, first in the row. Null leaves it out.
     onWatchLive: (() -> Unit)? = null,
+    // Live TV: Start over, the programme on air from its start (catch-up). Null leaves it out.
+    onStartOver: (() -> Unit)? = null,
     onShowAudioTrackSelector: () -> Unit,
     onShowSubtitleSelector: () -> Unit,
     onShowQualitySelector: () -> Unit,
@@ -698,6 +700,15 @@ fun TvPlayerControlsOverlay(
                                 icon = CinemaIcons.DateRange,
                                 label = stringResource(R.string.player_osd_guide),
                                 onClick = onShowGuide,
+                            )
+                        }
+
+                        // Start over: after Guide, when the channel's archive holds the programme on air.
+                        if (onStartOver != null) {
+                            OsdButton(
+                                icon = CinemaIcons.Replay,
+                                label = stringResource(R.string.player_osd_start_over),
+                                onClick = onStartOver,
                             )
                         }
 

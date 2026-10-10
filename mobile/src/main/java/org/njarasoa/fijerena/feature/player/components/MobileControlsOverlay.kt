@@ -116,6 +116,8 @@ fun MobileControlsOverlay(
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
     // Catch-up: Watch live, first in the row. Null leaves it out.
     onWatchLive: (() -> Unit)? = null,
+    // Live TV: Start over, the programme on air from its start (catch-up). Null leaves it out.
+    onStartOver: (() -> Unit)? = null,
     // The bottom panel's height in px, for the player to lift the subtitles above it.
     onPanelHeightChanged: (Int) -> Unit = {},
 ) {
@@ -545,6 +547,15 @@ fun MobileControlsOverlay(
                                 onClick = onWatchLive,
                                 icon = {
                                     Icon(CinemaIcons.LiveTv, stringResource(R.string.player_osd_watch_live), tint = CinemaTextPrimary)
+                                },
+                            )
+                        }
+
+                        if (onStartOver != null) {
+                            CinemaIconButton(
+                                onClick = onStartOver,
+                                icon = {
+                                    Icon(CinemaIcons.Replay, stringResource(R.string.player_osd_start_over), tint = CinemaTextPrimary)
                                 },
                             )
                         }

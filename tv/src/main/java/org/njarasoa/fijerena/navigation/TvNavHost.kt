@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -411,6 +412,9 @@ fun TvNavHost(
                     ),
                 )
             },
+            // Start over (catch-up): the programme on air from its start, full screen. Back returns
+            // to the Live TV preview.
+            onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
             onBack = {
                 // A single pop always lands on whatever pushed this entry — Home under a
                 // section's browse, or the search/EPG screen underneath a
@@ -807,6 +811,8 @@ fun TvNavHost(
                                         ),
                                     )
                                 },
+                                // Catch-up: the programme from the channel's archive, full screen.
+                                onWatchFromStart = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
                                 onChannelSelected = { streamId, _, categoryId ->
                                     navController.navigateOnce(
                                         Screen.CategoryList(

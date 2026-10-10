@@ -107,6 +107,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.GuideSource
+import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
@@ -261,6 +262,8 @@ fun TvGuideGrid(
     state: EpgViewModel.UiState,
     showDevStats: Boolean,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
+    /** The details panel's Watch from start: [EpgProgram] replayed from the channel's archive (catch-up). */
+    onWatchFromStart: (EpgProgram, MediaItem) -> Unit,
     onChannelSelected: (String, String, String) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
@@ -381,6 +384,7 @@ fun TvGuideGrid(
                         verticalListState = verticalListState,
                         returnFocus = returnFocus,
                         onProgramSelected = onProgramSelected,
+                        onWatchFromStart = onWatchFromStart,
                         onChannelSelected = onChannelSelected,
                         onRowsVisible = onRowsVisible,
                         isFavoriteChannel = isFavoriteChannel,
@@ -955,6 +959,7 @@ private fun GuideBody(
     verticalListState: LazyListState,
     returnFocus: NavReturnFocus,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
+    onWatchFromStart: (EpgProgram, MediaItem) -> Unit,
     onChannelSelected: (String, String, String) -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
     isFavoriteChannel: suspend (channelId: String) -> Boolean,
@@ -1251,6 +1256,10 @@ private fun GuideBody(
     // OK on a programme: its details panel (GD6).
     var details by remember { mutableStateOf<Pair<EpgProgram, MediaItem>?>(null) }
     details?.let { (program, channel) ->
+        val replayable =
+            remember(program, channel) {
+                CatchupAvailability.isPlayable(state.catchupDays[channel.id] ?: 0, program, System.currentTimeMillis() / 1000)
+            }
         ProgramDetailsDialog(
             program = program,
             channel = channel,
@@ -1259,6 +1268,16 @@ private fun GuideBody(
                 returnFocus.leaveFrom(programKey(channel.id, program.id), verticalListState)
                 onProgramSelected(program, channel)
             },
+            onWatchFromStart =
+                if (replayable) {
+                    {
+                        details = null
+                        returnFocus.leaveFrom(programKey(channel.id, program.id), verticalListState)
+                        onWatchFromStart(program, channel)
+                    }
+                } else {
+                    null
+                },
             onDismiss = { details = null },
         )
     }
@@ -1361,6 +1380,7 @@ private fun GuideBody(
                     focus = focus,
                     returnFocus = returnFocus,
                     returnChannelRequester = returnChannelRequester.takeIf { returnRowId == row.channel.id },
+                    archiveDays = state.catchupDays[row.channel.id] ?: 0,
                     channelColumnWidth = channelColumnWidth,
                     columnGap = columnGap,
                     onChannelClick = {
@@ -1453,6 +1473,8 @@ private fun GuideRow(
     focus: GuideFocus,
     returnFocus: NavReturnFocus,
     returnChannelRequester: FocusRequester?,
+    /** The channel's archive days (0 none): its past programmes that can be replayed get a mark. */
+    archiveDays: Int,
     channelColumnWidth: androidx.compose.ui.unit.Dp,
     columnGap: androidx.compose.ui.unit.Dp,
     onChannelClick: () -> Unit,
@@ -1503,6 +1525,7 @@ private fun GuideRow(
                                 cell = cell,
                                 scrollState = scrollState,
                                 timeOnly = cell.width < timeOnlyBelowPx,
+                                archiveDays = archiveDays,
                                 nowEpochSeconds = nowEpochSeconds,
                                 cardStyle = cardStyle,
                                 onClick = { onProgramClick(cell.program) },
@@ -1571,9 +1594,12 @@ private fun ProgramDetailsDialog(
     program: EpgProgram,
     channel: MediaItem,
     onWatchChannel: () -> Unit,
+    /** Catch-up: the programme from its start, from the channel's archive. Null: not replayable. */
+    onWatchFromStart: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val watchRequester = remember { FocusRequester() }
+    val fromStartRequester = remember { FocusRequester() }
     val today = remember { LocalDate.now() }
     val day = remember(program.startTime) { Instant.ofEpochSecond(program.startTime).atZone(ZoneId.systemDefault()).toLocalDate() }
     val dayLabel =
@@ -1614,17 +1640,31 @@ private fun ProgramDetailsDialog(
                 }
             }
         },
-        initialFocus = watchRequester,
+        // Watch from start first when the programme can be replayed: it is what the panel was opened for.
+        initialFocus = if (onWatchFromStart != null) fromStartRequester else watchRequester,
         confirmButton = {
-            CinemaDialogActionButton(
-                onClick = onWatchChannel,
-                modifier = Modifier.focusRequester(watchRequester),
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaAccent,
-                        contentColor = CinemaTextPrimary,
-                    ),
-            ) { Text(stringResource(R.string.epg_details_watch_channel), color = CinemaTextPrimary) }
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                if (onWatchFromStart != null) {
+                    CinemaDialogActionButton(
+                        onClick = onWatchFromStart,
+                        modifier = Modifier.focusRequester(fromStartRequester),
+                        colors =
+                            androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = CinemaAccent,
+                                contentColor = CinemaTextPrimary,
+                            ),
+                    ) { Text(stringResource(R.string.epg_details_watch_from_start), color = CinemaTextPrimary) }
+                }
+                CinemaDialogActionButton(
+                    onClick = onWatchChannel,
+                    modifier = Modifier.focusRequester(watchRequester),
+                    colors =
+                        androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = if (onWatchFromStart != null) CinemaSurfaceVariant else CinemaAccent,
+                            contentColor = CinemaTextPrimary,
+                        ),
+                ) { Text(stringResource(R.string.epg_details_watch_channel), color = CinemaTextPrimary) }
+            }
         },
         dismissButton = {
             CinemaDialogActionButton(
@@ -1761,6 +1801,7 @@ private fun ProgramCell(
     scrollState: ScrollState,
     /** Too narrow for a readable title: the start time alone ("10:45"). */
     timeOnly: Boolean,
+    archiveDays: Int,
     nowEpochSeconds: State<Long>,
     cardStyle: GuideCardStyle,
     onClick: () -> Unit,
@@ -1768,6 +1809,14 @@ private fun ProgramCell(
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
+    // A past programme the channel's archive still holds: a replay mark beside its title (catch-up).
+    val replayable by
+        remember(cell.program, archiveDays, nowEpochSeconds) {
+            derivedStateOf {
+                val now = nowEpochSeconds.value
+                now >= cell.endSec && CatchupAvailability.isPlayable(archiveDays, cell.program, now)
+            }
+        }
     // Shared tick instead of per-cell System.currentTimeMillis(), read through derivedStateOf so a
     // cell recomposes only when its own phase flips — not on every 60s tick.
     val phase by
@@ -1838,14 +1887,27 @@ private fun ProgramCell(
                             .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(
-                        text = cell.program.title,
-                        style = cardStyle.titleStyle,
-                        fontWeight = if (phase == CellPhase.ON_AIR) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (phase == CellPhase.ON_AIR) CinemaAccentLight else CinemaTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+                    ) {
+                        if (replayable) {
+                            Icon(
+                                imageVector = CinemaIcons.Replay,
+                                contentDescription = stringResource(R.string.epg_replayable),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        }
+                        Text(
+                            text = cell.program.title,
+                            style = cardStyle.titleStyle,
+                            fontWeight = if (phase == CellPhase.ON_AIR) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (phase == CellPhase.ON_AIR) CinemaAccentLight else CinemaTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Text(
                         text = TimeFormat.formatTimeRange(cell.program.startTime, cell.program.endTime),
                         style = cardStyle.timeStyle,

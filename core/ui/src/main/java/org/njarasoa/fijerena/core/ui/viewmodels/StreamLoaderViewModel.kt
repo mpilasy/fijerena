@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import kotlin.math.abs
 
 class StreamLoaderViewModel(
     private val context: Context,
@@ -98,6 +99,9 @@ class StreamLoaderViewModel(
             val supportsAutoplayNext: Boolean = false,
             // Catch-up: "Channel · Yesterday 17:15" under the programme title ([streamName]).
             val catchupLabel: String? = null,
+            // Live TV: how many days the channel keeps an archive (0 none) — Start over on the
+            // programme on air when it can be replayed. Set with the guide lookup.
+            val archiveDays: Int = 0,
         ) : StreamState()
 
         data class Error(
@@ -350,6 +354,7 @@ class StreamLoaderViewModel(
         val repo = mediaRepository ?: return
         var currentProgram: EpgProgram? = null
         var nextProgram: EpgProgram? = null
+        var archiveDays = 0
 
         if (contentType == ContentType.LIVE_TV) {
             val currentItem =
@@ -361,11 +366,29 @@ class StreamLoaderViewModel(
                         currentCategoryId,
                     )
 
+            if (isLiveTv) archiveDays = repo.getCatchupDays(listOf(streamId))[streamId] ?: 0
             val epgData = repo.getEpgBulkForItems(listOf(currentItem)).getOrNull()
-            val listings = epgData?.get(streamId)?.listings ?: emptyList()
             // Catch-up: the programme being replayed, not the one on air.
             val at = catchup?.let { it.startEpochSec + it.programOffsetSec } ?: (System.currentTimeMillis() / 1000)
-            currentProgram = listings.firstOrNull { at in it.startTime until it.endTime }
+            val indexed = epgData?.get(streamId)?.listings ?: emptyList()
+            // A channel with an archive (or a catch-up) the index knows nothing about at [at]: the
+            // index keeps 12 h of past and goes stale, while Start over and the replayed programme's
+            // title need the programme — the source's own guide has it.
+            val listings =
+                if (indexed.none { at in it.startTime until it.endTime } && (archiveDays > 0 || catchup != null)) {
+                    repo
+                        .getEpg(streamId)
+                        ?.getOrNull()
+                        ?.listings
+                        ?.takeIf { it.isNotEmpty() } ?: indexed
+                } else {
+                    indexed
+                }
+            // Catch-up: the programme picked, by its title near its start — the two guides (XMLTV,
+            // the source's own) can place a programme half an hour apart (bears, RTP 1, 2026-10-10).
+            currentProgram =
+                listings.firstOrNull { catchup != null && it.title == programTitle && abs(it.startTime - at) <= CATCHUP_MATCH_SLACK_SEC }
+                    ?: listings.firstOrNull { at in it.startTime until it.endTime }
             nextProgram =
                 if (currentProgram != null) {
                     listings.firstOrNull { it.startTime >= currentProgram.endTime }
@@ -428,6 +451,7 @@ class StreamLoaderViewModel(
                     episodeLabel = episodeLabel,
                     nextEpisode = nextEpisode,
                     supportsAutoplayNext = repo.supportsAutoplayNextEpisode,
+                    archiveDays = archiveDays,
                 )
         }
 
@@ -775,6 +799,9 @@ class StreamLoaderViewModel(
 private const val PROGRAMME_ROLLOVER_MARGIN_MS = 5_000L
 
 private const val MILLIS_PER_SECOND = 1_000L
+
+/** How far apart two guides may place the start of the catch-up programme and still be the one picked. */
+private const val CATCHUP_MATCH_SLACK_SEC = 60 * 60L
 
 /** "Channel · Yesterday 17:15": the catch-up programme's channel, day and start time. */
 internal fun catchupLabel(

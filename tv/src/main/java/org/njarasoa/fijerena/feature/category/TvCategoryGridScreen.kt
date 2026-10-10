@@ -42,6 +42,8 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
@@ -84,6 +86,8 @@ fun TvCategoryGridScreen(
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
     onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit = { _, _, _ -> },
+    /** Live TV: the full-screen OSD's Start over, the programme on air from the channel's archive. */
+    onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
     onBack: () -> Unit = {},
     /** Leaves for Home — after a remote Stop of the Live TV preview (see LiveTvSplitLayout). */
     onHome: () -> Unit = {},
@@ -149,6 +153,7 @@ fun TvCategoryGridScreen(
         catViewModel = viewModel,
         onStreamSelected = onStreamSelected,
         onEpgClick = onEpgClick,
+        onStartOver = onStartOver,
         onBack = onBack,
         onHome = onHome,
         contentType = contentType,
@@ -172,6 +177,7 @@ private fun CategoryGridContent(
     catViewModel: CategoryViewModel,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit,
+    onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)?,
     onBack: () -> Unit,
     onHome: () -> Unit,
     contentType: String,
@@ -343,6 +349,7 @@ private fun CategoryGridContent(
                                     onPlayingChannel = { streamId -> livePlayingChannelId = streamId },
                                     // The player's Guide button (GD5), only when the source has a guide.
                                     onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
+                                    onStartOver = onStartOver,
                                 )
                             }
                         }

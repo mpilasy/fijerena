@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.GuideSource
+import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -74,6 +75,9 @@ import java.util.Locale
 /** Date tabs: today and the six days after it (the guide loads any day; a week is what fits a thumb). */
 private const val DAY_TAB_COUNT = 7
 
+/** Past date tabs go back as far as the longest channel archive, a week at most (catch-up). */
+private const val MAX_PAST_DAY_TABS = 7
+
 /** A programme tapped in the grid, shown in the details sheet. */
 private data class GuideSelection(
     val program: EpgProgram,
@@ -84,7 +88,8 @@ private data class GuideSelection(
  * The phone's TV Guide (UX overhaul plan Part III, GD3): "TV Guide · <category>" with the GD1
  * status line beneath it, date tabs (Today / Tomorrow / weekdays) and a "Now" chip, then the
  * [MobileGuideGrid] time grid. Tapping a programme opens its details sheet ("Watch channel" docks the
- * channel); tapping a channel tunes it. Search opens "Search the guide" (the EPG Browser) on this
+ * channel; "Watch from start" replays it from the channel's archive when it holds it, catch-up, and
+ * past days get date tabs back to the longest archive); tapping a channel tunes it. Search opens "Search the guide" (the EPG Browser) on this
  * guide's channels — the grid has no search of its own (G-9, GD5). [focusChannelId] scrolls the
  * grid to that channel's row on first open.
  */
@@ -94,6 +99,7 @@ fun MobileEpgGuideScreen(
     categoryId: String,
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
+    onWatchFromStart: (program: EpgProgram, channel: MediaItem) -> Unit,
     onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onSearch: () -> Unit,
     onBack: () -> Unit,
@@ -124,6 +130,10 @@ fun MobileEpgGuideScreen(
     var entryRowPending by rememberSaveable { mutableStateOf(focusChannelId != null) }
 
     val state = uiState
+    // Kept across loads, so the past tabs don't come and go while a day loads.
+    var catchupDays by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    if (state is EpgViewModel.UiState.Ready) catchupDays = state.catchupDays
+    val pastDayTabs = remember(catchupDays) { (catchupDays.values.maxOrNull() ?: 0).coerceAtMost(MAX_PAST_DAY_TABS) }
     val shownDate =
         when (state) {
             is EpgViewModel.UiState.Ready -> state.selectedDate
@@ -212,6 +222,7 @@ fun MobileEpgGuideScreen(
                 DateTabs(
                     selectedDate = shownDate,
                     today = today,
+                    pastDays = pastDayTabs,
                     onSelectDate = onSelectDate,
                     onNow = onNow,
                 )
@@ -262,6 +273,7 @@ fun MobileEpgGuideScreen(
                                     },
                                     onRowsVisible = viewModel::onRowsVisible,
                                     isRowLoaded = state::isRowLoaded,
+                                    catchupDays = state.catchupDays,
                                 )
                             }
                         }
@@ -325,6 +337,10 @@ fun MobileEpgGuideScreen(
     }
 
     selection?.let { picked ->
+        val replayable =
+            remember(picked) {
+                CatchupAvailability.isPlayable(catchupDays[picked.channel.id] ?: 0, picked.program, System.currentTimeMillis() / 1000)
+            }
         ProgramDetailsSheet(
             selection = picked,
             today = today,
@@ -332,6 +348,15 @@ fun MobileEpgGuideScreen(
                 selection = null
                 onProgramSelected(picked.program, picked.channel)
             },
+            onWatchFromStart =
+                if (replayable) {
+                    {
+                        selection = null
+                        onWatchFromStart(picked.program, picked.channel)
+                    }
+                } else {
+                    null
+                },
             onDismiss = { selection = null },
         )
     }
@@ -391,22 +416,32 @@ private fun ListingsEndNote(state: EpgViewModel.UiState.Ready) {
     )
 }
 
-/** Today / Tomorrow / weekday tabs, scrollable, with the "Now" chip pinned at the end (G-M3, G-8). */
+/**
+ * Today / Tomorrow / weekday tabs, scrollable, with the "Now" chip pinned at the end (G-M3, G-8).
+ * [pastDays] tabs before today (Yesterday, then weekdays) for the channels' archives (catch-up); the
+ * row opens scrolled to today.
+ */
 @Composable
 private fun DateTabs(
     selectedDate: LocalDate,
     today: LocalDate,
+    pastDays: Int,
     onSelectDate: (LocalDate) -> Unit,
     onNow: () -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val formatter = remember(locale) { dayTabFormatter(locale) }
-    val days = remember(today) { (0 until DAY_TAB_COUNT).map { today.plusDays(it.toLong()) } }
+    val days = remember(today, pastDays) { (-pastDays until DAY_TAB_COUNT).map { today.plusDays(it.toLong()) } }
+    val tabsState = rememberLazyListState(initialFirstVisibleItemIndex = pastDays)
+    // Past tabs that arrive after the row first showed (the archive days load with the channels)
+    // must not push today out of view.
+    LaunchedEffect(pastDays) { if (selectedDate == today) tabsState.scrollToItem(pastDays) }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = CinemaSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LazyRow(
+            state = tabsState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
@@ -441,6 +476,7 @@ private fun dayLabel(
     when (day) {
         today -> stringResource(R.string.epg_tab_today)
         today.plusDays(1) -> stringResource(R.string.epg_tab_tomorrow)
+        today.minusDays(1) -> stringResource(R.string.epg_tab_yesterday)
         else -> remember(day, formatter) { day.format(formatter) }
     }
 
@@ -451,6 +487,8 @@ private fun ProgramDetailsSheet(
     selection: GuideSelection,
     today: LocalDate,
     onWatchChannel: () -> Unit,
+    /** Catch-up: the programme from its start, from the channel's archive. Null: not replayable. */
+    onWatchFromStart: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -516,8 +554,17 @@ private fun ProgramDetailsSheet(
                     ) {
                         Text(stringResource(R.string.common_close))
                     }
-                    CinemaButton(onClick = onWatchChannel) {
-                        Text(stringResource(R.string.epg_details_watch_channel))
+                    if (onWatchFromStart != null) {
+                        CinemaTextButton(onClick = onWatchChannel) {
+                            Text(stringResource(R.string.epg_details_watch_channel))
+                        }
+                        CinemaButton(onClick = onWatchFromStart) {
+                            Text(stringResource(R.string.epg_details_watch_from_start))
+                        }
+                    } else {
+                        CinemaButton(onClick = onWatchChannel) {
+                            Text(stringResource(R.string.epg_details_watch_channel))
+                        }
                     }
                 }
             }

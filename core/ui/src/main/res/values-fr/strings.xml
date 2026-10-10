@@ -48,6 +48,7 @@
     <string name="player_live">EN DIRECT</string>
     <string name="player_catchup">REPLAY</string>
     <string name="player_osd_watch_live">Regarder en direct</string>
+    <string name="player_osd_start_over">Reprendre au début</string>
     <string name="player_error">Erreur de lecture</string>
     <string name="player_retry">Réessayer</string>
     <string name="player_back">Retour</string>
@@ -967,6 +968,8 @@
     <string name="epg_tab_tomorrow">Demain</string>
     <string name="epg_tab_yesterday">Hier</string>
     <string name="epg_details_watch_channel">Regarder la chaîne</string>
+    <string name="epg_details_watch_from_start">Regarder depuis le début</string>
+    <string name="epg_replayable">Disponible en replay</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Chaînes</string>
     <string name="player_osd_more">Plus</string>

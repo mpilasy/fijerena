@@ -48,6 +48,7 @@
     <string name="player_live">LIVE</string>
     <string name="player_catchup">CATCH-UP</string>
     <string name="player_osd_watch_live">Watch live</string>
+    <string name="player_osd_start_over">Start over</string>
     <string name="player_error">Playback Error</string>
     <string name="player_retry">Retry</string>
     <string name="player_back">Back</string>
@@ -1000,6 +1001,8 @@
     <string name="epg_tab_tomorrow">Tomorrow</string>
     <string name="epg_tab_yesterday">Yesterday</string>
     <string name="epg_details_watch_channel">Watch channel</string>
+    <string name="epg_details_watch_from_start">Watch from start</string>
+    <string name="epg_replayable">Can be replayed</string>
     <!-- Phase 6 -->
     <string name="details_action_favorite">Favorite</string>
     <string name="details_action_watched">Watched</string>

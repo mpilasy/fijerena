@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.R
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.ChapterInfo
@@ -39,6 +40,10 @@ class PlaybackViewModel(
 
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    // The stream this ViewModel last asked to play ([currentMetadata] follows the shared service,
+    // whoever started it). Null until it plays one. See onCleared.
+    private var ownStreamUrl: String? = null
 
     private val _rebufferCount = MutableStateFlow(0)
     val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
@@ -209,6 +214,7 @@ class PlaybackViewModel(
         viewModelScope.launch {
             try {
                 val service = StreamingPlaybackService.awaitInstance()
+                ownStreamUrl = metadata.streamUrl
                 _currentMetadata.value = metadata
                 service.playStream(metadata, resumeFromPosition)
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
@@ -566,12 +572,19 @@ class PlaybackViewModel(
         super.onCleared()
         // viewModelScope is already cancelled by the time onCleared() runs, so cleanup
         // must happen synchronously here rather than via viewModelScope.launch.
+        // Stops the shared player only while it still plays this ViewModel's stream: by the time a
+        // screen's ViewModel is cleared, the screen it left for may already play its own on it
+        // (catch-up's Watch live and Back hand the player to the live preview — the preview was
+        // stopped here, seen on the emulator 2026-10-10, docs/plans/20261010_catchup-plan.md).
+        val service = StreamingPlaybackService.getInstance()
+        val own = ownStreamUrl
+        val ownsPlayback = service == null || own == null || XtreamStreamUrl.sameStream(service.currentMetadata.value.streamUrl, own)
         _controller.value?.let {
             it.removeListener(playerListener)
-            it.stop()
+            if (ownsPlayback) it.stop()
             it.release()
         }
-        StreamingPlaybackService.getInstance()?.stop()
+        if (ownsPlayback) service?.stop()
         serviceConnection.disconnect()
         // The start-claim itself is no longer this ViewModel's to clear — see
         // StreamingPlaybackService.tryClaimStart()'s doc. .stop() above doesn't tear the service

@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 
 /**
  * GD4: a guide page is the day's window — `end > windowStart AND start < windowEnd`, the predicate
@@ -60,5 +61,33 @@ class GuideWindowTest {
     @Test
     fun aSourceNotLoadedYetIsNotDeclaredGuideless() {
         assertTrue(hasGuide(supportsNativeEpg = null, enabledGuideSources = 0))
+    }
+
+    @Test
+    fun archivePastFillsTheHoursBeforeTheIndexFromTheSourcesGuide() {
+        val index = mapOf("1" to EpgResponse(listOf(program("index_evening", windowStart + 60_000, windowStart + 63_600))))
+        val native =
+            mapOf(
+                "1" to
+                    EpgResponse(
+                        listOf(
+                            program("day_before", windowStart - 7_200, windowStart - 3_600),
+                            program("morning", windowStart + 3_600, windowStart + 7_200),
+                            program("native_evening", windowStart + 60_000, windowStart + 63_600),
+                        ),
+                    ),
+                "2" to EpgResponse(listOf(program("only_native", windowStart + 100, windowStart + 3_700))),
+            )
+
+        val merged = archivePast(index, native, windowStart, windowEnd)
+
+        assertEquals(listOf("morning", "index_evening"), merged.getValue("1").listings.map { it.title })
+        assertEquals(listOf("only_native"), merged.getValue("2").listings.map { it.title })
+    }
+
+    @Test
+    fun archivePastLeavesChannelsTheSourceSaysNothingAbout() {
+        val index = mapOf("1" to EpgResponse(listOf(program("index", windowStart + 100, windowStart + 200))))
+        assertEquals(index, archivePast(index, mapOf("2" to EpgResponse(emptyList())), windowStart, windowEnd))
     }
 }

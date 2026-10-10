@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -61,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -104,6 +108,8 @@ fun MobileGuideGrid(
     modifier: Modifier = Modifier,
     /** Whether row [index]'s page has loaded: an empty row then says "No listings", not a blank bar. */
     isRowLoaded: (index: Int) -> Boolean = { true },
+    /** Archive days per channel id: past programmes the archive holds get a replay mark (catch-up). */
+    catchupDays: Map<String, Int> = emptyMap(),
 ) {
     val density = LocalDensity.current
     val zone = remember { ZoneId.systemDefault() }
@@ -201,6 +207,7 @@ fun MobileGuideGrid(
                     nowEpochSeconds = nowEpochSeconds,
                     channelColumnWidth = channelColumnWidth,
                     noListings = row.programs.isEmpty() && isRowLoaded(index),
+                    archiveDays = catchupDays[row.channel.id] ?: 0,
                     onChannelClick = { onChannelClick(row.channel) },
                     onProgramClick = { program -> onProgramClick(program, row.channel) },
                 )
@@ -264,6 +271,7 @@ private fun GuideRow(
     nowEpochSeconds: State<Long>,
     channelColumnWidth: Dp,
     noListings: Boolean,
+    archiveDays: Int,
     onChannelClick: () -> Unit,
     onProgramClick: (EpgProgram) -> Unit,
 ) {
@@ -312,6 +320,7 @@ private fun GuideRow(
                                 cell = cell,
                                 scrollState = scrollState,
                                 nowEpochSeconds = nowEpochSeconds,
+                                archiveDays = archiveDays,
                                 onClick = { onProgramClick(cell.program) },
                             )
                         }
@@ -376,8 +385,17 @@ private fun ProgramCell(
     cell: GuideCell,
     scrollState: ScrollState,
     nowEpochSeconds: State<Long>,
+    archiveDays: Int,
     onClick: () -> Unit,
 ) {
+    // A past programme the channel's archive still holds: a replay mark beside its title (catch-up).
+    val replayable by
+        remember(cell.program, archiveDays, nowEpochSeconds) {
+            derivedStateOf {
+                val now = nowEpochSeconds.value
+                now >= cell.endSec && CatchupAvailability.isPlayable(archiveDays, cell.program, now)
+            }
+        }
     // The shared tick, read through derivedStateOf so a cell recomposes only when its phase flips.
     val phase by
         remember(cell.startSec, cell.endSec, nowEpochSeconds) {
@@ -427,14 +445,27 @@ private fun ProgramCell(
                         }.padding(horizontal = CinemaSpacing.xxs, vertical = CinemaSpacing.xxs),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    text = cell.program.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (onAir) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (onAir) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                ) {
+                    if (replayable) {
+                        Icon(
+                            imageVector = CinemaIcons.Replay,
+                            contentDescription = stringResource(R.string.epg_replayable),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
+                    Text(
+                        text = cell.program.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (onAir) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (onAir) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = TimeFormat.formatTimeRange(cell.program.startTime, cell.program.endTime),
                     style = MaterialTheme.typography.labelSmall,

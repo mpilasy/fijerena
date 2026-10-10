@@ -43,10 +43,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -119,6 +122,11 @@ internal fun LiveTvSplitLayout(
      * Null (the source has no guide) leaves the button out.
      */
     onOpenGuide: ((categoryId: String, categoryName: String, focusChannelId: String?) -> Unit)? = null,
+    /**
+     * The full-screen OSD's Start over: the programme on air from its start, from the channel's
+     * archive (catch-up). Shown only when the archive holds it; null leaves the button out.
+     */
+    onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
@@ -452,14 +460,20 @@ internal fun LiveTvSplitLayout(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentSuccess by rememberUpdatedState(success)
     var resumeOnReturn by remember { mutableStateOf(false) }
+    // Start over handed the one player to the catch-up screen: leaving this screen must then
+    // neither pause nor release it (the catch-up is already playing on it). Not saveable: the
+    // screen composes afresh on return, and the preview plays again.
+    var handedOff by remember { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
-                        val state = playback.playbackState.value
-                        resumeOnReturn = state is PlaybackState.Playing || state is PlaybackState.Buffering
-                        playback.onFocusLost(false)
+                        if (!handedOff) {
+                            val state = playback.playbackState.value
+                            resumeOnReturn = state is PlaybackState.Playing || state is PlaybackState.Buffering
+                            playback.onFocusLost(false)
+                        }
                     }
 
                     Lifecycle.Event.ON_RESUME -> {
@@ -475,7 +489,7 @@ internal fun LiveTvSplitLayout(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            playback.stopAndRelease()
+            if (!handedOff) playback.stopAndRelease()
         }
     }
 
@@ -514,6 +528,25 @@ internal fun LiveTvSplitLayout(
                             open(contextId, contextName, target.id)
                         }
                         showGuide
+                    },
+                // Start over: the programme on air, from the channel's archive. The preview's player
+                // stops first (not released: that ends the playback service the catch-up starts on);
+                // the catch-up player starts its own stream.
+                onStartOver =
+                    onStartOver?.let { start ->
+                        success
+                            ?.currentEpgProgram
+                            ?.takeIf { CatchupAvailability.isPlayable(success.archiveDays, it, System.currentTimeMillis() / 1000) }
+                            ?.let { program ->
+                                val startOver: () -> Unit = {
+                                    // Now, not through the view model's coroutine, which could land
+                                    // after the catch-up has started on the same player.
+                                    StreamingPlaybackService.getInstance()?.stop()
+                                    handedOff = true
+                                    start(program, target)
+                                }
+                                startOver
+                            }
                     },
                 // The same panel as the split's, over the video (LT3): same tabs, rows and row
                 // actions, and its tabs switch channelContext — so the zap order below follows.

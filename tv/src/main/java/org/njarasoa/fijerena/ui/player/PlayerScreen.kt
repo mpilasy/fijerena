@@ -121,6 +121,8 @@ fun PlayerScreen(
     continueOnEnd: (() -> Boolean)? = null,
     // Catch-up: the OSD's Watch live, to the channel live. Null leaves the button out.
     onWatchLive: (() -> Unit)? = null,
+    // Live TV: the OSD's Start over, the programme on air from its start. Null leaves it out.
+    onStartOver: (() -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -540,6 +542,7 @@ fun PlayerScreen(
                     },
                 onShowGuide = onShowGuide,
                 onWatchLive = onWatchLive,
+                onStartOver = onStartOver,
                 onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },

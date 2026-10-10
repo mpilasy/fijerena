@@ -124,6 +124,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -140,6 +141,7 @@ import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -204,6 +206,8 @@ fun MobileCategoryListScreen(
     ) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    /** Live TV full screen: Start over, the programme on air from the channel's archive (catch-up). */
+    onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
     onBack: () -> Unit,
     /** Leaves for the Live TV tab's root — after a remote Stop of the Live TV dock. */
     onHome: () -> Unit = {},
@@ -557,11 +561,33 @@ fun MobileCategoryListScreen(
                 }
             }
         }
+        val dockSuccess = dockLoader.state.collectAsStateWithLifecycle().value as? StreamLoaderViewModel.StreamState.Success
+        // Start over handed the player to the catch-up screen: leaving must not pause or stop it.
+        var handedOff by remember { mutableStateOf(false) }
         MobilePlayerContent(
             viewModel = dockPlayback,
             loaderViewModel = dockLoader,
             contentType = contentType,
             onBack = { fullScreen = false },
+            handedOff = { handedOff },
+            // Start over: the programme on air, from the channel's archive. The dock stops first;
+            // the catch-up player starts its own stream.
+            onStartOver =
+                onStartOver?.let { start ->
+                    dockSuccess
+                        ?.currentEpgProgram
+                        ?.takeIf { CatchupAvailability.isPlayable(dockSuccess.archiveDays, it, System.currentTimeMillis() / 1000) }
+                        ?.let { program ->
+                            val startOver: () -> Unit = {
+                                // Now, not through the view model's coroutine, which could land
+                                // after the catch-up has started on the same player.
+                                StreamingPlaybackService.getInstance()?.stop()
+                                handedOff = true
+                                start(program, target)
+                            }
+                            startOver
+                        }
+                },
         )
         return
     }
