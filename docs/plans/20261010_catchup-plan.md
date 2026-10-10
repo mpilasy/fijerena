@@ -1,6 +1,6 @@
 # Catch-up TV Plan
 
-**Status:** In progress — Phase 2 (player). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
+**Status:** In progress — Phase 3 (guide). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
 (Phase 5 dropped), checked on the emulators only. Per-source differences are detected, not configured
 (see "Detected per source"); "Decided while building" overrides the design where they differ.
 
@@ -267,6 +267,11 @@ These replace the design above where the two differ.
 5. **One URL form:** the path form `/timeshift/…`, with the source's live output (`m3u8` or `ts`;
    bears seeks in both). A 404 or an empty answer is "This programme is not available to replay",
    with no retries. No `timeshift.php` fallback: on bears every host answers both forms or neither.
+6. **No end card for catch-up.** A replayed programme that ends leaves the player, as a film does.
+   **Watch live** in the controls replaces the player with the channel's preview (TV) or dock
+   (phone). A programme still on air carries on past the point it was asked for (see Phase 2).
+7. **No fake `/timeshift/` in the bridge.** The emulators reach bears directly (the host leaves by
+   the home ISP address), so catch-up is checked against the real panel.
 
 ## Phases
 
@@ -274,8 +279,8 @@ These replace the design above where the two differ.
 |---|---|---|
 | 0 | Measure a real panel (bears): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Done 2026-10-10 (see "Facts measured") |
 | 1 | Data: `getCatchupDays` (by channel id); the panel clock from each login; `supportsCatchup`; `resolveCatchupStream`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Done 2026-10-10 (`7013da3e`). Also fixed: the panel's own guide never showed (text times, base64 titles); it now reads `start_timestamp` / `stop_timestamp` and decodes the text. A start-over window past now gets a playlist that ends at now (bears) — Phase 2 continues it |
-| 2 | Player: catch-up plays with `isLive = false` (decision 3), `Screen.Player` catch-up arguments, every `isLive` and Live-TV content-type branch reviewed; a start-over that reaches now fetches the window again and carries on; "not available to replay" with no retries; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | In progress |
-| 3 | Guide: past retention, replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | Not started |
+| 2 | Player: catch-up plays with `isLive = false` (decision 3), `Screen.Player` catch-up arguments, every `isLive` and Live-TV content-type branch reviewed; a start-over that reaches now fetches the window again and carries on; "not available to replay" with no retries; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | Done 2026-10-10 (`6613f53f`); checked on the emulators in Phase 4 (nothing opens catch-up before Phase 3) |
+| 3 | Guide: past hours on archive channels from the panel's guide (decision 4), replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | In progress |
 | 4 | Check on the emulators against the bridge, then bears on the Shield and a phone; docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | Not started |
 | 5 | Remote M3U catch-up (attribute reader, modes, templates) | Dropped 2026-10-10 (Xtream only) |
 
