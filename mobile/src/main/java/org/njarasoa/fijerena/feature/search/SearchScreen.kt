@@ -97,7 +97,8 @@ fun MobileSearchScreen(
     // Told the query just before a result opens, so a result opened in another tab can bring the
     // search along (MobileNavHost.openInSectionTab) and Back still returns to these results.
     onResultOpening: (query: String) -> Unit = {},
-    onBack: () -> Unit,
+    // Null on the Search tab's root: no Back arrow.
+    onBack: (() -> Unit)?,
     initialQuery: String? = null,
     initialTypeFilter: String? = null,
     viewModel: SearchViewModel =
@@ -197,8 +198,10 @@ fun MobileSearchScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
+                        }
                     }
                 },
             )

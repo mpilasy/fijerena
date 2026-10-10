@@ -100,6 +100,13 @@ sealed interface Screen {
     data object TvShowsTab : Screen
 
     /**
+     * The phone's Search tab: [Search] over everything, as the bar's tab root. Its own destination,
+     * not [Search]: a section's Search pushed on its tab would otherwise be taken for this tab.
+     */
+    @Serializable
+    data object SearchTab : Screen
+
+    /**
      * Episode selection screen destination for TV shows.
      * Shows seasons and episodes for a selected series.
      *

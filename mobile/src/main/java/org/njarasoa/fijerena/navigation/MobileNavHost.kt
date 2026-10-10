@@ -112,6 +112,7 @@ fun MobileNavHost(
         navController.clearBackStack<Screen.LiveTvTab>()
         navController.clearBackStack<Screen.MoviesTab>()
         navController.clearBackStack<Screen.TvShowsTab>()
+        navController.clearBackStack<Screen.SearchTab>()
         navController.clearBackStack<Screen.Settings>()
     }
 
@@ -362,6 +363,59 @@ fun MobileNavHost(
                 navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
             },
             section = section,
+        )
+    }
+
+    // Search's screen, pushed ([Screen.Search]) or as the Search tab's root: a result opens in its
+    // section's tab.
+    val search: @Composable (Screen.Search, (() -> Unit)?) -> Unit = { searchScreen, onBack ->
+        var openingQuery by remember { mutableStateOf("") }
+        MobileSearchScreen(
+            onResultOpening = { openingQuery = it },
+            contentType = searchScreen.contentType,
+            initialTypeFilter = searchScreen.initialTypeFilter,
+            initialQuery = searchScreen.initialQuery,
+            onStreamSelected = { itemId, itemName, categoryId, contentType ->
+                val screen =
+                    when (contentType) {
+                        ContentType.TV_SHOWS -> {
+                            Screen.EpisodeSelection(
+                                seriesId = itemId,
+                                seriesName = itemName,
+                                categoryId = categoryId,
+                            )
+                        }
+
+                        ContentType.MOVIES -> {
+                            Screen.MovieDetails(
+                                movieId = itemId,
+                                movieName = itemName,
+                                categoryId = categoryId,
+                            )
+                        }
+
+                        else -> {
+                            // Live TV: land on the docked mini-player, not full-screen.
+                            Screen.CategoryList(
+                                contentType = contentType,
+                                initialCategoryId = categoryId,
+                                initialStreamId = itemId,
+                            )
+                        }
+                    }
+                openInSectionTab(contentType, screen, openingQuery)
+            },
+            onCategorySelected = { categoryId, contentType ->
+                openInSectionTab(
+                    contentType,
+                    Screen.CategoryList(
+                        contentType = contentType,
+                        initialCategoryId = categoryId,
+                    ),
+                    openingQuery,
+                )
+            },
+            onBack = onBack,
         )
     }
     Scaffold(
@@ -717,54 +771,13 @@ fun MobileNavHost(
 
             composable<Screen.Search> { backStackEntry ->
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
-                var openingQuery by remember { mutableStateOf("") }
-                MobileSearchScreen(
-                    onResultOpening = { openingQuery = it },
-                    contentType = searchScreen.contentType,
-                    initialTypeFilter = searchScreen.initialTypeFilter,
-                    initialQuery = searchScreen.initialQuery,
-                    onStreamSelected = { itemId, itemName, categoryId, contentType ->
-                        val screen =
-                            when (contentType) {
-                                ContentType.TV_SHOWS -> {
-                                    Screen.EpisodeSelection(
-                                        seriesId = itemId,
-                                        seriesName = itemName,
-                                        categoryId = categoryId,
-                                    )
-                                }
+                search(searchScreen) { navController.navigateUp() }
+            }
 
-                                ContentType.MOVIES -> {
-                                    Screen.MovieDetails(
-                                        movieId = itemId,
-                                        movieName = itemName,
-                                        categoryId = categoryId,
-                                    )
-                                }
-
-                                else -> {
-                                    // Live TV: land on the docked mini-player, not full-screen.
-                                    Screen.CategoryList(
-                                        contentType = contentType,
-                                        initialCategoryId = categoryId,
-                                        initialStreamId = itemId,
-                                    )
-                                }
-                            }
-                        openInSectionTab(contentType, screen, openingQuery)
-                    },
-                    onCategorySelected = { categoryId, contentType ->
-                        openInSectionTab(
-                            contentType,
-                            Screen.CategoryList(
-                                contentType = contentType,
-                                initialCategoryId = categoryId,
-                            ),
-                            openingQuery,
-                        )
-                    },
-                    onBack = { navController.navigateUp() },
-                )
+            // The Search tab's root: Search over everything, no Back arrow (Back leaves the app,
+            // as on every tab's root).
+            composable<Screen.SearchTab> {
+                search(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL), null)
             }
 
             composable<Screen.MovieDetails> { backStackEntry ->

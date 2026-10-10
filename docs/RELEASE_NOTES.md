@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Phone Search tab
+**Release Date:** 2026-10-10
+
+- **Search is a tab on the phone's bottom bar**, after the sections and before Settings. It searches everything ("All") and keeps its place like the other tabs; a result opens in its section's tab, as from a section's Search. The app never opens on it. The Search button in each section's header stays.
+
 ## Version: Catch-up TV
 **Release Date:** 2026-10-10
 
