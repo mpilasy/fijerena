@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Xtream lists with a nameless entry
+**Release Date:** 2026-10-09
+
+- **A source whose film or show list has an entry with no name no longer fails its sync.** One entry with `"name": null` (gr8iptv) failed the whole list ("Échec de la synchronisation du catalogue"). Such an entry now takes its title, or is left out when it has none; a missing category id or stream type no longer fails the list either. Sources that worked before read exactly as they did.
+
 ## Version: TV Recent and Favorites
 **Release Date:** 2026-10-09
 

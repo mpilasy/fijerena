@@ -30,11 +30,18 @@ data class XtreamCategory(
 @Serializable
 data class XtreamStream(
     @SerialName("num")
-    val num: Int,
+    val num: Int = 0,
+    // Defaults so one entry with `"name": null` (a gr8iptv film, 2026-10-09) doesn't fail the
+    // whole list: coerceInputValues turns a null into the default. [withName] then names the entry
+    // from its title, or drops it.
     @SerialName("name")
-    val name: String,
+    val name: String = "",
+    // Raw: until 2026-10-09 the key was ignored, so a server sending it as anything but text
+    // must not start failing the list now. [titleText] reads it.
+    @SerialName("title")
+    val title: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("stream_type")
-    val streamType: String,
+    val streamType: String = "",
     @SerialName("stream_id")
     val streamId: Int,
     @SerialName("stream_icon")
@@ -44,7 +51,7 @@ data class XtreamStream(
     @SerialName("added")
     val added: String? = null,
     @SerialName("category_id")
-    val categoryId: String,
+    val categoryId: String = "",
     @SerialName("custom_sid")
     val customSid: String? = null,
     @SerialName("tv_archive")
@@ -81,8 +88,13 @@ data class XtreamStream(
 data class XtreamSeries(
     @SerialName("num")
     val num: Int? = null,
+    // See XtreamStream: a null name no longer fails the list.
     @SerialName("name")
-    val name: String,
+    val name: String = "",
+    // Raw: until 2026-10-09 the key was ignored, so a server sending it as anything but text
+    // must not start failing the list now. [titleText] reads it.
+    @SerialName("title")
+    val title: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("series_id")
     val seriesId: Int,
     @JsonNames("cover", "movie_image")
@@ -469,3 +481,27 @@ object AudioInfoSerializer : KSerializer<AudioInfo?> {
         }
     }
 }
+
+/**
+ * This entry with a name to show: its own, else its title; null when it has neither (nothing to
+ * list it under). A list entry with no name used to fail the whole list.
+ */
+fun XtreamStream.withName(): XtreamStream? {
+    if (name.isNotBlank()) return this
+    val fromTitle = titleText(title) ?: return null
+    return copy(name = fromTitle)
+}
+
+/** See [XtreamStream.withName]. */
+fun XtreamSeries.withName(): XtreamSeries? {
+    if (name.isNotBlank()) return this
+    val fromTitle = titleText(title) ?: return null
+    return copy(name = fromTitle)
+}
+
+/** A `title` that is non-blank text, or null (absent, null, a number, an object…). */
+private fun titleText(title: kotlinx.serialization.json.JsonElement?): String? =
+    (title as? kotlinx.serialization.json.JsonPrimitive)
+        ?.takeIf { it.isString }
+        ?.content
+        ?.takeIf { it.isNotBlank() }

@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.model.withName
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
@@ -164,7 +165,7 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeFromStream<List<XtreamStream>>(stream)
+                    json.decodeFromStream<List<XtreamStream>>(stream).mapNotNull { it.withName() }
                 }
             }
 
@@ -186,7 +187,7 @@ class XtreamApiService(
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     json.decodeToSequence<XtreamStream>(stream).forEach {
-                        onItem(it)
+                        it.withName()?.let { item -> onItem(item) }
                     }
                 }
             }
@@ -207,7 +208,7 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeFromStream<List<XtreamStream>>(stream)
+                    json.decodeFromStream<List<XtreamStream>>(stream).mapNotNull { it.withName() }
                 }
             }
 
@@ -226,7 +227,7 @@ class XtreamApiService(
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     json.decodeToSequence<XtreamStream>(stream).forEach {
-                        onItem(it)
+                        it.withName()?.let { item -> onItem(item) }
                     }
                 }
             }
@@ -247,7 +248,7 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeFromStream<List<XtreamSeries>>(stream)
+                    json.decodeFromStream<List<XtreamSeries>>(stream).mapNotNull { it.withName() }
                 }
             }
 
@@ -266,7 +267,7 @@ class XtreamApiService(
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     json.decodeToSequence<XtreamSeries>(stream).forEach {
-                        onItem(it)
+                        it.withName()?.let { item -> onItem(item) }
                     }
                 }
             }
