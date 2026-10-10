@@ -72,7 +72,8 @@ jobs:
           profile: ${{ matrix.profile }}
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: ./gradlew ${{ matrix.tasks }}
+          # The build refuses connected tests without this (they uninstall the app); a CI emulator has no data to lose.
+          script: ./gradlew ${{ matrix.tasks }} -PallowConnectedTest=true
 
       - name: Upload test reports
         if: always()
