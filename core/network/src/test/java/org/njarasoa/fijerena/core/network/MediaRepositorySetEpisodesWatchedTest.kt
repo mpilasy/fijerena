@@ -148,6 +148,17 @@ class MediaRepositorySetEpisodesWatchedTest {
         }
 
     @Test
+    fun `marking a show unwatched also clears the show's own row from the old show toggle`() =
+        runBlocking {
+            db.watchStateDao().markWatched(P, PROFILE, "7", ContentType.TV_SHOWS, now = 1_000L)
+            repository.setEpisodesWatched("7", season = null, watched = true)
+
+            repository.setEpisodesWatched("7", season = null, watched = false)
+
+            assertFalse(row("7")!!.isCompleted)
+        }
+
+    @Test
     fun `the read counts an episode completed in a TMDB sibling as watched`() =
         runBlocking {
             // Show 8 is another language of show 7 (same tmdbId); its S1E1 and S1E2 are done.

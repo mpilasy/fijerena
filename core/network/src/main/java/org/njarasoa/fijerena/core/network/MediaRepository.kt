@@ -2111,6 +2111,11 @@ class MediaRepository(
                                 episodeDao.clearGroupCompletion(providerId, profileId, episodeId, now)
                             }
                         }
+                        // The show's own row, from the old one-toggle mark on a show row, would keep
+                        // the show's check on after every episode is unmarked.
+                        if (!watched && season == null) {
+                            watchStateDao.markUnwatched(providerId, profileId, seriesId, ContentType.TV_SHOWS, now)
+                        }
                     }
                 }
             }
