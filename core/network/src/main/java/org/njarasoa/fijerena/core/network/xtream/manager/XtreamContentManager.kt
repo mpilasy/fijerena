@@ -18,6 +18,9 @@ import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.toJsonPrimitive
+import org.njarasoa.fijerena.core.network.xtream.CatalogPart
+import org.njarasoa.fijerena.core.network.xtream.CatalogSyncProgress
+import org.njarasoa.fijerena.core.network.xtream.ProgressThrottle
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.*
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
@@ -598,6 +601,8 @@ class XtreamContentManager(
 
                 override suspend fun execute() {
                     val service = sessionManager.apiService ?: return
+                    val part = if (type == XtreamStreamEntity.TYPE_LIVE) CatalogPart.CHANNELS else CatalogPart.FILMS
+                    val progressThrottle = ProgressThrottle()
                     try {
                         coroutineScope {
                             val batch = mutableListOf<XtreamStreamEntity>()
@@ -638,6 +643,7 @@ class XtreamContentManager(
                                     )
 
                                 seenIds.add(it.streamId)
+                                if (progressThrottle.ready()) CatalogSyncProgress.report(providerId, part, seenIds.size)
                                 val old = currentState[it.streamId]
                                 val oldHash = old?.contentHash
                                 if (old != null && oldHash == contentHash && old.num != it.num) {
@@ -726,6 +732,8 @@ class XtreamContentManager(
                         android.util.Log.e("XtreamContentManager", "Error syncing streams", e)
                         // See syncCategories: the failure must reach syncAll() (R-08).
                         throw e
+                    } finally {
+                        CatalogSyncProgress.done(providerId, part)
                     }
                 }
             }
@@ -740,6 +748,7 @@ class XtreamContentManager(
 
                 override suspend fun execute() {
                     val service = sessionManager.apiService ?: return
+                    val progressThrottle = ProgressThrottle()
                     try {
                         coroutineScope {
                             val batch = mutableListOf<XtreamSeriesEntity>()
@@ -772,6 +781,7 @@ class XtreamContentManager(
                                         tmdbId = tmdbId,
                                     )
                                 seenIds.add(it.seriesId)
+                                if (progressThrottle.ready()) CatalogSyncProgress.report(providerId, CatalogPart.SHOWS, seenIds.size)
                                 val oldHash = currentHashes[it.seriesId]
                                 if (oldHash == null || oldHash != contentHash) {
                                     if (oldHash == null) inserted++ else updated++
@@ -841,6 +851,8 @@ class XtreamContentManager(
                         android.util.Log.e("XtreamContentManager", "Error syncing series", e)
                         // See syncCategories: the failure must reach syncAll() (R-08).
                         throw e
+                    } finally {
+                        CatalogSyncProgress.done(providerId, CatalogPart.SHOWS)
                     }
                 }
             }

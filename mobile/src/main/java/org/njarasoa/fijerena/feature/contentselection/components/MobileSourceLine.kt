@@ -36,6 +36,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
+import org.njarasoa.fijerena.core.ui.home.rememberSyncPhase
+import org.njarasoa.fijerena.core.ui.home.updatingText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -47,7 +49,8 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * The line under a tab root's title: the source's name and its last update — a dot and
- * "My IPTV · Updated 2 hours ago" / "· Updating…" / "· Update failed"; no dot nor status for a
+ * "My IPTV · Updated 2 hours ago" / "· Updating…" (or the sync's phase once it has counted
+ * something: "· Loading films… 12 400") / "· Update failed"; no dot nor status for a
  * source that has never synced (Jellyfin, M3U, a new Xtream source) — and ▾ when [showsPicker]. The
  * name is cut first, so the status stays readable. [onClick] (null: not tappable) opens the source
  * picker, or with a single source the reason the update failed.
@@ -57,6 +60,7 @@ fun MobileSourceLine(
     name: String,
     status: SourceSyncStatus,
     lastSyncedAtMs: Long,
+    providerId: Long,
     showsPicker: Boolean,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -70,7 +74,7 @@ fun MobileSourceLine(
             }
 
             SourceSyncStatus.UPDATING -> {
-                stringResource(R.string.home_source_updating)
+                updatingText(rememberSyncPhase(providerId))
             }
 
             SourceSyncStatus.FAILED -> {

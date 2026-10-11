@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -44,6 +46,14 @@ object ProviderSyncRunner {
      */
     val running: Flow<Set<Long>> = runningCounts.map { it.keys }.distinctUntilChanged()
 
+    private val firstSyncIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    /**
+     * Ids of the sources whose first catalogue sync (none ever recorded) is running now: Home says
+     * the library is still loading instead of leaving its empty sections blank.
+     */
+    val firstSyncs: StateFlow<Set<Long>> = firstSyncIds.asStateFlow()
+
     sealed interface Outcome {
         /**
          * Sync completed. [delta] is the row-level change count for an Xtream provider, null for
@@ -75,6 +85,7 @@ object ProviderSyncRunner {
         password: String,
     ): Outcome {
         runningCounts.update { it + (provider.id to (it[provider.id] ?: 0) + 1) }
+        if (provider.lastSyncedAtMs == 0L) firstSyncIds.update { it + provider.id }
         try {
             return syncWithRetries(context, provider, password)
         } finally {
@@ -82,6 +93,7 @@ object ProviderSyncRunner {
                 val left = (counts[provider.id] ?: 1) - 1
                 if (left > 0) counts + (provider.id to left) else counts - provider.id
             }
+            if (provider.id !in runningCounts.value) firstSyncIds.update { it - provider.id }
         }
     }
 

@@ -249,6 +249,7 @@ fun MobileSourceTopBar(
                     name = displayName,
                     status = syncStatus,
                     lastSyncedAtMs = lastSyncedAtMs,
+                    providerId = sourceId,
                     showsPicker = hasPicker,
                     onClick = onSourceLineClick,
                 )

@@ -146,6 +146,7 @@ import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatch
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -205,6 +206,7 @@ fun ContentTypeSelectionScreen(
     var syncStatsReload by remember { mutableIntStateOf(0) }
     val runningSyncs by ProviderSyncRunner.running.collectAsStateWithLifecycle(initialValue = emptySet())
     val syncing = activeProviderId in runningSyncs
+    val firstSyncs by ProviderSyncRunner.firstSyncs.collectAsStateWithLifecycle()
 
     // Category counts per content type: Pair(filtered, total) — null while loading
 
@@ -860,6 +862,7 @@ fun ContentTypeSelectionScreen(
                                     SourceSyncStatusLine(
                                         status = syncStatus,
                                         lastSyncedAtMs = lastSyncedAtMs,
+                                        providerId = activeProviderId,
                                         modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.sm),
                                     )
                                     if (canPick) {
@@ -898,6 +901,13 @@ fun ContentTypeSelectionScreen(
                         onSignIn = { leaveTo(RETURN_SIGN_IN) { onSignInRequired(activeProviderId) } },
                         scale = scale,
                         signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
+                    )
+                } else if (firstRowFocus == null && activeProviderId in firstSyncs) {
+                    // The source's first catalogue sync: nothing to show yet, and blank would read as
+                    // an empty library. Not focusable; the sections stay on the navigation rail.
+                    TvEmptyState(
+                        message = stringResource(R.string.home_library_still_loading),
+                        modifier = Modifier.weight(1f),
                     )
                 } else {
                     // The rows (TV home overhaul plan, Phase 2; the section tiles went 2026-10-09, the

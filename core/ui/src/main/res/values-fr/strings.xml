@@ -613,6 +613,10 @@
     <string name="home_source_updated">Mis à jour %1$s</string>
     <string name="home_source_update_failed">Échec de la mise à jour</string>
     <string name="home_source_update_failed_detail">Échec de la dernière mise à jour : %1$s</string>
+    <string name="home_sync_loading_channels">Chargement des chaînes… %1$s</string>
+    <string name="home_sync_loading_films">Chargement des films… %1$s</string>
+    <string name="home_sync_loading_shows">Chargement des séries… %1$s</string>
+    <string name="home_library_still_loading">Votre bibliothèque est encore en cours de chargement…</string>
     <string name="home_live_row_title">Chaînes</string>
     <string name="home_live_last_watched">Dernière regardée</string>
     <string name="home_favorite_movies">Films favoris</string>

@@ -32,6 +32,8 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
+import org.njarasoa.fijerena.core.ui.home.rememberSyncPhase
+import org.njarasoa.fijerena.core.ui.home.updatingText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
@@ -72,13 +74,15 @@ fun HomeClock(modifier: Modifier = Modifier) {
 }
 
 /**
- * The source pill's status: a dot and "Updating…" / "Update failed" / "Updated 2 hours ago".
+ * The source pill's status: a dot and "Updating…" (or, once the sync has counted something, its
+ * phase: "Loading films… 12 400") / "Update failed" / "Updated 2 hours ago".
  * Nothing for a source that has never synced (Jellyfin, M3U, a new Xtream source).
  */
 @Composable
 internal fun SourceSyncStatusLine(
     status: SourceSyncStatus,
     lastSyncedAtMs: Long,
+    providerId: Long,
     modifier: Modifier = Modifier,
 ) {
     if (status == SourceSyncStatus.NONE) return
@@ -87,7 +91,7 @@ internal fun SourceSyncStatusLine(
     val text =
         when (status) {
             SourceSyncStatus.UPDATING -> {
-                stringResource(R.string.home_source_updating)
+                updatingText(rememberSyncPhase(providerId))
             }
 
             SourceSyncStatus.FAILED -> {

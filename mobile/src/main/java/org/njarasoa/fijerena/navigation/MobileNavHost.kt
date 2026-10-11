@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
+import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
@@ -89,6 +90,10 @@ fun MobileNavHost(
     // the phone): the bottom bar's tabs are the active source's sections, read at startup, on each
     // visit to a tab's root and after every switch.
     var activeSource by remember { mutableStateOf<ActiveSource?>(null) }
+    // The active source's first catalogue sync is running: an empty list says the library is
+    // still loading, not that the category is empty.
+    val firstSyncs by ProviderSyncRunner.firstSyncs.collectAsStateWithLifecycle()
+    val libraryLoading = activeSource?.id?.let { it in firstSyncs } == true
     // The graph's start destination, decided once at startup.
     var openingTab by remember { mutableStateOf(MobileTab.LIVE_TV) }
     // Each Live TV dock as its screen reports it, by back-stack entry — the tab's root and any
@@ -518,6 +523,7 @@ fun MobileNavHost(
                         Screen.CategoryList(ContentType.LIVE_TV),
                         onHome = ::openLiveTvRoot,
                         sourceTopBar = sourceTopBar(MobileTab.LIVE_TV),
+                        libraryLoading = libraryLoading,
                         onDockChanged = reportLiveDock(backStackEntry.id),
                     )
                 }
@@ -530,6 +536,7 @@ fun MobileNavHost(
                         Screen.CategoryList(ContentType.MOVIES),
                         onHome = ::openLiveTvRoot,
                         sourceTopBar = sourceTopBar(MobileTab.MOVIES),
+                        libraryLoading = libraryLoading,
                     )
                 }
             }
@@ -541,6 +548,7 @@ fun MobileNavHost(
                         Screen.CategoryList(ContentType.TV_SHOWS),
                         onHome = ::openLiveTvRoot,
                         sourceTopBar = sourceTopBar(MobileTab.TV_SHOWS),
+                        libraryLoading = libraryLoading,
                     )
                 }
             }
@@ -918,6 +926,7 @@ private fun CategoryListDestination(
     onHome: () -> Unit,
     sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
     onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
+    libraryLoading: Boolean = false,
 ) {
     MobileCategoryListScreen(
         contentType = route.contentType,
@@ -1000,6 +1009,7 @@ private fun CategoryListDestination(
         onHome = onHome,
         onDockChanged = onDockChanged,
         sourceTopBar = sourceTopBar,
+        libraryLoading = libraryLoading,
     )
 }
 

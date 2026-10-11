@@ -60,6 +60,43 @@ class ProviderSyncRunnerRunningTest {
         }
 
     @Test
+    fun aNeverSyncedSourceIsAFirstSyncOnlyWhileItRuns() =
+        runTest {
+            val release = CompletableDeferred<Unit>()
+            connectedProvider {
+                release.await()
+                SyncDelta()
+            }
+
+            val job = launch { ProviderSyncRunner.syncProvider(context, provider, "pw") }
+            assertEquals(setOf(9L), ProviderSyncRunner.firstSyncs.first { it.isNotEmpty() })
+            release.complete(Unit)
+            job.join()
+
+            assertEquals(emptySet<Long>(), ProviderSyncRunner.firstSyncs.value)
+        }
+
+    @Test
+    fun aSourceSyncedBeforeIsNotAFirstSync() =
+        runTest {
+            val synced = provider.copy(lastSyncedAtMs = 1_000L)
+            val release = CompletableDeferred<Unit>()
+            val mediaProvider = mockk<XtreamMediaProvider>()
+            every { mediaProvider.isConnected() } returns true
+            coEvery { mediaProvider.syncAll() } coAnswers {
+                release.await()
+                SyncDelta()
+            }
+            every { MediaProviderFactory.create(synced, context, "pw") } returns mediaProvider
+
+            val job = launch { ProviderSyncRunner.syncProvider(context, synced, "pw") }
+            ProviderSyncRunner.running.first { it.isNotEmpty() }
+            assertEquals(emptySet<Long>(), ProviderSyncRunner.firstSyncs.value)
+            release.complete(Unit)
+            job.join()
+        }
+
+    @Test
     fun overlappingSyncsKeepTheSourceRunningUntilTheLastEnds() =
         runTest {
             val started = CompletableDeferred<Unit>()

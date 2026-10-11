@@ -225,6 +225,8 @@ fun MobileCategoryListScreen(
      * of the section title, back arrow and TV Guide, given this section's Search.
      */
     sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
+    /** The source's first catalogue sync is running: an empty list says the library is still loading. */
+    libraryLoading: Boolean = false,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -869,6 +871,7 @@ fun MobileCategoryListScreen(
                                                 StreamsList(
                                                     items = displayedStreams,
                                                     streamsLoading = displayedStreamsLoading,
+                                                    libraryLoading = libraryLoading,
                                                     selectedCategoryId = displayedCategoryId,
                                                     lastPlayedItemId = state.lastPlayedItemId,
                                                     nowPlaying = nowPlaying,
@@ -1448,6 +1451,7 @@ private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
+    libraryLoading: Boolean = false,
     lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
     catchupDays: ImmutableCatchupDays = ImmutableCatchupDays(),
@@ -1519,7 +1523,8 @@ private fun StreamsList(
         }
 
         items.isNullOrEmpty() -> {
-            MobileEmptyState(message = noItemsText(contentType), icon = sectionIcon(contentType))
+            val message = if (libraryLoading) stringResource(R.string.home_library_still_loading) else noItemsText(contentType)
+            MobileEmptyState(message = message, icon = sectionIcon(contentType))
         }
 
         else -> {

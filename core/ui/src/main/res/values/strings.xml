@@ -649,6 +649,10 @@
     <string name="home_source_updated">Updated %1$s</string>
     <string name="home_source_update_failed">Update failed</string>
     <string name="home_source_update_failed_detail">Last update failed: %1$s</string>
+    <string name="home_sync_loading_channels">Loading channels… %1$s</string>
+    <string name="home_sync_loading_films">Loading films… %1$s</string>
+    <string name="home_sync_loading_shows">Loading shows… %1$s</string>
+    <string name="home_library_still_loading">Still loading your library…</string>
     <string name="home_live_row_title">Channels</string>
     <string name="home_live_last_watched">Last watched</string>
     <string name="home_favorite_movies">Favourite movies</string>
