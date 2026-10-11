@@ -27,5 +27,5 @@ Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is
 | 3 | In progress | |
 | 4 | Done (2026-10-11); needs a phone check | fc5825d3 |
 | 5 | On hold (2026-10-11, user decision); not started. Expect a providers.db migration (offset stored in minutes), sync and export compatibility | |
-| 6 | In progress | |
+| 6 | Done (2026-10-11); needs a device check. Adding a source still doesn't start a full sync, so "still loading" shows only during a first full sync | 272e2bfd |
 | 7 | Done (2026-10-11): splash floor removed; the unused strings were already gone (Phase 6 of the release plan) | 1284a9d4 |
