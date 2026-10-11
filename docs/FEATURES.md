@@ -129,6 +129,7 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 - **Double-tap** the left or right 40 % of the screen seeks 10 s back or forward (VOD).
 - **Swipe up/down** zaps (Live TV), with a 3 s channel toast.
 - **Swipe right** opens the category's channels from the left edge, **swipe left** the Recent channels from the right edge (Live TV); picking a channel tunes it and closes the panel.
+- A swipe counts after 56 dp; one that starts in the outer 10 % of the screen (where the system's back, notification-shade and home swipes start) is ignored.
 - The player turns the phone to landscape (sensor) and puts it back on exit; the app is otherwise portrait. Picture-in-picture when leaving the app during playback.
 
 ### Shared

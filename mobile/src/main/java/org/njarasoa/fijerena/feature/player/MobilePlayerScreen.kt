@@ -764,8 +764,20 @@ fun MobilePlayerContent(
                                     var horizontalAccumulator = 0f
                                     var hasFiredVerticalThisGesture = false
                                     var hasFiredHorizontalThisGesture = false
+                                    var startedInEdge = false
+                                    // In dp, not px, so the distance is the same on every screen.
+                                    val swipePx = CHANNEL_SWIPE_THRESHOLD.toPx()
                                     detectDragGestures(
-                                        onDragStart = {
+                                        onDragStart = { start ->
+                                            // A drag from the outer 10 % of an edge is the system's
+                                            // (back, notification shade, home) or a stray edge touch.
+                                            startedInEdge =
+                                                startsInChannelSwipeEdge(
+                                                    start.x,
+                                                    start.y,
+                                                    size.width.toFloat(),
+                                                    size.height.toFloat(),
+                                                )
                                             verticalAccumulator = 0f
                                             horizontalAccumulator = 0f
                                             hasFiredVerticalThisGesture = false
@@ -785,11 +797,12 @@ fun MobilePlayerContent(
                                             // category/last-watched drawer was consumed here instead —
                                             // channel-skipping while the user tried to scroll the list.
                                             if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
+                                            if (startedInEdge) return@detectDragGestures
                                             change.consume()
                                             verticalAccumulator += dragAmount.y
                                             horizontalAccumulator += dragAmount.x
                                             // Vertical: channel switching
-                                            if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > 100f) {
+                                            if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > swipePx) {
                                                 hasFiredVerticalThisGesture = true
                                                 if (verticalAccumulator < 0) {
                                                     loaderViewModel.nextChannel()
@@ -799,7 +812,7 @@ fun MobilePlayerContent(
                                                 verticalAccumulator = 0f
                                             }
                                             // Horizontal: overlay panels
-                                            if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > 80f) {
+                                            if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > swipePx) {
                                                 hasFiredHorizontalThisGesture = true
                                                 when {
                                                     horizontalAccumulator > 0 && !showLastWatchedOverlay -> {
