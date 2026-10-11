@@ -188,7 +188,7 @@ and a first-run experience written for the developer rather than a stranger.
   Fix: "guide" instead of "EPG", plain sentences first, and HTTP codes only in developer mode.
 - **U-M7 TV VOD seeking.** Left and Right move a scrub cursor that seeks only on OK. Jump ±10 s
   on a tap and scrub only on hold, which is what Google TV users expect.
-- **U-M8 TV text size.** At the 80 % default, 14 sp `labelSmall` renders at about 11 sp. Add
+- **U-M8 TV text size. Declined 2026-10-11: TV scaling stays as is; not to be re-proposed.** At the 80 % default, 14 sp `labelSmall` renders at about 11 sp. Add
   110-120 % for low vision. System `fontScale` is already respected, which is good.
 - **U-M9 Phone portrait lock, no tablet or foldable layout.** On target 36 Android 16 ignores the
   lock on large screens anyway. Unlock at ≥600 dp and add a list/detail two-pane layout.
