@@ -241,8 +241,8 @@ A failed catalogue download (network, timeout, refused login) deletes nothing; a
 
 Backup & storage → Export / Import, through the system file picker.
 
-- **Exported:** every source (name, URL, username, type, config, per-source settings with the active profile's content filters, active flag), every guide source (with its auto-refresh interval), per-source favourites, favourite categories and watch state, and global settings (theme, UI scale, the active profile's dev mode). The device-wide guide auto-refresh is no longer exported; importing an older file that has it turned off sets that file's guide sources to Off.
-- **Not exported:** passwords (EncryptedSharedPreferences), caches, guide programme data.
+- **Exported:** every source (name, URL, username, type, config, per-source settings with the active profile's content filters, active flag), every guide source (with its auto-refresh interval) except an Xtream source's own `xmltv.php` guide (its address carries the login; the source's next login adds it again, and importing an older file skips it), per-source favourites, favourite categories and watch state, and global settings (theme, UI scale, the active profile's dev mode). The device-wide guide auto-refresh is no longer exported; importing an older file that has it turned off sets that file's guide sources to Off.
+- **Not exported:** passwords (EncryptedSharedPreferences), caches, guide programme data. A hand-added guide source is exported as typed, so a password in its URL is in the file.
 - **Import:** a "Select What to Import" dialog — General Settings, Sources, Guide sources, Favorites (favourites, favourite categories and watch state). Only the checked sections are imported. When an imported source's name matches an existing one: **Overwrite** (update URL, username, type, config and settings in place), **Duplicate** (add with an `(imported)` suffix) or **Skip**. Guide sources merge by URL and favourites by item id; duplicates are skipped. Passwords have to be entered again.
 
 ---

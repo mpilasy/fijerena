@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager.ExportedEpgSourc
 import org.njarasoa.fijerena.core.network.SettingsExportManager.ExportedSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager.GlobalSettings
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity.Companion.REFRESH_OFF
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 
 /** A guide source's own refresh interval in a settings file — see docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5. */
 class SettingsExportEpgIntervalTest {
@@ -72,5 +73,16 @@ class SettingsExportEpgIntervalTest {
         val file = SettingsExportManager.json.encodeToString(ExportedSettings.serializer(), ExportedSettings())
 
         assertFalse(file, file.contains("epgAutoRefreshEnabled"))
+    }
+
+    @Test
+    fun `an Xtream source's own guide is left out, with or without its login, whatever its label`() {
+        val xtream = ProviderEntity(name = "IPTV", url = "http://iptv.test:8080", username = "me")
+
+        assertTrue(SettingsExportManager.isXtreamOwnGuide("http://iptv.test:8080/xmltv.php", xtream))
+        assertTrue(SettingsExportManager.isXtreamOwnGuide("http://iptv.test:8080/xmltv.php?username=me&password=pw", xtream))
+        assertFalse(SettingsExportManager.isXtreamOwnGuide("http://other.test/xmltv.php?username=me&password=pw", xtream))
+        assertFalse(SettingsExportManager.isXtreamOwnGuide("http://epg.example/guide.xml.gz", xtream))
+        assertFalse(SettingsExportManager.isXtreamOwnGuide("http://iptv.test:8080/xmltv.php", xtream.copy(type = "M3U")))
     }
 }

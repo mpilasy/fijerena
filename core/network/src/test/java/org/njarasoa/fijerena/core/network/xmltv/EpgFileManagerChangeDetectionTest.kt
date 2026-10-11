@@ -117,6 +117,15 @@ class EpgFileManagerChangeDetectionTest {
     }
 
     @Test
+    fun requestGoesToTheGivenUrlWithTheSourcesValidators() {
+        val url = "http://iptv.test/xmltv.php?username=me&password=pw"
+        val request = EpgFileManager.buildDownloadRequest(source, indexHasRows = true, url = url)
+
+        assertEquals(url, request.url.toString())
+        assertEquals(source.etag, request.header("If-None-Match"))
+    }
+
+    @Test
     fun populatedIndexSendsValidators() {
         val request = EpgFileManager.buildDownloadRequest(source, indexHasRows = true)
 

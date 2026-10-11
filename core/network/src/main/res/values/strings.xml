@@ -16,6 +16,7 @@
     <string name="error_network">Network error. Check your connection and try again.</string>
     <string name="error_unauthorized">Login failed. Check your username and password.</string>
     <string name="error_saved_login_lost">This device lost a saved login (its secure key store was reset). Edit the source and enter the password again.</string>
+    <string name="error_guide_login_missing">This guide is downloaded with the source\'s login, and this device has no password for it. Edit the source and enter the password.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
     <string name="error_catalog_sync_failed">Catalog sync failed. %1$s</string>
     <string name="sync_error_download_failed">Download failed</string>

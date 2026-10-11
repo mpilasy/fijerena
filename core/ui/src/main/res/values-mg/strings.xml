@@ -477,6 +477,7 @@
     <!-- Mobile Settings Cards -->
     <string name="settings_about_section_title">Momba</string>
     <string name="settings_about_tagline">Fitaovana filalaovana horonantsary avo lenta ho an\'ny Android</string>
+    <string name="app_disclaimer_no_content">Tsy manome na mitahiry votoaty i Fijerena. Ny loharano ampidirinao ihany no alefany.</string>
     <string name="settings_developer_mode_title">Fomba mpamorona</string>
     <string name="settings_developer_mode_desc">Alefaso ny antontan\'isa ho an\'ny mpamorona sy ny endri-javatra fanadiovana</string>
     <string name="settings_export_import_section_title">Alefa / Ampidiro</string>

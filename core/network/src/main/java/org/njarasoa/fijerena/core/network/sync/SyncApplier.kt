@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 
@@ -501,8 +502,18 @@ class SyncApplier(
             )
         return when (val resolution = SyncMerge.resolve(record, local)) {
             Resolution.Upsert -> {
-                val remote = payload!!
-                val providerId = sync.providerByKey(remote.providerKey)?.id ?: return Outcome.Deferred
+                val provider = sync.providerByKey(payload!!.providerKey) ?: return Outcome.Deferred
+                val providerId = provider.id
+                // An automatic Xtream guide source arrives with its login (older builds store it so):
+                // kept without it here, like every automatic source on this version.
+                val remote =
+                    if (provider.type ==
+                        "XTREAM"
+                    ) {
+                        payload.copy(url = AutoXmltvSources.withoutLogin(payload.url, payload.label, provider.url))
+                    } else {
+                        payload
+                    }
                 inSettingsApply {
                     val dao = settingsDb.epgSourceDao()
                     // First sync: the same source added on both devices before linking adopts this key.

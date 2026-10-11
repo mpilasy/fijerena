@@ -72,7 +72,8 @@ No analytics, no ads, no crash upload. Logins stay on the device, encrypted. The
 the sources and guide links you add (and the stream and image addresses they list), to TMDB if you
 configure a key, and to a sync server if you set one up; sync data is end-to-end encrypted before it
 leaves the device. The camera is used only to
-scan a pairing QR code on the phone.
+scan a pairing QR code on the phone. Android backup and device transfer are off; move to a new device
+with Export / Import or live sync. The details are in [PRIVACY.md](PRIVACY.md).
 
 ---
 

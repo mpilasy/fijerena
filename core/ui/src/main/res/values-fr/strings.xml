@@ -531,6 +531,7 @@
     <!-- Mobile Settings Cards -->
     <string name="settings_about_section_title">À propos</string>
     <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
+    <string name="app_disclaimer_no_content">Fijerena ne fournit ni n\'héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
     <string name="settings_developer_mode_title">Mode développeur</string>
     <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
     <string name="settings_diagnostics_title">Diagnostics</string>

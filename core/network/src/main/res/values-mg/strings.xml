@@ -63,4 +63,5 @@
     <string name="epg_error_source_not_found">Tsy hita ny loharanon\'ny fitarihana</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="error_saved_login_lost">Very ny fidirana voatahiry tamin\'ity fitaovana ity (naverina tamin\'ny voalohany ny fitehirizana ny fanalahidiny miafina). Ovay ny loharano ary ampidiro indray ny tenimiafina.</string>
+    <string name="error_guide_login_missing">Ny fidiran\'ny loharano no ilaina hakana ity fitarihana ity, nefa tsy misy ny tenimiafiny amin\'ity fitaovana ity. Ovay ny loharano ary ampidiro ny tenimiafina.</string>
 </resources>

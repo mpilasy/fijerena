@@ -85,7 +85,7 @@ class XtreamSessionManager(
                         serviceAssigned = true
 
                         // One automatic XMLTV guide source, while the account has live channels
-                        reconcileAutoXmltvSource(service, url, username, password)
+                        reconcileAutoXmltvSource(service, url)
 
                         authResponse
                     } finally {
@@ -148,7 +148,7 @@ class XtreamSessionManager(
                         serviceAssigned = true
 
                         // One automatic XMLTV guide source, while the account has live channels
-                        reconcileAutoXmltvSource(service, credentials.url, credentials.username, password)
+                        reconcileAutoXmltvSource(service, credentials.url)
 
                         authResponse
                     } finally {
@@ -206,7 +206,7 @@ class XtreamSessionManager(
                         serviceAssigned = true
 
                         // One automatic XMLTV guide source, carried over from the old server
-                        reconcileAutoXmltvSource(service, newUrl, credentials.username, password, previousUrl = credentials.url)
+                        reconcileAutoXmltvSource(service, newUrl, previousUrl = credentials.url)
 
                         authResponse
                     } finally {
@@ -219,16 +219,14 @@ class XtreamSessionManager(
         }
 
     /**
-     * Keeps this source's automatic XMLTV guide source (`<server>/xmltv.php?…`) in line with the
-     * login: rewritten in place on a credential change, duplicates removed, added only when the
+     * Keeps this source's automatic XMLTV guide source (`<server>/xmltv.php`, the login added only
+     * when it is downloaded) in line with the login: duplicates removed, added only when the
      * account has live channels and removed when it has none; disabled while the source's "Provides a
      * guide" is off. See [AutoXmltvSources].
      */
     private suspend fun reconcileAutoXmltvSource(
         service: XtreamApiService,
         baseUrl: String,
-        user: String,
-        pass: String,
         previousUrl: String? = null,
     ) {
         // EPG sources belong to a provider - without a real provider id there is nothing to attach to.
@@ -243,8 +241,6 @@ class XtreamSessionManager(
                         deleteIndexRows = AutoXmltvSources.indexRowsDeleter(context),
                         providerId = providerId,
                         providerUrl = baseUrl,
-                        username = user,
-                        password = pass,
                         hasLiveChannels = if (providesGuide) hasLiveChannels(service) else null,
                         previousProviderUrl = previousUrl,
                         providesGuide = providesGuide,

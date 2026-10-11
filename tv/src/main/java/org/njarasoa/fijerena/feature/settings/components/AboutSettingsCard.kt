@@ -45,6 +45,11 @@ fun AboutSettingsCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                     )
+                    Text(
+                        text = stringResource(R.string.app_disclaimer_no_content),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
                 }
             },
         )

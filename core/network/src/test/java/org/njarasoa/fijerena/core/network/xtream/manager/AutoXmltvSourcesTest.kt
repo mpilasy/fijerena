@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 
 /** [AutoXmltvSources]: one automatic guide source per Xtream source, hand-added ones untouched. */
@@ -24,17 +25,28 @@ class AutoXmltvSourcesTest {
         addedAtMs: Long = id,
     ) = EpgSourceEntity(id = id, url = url, label = label, providerId = providerId, addedAtMs = addedAtMs)
 
+    /** An automatic source as older builds stored it, with the login in its URL. */
     private fun auto(
         id: Long,
         user: String,
         providerId: Long = 1,
     ) = source(id, AutoXmltvSources.xmltvUrl(server, user, "pw"), providerId = providerId)
 
+    /** An automatic source as it is stored now, without the login. */
+    private fun stored(
+        id: Long,
+        providerId: Long = 1,
+    ) = source(id, AutoXmltvSources.storedUrl(server), providerId = providerId)
+
+    private val storedUrl = "$server/xmltv.php"
+
     // --- isAutoXmltvSource ---
 
     @Test
     fun `the provider's xmltv php with a Bulk label is automatic`() {
         assertTrue(AutoXmltvSources.isAutoXmltvSource(auto(1, "test"), server))
+        // Stored without the login, as this version does.
+        assertTrue(AutoXmltvSources.isAutoXmltvSource(stored(1), server))
         // Trailing slash on either side, host case, explicit default port.
         assertTrue(AutoXmltvSources.isAutoXmltvSource(auto(1, "test"), "$server/"))
         assertTrue(
@@ -58,9 +70,10 @@ class AutoXmltvSourcesTest {
         assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "http://10.0.2.2:8081/xmltv.php?username=a&password=b"), server))
         assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "https://10.0.2.2:8080/xmltv.php?username=a&password=b"), server))
         assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "$server/other/xmltv.php?username=a&password=b"), server))
-        // Another file, or no credentials.
+        // Another file, or a query that isn't a login.
         assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "$server/epg.xml.gz"), server))
-        assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "$server/xmltv.php"), server))
+        assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "$server/xmltv.php?days=3"), server))
+        assertFalse(AutoXmltvSources.isAutoXmltvSource(source(1, "$server/xmltv.php", label = "My guide"), server))
         assertFalse(AutoXmltvSources.isAutoXmltvSource(auto(1, "a"), "not a url"))
     }
 
@@ -70,38 +83,82 @@ class AutoXmltvSourcesTest {
     fun `first login with live channels adds one source`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            val refresh = reconcile(dao, user = "test", hasLive = true)
+            val refresh = reconcile(dao, hasLive = true)
             assertTrue(refresh)
             val added = dao.rows.single()
-            assertEquals(AutoXmltvSources.xmltvUrl(server, "test", "pw"), added.url)
+            assertEquals(storedUrl, added.url)
             assertEquals("10.0.2.2 (Bulk)", added.label)
         }
 
     @Test
-    fun `a credential change rewrites the source in place and resets its ingest state`() =
+    fun `a row stored with the login loses it in place and keeps its ingest state`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
             dao.rows +=
                 auto(5, "test").copy(timezoneOffsetHours = 2, lastIngestedAtMs = 99, etag = "e", lastContentSha256 = "h", lastChannels = 10)
-            val refresh = reconcile(dao, user = "kilonga", hasLive = true)
+            val refresh = reconcile(dao, hasLive = true)
             assertTrue(refresh)
             val row = dao.rows.single()
             assertEquals(5L, row.id)
-            assertEquals(AutoXmltvSources.xmltvUrl(server, "kilonga", "pw"), row.url)
+            assertEquals(storedUrl, row.url)
             assertEquals(2, row.timezoneOffsetHours)
-            assertEquals(0L, row.lastIngestedAtMs)
-            assertEquals(0, row.lastChannels)
-            assertNull(row.etag)
-            assertNull(row.lastContentSha256)
+            assertEquals(99L, row.lastIngestedAtMs)
+            assertEquals(10, row.lastChannels)
+            assertEquals("e", row.etag)
         }
 
     @Test
-    fun `duplicates collapse to the one on the current login, with their guide rows`() =
+    fun `a login with other credentials leaves the stored row alone`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            dao.rows += listOf(auto(1, "test"), auto(2, "kilonga"), auto(3, "alice"))
+            dao.rows += stored(5).copy(lastIngestedAtMs = 99)
+            dao.writes = 0
+            assertFalse(reconcile(dao, hasLive = true))
+            assertEquals(0, dao.writes)
+            assertEquals(storedUrl, dao.rows.single().url)
+        }
+
+    @Test
+    fun `a server change resets the ingest state`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += stored(1).copy(lastIngestedAtMs = 99, etag = "e")
+            val newServer = "http://new.example:8080"
+            AutoXmltvSources.reconcile(dao, {}, 1, newServer, hasLiveChannels = true, previousProviderUrl = server)
+            val row = dao.rows.single()
+            assertEquals(0L, row.lastIngestedAtMs)
+            assertNull(row.etag)
+        }
+
+    @Test
+    fun `only an automatic source stored without its login is downloaded with it`() {
+        val xtream = ProviderEntity(id = 1, name = "IPTV", url = server, username = "me")
+        assertTrue(AutoXmltvSources.needsLogin(stored(1), xtream))
+        assertFalse(AutoXmltvSources.needsLogin(auto(1, "test"), xtream))
+        assertFalse(AutoXmltvSources.needsLogin(source(1, storedUrl, label = "My guide"), xtream))
+        assertFalse(AutoXmltvSources.needsLogin(stored(1), xtream.copy(type = "JELLYFIN")))
+        assertFalse(AutoXmltvSources.needsLogin(stored(1), null))
+        assertEquals("$storedUrl?username=me&password=p#%z w", AutoXmltvSources.withLogin(storedUrl, "me", "p#%z w"))
+    }
+
+    @Test
+    fun `withoutLogin strips only an automatic source's login`() {
+        val legacy = AutoXmltvSources.xmltvUrl(server, "me", "pw")
+        assertEquals(storedUrl, AutoXmltvSources.withoutLogin(legacy, "10.0.2.2 (Bulk)", server))
+        assertEquals(storedUrl, AutoXmltvSources.withoutLogin(storedUrl, "10.0.2.2 (Bulk)", server))
+        assertEquals(legacy, AutoXmltvSources.withoutLogin(legacy, "Mine", server))
+        assertEquals(legacy, AutoXmltvSources.withoutLogin(legacy, "10.0.2.2 (Bulk)", "http://other.example"))
+        val handAdded = "http://epg.example/guide.xml?token=abc"
+        assertEquals(handAdded, AutoXmltvSources.withoutLogin(handAdded, "guide (Bulk)", server))
+    }
+
+    @Test
+    fun `duplicates collapse to the stored one, with their guide rows`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += listOf(auto(1, "test"), stored(2), auto(3, "alice"))
             val deletedIndex = mutableListOf<Long>()
-            val refresh = reconcile(dao, user = "kilonga", hasLive = true, deletedIndex = deletedIndex)
+            val refresh = reconcile(dao, hasLive = true, deletedIndex = deletedIndex)
             assertFalse(refresh)
             assertEquals(listOf(2L), dao.rows.map { it.id })
             assertEquals(listOf(1L, 3L), deletedIndex.sorted())
@@ -114,7 +171,7 @@ class AutoXmltvSourcesTest {
             val handAdded = source(9, "http://epg.example/guide.xml.gz", label = "guide")
             val sameUrlHandAdded = source(8, "$server/xmltv.php?username=x&password=y", label = "Mine")
             dao.rows += listOf(auto(1, "test"), handAdded, sameUrlHandAdded, auto(4, "test", providerId = 2))
-            reconcile(dao, user = "test", hasLive = false)
+            reconcile(dao, hasLive = false)
             assertEquals(listOf(4L, 8L, 9L), dao.rows.map { it.id }.sorted())
         }
 
@@ -122,21 +179,23 @@ class AutoXmltvSourcesTest {
     fun `unknown live channels adds nothing and removes only duplicates`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            assertFalse(reconcile(dao, user = "test", hasLive = null))
+            assertFalse(reconcile(dao, hasLive = null))
             assertTrue(dao.rows.isEmpty())
 
             dao.rows += listOf(auto(1, "test"), auto(2, "kilonga"))
-            reconcile(dao, user = "test", hasLive = null)
+            reconcile(dao, hasLive = null)
             assertEquals(listOf(1L), dao.rows.map { it.id })
         }
 
     @Test
-    fun `a hand-added source with the exact URL stops a second one being added`() =
+    fun `a hand-added source with the same URL, with or without a login, stops a second one being added`() =
         runBlocking {
-            val dao = FakeEpgSourceDao()
-            dao.rows += source(8, AutoXmltvSources.xmltvUrl(server, "test", "pw"), label = "Mine")
-            assertFalse(reconcile(dao, user = "test", hasLive = true))
-            assertEquals(listOf(8L), dao.rows.map { it.id })
+            listOf(AutoXmltvSources.xmltvUrl(server, "test", "pw"), storedUrl).forEach { url ->
+                val dao = FakeEpgSourceDao()
+                dao.rows += source(8, url, label = "Mine")
+                assertFalse(reconcile(dao, hasLive = true))
+                assertEquals(listOf(8L), dao.rows.map { it.id })
+            }
         }
 
     @Test
@@ -145,10 +204,10 @@ class AutoXmltvSourcesTest {
             val dao = FakeEpgSourceDao()
             dao.rows += auto(1, "test")
             val newServer = "http://new.example:8080"
-            AutoXmltvSources.reconcile(dao, {}, 1, newServer, "test", "pw", hasLiveChannels = true, previousProviderUrl = server)
+            AutoXmltvSources.reconcile(dao, {}, 1, newServer, hasLiveChannels = true, previousProviderUrl = server)
             val row = dao.rows.single()
             assertEquals(1L, row.id)
-            assertEquals(AutoXmltvSources.xmltvUrl(newServer, "test", "pw"), row.url)
+            assertEquals("$newServer/xmltv.php", row.url)
             assertEquals("new.example (Bulk)", row.label)
         }
 
@@ -167,7 +226,7 @@ class AutoXmltvSourcesTest {
         runBlocking {
             listOf(ProviderSettings(), ProviderSettings(providesGuide = true, providesGuideSetByUser = true)).forEach { settings ->
                 val dao = FakeEpgSourceDao()
-                assertTrue(reconcile(dao, user = "test", hasLive = true, providesGuide = settings.providesGuideOn))
+                assertTrue(reconcile(dao, hasLive = true, providesGuide = settings.providesGuideOn))
                 assertTrue(dao.rows.single().enabled)
             }
         }
@@ -179,7 +238,7 @@ class AutoXmltvSourcesTest {
             val handAdded = source(9, "http://epg.example/guide.xml.gz", label = "guide")
             dao.rows += listOf(auto(1, "test").copy(lastChannels = 120, lastIngestedAtMs = 99), handAdded)
             val deletedIndex = mutableListOf<Long>()
-            assertFalse(reconcile(dao, user = "test", hasLive = true, providesGuide = false, deletedIndex = deletedIndex))
+            assertFalse(reconcile(dao, hasLive = true, providesGuide = false, deletedIndex = deletedIndex))
             val row = dao.rows.single { it.id == 1L }
             assertFalse(row.enabled)
             assertEquals(120, row.lastChannels)
@@ -192,7 +251,7 @@ class AutoXmltvSourcesTest {
     fun `off never adds one`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            assertFalse(reconcile(dao, user = "test", hasLive = true, providesGuide = false))
+            assertFalse(reconcile(dao, hasLive = true, providesGuide = false))
             assertTrue(dao.rows.isEmpty())
         }
 
@@ -200,18 +259,19 @@ class AutoXmltvSourcesTest {
     fun `a login while off doesn't re-enable or duplicate the disabled source`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            dao.rows += auto(1, "test").copy(enabled = false)
+            dao.rows += stored(1).copy(enabled = false)
             dao.writes = 0
-            assertFalse(reconcile(dao, user = "test", hasLive = true, providesGuide = false))
+            assertFalse(reconcile(dao, hasLive = true, providesGuide = false))
             assertEquals(listOf(1L), dao.rows.map { it.id })
             assertFalse(dao.rows.single().enabled)
             assertEquals(0, dao.writes)
 
-            // A credential change while off rewrites it in place, still disabled.
-            reconcile(dao, user = "kilonga", hasLive = true, providesGuide = false)
+            // A row stored with the login loses it in place while off, still disabled.
+            dao.rows.replaceAll { auto(1, "kilonga").copy(enabled = false) }
+            reconcile(dao, hasLive = true, providesGuide = false)
             val row = dao.rows.single()
             assertEquals(1L, row.id)
-            assertEquals(AutoXmltvSources.xmltvUrl(server, "kilonga", "pw"), row.url)
+            assertEquals(storedUrl, row.url)
             assertFalse(row.enabled)
         }
 
@@ -220,7 +280,7 @@ class AutoXmltvSourcesTest {
         runBlocking {
             val dao = FakeEpgSourceDao()
             dao.rows += auto(1, "test").copy(enabled = false)
-            reconcile(dao, user = "test", hasLive = true, providesGuide = true)
+            reconcile(dao, hasLive = true, providesGuide = true)
             assertEquals(listOf(1L), dao.rows.map { it.id })
         }
 
@@ -228,14 +288,14 @@ class AutoXmltvSourcesTest {
     fun `turned on again, the same row is enabled with its stats`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            dao.rows += auto(1, "test").copy(enabled = false, lastChannels = 120, lastIngestedAtMs = 99)
+            dao.rows += stored(1).copy(enabled = false, lastChannels = 120, lastIngestedAtMs = 99)
             val refresh =
                 AutoXmltvSources.reconcile(
                     sourceDao = dao,
                     deleteIndexRows = {},
                     providerId = 1,
                     providerUrl = server,
-                    currentUrl = AutoXmltvSources.xmltvUrl(server, "test", "pw"),
+                    currentUrl = storedUrl,
                     hasLiveChannels = null,
                     providesGuide = true,
                     enableKept = true,
@@ -287,7 +347,7 @@ class AutoXmltvSourcesTest {
     // --- cleanUp (one-time, at start) ---
 
     @Test
-    fun `cleanup keeps the current login's source, removes the rest and is idempotent`() =
+    fun `cleanup keeps the oldest source without its login, removes the rest and is idempotent`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
             val handAdded = source(9, "http://epg.example/guide.xml.gz", label = "guide")
@@ -296,13 +356,13 @@ class AutoXmltvSourcesTest {
             dao.rows += listOf(auto(4, "a", providerId = 2), auto(5, "b", providerId = 3), auto(6, "c", providerId = 3))
             val providers =
                 listOf(
-                    AutoXmltvSources.ProviderState(1, server, AutoXmltvSources.xmltvUrl(server, "alice", "pw"), hasLiveChannels = true),
-                    AutoXmltvSources.ProviderState(2, server, AutoXmltvSources.xmltvUrl(server, "a", "pw"), hasLiveChannels = false),
+                    AutoXmltvSources.ProviderState(1, server, storedUrl, hasLiveChannels = true),
+                    AutoXmltvSources.ProviderState(2, server, storedUrl, hasLiveChannels = false),
                     AutoXmltvSources.ProviderState(3, server, null, hasLiveChannels = null),
                 )
             AutoXmltvSources.cleanUp(providers, dao) {}
-            assertEquals(listOf(3L, 5L, 9L), dao.rows.map { it.id }.sorted())
-            assertEquals(AutoXmltvSources.xmltvUrl(server, "alice", "pw"), dao.rows.first { it.id == 3L }.url)
+            assertEquals(listOf(1L, 5L, 9L), dao.rows.map { it.id }.sorted())
+            assertEquals(storedUrl, dao.rows.first { it.id == 1L }.url)
 
             val before = dao.rows.toList()
             dao.writes = 0
@@ -316,7 +376,7 @@ class AutoXmltvSourcesTest {
         runBlocking {
             val dao = FakeEpgSourceDao()
             AutoXmltvSources.cleanUp(
-                listOf(AutoXmltvSources.ProviderState(1, server, AutoXmltvSources.xmltvUrl(server, "a", "pw"), hasLiveChannels = true)),
+                listOf(AutoXmltvSources.ProviderState(1, server, storedUrl, hasLiveChannels = true)),
                 dao,
             ) {}
             assertTrue(dao.rows.isEmpty())
@@ -324,11 +384,10 @@ class AutoXmltvSourcesTest {
 
     private suspend fun reconcile(
         dao: FakeEpgSourceDao,
-        user: String,
         hasLive: Boolean?,
         deletedIndex: MutableList<Long> = mutableListOf(),
         providesGuide: Boolean = true,
-    ): Boolean = AutoXmltvSources.reconcile(dao, { deletedIndex += it }, 1, server, user, "pw", hasLive, providesGuide = providesGuide)
+    ): Boolean = AutoXmltvSources.reconcile(dao, { deletedIndex += it }, 1, server, hasLive, providesGuide = providesGuide)
 
     /** In-memory [EpgSourceDao]: only what [AutoXmltvSources] uses. */
     private class FakeEpgSourceDao : EpgSourceDao {

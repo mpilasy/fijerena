@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
@@ -18,20 +19,26 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import java.net.URI
 
 /**
- * The guide source an Xtream source gets by itself: `<server>/xmltv.php?username=…&password=…`,
- * labelled `<host> (Bulk)`. There is at most one per Xtream source: a login with other credentials
- * rewrites its URL in place, and it exists only while the account has live channels. It is
+ * The guide source an Xtream source gets by itself: `<server>/xmltv.php`, labelled `<host> (Bulk)`.
+ * The row holds no login: [fetchUrl] adds `?username=…&password=…` from the source's encrypted
+ * login when the guide is downloaded, so `providers.db` and exports never carry the password. Rows
+ * written before that (and records from older builds) carry it in the query; they still count as
+ * automatic, and [withoutLogin] strips it. There is at most one per Xtream source, and it exists
+ * only while the account has live channels. It is
  * enabled while the source's "Provides a guide" ([ProviderSettings.providesGuide]) is on and
  * disabled, never deleted, while it is off — detected, turned off when the guide comes back empty
  * ([onEmptyIngest]), and changeable in Edit Source ([reconcileStored]).
  *
  * No column marks it: a source is automatic when its URL is the provider's server (same scheme,
- * host, port and path) plus `/xmltv.php?username=…&password=…` and its label ends with
- * [LABEL_SUFFIX] — see [isAutoXmltvSource]. Anything else is hand-added and never touched here.
- * A user who renames the automatic source turns it into a hand-added one.
+ * host, port and path) plus `/xmltv.php` (with no query, or `?username=…&password=…`) and its label
+ * ends with [LABEL_SUFFIX] — see [isAutoXmltvSource]. Anything else is hand-added and never touched
+ * here. A user who renames the automatic source turns it into a hand-added one.
  *
  * Every write goes through [EpgSourceDao], so live sync carries it to the group's other devices
- * (the URL update and the deletions included). See docs/plans/archive/20261003_ux-overhaul-plan.md → GD0c.
+ * (the URL update and the deletions included). Live sync sends it with the login in the query
+ * ([syncUrl], inside the end-to-end encrypted record) as older builds expect, and the receiver
+ * strips it again. See docs/plans/archive/20261003_ux-overhaul-plan.md → GD0c and
+ * docs/plans/20261011_public-release-fdroid-readiness-plan.md → R1.
  */
 object AutoXmltvSources {
     private const val TAG = "AutoXmltvSources"
@@ -39,12 +46,22 @@ object AutoXmltvSources {
     private const val XMLTV_PATH = "/xmltv.php"
     private const val PROVIDER_TYPE_XTREAM = "XTREAM"
 
-    /** The automatic source's URL. Built as it always was (no encoding), so existing rows still match. */
+    /** The automatic source's URL as stored: the server's `xmltv.php`, without the login. */
+    fun storedUrl(providerUrl: String): String = "${providerUrl.trim().trimEnd('/')}$XMLTV_PATH"
+
+    /** [storedUrl] with the login, as the server wants it. Built as it always was (no encoding), so older builds still match it. */
+    fun withLogin(
+        storedUrl: String,
+        username: String,
+        password: String,
+    ): String = "$storedUrl?username=$username&password=$password"
+
+    /** The automatic source's URL with the login: what is downloaded, and what older builds stored. */
     fun xmltvUrl(
         providerUrl: String,
         username: String,
         password: String,
-    ): String = "${providerUrl.trim().trimEnd('/')}$XMLTV_PATH?username=$username&password=$password"
+    ): String = withLogin(storedUrl(providerUrl), username, password)
 
     fun label(providerUrl: String): String = EpgFileManager.extractLabel(providerUrl) + LABEL_SUFFIX
 
@@ -52,20 +69,86 @@ object AutoXmltvSources {
     fun isAutoXmltvSource(
         source: EpgSourceEntity,
         providerUrl: String,
+    ): Boolean = isAutoXmltvSource(source.url, source.label, providerUrl)
+
+    private fun isAutoXmltvSource(
+        url: String,
+        label: String,
+        providerUrl: String,
+    ): Boolean {
+        val query = url.substringAfter('?', missingDelimiterValue = "")
+        val noLogin = '?' !in url
+        return label.endsWith(LABEL_SUFFIX) &&
+            (noLogin || (query.startsWith("username=") && query.contains("&password="))) &&
+            isServerXmltv(url, providerUrl)
+    }
+
+    /**
+     * Whether [url] is the `xmltv.php` of the Xtream server at [providerUrl], whatever its label and
+     * query: the automatic source, or one the viewer renamed. Either holds, or is downloaded with,
+     * the source's login.
+     */
+    fun isServerXmltv(
+        url: String,
+        providerUrl: String,
     ): Boolean {
         // Only the part before `?` is parsed: the query carries a raw password, which may hold
         // anything (`#`, `%`, spaces) that a URI parser would choke on or misread.
-        val base = source.url.substringBefore('?')
-        val query = source.url.substringAfter('?', missingDelimiterValue = "")
+        val base = url.substringBefore('?')
         val server = serverOf(providerUrl.trim())
-        val sourceServer = serverOf(base.removeSuffix(XMLTV_PATH))
-        return source.label.endsWith(LABEL_SUFFIX) &&
-            base.endsWith(XMLTV_PATH) &&
-            query.startsWith("username=") &&
-            query.contains("&password=") &&
-            server != null &&
-            server == sourceServer
+        return base.endsWith(XMLTV_PATH) && server != null && server == serverOf(base.removeSuffix(XMLTV_PATH))
     }
+
+    /** [url] as it is stored: without the login when it is the automatic source of [providerUrl], unchanged otherwise. */
+    fun withoutLogin(
+        url: String,
+        label: String,
+        providerUrl: String,
+    ): String = if (isAutoXmltvSource(url, label, providerUrl)) url.substringBefore('?') else url
+
+    /** Whether [source] is downloaded with its Xtream source's login: an automatic source stored without it. */
+    internal fun needsLogin(
+        source: EpgSourceEntity,
+        provider: ProviderEntity?,
+    ): Boolean = '?' !in source.url && provider?.type == PROVIDER_TYPE_XTREAM && isAutoXmltvSource(source, provider.url)
+
+    /**
+     * The URL to download [source] from: an automatic source's URL with its Xtream source's login
+     * (null when this device has no password for it), anything else as stored.
+     */
+    suspend fun fetchUrl(
+        context: Context,
+        source: EpgSourceEntity,
+    ): String? = loginUrl(ProviderRepository(context), source)
+
+    /**
+     * The URL live sync sends for [source]: with the login, as older builds store and fetch it.
+     * It travels inside the end-to-end encrypted record, as the source's own password does.
+     */
+    suspend fun syncUrl(
+        repository: ProviderRepository,
+        source: EpgSourceEntity,
+    ): String = loginUrl(repository, source) ?: source.url
+
+    private suspend fun loginUrl(
+        repository: ProviderRepository,
+        source: EpgSourceEntity,
+    ): String? =
+        withContext(Dispatchers.IO) {
+            val provider = repository.getProviderById(source.providerId)
+            if (provider != null && needsLogin(source, provider)) {
+                val login = repository.getLogin(provider)
+                if (login.username.isNotEmpty() &&
+                    login.password.isNotEmpty()
+                ) {
+                    withLogin(source.url, login.username, login.password)
+                } else {
+                    null
+                }
+            } else {
+                source.url
+            }
+        }
 
     /** Scheme, host and port compared case-insensitively with default ports filled in; the path exactly, minus a trailing `/`. */
     private fun serverOf(url: String): String? =
@@ -100,15 +183,16 @@ object AutoXmltvSources {
      * - [hasLiveChannels] `false`: delete every automatic source. `null` (unknown): add nothing,
      *   delete nothing beyond the duplicates.
      * - Otherwise keep one — the one already on [currentUrl], else the oldest — rewrite its URL to
-     *   [currentUrl] (with its ingest state reset, so the next refresh downloads for real) and
-     *   delete the others.
+     *   [currentUrl] (with its ingest state reset, so the next refresh downloads for real, unless
+     *   only the login is dropped from it) and delete the others.
      * - With none left, [addMissing] and [hasLiveChannels] `true`, add one, unless a hand-added
-     *   source already has that exact URL.
+     *   source already has that URL (with or without a login).
      * - [providesGuide] off ("Provides a guide", [ProviderSettings.providesGuideOn]): the kept one
      *   is disabled, never deleted for it, and none is added. On, [enableKept] (the viewer turned it
      *   back on) re-enables the kept one with its stats; otherwise its enabled state stays as it is.
      *
-     * [currentUrl] null (no credentials at hand) keeps the row's URL as it is. [previousProviderUrl]
+     * [currentUrl] is the [storedUrl] of the provider's server; null (no credentials at hand) keeps
+     * the row's URL as it is. [previousProviderUrl]
      * is the server the provider used before a URL change: its automatic source is carried over.
      */
     fun plan(
@@ -128,7 +212,10 @@ object AutoXmltvSources {
         val keep = if (hasLiveChannels == false) null else autos.firstOrNull { it.url == currentUrl } ?: autos.firstOrNull()
         val deleteIds = autos.filter { it !== keep }.map { it.id }
         val rewritten =
-            if (keep != null && currentUrl != null && keep.url != currentUrl) {
+            if (keep != null && currentUrl != null && keep.url.substringBefore('?') == currentUrl && keep.url != currentUrl) {
+                // Same server, stored with the login (an older row): only the login goes.
+                keep.copy(url = currentUrl)
+            } else if (keep != null && currentUrl != null && keep.url != currentUrl) {
                 // A row carried over from the previous server takes the new server's label.
                 val newLabel = if (isAutoXmltvSource(keep, providerUrl)) keep.label else label(providerUrl)
                 keep.copy(url = currentUrl, label = newLabel).withIngestionStateReset()
@@ -149,7 +236,7 @@ object AutoXmltvSources {
                 addMissing &&
                 hasLiveChannels == true &&
                 currentUrl != null &&
-                own.none { it.url == currentUrl }
+                own.none { it.url.substringBefore('?') == currentUrl }
             ) {
                 EpgSourceEntity(url = currentUrl, label = label(providerUrl), enabled = true, providerId = providerId)
             } else {
@@ -195,15 +282,14 @@ object AutoXmltvSources {
     /**
      * [plan] then [apply] for one provider, after a login. Returns whether its guide needs a
      * refresh. [providesGuide] off ([ProviderSettings.providesGuideOn]) keeps the automatic source
-     * disabled and never adds one.
+     * disabled and never adds one. The row holds no login, so a login with other credentials
+     * leaves it as it is; the next download uses them.
      */
     suspend fun reconcile(
         sourceDao: EpgSourceDao,
         deleteIndexRows: suspend (List<Long>) -> Unit,
         providerId: Long,
         providerUrl: String,
-        username: String,
-        password: String,
         hasLiveChannels: Boolean?,
         previousProviderUrl: String? = null,
         providesGuide: Boolean = true,
@@ -213,7 +299,7 @@ object AutoXmltvSources {
             deleteIndexRows = deleteIndexRows,
             providerId = providerId,
             providerUrl = providerUrl,
-            currentUrl = xmltvUrl(providerUrl, username, password),
+            currentUrl = storedUrl(providerUrl),
             hasLiveChannels = hasLiveChannels,
             previousProviderUrl = previousProviderUrl,
             providesGuide = providesGuide,
@@ -277,12 +363,7 @@ object AutoXmltvSources {
                         deleteIndexRows = indexRowsDeleter(context),
                         providerId = providerId,
                         providerUrl = provider.url,
-                        currentUrl =
-                            if (login.username.isNotEmpty() && login.password.isNotEmpty()) {
-                                xmltvUrl(provider.url, login.username, login.password)
-                            } else {
-                                null
-                            },
+                        currentUrl = if (login.username.isNotEmpty() && login.password.isNotEmpty()) storedUrl(provider.url) else null,
                         hasLiveChannels = hasLive,
                         providesGuide = providesGuide,
                         enableKept = providesGuide,
@@ -347,7 +428,7 @@ object AutoXmltvSources {
     data class ProviderState(
         val id: Long,
         val url: String,
-        /** The automatic source's URL for the current login; null when the password can't be read. */
+        /** The automatic source's [storedUrl]; null when the password can't be read. */
         val currentXmltvUrl: String?,
         /** True / false when known from this device's catalogue, null when not. */
         val hasLiveChannels: Boolean?,
@@ -412,11 +493,7 @@ object AutoXmltvSources {
                                 id = provider.id,
                                 url = provider.url,
                                 currentXmltvUrl =
-                                    if (login.username.isNotEmpty() && login.password.isNotEmpty()) {
-                                        xmltvUrl(provider.url, login.username, login.password)
-                                    } else {
-                                        null
-                                    },
+                                    if (login.username.isNotEmpty() && login.password.isNotEmpty()) storedUrl(provider.url) else null,
                                 hasLiveChannels = hasLive,
                             )
                         }

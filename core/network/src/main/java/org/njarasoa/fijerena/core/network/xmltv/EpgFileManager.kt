@@ -115,12 +115,16 @@ class EpgFileManager private constructor(
          * is a guide to keep. After a clear, or a staging run whose swap never committed, sending
          * them would let the server confirm "unchanged" against rows we no longer have, and the
          * guide would stay empty until the upstream file happened to change (G-11).
+         *
+         * [url] is where to download from: [EpgSourceEntity.url], or for an automatic Xtream guide
+         * source that URL with the login added ([AutoXmltvSources.fetchUrl]).
          */
         internal fun buildDownloadRequest(
             source: EpgSourceEntity,
             indexHasRows: Boolean,
+            url: String = source.url,
         ): Request {
-            val requestBuilder = Request.Builder().url(source.url)
+            val requestBuilder = Request.Builder().url(url)
             if (indexHasRows) {
                 source.etag?.let { requestBuilder.header("If-None-Match", it) }
                 source.lastModifiedHeader?.let { requestBuilder.header("If-Modified-Since", it) }
@@ -1277,13 +1281,19 @@ class EpgFileManager private constructor(
         val downloadStartMs = System.currentTimeMillis()
 
         try {
+            // The automatic Xtream guide source is stored without its login: added here, only for the request.
+            val fetchUrl = AutoXmltvSources.fetchUrl(context, source)
+            if (fetchUrl == null) {
+                sourceDao.markError(source.id, context.getString(R.string.error_guide_login_missing))
+                return null
+            }
             val indexHasRows = EpgIndexer.getInstance(context).hasProgrammesForSource(source.id)
             if (!indexHasRows && (source.etag != null || source.lastModifiedHeader != null || source.lastContentSha256 != null)) {
                 Log.i(TAG, "EPG source $label has validators but no rows in the index — treating as changed")
             }
             for (attempt in 1..5) {
                 try {
-                    val request = buildDownloadRequest(source, indexHasRows)
+                    val request = buildDownloadRequest(source, indexHasRows, fetchUrl)
                     withContext(Dispatchers.IO) {
                         okHttpClient.newCall(request).await().use { response ->
                             if (response.code == 304) {

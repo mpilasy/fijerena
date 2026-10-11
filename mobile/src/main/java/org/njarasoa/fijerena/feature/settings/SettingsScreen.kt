@@ -441,6 +441,11 @@ fun MobileSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
                     Text(
+                        text = stringResource(R.string.app_disclaimer_no_content),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    )
+                    Text(
                         text = stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),

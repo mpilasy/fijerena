@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import org.njarasoa.fijerena.core.network.profile.ProfileDao
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 
 @Database(
     entities = [
@@ -35,7 +36,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
-        const val DB_VERSION = 16
+        const val DB_VERSION = 17
         private const val DB_NAME = "providers.db"
 
         @Volatile
@@ -315,6 +316,40 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 16→17, no schema change: each Xtream source's automatic guide source
+         * (`<server>/xmltv.php?username=…&password=…`) loses its login, which stays only in the
+         * encrypted credential store and is added again when the guide is downloaded
+         * ([AutoXmltvSources.fetchUrl]). Hand-added sources keep their URL. Nothing is queued for
+         * live sync: what is sent for these rows is the same as before ([AutoXmltvSources.syncUrl]).
+         * See `docs/plans/20261011_public-release-fdroid-readiness-plan.md` → R1.
+         */
+        val MIGRATION_16_17 =
+            object : Migration(16, 17) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    val rows =
+                        db
+                            .query(
+                                "SELECT e.`id`, e.`url`, e.`label`, p.`url` FROM `epg_source` e " +
+                                    "JOIN `providers` p ON p.`id` = e.`provider_id` WHERE p.`type` = 'XTREAM' AND e.`url` LIKE '%?%'",
+                            ).use { cursor ->
+                                buildList {
+                                    while (cursor.moveToNext()) {
+                                        val url = cursor.getString(1)
+                                        val stored = AutoXmltvSources.withoutLogin(url, cursor.getString(2), cursor.getString(3))
+                                        if (stored != url) add(cursor.getLong(0) to stored)
+                                    }
+                                }
+                            }
+                    if (rows.isNotEmpty()) {
+                        // The live sync triggers, from an earlier open, still exist: hold them off.
+                        db.execSQL("UPDATE `sync_clock` SET `applying` = 1 WHERE `id` = ${SyncClockEntity.SINGLE_ROW}")
+                        rows.forEach { (id, url) -> db.execSQL("UPDATE `epg_source` SET `url` = ? WHERE `id` = ?", arrayOf<Any>(url, id)) }
+                        db.execSQL("UPDATE `sync_clock` SET `applying` = 0 WHERE `id` = ${SyncClockEntity.SINGLE_ROW}")
+                    }
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -346,6 +381,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_13_14,
                         MIGRATION_14_15,
                         MIGRATION_15_16,
+                        MIGRATION_16_17,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

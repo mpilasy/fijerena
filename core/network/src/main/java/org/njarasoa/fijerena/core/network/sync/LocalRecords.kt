@@ -11,6 +11,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 
 /**
  * Turns this device's pending versions into [SyncRecord]s to send, reading the current row, value
@@ -147,9 +148,19 @@ class LocalRecords(
                 val source = sync.sourceByKey(v.itemKey)
                 val providerKey = source?.let { sync.providerKey(it.providerId) }
                 when {
-                    source == null -> SyncRecord(key, v.hlc, deleted = true)
-                    providerKey == null -> null
-                    else -> SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.EpgSource.of(source, providerKey)))
+                    source == null -> {
+                        SyncRecord(key, v.hlc, deleted = true)
+                    }
+
+                    providerKey == null -> {
+                        null
+                    }
+
+                    // An automatic Xtream guide source goes with its login, as older builds store it.
+                    else -> {
+                        val sent = source.copy(url = AutoXmltvSources.syncUrl(providers, source))
+                        SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.EpgSource.of(sent, providerKey)))
+                    }
                 }
             }
 

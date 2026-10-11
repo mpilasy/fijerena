@@ -131,6 +131,41 @@ class SyncApplierEpgSourceTest {
     }
 
     @Test
+    fun `an automatic guide source received with its login is stored without it`() {
+        val withLogin = "http://iptv.test/xmltv.php?username=me&password=secret"
+
+        val updated = applyAndCaptureUpdate(SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", withLogin, "iptv.test (Bulk)", 0, true)))
+
+        assertEquals("http://iptv.test/xmltv.php", updated.url)
+    }
+
+    @Test
+    fun `a new automatic guide source is matched and inserted without its login`() {
+        coEvery { sync.sourceByKey("src-1") } returns null
+        val lookedUp = slot<String>()
+        coEvery { sync.sourcesAt(any(), capture(lookedUp)) } returns emptyList()
+        val inserted = slot<EpgSourceEntity>()
+        coEvery { sources.insertSource(capture(inserted)) } returns 1L
+        val withLogin = "http://iptv.test/xmltv.php?username=me&password=secret"
+
+        runBlocking {
+            applier().apply(listOf(record(SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", withLogin, "iptv.test (Bulk)", 0, true)))))
+        }
+
+        assertEquals("http://iptv.test/xmltv.php", lookedUp.captured)
+        assertEquals("http://iptv.test/xmltv.php", inserted.captured.url)
+    }
+
+    @Test
+    fun `a hand-added source with a login in its URL is stored as received`() {
+        val handAdded = "http://iptv.test/xmltv.php?username=me&password=secret"
+
+        val updated = applyAndCaptureUpdate(SyncPayloads.encode(SyncPayloads.EpgSource("prov-1", handAdded, "My guide", 0, true)))
+
+        assertEquals(handAdded, updated.url)
+    }
+
+    @Test
     fun `a source's interval is sent, and a source without one sends none`() {
         assertTrue(SyncPayloads.encode(SyncPayloads.EpgSource.of(local, "prov-1")).contains("\"refreshIntervalHours\":6"))
         assertFalse(

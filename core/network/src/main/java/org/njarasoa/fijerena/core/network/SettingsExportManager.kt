@@ -13,6 +13,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
@@ -20,6 +21,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 
 /**
  * Manages export and import of all application settings to/from a JSON file.
@@ -27,7 +29,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * Exported data:
  * - Global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, etc.)
  * - Provider configurations (name, URL, username, type, config, per-provider settings)
- * - EPG sources (URL, label, timezone offset, enabled state)
+ * - EPG sources (URL, label, timezone offset, enabled state), except an Xtream source's own
+ *   `xmltv.php` guide, which carries its login: the source's next login adds it again
  * - Favorites per provider (item ID, name, category, content type), active profile only
  *
  * NOT exported (for security/size reasons):
@@ -73,6 +76,16 @@ class SettingsExportManager(
         ): Int? =
             source.refreshIntervalHours?.takeIf { EpgRefreshSchedule.isValidInterval(it) }
                 ?: EpgSourceEntity.REFRESH_OFF.takeIf { global.epgAutoRefreshEnabled == false }
+
+        /**
+         * Whether [url] is [owner]'s own `xmltv.php` guide (automatic or renamed), which is fetched
+         * with, or holds, the Xtream login: never exported, never imported. See
+         * docs/plans/20261011_public-release-fdroid-readiness-plan.md → R1.
+         */
+        internal fun isXtreamOwnGuide(
+            url: String,
+            owner: ProviderEntity,
+        ): Boolean = owner.type == "XTREAM" && AutoXmltvSources.isServerXmltv(url, owner.url)
     }
 
     @Serializable
@@ -277,6 +290,7 @@ class SettingsExportManager(
             val epgSources =
                 settingsDb.epgSourceDao().getAllSourcesOnce().mapNotNull { source ->
                     val owner = providersById[source.providerId] ?: return@mapNotNull null
+                    if (isXtreamOwnGuide(source.url, owner)) return@mapNotNull null
                     ExportedEpgSource(
                         url = source.url,
                         label = source.label,
@@ -618,7 +632,9 @@ class SettingsExportManager(
                             allProvidersForFavorites.firstOrNull {
                                 it.name == es.providerName && it.url == es.providerUrl
                             } ?: providersByName[es.providerName]
-                        if (owner == null || (owner.id to es.url) in existingKeys) {
+                        // An older file may hold an Xtream source's own guide, login included:
+                        // left out, as this version's exports do. The source's next login adds it.
+                        if (owner == null || (owner.id to es.url) in existingKeys || isXtreamOwnGuide(es.url, owner)) {
                             sourcesSkipped++
                             continue
                         }

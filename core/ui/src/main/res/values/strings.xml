@@ -558,6 +558,8 @@
     <!-- Mobile Settings Cards -->
     <string name="settings_about_section_title">About</string>
     <string name="settings_about_tagline">Premium native media player for Android</string>
+    <!-- The no-content disclaimer: About now, the first-run welcome screen later (plan R4). -->
+    <string name="app_disclaimer_no_content">Fijerena does not provide or host any content. It plays the sources you add.</string>
     <string name="settings_developer_mode_title">Developer Mode</string>
     <string name="settings_developer_mode_desc">Enable stats for nerds and debug features</string>
     <string name="settings_diagnostics_title">Diagnostics</string>

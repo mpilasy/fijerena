@@ -7,13 +7,14 @@ Room's own exported schema for `xtream_v2.db` and `providers.db` is committed un
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 16
+**Version:** 17
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
 `providers.providerKey` and `sync_tombstone` for live sync; v14 added `epg_source.source_key`,
 `sync_outbox` and `sync_clock`, filled by triggers; v15 turned `sync_outbox` into `sync_version`;
-v16 added `epg_source.refresh_interval_hours`.)
+v16 added `epg_source.refresh_interval_hours`; v17, no schema change, dropped the login from
+automatic Xtream guide source URLs.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -94,7 +95,7 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INTEGER (PK) | Auto-generated ID |
-| `url` | TEXT | XMLTV source URL |
+| `url` | TEXT | XMLTV source URL. An Xtream source's automatic guide source (label ending ` (Bulk)`) is stored as `<server>/xmltv.php`, without the login: `AutoXmltvSources.fetchUrl` adds `?username=…&password=…` from the encrypted credential store at download time, and live sync sends it with the login (inside the encrypted record) for older builds, stripped again on receipt. `MIGRATION_16_17` strips existing rows, with the sync triggers silenced. Hand-added URLs are stored as typed |
 | `label` | TEXT | Display label for the source |
 | `provider_id` | INTEGER | Owning provider ID (enforced `NOT NULL` in v8, backfilled from active/first provider) |
 | `timezone_offset_hours` | INTEGER | Manual offset for parsing |
