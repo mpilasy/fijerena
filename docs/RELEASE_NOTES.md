@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Mark a season or show watched
+**Release Date:** 2026-10-11
+
+- **Mark a whole season or show watched or unwatched:** on TV, hold OK or press Menu on a season tab, or use the new action in the show's header; on the phone, long-press a season chip or use the show icon under Play. The mark is still kept per episode, so an episode added later shows as unwatched. Watched adds nothing to Recent; unwatched keeps where you stopped. Not offered for Jellyfin sources, which keep watched state on the server.
+
 ## Version: Everyday fixes
 **Release Date:** 2026-10-11
 

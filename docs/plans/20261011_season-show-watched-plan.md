@@ -52,6 +52,6 @@ focus changes.
 | # | Status | Commit |
 |---|---|---|
 | 1 | Done (2026-10-11) | 0d881379 |
-| 2 | In progress | |
+| 2 | Done (2026-10-11) | 0f32d48b |
 | 3 | In progress | |
 | 4 | Not started | |
