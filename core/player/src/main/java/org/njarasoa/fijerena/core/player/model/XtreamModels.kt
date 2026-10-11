@@ -133,22 +133,24 @@ data class XtreamSeries(
 data class XtreamAuthResponse(
     @SerialName("user_info")
     val userInfo: XtreamUserInfo,
+    // A refused login is just {"user_info":{"auth":0}}: no server_info and no username, password
+    // or status, so these default rather than failing the parse and hiding "wrong login".
     @SerialName("server_info")
-    val serverInfo: XtreamServerInfo,
+    val serverInfo: XtreamServerInfo? = null,
 )
 
 @Serializable
 data class XtreamUserInfo(
     @SerialName("username")
-    val username: String,
+    val username: String = "",
     @SerialName("password")
-    val password: String,
+    val password: String = "",
     @SerialName("message")
     val message: String? = null,
     @SerialName("auth")
-    val auth: Int,
+    val auth: Int = 0,
     @SerialName("status")
-    val status: String,
+    val status: String = "",
     @SerialName("exp_date")
     val expDate: String? = null,
     @SerialName("is_trial")
