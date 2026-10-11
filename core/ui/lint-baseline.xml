@@ -2280,17 +2280,6 @@
 
     <issue
         id="PluralsCandidate"
-        message="Formatting %d followed by words (&quot;streams&quot;): This should probably be a plural rather than a string"
-        errorLine1="    &lt;string name=&quot;category_streams_count&quot;>%1$d streams&lt;/string>"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="159"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;prefix&quot;): This should probably be a plural rather than a string"
         errorLine1="    &lt;string name=&quot;provider_prefixes_value&quot;>%1$d prefix(es): %2$s&lt;/string>"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -2462,17 +2451,6 @@
         <location
             file="src/main/res/values/strings.xml"
             line="797"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="PluralsCandidate"
-        message="Formatting %d followed by words (&quot;streams&quot;): This should probably be a plural rather than a string"
-        errorLine1="    &lt;string name=&quot;stream_count_format&quot;>%1$d streams&lt;/string>"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="798"
             column="5"/>
     </issue>
 

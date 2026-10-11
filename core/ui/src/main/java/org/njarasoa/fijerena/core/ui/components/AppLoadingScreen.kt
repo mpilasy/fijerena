@@ -35,20 +35,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
- * How long this screen stays up even once the app is ready.
- *
- * The splash in front of it cannot animate — on the Shields (API 30) core-splashscreen takes its
- * compat path, which only sets the icon on an ImageView, and the art is a photograph so an
- * AnimatedVectorDrawable isn't an option on newer devices either. This screen is the only part of
- * startup that moves, and since startup disk I/O moved off the main thread it renders fast enough
- * to be gone in a frame or two without a floor.
- *
- * One second is long enough for the breathing pulse and orbital arc to read as an intentional
- * transition rather than a flicker, without making returning users wait on an app that is ready.
- */
-const val APP_LOADING_MIN_MS = 1000L
-
-/**
  * Startup splash replacement displayed until provider configuration is resolved.
  *
  * The system splash is dismissed the moment Compose renders anything, which used to be inside this

@@ -30,7 +30,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -47,7 +46,6 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
-import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -273,14 +271,6 @@ fun TvNavHost(
 
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
-    // Floor on the loading screen's time so its animation is actually seen — see
-    // APP_LOADING_MIN_MS for why nothing in front of it can move.
-    var minimumShownElapsed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(APP_LOADING_MIN_MS)
-        minimumShownElapsed = true
-    }
-
     val startDestination =
         remember(initializationComplete, hasProvider) {
             if (!initializationComplete) {
@@ -454,7 +444,7 @@ fun TvNavHost(
         modifier = Modifier.fillMaxSize(),
         shape = RectangleShape,
     ) {
-        if (initializationComplete && startDestination != null && minimumShownElapsed) {
+        if (initializationComplete && startDestination != null) {
             CompositionLocalProvider(LocalTvNavRail provides rail) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     NavHost(
