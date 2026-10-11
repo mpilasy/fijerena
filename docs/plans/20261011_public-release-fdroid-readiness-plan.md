@@ -329,6 +329,19 @@ Phase 8 always comes last: nothing goes to the public repository before the tree
 
 ## Progress
 
+**Phase 4 done (2026-10-11, e062432b).** R1: the automatic Xtream guide source is stored as
+`<server>/xmltv.php` (providers.db v17 strips existing rows, sync triggers held off) and the login
+is added at download time from the encrypted store; with no password on the device the source
+shows `error_guide_login_missing` and nothing is requested. Live sync still sends the login inside
+the encrypted record so older builds keep working; receivers strip it. Exports leave out every
+Xtream source's own `xmltv.php` (re-added on login); hand-added guide URLs are exported as typed.
+R4: `PRIVACY.md`, and the `app_disclaimer_no_content` string in About on TV and phone (Phase 5
+reuses it). Data extraction rules exclude everything from cloud backup and device transfer.
+Checked on the phone emulator: v16 → v17 with both bears guide sources stripped, ingest state and
+pending sync rows unchanged; a manual refresh downloaded and ingested the bears guide (172k
+programmes) with the stored URL still bare; the disclaimer shows in Settings. Behaviour change: a
+login with other credentials no longer forces an immediate guide re-download.
+
 **Phase 1 done (2026-10-11, b1f78c65).** `LICENSE` (GPL-3.0-or-later) and `server/LICENSE`
 (AGPL-3.0-or-later), `server/package.json` licence; README rewritten user-first (licence, "does
 not provide or host any content", Android 11+, "Artwork and fonts": Blue Marble is NASA public
@@ -354,7 +367,7 @@ repository removed (FFmpeg resolves from Maven Central). F7: daemon JVM and CI o
 | 1 | Done (2026-10-11) | b1f78c65 |
 | 2 | Done (2026-10-11) | c6994c46 |
 | 3 | Not started | |
-| 4 | In progress (2026-10-11) | |
+| 4 | Done (2026-10-11) | e062432b |
 | 5 | Not started | |
 | 6 | In progress (2026-10-11) | |
 | 7 | Not started | |

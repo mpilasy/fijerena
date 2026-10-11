@@ -1,5 +1,11 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Privacy
+**Release Date:** 2026-10-11
+
+- **Your Xtream password no longer sits in the guide source or in exports:** a source's own guide (`xmltv.php`) is stored without the login, which is added only when the guide is downloaded. Existing guide sources are converted on update. Exports leave that guide out; it comes back when the source signs in after an import. Live sync still works with older versions.
+- **Privacy:** PRIVACY.md describes what the app stores and sends. About says Fijerena does not provide or host any content. Android cloud backup and device-to-device transfer no longer copy the app's data; use Export / Import or live sync to move to a new device.
+
 ## Version: No Google components
 **Release Date:** 2026-10-11
 
