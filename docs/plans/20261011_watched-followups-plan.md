@@ -1,6 +1,6 @@
 # Watched follow-ups
 
-**Status:** In progress (2026-10-11).
+**Status:** In progress (2026-10-11): all three phases on main; emulator check pending.
 
 Three follow-ups to [Mark a season or show watched](./archive/20261011_season-show-watched-plan.md),
 decided by the user on 2026-10-11.
@@ -20,7 +20,7 @@ decided by the user on 2026-10-11.
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | Play and the Home card go to the first unwatched episode | In progress |
+| 1 | Play and the Home card go to the first unwatched episode | Done (4a4e6824) |
 | 2 | Hide every watched mark on Jellyfin | Done (404c6d91) |
 | 3 | Phone list rows: long-press menu | Done (be1e5e40) |
 
@@ -43,6 +43,13 @@ decided by the user on 2026-10-11.
 - Not for Jellyfin (its Continue watching comes from the server).
 - Tests: unit tests for the anchor rule (skip over watched, wrap to start, all watched) and for
   the shelf card after a show mark.
+- **Done** (4a4e6824): shared rule `nextUnwatchedEpisodeId`; a mark no longer counts as a play (a row
+  without `lastPlayedAt` has timestamp 0); after a season or show mark the screens recompute the
+  anchor without moving focus or scroll. The shelf keeps every finished show whose episode list is
+  known, a one-episode show included, until removed from Recent. `XtreamEpisodeDao.getNextEpisode`
+  and its androidTest went with nothing left calling them. Left as is: the screens' anchor counts
+  only the show's own rows (TMDB siblings don't move it, the shelf counts them); unmarking a season
+  doesn't move Play back.
 
 ## Phase 2: no watched marks on Jellyfin
 
