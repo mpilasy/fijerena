@@ -53,5 +53,5 @@ focus changes.
 |---|---|---|
 | 1 | Done (2026-10-11) | 0d881379 |
 | 2 | Done (2026-10-11) | 0f32d48b |
-| 3 | In progress | |
-| 4 | Not started | |
+| 3 | Done (2026-10-11); follow-up fix 0dfdb995 (old show-level row) | 102c7950 |
+| 4 | In progress | |
