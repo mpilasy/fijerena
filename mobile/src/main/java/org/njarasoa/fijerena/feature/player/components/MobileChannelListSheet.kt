@@ -31,13 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
 fun MobileChannelListSheet(
@@ -47,6 +50,8 @@ fun MobileChannelListSheet(
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart,
     currentStreamId: String? = null,
+    /** Archive days per channel id: channels that keep one get a catch-up badge. */
+    catchupDays: ImmutableCatchupDays = ImmutableCatchupDays(),
 ) {
     val listState = rememberLazyListState()
 
@@ -124,17 +129,23 @@ fun MobileChannelListSheet(
                                     },
                                 shape = MaterialTheme.shapes.small,
                             ) {
-                                Text(
-                                    text = stream.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = CinemaTextPrimary,
+                                Row(
                                     modifier =
                                         Modifier.padding(
                                             horizontal = CinemaSpacing.md,
                                             vertical = CinemaSpacing.sm,
                                         ),
-                                    maxLines = 1,
-                                )
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    catchupDays[stream.id]?.let { CatchupBadge(it, iconSize = MobileDimensions.iconSmall) }
+                                    Text(
+                                        text = stream.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = CinemaTextPrimary,
+                                        maxLines = 1,
+                                    )
+                                }
                             }
                         }
                     }

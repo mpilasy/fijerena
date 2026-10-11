@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.io.Closeable
@@ -671,6 +672,25 @@ class MediaRepository(
     /** See [MediaProvider.getCatchupDays]. Empty when the source has no catch-up. */
     suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> =
         provider?.takeIf { it.capabilities.supportsCatchup }?.getCatchupDays(itemIds).orEmpty()
+
+    /**
+     * Archive days of the channels among a list's [items] that keep one, for the lists' catch-up
+     * badge: category rows and `####` separators are left out. Empty when the lookup fails — a
+     * missing badge is the whole cost.
+     */
+    suspend fun getCatchupDaysForRows(items: List<MediaItem>): Map<String, Int> {
+        val channelIds =
+            items
+                .filter { it.target !is BrowseTarget.CategoryRef && !it.isCategoryMarker }
+                .map { it.id }
+        val days =
+            if (channelIds.isEmpty()) {
+                emptyMap()
+            } else {
+                suspendRunCatching { getCatchupDays(channelIds) }.getOrDefault(emptyMap())
+            }
+        return days
+    }
 
     suspend fun search(
         query: String,

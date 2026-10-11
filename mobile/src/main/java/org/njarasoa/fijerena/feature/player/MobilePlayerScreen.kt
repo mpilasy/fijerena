@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -65,6 +66,7 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
@@ -983,11 +985,17 @@ fun MobilePlayerContent(
                 enter = slideInHorizontally { -it },
                 exit = slideOutHorizontally { -it },
             ) {
+                val categoryStreams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) }
+                // Asked while the panel is open only: channels that keep an archive get a catch-up badge.
+                val categoryCatchupDays by produceState(ImmutableCatchupDays(), categoryStreams) {
+                    value = ImmutableCatchupDays(loaderViewModel.catchupDays(categoryStreams))
+                }
                 MobileChannelListSheet(
                     title = stringResource(R.string.player_category_channels),
-                    streams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) },
+                    streams = categoryStreams,
                     panelAlignment = Alignment.CenterStart,
                     currentStreamId = state.streamId,
+                    catchupDays = categoryCatchupDays,
                     onSelect = { item ->
                         // Finalize current session properly before starting new one
                         finalizeSession(viewModel.playbackState.value, loaderViewModel)
@@ -1005,13 +1013,18 @@ fun MobilePlayerContent(
                 enter = slideInHorizontally { it },
                 exit = slideOutHorizontally { it },
             ) {
+                val otherRecentStreams =
+                    remember(recentStreams, state.streamId) {
+                        ImmutableMediaList(recentStreams.filter { it.id != state.streamId })
+                    }
+                val recentCatchupDays by produceState(ImmutableCatchupDays(), otherRecentStreams) {
+                    value = ImmutableCatchupDays(loaderViewModel.catchupDays(otherRecentStreams))
+                }
                 MobileChannelListSheet(
                     title = stringResource(R.string.category_recent_label),
-                    streams =
-                        remember(recentStreams, state.streamId) {
-                            ImmutableMediaList(recentStreams.filter { it.id != state.streamId })
-                        },
+                    streams = otherRecentStreams,
                     panelAlignment = Alignment.CenterEnd,
+                    catchupDays = recentCatchupDays,
                     onSelect = { item ->
                         // Finalize current session properly before starting new one
                         finalizeSession(viewModel.playbackState.value, loaderViewModel)

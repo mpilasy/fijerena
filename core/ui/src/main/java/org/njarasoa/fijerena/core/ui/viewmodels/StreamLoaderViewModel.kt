@@ -499,6 +499,14 @@ class StreamLoaderViewModel(
     }
 
     /**
+     * Archive days of the channels among [items] that keep one, for the player's channel lists'
+     * catch-up badge ([MediaRepository.getCatchupDaysForRows]). Empty off Live TV or before the
+     * repository is ready.
+     */
+    suspend fun catchupDays(items: List<MediaItem>): Map<String, Int> =
+        mediaRepository?.takeIf { contentType == ContentType.LIVE_TV }?.getCatchupDaysForRows(items).orEmpty()
+
+    /**
      * Plays [item]. [zapped] is true for a channel reached by stepping through the list (Up/Down
      * in full screen, a swipe on the phone) rather than chosen: it goes into Recent only once it
      * has settled (see [recentRecordDelayMs]).

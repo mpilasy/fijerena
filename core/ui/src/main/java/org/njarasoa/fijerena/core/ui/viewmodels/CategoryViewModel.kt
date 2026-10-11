@@ -17,12 +17,10 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
-import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -534,24 +532,12 @@ class CategoryViewModel(
     }
 
     /**
-     * Archive days of the channels among [items] that keep one, for the list's catch-up badge.
-     * Asked by the list itself, so every list of channels (a category, Recent, Favourites, the
-     * Live TV panel's tabs) gets it. Empty off Live TV or when the lookup fails — a missing badge
-     * is the whole cost.
+     * Archive days of the channels among [items] that keep one, for the list's catch-up badge
+     * ([MediaRepository.getCatchupDaysForRows]). Asked by the list itself, so every list of
+     * channels (a category, Recent, Favourites, the Live TV panel's tabs) gets it. Empty off Live TV.
      */
-    suspend fun catchupDays(items: List<MediaItem>): Map<String, Int> {
-        val channelIds =
-            items
-                .filter { it.target !is BrowseTarget.CategoryRef && !it.isCategoryMarker }
-                .map { it.id }
-        val days =
-            if (contentType != ContentType.LIVE_TV || channelIds.isEmpty()) {
-                emptyMap()
-            } else {
-                suspendRunCatching { awaitRepository().getCatchupDays(channelIds) }.getOrDefault(emptyMap())
-            }
-        return days
-    }
+    suspend fun catchupDays(items: List<MediaItem>): Map<String, Int> =
+        if (contentType == ContentType.LIVE_TV) awaitRepository().getCatchupDaysForRows(items) else emptyMap()
 
     fun isFavorite(
         itemId: String,
