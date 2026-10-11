@@ -68,6 +68,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -84,6 +85,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardBorder
 import androidx.tv.material3.CardColors
@@ -102,6 +104,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -123,6 +126,7 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.parseDurationToSeconds
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -142,6 +146,7 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
+import org.njarasoa.fijerena.feature.contentselection.components.openActionsOnMenuKey
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.KeepHeroInView
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
@@ -149,12 +154,14 @@ import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvDetailRow
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
@@ -597,6 +604,55 @@ internal fun EpisodeListContent(
             }
     }
 
+    // Mark a whole season (hold OK / Menu on its tab) or the whole show (the hero's action)
+    // watched or unwatched (docs/plans/20261011_season-show-watched-plan.md). Hidden for a source
+    // that keeps watched state on its server (Jellyfin). The wording follows episodesWatchState:
+    // "unwatched" only when every episode in scope is already watched.
+    val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkEpisodesWatched }
+    var showAllWatched by remember(seriesDetail) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(seriesDetail, watchedEpisodeIds, canMarkManyWatched) {
+        if (canMarkManyWatched) showAllWatched = mediaRepository.episodesWatchState(seriesDetail.id, season = null)
+    }
+    var markManyError by remember { mutableStateOf<String?>(null) }
+    val markEpisodesWatched: (Int?, Boolean) -> Unit = { season, watched ->
+        watchedToggleScope.launch {
+            mediaRepository
+                .setEpisodesWatched(seriesDetail.id, season, watched)
+                .onFailure { markManyError = friendlyErrorMessage(it, context, appSettings.isDevMode) }
+            refreshEpisodeWatchState()
+        }
+    }
+    // The season whose menu is open, with whether all its episodes are watched. A Dialog window:
+    // closing it hands focus back to the season tab it was opened on.
+    var seasonMenu by remember { mutableStateOf<Pair<Int, Boolean?>?>(null) }
+    var seasonMenuOpened by remember { mutableStateOf(false) }
+    LaunchedEffect(seasonMenu) {
+        if (seasonMenu != null) {
+            seasonMenuOpened = true
+        } else if (seasonMenuOpened) {
+            seasonMenuOpened = false
+            seasonTabsFocusRequester.requestFocusWithRetry()
+        }
+    }
+    val openSeasonMenu: (Int) -> Unit = { season ->
+        watchedToggleScope.launch {
+            seasonMenu = season to mediaRepository.episodesWatchState(seriesDetail.id, season)
+        }
+    }
+    seasonMenu?.let { (season, allWatched) ->
+        SeasonActionsMenu(
+            title = stringResource(R.string.series_season_label, season),
+            actionLabel =
+                stringResource(if (allWatched == true) R.string.watched_unmark_season else R.string.watched_mark_season),
+            actionIcon = if (allWatched == true) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
+            onAction = { markEpisodesWatched(season, allWatched != true) },
+            onDismiss = { seasonMenu = null },
+        )
+    }
+    markManyError?.let { message ->
+        MarkWatchedErrorDialog(message = message, onDismiss = { markManyError = null })
+    }
+
     // Playback positions for every episode: the progress bars and watched checks above, plus
     // auto-expanding the season holding the next unwatched/in-progress episode.
     LaunchedEffect(seriesDetail) {
@@ -1027,6 +1083,16 @@ internal fun EpisodeListContent(
                                     },
                                 )
                             }
+                            if (canMarkManyWatched) {
+                                val allWatched = showAllWatched == true
+                                TvIconAction(
+                                    onClick = { markEpisodesWatched(null, !allWatched) },
+                                    icon = if (allWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
+                                    iconTint = if (allWatched) CinemaAccent else CinemaTextPrimary,
+                                    label = stringResource(if (allWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
+                                    modifier = downToTabRow.then(upScrollToTop),
+                                )
+                            }
                             // Refresh info is maintenance, not something to watch: it lives behind
                             // "More" at the end of the row, as on the movie hero (Phase 6). While a
                             // refresh runs the button shows a spinning Refresh glyph instead.
@@ -1179,6 +1245,7 @@ internal fun EpisodeListContent(
                                                     // through normally.
                                                     if (!awaitingFirstFocus) resumeState.selectSeason(it)
                                                 },
+                                                onSeasonLongPress = if (canMarkManyWatched) openSeasonMenu else null,
                                                 entryFocusRequester = seasonTabsFocusRequester,
                                             )
                                         }
@@ -1956,6 +2023,7 @@ private fun SeasonTabs(
     seasons: List<SeasonInfo>,
     selectedSeason: Int?,
     onSeasonSelected: (Int) -> Unit,
+    onSeasonLongPress: ((Int) -> Unit)?,
     entryFocusRequester: FocusRequester,
 ) {
     val scale = LocalUiScale.current
@@ -2014,6 +2082,7 @@ private fun SeasonTabs(
                     season = season,
                     isSelected = season.seasonNumber == selectedSeason,
                     onSelected = { onSeasonSelected(season.seasonNumber) },
+                    onLongPress = onSeasonLongPress?.let { { it(season.seasonNumber) } },
                     focusRequester = focusRequesters[index],
                     previousTabFocusRequester = focusRequesters.getOrNull(index - 1),
                     nextTabFocusRequester = focusRequesters.getOrNull(index + 1),
@@ -2033,6 +2102,7 @@ private fun SeasonTab(
     season: SeasonInfo,
     isSelected: Boolean,
     onSelected: () -> Unit,
+    onLongPress: (() -> Unit)?,
     focusRequester: FocusRequester,
     previousTabFocusRequester: FocusRequester?,
     nextTabFocusRequester: FocusRequester?,
@@ -2101,6 +2171,8 @@ private fun SeasonTab(
                 // unreachable by D-pad Up/Down from outside the row (Left/Right worked because
                 // those go through the explicit FocusRequester wiring above, bypassing search).
                 .onFocusChanged { isFocused = it.isFocused }
+                // Hold OK or Menu: the season's actions (mark it watched or unwatched).
+                .then(onLongPress?.let { Modifier.tvLongPress(it).openActionsOnMenuKey(it) } ?: Modifier)
                 .clickable { onSelected() }
                 .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         contentAlignment = Alignment.Center,
@@ -2114,6 +2186,102 @@ private fun SeasonTab(
 }
 
 private val SeasonChipShape = RoundedCornerShape(percent = 50)
+
+/**
+ * What holding OK or Menu on a season tab opens: mark the season watched or unwatched, then
+ * Cancel. Focus opens on the action; Back or Cancel closes.
+ */
+@Composable
+private fun SeasonActionsMenu(
+    title: String,
+    actionLabel: String,
+    actionIcon: ImageVector,
+    onAction: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val firstItemFocusRequester = remember { FocusRequester() }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, color = CinemaTextPrimary, maxLines = 2)
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                TvInputListItem(
+                    selected = false,
+                    onClick = {
+                        onAction()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth().focusRequester(firstItemFocusRequester),
+                    leadingContent = {
+                        Icon(
+                            imageVector = actionIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaAccent,
+                        )
+                    },
+                    headlineContent = {
+                        Text(text = actionLabel, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                    },
+                )
+                TvInputListItem(
+                    selected = false,
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.Close,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaTextSecondary,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.common_cancel),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextSecondary,
+                        )
+                    },
+                )
+            }
+        },
+        initialFocus = firstItemFocusRequester,
+        confirmButton = {},
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+    )
+}
+
+/** A season or show mark that failed (its episodes couldn't be loaded): what went wrong, and OK. */
+@Composable
+private fun MarkWatchedErrorDialog(
+    message: String,
+    onDismiss: () -> Unit,
+) {
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.watched_mark_many_failed), color = CinemaTextPrimary) },
+        text = { Text(message, color = CinemaTextSecondary) },
+        confirmButton = {
+            CinemaButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.colors(containerColor = CinemaAccent, contentColor = CinemaTextPrimary),
+            ) {
+                Text(stringResource(R.string.common_ok))
+            }
+        },
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+    )
+}
 
 /**
  * Episode card styling, built once per list composition instead of once per card.

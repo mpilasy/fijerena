@@ -37,7 +37,9 @@ WAIT 15	E03 / By the Pricking of My Thumbs / Miss Marple joins forces with Tommy
 #
 # Walk 2 — Episodes: focus on the continue-watching episode. Left → the navigation rail on TV
 # Shows, Right → back on the same episode (rail Phase 3; Left went to the season tabs before,
-# F-E-2 — Up from the first episode still does).
+# F-E-2 — Up from the first episode still does). Not walked here: the show's hero row (Play, Start
+# from beginning, Favourite, trailer, Mark show watched, More) and hold OK / Menu on a season tab
+# (its Mark season watched menu; closing it returns to the tab).
 @start E03 / By the Pricking of My Thumbs / Miss Marple joins forces with Tommy and Tuppence Beresford to find the murderer of Tommy's Aunt Ada. / 01:32:59
 LEFT	TV Shows
 RIGHT	E03 / By the Pricking of My Thumbs

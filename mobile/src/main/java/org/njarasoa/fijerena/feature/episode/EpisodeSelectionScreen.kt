@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -372,6 +374,44 @@ private fun EpisodeListContent(
             }
     }
 
+    // Mark a whole season (long-press its chip) or the whole show (the action row) watched or
+    // unwatched (docs/plans/20261011_season-show-watched-plan.md). Hidden for a source that keeps
+    // watched state on its server (Jellyfin). The wording follows episodesWatchState: "unwatched"
+    // only when every episode in scope is already watched.
+    val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkEpisodesWatched }
+    var showAllWatched by remember(seriesDetail) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(seriesDetail, watchedEpisodeIds, canMarkManyWatched) {
+        if (canMarkManyWatched) showAllWatched = mediaRepository.episodesWatchState(seriesDetail.id, season = null)
+    }
+    var markManyError by remember { mutableStateOf<String?>(null) }
+    val markEpisodesWatched: (Int?, Boolean) -> Unit = { season, watched ->
+        watchedToggleScope.launch {
+            mediaRepository
+                .setEpisodesWatched(seriesDetail.id, season, watched)
+                .onFailure {
+                    markManyError = friendlyErrorMessage(it, context, AppSettings(context.applicationContext).isDevMode)
+                }
+            refreshEpisodeWatchState()
+        }
+    }
+    // The season whose long-press menu is open, with whether all its episodes are watched.
+    var seasonMenu by remember { mutableStateOf<Pair<Int, Boolean?>?>(null) }
+    val openSeasonMenu: (Int) -> Unit = { season ->
+        watchedToggleScope.launch {
+            seasonMenu = season to mediaRepository.episodesWatchState(seriesDetail.id, season)
+        }
+    }
+    markManyError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { markManyError = null },
+            title = { Text(stringResource(R.string.watched_mark_many_failed)) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { markManyError = null }) { Text(stringResource(R.string.common_ok)) }
+            },
+        )
+    }
+
     LaunchedEffect(seriesDetail) {
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
@@ -634,6 +674,15 @@ private fun EpisodeListContent(
                             onClick = { openExternalUrl(context, trailer) },
                         )
                     }
+                    if (canMarkManyWatched) {
+                        val allWatched = showAllWatched == true
+                        DetailIconAction(
+                            icon = if (allWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
+                            label = stringResource(if (allWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
+                            onClick = { markEpisodesWatched(null, !allWatched) },
+                            tint = if (allWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                        )
+                    }
                 }
 
                 seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
@@ -689,6 +738,32 @@ private fun EpisodeListContent(
                         seasons = sortedSeasons,
                         selectedSeason = resumeState.selectedSeason,
                         onSeasonSelected = { resumeState.selectSeason(it) },
+                        onSeasonLongPress = if (canMarkManyWatched) openSeasonMenu else null,
+                        seasonMenu = { season ->
+                            val menu = seasonMenu
+                            val allWatched = menu?.second == true
+                            DropdownMenu(expanded = menu?.first == season, onDismissRequest = { seasonMenu = null }) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                if (allWatched) R.string.watched_unmark_season else R.string.watched_mark_season,
+                                            ),
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = if (allWatched) CinemaIcons.CheckCircleOutline else CinemaIcons.CheckCircleFilled,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    onClick = {
+                                        seasonMenu = null
+                                        markEpisodesWatched(season, !allWatched)
+                                    },
+                                )
+                            }
+                        },
                     )
                 }
             }
@@ -1109,6 +1184,8 @@ private fun SeasonTabs(
     seasons: List<SeasonInfo>,
     selectedSeason: Int?,
     onSeasonSelected: (Int) -> Unit,
+    onSeasonLongPress: ((Int) -> Unit)? = null,
+    seasonMenu: @Composable (season: Int) -> Unit = {},
 ) {
     val rowState = rememberLazyListState()
     val selectedIndex = seasons.indexOfFirst { it.seasonNumber == selectedSeason }
@@ -1149,24 +1226,31 @@ private fun SeasonTabs(
     ) {
         items(seasons, key = { it.seasonNumber }) { season ->
             val isSelected = season.seasonNumber == selectedSeason
-            Text(
-                text = stringResource(R.string.series_season_name_format, season.seasonNumber),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color =
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                    },
-                modifier =
-                    Modifier
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textLow) else Color.Transparent,
-                            RoundedCornerShape(CinemaCornerRadius.medium),
-                        ).clickable(role = Role.Button) { onSeasonSelected(season.seasonNumber) }
-                        .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-            )
+            // Long-press: the season's menu (mark it watched or unwatched), anchored on the chip.
+            Box {
+                Text(
+                    text = stringResource(R.string.series_season_name_format, season.seasonNumber),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color =
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        },
+                    modifier =
+                        Modifier
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textLow) else Color.Transparent,
+                                RoundedCornerShape(CinemaCornerRadius.medium),
+                            ).combinedClickable(
+                                role = Role.Button,
+                                onLongClick = onSeasonLongPress?.let { { it(season.seasonNumber) } },
+                            ) { onSeasonSelected(season.seasonNumber) }
+                            .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
+                )
+                seasonMenu(season.seasonNumber)
+            }
         }
     }
 }

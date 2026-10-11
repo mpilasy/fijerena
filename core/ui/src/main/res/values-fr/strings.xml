@@ -152,6 +152,11 @@
     <string name="recent_remove">Retirer des récents</string>
     <string name="watched_mark">Marquer comme vu</string>
     <string name="watched_unmark">Marquer comme non vu</string>
+    <string name="watched_mark_season">Marquer la saison comme vue</string>
+    <string name="watched_unmark_season">Marquer la saison comme non vue</string>
+    <string name="watched_mark_show">Marquer la série comme vue</string>
+    <string name="watched_unmark_show">Marquer la série comme non vue</string>
+    <string name="watched_mark_many_failed">Impossible de modifier les épisodes vus</string>
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>

@@ -421,6 +421,13 @@ class MediaRepository(
     val supportsRemoveFromRecent: Boolean
         get() = !usesServerUserData
 
+    /**
+     * Whether a season or a whole show can be marked watched here ([setEpisodesWatched]): false
+     * when the source keeps watched state on its server (Jellyfin), which the app can't write.
+     */
+    val supportsMarkEpisodesWatched: Boolean
+        get() = !usesServerUserData
+
     /** Whether this provider's episodes may roll on to the next one — see ProviderCapabilities. */
     val supportsAutoplayNextEpisode: Boolean
         get() = provider?.capabilities?.supportsAutoplayNextEpisode == true

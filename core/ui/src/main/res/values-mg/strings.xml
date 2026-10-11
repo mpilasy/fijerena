@@ -152,6 +152,11 @@
     <string name="recent_remove">Esory amin\'ny vao haingana</string>
     <string name="watched_mark">Mariho ho efa nojerena</string>
     <string name="watched_unmark">Mariho ho mbola tsy nojerena</string>
+    <string name="watched_mark_season">Mariho ho efa nojerena ny vanim-potoana</string>
+    <string name="watched_unmark_season">Mariho ho mbola tsy nojerena ny vanim-potoana</string>
+    <string name="watched_mark_show">Mariho ho efa nojerena ny andiany</string>
+    <string name="watched_unmark_show">Mariho ho mbola tsy nojerena ny andiany</string>
+    <string name="watched_mark_many_failed">Tsy nahomby ny fanovana ny marika efa nojerena</string>
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>

@@ -156,6 +156,11 @@
     <string name="recent_remove">Remove from Recent</string>
     <string name="watched_mark">Mark as watched</string>
     <string name="watched_unmark">Mark as unwatched</string>
+    <string name="watched_mark_season">Mark season watched</string>
+    <string name="watched_unmark_season">Mark season unwatched</string>
+    <string name="watched_mark_show">Mark show watched</string>
+    <string name="watched_unmark_show">Mark show unwatched</string>
+    <string name="watched_mark_many_failed">Couldn\'t update the watched marks</string>
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
