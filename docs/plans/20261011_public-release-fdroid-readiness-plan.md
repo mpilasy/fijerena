@@ -322,7 +322,7 @@ commits and agent files are not a reason to rewrite either way.
 | 6 | **TMDB key in Settings (D4)** and the keyless/revoked-key check (see "Without a TMDB key"), then the **copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
 | 7 | **Store presence:** fastlane metadata in en/fr/mg, TV and phone screenshots, CHANGELOG | 1–3 | S |
 | 8 | **Public repository cut-over (Option C), always the last step:** final scrub check, archived plans left out (citations rewritten first), fresh squashed public repository, tag `v1.0.0`, signed release, F-Droid RFP / fdroiddata MR; old repository archived private | 1–7 | S |
-| 9 | **After 1.0** (in the new public repository): keyless More like this and same-series rows from the local catalogue, sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
+| 9 | **After 1.0** (in the new public repository): keyless More like this and same-series rows from the local catalogue, sync progress detail (U-M5), TV seek (U-M7), targetSdk 36 + tablets (U-M9), PiP for films and shows (D10), Google Play (D5), secret-store migration, lint baseline | none | L |
 
 Phases 1–3 are the minimum for F-Droid. Phases 4–5 are the minimum before inviting strangers.
 Phase 8 always comes last: nothing goes to the public repository before the tree is final.
