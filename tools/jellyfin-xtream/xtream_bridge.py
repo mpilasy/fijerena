@@ -424,6 +424,20 @@ def vod_info(vod_id):
     }
 
 
+# "S1EP01", "S02E09", "s2 e3" in an episode's name or file. Some libraries carry names Jellyfin
+# can't parse (it wants S01E01), and it then files every episode under one wrong season and number.
+EPISODE_TAG = re.compile(r"\bS(\d{1,2})\s*EP?(\d{1,3})\b", re.IGNORECASE)
+
+
+def episode_numbers(ep):
+    """(season, episode): Jellyfin's, unless the name or file says otherwise (see EPISODE_TAG)."""
+    for text in (ep.get("Name") or "", os.path.basename(ep.get("Path") or "")):
+        m = EPISODE_TAG.search(text)
+        if m:
+            return int(m.group(1)), int(m.group(2))
+    return ep.get("ParentIndexNumber") or 0, ep.get("IndexNumber") or 0
+
+
 def series_info(series_id):
     guid = ids.guid(series_id)
     if not guid:
@@ -431,16 +445,16 @@ def series_info(series_id):
     show = jf.request(f"/Users/{jf.user_id}/Items/{guid}", {"Fields": INFO_FIELDS})
     seasons = jf.request(f"/Shows/{guid}/Seasons", {"userId": jf.user_id})["Items"]
     episodes = jf.request(f"/Shows/{guid}/Episodes", {
-        "userId": jf.user_id, "Fields": "Overview,MediaSources,PremiereDate,ProviderIds,DateCreated",
+        "userId": jf.user_id, "Fields": "Overview,MediaSources,PremiereDate,ProviderIds,DateCreated,Path",
     })["Items"]
 
     by_season = {}
     for ep in episodes:
-        season = ep.get("ParentIndexNumber") or 0
+        season, number = episode_numbers(ep)
         d = secs(ep)
         by_season.setdefault(str(season), []).append({
             "id": str(ids.num(ep["Id"])),
-            "episode_num": ep.get("IndexNumber") or 0,
+            "episode_num": number,
             "title": ep["Name"],
             "container_extension": container(ep),
             "season": season,
@@ -459,17 +473,26 @@ def series_info(series_id):
             },
         })
 
+    for eps in by_season.values():
+        eps.sort(key=lambda e: e["episode_num"])
     counts = {k: len(v) for k, v in by_season.items()}
+    # One entry per season that has episodes; Jellyfin's own season when it has that number,
+    # else a plain "Season N" (its seasons follow its numbering, not EPISODE_TAG's).
+    jf_seasons = {str(s.get("IndexNumber") or 0): s for s in seasons}
+    season_list = []
+    for key in sorted(by_season, key=int):
+        s = jf_seasons.get(key)
+        season_list.append({
+            "season_number": int(key),
+            "name": s["Name"] if s else f"Season {key}",
+            "episode_count": counts[key],
+            "cover": image(s["Id"] if s else guid),
+            "air_date": release_date(s) if s else "",
+            "overview": s.get("Overview", "") if s else "",
+            "id": ids.num(s["Id"]) if s else int(series_id) * 1000 + int(key),
+        })
     return {
-        "seasons": [{
-            "season_number": s.get("IndexNumber") or 0,
-            "name": s["Name"],
-            "episode_count": counts.get(str(s.get("IndexNumber") or 0), 0),
-            "cover": image(s["Id"]),
-            "air_date": release_date(s),
-            "overview": s.get("Overview", ""),
-            "id": ids.num(s["Id"]),
-        } for s in seasons],
+        "seasons": season_list,
         "info": {
             "name": show["Name"],
             "cover": image(guid),
