@@ -1,6 +1,12 @@
 # Everyday UX fixes
 
-**Status:** Done except Phase 5 (on hold), 2026-10-11; device checks pending. Seven independent fixes taken from the on-hold
+**Status:** Done except Phase 5 (on hold), 2026-10-11. Emulator checks 2026-10-11 (TV and phone
+emulators, `jellyxtream` and `iptv`): seeking (tap ±10 s, three taps add up, hold scrubs), hold OK
+undo, loading screen, phone swipe (35 dp no switch, 100 dp switch, edges ignored, sideways opens
+the sheet) and the error dialog (title, buttons, focus on Go back) pass. Found and fixed: a wrong
+Xtream login said "Something went wrong" (b9c7ba5c; recheck on a device). Not seen: the sync
+progress text — `jellyxtream` syncs in under 1 s; needs a large catalogue. Not checked: Back
+during a hold-scrub, a new source syncing on save. Seven independent fixes taken from the on-hold
 [public release plan](./20261011_public-release-fdroid-readiness-plan.md) because they help
 everyday use, public or not. Built in parallel, one commit each on main.
 
