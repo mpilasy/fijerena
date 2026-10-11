@@ -3,6 +3,7 @@
 ## Version: Everyday fixes
 **Release Date:** 2026-10-11
 
+- **TV seeking in films and episodes:** a tap of Left or Right jumps 10 s straight away; holding still scrubs with the cursor and seeks when you let go (OK works too). Quick repeated taps add up. Live TV and Rewind / Fast-forward are unchanged.
 - **Phone channel swipe is harder to trigger by accident:** a swipe now needs 56 dp on either axis (it was about a third of that on dense screens), and a swipe that starts near an edge of the screen is left to the system (back, notification shade, home) instead of switching channel or opening a channel list.
 
 ## Version: TMDB is opt-in, clearer wording

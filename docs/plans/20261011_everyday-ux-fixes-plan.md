@@ -22,10 +22,10 @@ Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is
 
 | # | Status | Commit |
 |---|---|---|
-| 1 | In progress | |
+| 1 | Done (2026-10-11); needs a TV check | ace3a4e8 |
 | 2 | In progress | |
 | 3 | In progress | |
 | 4 | Done (2026-10-11); needs a phone check | fc5825d3 |
-| 5 | Queued (max 4 agents at once) | |
+| 5 | In progress | |
 | 6 | Queued | |
 | 7 | In progress | |
