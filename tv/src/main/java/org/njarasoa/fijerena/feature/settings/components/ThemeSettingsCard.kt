@@ -31,7 +31,7 @@ fun ThemeSettingsRows(
     SettingsRow(
         title = stringResource(R.string.settings_theme_section_title),
         description = stringResource(R.string.settings_theme_desc),
-        value = AllPalettes.firstOrNull { it.id == selectedThemeId }?.displayName ?: selectedThemeId,
+        value = AllPalettes.firstOrNull { it.id == selectedThemeId }?.let { stringResource(it.nameRes) } ?: selectedThemeId,
         onClick = onOpenThemePicker,
         focusRequester = themeRowFocusRequester,
         modifier = themeRowModifier,
@@ -39,7 +39,7 @@ fun ThemeSettingsRows(
     SettingsRow(
         title = stringResource(R.string.settings_ui_style_section_title),
         description = stringResource(R.string.settings_ui_style_desc_tv),
-        value = AllUiStyles.firstOrNull { it.id == selectedUiStyleId }?.displayName ?: selectedUiStyleId,
+        value = AllUiStyles.firstOrNull { it.id == selectedUiStyleId }?.let { stringResource(it.nameRes) } ?: selectedUiStyleId,
         onClick = onOpenUiStylePicker,
         focusRequester = uiStyleRowFocusRequester,
     )
@@ -53,7 +53,7 @@ fun ThemePickerPane(
 ) {
     SettingsPickerPane(
         title = stringResource(R.string.settings_theme_section_title),
-        options = AllPalettes.map { palette -> PickerOption(palette.displayName, palette.id) { PaletteSwatches(palette) } },
+        options = AllPalettes.map { palette -> PickerOption(stringResource(palette.nameRes), palette.id) { PaletteSwatches(palette) } },
         selectedValue = selectedThemeId,
         onPick = onPick,
         onBack = onBack,
@@ -68,7 +68,7 @@ fun UiStylePickerPane(
 ) {
     SettingsPickerPane(
         title = stringResource(R.string.settings_ui_style_section_title),
-        options = AllUiStyles.map { style -> PickerOption(style.displayName, style.id) },
+        options = AllUiStyles.map { style -> PickerOption(stringResource(style.nameRes), style.id) },
         selectedValue = selectedUiStyleId,
         onPick = onPick,
         onBack = onBack,

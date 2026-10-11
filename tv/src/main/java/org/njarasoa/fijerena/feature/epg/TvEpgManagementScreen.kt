@@ -684,6 +684,7 @@ private fun EpgSourceEditDialog(
                     value = url,
                     onValueChange = { url = it },
                     label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
+                    supportingText = { Text(stringResource(R.string.epg_xmltv_url_hint)) },
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors =
@@ -718,6 +719,7 @@ private fun EpgSourceEditDialog(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = { Text(stringResource(R.string.epg_timezone_label)) },
+                    supportingText = { Text(stringResource(R.string.epg_timezone_hint)) },
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors =

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- EPG sync foreground-service notifications -->
-    <string name="epg_sync_notification_channel">EPG Guide Sync</string>
+    <string name="epg_sync_notification_channel">TV guide updates</string>
     <string name="epg_sync_notification_title">Refreshing TV guide</string>
     <string name="epg_fts_rebuild_notification_title">Rebuilding TV guide index</string>
 
     <!-- Xtream catalog sync foreground-service notifications -->
-    <string name="xtream_sync_notification_channel">Xtream Catalog Sync</string>
+    <string name="xtream_sync_notification_channel">Catalogue updates</string>
     <string name="xtream_sync_notification_title">Syncing channels &amp; content</string>
 
     <!-- Friendly error messages (FriendlyError.kt) -->
@@ -18,7 +18,7 @@
     <string name="error_saved_login_lost">This device lost a saved login (its secure key store was reset). Edit the source and enter the password again.</string>
     <string name="error_guide_login_missing">This guide is downloaded with the source\'s login, and this device has no password for it. Edit the source and enter the password.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
-    <string name="error_catalog_sync_failed">Catalog sync failed. %1$s</string>
+    <string name="error_catalog_sync_failed">Catalogue sync failed. %1$s</string>
     <string name="sync_error_download_failed">Download failed</string>
     <string name="sync_error_upload_failed">Upload failed</string>
 
@@ -32,7 +32,7 @@
     <string name="settings_export_item_overwritten_format">%1$d overwritten</string>
     <string name="settings_export_item_skipped_format">%1$d skipped</string>
     <string name="settings_export_summary_epg_sources_format">Guide sources: %1$s</string>
-    <string name="settings_export_summary_favorites_format">%1$d favorite(s) restored</string>
+    <string name="settings_export_summary_favorites_format">%1$d favourite(s) restored</string>
     <string name="settings_export_summary_watch_state_format">%1$d watch history item(s) restored</string>
     <string name="settings_export_summary_updated">Settings updated</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (Passwords must be re-entered)</string>
@@ -40,7 +40,7 @@
     <!-- Provider copy/duplicate (ProviderCopyManager) -->
     <string name="provider_copy_result_connection">Connection copied</string>
     <string name="provider_copy_result_settings">Settings copied</string>
-    <string name="provider_copy_result_favorites_format">%1$d favorite(s) copied</string>
+    <string name="provider_copy_result_favorites_format">%1$d favourite(s) copied</string>
     <string name="provider_copy_result_watch_state_format">%1$d watch history item(s) copied</string>
     <string name="provider_copy_result_nothing">Nothing to copy</string>
 

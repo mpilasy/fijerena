@@ -6,25 +6,24 @@
 
     <!-- EPG Management -->
     <string name="epg_refresh_in_queue">Refresh already in queue...</string>
-    <string name="epg_up_to_date">EPG is up to date.</string>
+    <string name="epg_up_to_date">The guide is up to date.</string>
     <string name="epg_refreshing_stale">Refreshing %1$d stale guide source(s)...</string>
     <string name="epg_no_stale_sources">No stale guide sources need refreshing.</string>
     <string name="epg_no_failed_sources">No failed guide sources found.</string>
     <string name="epg_cache_cleaned">Cleaned up %1$d file(s), freed %2$s</string>
     <string name="epg_no_stray_files">No stray files found</string>
-    <string name="epg_data_cleared">All EPG data cleared</string>
+    <string name="epg_data_cleared">All guide data cleared</string>
     <string name="epg_purged_programmes">Purged %1$d programme(s)</string>
     <string name="epg_no_old_programmes">No old programmes to purge</string>
 
     <!-- EPG Management UI -->
-    <string name="epg_management_title">EPG Management</string>
-    <string name="epg_add_source">Add Guide Source</string>
-    <string name="epg_refresh_stale_btn">Refresh Stale (%1$d)</string>
-    <string name="epg_retry_failed_btn">Retry Failed (%1$d)</string>
-    <string name="epg_clear_all_data_btn">Clear All Data</string>
+    <string name="epg_add_source">Add guide source</string>
+    <string name="epg_refresh_stale_btn">Refresh stale (%1$d)</string>
+    <string name="epg_retry_failed_btn">Retry failed (%1$d)</string>
+    <string name="epg_clear_all_data_btn">Clear all data</string>
     <string name="epg_maintenance_title">Maintenance</string>
     <string name="epg_auto_refresh_title">Auto-refresh</string>
-    <string name="epg_sources_header">Guide Sources</string>
+    <string name="epg_sources_header">Guide sources</string>
     <string name="epg_cleanup_btn">Cleanup</string>
     <string name="epg_purge_btn">Purge</string>
 
@@ -36,11 +35,11 @@
     <string name="search_searching">Searching…</string>
 
     <!-- Player Common -->
-    <string name="player_select_audio">Select Audio Track</string>
+    <string name="player_select_audio">Select audio track</string>
     <string name="player_no_audio">No audio tracks available</string>
     <string name="player_select_subtitles">Select Subtitles</string>
     <string name="player_no_subtitles">No subtitle tracks available</string>
-    <string name="player_select_quality">Select Quality</string>
+    <string name="player_select_quality">Select quality</string>
     <string name="player_no_quality">No quality options available</string>
     <string name="player_quality_auto">Auto (Adaptive)</string>
     <string name="player_subtitles_off">Off</string>
@@ -49,7 +48,7 @@
     <string name="player_catchup">CATCH-UP</string>
     <string name="player_osd_watch_live">Watch live</string>
     <string name="player_osd_start_over">Start over</string>
-    <string name="player_error">Playback Error</string>
+    <string name="player_error">Playback error</string>
     <string name="player_retry">Retry</string>
     <string name="player_back">Back</string>
     <string name="player_stats_title">Stats for Nerds</string>
@@ -57,7 +56,7 @@
     <string name="player_stats_raw_series">Series</string>
     <string name="player_stats_login">Login</string>
     <string name="player_stats_login_format">%1$d of %2$d</string>
-    <string name="player_now_playing">Now Playing</string>
+    <string name="player_now_playing">Now playing</string>
     <string name="player_no_channels">No channels available</string>
 
     <!-- Settings -->
@@ -69,7 +68,7 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_mg">Malagasy</string>
-    <string name="settings_language_fr">French</string>
+    <string name="settings_language_fr">Français</string>
     <string name="settings_export_success">Settings exported successfully</string>
     <string name="settings_export_failed">Export failed</string>
     <string name="settings_import_failed">Import failed: %1$s</string>
@@ -89,33 +88,32 @@
     <string name="common_collapse">Collapse</string>
 
     <!-- EPG indexing -->
-    <string name="epg_indexing_failed">EPG indexing failed</string>
-    <string name="epg_indexing_progress">EPG indexing %1$d%%…</string>
+    <string name="epg_indexing_failed">Couldn\'t prepare the guide</string>
+    <string name="epg_indexing_progress">Preparing the guide %1$d%%…</string>
     <string name="epg_now_prefix">Now: %1$s</string>
 
     <!-- EPG Guide UI -->
     <string name="epg_guide_title_format">TV Guide - %1$s</string>
-    <string name="epg_loading_guide">Loading TV Guide…</string>
-    <string name="epg_no_data">No EPG data available</string>
-    <string name="epg_error_loading">Error Loading Guide</string>
-    <string name="epg_prev_day">Previous Day</string>
-    <string name="epg_next_day">Next Day</string>
+    <string name="epg_loading_guide">Loading TV guide…</string>
+    <string name="epg_error_loading">Couldn\'t load the guide</string>
+    <string name="epg_prev_day">Previous day</string>
+    <string name="epg_next_day">Next day</string>
     <string name="epg_jump_to_now">Now</string>
-    <string name="epg_no_program_found">No program found</string>
-    <string name="epg_system_status">System Status</string>
+    <string name="epg_no_program_found">No programme found</string>
+    <string name="epg_system_status">System status</string>
     <string name="epg_database_label">Database: %1$s</string>
     <string name="epg_database_empty">Empty</string>
     <string name="epg_database_indexing">Indexing in progress…</string>
     <string name="epg_database_error">Error: %1$s</string>
-    <string name="epg_current_status">Current Status: %1$s</string>
+    <string name="epg_current_status">Current status: %1$s</string>
     <string name="epg_status_idle">Idle</string>
     <string name="epg_status_tasks_queued">%1$d refresh tasks queued</string>
     <string name="epg_status_processing">Processing %1$d/%2$d guide sources</string>
-    <string name="epg_status_retrying">Error. Retrying (Attempt %1$d/%2$d) at %3$s</string>
+    <string name="epg_status_retrying">Trying again at %3$s (attempt %1$d of %2$d)</string>
     <string name="epg_status_finished">Finished run</string>
-    <string name="epg_status_finalizing">Finalizing (%1$s)…</string>
+    <string name="epg_status_finalizing">Finalising (%1$s)…</string>
     <string name="epg_status_clearing">Clearing data…</string>
-    <string name="epg_last_run_stats">Last Run: Finished at %1$s • %2$d guide sources in %3$s%4$s</string>
+    <string name="epg_last_run_stats">Last run: finished at %1$s • %2$d guide sources in %3$s%4$s</string>
     <string name="epg_last_run_errors"> (%1$d errors)</string>
     <string name="epg_maintenance_desc">Manage local database and temporary files.</string>
     <string name="epg_maintenance_desc_tv">Clean up temporary files and old programmes.</string>
@@ -127,36 +125,34 @@
     <string name="epg_source_refresh_daily">Refreshes daily</string>
     <string name="epg_source_refresh_weekly">Refreshes weekly</string>
     <string name="epg_source_refresh_hours">Refreshes every %1$d hours</string>
-    <string name="epg_unnamed_source">Unnamed Guide Source</string>
-    <string name="epg_source_stat_label">Last Sync</string>
-    <string name="epg_source_stat_download">Download</string>
-    <string name="epg_source_stat_ingest">Ingest</string>
-    <string name="epg_source_stat_latest">Latest Prog</string>
+    <string name="epg_unnamed_source">Unnamed guide source</string>
+    <string name="epg_source_stat_label">Last sync</string>
+    <string name="epg_source_stat_download">Downloaded in</string>
+    <string name="epg_source_stat_ingest">Imported in</string>
+    <string name="epg_source_stat_latest">Listings until</string>
     <string name="epg_source_stat_channels">Channels</string>
     <string name="epg_source_stat_programmes">Programmes</string>
     <string name="epg_source_stat_unchanged">Unchanged</string>
     <string name="epg_source_never">Never</string>
     <string name="epg_source_none">None</string>
-    <string name="epg_add_source_title">Add Guide Source</string>
-    <string name="epg_edit_source_title">Edit Guide Source</string>
-    <string name="epg_xmltv_url_label">XMLTV URL</string>
+    <string name="epg_add_source_title">Add guide source</string>
+    <string name="epg_edit_source_title">Edit guide source</string>
+    <string name="epg_xmltv_url_label">Guide link (XMLTV)</string>
     <string name="epg_label_optional">Label (Optional)</string>
-    <string name="epg_timezone_label">Timezone Offset (Hours)</string>
-    <string name="epg_clear_db_confirm_title">Clear EPG Data?</string>
+    <string name="epg_timezone_label">Time correction (hours)</string>
+    <string name="epg_clear_db_confirm_title">Clear guide data?</string>
     <string name="epg_clear_db_confirm_message">This will delete all indexed programmes and channels. Your guide source URLs will be preserved.</string>
-    <string name="epg_clear_everything_btn">Clear Everything</string>
-    <string name="epg_delete_source_confirm_title">Delete Guide Source?</string>
-    <string name="epg_delete_source_confirm_message">Are you sure you want to remove \'%1$s\'? All associated EPG data will be deleted.</string>
+    <string name="epg_clear_everything_btn">Clear everything</string>
+    <string name="epg_delete_source_confirm_title">Delete guide source?</string>
+    <string name="epg_delete_source_confirm_message">Remove \'%1$s\'? Its guide data will be deleted.</string>
 
     <!-- Category -->
     <string name="category_select_category">Select a category</string>
     <string name="category_loading_streams">Loading streams…</string>
-    <string name="category_no_streams">No streams in this category</string>
-    <string name="category_streams_count">%1$d streams</string>
 
     <!-- Favorites -->
-    <string name="favorite_add">Add to Favorites</string>
-    <string name="favorite_remove">Remove from Favorites</string>
+    <string name="favorite_add">Add to Favourites</string>
+    <string name="favorite_remove">Remove from Favourites</string>
     <string name="recent_remove">Remove from Recent</string>
     <string name="watched_mark">Mark as watched</string>
     <string name="watched_unmark">Mark as unwatched</string>
@@ -169,7 +165,7 @@
     <string name="login_server_url_placeholder">http://example.com:8080</string>
     <string name="login_username_label">Username</string>
     <string name="login_password_label">Password</string>
-    <string name="login_remember_me">Remember Me</string>
+    <string name="login_remember_me">Remember me</string>
     <string name="login_button">Login</string>
     <string name="login_success_toast">Login successful!</string>
     <string name="login_footer_text">Contact your IPTV provider for credentials</string>
@@ -177,8 +173,8 @@
     <!-- Provider Setup -->
     <string name="provider_add_title">Add Source</string>
     <string name="provider_edit_title">Edit Source</string>
-    <string name="provider_name_label">Source Name</string>
-    <string name="provider_type_label">Source Type</string>
+    <string name="provider_name_label">Source name</string>
+    <string name="provider_type_label">Source type</string>
     <string name="provider_url_label">Server URL</string>
     <string name="provider_username_label">Username</string>
     <string name="provider_password_label">Password</string>
@@ -186,8 +182,8 @@
     <string name="provider_delete_button">Delete</string>
     <string name="provider_refresh_button">Refresh</string>
     <string name="provider_quick_connect_title">Quick Connect</string>
-    <string name="provider_data_management_title">Data Management</string>
-    <string name="provider_settings_title">Source Settings</string>
+    <string name="provider_data_management_title">Data management</string>
+    <string name="provider_settings_title">Source settings</string>
     <string name="provider_name_placeholder_xtream">e.g. My IPTV</string>
     <string name="provider_name_placeholder_jellyfin">e.g. My Jellyfin Server</string>
     <string name="provider_name_placeholder_smb">e.g. NAS Media</string>
@@ -202,32 +198,32 @@
     <string name="provider_error_m3u_url_required">M3U Playlist URL is required</string>
     <string name="provider_connecting">Connecting…</string>
     <string name="provider_saving">Saving…</string>
-    <string name="provider_connection_failed">Connection Failed</string>
-    <string name="provider_save_anyway">Save Anyway</string>
-    <string name="provider_go_back">Go Back</string>
-    <string name="provider_clear_cache_all_title">Clear All Cache?</string>
+    <string name="provider_connection_failed">Connection failed</string>
+    <string name="provider_save_anyway">Save anyway</string>
+    <string name="provider_go_back">Go back</string>
+    <string name="provider_clear_cache_all_title">Clear all cache?</string>
     <string name="provider_clear_cache_all_message">This will remove this source\'s cached Live TV, Movies and TV Shows data (categories and streams). The app will re-download it from the server.</string>
-    <string name="provider_clear_all_button">Clear All</string>
-    <string name="provider_clear_cache_live_title">Clear Live TV Cache?</string>
+    <string name="provider_clear_all_button">Clear all</string>
+    <string name="provider_clear_cache_live_title">Clear Live TV cache?</string>
     <string name="provider_clear_cache_live_message">This will remove all cached Live TV data (categories and streams).</string>
-    <string name="provider_clear_cache_movies_title">Clear Movies Cache?</string>
+    <string name="provider_clear_cache_movies_title">Clear Movies cache?</string>
     <string name="provider_clear_cache_movies_message">This will remove all cached Movies data (categories and streams).</string>
-    <string name="provider_clear_cache_tvshows_title">Clear TV Shows Cache?</string>
+    <string name="provider_clear_cache_tvshows_title">Clear TV Shows cache?</string>
     <string name="provider_clear_cache_tvshows_message">This will remove all cached TV Shows data (categories and streams).</string>
     <string name="provider_clear_button">Clear</string>
-    <string name="provider_clear_favorites_title">Clear All Favorites?</string>
+    <string name="provider_clear_favorites_title">Clear all favourites?</string>
     <string name="provider_clear_favorites_message">This will remove all favourites from Live TV, Movies and TV Shows. This action cannot be undone.</string>
-    <string name="provider_clear_progress_label">Clear Playback Progress</string>
-    <string name="provider_clear_progress_title">Clear All Playback Progress?</string>
+    <string name="provider_clear_progress_label">Clear playback progress</string>
+    <string name="provider_clear_progress_title">Clear all playback progress?</string>
     <string name="provider_clear_progress_message">This will remove all saved playback positions. You will start from the beginning when playing any VOD content.</string>
     <string name="provider_filter_mode_label">Filter mode:</string>
     <string name="provider_filter_exclude">Exclude</string>
-    <string name="provider_filter_include">Include Only</string>
+    <string name="provider_filter_include">Include only</string>
     <string name="provider_filter_exclude_desc">Categories matching these rules will be hidden</string>
     <string name="provider_filter_include_desc">Only categories matching these rules will be shown</string>
     <string name="provider_filter_add_rules_label">Add rules (comma-separated)</string>
     <string name="provider_filter_prefixes_placeholder">Adult, XXX, 18+</string>
-    <string name="provider_filter_script_title">Language Script Filter:</string>
+    <string name="provider_filter_script_title">Language script filter:</string>
     <string name="provider_filter_script_desc">Show only categories in selected scripts (none = show all)</string>
     <string name="provider_filter_choose_match_type">Choose match type</string>
     <string name="provider_filter_match_starts">Starts</string>
@@ -248,7 +244,7 @@
     <string name="provider_use_quick_connect">Use Quick Connect</string>
     <string name="provider_host_label">Host / IP</string>
     <string name="provider_host_placeholder">192.168.1.100</string>
-    <string name="provider_share_label">Share Name</string>
+    <string name="provider_share_label">Share name</string>
     <string name="provider_share_placeholder">media</string>
     <string name="provider_username_optional_label">Username (optional)</string>
     <string name="provider_password_optional_label">Password (optional)</string>
@@ -256,31 +252,31 @@
     <string name="provider_m3u_url_placeholder">https://example.com/playlist.m3u</string>
     <string name="provider_auto_resume_label">Auto-Resume</string>
     <string name="provider_auto_resume_desc">Resume VOD content from where you left off</string>
-    <string name="provider_watch_history_size_label">Last Watched Queue Size</string>
+    <string name="provider_watch_history_size_label">Recent row size</string>
     <string name="provider_watch_history_size_desc">Cards to show in the Recent row (1-100)</string>
     <string name="provider_edit_button">Edit</string>
-    <string name="provider_queue_size_label">Queue Size</string>
-    <string name="provider_max_size_label">Max Size</string>
+    <string name="provider_queue_size_label">Queue size</string>
+    <string name="provider_max_size_label">Max size</string>
     <string name="provider_clear_favorites_desc">Remove all favourites</string>
-    <string name="provider_clear_favorites_button">Clear All Favorites</string>
+    <string name="provider_clear_favorites_button">Clear all favourites</string>
     <string name="provider_clear_progress_desc">Remove all saved positions (Continue Watching will be empty)</string>
-    <string name="provider_clear_progress_button">Clear All Progress</string>
-    <string name="provider_stream_format_label">Stream Output Format</string>
+    <string name="provider_clear_progress_button">Clear all progress</string>
+    <string name="provider_stream_format_label">Stream output format</string>
     <string name="provider_stream_format_desc">Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)</string>
-    <string name="provider_playlist_type_label">Playlist Type</string>
-    <string name="provider_playlist_type_desc">Playlist format (m3u_plus = extended with EPG, simple = basic)</string>
+    <string name="provider_playlist_type_label">Playlist type</string>
+    <string name="provider_playlist_type_desc">Playlist format (m3u_plus = with guide details, simple = basic)</string>
     <string name="provider_category_filters_desc">Hide categories by prefix (e.g., \'Adult\', \'XXX\')</string>
     <string name="provider_category_filters_profile">These are %1$s\'s filters. Every profile has its own.</string>
-    <string name="provider_enable_caching_label">Enable Caching</string>
+    <string name="provider_enable_caching_label">Enable caching</string>
     <string name="provider_enable_caching_desc">Enable caching for faster loading</string>
     <string name="provider_data_management_desc">Manage local database and cached data</string>
     <string name="provider_syncing">Syncing…</string>
-    <string name="provider_sync_now_button">Sync Data Now</string>
-    <string name="provider_last_sync_status">Last Sync: Finished at %1$s • Took %2$s</string>
+    <string name="provider_sync_now_button">Sync data now</string>
+    <string name="provider_last_sync_status">Last sync: finished at %1$s • took %2$s</string>
     <string name="provider_sync_success">Sync completed successfully</string>
     <string name="provider_sync_no_changes">No changes since last sync</string>
     <string name="provider_sync_delta">%1$d added • %2$d updated • %3$d removed</string>
-    <string name="provider_total_db_items_label">Total Database Items</string>
+    <string name="provider_total_db_items_label">Items stored</string>
     <string name="provider_total_items_value">%1$s Items</string>
     <string name="provider_live_tv_label">Live TV</string>
     <string name="provider_live_tv_stats">%1$s Categories · %2$s Channels</string>
@@ -288,35 +284,35 @@
     <string name="provider_movies_stats">%1$s Categories · %2$s Movies</string>
     <string name="provider_tv_shows_label">TV Shows</string>
     <string name="provider_tv_shows_stats">%1$s Cat. · %2$s Series · %3$s Ep.</string>
-    <string name="provider_epg_stats">EPG Data: %1$s channels</string>
+    <string name="provider_epg_stats">Guide: %1$s channels</string>
     <string name="provider_qc_init_failed">Failed to start Quick Connect</string>
     <string name="provider_qc_poll_failed">Polling failed: %1$s</string>
     <string name="provider_qc_auth_failed">Authentication failed: %1$s</string>
     <string name="provider_qc_timeout">Timed out waiting for approval. Please try again.</string>
     <string name="provider_connecting_server">Connecting to server…</string>
     <string name="provider_qc_enter_code">Enter this code in Jellyfin:</string>
-    <string name="provider_qc_instructions">Open Jellyfin → Dashboard → Quick Connect, then enter the code above.</string>
+    <string name="provider_qc_instructions">On a device already signed in to Jellyfin, open your profile menu → Quick Connect and enter the code above.</string>
     <string name="provider_qc_waiting">Waiting for approval…</string>
 
     <!-- Provider Selection -->
     <string name="provider_selection_title">Sources</string>
     <string name="provider_loading">Loading sources…</string>
     <string name="provider_no_providers">No sources configured</string>
-    <string name="provider_delete_confirm_title">Delete Source?</string>
+    <string name="provider_delete_confirm_title">Delete source?</string>
     <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this source will be removed.</string>
     <string name="provider_active_label">Active</string>
     <string name="provider_more_actions">More actions</string>
     <string name="provider_more_actions_for_format">More actions for %1$s</string>
     <string name="provider_duplicate_button">Duplicate</string>
-    <string name="provider_duplicate_title">Duplicate Source</string>
+    <string name="provider_duplicate_title">Duplicate source</string>
     <string name="provider_duplicate_name_default_format">%1$s (copy)</string>
     <string name="provider_duplicate_name_label">New source name</string>
     <string name="provider_copy_to_button">Copy to…</string>
-    <string name="provider_copy_to_title">Copy To Source</string>
+    <string name="provider_copy_to_title">Copy to source</string>
     <string name="provider_copy_to_target_label">Target source</string>
     <string name="provider_copy_to_options_label">What to copy</string>
     <string name="provider_copy_to_settings_label">Settings</string>
-    <string name="provider_copy_to_favorites_label">Favorites</string>
+    <string name="provider_copy_to_favorites_label">Favourites</string>
     <string name="provider_copy_to_watch_history_label">Watch history</string>
     <string name="provider_copy_to_connection_label">Connection &amp; credentials</string>
     <string name="provider_copy_to_connection_warning_format">This overwrites \"%1$s\"\'s URL, username and password.</string>
@@ -333,7 +329,7 @@
     <string name="common_off">Off</string>
 
 
-    <string name="movie_details_title">Movie Details</string>
+    <string name="movie_details_title">Movie details</string>
     <string name="movie_refresh_info">Refresh movie info</string>
     <string name="movie_ends_at_format">Ends at %1$s</string>
     <string name="movie_resume_from_format">▶ Resume from %1$s</string>
@@ -344,7 +340,7 @@
     <string name="movie_director_format">Director: %1$s</string>
     <string name="details_watch_trailer">▶ Trailer</string>
     <string name="details_watch_trailer_description">Watch trailer</string>
-    <string name="details_community_rating">Community Rating</string>
+    <string name="details_community_rating">Community rating</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">None</string>
     <string name="details_stream_name_format">Stream name: %1$s</string>
@@ -353,10 +349,10 @@
     <string name="details_tab_cast">Cast</string>
     <string name="details_tab_details">Details</string>
     <string name="details_tab_seasons">Seasons</string>
-    <string name="details_more_like_this">More Like This</string>
+    <string name="details_more_like_this">More like this</string>
     <string name="details_no_link_handler">No app on this device can open that link</string>
     <string name="movie_loading_details">Loading movie details…</string>
-    <string name="movie_error_loading">Error Loading Movie</string>
+    <string name="movie_error_loading">Couldn\'t load the movie</string>
     <string name="movie_back_to_movies">Back to Movies</string>
 
     <string name="series_details_title">TV Show Details</string>
@@ -374,14 +370,14 @@
     <string name="series_aired_format">Aired: %1$s</string>
     <string name="series_bitrate_format">Bitrate: %1$s kbps</string>
     <string name="series_loading_episodes">Loading episodes…</string>
-    <string name="series_error_loading">Error Loading Episodes</string>
+    <string name="series_error_loading">Couldn\'t load the episodes</string>
     <string name="series_back_to_list">Back to Series List</string>
     <string name="series_rating_format">Rating: %1$s</string>
     <string name="series_season_label">Season %1$d</string>
     <string name="series_episode_label">Episode %1$d</string>
-    <string name="series_continue_watching_badge">Continue Watching</string>
+    <string name="series_continue_watching_badge">Continue watching</string>
     <string name="series_present">ongoing</string>
-    <string name="series_next_up_title">Next Up</string>
+    <string name="series_next_up_title">Next up</string>
     <string name="continue_watching_up_next">Up next</string>
     <string name="series_remaining_format">%1$s remaining</string>
     <string name="content_watched_badge">Watched</string>
@@ -402,17 +398,17 @@
     <!-- Player UI -->
     <string name="player_playback_ended">Playback ended</string>
     <string name="player_playback_error_prefix">⚠️ Playback Error</string>
-    <string name="player_technical_details">Technical Details (Dev Mode):</string>
+    <string name="player_technical_details">Technical details (developer mode):</string>
     <string name="player_error_type_label">Type: </string>
     <string name="player_error_message_label">Message: </string>
-    <string name="player_error_stack_trace_label">Stack Trace:</string>
+    <string name="player_error_stack_trace_label">Stack trace:</string>
     <string name="player_error_unknown">Unknown</string>
     <string name="player_no_stack_trace">No stack trace available</string>
     <string name="player_seek_hint">Press OK to seek • Back to cancel</string>
     <string name="player_seek_rewind_format">⟲ %1$ds</string>
     <string name="player_seek_forward_format">%1$ds ⟳</string>
     <string name="player_now_playing_format">Now: %1$s (%2$s – %3$s)</string>
-    <string name="player_up_next_format">Up Next: %1$s (%2$s)</string>
+    <string name="player_up_next_format">Up next: %1$s (%2$s)</string>
     <string name="player_chapters">Chapters</string>
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtitles</string>
@@ -427,11 +423,10 @@
     <string name="player_no_chapters">No chapters available</string>
     <string name="player_prev_episode">⏮ Previous</string>
     <string name="player_next_episode">Next ⏭</string>
-    <string name="player_favorited">Favorited</string>
-    <string name="player_favorite">Favorite</string>
-    <string name="player_add_favorite">Add Favorite</string>
-    <string name="player_remove_favorite">Remove Favorite</string>
-    <string name="player_press_back_exit">Press OK to hide controls • Press BACK to exit</string>
+    <string name="player_favorited">Favourited</string>
+    <string name="player_favorite">Favourite</string>
+    <string name="player_add_favorite">Add favourite</string>
+    <string name="player_remove_favorite">Remove favourite</string>
 
     <!-- Stats Labels -->
     <string name="player_stats_video">VIDEO</string>
@@ -471,7 +466,7 @@
     <string name="player_stats_dropped_format">%1$d / %2$d</string>
 
     <!-- Channel Overlays -->
-    <string name="player_category_channels">Category Channels</string>
+    <string name="player_category_channels">Category channels</string>
     <string name="player_no_last_watched">No recently watched channels yet</string>
 
     <!-- Audio format -->
@@ -488,11 +483,11 @@
     <!-- EPG Management extras -->
     <string name="epg_source_phase_format">%1$s…</string>
     <string name="epg_source_progress_percent">%1$d%%</string>
-    <string name="epg_delete_source_title">Delete Guide Source?</string>
+    <string name="epg_delete_source_title">Delete guide source?</string>
     <string name="epg_database_ready">Ready (%1$s programmes)</string>
-    <string name="epg_database_optimizing">Optimizing search index…</string>
-    <string name="epg_database_error_prefixed">Database Error: %1$s</string>
-    <string name="epg_current_status_error">Current Status Error: %1$s</string>
+    <string name="epg_database_optimizing">Optimising search index…</string>
+    <string name="epg_database_error_prefixed">Guide database problem: %1$s</string>
+    <string name="epg_current_status_error">Guide update problem: %1$s</string>
 
     <!-- EPG Browser -->
     <string name="epg_browser_title">Search the guide</string>
@@ -500,11 +495,11 @@
     <string name="epg_browser_matched_label">Matched</string>
     <string name="epg_browser_search_titles_placeholder">Search titles…</string>
     <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
-    <string name="epg_browser_finalizing_format">finalizing… (%1$s)</string>
+    <string name="epg_browser_finalizing_format">finalising… (%1$s)</string>
     <string name="epg_browser_indexing_label">Indexing…</string>
-    <string name="epg_browser_optimizing_label">Optimizing…</string>
+    <string name="epg_browser_optimizing_label">Optimising…</string>
     <string name="epg_browser_hint_search_titles">Search programme titles</string>
-    <string name="epg_browser_no_file_message">No EPG file available.\nConfigure an EPG URL in Settings.</string>
+    <string name="epg_browser_no_file_message">No guide yet.\nAdd a guide source in Edit Source → Guide sources.</string>
     <string name="epg_browser_watch_confirm_title">Watch now?</string>
     <string name="epg_browser_watch_confirm_message">This show airs at %1$s.\nWatch %2$s now?</string>
     <string name="epg_browser_watch_now_btn">Watch now</string>
@@ -516,17 +511,16 @@
     <string name="epg_browser_show_more_count">%1$d more airings</string>
     <string name="epg_browser_on_air_badge">ON AIR</string>
     <string name="epg_browser_soon_badge">SOON</string>
-    <string name="epg_browser_recent_searches">Recent Searches</string>
+    <string name="epg_browser_recent_searches">Recent searches</string>
     <string name="epg_browser_clear_all_description">Clear all</string>
     <string name="epg_browser_remove_description">Remove</string>
 
     <!-- EPG Settings Card -->
     <string name="epg_summary_no_sources">No guide sources configured</string>
-    <string name="epg_data_manage_button">Manage EPG Data</string>
 
     <!-- Player Controls extras -->
     <string name="player_rewind_1min_description">Rewind 1min</string>
-    <string name="player_fast_forward_5min_description">Fast Forward 5min</string>
+    <string name="player_fast_forward_5min_description">Fast forward 5 min</string>
     <string name="player_rewind_label">-1m</string>
     <string name="player_forward_label">+5m</string>
     <string name="player_play">Play</string>
@@ -560,11 +554,11 @@
     <string name="settings_about_tagline">Premium native media player for Android</string>
     <!-- The no-content disclaimer: About now, the first-run welcome screen later (plan R4). -->
     <string name="app_disclaimer_no_content">Fijerena does not provide or host any content. It plays the sources you add.</string>
-    <string name="settings_developer_mode_title">Developer Mode</string>
-    <string name="settings_developer_mode_desc">Enable stats for nerds and debug features</string>
+    <string name="settings_developer_mode_title">Developer mode</string>
+    <string name="settings_developer_mode_desc">Diagnostics, technical details, and source types still in development (SMB, local files)</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
-    <string name="settings_diagnostics_open">Open Diagnostics</string>
+    <string name="settings_diagnostics_open">Open diagnostics</string>
     <string name="settings_diagnostics_empty">Nothing recorded</string>
     <string name="settings_diagnostics_clear">Clear log</string>
     <string name="settings_diagnostics_share">Share</string>
@@ -621,53 +615,51 @@
     <string name="common_export">Export</string>
     <string name="common_import">Import</string>
     <string name="settings_quick_import_not_found">Settings file not found in Downloads or app folder</string>
-    <string name="settings_quick_import_button">Quick Import from Downloads</string>
-    <string name="settings_shrink_database_title">Database Maintenance</string>
+    <string name="settings_quick_import_button">Quick import from Downloads</string>
+    <string name="settings_shrink_database_title">Database maintenance</string>
     <string name="settings_shrink_database_desc">Remove leftover data from deleted sources and reclaim disk space</string>
-    <string name="settings_shrink_database_button">Shrink Database</string>
+    <string name="settings_shrink_database_button">Shrink database</string>
     <string name="settings_shrink_database_button_running">Shrinking…</string>
     <string name="settings_shrink_database_result_format">Removed %1$d leftover rows, freed %2$s</string>
     <string name="settings_shrink_database_nothing_to_clean">Nothing to clean up — database is already tidy</string>
     <string name="settings_shrink_database_dev_stats_time">Last shrink: Finished at %1$s • Took %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">%1$d records deleted • %2$s recovered</string>
-    <string name="settings_import_select_title">Select What to Import</string>
-    <string name="settings_import_general_label">General Settings</string>
+    <string name="settings_import_select_title">Select what to import</string>
+    <string name="settings_import_general_label">General settings</string>
     <string name="settings_import_providers_count_format">Sources (%1$d)</string>
     <string name="settings_import_epg_sources_count_format">Guide sources (%1$d)</string>
-    <string name="settings_import_favorites_label">Favorites</string>
-    <string name="settings_import_provider_conflict_title">Source Conflict</string>
+    <string name="settings_import_favorites_label">Favourites</string>
+    <string name="settings_import_provider_conflict_title">Source conflict</string>
     <string name="settings_import_conflict_message">The following source(s) already exist:\n\n%1$s\n\nWhat would you like to do?</string>
     <string name="common_overwrite">Overwrite</string>
     <string name="common_duplicate">Duplicate</string>
-    <string name="settings_import_skip_duplicates_button">Skip Duplicates</string>
+    <string name="settings_import_skip_duplicates_button">Skip duplicates</string>
     <string name="settings_playback_section_title">Playback</string>
     <string name="settings_playback_watch_delay_desc">How long to watch a channel before it\'s added to Last Watched</string>
     <string name="settings_watch_delay_label">Watch delay (seconds)</string>
     <string name="settings_watch_delay_range_format">%1$d–%2$d seconds</string>
     <string name="settings_theme_section_title">Theme</string>
-    <string name="settings_theme_desc">Select a color theme for the app</string>
+    <string name="settings_theme_desc">Select a colour theme for the app</string>
     <string name="settings_ui_style_desc">Select a look and feel</string>
 
     <!-- Content Type Selection -->
-    <string name="content_switch_provider_title">Switch Source</string>
-    <string name="content_switch_provider_description_format">Switch Source, current source: %1$s</string>
+    <string name="content_switch_provider_title">Switch source</string>
+    <string name="content_switch_provider_description_format">Switch source, current source: %1$s</string>
     <string name="home_source_updating">Updating…</string>
     <string name="home_source_updated">Updated %1$s</string>
     <string name="home_source_update_failed">Update failed</string>
     <string name="home_source_update_failed_detail">Last update failed: %1$s</string>
     <string name="home_live_row_title">Channels</string>
     <string name="home_live_last_watched">Last watched</string>
-    <string name="home_favorite_movies">Favorite movies</string>
-    <string name="home_favorite_shows">Favorite shows</string>
+    <string name="home_favorite_movies">Favourite movies</string>
+    <string name="home_favorite_shows">Favourite shows</string>
 
     <!-- Category -->
-    <string name="category_live_preview_badge">LIVE PREVIEW</string>
 
     <!-- Search -->
-    <string name="search_streams_placeholder">Search streams…</string>
     <string name="search_categories_streams_hint">Search categories and streams across all categories</string>
     <string name="search_tab_categories">Categories</string>
-    <string name="search_tab_streams">Streams</string>
+    <string name="search_tab_streams">Results</string>
     <string name="category_up_next_format">Up next: %1$s</string>
 
     <!-- Provider Category Filters (TV short labels) -->
@@ -685,14 +677,13 @@
     <!-- EPG Browser (TV) -->
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">%1$s progs, %2$s channels</string>
-    <string name="epg_browser_dev_stats_format">EPG: %1$s</string>
+    <string name="epg_browser_dev_stats_format">Guide: %1$s</string>
     <string name="epg_browser_matched_only_label">Matched only</string>
     <string name="epg_browser_enter_programme_placeholder">Enter programme title…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
-    <string name="epg_browser_finalizing_programmes_format">finalizing… (%1$s programmes)</string>
+    <string name="epg_browser_finalizing_programmes_format">finalising… (%1$s programmes)</string>
     <string name="epg_browser_building_index_label">Building search index…</string>
-    <string name="epg_browser_optimizing_index_label">Optimizing search index…</string>
-    <string name="epg_browser_hint_search_titles_local">Search programme titles in your local EPG data</string>
+    <string name="epg_browser_optimizing_index_label">Optimising search index…</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Back to Categories</string>
@@ -704,8 +695,8 @@
     <string name="settings_about_built_format">Built: %1$s</string>
 
     <!-- TV Settings: Export/Import Card -->
-    <string name="settings_export_button">Export Settings</string>
-    <string name="settings_import_button">Import Settings</string>
+    <string name="settings_export_button">Export settings</string>
+    <string name="settings_import_button">Import settings</string>
     <string name="settings_import_conflict_intro">The following source(s) already exist:</string>
     <string name="settings_import_choose_action">What would you like to do?</string>
 
@@ -724,14 +715,14 @@
 
     <!-- EPG phase labels (dynamic phase words from EpgFileManager) -->
     <string name="epg_phase_downloading">Downloading</string>
-    <string name="epg_phase_ingesting">Ingesting</string>
-    <string name="epg_phase_awaiting_ingestion">Awaiting Ingestion</string>
+    <string name="epg_phase_ingesting">Importing</string>
+    <string name="epg_phase_awaiting_ingestion">Waiting to import</string>
     <string name="epg_phase_rebuilding_indexes">Rebuilding indexes…</string>
-    <string name="epg_phase_swapping_primary_guide">Swapping to primary guide…</string>
+    <string name="epg_phase_swapping_primary_guide">Switching to the new guide…</string>
     <string name="category_count_format">%1$d categories</string>
 
     <!-- Search content-type audit fixes -->
-    <string name="content_type_all_label">All Content</string>
+    <string name="content_type_all_label">All content</string>
     <string name="search_title_format">Search %1$s</string>
     <string name="search_no_results_query_format">No results found for \'%1$s\'\nTry different keywords</string>
     <string name="search_no_results_type_format">No results found in %1$s for \'%2$s\'\nTry different keywords</string>
@@ -744,7 +735,7 @@
     <!-- Punctuation-adjacent literal audit fixes -->
     <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Device: %1$s | Type: %2$s</string>
-    <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
+    <string name="epg_browser_index_stats_format">Guide index: %1$s</string>
     <string name="category_now_playing_badge">▶ Playing</string>
     <string name="settings_ui_scale_section_title">Text &amp; grid size</string>
     <string name="settings_ui_scale_desc">Size of text and everything on screen, on every screen</string>
@@ -755,7 +746,6 @@
     <string name="provider_error_http_status_format">Server returned HTTP %1$d</string>
     <string name="provider_error_invalid_m3u">Not a valid M3U file: missing #EXTM3U header</string>
     <string name="provider_error_connection_failed">Connection failed</string>
-    <string name="stream_count_format">%1$d streams</string>
     <string name="category_select_to_view_channels">Select a category to view channels</string>
     <string name="category_no_channels">No channels in this category</string>
     <string name="category_filtered_of_total_format">%1$d of %2$d categories</string>
@@ -763,8 +753,8 @@
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Failed to load channels: %1$s</string>
     <string name="epg_error_no_channels_in_category">No channels found in this category</string>
-    <string name="epg_error_load_data_format">Failed to load EPG data: %1$s</string>
-    <string name="stream_error_initialization_failed">Initialization failed</string>
+    <string name="epg_error_load_data_format">Couldn\'t load the guide: %1$s</string>
+    <string name="stream_error_initialization_failed">Initialisation failed</string>
     <string name="stream_error_resolve_failed">Failed to resolve stream</string>
     <string name="stream_error_unknown">Unknown error loading stream</string>
     <string name="subscription_unlimited">Unlimited</string>
@@ -778,12 +768,12 @@
     <string name="error_generic_unknown">Unknown error</string>
     <string name="category_error_connection_failed_format">Connection failed: %1$s</string>
     <string name="category_error_load_failed">Failed to load categories</string>
-    <string name="category_favorite_categories_label">Favorite Categories</string>
-    <string name="category_recent_categories_label">Recent Categories</string>
+    <string name="category_favorite_categories_label">Favourite categories</string>
+    <string name="category_recent_categories_label">Recent categories</string>
     <string name="category_recent_label">Recent</string>
     <string name="search_error_session_expired">Session expired. Please login again.</string>
     <string name="search_error_failed">Failed to search</string>
-    <string name="epg_error_file_too_large">EPG file too large for search. Try a more specific query.</string>
+    <string name="epg_error_file_too_large">The guide is too large to search this way. Try a more specific search.</string>
     <string name="epg_browser_no_matched_results_format">No matched results for \'%1$s\'</string>
     <string name="epg_browser_no_results_format">No results found for \'%1$s\'</string>
     <string name="epg_browser_busy_refreshing_format">The guide is updating. Your search for \'%1$s\' will run as soon as it\'s ready.</string>
@@ -820,7 +810,7 @@
     <string name="profile_content_filters_title">Content filters</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Live sync</string>
-    <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>
+    <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves. To run a server, see the server folder at github.com/mpilasy/fijerena.</string>
     <string name="live_sync_open">Set up</string>
     <string name="live_sync_manage">Manage</string>
     <string name="live_sync_off">Off</string>
@@ -934,7 +924,7 @@
     <!-- GD1 -->
     <string name="epg_guide_status_format">%1$d of %2$d channels have listings · %3$s · updated %4$s</string>
     <string name="epg_guide_source_xmltv">XMLTV guide</string>
-    <string name="epg_guide_source_native">source EPG</string>
+    <string name="epg_guide_source_native">source\'s own guide</string>
     <string name="epg_guide_updated_unknown">unknown</string>
     <string name="epg_guide_no_listings_title">No listings</string>
     <string name="epg_guide_no_listings_index_empty">The guide index has nothing for these channels. Refresh the guide in Edit Source → Guide sources.</string>
@@ -1008,7 +998,7 @@
     <!-- A channel row's catch-up badge: how many days its archive keeps. -->
     <string name="catchup_badge_days">%1$dd</string>
     <!-- Phase 6 -->
-    <string name="details_action_favorite">Favorite</string>
+    <string name="details_action_favorite">Favourite</string>
     <string name="details_action_watched">Watched</string>
     <string name="details_action_more">More</string>
     <string name="series_play_next_format">▶ Play: %1$s</string>
@@ -1067,7 +1057,7 @@
     <string name="device_info_downstream">Estimated download bandwidth</string>
     <string name="device_info_mbps">%1$d Mbps</string>
     <string name="device_info_kbps">%1$d kbps</string>
-    <string name="device_info_battery_exempt">Exempt from battery optimization</string>
+    <string name="device_info_battery_exempt">Exempt from battery optimisation</string>
     <string name="device_info_standby_bucket">App standby bucket</string>
     <string name="device_info_bucket_exempted">Exempted</string>
     <string name="device_info_bucket_active">Active</string>
@@ -1091,15 +1081,15 @@
     <string name="device_info_sources">Sources</string>
     <string name="device_info_no_sources">None</string>
     <string name="device_info_sync_never">Never synced</string>
-    <string name="device_info_sync_not_applicable">No catalog sync for this source type</string>
+    <string name="device_info_sync_not_applicable">No catalogue sync for this source type</string>
     <string name="device_info_sync_ok">%1$s · took %2$d s · OK</string>
     <string name="device_info_sync_failed">%1$s · took %2$d s · %3$s</string>
     <string name="device_info_guide_last_refresh">Last guide refresh</string>
     <string name="device_info_guide_never">Never refreshed</string>
     <string name="device_info_guide_ok">%1$s · took %2$d s · guide sources: %3$d · OK</string>
     <string name="device_info_guide_failed">%1$s · took %2$d s · guide sources: %3$d · errors: %4$d</string>
-    <string name="device_info_catalog_job">Catalog sync job</string>
-    <string name="device_info_catalog_job_next">Next catalog sync</string>
+    <string name="device_info_catalog_job">Catalogue sync job</string>
+    <string name="device_info_catalog_job_next">Next catalogue sync</string>
     <string name="device_info_guide_job">Guide refresh job</string>
     <string name="device_info_guide_job_next">Next guide refresh</string>
     <string name="device_info_job_not_scheduled">Not scheduled</string>
@@ -1158,15 +1148,46 @@
     <string name="tv_nav_rail_home">Home</string>
     <string name="tv_nav_rail_hint">Press Left for sections</string>
     <!-- TV Recent and Favorites (lane B) -->
-    <string name="home_favorite_channels">Favorite channels</string>
+    <string name="home_favorite_channels">Favourite channels</string>
     <!-- TV Recent and Favorites -->
     <string name="undo_removed_format">Removed %1$s · Press Menu to undo</string>
     <string name="edit_list_action">Edit list</string>
     <string name="edit_list_done">Finish editing</string>
     <string name="edit_recent_hint">Edit Recent · OK removes · Back to finish</string>
-    <string name="edit_favorites_hint">Edit Favorites · OK removes · Back to finish</string>
+    <string name="edit_favorites_hint">Edit Favourites · OK removes · Back to finish</string>
     <string name="edit_remove_row">Remove</string>
     <string name="recent_clear">Clear Recent</string>
     <string name="recent_clear_confirm_title">Clear Recent?</string>
     <string name="recent_clear_confirm_message">Everything leaves this section\'s Recent list. Progress and watched marks stay.</string>
+    <string name="tmdb_settings_title">Film and series details (TMDB)</string>
+    <string name="tmdb_settings_desc">Fills in missing plots, episode summaries and age ratings, and adds title art and More Like This, with your own free TMDB key. Without a key, nothing is sent to TMDB.</string>
+    <string name="tmdb_key_label">TMDB key</string>
+    <string name="tmdb_key_hint">Get a free key at themoviedb.org (Settings › API). An API key or a read access token both work.</string>
+    <string name="tmdb_status_on">On</string>
+    <string name="tmdb_status_rejected">Key refused</string>
+    <string name="tmdb_rejected_message">TMDB refused this key, so details from TMDB are off. Check the key or enter a new one.</string>
+    <string name="tmdb_test_button">Test</string>
+    <string name="tmdb_testing">Testing…</string>
+    <string name="tmdb_check_valid">TMDB accepted this key.</string>
+    <string name="tmdb_check_rejected">TMDB refused this key.</string>
+    <string name="tmdb_check_unreachable">Couldn\'t reach TMDB. Check the connection and try again.</string>
+    <string name="tmdb_remove_button">Remove key</string>
+    <string name="tmdb_remove_confirm_title">Remove the TMDB key?</string>
+    <string name="tmdb_remove_confirm_text">Details from TMDB turn off on this device and on every device linked by live sync.</string>
+    <string name="tmdb_attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
+    <string name="tmdb_logo_description">TMDB logo</string>
+    <string name="tmdb_attribution_title">Film and series data</string>
+    <string name="epg_xmltv_url_hint">The address of an XMLTV guide file (.xml or .xml.gz), from your provider or a guide site.</string>
+    <string name="epg_timezone_hint">Only if programmes show at the wrong time. Usually 0.</string>
+    <string name="settings_developer_mode_enabled">Developer mode is on for this profile</string>
+    <string name="settings_developer_mode_already_on">Developer mode is already on</string>
+    <string name="settings_developer_mode_taps_left">Developer mode: %1$d to go</string>
+    <string name="ui_style_standard">Standard</string>
+    <string name="ui_style_rounded">Rounded</string>
+    <string name="ui_style_sharp">Sharp</string>
+    <string name="ui_style_balanced">Balanced</string>
+    <string name="theme_deep_night">Deep night</string>
+    <string name="theme_pure_black">Pure black</string>
+    <string name="theme_amethyst">Amethyst</string>
+    <string name="theme_teal">Teal</string>
 </resources>

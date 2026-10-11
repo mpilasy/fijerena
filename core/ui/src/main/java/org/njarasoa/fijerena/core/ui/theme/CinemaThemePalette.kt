@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -7,11 +8,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import org.njarasoa.fijerena.core.ui.R
 
 @Immutable
 data class CinemaThemePalette(
     val id: String,
-    val displayName: String,
+    /** The name shown in Settings, localised (U-M4). */
+    @param:StringRes val nameRes: Int,
     // Primary accent
     val accent: Color,
     val accentDark: Color,
@@ -51,7 +54,7 @@ data class CinemaThemePalette(
 val DeepNightPalette =
     CinemaThemePalette(
         id = "deep_night",
-        displayName = "Deep Night",
+        nameRes = R.string.theme_deep_night,
         accent = Color(0xFF2979FF),
         accentDark = Color(0xFF1565C0),
         accentLight = Color(0xFF82B1FF),
@@ -69,7 +72,7 @@ val DeepNightPalette =
 val AmoledBlackPalette =
     CinemaThemePalette(
         id = "amoled_black",
-        displayName = "AMOLED Black",
+        nameRes = R.string.theme_pure_black,
         accent = Color(0xFFE0E0E0),
         accentDark = Color(0xFFB0B0B0),
         accentLight = Color(0xFFFFFFFF),
@@ -87,7 +90,7 @@ val AmoledBlackPalette =
 val AmethystPalette =
     CinemaThemePalette(
         id = "amethyst",
-        displayName = "Amethyst",
+        nameRes = R.string.theme_amethyst,
         accent = Color(0xFF9C6BFF),
         accentDark = Color(0xFF6A3FD6),
         accentLight = Color(0xFFC7A8FF),
@@ -105,7 +108,7 @@ val AmethystPalette =
 val TealPalette =
     CinemaThemePalette(
         id = "teal",
-        displayName = "Teal",
+        nameRes = R.string.theme_teal,
         accent = Color(0xFF26C6DA),
         accentDark = Color(0xFF00838F),
         accentLight = Color(0xFF80DEEA),

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
@@ -8,6 +9,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.njarasoa.fijerena.core.ui.R
 
 /**
  * Look-and-feel tokens: platform-inspired shape/type/grid/dialog/icon character, independent of
@@ -57,7 +59,8 @@ data class UiIconTokens(
 @Immutable
 data class UiStyle(
     val id: String,
-    val displayName: String,
+    /** The name shown in Settings: neutral and localised (no product names, U-M4). */
+    @param:StringRes val nameRes: Int,
     val shapes: UiShapeTokens,
     val type: UiTypeTokens,
     val dialog: UiDialogTokens,
@@ -70,7 +73,7 @@ data class UiStyle(
 val MaterialStyle =
     UiStyle(
         id = "material",
-        displayName = "Material",
+        nameRes = R.string.ui_style_standard,
         shapes = UiShapeTokens(card = 16.dp, button = 20.dp, chip = 20.dp, dialog = 28.dp),
         type = UiTypeTokens(weightRegular = 400, weightEmphasis = 600, trackingTitleSp = 0f, trackingBodySp = 0f),
         dialog = UiDialogTokens(cornerRadius = 28.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.32f),
@@ -81,7 +84,7 @@ val MaterialStyle =
 val CupertinoStyle =
     UiStyle(
         id = "cupertino",
-        displayName = "Cupertino",
+        nameRes = R.string.ui_style_rounded,
         shapes = UiShapeTokens(card = 22.dp, button = 100.dp, chip = 100.dp, dialog = 18.dp),
         type = UiTypeTokens(weightRegular = 400, weightEmphasis = 500, trackingTitleSp = -0.2f, trackingBodySp = 0f),
         dialog = UiDialogTokens(cornerRadius = 18.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.4f),
@@ -92,7 +95,7 @@ val CupertinoStyle =
 val RokuStyle =
     UiStyle(
         id = "roku",
-        displayName = "Roku",
+        nameRes = R.string.ui_style_sharp,
         shapes = UiShapeTokens(card = 2.dp, button = 2.dp, chip = 2.dp, dialog = 0.dp),
         type = UiTypeTokens(weightRegular = 500, weightEmphasis = 800, trackingTitleSp = 1.2f, trackingBodySp = 0.4f),
         dialog = UiDialogTokens(cornerRadius = 0.dp, position = DialogPosition.FULL_BLEED, scrimAlpha = 0.55f),
@@ -103,7 +106,7 @@ val RokuStyle =
 val BraviaStyle =
     UiStyle(
         id = "bravia",
-        displayName = "BRAVIA",
+        nameRes = R.string.ui_style_balanced,
         shapes = UiShapeTokens(card = 8.dp, button = 8.dp, chip = 8.dp, dialog = 8.dp),
         type = UiTypeTokens(weightRegular = 400, weightEmphasis = 600, trackingTitleSp = 0.3f, trackingBodySp = 0.2f),
         dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.4f),

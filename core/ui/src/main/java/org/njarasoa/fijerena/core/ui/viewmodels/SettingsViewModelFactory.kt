@@ -53,6 +53,10 @@ class SettingsViewModelFactory(
                 SyncSettingsViewModel(appContext as android.app.Application) as T
             }
 
+            modelClass.isAssignableFrom(TmdbKeyViewModel::class.java) -> {
+                TmdbKeyViewModel(appContext) as T
+            }
+
             modelClass.isAssignableFrom(DiagnosticsViewModel::class.java) -> {
                 DiagnosticsViewModel(appContext) as T
             }

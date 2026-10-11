@@ -3,6 +3,6 @@
 # Covers: the menu opens on Remove from Favorites; no confirmation; the list empties and its
 # Refresh takes focus; Menu undoes, the row back and focused.
 @start 9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
-MENU	Remove from Favorites
+MENU	Remove from Favourites
 REMOVE	Refresh
 MENU	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions

@@ -15,10 +15,10 @@
 # Up from the first row lands on the selected tab, not on the Refresh icon.
 UP	Recent
 # Right on a tab moves to the next tab and switches the list to it.
-RIGHT	Favorites
+RIGHT	Favourites
 # Right past the last tab reaches Refresh, the only other stop in the row.
 RIGHT	Refresh streams
-LEFT	Favorites
+LEFT	Favourites
 # Down enters the rows: the current channel when Favorites has it, else the first row (text
 # varies, not asserted). With no favourites nothing below is focusable and focus stays here.
 DOWN	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions

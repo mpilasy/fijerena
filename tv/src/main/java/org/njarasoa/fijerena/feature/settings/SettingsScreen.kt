@@ -43,11 +43,13 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
+import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
@@ -85,6 +87,7 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9, T6).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val tmdbKeyViewModel: TmdbKeyViewModel = viewModel(factory = SettingsViewModelFactory(context))
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
@@ -169,6 +172,7 @@ fun SettingsScreen(
             val hadOnLoad = hadProviderOnLoad
             viewModel.refreshProviderInfo()
             viewModel.refreshDevMode()
+            tmdbKeyViewModel.refresh()
 
             if (hadOnLoad == null) {
                 hadProviderOnLoad = activeProvider != null
@@ -180,6 +184,7 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
+    val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, viewModel::enableDevMode)
 
     // Two panes (plan Part I, B): a rail of the seven groups on the left, the selected group's
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
@@ -395,6 +400,10 @@ fun SettingsScreen(
                                 GuideMaintenancePane(viewModel = epgViewModel, onBack = closePicker)
                             }
 
+                            SettingPicker.TMDB_KEY -> {
+                                TmdbKeyPane(viewModel = tmdbKeyViewModel, onBack = closePicker)
+                            }
+
                             SettingPicker.PROFILE -> {
                                 val profile = profiles.firstOrNull { it.id == editingProfileId }
                                 // Gone (deleted on another device): close. An empty list is still loading.
@@ -461,6 +470,13 @@ fun SettingsScreen(
                                                     },
                                                     manageRowFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
                                                     manageRowModifier = entryModifier,
+                                                )
+                                            }
+                                            item {
+                                                TmdbKeySettingsRow(
+                                                    viewModel = tmdbKeyViewModel,
+                                                    onOpen = { openPicker(SettingPicker.TMDB_KEY) },
+                                                    focusRequester = returnFocus.requesterFor(SettingPicker.TMDB_KEY.returnKey),
                                                 )
                                             }
                                         }
@@ -583,11 +599,13 @@ fun SettingsScreen(
                                                         } else {
                                                             null
                                                         },
+                                                    onVersionClick = onVersionClick,
                                                     rowModifier = entryModifier,
                                                     deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
                                                     diagnosticsFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
                                                 )
                                             }
+                                            item { TmdbAttributionRow() }
                                         }
                                     }
                                 }
@@ -688,6 +706,7 @@ enum class SettingPicker(
     WATCH_DELAY("picker:watchDelay"),
     LANGUAGE("picker:language"),
     GUIDE_MAINTENANCE("picker:guideMaintenance"),
+    TMDB_KEY("picker:tmdbKey"),
 
     /** A profile's page; its rows return focus by `profileReturnKey`, not by this key. */
     PROFILE("picker:profile"),

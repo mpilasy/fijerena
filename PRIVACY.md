@@ -32,10 +32,14 @@ says what the app stores, what it sends and to whom.
   streams and download guides. Images (posters, channel logos) come from the addresses those
   sources give. Jellyfin servers receive a device name and a device id (Android's `ANDROID_ID`
   for this app), as every Jellyfin client sends.
-- **TMDB, only with your own key.** No TMDB key is built into the app. If you enter one, the app
+- **TMDB, only with your own key.** No TMDB key is built into the app, and without one nothing is
+  sent to TMDB. If you enter one (Settings → Source & guide → Film and series details), the app
   asks [The Movie Database](https://www.themoviedb.org) for artwork and details of films and
-  shows. TMDB's own privacy policy applies to those requests.
-- **Live sync, only if you set it up.** Sources (logins included), guide sources, settings,
+  shows, sending your key and the TMDB id of the title you open. If TMDB refuses the key, the app
+  stops asking until you enter another. The key is never put in an export; with live sync it goes
+  to your other devices inside the encrypted records. TMDB's own privacy policy applies to those
+  requests.
+- **Live sync, only if you set it up.** Sources (logins included), guide sources, settings (the TMDB key included),
   profiles, favourites and watch history are sent to the sync server whose address you enter.
   Every record is encrypted on the device with AES-256-GCM, with keys derived (HKDF-SHA256) from
   an account key that only your devices hold; the server never sees it. The server sees what it

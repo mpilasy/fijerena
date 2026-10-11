@@ -4,6 +4,7 @@ import android.app.Application
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,11 +36,13 @@ import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
@@ -47,6 +50,9 @@ import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsRows
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
+import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
+import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -79,11 +85,16 @@ fun MobileSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val tmdbKeyViewModel: TmdbKeyViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val lifecycleOwner = LocalLifecycleOwner.current
-    // Back from a profile's page: the profile in use may have had its developer mode changed.
+    // Back from a profile's page: the profile in use may have had its developer mode changed; a
+    // TMDB 401 elsewhere may have turned the key's status to refused.
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     LaunchedEffect(lifecycleState) {
-        if (lifecycleState == Lifecycle.State.RESUMED) viewModel.refreshDevMode()
+        if (lifecycleState == Lifecycle.State.RESUMED) {
+            viewModel.refreshDevMode()
+            tmdbKeyViewModel.refresh()
+        }
     }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -196,11 +207,16 @@ fun MobileSettingsScreen(
     var showUiStylePicker by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showWatchDelayPicker by remember { mutableStateOf(false) }
+    var showTmdbKeyDialog by remember { mutableStateOf(false) }
+
+    if (showTmdbKeyDialog) {
+        TmdbKeyDialog(viewModel = tmdbKeyViewModel, onDismiss = { showTmdbKeyDialog = false })
+    }
 
     if (showThemePicker) {
         SettingsPickerDialog(
             title = stringResource(R.string.settings_theme_section_title),
-            options = AllPalettes.map { it.displayName to it.id },
+            options = AllPalettes.map { stringResource(it.nameRes) to it.id },
             selected = uiState.themeId,
             onSelect = { id ->
                 viewModel.updateTheme(id)
@@ -213,7 +229,7 @@ fun MobileSettingsScreen(
     if (showUiStylePicker) {
         SettingsPickerDialog(
             title = stringResource(R.string.settings_ui_style_section_title),
-            options = AllUiStyles.map { it.displayName to it.id },
+            options = AllUiStyles.map { stringResource(it.nameRes) to it.id },
             selected = uiState.uiStyleId,
             onSelect = { id ->
                 viewModel.updateUiStyle(id)
@@ -294,6 +310,7 @@ fun MobileSettingsScreen(
                     summary = manageSourcesSummary(uiState),
                     onClick = onManageProviders,
                 )
+                TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
             }
 
             // === 3. Playback ===
@@ -324,12 +341,13 @@ fun MobileSettingsScreen(
                 )
                 SettingsListRow(
                     title = stringResource(R.string.settings_theme_section_title),
-                    summary = AllPalettes.firstOrNull { it.id == uiState.themeId }?.displayName ?: uiState.themeId,
+                    summary = AllPalettes.firstOrNull { it.id == uiState.themeId }?.let { stringResource(it.nameRes) } ?: uiState.themeId,
                     onClick = { showThemePicker = true },
                 )
                 SettingsListRow(
                     title = stringResource(R.string.settings_ui_style_section_title),
-                    summary = AllUiStyles.firstOrNull { it.id == uiState.uiStyleId }?.displayName ?: uiState.uiStyleId,
+                    summary =
+                        AllUiStyles.firstOrNull { it.id == uiState.uiStyleId }?.let { stringResource(it.nameRes) } ?: uiState.uiStyleId,
                     onClick = { showUiStylePicker = true },
                 )
                 SettingsListRow(
@@ -430,7 +448,15 @@ fun MobileSettingsScreen(
             // === 7. About & advanced ===
             item {
                 SettingsGroupHeader(stringResource(R.string.settings_group_about_advanced))
-                Column(modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs)) {
+                // Tapping the version 7 times turns developer mode on (DeveloperModeTaps).
+                val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, viewModel::enableDevMode)
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onVersionClick)
+                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                ) {
                     Text(
                         text = stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodyLarge,
@@ -469,6 +495,7 @@ fun MobileSettingsScreen(
                         onClick = onDiagnostics,
                     )
                 }
+                TmdbAttribution()
             }
         }
     }

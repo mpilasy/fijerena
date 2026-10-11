@@ -10,5 +10,5 @@ MENU	Remove from Recent
 REMOVE	2 / 24 Horas (Chile) (1080p) / Hold OK or press Menu for actions
 MENU	2 / 24/7 Canal de Noticias / Hold OK or press Menu for actions
 DOWN	9 / 9 Plus News (1080p) / Hold OK or press Menu for actions
-MENU	Remove from Favorites
+MENU	Remove from Favourites
 BACK	9 / 9 Plus News (1080p) / Hold OK or press Menu for actions

@@ -5,6 +5,7 @@ import androidx.core.content.edit
 import kotlinx.serialization.json.booleanOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
+import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
 
 class AppSettings(
     private val context: Context,
@@ -64,6 +65,12 @@ class AppSettings(
         const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
 
+        /**
+         * The user's TMDB key: synced like a setting, but stored in [TmdbKeyStore]'s encrypted file,
+         * not in these prefs. Sync records are end-to-end encrypted, so the server never sees it.
+         */
+        const val KEY_TMDB_API_KEY = "tmdb_api_key"
+
         /** Settings kept the same on every device by live sync; those in [PER_PROFILE_SETTING_KEYS] are per profile. */
         val SYNCED_SETTING_KEYS =
             listOf(
@@ -71,6 +78,7 @@ class AppSettings(
                 KEY_DEV_MODE,
                 KEY_LAST_PROVIDER,
                 KEY_AUTOPLAY_NEXT_EPISODE,
+                KEY_TMDB_API_KEY,
             )
         val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER, KEY_AUTOPLAY_NEXT_EPISODE)
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
@@ -175,6 +183,10 @@ class AppSettings(
         profileId: String,
         value: kotlinx.serialization.json.JsonPrimitive,
     ) {
+        if (key == KEY_TMDB_API_KEY) {
+            if (value.isString) TmdbKeyStore(context).applyRemote(value.content)
+            return
+        }
         prefs.edit {
             when (key) {
                 KEY_DEV_MODE -> value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
@@ -190,6 +202,10 @@ class AppSettings(
         key: String,
         profileId: String,
     ): kotlinx.serialization.json.JsonPrimitive? {
+        if (key == KEY_TMDB_API_KEY) {
+            val store = TmdbKeyStore(context)
+            return if (store.hasValue()) kotlinx.serialization.json.JsonPrimitive(store.key) else null
+        }
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {

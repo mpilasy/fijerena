@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.remote.RemoteM3uMediaProvider
 import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
+import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -195,7 +196,7 @@ object MediaProviderFactory {
                 entity.id,
                 providerSettings,
             )
-        return XtreamMediaProvider(entity.id, xtreamRepository)
+        return XtreamMediaProvider(entity.id, xtreamRepository, TmdbApiService.getInstance(context.applicationContext))
     }
 
     private fun createJellyfin(

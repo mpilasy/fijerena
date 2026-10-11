@@ -15,19 +15,19 @@
 @start ▶ Play Movie
 LEFT	Movies
 RIGHT	▶ Play Movie
-RIGHT	Favorite
+RIGHT	Favourite
 RIGHT	Watched
 # Refresh info is no longer in the row: More is the last button (a trailer icon would sit before it).
 RIGHT	More
 LEFT	Watched
 # Down from any action → the selected tab: the first one, More Like This when the movie has
 # related titles (its collection or similar ones), else Cast or Details (-r).
-DOWN	More Like This
+DOWN	More like this
 LEFT	Movies
-RIGHT	More Like This
+RIGHT	More like this
 # Up from a tab → Play, not the button above the tab.
 UP	▶ Play Movie
-DOWN	More Like This
+DOWN	More like this
 # The next tab, then Up again → Play (-r for the tab name: Cast or Details).
 RIGHT	Cast
 UP	▶ Play Movie

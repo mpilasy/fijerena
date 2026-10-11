@@ -8,27 +8,29 @@
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04 (source value and database line blanked).
 @start Profiles
 DOWN	Source & guide
-# P4 (D6): Manage sources is the only source row; guide sources are reached from the source.
+# P4 (D6): Manage sources, then the TMDB key row (Phase 6, D4); guide sources are reached
+# from the source.
 RIGHT	Manage sources
-# Down at the end of the pane stays put: Manage sources is the group's only row.
-DOWN	Manage sources
+# Down at the end of the pane stays put on the TMDB key row.
+DOWN	Film and series details (TMDB)
+DOWN	Film and series details (TMDB)
 LEFT	Source & guide
 DOWN	Playback
 DOWN	Display
 DOWN	Live sync
 DOWN	Backup & storage
 # Backup & storage is a vertical list: Export Settings, Import Settings, then the rest.
-RIGHT	Export Settings
+RIGHT	Export settings
 # Developer mode only (the active profile's Developer Mode, on in the emulator); drop this line
 # without it.
-DOWN	Import Settings
-DOWN	Quick Import from Downloads
-DOWN	Shrink Database
+DOWN	Import settings
+DOWN	Quick import from Downloads
+DOWN	Shrink database
 DOWN	Guide data maintenance
 CENTER	Cleanup
 DOWN	Purge
-DOWN	Clear All Data
-DOWN	Clear All Data
+DOWN	Clear all data
+DOWN	Clear all data
 UP	Purge
 # Back leaves the sub-pane onto its row, Back again returns to the rail.
 BACK	Guide data maintenance

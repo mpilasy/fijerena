@@ -12,12 +12,11 @@
     <string name="epg_no_failed_sources">Aucune source de guide en échec trouvée.</string>
     <string name="epg_cache_cleaned">%1$d fichier(s) nettoyé(s), %2$s libéré(s)</string>
     <string name="epg_no_stray_files">Aucun fichier orphelin trouvé</string>
-    <string name="epg_data_cleared">Toutes les données EPG ont été effacées</string>
+    <string name="epg_data_cleared">Toutes les données du guide ont été effacées</string>
     <string name="epg_purged_programmes">%1$d programme(s) purgé(s)</string>
     <string name="epg_no_old_programmes">Aucun ancien programme à purger</string>
 
     <!-- EPG Management UI -->
-    <string name="epg_management_title">Gestion EPG</string>
     <string name="epg_add_source">Ajouter une source de guide</string>
     <string name="epg_refresh_stale_btn">Actualiser périmés (%1$d)</string>
     <string name="epg_retry_failed_btn">Réessayer échecs (%1$d)</string>
@@ -63,8 +62,8 @@
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>
     <string name="settings_language">Langue</string>
-    <string name="settings_language_en">Anglais</string>
-    <string name="settings_language_mg">Malgache</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_mg">Malagasy</string>
     <string name="settings_language_fr">Français</string>
     <string name="settings_export_success">Paramètres exportés avec succès</string>
     <string name="settings_export_failed">L\'exportation a échoué</string>
@@ -85,14 +84,13 @@
     <string name="common_collapse">Réduire</string>
 
     <!-- EPG indexing -->
-    <string name="epg_indexing_failed">L\'indexation EPG a échoué</string>
-    <string name="epg_indexing_progress">Indexation EPG %1$d%%…</string>
+    <string name="epg_indexing_failed">Impossible de préparer le guide</string>
+    <string name="epg_indexing_progress">Préparation du guide %1$d%%…</string>
     <string name="epg_now_prefix">Actuel : %1$s</string>
 
     <!-- EPG Guide UI -->
     <string name="epg_guide_title_format">Guide TV - %1$s</string>
     <string name="epg_loading_guide">Chargement du guide TV…</string>
-    <string name="epg_no_data">Aucune donnée EPG disponible</string>
     <string name="epg_error_loading">Erreur de chargement du guide</string>
     <string name="epg_prev_day">Jour précédent</string>
     <string name="epg_next_day">Jour suivant</string>
@@ -107,7 +105,7 @@
     <string name="epg_status_idle">Inactif</string>
     <string name="epg_status_tasks_queued">%1$d tâches de mise à jour en attente</string>
     <string name="epg_status_processing">Traitement de %1$d/%2$d sources de guide</string>
-    <string name="epg_status_retrying">Erreur. Nouvel essai (Tentative %1$d/%2$d) à %3$s</string>
+    <string name="epg_status_retrying">Nouvel essai à %3$s (tentative %1$d sur %2$d)</string>
     <string name="epg_status_finished">Traitement terminé</string>
     <string name="epg_status_finalizing">Finalisation (%1$s)…</string>
     <string name="epg_status_clearing">Effacement des données…</string>
@@ -125,9 +123,9 @@
     <string name="epg_source_refresh_hours">Mise à jour toutes les %1$d heures</string>
     <string name="epg_unnamed_source">Source de guide sans nom</string>
     <string name="epg_source_stat_label">Dernière synchro</string>
-    <string name="epg_source_stat_download">Téléchargement</string>
-    <string name="epg_source_stat_ingest">Importation</string>
-    <string name="epg_source_stat_latest">Dernier programme</string>
+    <string name="epg_source_stat_download">Téléchargé en</string>
+    <string name="epg_source_stat_ingest">Importé en</string>
+    <string name="epg_source_stat_latest">Programmes jusqu\'au</string>
     <string name="epg_source_stat_channels">Chaînes</string>
     <string name="epg_source_stat_programmes">Programmes</string>
     <string name="epg_source_stat_unchanged">Inchangé</string>
@@ -135,20 +133,18 @@
     <string name="epg_source_none">Aucun</string>
     <string name="epg_add_source_title">Ajouter une source de guide</string>
     <string name="epg_edit_source_title">Modifier la source de guide</string>
-    <string name="epg_xmltv_url_label">URL XMLTV</string>
+    <string name="epg_xmltv_url_label">Lien du guide (XMLTV)</string>
     <string name="epg_label_optional">Étiquette (Facultatif)</string>
-    <string name="epg_timezone_label">Décalage horaire (Heures)</string>
-    <string name="epg_clear_db_confirm_title">Effacer les données EPG ?</string>
+    <string name="epg_timezone_label">Correction horaire (heures)</string>
+    <string name="epg_clear_db_confirm_title">Effacer les données du guide ?</string>
     <string name="epg_clear_db_confirm_message">Ceci supprimera tous les programmes et chaînes indexés. Les URLs de vos sources de guide seront conservées.</string>
     <string name="epg_clear_everything_btn">Tout effacer</string>
     <string name="epg_delete_source_confirm_title">Supprimer la source de guide ?</string>
-    <string name="epg_delete_source_confirm_message">Voulez-vous vraiment supprimer \'%1$s\' ? Toutes les données EPG associées seront effacées.</string>
+    <string name="epg_delete_source_confirm_message">Supprimer \'%1$s\' ? Ses données de guide seront effacées.</string>
 
     <!-- Category -->
     <string name="category_select_category">Sélectionner une catégorie</string>
     <string name="category_loading_streams">Chargement des flux…</string>
-    <string name="category_no_streams">Aucun flux dans cette catégorie</string>
-    <string name="category_streams_count">%1$d flux</string>
 
     <!-- Favorites -->
     <string name="favorite_add">Ajouter aux favoris</string>
@@ -252,7 +248,7 @@
     <string name="provider_m3u_url_placeholder">https://exemple.com/playlist.m3u</string>
     <string name="provider_auto_resume_label">Reprise automatique</string>
     <string name="provider_auto_resume_desc">Reprendre le contenu VOD là où vous vous êtes arrêté</string>
-    <string name="provider_watch_history_size_label">Taille de l\'historique</string>
+    <string name="provider_watch_history_size_label">Nombre de récents</string>
     <string name="provider_watch_history_size_desc">Nombre de fiches affichées dans la ligne Récents (1-100)</string>
     <string name="provider_edit_button">Modifier</string>
     <string name="provider_queue_size_label">Taille de la file</string>
@@ -264,7 +260,7 @@
     <string name="provider_stream_format_label">Format de flux</string>
     <string name="provider_stream_format_desc">Format utilisé pour les flux en direct (m3u8 = HLS, ts = MPEG-TS)</string>
     <string name="provider_playlist_type_label">Type de playlist</string>
-    <string name="provider_playlist_type_desc">Format de playlist (m3u_plus = étendu avec EPG, simple = basique)</string>
+    <string name="provider_playlist_type_desc">Format de playlist (m3u_plus = avec les infos du guide, simple = basique)</string>
     <string name="provider_category_filters_desc">Masquer les catégories par préfixe (ex. \'Adulte\', \'XXX\')</string>
     <string name="provider_category_filters_profile">Filtres du profil %1$s. Chaque profil a les siens.</string>
     <string name="provider_enable_caching_label">Activer le cache</string>
@@ -276,7 +272,7 @@
     <string name="provider_sync_success">Synchronisation réussie</string>
     <string name="provider_sync_no_changes">Aucun changement depuis la dernière synchro</string>
     <string name="provider_sync_delta">%1$d ajoutés • %2$d mis à jour • %3$d supprimés</string>
-    <string name="provider_total_db_items_label">Total des éléments en base</string>
+    <string name="provider_total_db_items_label">Éléments enregistrés</string>
     <string name="provider_total_items_value">%1$s Éléments</string>
     <string name="provider_live_tv_label">TV en direct</string>
     <string name="provider_live_tv_stats">%1$s Catégories · %2$s Chaînes</string>
@@ -284,14 +280,14 @@
     <string name="provider_movies_stats">%1$s Catégories · %2$s Films</string>
     <string name="provider_tv_shows_label">Séries</string>
     <string name="provider_tv_shows_stats">%1$s Cat. · %2$s Séries · %3$s Ep.</string>
-    <string name="provider_epg_stats">Données EPG : %1$s chaînes</string>
+    <string name="provider_epg_stats">Guide : %1$s chaînes</string>
     <string name="provider_qc_init_failed">Échec du démarrage de Quick Connect</string>
     <string name="provider_qc_poll_failed">Échec de la vérification : %1$s</string>
     <string name="provider_qc_auth_failed">Échec de l\'authentification : %1$s</string>
     <string name="provider_qc_timeout">Délai expiré. Veuillez réessayer.</string>
     <string name="provider_connecting_server">Connexion au serveur…</string>
     <string name="provider_qc_enter_code">Entrez ce code dans Jellyfin :</string>
-    <string name="provider_qc_instructions">Allez dans Jellyfin → Tableau de bord → Quick Connect, puis entrez le code.</string>
+    <string name="provider_qc_instructions">Sur un appareil déjà connecté à Jellyfin, ouvrez le menu de votre profil → Quick Connect et saisissez le code ci-dessus.</string>
     <string name="provider_qc_waiting">En attente d\'approbation…</string>
 
     <!-- Provider Selection -->
@@ -409,7 +405,6 @@
     <string name="player_favorite">Favori</string>
     <string name="player_add_favorite">Ajouter aux favoris</string>
     <string name="player_remove_favorite">Retirer des favoris</string>
-    <string name="player_press_back_exit">OK pour masquer • RETOUR pour quitter</string>
 
     <!-- Stats Labels -->
     <string name="player_stats_video">VIDÉO</string>
@@ -487,8 +482,8 @@
     <string name="epg_delete_source_title">Supprimer la source de guide ?</string>
     <string name="epg_database_ready">Prêt (%1$s programmes)</string>
     <string name="epg_database_optimizing">Optimisation de l\'index de recherche…</string>
-    <string name="epg_database_error_prefixed">Erreur de base de données : %1$s</string>
-    <string name="epg_current_status_error">Erreur de statut actuel : %1$s</string>
+    <string name="epg_database_error_prefixed">Problème de la base du guide : %1$s</string>
+    <string name="epg_current_status_error">Problème de mise à jour du guide : %1$s</string>
 
     <!-- EPG Browser -->
     <string name="epg_browser_title">Rechercher dans le guide</string>
@@ -500,7 +495,7 @@
     <string name="epg_browser_indexing_label">Indexation…</string>
     <string name="epg_browser_optimizing_label">Optimisation…</string>
     <string name="epg_browser_hint_search_titles">Rechercher des titres de programmes</string>
-    <string name="epg_browser_no_file_message">Aucun fichier EPG disponible.\nConfigurez une URL EPG dans les paramètres.</string>
+    <string name="epg_browser_no_file_message">Pas encore de guide.\nAjoutez une source de guide dans Modifier la source → Sources de guide.</string>
     <string name="epg_browser_watch_confirm_title">Regarder maintenant ?</string>
     <string name="epg_browser_watch_confirm_message">Cette émission passe à %1$s.\nRegarder %2$s maintenant ?</string>
     <string name="epg_browser_watch_now_btn">Regarder maintenant</string>
@@ -518,7 +513,6 @@
 
     <!-- EPG Settings Card -->
     <string name="epg_summary_no_sources">Aucune source de guide configurée</string>
-    <string name="epg_data_manage_button">Gérer les données EPG</string>
 
     <!-- Player Stats extras -->
     <string name="player_stats_na">N/A</string>
@@ -533,7 +527,7 @@
     <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
     <string name="app_disclaimer_no_content">Fijerena ne fournit ni n\'héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
     <string name="settings_developer_mode_title">Mode développeur</string>
-    <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
+    <string name="settings_developer_mode_desc">Diagnostics, détails techniques et types de source encore en développement (SMB, fichiers locaux)</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
     <string name="settings_diagnostics_open">Ouvrir les diagnostics</string>
@@ -625,13 +619,11 @@
     <string name="home_favorite_shows">Séries favorites</string>
 
     <!-- Category -->
-    <string name="category_live_preview_badge">APERÇU EN DIRECT</string>
 
     <!-- Search -->
-    <string name="search_streams_placeholder">Rechercher des flux…</string>
     <string name="search_categories_streams_hint">Rechercher des catégories et des flux dans toutes les catégories</string>
     <string name="search_tab_categories">Catégories</string>
-    <string name="search_tab_streams">Flux</string>
+    <string name="search_tab_streams">Résultats</string>
     <string name="category_up_next_format">À suivre : %1$s</string>
 
     <!-- Provider Category Filters (TV short labels) -->
@@ -649,14 +641,13 @@
     <!-- EPG Browser (TV) -->
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">%1$s prog., %2$s chaînes</string>
-    <string name="epg_browser_dev_stats_format">EPG : %1$s</string>
+    <string name="epg_browser_dev_stats_format">Guide : %1$s</string>
     <string name="epg_browser_matched_only_label">Correspondances uniquement</string>
     <string name="epg_browser_enter_programme_placeholder">Saisir le titre du programme…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
     <string name="epg_browser_finalizing_programmes_format">finalisation… (%1$s programmes)</string>
     <string name="epg_browser_building_index_label">Construction de l\'index de recherche…</string>
     <string name="epg_browser_optimizing_index_label">Optimisation de l\'index de recherche…</string>
-    <string name="epg_browser_hint_search_titles_local">Rechercher les titres de programmes dans vos données EPG locales</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Retour aux catégories</string>
@@ -688,10 +679,10 @@
 
     <!-- EPG phase labels -->
     <string name="epg_phase_downloading">Téléchargement</string>
-    <string name="epg_phase_ingesting">Ingestion</string>
-    <string name="epg_phase_awaiting_ingestion">En attente d\'ingestion</string>
+    <string name="epg_phase_ingesting">Importation</string>
+    <string name="epg_phase_awaiting_ingestion">En attente d\'importation</string>
     <string name="epg_phase_rebuilding_indexes">Reconstruction des index…</string>
-    <string name="epg_phase_swapping_primary_guide">Basculement vers le guide principal…</string>
+    <string name="epg_phase_swapping_primary_guide">Passage au nouveau guide…</string>
     <string name="category_count_format">%1$d catégories</string>
 
     <!-- Search content-type audit fixes -->
@@ -708,7 +699,7 @@
     <!-- Punctuation-adjacent literal audit fixes -->
     <string name="player_stats_build_format">Build : %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Appareil : %1$s | Type : %2$s</string>
-    <string name="epg_browser_index_stats_format">Index EPG : %1$s</string>
+    <string name="epg_browser_index_stats_format">Index du guide : %1$s</string>
     <string name="category_now_playing_badge">▶ Lecture en cours</string>
     <string name="settings_ui_scale_section_title">Taille du texte et de la grille</string>
     <string name="settings_ui_scale_desc">Taille du texte et de tout ce qui est à l\'écran, sur chaque écran</string>
@@ -719,7 +710,6 @@
     <string name="provider_error_http_status_format">Le serveur a retourné HTTP %1$d</string>
     <string name="provider_error_invalid_m3u">Fichier M3U invalide : en-tête #EXTM3U manquant</string>
     <string name="provider_error_connection_failed">Échec de la connexion</string>
-    <string name="stream_count_format">%1$d flux</string>
     <string name="category_select_to_view_channels">Sélectionnez une catégorie pour voir les chaînes</string>
     <string name="category_no_channels">Aucune chaîne dans cette catégorie</string>
     <string name="category_filtered_of_total_format">%1$d sur %2$d catégories</string>
@@ -727,7 +717,7 @@
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
     <string name="epg_error_load_channels_format">Échec du chargement des chaînes : %1$s</string>
     <string name="epg_error_no_channels_in_category">Aucune chaîne trouvée dans cette catégorie</string>
-    <string name="epg_error_load_data_format">Échec du chargement des données EPG : %1$s</string>
+    <string name="epg_error_load_data_format">Impossible de charger le guide : %1$s</string>
     <string name="stream_error_initialization_failed">Échec de l\'initialisation</string>
     <string name="stream_error_resolve_failed">Échec de la résolution du flux</string>
     <string name="stream_error_unknown">Erreur inconnue lors du chargement du flux</string>
@@ -747,7 +737,7 @@
     <string name="category_recent_label">Récents</string>
     <string name="search_error_session_expired">Session expirée. Veuillez vous reconnecter.</string>
     <string name="search_error_failed">Échec de la recherche</string>
-    <string name="epg_error_file_too_large">Fichier EPG trop volumineux pour la recherche. Essayez une requête plus précise.</string>
+    <string name="epg_error_file_too_large">Le guide est trop volumineux pour cette recherche. Essayez une recherche plus précise.</string>
     <string name="epg_browser_no_matched_results_format">Aucun résultat correspondant pour \'%1$s\'</string>
     <string name="epg_browser_no_results_format">Aucun résultat trouvé pour \'%1$s\'</string>
     <string name="epg_browser_busy_refreshing_format">Le guide est en cours de mise à jour. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
@@ -785,7 +775,7 @@
     <string name="profile_content_filters_title">Filtres de contenu</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
-    <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>
+    <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter. Pour installer un serveur, voir le dossier server sur github.com/mpilasy/fijerena.</string>
     <string name="live_sync_open">Configurer</string>
     <string name="live_sync_manage">Gérer</string>
     <string name="live_sync_off">Désactivée</string>
@@ -898,7 +888,7 @@
     <!-- GD1 -->
     <string name="epg_guide_status_format">%1$d chaînes sur %2$d ont un programme · %3$s · mis à jour %4$s</string>
     <string name="epg_guide_source_xmltv">guide XMLTV</string>
-    <string name="epg_guide_source_native">EPG de la source</string>
+    <string name="epg_guide_source_native">guide de la source</string>
     <string name="epg_guide_updated_unknown">inconnu</string>
     <string name="epg_guide_no_listings_title">Aucun programme</string>
     <string name="epg_guide_no_listings_index_empty">L\'index du guide n\'a rien pour ces chaînes. Actualisez le guide dans Modifier la source → Sources de guide.</string>
@@ -1171,4 +1161,35 @@
     <string name="recent_clear">Vider les récents</string>
     <string name="recent_clear_confirm_title">Vider les récents\u00A0?</string>
     <string name="recent_clear_confirm_message">Tout quitte la liste des récents de cette section. La progression et les marques «\u00A0vu\u00A0» sont conservées.</string>
+    <string name="tmdb_settings_title">Fiches des films et séries (TMDB)</string>
+    <string name="tmdb_settings_desc">Complète les résumés et classifications d\'âge manquants, et ajoute les logos de titre et « Dans le même genre », avec votre propre clé TMDB gratuite. Sans clé, rien n\'est envoyé à TMDB.</string>
+    <string name="tmdb_key_label">Clé TMDB</string>
+    <string name="tmdb_key_hint">Obtenez une clé gratuite sur themoviedb.org (Paramètres › API). Une clé d\'API ou un jeton d\'accès en lecture conviennent.</string>
+    <string name="tmdb_status_on">Activées</string>
+    <string name="tmdb_status_rejected">Clé refusée</string>
+    <string name="tmdb_rejected_message">TMDB a refusé cette clé : les fiches TMDB sont désactivées. Vérifiez la clé ou saisissez-en une nouvelle.</string>
+    <string name="tmdb_test_button">Tester</string>
+    <string name="tmdb_testing">Test en cours…</string>
+    <string name="tmdb_check_valid">TMDB a accepté cette clé.</string>
+    <string name="tmdb_check_rejected">TMDB a refusé cette clé.</string>
+    <string name="tmdb_check_unreachable">Impossible de joindre TMDB. Vérifiez la connexion et réessayez.</string>
+    <string name="tmdb_remove_button">Supprimer la clé</string>
+    <string name="tmdb_remove_confirm_title">Supprimer la clé TMDB ?</string>
+    <string name="tmdb_remove_confirm_text">Les fiches TMDB seront désactivées sur cet appareil et sur tous ceux liés par la synchronisation.</string>
+    <string name="tmdb_attribution">Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</string>
+    <string name="tmdb_logo_description">Logo TMDB</string>
+    <string name="tmdb_attribution_title">Données des films et séries</string>
+    <string name="epg_xmltv_url_hint">L\'adresse d\'un fichier de guide XMLTV (.xml ou .xml.gz), fournie par votre fournisseur ou un site de guides.</string>
+    <string name="epg_timezone_hint">Seulement si les programmes s\'affichent à la mauvaise heure. En général 0.</string>
+    <string name="settings_developer_mode_enabled">Mode développeur activé pour ce profil</string>
+    <string name="settings_developer_mode_already_on">Le mode développeur est déjà activé</string>
+    <string name="settings_developer_mode_taps_left">Mode développeur : encore %1$d</string>
+    <string name="ui_style_standard">Standard</string>
+    <string name="ui_style_rounded">Arrondi</string>
+    <string name="ui_style_sharp">Net</string>
+    <string name="ui_style_balanced">Équilibré</string>
+    <string name="theme_deep_night">Nuit profonde</string>
+    <string name="theme_pure_black">Noir pur</string>
+    <string name="theme_amethyst">Améthyste</string>
+    <string name="theme_teal">Bleu canard</string>
 </resources>

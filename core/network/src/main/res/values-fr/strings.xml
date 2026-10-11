@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- EPG sync foreground-service notifications -->
-    <string name="epg_sync_notification_channel">Synchronisation du guide EPG</string>
+    <string name="epg_sync_notification_channel">Mises à jour du guide TV</string>
     <string name="epg_sync_notification_title">Actualisation du guide TV</string>
     <string name="epg_fts_rebuild_notification_title">Reconstruction de l\'index du guide TV</string>
 
     <!-- Xtream catalog sync foreground-service notifications -->
-    <string name="xtream_sync_notification_channel">Synchronisation du catalogue Xtream</string>
+    <string name="xtream_sync_notification_channel">Mises à jour du catalogue</string>
     <string name="xtream_sync_notification_title">Synchronisation des chaînes et contenus</string>
 
     <!-- Friendly error messages -->

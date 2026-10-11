@@ -14,7 +14,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 
 /**
  * About: version and build as one focusable row — the group's entry row, so Right from the rail
- * always lands somewhere and Up/Down never skip it (focus contract rule 3); OK does nothing. Then
+ * always lands somewhere and Up/Down never skip it (focus contract rule 3); OK counts toward
+ * developer mode ([onVersionClick], 7 taps). Then
  * Device info, and Diagnostics while the profile in use has developer mode on ([onDiagnostics]
  * not null; switched on each profile's page). Both open their own screens.
  */
@@ -22,6 +23,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 fun AboutSettingsCard(
     onDeviceInfo: () -> Unit,
     onDiagnostics: (() -> Unit)?,
+    onVersionClick: () -> Unit = {},
     rowModifier: Modifier = Modifier,
     deviceInfoFocusRequester: FocusRequester? = null,
     diagnosticsFocusRequester: FocusRequester? = null,
@@ -30,7 +32,7 @@ fun AboutSettingsCard(
         SettingsRow(
             title = stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME),
             description = null,
-            onClick = {},
+            onClick = onVersionClick,
             modifier = rowModifier,
             chevron = false,
             supporting = {

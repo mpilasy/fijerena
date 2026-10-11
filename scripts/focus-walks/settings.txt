@@ -21,7 +21,9 @@ DOWN	About & advanced
 RIGHT	Fijerena
 DOWN	Device info / This app and device: versions, memory, storage, screen, media decoders, network and background state / ›
 DOWN	Diagnostics / Crashes and errors recorded on this device
-DOWN	Diagnostics / Crashes and errors recorded on this device
+# TMDB attribution (Phase 6, D4): one focusable row, OK does nothing.
+DOWN	Film and series data
+DOWN	Film and series data
 LEFT	About & advanced
 UP	Backup & storage
 UP	Live sync
@@ -42,9 +44,10 @@ LEFT	Count as watched after / How long to watch a channel before it's added to L
 LEFT	Playback
 UP	Source & guide
 # P4 (D6): one Manage sources row (the source in use as its value); Guide auto-refresh went
-# with P5b (each guide source has its own), so Down stays on it.
+# with P5b (each guide source has its own). Then the TMDB key row (Phase 6, D4), the last.
 RIGHT	Manage sources
-DOWN	Manage sources
+DOWN	Film and series details (TMDB)
+DOWN	Film and series details (TMDB)
 LEFT	Source & guide
 UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).
@@ -57,7 +60,7 @@ RIGHT	M / main / Using on this device
 # profile's row. Nothing below is pressed except the OK that opens a page.
 CENTER	Edit Name
 DOWN	Colour / ›
-DOWN	Developer Mode / Enable stats for nerds and debug features
+DOWN	Developer mode / Diagnostics, technical details, and source types still in development (SMB, local files)
 DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
 DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
 LEFT	M / main / Using on this device
@@ -66,7 +69,7 @@ LEFT	M / main / Using on this device
 DOWN	K / Kid
 CENTER	Edit Name
 DOWN	Colour / ›
-DOWN	Developer Mode / Enable stats for nerds and debug features
+DOWN	Developer mode / Diagnostics, technical details, and source types still in development (SMB, local files)
 DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
 DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
 DOWN	Switch to this profile

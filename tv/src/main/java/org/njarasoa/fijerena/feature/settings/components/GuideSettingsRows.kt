@@ -164,7 +164,7 @@ fun GuideMaintenancePane(
  * sits in one column, so Left has nothing else to do). The caller lands focus on its first control.
  */
 @Composable
-private fun SettingsSubPane(
+internal fun SettingsSubPane(
     title: String,
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,

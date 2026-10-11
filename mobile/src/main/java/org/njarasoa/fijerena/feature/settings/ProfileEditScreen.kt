@@ -110,11 +110,15 @@ fun MobileProfileEditScreen(
                     showError = showNameError,
                 )
                 ProfileColourPicker(colorIndex = colorIndex, onPick = { colorIndex = it })
-                ProfileSwitchRow(
-                    title = stringResource(R.string.settings_developer_mode_title),
-                    checked = devMode,
-                    onCheckedChange = { devMode = it },
-                )
+                // Only while it is on, to turn it off: it is turned on by tapping the version in
+                // About 7 times (DeveloperModeTaps).
+                if (stored.devMode) {
+                    ProfileSwitchRow(
+                        title = stringResource(R.string.settings_developer_mode_title),
+                        checked = devMode,
+                        onCheckedChange = { devMode = it },
+                    )
+                }
                 ProfileSwitchRow(
                     title = stringResource(R.string.settings_autoplay_next_episode_title),
                     checked = autoplayNextEpisode,

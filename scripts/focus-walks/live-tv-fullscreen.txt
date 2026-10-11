@@ -15,7 +15,7 @@ RIGHT	Hold OK or press Menu for actions
 # channel's context).
 UP	Recent
 # Right on a tab moves to the next tab and switches the list to it (the zap order follows).
-RIGHT	Favorites
+RIGHT	Favourites
 # Down enters the rows: the playing channel when it is a favourite, else the first row (text
 # varies). With no favourites nothing below is focusable and focus stays on the tab.
 # (Favorites' tab is the one the walk leaves selected; the player root and its banner text vary.)

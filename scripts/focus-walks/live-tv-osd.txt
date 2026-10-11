@@ -10,10 +10,10 @@
 # OK opens the OSD with focus on Channels (not on Favorite: a stray second OK must not favourite).
 CENTER	Channels
 RIGHT	Guide
-RIGHT	Favorite
+RIGHT	Favourite
 # Next: Subtitles, Audio, Quality or More, depending on the stream's tracks — not asserted.
 RIGHT	
-LEFT	Favorite
+LEFT	Favourite
 LEFT	Guide
 LEFT	Channels
 # Left at the start of the row stays on it (the row is a focus group that keeps Left/Right).

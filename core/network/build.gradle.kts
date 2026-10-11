@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -19,14 +17,8 @@ android {
     defaultConfig {
         minSdk = 30
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        val tmdbApiKey =
-            runCatching {
-                val props = Properties()
-                rootProject.file("local.properties").inputStream().use { props.load(it) }
-                props.getProperty("TMDB_API_KEY") ?: ""
-            }.getOrDefault("")
-        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
+        // No TMDB key is built in: the user enters their own in Settings (D4,
+        // docs/plans/20261011_public-release-fdroid-readiness-plan.md).
     }
     buildFeatures {
         buildConfig = true

@@ -56,7 +56,7 @@ The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the shor
   Favourites) in the preview and over the video in full screen; channel switching with Up/Down; a TV
   Guide grid and guide search over XMLTV guides, refreshed in the background.
 - **Movies and TV Shows:** details screens, resume, Continue Watching and Up next, mark
-  watched/unwatched, and extra details from TMDB when a TMDB key is configured.
+  watched/unwatched, and extra details from TMDB with your own free TMDB key, entered in Settings.
 - **Player:** Media3 (HLS, DASH, MPEG-TS) with the FFmpeg decoder extension; audio, subtitle and quality
   selection remembered per item and per series, Stats for Nerds, network-aware buffering.
 - **Profiles and live sync:** a "Who's watching?" picker with per-profile favourites, history and
@@ -96,14 +96,9 @@ Outputs: `tv/build/outputs/apk/debug/tv-debug.apk` and
 `mobile/build/outputs/apk/debug/mobile-debug.apk`. Debug builds also include x86 and x86_64 so
 emulators run natively.
 
-Nothing is required to build. For TMDB details, put a TMDB API key (v3 key or v4 read token) in the
-gitignored `local.properties`:
-
-```properties
-TMDB_API_KEY=<your key>
-```
-
-Without it the build still works and TMDB lookups are skipped.
+Nothing is required to build, and no build carries a TMDB key. For TMDB details, enter your own key
+(v3 API key or v4 read access token, free from themoviedb.org → Settings → API) in the app:
+Settings → Source & guide → Film and series details (TMDB). Without one, nothing is sent to TMDB.
 
 `./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs. The build has no
 signing configuration yet, so they come out unsigned.

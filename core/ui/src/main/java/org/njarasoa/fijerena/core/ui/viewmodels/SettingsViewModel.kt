@@ -126,6 +126,12 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(isDevMode = appSettings.isDevMode)
     }
 
+    /** The 7th tap on the version row: developer mode on for the profile in use. */
+    fun enableDevMode() {
+        appSettings.isDevMode = true
+        refreshDevMode()
+    }
+
     fun updateLanguage(language: String) {
         org.njarasoa.fijerena.core.ui.utils.LocaleManager
             .updateLocale(context, language)

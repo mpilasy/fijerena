@@ -278,12 +278,16 @@ fun ProfileEditPane(
                     focusRequester = colourFocus,
                     leading = { ColourDot(colorIndex, scale) },
                 )
-                TvSwitchRow(
-                    checked = devMode,
-                    onCheckedChange = { devMode = it },
-                    label = stringResource(R.string.settings_developer_mode_title),
-                    description = stringResource(R.string.settings_developer_mode_desc),
-                )
+                // Only while it is on, to turn it off: it is turned on by tapping the version in
+                // About 7 times (DeveloperModeTaps).
+                if (stored.devMode) {
+                    TvSwitchRow(
+                        checked = devMode,
+                        onCheckedChange = { devMode = it },
+                        label = stringResource(R.string.settings_developer_mode_title),
+                        description = stringResource(R.string.settings_developer_mode_desc),
+                    )
+                }
                 TvSwitchRow(
                     checked = autoplayNextEpisode,
                     onCheckedChange = { autoplayNextEpisode = it },

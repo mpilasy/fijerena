@@ -11,7 +11,7 @@
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04.
 # Recent row size, stream format and playlist type are settings rows (title, description, value ›)
 # like Settings'; OK opens the same picker. Re-recorded as text only, 2026-10-07.
-@start Edit Source Name
+@start Edit Source name
 DOWN	Edit Server URL
 DOWN	Edit Username
 DOWN	Edit Password
@@ -21,27 +21,27 @@ RIGHT	Save connection
 # Right from Save connection enters the settings column on its first control.
 RIGHT	Auto-Resume / Resume VOD content from where you left off
 # Recent row size: the "Last Watched Queue Size" row (opens Settings' picker; no Edit button).
-DOWN	Last Watched Queue Size
+DOWN	Recent row size
 # Stream format: the "Stream Output Format" row (value m3u8 or ts).
-DOWN	Stream Output Format
+DOWN	Stream output format
 # Playlist type: the "Playlist Type" row (value m3u_plus or simple).
-DOWN	Playlist Type
+DOWN	Playlist type
 # Left goes back to the Connection column, on the row it left.
 LEFT	Save connection
 # Right comes back to the settings row it left.
-RIGHT	Playlist Type
+RIGHT	Playlist type
 # P3/P4 Guide section, after Enable Caching and the Logins section: Provides a guide (Xtream), then Guide sources.
-DOWN	Enable Caching / Enable caching for faster loading
+DOWN	Enable caching / Enable caching for faster loading
 # Shared logins: the Logins section. With only the main login it is one focusable row (no
 # buttons), then Add login. With extra logins the rows' icons are the stops instead.
 DOWN	Main login
 DOWN	Add login
 DOWN	Provides a guide / This source's own guide (xmltv.php) is added automatically
-DOWN	Guide Sources
+DOWN	Guide sources
 # OK opens the source's guide sources (entry: its first row's toggle, or Add Guide Source when it
 # has none, as jellyxtream); Back returns to the Guide sources row. Library data follows, with
 # no content filters section in between (they are on each profile's page).
-CENTER	Add Guide Source
-BACK	Guide Sources
-DOWN	Sync Data Now
-UP	Guide Sources
+CENTER	Add guide source
+BACK	Guide sources
+DOWN	Sync data now
+UP	Guide sources
