@@ -4,9 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -37,10 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.common.InputImage
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -88,7 +82,6 @@ fun QrScanner(
     }
 }
 
-@OptIn(ExperimentalGetImage::class)
 @Composable
 private fun CameraPreview(onScanned: (String) -> Unit) {
     val context = LocalContext.current
@@ -98,27 +91,27 @@ private fun CameraPreview(onScanned: (String) -> Unit) {
 
     DisposableEffect(lifecycleOwner) {
         val executor = Executors.newSingleThreadExecutor()
-        val scanner = BarcodeScanning.getClient(BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build())
+        val mainExecutor = ContextCompat.getMainExecutor(context)
         val delivered = AtomicBoolean(false)
         val providerFuture = ProcessCameraProvider.getInstance(context)
+        // Both the listeners below and onDispose run on Main, so a plain flag is enough.
+        var disposed = false
         val analysis =
             ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().apply {
                 setAnalyzer(executor) { proxy ->
-                    val image = proxy.image
-                    if (image == null || delivered.get()) {
-                        proxy.close()
-                        return@setAnalyzer
+                    // The default YUV_420_888 frames: plane 0 is luminance, one byte per pixel.
+                    val text =
+                        proxy.use {
+                            if (delivered.get()) return@use null
+                            val plane = it.planes[0]
+                            val bytes = ByteArray(plane.buffer.remaining()).also { b -> plane.buffer.get(b) }
+                            decodeQrFrame(bytes, it.width, it.height, plane.rowStride).firstOrNull { qr -> PairingQr.decode(qr) != null }
+                        }
+                    if (text != null && delivered.compareAndSet(false, true)) {
+                        mainExecutor.execute { if (!disposed) currentOnScanned(text) }
                     }
-                    scanner
-                        .process(InputImage.fromMediaImage(image, proxy.imageInfo.rotationDegrees))
-                        .addOnSuccessListener { codes ->
-                            val text = codes.firstNotNullOfOrNull { code -> code.rawValue?.takeIf { PairingQr.decode(it) != null } }
-                            if (text != null && delivered.compareAndSet(false, true)) currentOnScanned(text)
-                        }.addOnCompleteListener { proxy.close() }
                 }
             }
-        // Both the listener and onDispose run on Main, so a plain flag is enough.
-        var disposed = false
         providerFuture.addListener({
             // CameraX failed to start, or no back camera (some tablets): the screen stays black
             // with its hint and Cancel. Skipped when the scanner closed before the camera was ready.
@@ -130,12 +123,11 @@ private fun CameraPreview(onScanned: (String) -> Unit) {
                     provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
                 }.onFailure { android.util.Log.w("QrScanner", "Camera unavailable", it) }
             }
-        }, ContextCompat.getMainExecutor(context))
+        }, mainExecutor)
         onDispose {
             disposed = true
             // Never block Main on a camera that is still starting; nothing is bound until it's done.
             if (providerFuture.isDone) runCatching { providerFuture.get().unbindAll() }
-            scanner.close()
             executor.shutdown()
         }
     }

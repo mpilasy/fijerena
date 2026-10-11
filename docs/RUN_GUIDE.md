@@ -91,7 +91,7 @@ CI runs on every push to `main`, or by hand (`workflow_dispatch`), in three work
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
   Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
   `assembleDebugAndroidTest` so the instrumented tests keep compiling.
-  Both APKs are uploaded as artifacts from `main` and manual runs only. Gradle runs on JDK 25
+  Both APKs are uploaded as artifacts from `main` and manual runs only. Gradle runs on JDK 21
   (`gradle/gradle-daemon-jvm.properties`).
 - `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
 - `instrumented-tests.yml`, nightly at 06:17 UTC or by hand: `connectedDebugAndroidTest` for
