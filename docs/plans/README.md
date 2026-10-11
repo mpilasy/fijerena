@@ -16,7 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-11 | [Watched follow-ups](./20261011_watched-followups-plan.md) | Play goes to the first unwatched episode after a mark; no watched marks on Jellyfin; phone list rows get a long-press menu | All three phases |
+| 2026-10-11 | [Watched follow-ups](./20261011_watched-followups-plan.md) | Play goes to the first unwatched episode after a mark; no watched marks on Jellyfin; phone list rows get a long-press menu | Phase 2 done; 1 and 3 in progress |
 | 2026-10-11 | [Everyday UX fixes](./20261011_everyday-ux-fixes-plan.md) | Seven fixes from the release plan that help everyday use: TV seeking, Undo without Menu, login errors, phone swipe, guide offset, sync progress, cleanups | 1–4, 6, 7 done (device checks pending); 5 on hold |
 | 2026-10-11 | [Public release and F-Droid readiness](./20261011_public-release-fdroid-readiness-plan.md) | Audit and plan to make the app releasable to the public and acceptable to F-Droid: license, FOSS dependencies (ML Kit, requery, FFmpeg), separate package IDs, reproducible signed builds, privacy, first-run UX and copy | On hold (2026-10-11): Phases 1, 2, 4 and 6 done; 3, 5, 7 and 8 not started; decisions D1–D11 made; public repo starts from a fresh squashed snapshot as the last step |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real panel-a) needs a second panel-a login |

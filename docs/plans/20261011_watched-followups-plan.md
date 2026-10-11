@@ -21,8 +21,8 @@ decided by the user on 2026-10-11.
 | Phase | What | Status |
 |---|---|---|
 | 1 | Play and the Home card go to the first unwatched episode | In progress |
-| 2 | Hide every watched mark on Jellyfin | In progress |
-| 3 | Phone list rows: long-press menu | Not started (after Phase 2; same screen) |
+| 2 | Hide every watched mark on Jellyfin | Done (404c6d91) |
+| 3 | Phone list rows: long-press menu | In progress |
 
 ## Phase 1: first unwatched episode
 
@@ -51,6 +51,10 @@ decided by the user on 2026-10-11.
 - Hide the single film/episode Mark watched / Mark unwatched wherever it shows: TV and phone
   episode screens, film details, list row menus and swipe, Home card menus, Search.
 - Tests: the gate is false for a server-backed provider (extend an existing repository test).
+- **Done** (404c6d91): hidden in film details (TV, phone), TV and phone episode cards, TV list row
+  menus, phone swipe (narrower when it has no watched action), TV Home card menus and TV Search
+  (phone Search only ever had the show mark). On the phone episode screen a watched episode
+  still shows its check on Jellyfin, just not tappable.
 
 ## Phase 3: phone long-press menu on list rows
 
