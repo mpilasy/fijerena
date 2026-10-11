@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.ui.R
@@ -470,7 +471,10 @@ class ProviderViewModel(
                 // reusing one built from the old URL/username/password.
                 AppContainer.getInstance(context).onProvidersChanged(setOf(id))
             } else {
-                providerRepository.addProvider(name, url, username, password, type, config, initialSettings)
+                val newId = providerRepository.addProvider(name, url, username, password, type, config, initialSettings)
+                // A new source loads its whole catalogue now, not at the next scheduled sync (up to
+                // 4 h away). Runs in ProviderSyncManager's own scope, so leaving the form doesn't stop it.
+                if (type == "XTREAM") ProviderSyncManager.getInstance(context).startManualSync(newId)
             }
             loadProviders()
             _saveState.value = SaveState.Idle
