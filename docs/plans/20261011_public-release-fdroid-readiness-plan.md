@@ -332,12 +332,12 @@ Phase 8 always comes last: nothing goes to the public repository before the tree
 | Phase | Status | Commit |
 |---|---|---|
 | 0 | Done (2026-10-11) | |
-| 1 | Not started | |
-| 2 | Not started | |
+| 1 | In progress (2026-10-11) | |
+| 2 | In progress (2026-10-11) | |
 | 3 | Not started | |
-| 4 | Not started | |
+| 4 | In progress (2026-10-11) | |
 | 5 | Not started | |
-| 6 | Not started | |
+| 6 | In progress (2026-10-11) | |
 | 7 | Not started | |
 | 8 | Not started (last) | |
 | 9 | Not started | |
