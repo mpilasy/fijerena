@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import org.njarasoa.fijerena.core.ui.R
 
 /**
@@ -19,6 +20,7 @@ fun rememberDeveloperModeTapHandler(
     onEnable: () -> Unit,
 ): () -> Unit {
     val context = LocalContext.current
+    val resources = LocalResources.current
     var taps by remember { mutableIntStateOf(0) }
     return {
         val outcome = DeveloperModeTaps.onTap(taps, isDevMode)
@@ -29,16 +31,16 @@ fun rememberDeveloperModeTapHandler(
                 }
 
                 is DeveloperModeTaps.Outcome.TapsLeft -> {
-                    context.getString(R.string.settings_developer_mode_taps_left, outcome.count)
+                    resources.getString(R.string.settings_developer_mode_taps_left, outcome.count)
                 }
 
                 DeveloperModeTaps.Outcome.Enable -> {
                     onEnable()
-                    context.getString(R.string.settings_developer_mode_enabled)
+                    resources.getString(R.string.settings_developer_mode_enabled)
                 }
 
                 DeveloperModeTaps.Outcome.AlreadyOn -> {
-                    context.getString(R.string.settings_developer_mode_already_on)
+                    resources.getString(R.string.settings_developer_mode_already_on)
                 }
             }
         taps = if (isDevMode || outcome == DeveloperModeTaps.Outcome.Enable) 0 else taps + 1
