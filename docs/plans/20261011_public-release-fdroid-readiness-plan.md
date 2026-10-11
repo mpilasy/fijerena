@@ -2,7 +2,8 @@
 
 **Status:** On hold, 2026-10-11. Phases 1, 2, 4 and 6 are done and on main; Phases 3, 5, 7 and 8
 are not started (open questions: release signing key, icon artwork source, public repository
-address). Resume from Phase 3.
+address). Resume from Phase 3. U-H2, U-H4, U-H5, U-M2 (offset), U-M5, U-M7 and the unused-strings and splash Low items moved to
+[Everyday UX fixes](./20261011_everyday-ux-fixes-plan.md).
 
 **Original status:** Proposed, 2026-10-11. Audit only; nothing built yet. Every decision is made (D1–D11,
 2026-10-11); Phase 1 can start. Personal and provider details were scrubbed from the tree on
@@ -206,7 +207,7 @@ and a first-run experience written for the developer rather than a stranger.
 - Remove the fixed 1 s minimum splash (`AppLoadingScreen.kt:49`).
 - Contrast: `textDisabled` #606060 is about 3:1 and must never carry information; `textTertiary`
   drops below 4.5:1 on lighter surfaces.
-- PiP is live only. Users will expect it for films too (that was a decided rule; revisit it).
+- PiP is live only. Users will expect it for films too (that was a decided rule; revisit it). **Revisited 2026-10-11: stays live-only.**
 
 ---
 
