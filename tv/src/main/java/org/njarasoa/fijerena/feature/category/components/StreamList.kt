@@ -241,7 +241,8 @@ internal fun StreamList(
         // watched / unwatched" for all its episodes instead of the one-item toggle, except where
         // the source keeps watched state on its server. The menu opens once its wording is known.
         val showSeriesId = item.showSeriesId(contentType)
-        val showMarkId = showSeriesId?.takeIf { categoryViewModel.supportsShowWatchedMark }
+        val showMarkId = showSeriesId?.takeIf { categoryViewModel.supportsWatchedMark }
+        val canMarkItem = isWatchable && showSeriesId == null && categoryViewModel.supportsWatchedMark
         var isShowWatched by remember(item) { mutableStateOf<Boolean?>(null) }
         var showStateKnown by remember(item) { mutableStateOf(showMarkId == null) }
         LaunchedEffect(item) {
@@ -260,7 +261,7 @@ internal fun StreamList(
                         categoryId = item.categoryId,
                         contentType = contentType,
                         isFavorite = isFavorite,
-                        isWatched = if (isWatchable && showSeriesId == null) item.id in watchedIds else null,
+                        isWatched = if (canMarkItem) item.id in watchedIds else null,
                         isInRecent = canRemoveFromRecent,
                         seriesId = item.seriesId,
                         isShowWatched = isShowWatched,
@@ -274,7 +275,7 @@ internal fun StreamList(
                 },
                 onDismiss = { actionsItem = null },
                 onToggleWatched =
-                    if (isWatchable && showSeriesId == null) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
+                    if (canMarkItem) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
                 onToggleShowWatched =
                     showMarkId?.let { seriesId ->
                         {

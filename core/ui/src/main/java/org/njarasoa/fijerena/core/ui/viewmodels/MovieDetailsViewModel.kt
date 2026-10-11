@@ -263,6 +263,13 @@ class MovieDetailsViewModel(
     }
 
     /**
+     * Whether the film offers "Mark watched / unwatched": not where the source keeps watched state
+     * on its server (Jellyfin). Known once the details have loaded.
+     */
+    val supportsWatchedMark: Boolean
+        get() = mediaRepository?.supportsMarkWatched == true
+
+    /**
      * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Marking
      * watched leaves the stored position in `watch_state` alone — a rewatch still resumes — but
      * hides this screen's own resume bar immediately rather than waiting for a reload, matching

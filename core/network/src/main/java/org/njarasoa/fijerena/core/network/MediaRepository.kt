@@ -422,10 +422,11 @@ class MediaRepository(
         get() = !usesServerUserData
 
     /**
-     * Whether a season or a whole show can be marked watched here ([setEpisodesWatched]): false
-     * when the source keeps watched state on its server (Jellyfin), which the app can't write.
+     * Whether anything can be marked watched or unwatched here — a film or an episode ([setWatched]),
+     * a season or a whole show ([setEpisodesWatched]): false when the source keeps watched state on
+     * its server (Jellyfin), which the app can't write.
      */
-    val supportsMarkEpisodesWatched: Boolean
+    val supportsMarkWatched: Boolean
         get() = !usesServerUserData
 
     /** Whether this provider's episodes may roll on to the next one — see ProviderCapabilities. */

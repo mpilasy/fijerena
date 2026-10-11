@@ -378,7 +378,7 @@ private fun EpisodeListContent(
     // unwatched (docs/plans/archive/20261011_season-show-watched-plan.md). Hidden for a source that keeps
     // watched state on its server (Jellyfin). The wording follows episodesWatchState: "unwatched"
     // only when every episode in scope is already watched.
-    val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkEpisodesWatched }
+    val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkWatched }
     var showAllWatched by remember(seriesDetail) { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(seriesDetail, watchedEpisodeIds, canMarkManyWatched) {
         if (canMarkManyWatched) showAllWatched = mediaRepository.episodesWatchState(seriesDetail.id, season = null)
@@ -778,21 +778,26 @@ private fun EpisodeListContent(
                     onClick = {
                         onEpisodeSelected(episode)
                     },
-                    onToggleWatched = {
-                        // Manual watched/unwatched mark (Phase 6,
-                        // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic: flips this
-                        // episode's own badge immediately rather than waiting on the write;
-                        // the full re-read after it lands is what catches a TMDB sibling this
-                        // mark just completed too (Phase 5) and restores the resume bar on an
-                        // unmark — a single-item patch would miss both.
-                        val nowWatched = episode.id !in watchedEpisodeIds
-                        watchedEpisodeIds =
-                            if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                        watchedToggleScope.launch {
-                            mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                            refreshEpisodeWatchState()
-                        }
-                    },
+                    onToggleWatched =
+                        if (mediaRepository.supportsMarkWatched) {
+                            {
+                                // Manual watched/unwatched mark (Phase 6,
+                                // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic: flips this
+                                // episode's own badge immediately rather than waiting on the write;
+                                // the full re-read after it lands is what catches a TMDB sibling this
+                                // mark just completed too (Phase 5) and restores the resume bar on an
+                                // unmark — a single-item patch would miss both.
+                                val nowWatched = episode.id !in watchedEpisodeIds
+                                watchedEpisodeIds =
+                                    if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                                watchedToggleScope.launch {
+                                    mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                                    refreshEpisodeWatchState()
+                                }
+                            }
+                        } else {
+                            null
+                        },
                 )
             }
         }
@@ -1262,7 +1267,7 @@ private fun EpisodeCard(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     onClick: () -> Unit,
-    onToggleWatched: () -> Unit = {},
+    onToggleWatched: (() -> Unit)? = null,
 ) {
     CinemaCard(
         onClick = onClick,
@@ -1316,18 +1321,28 @@ private fun EpisodeCard(
                     // Watched toggle (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md): the
                     // badge itself is the tap target, since CinemaCard's onClick already owns the
                     // rest of the row for playing the episode.
-                    CinemaIconButton(
-                        onClick = onToggleWatched,
-                        icon = {
-                            Icon(
-                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                contentDescription =
-                                    if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
-                                tint = if (isWatched) CinemaSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(MobileDimensions.iconSmall),
-                            )
-                        },
-                    )
+                    // No toggle where the source keeps watched state on its server: the check only shows.
+                    if (onToggleWatched != null) {
+                        CinemaIconButton(
+                            onClick = onToggleWatched,
+                            icon = {
+                                Icon(
+                                    imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                    contentDescription =
+                                        if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
+                                    tint = if (isWatched) CinemaSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(MobileDimensions.iconSmall),
+                                )
+                            },
+                        )
+                    } else if (isWatched) {
+                        Icon(
+                            imageVector = CinemaIcons.CheckCircle,
+                            contentDescription = stringResource(R.string.content_watched_badge),
+                            tint = CinemaSuccess,
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))

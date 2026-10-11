@@ -711,9 +711,12 @@ class CategoryViewModel(
         }
     }
 
-    /** Whether a show row offers "Mark show watched / unwatched": not where the source keeps watched state on its server. */
-    val supportsShowWatchedMark: Boolean
-        get() = repositoryOrNull?.supportsMarkEpisodesWatched ?: false
+    /**
+     * Whether rows offer "Mark watched / unwatched" (and a show row "Mark show watched / unwatched"):
+     * not where the source keeps watched state on its server.
+     */
+    val supportsWatchedMark: Boolean
+        get() = repositoryOrNull?.supportsMarkWatched ?: false
 
     /**
      * Whether every episode of [seriesId] is watched — the wording of the show row's mark; null

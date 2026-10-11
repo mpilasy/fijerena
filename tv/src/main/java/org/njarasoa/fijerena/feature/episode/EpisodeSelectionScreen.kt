@@ -608,7 +608,7 @@ internal fun EpisodeListContent(
     // watched or unwatched (docs/plans/archive/20261011_season-show-watched-plan.md). Hidden for a source
     // that keeps watched state on its server (Jellyfin). The wording follows episodesWatchState:
     // "unwatched" only when every episode in scope is already watched.
-    val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkEpisodesWatched }
+    val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkWatched }
     var showAllWatched by remember(seriesDetail) { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(seriesDetail, watchedEpisodeIds, canMarkManyWatched) {
         if (canMarkManyWatched) showAllWatched = mediaRepository.episodesWatchState(seriesDetail.id, season = null)
@@ -1315,19 +1315,22 @@ internal fun EpisodeListContent(
                                         selectedEpisode = episode
                                     },
                                     onLongPress = {
-                                        // Manual watched/unwatched mark (Phase 6,
-                                        // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic:
-                                        // flips this episode's own badge immediately rather than
-                                        // waiting on the write; the full re-read after it lands is what
-                                        // catches a TMDB sibling this mark just completed too (Phase 5)
-                                        // and restores the resume bar on an unmark — a single-item
-                                        // patch would miss both.
-                                        val nowWatched = episode.id !in watchedEpisodeIds
-                                        watchedEpisodeIds =
-                                            if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                                        watchedToggleScope.launch {
-                                            mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                                            refreshEpisodeWatchState()
+                                        // Not where the source keeps watched state on its server (Jellyfin).
+                                        if (mediaRepository.supportsMarkWatched) {
+                                            // Manual watched/unwatched mark (Phase 6,
+                                            // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Optimistic:
+                                            // flips this episode's own badge immediately rather than
+                                            // waiting on the write; the full re-read after it lands is what
+                                            // catches a TMDB sibling this mark just completed too (Phase 5)
+                                            // and restores the resume bar on an unmark — a single-item
+                                            // patch would miss both.
+                                            val nowWatched = episode.id !in watchedEpisodeIds
+                                            watchedEpisodeIds =
+                                                if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                                            watchedToggleScope.launch {
+                                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                                                refreshEpisodeWatchState()
+                                            }
                                         }
                                     },
                                 )

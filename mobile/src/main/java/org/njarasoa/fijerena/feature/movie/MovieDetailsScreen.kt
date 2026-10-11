@@ -156,7 +156,7 @@ fun MobileMovieDetailsScreen(
                             isFavorite = isFavorite,
                             isWatched = isWatched,
                             onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
-                            onToggleWatched = { viewModel.toggleWatched() },
+                            onToggleWatched = if (viewModel.supportsWatchedMark) ({ viewModel.toggleWatched() }) else null,
                             onPlayMovie = onPlayMovie,
                             onCategorySelected = { onCategorySelected(shown.categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
@@ -189,7 +189,7 @@ private fun MovieDetailsContent(
     isFavorite: Boolean,
     isWatched: Boolean,
     onToggleFavorite: () -> Unit,
-    onToggleWatched: () -> Unit,
+    onToggleWatched: (() -> Unit)?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
@@ -299,12 +299,15 @@ private fun MovieDetailsContent(
                             onClick = onToggleFavorite,
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                         )
-                        DetailIconAction(
-                            icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
-                            label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
-                            onClick = onToggleWatched,
-                            tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                        )
+                        // None where the source keeps watched state on its server (Jellyfin).
+                        if (onToggleWatched != null) {
+                            DetailIconAction(
+                                icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
+                                label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                                onClick = onToggleWatched,
+                                tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            )
+                        }
                         if (hasResume) {
                             DetailIconAction(
                                 icon = CinemaIcons.Replay,

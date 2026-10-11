@@ -177,7 +177,7 @@ fun MovieDetailsScreen(
                 onPlayMovie = onPlayMovie,
                 onCategorySelected = { onCategorySelected(state.categoryId) },
                 onToggleFavorite = { viewModel.toggleFavorite(state.streamName) },
-                onToggleWatched = { viewModel.toggleWatched() },
+                onToggleWatched = if (viewModel.supportsWatchedMark) ({ viewModel.toggleWatched() }) else null,
                 onRefresh = { viewModel.refreshMovieInfo() },
                 onBack = onBack,
                 onRelatedTitleSelected = onRelatedTitleSelected,
@@ -205,7 +205,7 @@ private fun MovieDetailsContent(
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onToggleWatched: () -> Unit,
+    onToggleWatched: (() -> Unit)?,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
@@ -515,14 +515,17 @@ private fun MovieDetailsContent(
                             label = stringResource(R.string.details_action_favorite),
                             modifier = downToTabRow.then(upScrollToTop),
                         )
-                        // Watched button (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md)
-                        TvIconAction(
-                            onClick = onToggleWatched,
-                            icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
-                            iconTint = if (isWatched) CinemaAccent else CinemaTextPrimary,
-                            label = stringResource(R.string.details_action_watched),
-                            modifier = downToTabRow.then(upScrollToTop),
-                        )
+                        // Watched button (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md);
+                        // none where the source keeps watched state on its server (Jellyfin).
+                        if (onToggleWatched != null) {
+                            TvIconAction(
+                                onClick = onToggleWatched,
+                                icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
+                                iconTint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                                label = stringResource(R.string.details_action_watched),
+                                modifier = downToTabRow.then(upScrollToTop),
+                            )
+                        }
                         movieDetail.metadata.trailerUrl?.let { trailer ->
                             val trailerContext = LocalContext.current
                             CinemaIconButton(

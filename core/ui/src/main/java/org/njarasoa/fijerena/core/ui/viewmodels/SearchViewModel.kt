@@ -495,12 +495,16 @@ class SearchViewModel(
      * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike
      * [isFavorite], this has no synchronous in-memory cache to read — `watch_state` reads are
      * suspend since Phase 3 — so building the long-press menu target for a search result means an
-     * explicit fetch rather than an inline call.
+     * explicit fetch rather than an inline call. Null when the source keeps watched state on its
+     * server (no such action).
      */
     suspend fun isWatchedSuspend(
         itemId: String,
         contentType: String,
-    ): Boolean = ensureRepo().getPlaybackPositionSuspend(itemId, contentType)?.isCompleted == true
+    ): Boolean? {
+        val repo = ensureRepo()
+        return if (repo.supportsMarkWatched) repo.getPlaybackPositionSuspend(itemId, contentType)?.isCompleted == true else null
+    }
 
     fun toggleWatched(
         itemId: String,
@@ -520,7 +524,7 @@ class SearchViewModel(
      */
     suspend fun showWatchedMarkState(seriesId: String): Boolean? {
         val repo = ensureRepo()
-        return if (repo.supportsMarkEpisodesWatched) {
+        return if (repo.supportsMarkWatched) {
             suspendRunCatching { repo.episodesWatchState(seriesId, null) }.getOrNull() == true
         } else {
             null

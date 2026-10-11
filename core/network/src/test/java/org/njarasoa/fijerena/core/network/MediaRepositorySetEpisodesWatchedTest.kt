@@ -216,6 +216,15 @@ class MediaRepositorySetEpisodesWatchedTest {
             coVerify(exactly = 0) { provider.getSeriesDetail(any()) }
         }
 
+    @Test
+    fun `no watched marks are offered for a server-backed source`() {
+        assertTrue(repository.supportsMarkWatched)
+
+        every { provider.capabilities } returns capabilities(serverUserData = true)
+
+        assertFalse(repository.supportsMarkWatched)
+    }
+
     private suspend fun row(id: String): WatchStateEntity? = db.watchStateDao().getItem(P, PROFILE, id, ContentType.TV_SHOWS)
 
     private companion object {

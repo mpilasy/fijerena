@@ -908,7 +908,7 @@ fun MobileCategoryListScreen(
                                                     onToggleWatched = { toggled ->
                                                         viewModel.toggleWatchedStream(toggled.id, contentType)
                                                     },
-                                                    showWatchedMark = viewModel.supportsShowWatchedMark,
+                                                    showWatchedMark = viewModel.supportsWatchedMark,
                                                     showWatchState = viewModel::showWatchState,
                                                     onSetShowWatched = { seriesId, watched ->
                                                         viewModel.setShowWatched(seriesId, watched) { message ->
@@ -1472,9 +1472,10 @@ private fun StreamsList(
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
-    // A show row's swipe action is "Mark show watched / unwatched" for all its episodes
-    // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3), absent when this is false (a
-    // source that keeps watched state on its server); worded from showWatchState when revealed.
+    // The swipe's "Mark watched / unwatched", absent when this is false (a source that keeps
+    // watched state on its server). A show row's is "Mark show watched / unwatched" for all its
+    // episodes (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3), worded from
+    // showWatchState when revealed.
     showWatchedMark: Boolean = false,
     showWatchState: suspend (seriesId: String) -> Boolean? = { null },
     onSetShowWatched: (seriesId: String, watched: Boolean) -> Unit = { _, _ -> },
@@ -1605,7 +1606,7 @@ private fun StreamsList(
                         val isFavorite = item.id in favoriteIds
                         val isWatchedItem = item.id in watchedIds
                         val showSeriesId = item.showSeriesId(contentType)
-                        val hasWatchedAction = if (showSeriesId != null) showWatchedMark else isWatchable
+                        val hasWatchedAction = showWatchedMark && (showSeriesId != null || isWatchable)
                         val density = LocalDensity.current
                         val greenIconCount = if (hasWatchedAction) 2 else 1
                         val favoriteRevealWidth =
@@ -1691,7 +1692,7 @@ private fun StreamsList(
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
                                             },
                                         )
-                                    } else if (showSeriesId == null && isWatchable) {
+                                    } else if (showSeriesId == null && isWatchable && showWatchedMark) {
                                         SwipeActionButton(
                                             icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                                             contentDescription =

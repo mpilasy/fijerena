@@ -626,9 +626,10 @@ fun ContentTypeSelectionScreen(
         mediaRepositoryRef?.let { repo ->
             coroutineScope.launchGuarded("Home.openCardMenu") {
                 val isFavorite = shelf.isFavorites || repo.isFavoriteSuspend(ref.id, ref.contentType)
+                // Null hides "Mark watched", as on a source that keeps watched state on its server.
                 val isWatched =
                     when {
-                        ref.watchedItemId == null -> {
+                        ref.watchedItemId == null || !repo.supportsMarkWatched -> {
                             null
                         }
 
@@ -645,7 +646,7 @@ fun ContentTypeSelectionScreen(
                 // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3): null hides it, as on a
                 // source that keeps watched state on its server.
                 val isShowWatched =
-                    if (shelf == HomeShelf.FAVORITE_SHOWS && repo.supportsMarkEpisodesWatched) {
+                    if (shelf == HomeShelf.FAVORITE_SHOWS && repo.supportsMarkWatched) {
                         repo.episodesWatchState(ref.id, null) == true
                     } else {
                         null
