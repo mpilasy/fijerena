@@ -4,52 +4,147 @@
 
 ![App Icon](mobile/src/main/res/mipmap-xxxhdpi/ic_launcher.webp)
 
-**A multi-source media player for Android TV and Android phones**
+**A media player for Android TV and Android phones: IPTV (Xtream Codes, M3U) and Jellyfin**
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Android](https://img.shields.io/badge/Android-11+-green.svg)](#requirements)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Android-11+-green.svg)](https://developer.android.com)
-[![Compose](https://img.shields.io/badge/Jetpack%20Compose-UI-brightgreen.svg)](https://developer.android.com/jetpack/compose)
-[![License](https://img.shields.io/badge/License-Proprietary-red.svg)]()
-
-*Android phones and tablets, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV)*
 
 </div>
 
 ---
 
-## 📖 Overview
+## What it is
 
-Fijerena is a native Android media player written in Kotlin with Jetpack Compose. One codebase builds two apps: a 10-foot TV app driven by the D-pad, and a touch app for phones. Both play Live TV, movies and TV shows from the sources you add, with a TV guide, profiles, and live sync between a household's devices.
+Fijerena is a free and open-source media player. One codebase builds two apps: a 10-foot app for
+Android TV driven by the remote's D-pad, and a touch app for phones. Both play Live TV, films and TV
+shows from the sources **you** add, with a TV guide, profiles, and optional live sync between your
+own devices.
 
-The adaptive icon is the Blue Marble (Earth) wearing red/cyan 3D glasses.
+## What it isn't
 
-## ✨ Key Features
+**Fijerena does not provide or host any content.** It ships with no channels, playlists, films or
+subscriptions, and it doesn't recommend any. You need your own source: a Jellyfin server, an IPTV
+subscription you are entitled to use (Xtream Codes login or M3U playlist link), or a playlist you
+made yourself.
+
+## Requirements
+
+- **Android 11 or later** (API 30), on both TV and phone. Many devices fall short of that: most
+  inexpensive Android TV boxes still on Android 9 or 10, and Amazon Fire TV devices on Fire OS 7
+  or older, can't install it.
+- Tested on Android phones, NVIDIA Shield (Shield TV and Shield TV Pro), Chromecast with Google TV,
+  and Sony Bravia Android TVs.
+- An ARM device (arm64-v8a or armeabi-v7a), as almost every TV and phone is.
+
+## Install
+
+Release builds will be published on F-Droid and on this repository's GitHub Releases page from
+version 1.0. Until then, build it from source (see [Building](#building)).
+
+The TV app and the phone app are separate APKs: install the TV one on a TV and the phone one on a
+phone.
+
+## Features
 
 The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the short version.
 
-- **Sources:** Xtream Codes (Live TV, Movies, TV Shows, guide), Jellyfin (Movies, TV Shows, progress sync, Quick Connect), and Remote M3U playlists (Live TV and the playlist's video entries). SMB shares and Local files are offered in developer mode only. Several sources can be configured; logins are stored encrypted per source.
-- **Live TV:** a channel plays beside the list while you browse; one channel panel (category, Recent, Favourites) in the preview and over the video in full screen; channel switching with Up/Down; a TV Guide grid and guide search over multi-source XMLTV, refreshed in the background with change detection and retries.
-- **Movies and TV Shows:** details screens, resume between 2 % and 95 %, Continue Watching and Up next, mark watched/unwatched, watched state shared across language/quality variants of the same title (TMDB ID), and TMDB episode synopses when a TMDB key is configured.
-- **Player:** Media3 (HLS, DASH, MPEG-TS), audio, subtitle and quality selection remembered per item and per series, Stats for Nerds, network-aware buffering, and codec preference per device (AV1 → HEVC → AVC on Shield).
-- **Profiles and Live Sync:** a "Who's watching?" picker with per-profile favourites, history, filters and Jellyfin login; profiles, favourites, progress and settings kept in step across devices, end-to-end encrypted, through a self-hosted or Cloudflare sync server ([server/](server/README.md)); TVs join by QR code from a phone.
-- **Settings:** four dark themes (Deep Night, AMOLED Black, Amethyst, Teal), four looks (Material, Cupertino, Roku, BRAVIA), English, French and Malagasy, UI scale on TV, export/import, developer mode with on-device diagnostics.
-- **TV UI:** D-pad navigation with a consistent focus model, TV-safe margins (56dp / 32dp), body text of at least 18sp. Mobile is portrait-locked outside the player.
+- **Sources:** Xtream Codes (Live TV, Movies, TV Shows, guide), Jellyfin (Movies, TV Shows, progress
+  sync, Quick Connect), and Remote M3U playlists (Live TV and the playlist's video entries). Several
+  sources can be configured; logins are stored encrypted on the device.
+- **Live TV:** a channel plays beside the list while you browse; a channel panel (category, Recent,
+  Favourites) in the preview and over the video in full screen; channel switching with Up/Down; a TV
+  Guide grid and guide search over XMLTV guides, refreshed in the background.
+- **Movies and TV Shows:** details screens, resume, Continue Watching and Up next, mark
+  watched/unwatched, and extra details from TMDB when a TMDB key is configured.
+- **Player:** Media3 (HLS, DASH, MPEG-TS) with the FFmpeg decoder extension; audio, subtitle and quality
+  selection remembered per item and per series, Stats for Nerds, network-aware buffering.
+- **Profiles and live sync:** a "Who's watching?" picker with per-profile favourites, history and
+  filters; profiles, favourites, progress and settings kept in step across your devices, end-to-end
+  encrypted, through a sync server you host yourself ([server/](server/README.md)); TVs join by QR
+  code from a phone.
+- **Settings:** dark themes, several looks, English, French and Malagasy, UI scale on TV,
+  export/import.
 
-## 🖥️ Supported Devices
+## Privacy
 
-- **Android phones and tablets** (Android 11+).
-- **NVIDIA Shield** (Shield TV and Shield TV Pro).
-- **Chromecast with Google TV**.
-- **Sony Bravia** Android TV models.
+No analytics, no ads, no crash upload. Logins stay on the device, encrypted. The app talks only to
+the sources and guide links you add (and the stream and image addresses they list), to TMDB if you
+configure a key, and to a sync server if you set one up; sync data is end-to-end encrypted before it
+leaves the device. The camera is used only to
+scan a pairing QR code on the phone.
 
-| | |
-|---|---|
-| Minimum SDK | 30 (Android 11) |
-| Target SDK | 35 (Android 15) |
-| Compile SDK | 36 (Android 16) |
-| ABIs | arm64-v8a, armeabi-v7a; debug builds add x86 and x86_64 so emulators run natively |
+---
 
-## 🛠️ Tech Stack
+## For developers
+
+### Building
+
+Prerequisites: **JDK 21**, the **Android SDK** (API level 36), and optionally Android Studio (a
+release that supports AGP 9.4).
+
+```bash
+git clone https://github.com/mpilasy/fijerena.git
+cd fijerena
+./gradlew assembleDebug            # both apps
+./gradlew :tv:assembleDebug        # TV only   (or scripts/build-tv.sh)
+./gradlew :mobile:assembleDebug    # phone only (or scripts/build-mobile.sh)
+```
+
+Outputs: `tv/build/outputs/apk/debug/tv-debug.apk` and
+`mobile/build/outputs/apk/debug/mobile-debug.apk`. Debug builds also include x86 and x86_64 so
+emulators run natively.
+
+Nothing is required to build. For TMDB details, put a TMDB API key (v3 key or v4 read token) in the
+gitignored `local.properties`:
+
+```properties
+TMDB_API_KEY=<your key>
+```
+
+Without it the build still works and TMDB lookups are skipped.
+
+`./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs. The build has no
+signing configuration yet, so they come out unsigned.
+
+### Installing a development build
+
+The deploy scripts build the right APK and install it as an update:
+
+```bash
+scripts/deploy-tv-emulator.sh [serial]       # TV emulator
+scripts/deploy-mobile-emulator.sh [serial]   # phone emulator
+scripts/deploy-tv-ip.sh <ip>[:port] ...      # network TVs
+scripts/deploy-mobile-usb.sh [serial]        # phone over USB
+```
+
+The TV and phone apps currently share one `applicationId` (`org.njarasoa.fijerena`), so a device
+gets one or the other. `adb install -r` can wipe the app's data without warning; the real-device
+scripts back up user data first (`scripts/backup-app-data.sh`, which needs `sqlite3` on the host).
+Device discovery, backup/restore, logs and debugging are in
+**[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
+
+### Checks
+
+```bash
+./gradlew ktlintCheck          # code style (ktlintFormat fixes it)
+./gradlew lintDebug            # Android Lint; each module's lint-baseline.xml holds the old warnings
+./gradlew testDebugUnitTest    # unit tests
+scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
+```
+
+GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml`
+(tests, lint, the Room schema check, both debug APKs) and `server.yml` (the sync server's tests,
+when `server/` changes).
+
+```bash
+# Instrumentation tests (requires a connected device/emulator).
+# WARNING: this uninstalls the app and wipes its data on EVERY connected device;
+# disconnect real devices first, or target one emulator with ANDROID_SERIAL.
+./gradlew connectedAndroidTest
+```
+
+### Tech stack
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
@@ -59,7 +154,7 @@ The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the shor
 | UI Framework | Jetpack Compose | 2026.03.01 BOM (ui/foundation/runtime/animation 1.10.6) |
 | Material Design | Material 3 | 1.4.0 (`strictly`) |
 | TV Components | androidx.tv.material3 (lists are plain LazyColumn/LazyRow) | 1.0.0-alpha10 |
-| Video Player | Media3 (ExoPlayer) | 1.8.0 |
+| Video Player | Media3 (ExoPlayer), Jellyfin FFmpeg decoder | 1.8.0 |
 | Networking | Ktor (OkHttp engine) | 3.5.2 |
 | Serialization | kotlinx.serialization | 1.11.0 |
 | Database | Room (FTS4) | 2.8.4 |
@@ -72,15 +167,14 @@ The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the shor
 | SMB Client | smbj (Hierynomus) | 0.15.0 |
 | Sync server | TypeScript on Cloudflare Workers / workerd | see `server/package.json` |
 
-`gradle/libs.versions.toml` is authoritative. The TV app doesn't use `tv-foundation`'s lazy lists
-(its alpha10 calls a prefetch API removed in Compose 1.9), which is what let the Compose BOM move off
-2025.06.x. Compose 1.11+ needs `compileSdk` 37.
+`gradle/libs.versions.toml` is authoritative. Minimum SDK 30 (Android 11), target SDK 35, compile
+SDK 36; release ABIs arm64-v8a and armeabi-v7a.
 
 Architecture in one line: multi-module MVVM (ViewModel + StateFlow), provider types mapped to shared
 domain models, one `MediaRepository` over the active source, manual DI through `AppContainer`. See
 [docs/design.md](docs/design.md).
 
-## 📂 Project Structure
+### Project structure
 
 ```
 fijerena/
@@ -89,105 +183,17 @@ fijerena/
 ├── core/
 │   ├── player/               # Media3 player, playback service, domain models, diagnostics
 │   ├── network/              # Source implementations, Room databases, EPG pipeline, live sync client
-│   │   ├── XtreamMediaProvider.kt    # Xtream Codes
-│   │   ├── jellyfin/                 # Jellyfin REST client
-│   │   ├── remote/                   # Remote M3U
-│   │   ├── local/                    # Local files and M3U parser
-│   │   └── smb/                      # SMB share client
 │   ├── ui/                   # Shared ViewModels, Compose components, design tokens, strings
 │   ├── navigation/           # Type-safe navigation definitions
 │   └── data/                 # AuthViewModel only
 ├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
 ├── scripts/                  # Build, deploy, backup/restore, CI checks, TV focus walks
-├── tools/jellyfin-xtream/    # Test bridge: serves a Jellyfin library as an Xtream panel
+├── tools/jellyfin-xtream/    # Development only: serves a Jellyfin library as an Xtream panel for testing
 ├── docs/                     # Technical documentation
-├── AGENTS.md                 # Guide for AI coding agents (rules and conventions)
-└── README.md                 # This file
+└── AGENTS.md                 # Coding rules and conventions
 ```
 
-## 🚀 Getting Started
-
-### Prerequisites
-- **JDK 21** (sources target Java 21)
-- **Android Studio** — a release that supports AGP 9.4 — or the Android SDK command-line tools
-- **Android SDK** — API level 36
-- **sqlite3** on the host, for the backup/restore and network-TV deploy scripts
-
-### Clone and open
-```bash
-git clone https://github.com/mpilasy/fijerena.git
-cd fijerena
-```
-Open the folder in Android Studio (**File → Open**) and let Gradle sync, or use `./gradlew` from the
-command line.
-
-### Configuration
-Nothing is required to build. For TMDB episode synopses, put a TMDB API key (v3 key or v4 read
-token) in the gitignored `local.properties`:
-
-```properties
-TMDB_API_KEY=<your key>
-```
-
-Without it the build still works and TMDB lookups are skipped. The app asks for a source on first
-launch.
-
-## 🔨 Building
-
-```bash
-./gradlew assembleDebug            # both apps
-./gradlew :tv:assembleDebug        # TV only   (or scripts/build-tv.sh)
-./gradlew :mobile:assembleDebug    # mobile only (or scripts/build-mobile.sh)
-```
-
-Outputs, one per module:
-- `tv/build/outputs/apk/debug/tv-debug.apk`
-- `mobile/build/outputs/apk/debug/mobile-debug.apk`
-
-`./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs. The build has no
-signing configuration, so they come out unsigned and must be signed (e.g. with `apksigner`) before
-they can be installed.
-
-## 📲 Installation
-
-Use the deploy scripts; each builds the right APK and installs it as an update:
-
-```bash
-scripts/deploy-tv-emulator.sh [serial]       # TV emulator
-scripts/deploy-mobile-emulator.sh [serial]   # phone emulator
-scripts/deploy-tv-ip.sh <ip>[:port] ...      # network TVs: Shield, Bravia, Chromecast
-scripts/deploy-mobile-usb.sh [serial]        # phone over USB
-```
-
-The TV and mobile apps share one `applicationId` (`org.njarasoa.fijerena`), so a device gets one or
-the other. `adb install -r` can wipe the app's data without warning; the real-device scripts back up
-user data first (`scripts/backup-app-data.sh`). Device discovery, backup/restore, logs and debugging
-are in **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)**.
-
-## 🔍 Development
-
-```bash
-./gradlew ktlintCheck          # code style (ktlintFormat fixes it)
-./gradlew lintDebug            # Android Lint; each module's lint-baseline.xml holds the old warnings
-./gradlew testDebugUnitTest    # unit tests
-scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
-```
-
-GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml` (tests,
-lint, the Room schema check, both debug APKs) and `server.yml` (the sync server's tests, when
-`server/` changes).
-
-```bash
-# Instrumentation tests (requires a connected device/emulator).
-# WARNING: this uninstalls the app and wipes its data on EVERY connected device;
-# disconnect real devices first, or target one emulator with ANDROID_SERIAL.
-./gradlew connectedAndroidTest
-```
-
-Coding rules (design tokens, TV focus, strings in English, French and Malagasy, database migrations)
-are in **[AGENTS.md](AGENTS.md)**, which applies to people as much as to agents.
-
-## 📚 Documentation
+### Documentation
 
 - **[docs/FEATURES.md](docs/FEATURES.md)** - Feature reference, settings, themes
 - **[docs/design.md](docs/design.md)** - System design and architecture
@@ -199,42 +205,46 @@ are in **[AGENTS.md](AGENTS.md)**, which applies to people as much as to agents.
 - **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Changelog
 - **[server/README.md](server/README.md)** - Live sync server: develop, deploy, self-host, API
 
-### AI agent instructions
+### Contributing
 
-**[AGENTS.md](AGENTS.md)** is the guide for all AI coding assistants. The vendor entry points
-redirect there:
-
-| File | Tool |
-|------|------|
-| `CLAUDE.md` | Claude Code |
-| `GEMINI.md` | Gemini CLI, Jules |
-| `CODEX.md` | OpenAI Codex |
-| `.cursorrules` | Cursor |
-| `.github/copilot-instructions.md` | GitHub Copilot |
-
-`.jules/bolt.md` is Jules' performance journal.
-
-## 🤝 Contributing
-
-1. Read [AGENTS.md](AGENTS.md) for the coding rules.
+1. Read [AGENTS.md](AGENTS.md) for the coding rules (design tokens, TV focus, strings in English,
+   French and Malagasy, database migrations); it applies to people and coding agents alike.
 2. Work on a branch.
 3. Keep TV screens D-pad navigable and inside the safe margins; use the design tokens.
 4. Make ktlint, Android Lint, the unit tests and the `scripts/check-*.sh` gates pass.
-5. Test on both TV and mobile; include screenshots or recordings for UI changes.
+5. Test on both TV and phone; include screenshots or recordings for UI changes.
 6. Write commit messages that say why, not only what.
 
-## 📄 License
+By contributing you agree that your contribution is licensed under the project's licence (below).
 
-This project is proprietary software. All rights reserved.
+## License
 
-Unauthorized copying, modification, distribution, or use of this software,
-via any medium, is strictly prohibited without explicit permission from the
-copyright holder.
+Copyright © 2026 Orinasa Njarasoa
 
-## 🙏 Acknowledgments
+The Android apps (`tv/`, `mobile/`, `core/`) are free software: you can redistribute and/or modify
+them under the terms of the **GNU General Public License, version 3 or (at your option) any later
+version** ([GPL-3.0-or-later](LICENSE)). The sync server in `server/` is licensed under the **GNU
+Affero General Public License, version 3 or later** ([AGPL-3.0-or-later](server/LICENSE)).
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the licences
+for details.
+
+### Artwork and fonts
+
+- **App icon and logo** (`mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, the
+  `ic_launcher*.webp` mipmaps of both apps, `core/ui/src/main/res/drawable-*/app_logo.png`): the
+  Earth is "The Blue Marble", photographed by the crew of Apollo 17 on 7 December 1972 (NASA photo
+  AS17-148-22727), which is in the public domain as a work of NASA. The red/cyan 3D glasses drawn
+  over it: **source and licence still to be recorded.**
+- **Manrope** (`tv/` and `mobile/` `res/font/manrope_variable.ttf`): Copyright 2019 The Manrope
+  Project Authors, licensed under the SIL Open Font License 1.1
+  ([docs/licenses/Manrope-OFL.txt](docs/licenses/Manrope-OFL.txt)).
+
+## Acknowledgments
 
 - **Jetpack Compose** - declarative UI toolkit
-- **Media3** - the ExoPlayer playback engine
+- **Media3** - the ExoPlayer playback engine, and Jellyfin's FFmpeg decoder build
 - **Ktor** - networking
 - **Hierynomus** - the smbj SMB client library
 - The open-source libraries listed in `gradle/libs.versions.toml`

@@ -119,12 +119,11 @@ incrementally and installs it as an update (`install -r`):
 
 A real-device script doesn't install on a device that has the app but whose backup failed. Other
 scripts: `scripts/uninstall-app.sh [serial]` is the only sanctioned uninstall (it asks you to type
-`UNINSTALL`); `scripts/tune-system-memory.sh` tunes the development host (zram, swappiness), not a
-device.
+`UNINSTALL`).
 
 > [!CAUTION]
 > **Strict Deployment Rules:**
-> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 household TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — run `scripts/backup-app-data.sh <serial> <out.tar.gz>` (user data only); `scripts/restore-app-data.sh <serial> <backup.tar.gz>` puts it back — see Backup & restore below. Both real-device deploy scripts (`deploy-tv-ip.sh`, `deploy-mobile-usb.sh`) run the backup themselves. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
+> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 real TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — run `scripts/backup-app-data.sh <serial> <out.tar.gz>` (user data only); `scripts/restore-app-data.sh <serial> <backup.tar.gz>` puts it back — see Backup & restore below. Both real-device deploy scripts (`deploy-tv-ip.sh`, `deploy-mobile-usb.sh`) run the backup themselves. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
 > 2. **Device Detection:** Always detect device type via `getprop ro.build.characteristics` (or inspect `product:`/`model:` in `adb devices -l`) before deploying. Never assume target identity from port numbers or IPs.
 > 3. **No Auto-Launch:** Never automatically launch the app (`am start` or monkey intents) after install. Let the user launch the app manually when ready.
 
@@ -171,10 +170,10 @@ HEVC testing on an emulator is limited, and Jellyfin content will be transcoded.
 
 #### Test source: Jellyfin as Xtream
 
-`tools/jellyfin-xtream/xtream_bridge.py` (Python 3, stdlib only) serves a Jellyfin server as an Xtream panel, so the Xtream code paths can be tested against a known library. It holds no credentials: the Xtream username/password the app sends are checked against Jellyfin. Pointing it at another Jellyfin server only means changing `JELLYFIN_URL`.
+A development tool, not part of the apps: `tools/jellyfin-xtream/xtream_bridge.py` (Python 3, stdlib only) serves a Jellyfin server as an Xtream panel, so the Xtream code paths can be tested against a known library. It holds no credentials: the Xtream username/password the app sends are checked against Jellyfin. Pointing it at another Jellyfin server only means changing `JELLYFIN_URL`.
 
 ```bash
-tools/jellyfin-xtream/restart.sh          # (re)starts it detached on :8080 for jellyfin.example.org
+tools/jellyfin-xtream/restart.sh          # (re)starts it detached on :8080 for Jellyfin at localhost:8096
 JELLYFIN_URL=https://other.host BRIDGE_PORT=8081 tools/jellyfin-xtream/restart.sh
 ```
 

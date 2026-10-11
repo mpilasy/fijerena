@@ -16,7 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-11 | [Public release and F-Droid readiness](./20261011_public-release-fdroid-readiness-plan.md) | Audit and plan to make the app releasable to the public and acceptable to F-Droid: license, FOSS dependencies (ML Kit, requery, FFmpeg), separate package IDs, reproducible signed builds, privacy, first-run UX and copy | Everything; decisions D1–D4 open; public repo starts from a fresh squashed snapshot as the last step |
+| 2026-10-11 | [Public release and F-Droid readiness](./20261011_public-release-fdroid-readiness-plan.md) | Audit and plan to make the app releasable to the public and acceptable to F-Droid: license, FOSS dependencies (ML Kit, requery, FFmpeg), separate package IDs, reproducible signed builds, privacy, first-run UX and copy | In progress: Phases 1–2 done; 4 and 6 in progress; decisions D1–D11 made; public repo starts from a fresh squashed snapshot as the last step |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real panel-a) needs a second panel-a login |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
@@ -50,7 +50,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 | 2026-10-01 | [Fast profile switch](./archive/20261001_fast-profile-switch-plan.md) | Near-instant profile switch: no per-item filter writes, xtream_v2.db v24 | Done |
 | 2026-09-30 | [Profile-scoped settings](./archive/20260930_profile-scoped-settings-plan.md) | Developer mode and category filters are per profile | Done |
 | 2026-09-30 | [Profile architecture review](./archive/20260930_profile-architecture-adversarial-review-plan.md) | Review of profiles and per-profile Jellyfin logins; findings 3, 5, 6, 7 fixed | Done; mg strings deferred |
-| 2026-09-29 | [Live sync](./archive/20260929_live-sync-plan.md) | Favorites, watch state and settings synced live across household devices | Done; key rotation after revoke deferred |
+| 2026-09-29 | [Live sync](./archive/20260929_live-sync-plan.md) | Favorites, watch state and settings synced live across devices | Done; key rotation after revoke deferred |
 | 2026-09-25 | [EPG add to calendar](./archive/20260925_epg-add-to-calendar-plan.md) | "Add to calendar" for a future airing in the EPG dialog | Done |
 | 2026-09-23 | [UI/UX transitions and flow](./archive/20260923_ui-ux-transitions-flow-uplift-plan.md) | Transitions, Jump Back In shelf, mobile detail hero, TV settings grouping, double-tap seek | Done; 6a and 2c held back by the user |
 | 2026-09-22 | [Codebase stability and resilience](./archive/20260922_codebase-stability-resilience-plan.md) | Data-loss, crash, DB, EPG, network and UI findings in batches 0–7 | Done; Jellyfin, SMB and M3U findings out of scope |

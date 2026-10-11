@@ -88,3 +88,10 @@ ahead of the server's clock) is rejected on its own as
 500 records) gets `400`. A deletion with `cascade: "provider"` or `"profile"` also drops every other record with the
 same tag. Tombstones are purged after 90 days; a device whose `since` falls before the purge gets
 `410` and must pull again from 0.
+
+## License
+
+The sync server is licensed under the GNU Affero General Public License, version 3 or (at your
+option) any later version ([AGPL-3.0-or-later](LICENSE)). If you run a modified copy as a network
+service, you must offer its users the modified source. The Android apps are GPL-3.0-or-later (see
+the [root LICENSE](../LICENSE)).

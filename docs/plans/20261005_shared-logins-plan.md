@@ -4,8 +4,8 @@
 
 ## Goal
 
-The Xtream providers in use allow **one stream per login**. The household has 8 devices (4 TV
-streamers, 3 phones, 1 tablet), with 2–3 streaming at once, rarely more. Instead of one login per
+The Xtream providers in use allow **one stream per login**. A home typically has several devices
+(TV streamers, phones, a tablet), with 2–3 streaming at once, rarely more. Instead of one login per
 device, an Xtream source holds 2–3 logins on the same panel, and each playback takes whichever
 login is free at that moment.
 
@@ -22,8 +22,8 @@ hand out logins adds a service to keep running for little gain over the in-app c
   stopping (12:29:33 still 1, 12:29:55 0).
 - Known from 2026-10-04 (`AccountBusy.kt`): panel-a refuses a stream from a **different public
   address** with HTTP 460 for ~5 minutes after the previous stream stops, even when the count
-  already reads 0. Home devices share one address (except the Bravia, which the router sends out
-  another way); phones on mobile data don't.
+  already reads 0. Devices on one home network usually share one address (unless the router sends one out
+  another way, e.g. a VPN); phones on mobile data don't.
 
 ## Design
 

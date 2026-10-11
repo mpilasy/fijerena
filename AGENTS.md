@@ -10,7 +10,9 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 
 **Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android phones/tablets. `minSdk` 30 (Android 11), `targetSdk` 35, `compileSdk` 36.
 
-**App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps.
+**App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps. Where each image and font comes from, and its licence, is in `README.md` → "Artwork and fonts"; a new image or font adds its line there.
+
+**License:** the apps are GPL-3.0-or-later (`LICENSE`), the sync server AGPL-3.0-or-later (`server/LICENSE`). A new dependency must be compatible with GPLv3 and free software (no proprietary SDKs: F-Droid rejects them).
 
 ---
 
@@ -41,7 +43,7 @@ fijerena/
 │   └── data/        # AuthViewModel only
 ├── server/          # Live sync server (TypeScript; Cloudflare Worker or workerd in Docker) — see server/README.md
 ├── scripts/         # Build, deploy, backup/restore, CI checks, TV focus walks
-├── tools/           # jellyfin-xtream test bridge
+├── tools/           # jellyfin-xtream test bridge (development only)
 ├── docs/            # Technical documentation (see below)
 └── gradle/          # Version catalog (libs.versions.toml)
 ```
@@ -257,7 +259,7 @@ CI runs on every push to `main` (and by hand); other branches run nothing until 
 ### Deployment Rules
 
 - **Use the deploy scripts**, never hand-run `gradlew` + `adb install`. They build incrementally and install with `install -r`. `deploy-tv-emulator.sh` and `deploy-tv-ip.sh` check `dumpsys media_session` for active playback (`state=PlaybackState {state=3}`) and ask before interrupting it; `deploy-tv-ip.sh` skips a device that doesn't report `tv` in `ro.build.characteristics`. TV and mobile share the `applicationId` `org.njarasoa.fijerena`, so installing the wrong APK silently replaces the other app.
-- **NEVER install to real hardware without backing up app data first.** `adb install -r` is *not* guaranteed to preserve app data — a signing-key mismatch (or other cause) can make it install fresh with no warning. On 2026-09-08 a deploy to all three household TVs (2 Shields + 1 Bravia) reported "Success" on every device and had wiped every one (`firstInstallTime == lastUpdateTime`); no backup existed. `deploy-tv-ip.sh` and `deploy-mobile-usb.sh` back up each device with `scripts/backup-app-data.sh` (user data only: `shared_prefs`, `providers.db*`, and the `watch_state`, `favorite_state` and `sync_*` tables of `xtream_v2.db`) into `backups/`, deleting backups older than 7 days, and don't install on a device whose backup failed; `scripts/restore-app-data.sh` puts one back. Any other install to a real device runs `scripts/backup-app-data.sh <serial> <out.tar.gz>` first. Permission to deploy is not permission to skip this.
+- **NEVER install to real hardware without backing up app data first.** `adb install -r` is *not* guaranteed to preserve app data — a signing-key mismatch (or other cause) can make it install fresh with no warning. On 2026-09-08 a deploy to three real TVs reported "Success" on every device and had wiped every one (`firstInstallTime == lastUpdateTime`); no backup existed. `deploy-tv-ip.sh` and `deploy-mobile-usb.sh` back up each device with `scripts/backup-app-data.sh` (user data only: `shared_prefs`, `providers.db*`, and the `watch_state`, `favorite_state` and `sync_*` tables of `xtream_v2.db`) into `backups/`, deleting backups older than 7 days, and don't install on a device whose backup failed; `scripts/restore-app-data.sh` puts one back. Any other install to a real device runs `scripts/backup-app-data.sh <serial> <out.tar.gz>` first. Permission to deploy is not permission to skip this.
 - **Never uninstall or clear app data** (`adb uninstall`, `pm clear`) to fix a deploy, and ask before uninstalling or clearing data on any device, emulators included, and before installing on a real device. On emulators, installing over the existing app (the deploy scripts, `install -r`) is fine. `scripts/uninstall-app.sh` is the only sanctioned uninstall and asks for confirmation. `./gradlew connectedAndroidTest` uninstalls the app on every connected device: run it only when asked, on one emulator (`ANDROID_SERIAL`).
 - **No auto-launch on install:** never launch the app (`am start`, monkey) after installing unless the user asks.
 - **Incremental deploys:** the deploy scripts don't run `clean`. A `NoClassDefFoundError` after changes across modules (`core:*` consumed by `:tv`/`:mobile`) is a stale DEX shard: `./gradlew clean`, then deploy again.

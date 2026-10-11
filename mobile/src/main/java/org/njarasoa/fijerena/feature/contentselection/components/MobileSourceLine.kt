@@ -47,7 +47,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * The line under a tab root's title: the source's name and its last update — a dot and
- * "jellyxtream · Updated 2 hours ago" / "· Updating…" / "· Update failed"; no dot nor status for a
+ * "My IPTV · Updated 2 hours ago" / "· Updating…" / "· Update failed"; no dot nor status for a
  * source that has never synced (Jellyfin, M3U, a new Xtream source) — and ▾ when [showsPicker]. The
  * name is cut first, so the status stays readable. [onClick] (null: not tappable) opens the source
  * picker, or with a single source the reason the update failed.
