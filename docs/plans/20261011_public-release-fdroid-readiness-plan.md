@@ -1,7 +1,8 @@
 # Public release and F-Droid readiness
 
 **Status:** Proposed, 2026-10-11. Audit only; nothing built yet. Four decisions (D1–D4) are open
-and block phases 1 and 2.
+and block phases 1 and 2. Decided 2026-10-11: the public repository starts from a fresh squashed
+snapshot (Option C), and that cut-over is the **last** step of this plan (Phase 8).
 
 The audit was read-only and covered three areas: F-Droid compliance, release readiness, and
 UI/UX for a new user. No device runs were done. The UX findings come from reading the code and
@@ -65,7 +66,8 @@ dependencies, and a first-run experience written for the developer rather than a
   set per applicationId.
 - Image provenance isn't recorded. The "Blue Marble + 3D glasses" icon and `app_logo.png` need a
   source and license note: NASA Blue Marble is public domain, but the glasses art needs its own.
-- Then open the RFP / merge request on `fdroiddata`. Put an `fdroid` build flavor in Gradle
+- Then, after the cut-over (Phase 8), open the RFP / merge request on `fdroiddata` against the
+  new public repository. Put an `fdroid` build flavor in Gradle
   (D3/D4) so the recipe stays a plain `gradle: [fdroid]`.
 
 ---
@@ -78,7 +80,7 @@ dependencies, and a first-run experience written for the developer rather than a
 |---|---|---|---|
 | R1 | The export file carries the Xtream password in clear | `SettingsExportManager.kt:277-288` exports EPG source `url` raw; the auto-added guide source is `xmltv.php?username=…&password=…` (`AutoXmltvSources.kt:47`). The same URL sits unencrypted in `providers.db`, which bypasses the encrypted credential store | On export, drop auto-XMLTV sources (they're recreated on import) or strip the query. Longer term, store them credential-less and rebuild the URL at fetch time from the secret store. Check that live sync doesn't send the same URL outside the E2E envelope |
 | R2 | Release builds aren't signed, minified or built in CI | `isMinifyEnabled = false` (tv:63, mobile:52); no `signingConfig`; CI builds only `assembleDebug` | Add a signing config from env or `keystore.properties` (never committed). Enable R8 and `shrinkResources`. Move the core modules' rules to `consumerProguardFiles` (they currently apply only to the libraries themselves); fix the invalid `-keepattrs` in core/player; replace the blanket `-keep androidx.media3.**/io.ktor.**/kotlinx.coroutines.**`; add `-dontwarn` for smbj/BouncyCastle/slf4j and keep rules for `@Serializable` routes. Add `assembleRelease` plus a launch smoke test to CI. Strip `Log.d` with `-assumenosideeffects` |
-| R3 | Personal and household data in tracked files | `192.168.68.x` (AGENTS.md:264, RUN_GUIDE.md:187, gradle.properties:38, two archived plans); `sm.njarasoa.org` (tools/jellyfin-xtream/restart.sh:4,12; RUN_GUIDE.md:177); `/home/tahiry/...` (13 files); "mdarcy" (EPG_INDEX_STORAGE.md); `.claude/projects/-home-tahiry-…/memory/*.md` committed; provider names above | Scrub, then run `gitleaks` / `trufflehog` over the **full** history (this clone is shallow). If anything real turns up, rewrite history before announcing, or start the public repo from a fresh squashed root |
+| R3 | Personal and household data in tracked files | `192.168.68.x` (AGENTS.md:264, RUN_GUIDE.md:187, gradle.properties:38, two archived plans); `sm.njarasoa.org` (tools/jellyfin-xtream/restart.sh:4,12; RUN_GUIDE.md:177); `/home/tahiry/...` (13 files); "mdarcy" (EPG_INDEX_STORAGE.md); `.claude/projects/-home-tahiry-…/memory/*.md` committed; provider names above | Scrub the tree. History is not rewritten: the public repository starts from a squashed snapshot at the end (see "Public repository cut-over") |
 | R4 | No disclaimer or privacy policy | Only `login_footer_text`; no PRIVACY file | Show "Fijerena does not provide or host any content" on first run and in About. Add a `PRIVACY.md` covering: no telemetry; credentials stay on the device; the sync server (user-chosen) receives E2E-encrypted data (AES-256-GCM + HKDF, `SyncCrypto.kt`); camera only for QR pairing; cleartext HTTP allowed for LAN and IPTV panels. Link it from the store listings |
 | R5 | Unused dangerous permissions on TV | tv/AndroidManifest.xml:12-14 `READ_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE`; local files go through SAF | Remove both |
 
@@ -197,6 +199,44 @@ dependencies, and a first-run experience written for the developer rather than a
 
 ---
 
+## Public repository cut-over (Option C, last step)
+
+**Decision (2026-10-11):** history is not rewritten. When every other phase that goes into 1.0 is
+done, the public repository starts from one squashed commit of the cleaned tree, and the current
+repository, with its full history, becomes private.
+
+**Why:** a scan of the full history (1,706 commits, 2026-10-11) found no real secrets: no API keys,
+tokens, keystores, `local.properties` or real passwords, only test values. What it does hold is
+personal and provider detail that only a fresh root removes for certain:
+
+- `PCAPdroid_18_Mar_19_04_11.csv`, a phone traffic capture showing an IPTV host
+  (`m3u.best-smarter.me`, 185.245.2.100) and iMPlayer. Added in `09f0d660` (2026-03-19), deleted
+  in `0dc16169` (2026-04-24).
+- Real panel domains (`bearsclub.online`, `bearstv.online`, `cf.bearsp.xyz`), mostly in archived
+  plans, plus one shipped comment (`XtreamLoginCheck.kt:71-72`).
+- LAN IPs, `sm.njarasoa.org`, `/home/tahiry` paths and device names.
+- Two personal author emails (353 commits carry the gmail address) and one "Your Name" commit.
+
+`git filter-repo` could remove these too, but it changes every commit hash (the plans cite commits
+by hash), and old copies survive in clones, forks and GitHub's pull-request refs. AI-authored
+commits and agent files are not a reason to rewrite either way.
+
+**Steps** (done last, after Phase 7):
+
+1. Make the current repository **private** now, without waiting for this phase, if it is public.
+2. Freeze `main`: every earlier phase is merged and CI is green.
+3. Final scrub check on the tree: `gitleaks detect --no-git` and a grep for the names, domains,
+   IPs and paths above. Decide whether `docs/plans/` (and its commit-hash citations, which won't
+   resolve in the new repository) goes public. If it does, add a note that hashes refer to the
+   private history.
+4. Create the new public repository from `git archive main` (a tree only, no `.git`), as a single
+   commit authored with the GitHub noreply address, with the message "Initial public release
+   (v1.0.0)".
+5. Tag `v1.0.0` in the new repository, publish the signed release APKs, and point the README,
+   fastlane metadata and the F-Droid RFP at the new URL.
+6. Archive the old repository (private, read-only) and keep it as the full history. All further
+   work happens in the public repository.
+
 ## Plan of attack
 
 | Phase | Content | Depends on | Size |
@@ -208,10 +248,12 @@ dependencies, and a first-run experience written for the developer rather than a
 | 4 | **Privacy and security:** export without credentialed guide URLs, credential-less guide URLs at rest (R1), `PRIVACY.md` + in-app disclaimer (R4), data extraction rules | none | S-M; at-rest needs a `providers.db` migration and a `DATABASE_SCHEMA.md` update |
 | 5 | **First-run UX:** welcome screen, source-type subtitles and paste hint, go to Home after the first add (U-H1, U-H3), login errors (U-H4), Undo without a Menu key (U-H2), phone swipe thresholds (U-H5) | Phase 4 disclaimer text | M; focus walks to update |
 | 6 | **Copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
-| 7 | **Store presence:** fastlane metadata in en/fr/mg, TV and phone screenshots, CHANGELOG, tag `v1.0.0`, F-Droid RFP / fdroiddata MR | 1–3 | S |
-| 8 | **After 1.0:** sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
+| 7 | **Store presence:** fastlane metadata in en/fr/mg, TV and phone screenshots, CHANGELOG | 1–3 | S |
+| 8 | **Public repository cut-over (Option C), always the last step:** final scrub check, fresh squashed public repository, tag `v1.0.0`, signed release, F-Droid RFP / fdroiddata MR; old repository archived private | 1–7 | S |
+| 9 | **After 1.0** (in the new public repository): sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
 
 Phases 1–3 are the minimum for F-Droid. Phases 4–5 are the minimum before inviting strangers.
+Phase 8 always comes last: nothing goes to the public repository before the tree is final.
 
 ## Progress
 
@@ -225,4 +267,5 @@ Phases 1–3 are the minimum for F-Droid. Phases 4–5 are the minimum before in
 | 5 | Not started | |
 | 6 | Not started | |
 | 7 | Not started | |
-| 8 | Not started | |
+| 8 | Not started (last) | |
+| 9 | Not started | |
