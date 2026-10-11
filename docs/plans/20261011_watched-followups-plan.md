@@ -22,7 +22,7 @@ decided by the user on 2026-10-11.
 |---|---|---|
 | 1 | Play and the Home card go to the first unwatched episode | In progress |
 | 2 | Hide every watched mark on Jellyfin | Done (404c6d91) |
-| 3 | Phone list rows: long-press menu | In progress |
+| 3 | Phone list rows: long-press menu | Done (be1e5e40) |
 
 ## Phase 1: first unwatched episode
 
@@ -64,3 +64,7 @@ decided by the user on 2026-10-11.
 - Live channel rows get it too, with whatever applies to them (favourite).
 - The swipe is not changed.
 - Jellyfin: the menu has no watched items (Phase 2's gate).
+- **Done** (be1e5e40): Search's dialog moved to a shared `ItemActionsDialog`; rows open it on long
+  press (TalkBack: "More actions"). Channels: favourite (plus Remove from Recent in Recent).
+  Films and Recent episodes: Mark watched / unwatched and favourite. Shows: Mark show watched /
+  unwatched and favourite. Not yet checked on the phone emulator.
