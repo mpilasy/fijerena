@@ -185,6 +185,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.ItemActionsDialog
+import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -1505,6 +1507,18 @@ private fun StreamsList(
     // A new list starts with none.
     var openRowId by remember(selectedCategoryId) { mutableStateOf<String?>(null) }
 
+    // The row whose long-press menu is open: the swipe's actions (watched follow-ups plan Phase 3).
+    // A show's waits for its "Mark show watched / unwatched" wording, as in Search.
+    var rowMenu by remember(selectedCategoryId) { mutableStateOf<RowMenu?>(null) }
+    val openRowMenu: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = { item ->
+        val seriesId = item.showSeriesId(contentType)
+        if (seriesId != null && showWatchedMark) {
+            scope.launch { rowMenu = RowMenu(item, showWatchState(seriesId)) }
+        } else {
+            rowMenu = RowMenu(item, isShowWatched = null)
+        }
+    }
+
     LaunchedEffect(items, lastPlayedItemId) {
         if (!items.isNullOrEmpty() && lastPlayedItemId != null) {
             val index = items.indexOfFirst { it.id == lastPlayedItemId }
@@ -1598,6 +1612,8 @@ private fun StreamsList(
                                 onClick = {
                                     onItemSelected(item.id, item.name, item.categoryId)
                                 },
+                                onLongClick = { openRowMenu(item) },
+                                onLongClickLabel = stringResource(R.string.row_more_actions),
                                 modifier = modifier,
                             )
                         }
@@ -1749,10 +1765,89 @@ private fun StreamsList(
                         }
                     }
                 }
+                rowMenu?.let { menu ->
+                    val item = menu.item
+                    val showSeriesId = item.showSeriesId(contentType)
+                    val isWatchedItem = item.id in watchedIds
+                    val isShowWatched = menu.isShowWatched == true
+                    val actions =
+                        rowMenuActions(
+                            isShowRow = showSeriesId != null,
+                            isWatchable = isWatchable,
+                            showWatchedMark = showWatchedMark,
+                            canRemoveFromRecent = isRecentList && onRemoveItem != null,
+                        ).map { action ->
+                            when (action) {
+                                RowMenuAction.MARK_WATCHED -> {
+                                    ItemMenuAction(
+                                        icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                        label = stringResource(if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark),
+                                        onClick = { onToggleWatched(item) },
+                                    )
+                                }
+
+                                RowMenuAction.MARK_SHOW_WATCHED -> {
+                                    ItemMenuAction(
+                                        icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                        label =
+                                            stringResource(
+                                                if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show,
+                                            ),
+                                        onClick = { showSeriesId?.let { onSetShowWatched(it, !isShowWatched) } },
+                                    )
+                                }
+
+                                RowMenuAction.REMOVE_FROM_RECENT -> {
+                                    ItemMenuAction(
+                                        icon = CinemaIcons.Delete,
+                                        label = stringResource(R.string.recent_remove),
+                                        onClick = { onRemoveItem?.invoke(item) },
+                                    )
+                                }
+                            }
+                        }
+                    ItemActionsDialog(
+                        title = parseDisplayTitle(item.name).title.ifBlank { item.name },
+                        isFavorite = item.id in favoriteIds,
+                        onToggleFavorite = { onToggleFavorite(item) },
+                        onDismiss = { rowMenu = null },
+                        actions = actions,
+                    )
+                }
             }
         }
     }
 }
+
+/** A row whose long-press menu is open; [isShowWatched] words a show row's mark (null: not known). */
+private class RowMenu(
+    val item: MediaItem,
+    val isShowWatched: Boolean?,
+)
+
+/** A row menu's actions besides Add to / Remove from Favourites, which every row has. */
+internal enum class RowMenuAction { MARK_WATCHED, MARK_SHOW_WATCHED, REMOVE_FROM_RECENT }
+
+/**
+ * The long-press menu's actions, the same as the row's swipe offers: a show row's "Mark show
+ * watched", a film's or an episode's "Mark watched" (neither where the source keeps watched state
+ * on its server), and "Remove from Recent" on the Recent list. A Favourites row's "Remove from
+ * Favourites" is the menu's favourite button.
+ */
+internal fun rowMenuActions(
+    isShowRow: Boolean,
+    isWatchable: Boolean,
+    showWatchedMark: Boolean,
+    canRemoveFromRecent: Boolean,
+): List<RowMenuAction> =
+    buildList {
+        if (showWatchedMark && isShowRow) {
+            add(RowMenuAction.MARK_SHOW_WATCHED)
+        } else if (showWatchedMark && isWatchable) {
+            add(RowMenuAction.MARK_WATCHED)
+        }
+        if (canRemoveFromRecent) add(RowMenuAction.REMOVE_FROM_RECENT)
+    }
 
 /** A row's thumbnail: 16:9 (phone UI audit P1), sized so the row holds a title and one more line. */
 private val StreamThumbnailWidth = 96.dp
@@ -1840,6 +1935,7 @@ private fun StreamCard(
     cardColors: CardColors,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
+    onLongClickLabel: String? = null,
     modifier: Modifier = Modifier,
 ) {
     CinemaCard(
@@ -1850,6 +1946,7 @@ private fun StreamCard(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
+                    onLongClickLabel = onLongClickLabel,
                 ),
         colors = cardColors,
         border =

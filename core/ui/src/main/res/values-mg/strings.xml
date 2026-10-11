@@ -699,6 +699,7 @@
     <string name="provider_use_button">Ampiasaina</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Tazony ny OK na tsindrio Menu hahitana ny asa</string>
+    <string name="row_more_actions">Asa hafa</string>
     <!-- GD1 -->
     <string name="epg_guide_status_format">%1$d amin\'ny %2$d fantsona no manana fandaharana · %3$s · nohavaozina %4$s</string>
     <string name="epg_guide_source_xmltv">fitarihana XMLTV</string>

@@ -41,9 +41,6 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
@@ -63,6 +60,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
+import org.njarasoa.fijerena.ui.components.ItemActionsDialog
+import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
@@ -963,50 +962,23 @@ private fun MobileSearchFavoriteDialog(
     onToggleShowWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
-    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
     val isShowWatched = (target as? FavoriteMenuTarget.Stream)?.isShowWatched == true
+    val showWatchedLabel = stringResource(if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show)
 
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = itemName,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-            )
-        },
-        text =
-            onToggleShowWatched?.let { toggle ->
-                {
-                    CinemaDialogTextButton(
-                        onClick = {
-                            toggle()
-                            onDismiss()
-                        },
-                    ) {
-                        Icon(
-                            imageVector = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-                            contentDescription = null,
-                        )
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text(stringResource(if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show))
-                    }
-                }
-            },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    onConfirm()
-                    onDismiss()
+    ItemActionsDialog(
+        title = itemName,
+        isFavorite = isFavorite,
+        onToggleFavorite = onConfirm,
+        onDismiss = onDismiss,
+        actions =
+            listOfNotNull(
+                onToggleShowWatched?.let { toggle ->
+                    ItemMenuAction(
+                        icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                        label = showWatchedLabel,
+                        onClick = toggle,
+                    )
                 },
-            ) {
-                Text(actionText)
-            }
-        },
-        dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
+            ),
     )
 }

@@ -892,6 +892,7 @@
     <string name="provider_use_button">Utiliser</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Maintenez OK ou appuyez sur Menu pour les actions</string>
+    <string name="row_more_actions">Plus d\'actions</string>
     <!-- GD1 -->
     <string name="epg_guide_status_format">%1$d chaînes sur %2$d ont un programme · %3$s · mis à jour %4$s</string>
     <string name="epg_guide_source_xmltv">guide XMLTV</string>

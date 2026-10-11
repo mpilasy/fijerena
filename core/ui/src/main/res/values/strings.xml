@@ -928,6 +928,7 @@
     <string name="provider_use_button">Use</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Hold OK or press Menu for actions</string>
+    <string name="row_more_actions">More actions</string>
     <!-- GD1 -->
     <string name="epg_guide_status_format">%1$d of %2$d channels have listings · %3$s · updated %4$s</string>
     <string name="epg_guide_source_xmltv">XMLTV guide</string>

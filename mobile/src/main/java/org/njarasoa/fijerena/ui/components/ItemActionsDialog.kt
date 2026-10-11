@@ -1,0 +1,85 @@
+package org.njarasoa.fijerena.ui.components
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+
+/** One action in [ItemActionsDialog] besides the favourite one. */
+@Immutable
+data class ItemMenuAction(
+    val icon: ImageVector,
+    val label: String,
+    val onClick: () -> Unit,
+)
+
+/**
+ * The phone's long-press menu on a title or channel (Search results, list rows): the item's name,
+ * its other actions (mark watched, remove from Recent…) as text buttons, Add to / Remove from
+ * Favourites as the confirm button, and Cancel. Every action closes the menu.
+ */
+@Composable
+fun ItemActionsDialog(
+    title: String,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onDismiss: () -> Unit,
+    actions: List<ItemMenuAction> = emptyList(),
+) {
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+            )
+        },
+        text =
+            actions.takeIf { it.isNotEmpty() }?.let {
+                {
+                    Column {
+                        actions.forEach { action ->
+                            CinemaDialogTextButton(
+                                onClick = {
+                                    action.onClick()
+                                    onDismiss()
+                                },
+                            ) {
+                                Icon(imageVector = action.icon, contentDescription = null)
+                                Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                                Text(action.label)
+                            }
+                        }
+                    }
+                }
+            },
+        confirmButton = {
+            CinemaDialogActionButton(
+                onClick = {
+                    onToggleFavorite()
+                    onDismiss()
+                },
+            ) {
+                Text(stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add))
+            }
+        },
+        dismissButton = {
+            CinemaDialogTextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
+}
