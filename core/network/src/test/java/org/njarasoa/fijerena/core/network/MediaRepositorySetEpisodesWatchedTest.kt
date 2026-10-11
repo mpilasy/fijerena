@@ -35,7 +35,7 @@ import org.robolectric.annotation.Config
 /**
  * Marking a whole season or show watched / unwatched, per episode
  * (docs/plans/archive/20261011_season-show-watched-plan.md → Phase 1), and the Home "Continue
- * watching" card it moves on (docs/plans/20261011_watched-followups-plan.md → Phase 1). Against a real in-memory
+ * watching" card it moves on (docs/plans/archive/20261011_watched-followups-plan.md → Phase 1). Against a real in-memory
  * `xtream_v2.db` under Robolectric, so the watch-state upserts and the TMDB sibling queries run
  * as SQL rather than through fakes.
  */

@@ -1,8 +1,8 @@
 # Watched follow-ups
 
-**Status:** In progress (2026-10-11): all three phases on main; emulator check pending.
+**Status:** Done (2026-10-11): all three phases on main and checked on the TV and phone emulators.
 
-Three follow-ups to [Mark a season or show watched](./archive/20261011_season-show-watched-plan.md),
+Three follow-ups to [Mark a season or show watched](./20261011_season-show-watched-plan.md),
 decided by the user on 2026-10-11.
 
 ## Decisions
@@ -74,4 +74,18 @@ decided by the user on 2026-10-11.
 - **Done** (be1e5e40): Search's dialog moved to a shared `ItemActionsDialog`; rows open it on long
   press (TalkBack: "More actions"). Channels: favourite (plus Remove from Recent in Recent).
   Films and Recent episodes: Mark watched / unwatched and favourite. Shows: Mark show watched /
-  unwatched and favourite. Not yet checked on the phone emulator.
+  unwatched and favourite.
+
+## Emulator checks (2026-10-11)
+
+- **TV (Marple, jellyxtream):** Mark season 1 watched moved Play to "S02E01 · Sleeping Murder"
+  with focus kept on the tab; a single episode toggle didn't move it; Mark show watched moved
+  Play and the badge to S01E01 with focus kept on the action and no scroll. After a play and a
+  show mark, Marple stayed in Home's Continue watching with "Up next • The Body in the Library".
+  Jellyfin (njarasoa): no watched item on film details, row and card menus, the episode cards or
+  season tabs. Jellyfin shows with no episodes listed weren't usable for the episode part.
+- **Phone:** long-press menus on show, film, channel and Recent rows as described in Phase 3;
+  tap and swipe unchanged. Play moved after season and show marks (Call My Agent!). Jellyfin menus
+  and film details had no watched items.
+- **Seen in passing, not followed up:** on TV, after switching to profile Kid on njarasoa's
+  "Sign in" screen, D-pad focus was lost until the source switcher was tapped.

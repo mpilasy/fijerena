@@ -100,7 +100,7 @@ fun WatchedItem.resumeProgress(): Float? {
  * lookup and the Recent row both actually mean — or 0 when the row has none: one only marked
  * watched ([markWatched][org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao.markWatched]'s
  * insert), since a mark is not a play and must not become the series screen's "last played"
- * (docs/plans/20261011_watched-followups-plan.md → Phase 1), and one `removeFromRecent` cleared,
+ * (docs/plans/archive/20261011_watched-followups-plan.md → Phase 1), and one `removeFromRecent` cleared,
  * whose `updatedAt` is just "removed just now" and must not outrank a genuinely recently-played row.
  */
 private fun WatchStateEntity.toWatchedItem(): WatchedItem =
@@ -1725,7 +1725,7 @@ class MediaRepository(
     /**
      * The "Up next" episode of each show in [latestPerShow] (its most recently played episode per
      * show) that isn't mid-watch: once it is finished, the first unwatched episode by
-     * [nextUnwatchedEpisodeId] (docs/plans/20261011_watched-followups-plan.md → Phase 1) — watched
+     * [nextUnwatchedEpisodeId] (docs/plans/archive/20261011_watched-followups-plan.md → Phase 1) — watched
      * meaning a completed row, or the same episode completed in a TMDB sibling, as in
      * [episodesWatchState]; the episode itself when barely started. Absent from the map: shows to
      * resume, and shows whose episode list is known nowhere.

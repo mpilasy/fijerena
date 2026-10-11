@@ -141,7 +141,7 @@ fun SeriesDetail.resumeAnchorEpisodeId(
 
 /**
  * The episode to watch after finishing [finishedEpisodeId], from [orderedEpisodeIds] in show order
- * (docs/plans/20261011_watched-followups-plan.md → Phase 1): the first one after it that isn't
+ * (docs/plans/archive/20261011_watched-followups-plan.md → Phase 1): the first one after it that isn't
  * completed; failing that, the first one from the start of the show that isn't; and when every
  * episode is completed, the first episode. [finishedEpisodeId] itself counts as completed; null
  * starts from the beginning. Null when [finishedEpisodeId] isn't in the list, or the list is empty.

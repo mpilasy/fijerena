@@ -400,7 +400,7 @@ private fun EpisodeListContent(
                 }
             val allWatched = refreshEpisodeWatchState()
             // Play and the "Continue watching" badge move on to the first unwatched episode at once
-            // (docs/plans/20261011_watched-followups-plan.md → Phase 1); the selected season stays.
+            // (docs/plans/archive/20261011_watched-followups-plan.md → Phase 1); the selected season stays.
             // A single-episode toggle doesn't come through here, so it leaves the anchor alone.
             seriesDetail
                 .resumeAnchorEpisodeId(

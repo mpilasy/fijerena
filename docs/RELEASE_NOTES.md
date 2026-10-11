@@ -1,5 +1,13 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Watched follow-ups
+**Release Date:** 2026-10-11
+
+- **Play goes to the first unwatched episode:** after a season or show is marked watched, Play and the "Continue watching" badge move straight to the first unwatched episode (after the last one played, else from the start; S01E01 when everything is watched). Marking one episode doesn't move them. A marked episode no longer counts as played.
+- **Home's Continue watching keeps finished shows:** a finished show's card offers its first unwatched episode, or S01E01 once everything is watched, instead of leaving the row. Remove from Recent still takes it off.
+- **No watched marks on Jellyfin:** Mark watched / unwatched is gone from Jellyfin films and episodes too (it did nothing there; Jellyfin keeps watched state on its server).
+- **Long-press menu on phone list rows:** long-press a film, show or channel row for its actions (Mark watched or Mark show watched, favourite, Remove from Recent in Recent). The swipe is unchanged.
+
 ## Version: Mark a season or show watched
 **Release Date:** 2026-10-11
 
