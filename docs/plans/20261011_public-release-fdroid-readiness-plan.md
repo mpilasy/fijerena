@@ -1,7 +1,7 @@
 # Public release and F-Droid readiness
 
-**Status:** Proposed, 2026-10-11. Audit only; nothing built yet. Four decisions (D1–D4) are open
-and block phases 1 and 2. Decided 2026-10-11: the public repository starts from a fresh squashed
+**Status:** Proposed, 2026-10-11. Audit only; nothing built yet. Decisions D1–D3 are open and
+block phases 1 and 2; D4 (TMDB) is decided. Decided 2026-10-11: the public repository starts from a fresh squashed
 snapshot (Option C), and that cut-over is the **last** step of this plan (Phase 8).
 
 The audit was read-only and covered three areas: F-Droid compliance, release readiness, and
@@ -24,7 +24,7 @@ dependencies, and a first-run experience written for the developer rather than a
 | D1 | License | **GPL-3.0-or-later.** The repo is public but README says "proprietary, all rights reserved". `org.jellyfin.media3:media3-ffmpeg-decoder` is GPL-3.0, so shipping it in a closed APK is already a violation. GPLv3 is compatible with every other dependency (Apache-2.0 androidx/Media3/Ktor, smbj, OFL Manrope). The server needs a license too. |
 | D2 | TV and phone packages | **Separate applicationIds** (`org.njarasoa.fijerena` and `org.njarasoa.fijerena.tv`): two F-Droid entries with their own screenshots. Costs: installs that exist today don't migrate, so data has to move by export/import or live sync. The alternative is one universal APK that picks its UI at runtime. |
 | D3 | FFmpeg extension in the F-Droid build | **An `fdroid` flavor without it at first** (`FfmpegLibrary.isAvailable()` already gates it, `StreamingPlaybackService.kt:445`). Later, build Media3 `decoder_ffmpeg` from source through an F-Droid srclib. That's harder, but brings back the audio codecs (AC-3/E-AC-3/DTS on devices without passthrough). |
-| D4 | TMDB in the F-Droid build | **Leave it off** (no key, so `hasApiKey()` makes no calls and there's no anti-feature). Optional later: a user-entered key that adds the NonFreeNet anti-feature and TMDB's required attribution. |
+| D4 | TMDB | **Decided 2026-10-11: the user enters their own TMDB key; without one, TMDB is off.** No key is built into any build: remove the `TMDB_API_KEY` `buildConfigField` (core/network/build.gradle.kts:23-29) so a release APK can never ship one extractably. Accept a v3 API key or a v4 read token (`TmdbApiService.authenticate()` already handles both), keep it in the encrypted credential store, carry it in live sync inside the E2E envelope, and send it in exports only if passwords are exported too. Settings needs a field with a "Get a free key at themoviedb.org" hint, a Test button, and TMDB's required attribution ("This product uses the TMDB API but is not endorsed or certified by TMDB" plus their logo) in About. Expect F-Droid to add **NonFreeNet** even though it is opt-in. Also: `language` is pinned to `en-US`; use the app language. |
 
 ---
 
@@ -48,7 +48,7 @@ dependencies, and a first-run experience written for the developer rather than a
 - **Tracking:** possibly ML Kit's `datatransport` usage logging. Nothing else: CrashLog stays on
   the device, sharing it is user-initiated, and `ANDROID_ID` goes only to the user's own Jellyfin
   server as `DeviceId` (normal for Jellyfin clients).
-- **NonFreeNet:** only if a TMDB key is built in (D4).
+- **NonFreeNet:** likely, for the opt-in TMDB key (D4). Nothing contacts TMDB without a key the user entered.
 - **TetheredNet / NonFreeAdd:** none. There's no default sync server (the hint is
   `sync.example.com`) and no update checks or third-party hosts.
 - **Reviewer optics (not an anti-feature, but F-Droid pushes back on IPTV apps that look
@@ -255,13 +255,13 @@ commits and agent files are not a reason to rewrite either way.
 
 | Phase | Content | Depends on | Size |
 |---|---|---|---|
-| 0 | Decide D1–D4 | none | none |
+| 0 | Decide D1–D3 (D4 decided) | none | none |
 | 1 | **Legal and hygiene:** LICENSE + README rewrite (F1), scrub personal data and provider names (R3), full-history secret scan, remove the TV storage permissions (R5), drop the household tooling, image provenance notes | D1 | S |
 | 2 | **FOSS dependencies:** ML Kit → zxing (F2), delete the Cronet entries (F3), requery → `sqlite-bundled` with a Shield re-measure (F4), `fdroid` flavor without FFmpeg and drop s01 (F5), daemon JVM 21 (F7) | D3 | M; F4 is the risky item |
 | 3 | **Packaging:** applicationId split or universal APK, one version source (F6), reproducible `BUILD_TIME` (F8), `dependenciesInfo` (F9), signing, R8 + consumer rules (R2), `assembleRelease` + CI on PRs | D2 | M; R8 needs a full regression pass on both apps |
 | 4 | **Privacy and security:** export without credentialed guide URLs, credential-less guide URLs at rest (R1), `PRIVACY.md` + in-app disclaimer (R4), data extraction rules | none | S-M; at-rest needs a `providers.db` migration and a `DATABASE_SCHEMA.md` update |
 | 5 | **First-run UX:** welcome screen, source-type subtitles and paste hint, go to Home after the first add (U-H1, U-H3), login errors (U-H4), Undo without a Menu key (U-H2), phone swipe thresholds (U-H5) | Phase 4 disclaimer text | M; focus walks to update |
-| 6 | **Copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
+| 6 | **TMDB key in Settings (D4)**, then the **copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
 | 7 | **Store presence:** fastlane metadata in en/fr/mg, TV and phone screenshots, CHANGELOG | 1–3 | S |
 | 8 | **Public repository cut-over (Option C), always the last step:** final scrub check, archived plans left out (citations rewritten first), fresh squashed public repository, tag `v1.0.0`, signed release, F-Droid RFP / fdroiddata MR; old repository archived private | 1–7 | S |
 | 9 | **After 1.0** (in the new public repository): sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
