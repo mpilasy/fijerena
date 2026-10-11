@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -324,11 +325,16 @@ private fun EpisodeListContent(
 
     val listState = rememberLazyListState()
 
+    // The anchor a season or show mark just moved Play to (markEpisodesWatched below): the list
+    // doesn't scroll to it, staying where the user pressed the mark.
+    var anchorMovedByMark by remember { mutableStateOf<String?>(null) }
+
     // Scroll to the resume episode, but only when it's actually the reason this season is
     // selected — a manual tab tap or swipe must never yank the list back to the resume spot (or
     // anywhere else); it stays exactly where the user left it.
     LaunchedEffect(resumeState.resumeEpisodeId) {
         val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
+        if (targetId == anchorMovedByMark) return@LaunchedEffect
         if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
         val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
@@ -344,8 +350,8 @@ private fun EpisodeListContent(
     // Re-reads progress/watched (including TMDB siblings) for every episode of this series.
     // Called after a manual mark, not just on initial load — a single-episode optimistic patch
     // would miss a sibling that the mark just made completed, and wouldn't restore a resume bar
-    // an unmark brings back.
-    suspend fun refreshEpisodeWatchState() {
+    // an unmark brings back. Returns this series' own rows, for markEpisodesWatched's re-anchor.
+    suspend fun refreshEpisodeWatchState(): Map<String, WatchedItem> {
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
             for (ep in episodes) {
@@ -372,6 +378,7 @@ private fun EpisodeListContent(
                 }
                 addAll(mediaRepository.getSiblingCompletedEpisodeIds(seriesDetail.id))
             }
+        return allWatched
     }
 
     // Mark a whole season (long-press its chip) or the whole show (the action row) watched or
@@ -391,7 +398,20 @@ private fun EpisodeListContent(
                 .onFailure {
                     markManyError = friendlyErrorMessage(it, context, AppSettings(context.applicationContext).isDevMode)
                 }
-            refreshEpisodeWatchState()
+            val allWatched = refreshEpisodeWatchState()
+            // Play and the "Continue watching" badge move on to the first unwatched episode at once
+            // (docs/plans/20261011_watched-followups-plan.md → Phase 1); the selected season stays.
+            // A single-episode toggle doesn't come through here, so it leaves the anchor alone.
+            seriesDetail
+                .resumeAnchorEpisodeId(
+                    sortedSeasons = sortedSeasons,
+                    lastPlayedEpisodeId = resumeState.resumeEpisodeId,
+                    isCompleted = { allWatched[it]?.isCompleted == true },
+                )?.takeIf { it != resumeState.resumeEpisodeId }
+                ?.let {
+                    anchorMovedByMark = it
+                    resumeState.applyAnchor(episodeId = it, season = null)
+                }
         }
     }
     // The season whose long-press menu is open, with whether all its episodes are watched.
@@ -449,7 +469,13 @@ private fun EpisodeListContent(
             seriesDetail
                 .resumeAnchorEpisodeId(
                     sortedSeasons = sortedSeasons,
-                    lastPlayedEpisodeId = resumeState.resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
+                    // A row only marked watched has no playback timestamp (0): a mark is not a play.
+                    lastPlayedEpisodeId =
+                        resumeState.resumeEpisodeId
+                            ?: allWatched.entries
+                                .filter { it.value.timestamp > 0L }
+                                .maxByOrNull { it.value.timestamp }
+                                ?.key,
                     isCompleted = { allWatched[it]?.isCompleted == true },
                 )?.also { resumeState.applyAnchor(episodeId = it, season = null) }
 

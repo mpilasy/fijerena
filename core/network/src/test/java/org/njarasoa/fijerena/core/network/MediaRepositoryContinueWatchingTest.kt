@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -35,7 +36,8 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 /**
  * The home screen's Continue Watching shelf: a show stays on it after an episode ends, offering
- * the next one ("Up next"), and leaves after its last episode. Movies show only while mid-watch.
+ * the first unwatched episode ("Up next") — after it, else from the start, else the first episode.
+ * Movies show only while mid-watch.
  */
 class MediaRepositoryContinueWatchingTest {
     private lateinit var context: Context
@@ -63,10 +65,10 @@ class MediaRepositoryContinueWatchingTest {
         episodeDao = mockk(relaxed = true)
         // Show 7: S1E1, S1E2, then S2E1. Show 8's episodes aren't cached.
         coEvery { episodeDao.getEpisode(P, any()) } returns null
-        coEvery { episodeDao.getNextEpisode(P, any(), any(), any()) } returns null
-        listOf(ep("e1", 1, 1), ep("e2", 1, 2), ep("e3", 2, 1)).forEach { e -> coEvery { episodeDao.getEpisode(P, e.id) } returns e }
-        coEvery { episodeDao.getNextEpisode(P, 7, 1, 1) } returns ep("e2", 1, 2)
-        coEvery { episodeDao.getNextEpisode(P, 7, 1, 2) } returns ep("e3", 2, 1)
+        val show7 = listOf(ep("e1", 1, 1), ep("e2", 1, 2), ep("e3", 2, 1))
+        show7.forEach { e -> coEvery { episodeDao.getEpisode(P, e.id) } returns e }
+        every { episodeDao.getEpisodes(P, 7) } returns show7
+        coEvery { episodeDao.getSiblingCompletedEpisodeIds(P, any(), any()) } returns emptyList()
     }
 
     @After
@@ -114,11 +116,10 @@ class MediaRepositoryContinueWatchingTest {
     }
 
     @Test
-    fun `the provider's last episode ends the show there too`() {
-        assertEquals(
-            emptyList<ContinueWatchingItem>(),
-            shelf(episode("x3", "8", position = 100, duration = 100, isCompleted = true), provider = panel()),
-        )
+    fun `after the provider's last episode the card goes back to the first unwatched one`() {
+        val card = shelf(episode("x3", "8", position = 100, duration = 100, isCompleted = true), provider = panel()).single()
+        assertEquals(true, card.upNext)
+        assertEquals(BrowseTarget.Series(SeriesId("8"), EpisodeId("x1")), card.target)
     }
 
     @Test
@@ -137,8 +138,36 @@ class MediaRepositoryContinueWatchingTest {
     }
 
     @Test
-    fun `a show leaves after its last episode`() {
-        assertEquals(emptyList<ContinueWatchingItem>(), shelf(episode("e3", "7", position = 100, duration = 100, isCompleted = true)))
+    fun `a finished episode skips over the watched ones after it`() {
+        markWatched("e2")
+        val card = shelf(episode("e1", "7", position = 2_400_000, duration = 2_400_000, isCompleted = true)).single()
+        assertEquals(true, card.upNext)
+        assertEquals(BrowseTarget.Series(SeriesId("7"), EpisodeId("e3")), card.target)
+    }
+
+    @Test
+    fun `an episode completed in a TMDB sibling counts as watched`() {
+        coEvery { episodeDao.getSiblingCompletedEpisodeIds(P, ProfileEntity.DEFAULT_ID, 7) } returns listOf("e2")
+        val card = shelf(episode("e1", "7", position = 2_400_000, duration = 2_400_000, isCompleted = true)).single()
+        assertEquals(BrowseTarget.Series(SeriesId("7"), EpisodeId("e3")), card.target)
+    }
+
+    @Test
+    fun `after the last episode the card goes back to the first unwatched one`() {
+        markWatched("e1")
+        val card = shelf(episode("e3", "7", position = 100, duration = 100, isCompleted = true)).single()
+        assertEquals(true, card.upNext)
+        assertEquals("Episode e2", card.subtitle)
+        assertEquals(BrowseTarget.Series(SeriesId("7"), EpisodeId("e2")), card.target)
+    }
+
+    @Test
+    fun `a show with every episode watched stays, offering the first episode`() {
+        markWatched("e1")
+        markWatched("e2")
+        val card = shelf(episode("e3", "7", position = 100, duration = 100, isCompleted = true)).single()
+        assertEquals(true, card.upNext)
+        assertEquals(BrowseTarget.Series(SeriesId("7"), EpisodeId("e1")), card.target)
     }
 
     @Test
@@ -187,6 +216,12 @@ class MediaRepositoryContinueWatchingTest {
             )
         assertEquals(listOf("m1", "7", "m2"), cards.map { it.id })
     }
+
+    /** A manual mark: completed, never played, so it never becomes the show's latest row. */
+    private fun markWatched(id: String) =
+        runBlocking {
+            watchStateDao.markWatched(P, ProfileEntity.DEFAULT_ID, id, ContentType.TV_SHOWS, now = 1L, seriesId = "7", episodeId = id)
+        }
 
     private fun ep(
         id: String,

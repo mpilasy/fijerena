@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
+import org.njarasoa.fijerena.core.player.domain.nextUnwatchedEpisodeId
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.io.Closeable
@@ -96,11 +97,11 @@ fun WatchedItem.resumeProgress(): Float? {
 /**
  * `watch_state` row as a [WatchedItem], for callers that still speak the blob-era shape.
  * `timestamp` becomes `lastPlayedAt` — the value [EpisodeSelectionScreen]'s "most recently played"
- * lookup and the Recent row both actually mean — falling back to `updatedAt` only for a genuine
- * Phase 6 row whose completion was set without ever playing anything (no position/duration ever
- * recorded, per [markWatched][org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
- * .markWatched]'s insert). A row `removeFromRecent` cleared instead falls to 0 — `updatedAt` there
- * is just "removed just now" and must not outrank a genuinely recently-played row.
+ * lookup and the Recent row both actually mean — or 0 when the row has none: one only marked
+ * watched ([markWatched][org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao.markWatched]'s
+ * insert), since a mark is not a play and must not become the series screen's "last played"
+ * (docs/plans/20261011_watched-followups-plan.md → Phase 1), and one `removeFromRecent` cleared,
+ * whose `updatedAt` is just "removed just now" and must not outrank a genuinely recently-played row.
  */
 private fun WatchStateEntity.toWatchedItem(): WatchedItem =
     WatchedItem(
@@ -108,7 +109,7 @@ private fun WatchStateEntity.toWatchedItem(): WatchedItem =
         itemName = itemName,
         categoryId = categoryId,
         contentType = contentType,
-        timestamp = lastPlayedAt ?: (if (positionMs <= 0L && durationMs <= 0L) updatedAt else 0L),
+        timestamp = lastPlayedAt ?: 0L,
         playbackPosition = positionMs,
         duration = durationMs,
         isCompleted = isCompleted,
@@ -1659,9 +1660,11 @@ class MediaRepository(
      * enforced in SQL by [WatchStateDao.getResumable]. A finished movie has nothing to continue.
      *
      * TV Shows: one card per show, from its most recently played episode. Mid-watch, the card
-     * resumes it. Finished, the card offers the next episode ("Up next"), if this device has the
-     * show's episode list cached; after the last episode the show leaves the shelf. Barely started
-     * (under 2%), the card offers that episode itself as up next. See [upNextFor].
+     * resumes it. Finished, the card offers the first unwatched episode after it ("Up next"), else
+     * the first unwatched one from the start, else (every episode watched) the first episode — the
+     * series screen's rule, [nextUnwatchedEpisodeId]. A show whose episode list is known nowhere
+     * leaves the shelf once finished. Barely started (under 2%), the card offers that episode itself
+     * as up next. See [upNextForShows].
      *
      * Live TV never appears:
      * [savePlaybackPosition] never records a position for a live stream, so no live entry can fall
@@ -1677,7 +1680,7 @@ class MediaRepository(
                 emptyList()
             } else {
                 val movieRows = watchStateDao.getResumable(providerId, profileId, ContentType.MOVIES, limit)
-                // Over-fetched: a finished show with no next episode drops out below.
+                // Over-fetched: a finished show whose episodes are unknown drops out below.
                 val latestPerShow = watchStateDao.getRecentSeriesCollapsed(providerId, profileId, ContentType.TV_SHOWS, limit * 3)
                 val upNext = upNextForShows(latestPerShow, limit)
                 val seriesRows = latestPerShow.filter { it.isResumable() || upNext[it] != null }.take(limit)
@@ -1721,10 +1724,13 @@ class MediaRepository(
 
     /**
      * The "Up next" episode of each show in [latestPerShow] (its most recently played episode per
-     * show) that isn't mid-watch: the next episode once it is finished, or the episode itself when
-     * barely started. Absent from the map: shows to resume, and shows with nothing next.
+     * show) that isn't mid-watch: once it is finished, the first unwatched episode by
+     * [nextUnwatchedEpisodeId] (docs/plans/20261011_watched-followups-plan.md → Phase 1) — watched
+     * meaning a completed row, or the same episode completed in a TMDB sibling, as in
+     * [episodesWatchState]; the episode itself when barely started. Absent from the map: shows to
+     * resume, and shows whose episode list is known nowhere.
      *
-     * The next episode comes from this device's stored episode list. A show whose list this device
+     * The episodes come from this device's stored episode list. A show whose list this device
      * has never stored — typically one watched on another device, its history arriving by sync —
      * has its list fetched from the provider (stored as a side effect, so once per show), for the
      * first [limit] shows only, in parallel and at most [UP_NEXT_FETCH_TIMEOUT_MS] each.
@@ -1735,6 +1741,8 @@ class MediaRepository(
     ): Map<WatchStateEntity, UpNextEpisode> {
         val found = mutableMapOf<WatchStateEntity, UpNextEpisode>()
         val unknown = mutableListOf<WatchStateEntity>()
+        // Read once for every show, and only when some show is finished.
+        var completedRows: Set<String>? = null
         for (row in latestPerShow) {
             if (row.isResumable() || row.seriesId?.toIntOrNull() == null) continue
             val episodeId = row.episodeId ?: row.itemId
@@ -1742,38 +1750,64 @@ class MediaRepository(
                 found[row] = UpNextEpisode(episodeId, row.itemName)
                 continue
             }
+            val completed = completedRows ?: completedEpisodeRows().also { completedRows = it }
             val current = episodeDao.getEpisode(providerId, episodeId)
             if (current == null) {
                 unknown += row
                 continue
             }
-            episodeDao
-                .getNextEpisode(providerId, current.seriesId, current.season ?: 0, current.episodeNum)
-                ?.let { found[row] = UpNextEpisode(it.id, it.title) }
+            val episodes = withContext(Dispatchers.IO) { episodeDao.getEpisodes(providerId, current.seriesId) }
+            firstUnwatched(row, episodes.map { UpNextEpisode(it.id, it.title) }, completed)?.let { found[row] = it }
         }
         val toFetch = unknown.filter { latestPerShow.indexOf(it) < limit }
         if (toFetch.isNotEmpty()) {
+            val completed = completedRows.orEmpty()
             coroutineScope {
                 toFetch
-                    .map { row -> async { row to withTimeoutOrNull(UP_NEXT_FETCH_TIMEOUT_MS) { nextFromProvider(row) } } }
+                    .map { row -> async { row to withTimeoutOrNull(UP_NEXT_FETCH_TIMEOUT_MS) { nextFromProvider(row, completed) } } }
                     .awaitAll()
             }.forEach { (row, next) -> if (next != null) found[row] = next }
         }
         return found
     }
 
-    /** The episode after [row]'s in the show's episode list as the provider gives it: season, then episode order. */
-    private suspend fun nextFromProvider(row: WatchStateEntity): UpNextEpisode? {
+    /** [upNextForShows] from the show's episode list as the provider gives it: season, then episode order. */
+    private suspend fun nextFromProvider(
+        row: WatchStateEntity,
+        completedRows: Set<String>,
+    ): UpNextEpisode? {
         val seriesId = row.seriesId ?: return null
         val detail = provider?.getSeriesDetail(SeriesId(seriesId))?.getOrNull() ?: return null
         val ordered =
             detail.episodes
                 .flatMap { (seasonKey, episodes) -> episodes.map { (it.seasonNumber ?: seasonKey.toIntOrNull() ?: 0) to it } }
                 .sortedWith(compareBy({ it.first }, { it.second.episodeNumber }))
-                .map { it.second }
-        val index = ordered.indexOfFirst { it.id == (row.episodeId ?: row.itemId) }
-        val next = ordered.getOrNull(index + 1)?.takeIf { index >= 0 } ?: return null
-        return UpNextEpisode(next.id, next.title)
+                .map { UpNextEpisode(it.second.id, it.second.title) }
+        return firstUnwatched(row, ordered, completedRows)
+    }
+
+    /** Ids of every completed TV Shows row, for [upNextForShows]. */
+    private suspend fun completedEpisodeRows(): Set<String> =
+        watchStateDao
+            .getByContentType(providerId, profileId, ContentType.TV_SHOWS)
+            .filter { it.isCompleted }
+            .mapTo(HashSet()) { it.itemId }
+
+    /**
+     * The episode of [ordered] (show order) to offer after [row]'s finished one, by
+     * [nextUnwatchedEpisodeId]; null when [row]'s episode isn't in the list.
+     */
+    private suspend fun firstUnwatched(
+        row: WatchStateEntity,
+        ordered: List<UpNextEpisode>,
+        completedRows: Set<String>,
+    ): UpNextEpisode? {
+        val siblingCompleted = row.seriesId?.let { getSiblingCompletedEpisodeIds(it) }.orEmpty()
+        val nextId =
+            nextUnwatchedEpisodeId(ordered.map { it.episodeId }, row.episodeId ?: row.itemId) { id ->
+                id in completedRows || id in siblingCompleted
+            }
+        return nextId?.let { id -> ordered.first { it.episodeId == id } }
     }
 
     private fun WatchStateEntity.isFinished(): Boolean = isCompleted || (durationMs > 0 && positionMs * 100.0 / durationMs > 95.0)

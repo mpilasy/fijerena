@@ -115,25 +115,53 @@ fun SeriesDetail.episodeIdMatchingName(name: String): String? {
 private val SEASON_EPISODE = Regex("""\bS(\d{1,3})\s*E(\d{1,4})\b""", RegexOption.IGNORE_CASE)
 
 /**
- * Episode to land on when the series screen opens: the most recently played one, or the
- * episode right after it when that one was already finished (nobody comes back to a series
- * to rewatch what they just completed). Null when nothing here has been played yet.
+ * Episode to land on when the series screen opens: the most recently played one, or the first
+ * unwatched episode after it when that one was already finished (nobody comes back to a series
+ * to rewatch what they just completed) — see [nextUnwatchedEpisodeId]. Nothing played but some
+ * episodes marked watched: the first unwatched episode from the start. Null when nothing here has
+ * been played or marked yet.
  *
  * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series'
- * episodes; [isCompleted] reports whether an episode was watched past the completion mark.
+ * episodes (a manual mark is not a play); [isCompleted] reports whether an episode was watched
+ * past the completion mark or marked watched.
  */
 fun SeriesDetail.resumeAnchorEpisodeId(
     sortedSeasons: List<SeasonInfo>,
     lastPlayedEpisodeId: String?,
     isCompleted: (episodeId: String) -> Boolean,
 ): String? {
-    val lastPlayed = lastPlayedEpisodeId ?: return null
-    if (!isCompleted(lastPlayed)) return lastPlayed
-    val flat = flattenedEpisodes(sortedSeasons)
-    val index = flat.indexOfFirst { it.id == lastPlayed }
-    if (index < 0) return lastPlayed
-    // Last episode of the series finished: stay on it rather than pointing at nothing.
-    return flat.getOrNull(index + 1)?.id ?: lastPlayed
+    if (lastPlayedEpisodeId != null && !isCompleted(lastPlayedEpisodeId)) return lastPlayedEpisodeId
+    val flat = flattenedEpisodes(sortedSeasons).map { it.id }
+    return when {
+        lastPlayedEpisodeId != null -> nextUnwatchedEpisodeId(flat, lastPlayedEpisodeId, isCompleted) ?: lastPlayedEpisodeId
+        flat.any(isCompleted) -> nextUnwatchedEpisodeId(flat, finishedEpisodeId = null, isCompleted)
+        else -> null
+    }
+}
+
+/**
+ * The episode to watch after finishing [finishedEpisodeId], from [orderedEpisodeIds] in show order
+ * (docs/plans/20261011_watched-followups-plan.md → Phase 1): the first one after it that isn't
+ * completed; failing that, the first one from the start of the show that isn't; and when every
+ * episode is completed, the first episode. [finishedEpisodeId] itself counts as completed; null
+ * starts from the beginning. Null when [finishedEpisodeId] isn't in the list, or the list is empty.
+ * Shared by the series screens and Home's "Continue watching" card so both offer the same episode.
+ */
+fun nextUnwatchedEpisodeId(
+    orderedEpisodeIds: List<String>,
+    finishedEpisodeId: String?,
+    isCompleted: (episodeId: String) -> Boolean,
+): String? {
+    val start =
+        if (finishedEpisodeId == null) {
+            0
+        } else {
+            orderedEpisodeIds.indexOf(finishedEpisodeId).takeIf { it >= 0 }?.plus(1) ?: return null
+        }
+    val unwatched = { id: String -> id != finishedEpisodeId && !isCompleted(id) }
+    return orderedEpisodeIds.subList(start, orderedEpisodeIds.size).firstOrNull(unwatched)
+        ?: orderedEpisodeIds.firstOrNull(unwatched)
+        ?: orderedEpisodeIds.firstOrNull()
 }
 
 /**

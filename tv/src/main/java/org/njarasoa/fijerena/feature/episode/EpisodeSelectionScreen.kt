@@ -104,6 +104,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -551,9 +552,14 @@ internal fun EpisodeListContent(
     // Items above the episodes: the hero and the section tabs, then the pinned episodes header
     // (season tabs, compact title line) and the gap under it.
     val headerItemCount = 4
+
+    // The anchor a season or show mark just moved Play to (markEpisodesWatched below): neither
+    // this scroll nor the first-focus effect follows it, so focus stays on the action pressed.
+    var anchorMovedByMark by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(resumeState.resumeEpisodeId) {
         if (returnFocus.isReturn) return@LaunchedEffect
         val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
+        if (targetId == anchorMovedByMark) return@LaunchedEffect
         if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
         val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
@@ -574,8 +580,9 @@ internal fun EpisodeListContent(
     // Called after a manual mark, not just on initial load — a single-episode optimistic patch
     // would miss a sibling that the mark just made completed, and wouldn't restore a resume bar
     // an unmark brings back. Doesn't touch resumeEpisodeId/selectedSeasonNumber: a manual toggle
-    // should not re-anchor or re-select a season out from under the user.
-    suspend fun refreshEpisodeWatchState() {
+    // should not re-anchor or re-select a season out from under the user. Returns this series'
+    // own rows, for markEpisodesWatched's re-anchor.
+    suspend fun refreshEpisodeWatchState(): Map<String, WatchedItem> {
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
             for (ep in episodes) {
@@ -602,6 +609,7 @@ internal fun EpisodeListContent(
                 }
                 addAll(mediaRepository.getSiblingCompletedEpisodeIds(seriesDetail.id))
             }
+        return allWatched
     }
 
     // Mark a whole season (hold OK / Menu on its tab) or the whole show (the hero's action)
@@ -619,7 +627,20 @@ internal fun EpisodeListContent(
             mediaRepository
                 .setEpisodesWatched(seriesDetail.id, season, watched)
                 .onFailure { markManyError = friendlyErrorMessage(it, context, appSettings.isDevMode) }
-            refreshEpisodeWatchState()
+            val allWatched = refreshEpisodeWatchState()
+            // Play and the "Continue watching" badge move on to the first unwatched episode at once
+            // (docs/plans/20261011_watched-followups-plan.md → Phase 1); the selected season stays.
+            // A single-episode toggle doesn't come through here, so it leaves the anchor alone.
+            seriesDetail
+                .resumeAnchorEpisodeId(
+                    sortedSeasons = sortedSeasons,
+                    lastPlayedEpisodeId = resumeState.resumeEpisodeId,
+                    isCompleted = { allWatched[it]?.isCompleted == true },
+                )?.takeIf { it != resumeState.resumeEpisodeId }
+                ?.let {
+                    anchorMovedByMark = it
+                    resumeState.applyAnchor(episodeId = it, season = null)
+                }
         }
     }
     // The season whose menu is open, with whether all its episodes are watched. A Dialog window:
@@ -694,10 +715,16 @@ internal fun EpisodeListContent(
         // to the newest playback timestamp. Either way the anchor moves on when that episode is
         // already finished — re-evaluated on every entry, so backing out of an episode the user
         // just completed lands on the following one.
+        // A row only marked watched has no playback timestamp (0): a mark is not a play.
+        val lastPlayed =
+            resumeState.resumeEpisodeId
+                ?: allWatched.entries
+                    .filter { it.value.timestamp > 0L }
+                    .maxByOrNull { it.value.timestamp }
+                    ?.key
         // An episode from another copy of this show (played via an alternate stream) isn't in
         // this one's list: find the same season and episode here, rather than falling back to
         // S1E1.
-        val lastPlayed = resumeState.resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key
         val lastPlayedHere =
             if (lastPlayed != null && seriesDetail.seasonNumberContaining(lastPlayed) == null) {
                 mediaRepository
@@ -823,7 +850,8 @@ internal fun EpisodeListContent(
     // and the system hands it to the first season tab (seen on a Shield): [awaitingFirstFocus]
     // stops that stray focus from selecting its season.
     LaunchedEffect(resumeState.resumeEpisodeId) {
-        if (streamSwitchSignal != 0 || returnFocus.isReturn) {
+        val movedByMark = anchorMovedByMark != null && resumeState.resumeEpisodeId == anchorMovedByMark
+        if (streamSwitchSignal != 0 || returnFocus.isReturn || movedByMark) {
             awaitingFirstFocus = false
         } else {
             val target = resumeState.resumeEpisodeId

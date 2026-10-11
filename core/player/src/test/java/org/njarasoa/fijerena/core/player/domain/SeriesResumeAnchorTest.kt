@@ -44,8 +44,34 @@ class SeriesResumeAnchorTest {
     }
 
     @Test
-    fun `finished last episode stays on itself`() {
-        assertEquals("s2e2", series.resumeAnchorEpisodeId(seasons, "s2e2", isCompleted = { it == "s2e2" }))
+    fun `finished episode skips over the watched ones after it`() {
+        val watched = setOf("s1e1", "s1e2", "s2e1")
+        assertEquals("s2e2", series.resumeAnchorEpisodeId(seasons, "s1e1", isCompleted = { it in watched }))
+    }
+
+    @Test
+    fun `finished last episode wraps to the first unwatched one from the start`() {
+        val watched = setOf("s1e1", "s2e2")
+        assertEquals("s1e2", series.resumeAnchorEpisodeId(seasons, "s2e2", isCompleted = { it in watched }))
+    }
+
+    @Test
+    fun `every episode watched anchors on the first episode`() {
+        assertEquals("s1e1", series.resumeAnchorEpisodeId(seasons, "s1e2", isCompleted = { true }))
+    }
+
+    @Test
+    fun `marked episodes with nothing played anchor on the first unwatched one`() {
+        val marked = setOf("s1e1", "s1e2")
+        assertEquals("s2e1", series.resumeAnchorEpisodeId(seasons, lastPlayedEpisodeId = null, isCompleted = { it in marked }))
+    }
+
+    @Test
+    fun `a finished episode not marked completed is still skipped`() {
+        // Past 95% but its row not yet completed: never offered again as "next".
+        assertEquals("s1e2", nextUnwatchedEpisodeId(listOf("s1e1", "s1e2"), "s1e1", isCompleted = { false }))
+        assertEquals("s1e1", nextUnwatchedEpisodeId(listOf("s1e1", "s1e2"), "s1e2", isCompleted = { false }))
+        assertEquals("s1e1", nextUnwatchedEpisodeId(listOf("s1e1"), "s1e1", isCompleted = { false }))
     }
 
     @Test

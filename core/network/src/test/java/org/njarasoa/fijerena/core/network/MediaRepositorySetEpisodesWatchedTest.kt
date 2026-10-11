@@ -21,7 +21,9 @@ import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
@@ -32,7 +34,8 @@ import org.robolectric.annotation.Config
 
 /**
  * Marking a whole season or show watched / unwatched, per episode
- * (docs/plans/archive/20261011_season-show-watched-plan.md → Phase 1). Against a real in-memory
+ * (docs/plans/archive/20261011_season-show-watched-plan.md → Phase 1), and the Home "Continue
+ * watching" card it moves on (docs/plans/20261011_watched-followups-plan.md → Phase 1). Against a real in-memory
  * `xtream_v2.db` under Robolectric, so the watch-state upserts and the TMDB sibling queries run
  * as SQL rather than through fakes.
  */
@@ -187,6 +190,32 @@ class MediaRepositorySetEpisodesWatchedTest {
         }
 
     @Test
+    fun `after a season mark the shelf offers the first unwatched episode`() =
+        runBlocking {
+            storeShow7()
+            finish("e1")
+
+            repository.setEpisodesWatched("7", season = 1, watched = true)
+
+            val card = repository.getContinueWatchingItems().single()
+            assertTrue(card.upNext)
+            assertEquals(BrowseTarget.Series(SeriesId("7"), EpisodeId("e3")), card.target)
+        }
+
+    @Test
+    fun `after a show mark the shelf keeps the show, offering the first episode`() =
+        runBlocking {
+            storeShow7()
+            finish("e2")
+
+            repository.setEpisodesWatched("7", season = null, watched = true)
+
+            val card = repository.getContinueWatchingItems().single()
+            assertTrue(card.upNext)
+            assertEquals(BrowseTarget.Series(SeriesId("7"), EpisodeId("e1")), card.target)
+        }
+
+    @Test
     fun `the read is null when no episodes are known`() =
         runBlocking {
             coEvery { provider.getCachedSeriesDetail(SeriesId("9")) } returns null
@@ -224,6 +253,33 @@ class MediaRepositorySetEpisodesWatchedTest {
 
         assertFalse(repository.supportsMarkWatched)
     }
+
+    /** Show 7's episode list as this device stores it, matching [show7]. */
+    private fun storeShow7() {
+        db.seriesDao().insertAll(listOf(series(7, "100")))
+        db.episodeDao().insertAll(listOf(episode("e1", 7, 1, 1), episode("e2", 7, 1, 2), episode("e3", 7, 2, 1)))
+    }
+
+    /** [id] played to the end. */
+    private fun finish(id: String) =
+        db.watchStateDao().upsertProgress(
+            providerId = P,
+            profileId = PROFILE,
+            itemId = id,
+            contentType = ContentType.TV_SHOWS,
+            itemName = id,
+            categoryId = "c",
+            positionMs = 2_500_000L,
+            durationMs = 2_500_000L,
+            isCompleted = true,
+            now = 1_000L,
+            seriesId = "7",
+            episodeId = id,
+            seriesName = "Show 7",
+            episodeExtension = "mkv",
+            audioTrackIndex = null,
+            subtitleTrackIndex = null,
+        )
 
     private suspend fun row(id: String): WatchStateEntity? = db.watchStateDao().getItem(P, PROFILE, id, ContentType.TV_SHOWS)
 
