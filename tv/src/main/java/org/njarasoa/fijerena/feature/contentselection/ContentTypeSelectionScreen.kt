@@ -99,6 +99,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -640,6 +641,15 @@ fun ContentTypeSelectionScreen(
                                 true
                         }
                     }
+                // A favourite show's "Mark show watched / unwatched"
+                // (docs/plans/20261011_season-show-watched-plan.md Phase 3): null hides it, as on a
+                // source that keeps watched state on its server.
+                val isShowWatched =
+                    if (shelf == HomeShelf.FAVORITE_SHOWS && repo.supportsMarkEpisodesWatched) {
+                        repo.episodesWatchState(ref.id, null) == true
+                    } else {
+                        null
+                    }
                 cardMenu =
                     HomeCardMenu(
                         shelf = shelf,
@@ -654,6 +664,7 @@ fun ContentTypeSelectionScreen(
                                 isWatched = isWatched,
                                 // A source that keeps its own history (Jellyfin) has no Remove from Recent.
                                 isInRecent = !shelf.isFavorites && repo.supportsRemoveFromRecent,
+                                isShowWatched = isShowWatched,
                             ),
                     )
             }
@@ -662,6 +673,7 @@ fun ContentTypeSelectionScreen(
     cardMenu?.let { menu ->
         val repo = mediaRepositoryRef
         val ref = menu.ref
+        val markShowFailed = stringResource(R.string.watched_mark_many_failed)
         FavoriteContextMenuDialog(
             target = menu.target,
             onConfirm = {
@@ -733,6 +745,24 @@ fun ContentTypeSelectionScreen(
                     null
                 },
             list = if (menu.shelf.isFavorites) RowMenuList.FAVORITES else RowMenuList.RECENT,
+            onToggleShowWatched =
+                menu.target.isShowWatched?.let { isShowWatched ->
+                    {
+                        repo?.let {
+                            coroutineScope.launchGuarded("Home.setShowWatched") {
+                                repo
+                                    .setEpisodesWatched(ref.id, null, !isShowWatched)
+                                    .onSuccess { reloadContinueWatching(repo, null) }
+                                    .onFailure { e ->
+                                        val message = markShowFailed + "\n" + friendlyErrorMessage(e, context, appSettings.isDevMode)
+                                        android.widget.Toast
+                                            .makeText(context, message, android.widget.Toast.LENGTH_LONG)
+                                            .show()
+                                    }
+                            }
+                        }
+                    }
+                },
         )
     }
 

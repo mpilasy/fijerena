@@ -44,6 +44,7 @@ enum class RowMenuList {
  * Themed context menu dialog for a category/stream row (long-press OK or the Menu key — UX
  * overhaul plan Part II P3): favorite toggle always, watched toggle too when [onToggleWatched] is
  * given — `target.isWatched == null` (Live TV, categories) is what keeps callers from passing one.
+ * A show row gets "Mark show watched / unwatched" ([onToggleShowWatched]) in place of that toggle.
  * See docs/plans/archive/20260828_watch-state-durable-storage-plan.md Phase 6. Independent actions rather
  * than an AlertDialog's usual confirm/cancel pair: each row commits immediately, `onDismiss` alone
  * closes the menu. Focus opens on the first row: what the list is about ([list]) — so in Recent
@@ -59,6 +60,9 @@ fun FavoriteContextMenuDialog(
     onToggleWatched: (() -> Unit)? = null,
     onRemoveFromRecent: (() -> Unit)? = null,
     list: RowMenuList = RowMenuList.OTHER,
+    // A show row's "Mark show watched / unwatched", worded from `target.isShowWatched`
+    // (docs/plans/20261011_season-show-watched-plan.md Phase 3). Null hides it.
+    onToggleShowWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
     val streamTarget = target as? FavoriteMenuTarget.Stream
@@ -162,6 +166,33 @@ fun FavoriteContextMenuDialog(
                         headlineContent = {
                             Text(
                                 text = watchedActionText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CinemaTextPrimary,
+                            )
+                        },
+                    )
+                }
+
+                if (onToggleShowWatched != null) {
+                    val showWatched = streamTarget?.isShowWatched == true
+                    TvInputListItem(
+                        selected = false,
+                        onClick = {
+                            onToggleShowWatched()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingContent = {
+                            Icon(
+                                imageVector = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(TvDimensions.iconSmall),
+                                tint = CinemaAccent,
+                            )
+                        },
+                        headlineContent = {
+                            Text(
+                                text = stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = CinemaTextPrimary,
                             )

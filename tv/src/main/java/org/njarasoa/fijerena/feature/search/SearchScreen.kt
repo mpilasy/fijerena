@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.search
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -226,6 +227,15 @@ fun SearchScreen(
                 (target as? FavoriteMenuTarget.Stream)?.isWatched?.let { isWatched ->
                     { viewModel.toggleWatched(target.itemId, target.contentType, isWatched) }
                 },
+            // Null when the result isn't a show or its source keeps watched state on its server.
+            onToggleShowWatched =
+                (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
+                    {
+                        viewModel.setShowWatched(target.itemId, !isShowWatched) { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
         )
     }
 
@@ -296,10 +306,14 @@ fun SearchScreen(
                             // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike isFavorite,
                             // there is no synchronous in-memory cache for watch_state — the
                             // menu target has to wait on one suspend fetch before it opens.
+                            // A show offers "Mark show watched / unwatched" instead
+                            // (docs/plans/20261011_season-show-watched-plan.md Phase 3).
+                            val isShow = result.isShow
                             val isWatchable =
-                                result.contentType == ContentType.MOVIES || result.contentType == ContentType.TV_SHOWS
+                                result.contentType == ContentType.MOVIES || (result.contentType == ContentType.TV_SHOWS && !isShow)
                             longPressScope.launch {
                                 val isWatched = if (isWatchable) viewModel.isWatchedSuspend(result.itemId, result.contentType) else null
+                                val isShowWatched = if (isShow) viewModel.showWatchedMarkState(result.itemId) else null
                                 favoriteMenuTarget =
                                     FavoriteMenuTarget.Stream(
                                         itemId = result.itemId,
@@ -308,6 +322,7 @@ fun SearchScreen(
                                         contentType = result.contentType,
                                         isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
                                         isWatched = isWatched,
+                                        isShowWatched = isShowWatched,
                                     )
                             }
                         },

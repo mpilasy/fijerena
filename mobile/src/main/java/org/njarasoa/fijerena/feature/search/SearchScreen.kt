@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
@@ -152,8 +153,20 @@ fun MobileSearchScreen(
                 }
             },
             onDismiss = { favoriteMenuTarget = null },
+            // Null when the result isn't a show or its source keeps watched state on its server.
+            onToggleShowWatched =
+                (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
+                    {
+                        viewModel.setShowWatched(target.itemId, !isShowWatched) { message ->
+                            android.widget.Toast
+                                .makeText(context, message, android.widget.Toast.LENGTH_LONG)
+                                .show()
+                        }
+                    }
+                },
         )
     }
+    val longPressScope = rememberCoroutineScope()
 
     // Restore search query from ViewModel on screen re-entry (e.g. back from stream playback)
     LaunchedEffect(Unit) {
@@ -331,14 +344,19 @@ fun MobileSearchScreen(
                                 )
                             },
                             onResultLongPress = { result ->
-                                favoriteMenuTarget =
-                                    FavoriteMenuTarget.Stream(
-                                        itemId = result.itemId,
-                                        itemName = result.streamName,
-                                        categoryId = result.categoryId,
-                                        contentType = result.contentType,
-                                        isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
-                                    )
+                                // A show's menu waits for its "Mark show watched / unwatched" wording.
+                                longPressScope.launch {
+                                    val isShowWatched = if (result.isShow) viewModel.showWatchedMarkState(result.itemId) else null
+                                    favoriteMenuTarget =
+                                        FavoriteMenuTarget.Stream(
+                                            itemId = result.itemId,
+                                            itemName = result.streamName,
+                                            categoryId = result.categoryId,
+                                            contentType = result.contentType,
+                                            isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
+                                            isShowWatched = isShowWatched,
+                                        )
+                                }
                             },
                             onCategoryClick = { catResult ->
                                 onResultOpening(searchQuery)
@@ -940,9 +958,13 @@ private fun MobileSearchFavoriteDialog(
     target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    // A show's "Mark show watched / unwatched" (docs/plans/20261011_season-show-watched-plan.md
+    // Phase 3), worded from the target's isShowWatched. Null hides it.
+    onToggleShowWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
     val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
+    val isShowWatched = (target as? FavoriteMenuTarget.Stream)?.isShowWatched == true
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -953,6 +975,24 @@ private fun MobileSearchFavoriteDialog(
                 maxLines = 2,
             )
         },
+        text =
+            onToggleShowWatched?.let { toggle ->
+                {
+                    CinemaDialogTextButton(
+                        onClick = {
+                            toggle()
+                            onDismiss()
+                        },
+                    ) {
+                        Icon(
+                            imageVector = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                            contentDescription = null,
+                        )
+                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                        Text(stringResource(if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show))
+                    }
+                }
+            },
         confirmButton = {
             CinemaDialogActionButton(
                 onClick = {

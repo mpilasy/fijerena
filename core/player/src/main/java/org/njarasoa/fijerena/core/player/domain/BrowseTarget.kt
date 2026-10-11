@@ -59,6 +59,9 @@ sealed interface BrowseTarget {
  */
 fun MediaItem.browseTarget(contentType: String): BrowseTarget = target ?: browseTargetFor(contentType, id)
 
+/** The show this row stands for (a TV Shows catalogue row, or a Recent card for a show), else null. */
+fun MediaItem.showSeriesId(contentType: String): String? = (browseTarget(contentType) as? BrowseTarget.Series)?.seriesId?.raw
+
 /** What a row with only an id to go on opens — see [browseTarget]. */
 fun browseTargetFor(
     contentType: String,

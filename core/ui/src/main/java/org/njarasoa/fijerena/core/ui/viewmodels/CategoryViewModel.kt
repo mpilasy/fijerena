@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -707,6 +708,41 @@ class CategoryViewModel(
             val repo = awaitRepository()
             repo.setWatched(itemId, contentType, nowWatched)
             refreshPerItemData()
+        }
+    }
+
+    /** Whether a show row offers "Mark show watched / unwatched": not where the source keeps watched state on its server. */
+    val supportsShowWatchedMark: Boolean
+        get() = repositoryOrNull?.supportsMarkEpisodesWatched ?: false
+
+    /**
+     * Whether every episode of [seriesId] is watched — the wording of the show row's mark; null
+     * when not known here (or the read failed: the menu then offers "watched").
+     */
+    suspend fun showWatchState(seriesId: String): Boolean? =
+        suspendRunCatching { awaitRepository().episodesWatchState(seriesId, null) }.getOrNull()
+
+    /**
+     * Marks every episode of [seriesId] watched or unwatched
+     * (docs/plans/20261011_season-show-watched-plan.md Phase 3), then republishes the rows'
+     * watched checks and progress as [toggleWatchedStream] does. A failure (a show never opened
+     * here, offline) reaches [onError] as a plain-words message.
+     */
+    fun setShowWatched(
+        seriesId: String,
+        watched: Boolean,
+        onError: (String) -> Unit,
+    ) {
+        viewModelScope.launchGuarded("CategoryViewModel.setShowWatched") {
+            awaitRepository()
+                .setEpisodesWatched(seriesId, null, watched)
+                .onSuccess { refreshPerItemData() }
+                .onFailure { e ->
+                    onError(
+                        context.getString(R.string.watched_mark_many_failed) + "\n" +
+                            friendlyErrorMessage(e, context, appSettings.isDevMode),
+                    )
+                }
         }
     }
 

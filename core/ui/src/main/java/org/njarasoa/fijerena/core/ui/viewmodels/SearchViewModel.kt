@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.ParsedQuery
 import org.njarasoa.fijerena.core.network.SearchUtils
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -70,7 +71,11 @@ class SearchViewModel(
         val contentType: String,
         val thumbnailUrl: String? = null,
         val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null,
-    )
+    ) {
+        /** A whole show (its id is the series id), not an episode. */
+        val isShow: Boolean
+            get() = contentType == ContentType.TV_SHOWS && mediaType != org.njarasoa.fijerena.core.player.domain.MediaType.EPISODE
+    }
 
     data class CategorySearchResult(
         val categoryId: String,
@@ -504,6 +509,39 @@ class SearchViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             ensureRepo().setWatched(itemId, contentType, !isWatched)
+        }
+    }
+
+    /**
+     * For a show result's "Mark show watched / unwatched"
+     * (docs/plans/20261011_season-show-watched-plan.md Phase 3): null when the source keeps watched
+     * state on its server (no such action), else whether every episode is watched (true) or not
+     * (false, also when the show was never opened here or the read failed).
+     */
+    suspend fun showWatchedMarkState(seriesId: String): Boolean? {
+        val repo = ensureRepo()
+        return if (repo.supportsMarkEpisodesWatched) {
+            suspendRunCatching { repo.episodesWatchState(seriesId, null) }.getOrNull() == true
+        } else {
+            null
+        }
+    }
+
+    /** Marks every episode of [seriesId] watched or unwatched; a failure reaches [onError] in plain words. */
+    fun setShowWatched(
+        seriesId: String,
+        watched: Boolean,
+        onError: (String) -> Unit,
+    ) {
+        viewModelScope.launchGuarded("SearchViewModel.setShowWatched") {
+            ensureRepo()
+                .setEpisodesWatched(seriesId, null, watched)
+                .onFailure { e ->
+                    onError(
+                        context.getString(R.string.watched_mark_many_failed) + "\n" +
+                            friendlyErrorMessage(e, context, appSettings.isDevMode),
+                    )
+                }
         }
     }
 }

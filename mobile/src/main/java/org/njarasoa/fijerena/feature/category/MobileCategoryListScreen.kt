@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.category
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -134,6 +135,7 @@ import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -906,6 +908,13 @@ fun MobileCategoryListScreen(
                                                     onToggleWatched = { toggled ->
                                                         viewModel.toggleWatchedStream(toggled.id, contentType)
                                                     },
+                                                    showWatchedMark = viewModel.supportsShowWatchedMark,
+                                                    showWatchState = viewModel::showWatchState,
+                                                    onSetShowWatched = { seriesId, watched ->
+                                                        viewModel.setShowWatched(seriesId, watched) { message ->
+                                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                                        }
+                                                    },
                                                     onRemoveItem =
                                                         if (viewModel.supportsRemoveFromRecent) {
                                                             { item -> viewModel.removeFromRecent(item.id, contentType, item.seriesId) }
@@ -1463,6 +1472,12 @@ private fun StreamsList(
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    // A show row's swipe action is "Mark show watched / unwatched" for all its episodes
+    // (docs/plans/20261011_season-show-watched-plan.md Phase 3), absent when this is false (a
+    // source that keeps watched state on its server); worded from showWatchState when revealed.
+    showWatchedMark: Boolean = false,
+    showWatchState: suspend (seriesId: String) -> Boolean? = { null },
+    onSetShowWatched: (seriesId: String, watched: Boolean) -> Unit = { _, _ -> },
     onRemoveItem: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
     onRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
 ) {
@@ -1589,8 +1604,10 @@ private fun StreamsList(
                         val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRemoveFavorite != null)
                         val isFavorite = item.id in favoriteIds
                         val isWatchedItem = item.id in watchedIds
+                        val showSeriesId = item.showSeriesId(contentType)
+                        val hasWatchedAction = if (showSeriesId != null) showWatchedMark else isWatchable
                         val density = LocalDensity.current
-                        val greenIconCount = if (isWatchable) 2 else 1
+                        val greenIconCount = if (hasWatchedAction) 2 else 1
                         val favoriteRevealWidth =
                             CinemaSpacing.sm * 2 +
                                 MobileDimensions.swipeActionCircleSize * greenIconCount +
@@ -1651,7 +1668,30 @@ private fun StreamsList(
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
                                         },
                                     )
-                                    if (isWatchable) {
+                                    if (showSeriesId != null && showWatchedMark) {
+                                        val revealed = revealState.targetValue == SwipeReveal.FAVORITE_ACTIONS
+                                        val isShowWatched by produceState<Boolean?>(null, revealed, showSeriesId) {
+                                            if (revealed) value = showWatchState(showSeriesId)
+                                        }
+                                        SwipeActionButton(
+                                            icon = if (isShowWatched == true) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                            contentDescription =
+                                                stringResource(
+                                                    if (isShowWatched ==
+                                                        true
+                                                    ) {
+                                                        R.string.watched_unmark_show
+                                                    } else {
+                                                        R.string.watched_mark_show
+                                                    },
+                                                ),
+                                            tint = CinemaAccent,
+                                            onClick = {
+                                                onSetShowWatched(showSeriesId, isShowWatched != true)
+                                                scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                            },
+                                        )
+                                    } else if (showSeriesId == null && isWatchable) {
                                         SwipeActionButton(
                                             icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                                             contentDescription =

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.category.components
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +59,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
@@ -234,35 +237,61 @@ internal fun StreamList(
         // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
         // the browse list's favoriteIds may not cover) the repository says.
         val isFavorite = isFavoritesList || item.id in favoriteIds || categoryViewModel.isFavorite(item.id, contentType)
-        FavoriteContextMenuDialog(
-            target =
-                FavoriteMenuTarget.Stream(
-                    itemId = item.id,
-                    itemName = item.name,
-                    categoryId = item.categoryId,
-                    contentType = contentType,
-                    isFavorite = isFavorite,
-                    isWatched = if (isWatchable) item.id in watchedIds else null,
-                    isInRecent = canRemoveFromRecent,
-                    seriesId = item.seriesId,
-                ),
-            onConfirm = {
-                if (isFavorite) {
-                    removeFavorite(item)
-                } else {
-                    categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
-                }
-            },
-            onDismiss = { actionsItem = null },
-            onToggleWatched = if (isWatchable) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
-            onRemoveFromRecent = if (canRemoveFromRecent) ({ removeFromRecent(item) }) else null,
-            list =
-                when {
-                    isRecentList -> RowMenuList.RECENT
-                    isFavoritesList -> RowMenuList.FAVORITES
-                    else -> RowMenuList.OTHER
+        // A show row (docs/plans/20261011_season-show-watched-plan.md Phase 3) offers "Mark show
+        // watched / unwatched" for all its episodes instead of the one-item toggle, except where
+        // the source keeps watched state on its server. The menu opens once its wording is known.
+        val showSeriesId = item.showSeriesId(contentType)
+        val showMarkId = showSeriesId?.takeIf { categoryViewModel.supportsShowWatchedMark }
+        var isShowWatched by remember(item) { mutableStateOf<Boolean?>(null) }
+        var showStateKnown by remember(item) { mutableStateOf(showMarkId == null) }
+        LaunchedEffect(item) {
+            if (showMarkId != null) {
+                isShowWatched = categoryViewModel.showWatchState(showMarkId)
+                showStateKnown = true
+            }
+        }
+        val context = LocalContext.current
+        if (showStateKnown) {
+            FavoriteContextMenuDialog(
+                target =
+                    FavoriteMenuTarget.Stream(
+                        itemId = item.id,
+                        itemName = item.name,
+                        categoryId = item.categoryId,
+                        contentType = contentType,
+                        isFavorite = isFavorite,
+                        isWatched = if (isWatchable && showSeriesId == null) item.id in watchedIds else null,
+                        isInRecent = canRemoveFromRecent,
+                        seriesId = item.seriesId,
+                        isShowWatched = isShowWatched,
+                    ),
+                onConfirm = {
+                    if (isFavorite) {
+                        removeFavorite(item)
+                    } else {
+                        categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+                    }
                 },
-        )
+                onDismiss = { actionsItem = null },
+                onToggleWatched =
+                    if (isWatchable && showSeriesId == null) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
+                onToggleShowWatched =
+                    showMarkId?.let { seriesId ->
+                        {
+                            categoryViewModel.setShowWatched(seriesId, isShowWatched != true) { message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                onRemoveFromRecent = if (canRemoveFromRecent) ({ removeFromRecent(item) }) else null,
+                list =
+                    when {
+                        isRecentList -> RowMenuList.RECENT
+                        isFavoritesList -> RowMenuList.FAVORITES
+                        else -> RowMenuList.OTHER
+                    },
+            )
+        }
     }
 
     // Auto-scroll and focus on the opened or last played item (on initial load and when returning
