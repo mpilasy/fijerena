@@ -7,6 +7,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import android.view.KeyEvent as AndroidKeyEvent
 
@@ -35,14 +36,21 @@ fun handlePlayerKeyEvent(
 
     val handled =
         when {
-            // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center
-            // to commit) — except a Center/Enter KeyUp that must be consumed because its own
-            // KeyDown just revealed the OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it
-            // falls through to the button focus just landed on and activates it — a single press
-            // should only open the OSD, never also toggle favourite or pause.
+            // KeyUp: a Center/Enter KeyUp must be consumed when its own KeyDown just revealed the
+            // OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it falls through to the
+            // button focus just landed on and activates it — a single press should only open
+            // the OSD, never also toggle favourite or pause.
+            // VOD with the OSD hidden: releasing Left/Right seeks to the scrub cursor (U-M7), so
+            // a tap jumps 10 s and a hold scrubs, then seeks on release.
             keyEvent.type == KeyEventType.KeyUp -> {
                 if ((keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) && state.suppressNextCenterKeyUp) {
                     state.suppressNextCenterKeyUp = false
+                    true
+                } else if ((keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) &&
+                    !state.isModalOpen && !state.showControls && !currentMetadata.isLive && state.scrubPositionMs != null
+                ) {
+                    commitScrub(state, viewModel)
+                    state.showStreamInfo = true
                     true
                 } else {
                     false
@@ -173,7 +181,7 @@ private fun handleKeyDown(
                     if (hasChannelPanel) state.showChannelPanel = true
                     hasChannelPanel
                 } else if (!state.showControls && !currentMetadata.isLive) {
-                    // VOD: move scrub cursor backward; OK commits the seek
+                    // VOD: move the scrub cursor back; releasing the key (or OK) seeks
                     stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
                     true
                 } else {
@@ -191,7 +199,7 @@ private fun handleKeyDown(
                     if (hasChannelPanel) state.showChannelPanel = true
                     hasChannelPanel
                 } else if (!state.showControls && !currentMetadata.isLive) {
-                    // VOD: move scrub cursor forward; OK commits the seek
+                    // VOD: move the scrub cursor forward; releasing the key (or OK) seeks
                     stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
                     true
                 } else {
@@ -241,7 +249,8 @@ private fun handleKeyDown(
 
 /**
  * Move the scrub cursor one step. Initializes the cursor at the current playback position
- * when scrubbing starts. The actual seek happens only on [commitScrub] (OK/Center).
+ * when scrubbing starts. The actual seek happens only on [commitScrub]: on the release of
+ * D-pad Left/Right, or on OK/Center (FF/REW).
  */
 internal fun stepScrubCursor(
     state: PlayerScreenState,
@@ -249,25 +258,44 @@ internal fun stepScrubCursor(
     nativeEvent: AndroidKeyEvent,
     forward: Boolean,
 ) {
-    val isScrubbableState =
-        when (playbackState) {
-            is PlaybackState.Playing, is PlaybackState.Paused -> true
-            else -> false
-        }
     // Use the live-polled position/duration (state.livePosition/liveDuration, refreshed every
     // 500ms in PlayerEffects), not playbackState.position/duration: that PlaybackState only
     // updates on discrete Player.Listener events, so during steady playback it stays frozen at
     // whatever it was minutes ago. Starting the scrub cursor from that stale value threw the
     // seek destination off by however long playback had been running.
+    // A new cursor reads the player itself: the poll stops while Buffering, and ExoPlayer
+    // already reports a pending seek's target, so taps in quick succession add up.
+    if (state.scrubPositionMs == null) {
+        StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
+            state.livePosition = player.currentPosition
+            state.liveDuration = player.duration.coerceAtLeast(0L)
+        }
+    }
     val duration = state.liveDuration
 
-    if (isScrubbableState && duration > 0L) {
+    if (canScrub(playbackState, duration)) {
         val origin = state.scrubPositionMs ?: state.livePosition
         val step = scrubStepMs(nativeEvent.repeatCount, nativeEvent.eventTime - nativeEvent.downTime)
         val delta = if (forward) step else -step
         state.scrubPositionMs = (origin + delta).coerceIn(0L, duration)
         state.showStreamInfo = true
     }
+}
+
+/**
+ * Whether the scrub cursor may move. Buffering counts once the duration is known: a tap seeks
+ * at once, so the next tap often lands while that seek is still buffering and must not be lost.
+ */
+internal fun canScrub(
+    playbackState: PlaybackState,
+    durationMs: Long,
+): Boolean {
+    val scrubbableState =
+        when (playbackState) {
+            is PlaybackState.Playing, is PlaybackState.Paused, PlaybackState.Buffering -> true
+            else -> false
+        }
+    return scrubbableState && durationMs > 0L
 }
 
 /**

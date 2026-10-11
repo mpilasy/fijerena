@@ -72,7 +72,7 @@ class PlayerScreenState(
     var suppressNextCenterKeyUp: Boolean = false
 
     // Scrub cursor position for VOD: non-null while user is scrubbing with D-pad.
-    // OK/Center commits the seek; Back cancels.
+    // Releasing Left/Right (or OK/Center) commits the seek; Back cancels.
     var scrubPositionMs by mutableStateOf<Long?>(null)
 
     // Net channel hops accumulated from D-pad auto-repeat ticks (repeatCount >= 1) while a

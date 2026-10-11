@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.ui.player
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.model.PlaybackState
 
 class ScrubStepTest {
     @Test
@@ -32,5 +34,20 @@ class ScrubStepTest {
         // ~1.5 min + 10 min + ~50 min: a 2h film's end is reachable in ~15s, but no
         // 40-min-per-second runaway like the old repeatCount tiers.
         assertTrue("total=$total", total in 3_000_000L..4_000_000L)
+    }
+
+    @Test
+    fun `a tap during the previous tap's seek still counts`() {
+        assertTrue(canScrub(PlaybackState.Buffering, durationMs = 60_000L))
+        assertTrue(canScrub(PlaybackState.Playing(0L, 60_000L), durationMs = 60_000L))
+        assertTrue(canScrub(PlaybackState.Paused(0L, 60_000L), durationMs = 60_000L))
+    }
+
+    @Test
+    fun `no scrub without a known duration or after the end`() {
+        assertFalse(canScrub(PlaybackState.Buffering, durationMs = 0L))
+        assertFalse(canScrub(PlaybackState.Playing(0L, 0L), durationMs = 0L))
+        assertFalse(canScrub(PlaybackState.Idle, durationMs = 60_000L))
+        assertFalse(canScrub(PlaybackState.Ended(60_000L), durationMs = 60_000L))
     }
 }

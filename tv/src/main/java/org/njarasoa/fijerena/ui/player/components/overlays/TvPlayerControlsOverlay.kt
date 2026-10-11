@@ -497,7 +497,7 @@ fun TvPlayerControlsOverlay(
                                         if (event.type == KeyEventType.KeyDown) {
                                             when (event.key) {
                                                 // Same cursor as the hidden-OSD D-pad scrub: Left/Right
-                                                // move it, OK commits, Back cancels.
+                                                // move it, their release or OK commits, Back cancels.
                                                 Key.DirectionLeft -> {
                                                     onScrubStep(event.nativeKeyEvent, false)
                                                     true
@@ -529,6 +529,13 @@ fun TvPlayerControlsOverlay(
                                                     false
                                                 }
                                             }
+                                        } else if (event.type == KeyEventType.KeyUp &&
+                                            (event.key == Key.DirectionLeft || event.key == Key.DirectionRight) &&
+                                            scrubPositionMs != null
+                                        ) {
+                                            // A tap jumps 10 s; a hold scrubs and seeks on release.
+                                            onCommitScrub()
+                                            true
                                         } else {
                                             false
                                         }
