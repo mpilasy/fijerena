@@ -384,7 +384,7 @@ silently evicted anything older. See `docs/plans/archive/20260828_watch-state-du
 | `categoryId` | TEXT | Owning category |
 | `positionMs` | INTEGER | Saved playback position |
 | `durationMs` | INTEGER | Item duration as known at save time |
-| `isCompleted` | INTEGER | Boolean (0/1). Sticky on progress upserts (`MAX(existing, new)`); only `setWatched(false)` clears it |
+| `isCompleted` | INTEGER | Boolean (0/1). Sticky on progress upserts (`MAX(existing, new)`); only `setWatched(false)` / `setEpisodesWatched(…, false)` clears it |
 | `updatedAt` | INTEGER | Last-modified stamp for this row |
 | `lastPlayedAt` | INTEGER | Set by playback only; drives the Recent row. Stays null for a manual watched/unwatched mark |
 | `seriesId` | TEXT | Owning series, for episodes |

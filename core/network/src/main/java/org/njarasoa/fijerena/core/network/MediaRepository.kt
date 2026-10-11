@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -269,6 +270,9 @@ class MediaRepository(
     private val streamDao: XtreamStreamDao = XtreamDatabase.getInstance(context).streamDao(),
     private val episodeDao: XtreamEpisodeDao = XtreamDatabase.getInstance(context).episodeDao(),
     private val favoriteStateDao: FavoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao(),
+    // Only for transactions spanning several DAOs (setEpisodesWatched). Lazy so the plain-JVM
+    // tests above, which never reach it, don't need a real database.
+    private val xtreamDb: Lazy<XtreamDatabase> = lazy { XtreamDatabase.getInstance(context) },
 ) : Closeable {
     @Volatile
     private var provider: MediaProvider? = null
@@ -2058,6 +2062,87 @@ class MediaRepository(
                 }
             }
         }
+    }
+
+    /**
+     * [setWatched] for every episode of a season ([season]) or of the whole show ([season] null),
+     * in one transaction (docs/plans/20261011_season-show-watched-plan.md). The mark stays per
+     * episode: one `watch_state` row for each episode that exists now, so an episode the provider
+     * adds later has no row and shows unwatched. Watched leaves `lastPlayedAt` alone (nothing joins
+     * Recent); unwatched clears only the flag, plus the TMDB sibling group, keeping positions.
+     *
+     * The episode list comes from [getSeriesDetail], which fetches it when the provider's cached
+     * list is missing or stale, so a show never opened here works too. Fails only when that load
+     * fails. Does nothing for a source that keeps watched state on its server (Jellyfin).
+     */
+    suspend fun setEpisodesWatched(
+        seriesId: String,
+        season: Int?,
+        watched: Boolean,
+    ): kotlin.Result<Unit> {
+        val result =
+            if (usesServerUserData) {
+                kotlin.Result.success(Unit)
+            } else {
+                getSeriesDetail(SeriesId(seriesId)).map { detail ->
+                    val episodeIds = detail.episodeIdsIn(season)
+                    val now = System.currentTimeMillis()
+                    xtreamDb.value.withTransaction {
+                        for (episodeId in episodeIds) {
+                            if (watched) {
+                                watchStateDao.markWatched(
+                                    providerId,
+                                    profileId,
+                                    episodeId,
+                                    ContentType.TV_SHOWS,
+                                    now,
+                                    seriesId = seriesId,
+                                    episodeId = episodeId,
+                                )
+                            } else {
+                                watchStateDao.markUnwatched(providerId, profileId, episodeId, ContentType.TV_SHOWS, now)
+                                episodeDao.clearGroupCompletion(providerId, profileId, episodeId, now)
+                            }
+                        }
+                    }
+                }
+            }
+        return result
+    }
+
+    /**
+     * Whether every episode of a season ([season]) or of the whole show ([season] null) is
+     * watched, for the wording of [setEpisodesWatched]'s toggle: true when all are, false when any
+     * isn't, null when no episodes are known here or the source keeps watched state on its server.
+     * Watched means what the episode list shows: the episode's own row completed, or the same
+     * episode completed in a TMDB sibling ([getSiblingCompletedEpisodeIds]). Reads only the cached
+     * episode list ([getCachedSeriesDetail]), never the network.
+     */
+    suspend fun episodesWatchState(
+        seriesId: String,
+        season: Int?,
+    ): Boolean? {
+        val episodeIds =
+            if (usesServerUserData) {
+                emptyList()
+            } else {
+                getCachedSeriesDetail(SeriesId(seriesId))?.episodeIdsIn(season).orEmpty()
+            }
+        val result =
+            if (episodeIds.isEmpty()) {
+                null
+            } else {
+                val completed = getPlaybackPositions(episodeIds, ContentType.TV_SHOWS)
+                val siblingCompleted = getSiblingCompletedEpisodeIds(seriesId)
+                episodeIds.all { id -> completed[id]?.isCompleted == true || id in siblingCompleted }
+            }
+        return result
+    }
+
+    /** Episode ids of [season], or of every season when null — keyed as the episode screens key them. */
+    private fun SeriesDetail.episodeIdsIn(season: Int?): List<String> {
+        val lists = if (season == null) episodes.values else listOfNotNull(episodes[season.toString()])
+        return lists.flatMap { list -> list.map { it.id } }.distinct()
     }
 
     /**
