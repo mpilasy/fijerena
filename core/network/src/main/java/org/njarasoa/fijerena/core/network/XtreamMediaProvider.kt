@@ -261,7 +261,7 @@ class XtreamMediaProvider(
         // enough to use instead of asking Xtream again.
         //
         // New episodes are noticed through the catalogue sync instead: a series whose catalogue
-        // entry changed (bears bumps `last_modified` when episodes are added) gets its
+        // entry changed (panel-a bumps `last_modified` when episodes are added) gets its
         // episodesFetchedAt cleared, so the next open lands here as not fresh.
         val cachedEntity = repository.getCachedSeriesEntity(id)
         val episodesFresh =

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # (Re)starts the Jellyfin-to-Xtream bridge in the background, detached from this shell.
 #
-#   ./restart.sh                                   # sm.njarasoa.org on :8080
+#   ./restart.sh                                   # Jellyfin at localhost:8096, bridge on :8080
 #   JELLYFIN_URL=https://other.host BRIDGE_PORT=8081 ./restart.sh
 #
 # One instance per port: the previous one on the same port is stopped first. Log goes to
@@ -9,7 +9,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-export JELLYFIN_URL="${JELLYFIN_URL:-https://sm.njarasoa.org}"
+export JELLYFIN_URL="${JELLYFIN_URL:-http://localhost:8096}"
 export BRIDGE_PORT="${BRIDGE_PORT:-8080}"
 pidfile="bridge-$BRIDGE_PORT.pid"
 log="bridge-$BRIDGE_PORT.log"

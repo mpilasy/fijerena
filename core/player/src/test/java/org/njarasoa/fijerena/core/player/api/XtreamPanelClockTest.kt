@@ -20,18 +20,18 @@ class XtreamPanelClockTest {
         timeNow = timeNow,
     )
 
-    // bears, 2026-10-10 (docs/plans/archive/20261010_catchup-plan.md → "Facts measured").
-    private val bears = info("Europe/Amsterdam", 1791652504, "2026-10-10 19:15:04")
+    // panel-a, 2026-10-10 (docs/plans/archive/20261010_catchup-plan.md → "Facts measured").
+    private val panelA = info("Europe/Amsterdam", 1791652504, "2026-10-10 19:15:04")
 
     @Test
     fun `a name that agrees with the measured offset is kept`() {
-        assertEquals(ZoneId.of("Europe/Amsterdam"), XtreamPanelClock.from(bears).zone)
+        assertEquals(ZoneId.of("Europe/Amsterdam"), XtreamPanelClock.from(panelA).zone)
     }
 
     @Test
     fun `the start is written in the panel's wall clock`() {
         // The RTP 1 programme of 15:15 UTC (1791645300) is 17:15 in Amsterdam.
-        assertEquals("2026-10-10:17-15", XtreamPanelClock.from(bears).timeshiftStart(1791645300))
+        assertEquals("2026-10-10:17-15", XtreamPanelClock.from(panelA).timeshiftStart(1791645300))
     }
 
     @Test

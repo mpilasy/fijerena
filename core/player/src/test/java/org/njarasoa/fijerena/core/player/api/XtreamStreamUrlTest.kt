@@ -17,7 +17,7 @@ class XtreamStreamUrlTest {
 
     @Test
     fun `decodes an encoded username`() {
-        assertEquals("tahiry+2", XtreamStreamUrl.username("http://h/movie/tahiry%2B2/test/12.mkv"))
+        assertEquals("alice+2", XtreamStreamUrl.username("http://h/movie/alice%2B2/test/12.mkv"))
     }
 
     @Test

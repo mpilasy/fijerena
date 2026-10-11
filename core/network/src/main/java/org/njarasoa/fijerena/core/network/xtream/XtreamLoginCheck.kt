@@ -68,8 +68,8 @@ object XtreamLoginCheck {
      * Whether [extra] can share [main]'s source at [url]: it signs in, and the first live and the
      * first VOD category of the main login's catalogue hold the same stream ids for it. Stream ids
      * belong to a panel, so matching ids mean a stream URL works with either login. The server
-     * names aren't compared: one panel answers under several domains (bearsclub.online and
-     * bearstv.online).
+     * names aren't compared: one panel answers under several domains (panel-b.example and
+     * panel-b2.example).
      */
     suspend fun samePanel(
         url: String,

@@ -236,7 +236,7 @@ fun TvPlayerScreen(
     }
 
     // Catch-up of a programme still on air: the panel's answer stops at the moment it was asked
-    // for (bears), so reaching its end asks again and carries on from there, until the window has
+    // for (panel-a), so reaching its end asks again and carries on from there, until the window has
     // been asked for in full. See docs/plans/archive/20261010_catchup-plan.md → Phase 2.
     var catchupAskedAtSec by remember { mutableStateOf(0L) }
     val continueCatchup: (() -> Boolean)? =

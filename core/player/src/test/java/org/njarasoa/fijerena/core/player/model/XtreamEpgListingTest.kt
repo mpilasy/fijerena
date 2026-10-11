@@ -13,8 +13,8 @@ class XtreamEpgListingTest {
             coerceInputValues = true
         }
 
-    // One bears `get_simple_data_table` listing (2026-10-10), as it comes.
-    private val bears =
+    // One panel-a `get_simple_data_table` listing (2026-10-10), as it comes.
+    private val panelA =
         """
         {"epg_listings":[{"id":"1","epg_id":"7","title":"T3V2aXIgUXVlbSBWw6ogTnVtIE1pbnV0bw==","lang":"pt",
         "start":"2026-10-10 15:15:00","end":"2026-10-10 15:30:00","description":"VW0gcHJvZ3JhbWEu",
@@ -26,7 +26,7 @@ class XtreamEpgListingTest {
     fun `times come from the timestamps and text is decoded`() {
         val program =
             json
-                .decodeFromString<XtreamEpgAnswer>(bears)
+                .decodeFromString<XtreamEpgAnswer>(panelA)
                 .toEpgResponse()
                 .listings
                 .single()

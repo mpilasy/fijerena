@@ -1,7 +1,7 @@
-# T6 — EPG Management per source (TvEpgManagementScreen), TV emulator, source bearstv (Xtream; on
+# T6 — EPG Management per source (TvEpgManagementScreen), TV emulator, source panel-b (Xtream; on
 # the emulator it has one guide source, a weekly "Bulk" one; iptv has none, so it cannot be used).
-# Start: Settings → Source & guide → Manage sources → OK on bearstv's row (Edit Source) → Guide
-# sources; title "Guide sources · bearstv". The title row has no buttons (the section-root button
+# Start: Settings → Source & guide → Manage sources → OK on panel-b's row (Edit Source) → Guide
+# sources; title "Guide sources · panel-b". The title row has no buttons (the section-root button
 # went with the TV navigation rail, 2026-10-08), so the walk's last UP stays on Add.
 # Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
 # source it is "Add Guide Source" under "No guide sources configured". No System Status or

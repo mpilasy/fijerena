@@ -6,7 +6,7 @@
 # (empty on a source without live channels: Jellyfin, SMB) and ⋮ ("More actions for <name>").
 # Right walks the slots, Left walks back, Up/Down keep the column, Up from the first row lands
 # on the header "+" (Add Source). Expectations assume the active source is iptv (M3U, so it has
-# a Guide slot) and the next row is bears (Xtream: Use, Guide, ⋮) — the TV AVD on 2026-10-03.
+# a Guide slot) and the next row is panel-a (Xtream: Use, Guide, ⋮) — the TV AVD on 2026-10-03.
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04.
 @start iptv / Active / https://iptv-org.github.io/iptv/index.m3u
 # Use is empty on the active row, so Right lands on Guide (on a source without live channels it
@@ -14,10 +14,10 @@
 RIGHT	Guide
 RIGHT	More actions for iptv
 # Down from ⋮ lands on the ⋮ of the next row.
-DOWN	More actions for bears
+DOWN	More actions for panel-a
 LEFT	Guide
 LEFT	Use
-LEFT	bears / http://cf.bearsp.xyz / 1fb5318f4d
+LEFT	panel-a / http://panel-a.example / user1
 UP	iptv / Active / https://iptv-org.github.io/iptv/index.m3u
 # Up from the first row lands on the header "+".
 UP	Add Source

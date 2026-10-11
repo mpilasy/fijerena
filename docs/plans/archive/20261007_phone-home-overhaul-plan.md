@@ -1,6 +1,6 @@
 # Phone home overhaul and bottom navigation
 
-**Status:** Done 2026-10-07 on the phone emulator: Phases 1–3 and 8, the header redesign, docs. Home dropped (Phases 4–6 built, not merged). Known gaps: a source with a native guide but no indexed guide has no TV Guide entry from the Live TV tab; a profile whose filters hide every live category still gets an (empty) Live TV tab; "Update failed" and the Jellyfin sign-in prompt not forced on the emulator. On bears (user allowed it): the header shows "● bears (XTREAM) · Updating…" during a manual sync, then "Updated just now"; switching source takes about 4 s (jellyxtream) and 6 s (bears) from the tap to the new tab.
+**Status:** Done 2026-10-07 on the phone emulator: Phases 1–3 and 8, the header redesign, docs. Home dropped (Phases 4–6 built, not merged). Known gaps: a source with a native guide but no indexed guide has no TV Guide entry from the Live TV tab; a profile whose filters hide every live category still gets an (empty) Live TV tab; "Update failed" and the Jellyfin sign-in prompt not forced on the emulator. On panel-a (user allowed it): the header shows "● panel-a (XTREAM) · Updating…" during a manual sync, then "Updated just now"; switching source takes about 4 s (jellyxtream) and 6 s (panel-a) from the tap to the new tab.
 (`20261007_tv-home-overhaul-plan.md`) adapted for touch, with a bottom navigation bar in place of
 the section cards. Implementation waits for the user's go-ahead.
 
@@ -81,7 +81,7 @@ The row updates at once; the action syncs like the lists' swipe actions do.
 
 **Pull to refresh** on home starts a catalogue sync of the active source
 (`ProviderSyncManager.startManualSync`, the status line shows "Updating…") and reloads the rows.
-The spinner ends when the rows have reloaded, not when the sync ends (a bears sync can take
+The spinner ends when the rows have reloaded, not when the sync ends (a panel-a sync can take
 minutes); a sync already running is joined, not started twice.
 
 ## Shared code (core)
@@ -158,7 +158,7 @@ backdrop as is.
 
 ## Checks
 
-Phone emulator (jellyxtream for VOD rows, iptv for Channels; bears only if asked): tab switches
+Phone emulator (jellyxtream for VOD rows, iptv for Channels; panel-a only if asked): tab switches
 keep place, reselect to root, Back order, dock above the bar and stopped on tab change, switches
 land on Home, long-press actions, pull to refresh shows "Updating…". Never install, uninstall or
 clear data without asking.
@@ -168,8 +168,8 @@ clear data without asking.
 | Phase | Status | Commit |
 |---|---|---|
 | 1 Shared code to core | Done: `core.ui.home` `LiveRow.kt` / `SourceSyncStatus.kt`, tests moved + `SourceSyncStatusTest`; TV only re-imports (compile + unit tests; TV emulator not re-run, no behaviour change) | 52438b1b |
-| 2 Top bar status | Done: `MobileSourceStatusLine` under the source name (own minute tick, pulse at draw time), "Update failed" opens a dialog with the reason; the bar grows to 84 dp (`homeTopBarHeight`) while a status shows, so the line keeps a 48 dp touch target. Checked on the phone emulator: bears shows "● Updated 1 hour ago". "Updating…" to check with Phase 6's pull to refresh | 71b8efe4 |
-| 3 Bottom navigation bar | Done: one route per tab root (`Screen.LiveTvTab` / `MoviesTab` / `TvShowsTab` — saved stacks are keyed by destination, and the three `CategoryList(type)` entries share one); `MobileBottomBar.kt` + test; dock reports full screen / PiP / landscape split to hide the bar and is stopped on a tab change; switches `clearBackStack` the tabs; `SectionRootAction` deleted. Checked on the phone emulator: tab state kept (Movies → BG ФИЛМ category → TV Shows → Movies back on it), Back → Home, ANT1 docked above the bar and stopped (Idle) on switching to Movies, full screen hides the bar, after switching bears → jellyxtream the Movies tab opens on jellyxtream. The bar is hidden on details, so a tab keeps its root only | 567338c0 |
+| 2 Top bar status | Done: `MobileSourceStatusLine` under the source name (own minute tick, pulse at draw time), "Update failed" opens a dialog with the reason; the bar grows to 84 dp (`homeTopBarHeight`) while a status shows, so the line keeps a 48 dp touch target. Checked on the phone emulator: panel-a shows "● Updated 1 hour ago". "Updating…" to check with Phase 6's pull to refresh | 71b8efe4 |
+| 3 Bottom navigation bar | Done: one route per tab root (`Screen.LiveTvTab` / `MoviesTab` / `TvShowsTab` — saved stacks are keyed by destination, and the three `CategoryList(type)` entries share one); `MobileBottomBar.kt` + test; dock reports full screen / PiP / landscape split to hide the bar and is stopped on a tab change; switches `clearBackStack` the tabs; `SectionRootAction` deleted. Checked on the phone emulator: tab state kept (Movies → BG ФИЛМ category → TV Shows → Movies back on it), Back → Home, ANT1 docked above the bar and stopped (Idle) on switching to Movies, full screen hides the bar, after switching panel-a → jellyxtream the Movies tab opens on jellyxtream. The bar is hidden on details, so a tab keeps its root only | 567338c0 |
 | 4 Rows | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
 | 5 Long-press sheet | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |
 | 6 Pull to refresh | Dropped: built on a branch (e4e9d2bb, f499bbff, 6997c5e2), not merged — Home is gone | |

@@ -31,7 +31,7 @@ data class XtreamCategory(
 data class XtreamStream(
     @SerialName("num")
     val num: Int = 0,
-    // Defaults so one entry with `"name": null` (a gr8iptv film, 2026-10-09) doesn't fail the
+    // Defaults so one entry with `"name": null` (a panel-c film, 2026-10-09) doesn't fail the
     // whole list: coerceInputValues turns a null into the default. [withName] then names the entry
     // from its title, or drops it.
     @SerialName("name")

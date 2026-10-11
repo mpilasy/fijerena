@@ -336,7 +336,7 @@ private fun EpgSourceCard(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            // No size from the server (bears sends none): the bytes so far instead of a percentage.
+                            // No size from the server (panel-a sends none): the bytes so far instead of a percentage.
                             text =
                                 if (activeProgress.progressPercent >= 0) {
                                     stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent)

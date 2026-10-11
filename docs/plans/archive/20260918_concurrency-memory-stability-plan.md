@@ -20,7 +20,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 1: Category Switching Race & State Clobbering in `CategoryViewModel`
 * **Severity:** **P0 - Critical**
-* **Location:** [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt#L287-L305)
+* **Location:** [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt#L287-L305)
 * **Mechanism:** As a user navigates up or down the category list with the TV D-pad or mobile taps, `loadStreams(categoryId)` is called on every focus/selection change. `CategoryViewModel` maintains no active `Job` reference and lacks category-matching guards in its emission callbacks:
   1. If a user quickly navigates through categories $A \rightarrow B \rightarrow C$, three coroutines run concurrently on `viewModelScope`.
   2. If query $A$ completes after query $C$, $A$'s result calls `emitStreams()`, silently clobbering `_uiState.value`. The UI displays streams belonging to category $A$ while category $C$ is focused.
@@ -34,7 +34,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 2: Thread-Unsafe Singleton Cache in `MediaProviderFactory`
 * **Severity:** **P0 - Critical**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt#L30)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt#L30)
 * **Mechanism:** `private val providerCache = mutableMapOf<Long, MediaProvider>()` uses a plain `LinkedHashMap` accessed across arbitrary threads with zero synchronization:
   - `create()` is called concurrently from background workers (`ProviderSyncRunner`), IO dispatchers (`AppContainer`), and screen composables.
   - `trimMemory()` iterates `providerCache.values.forEach { ... }` from Android's main thread via `FijerenaApplication.onTrimMemory`.
@@ -46,7 +46,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 3: Zombie `PlaybackViewModel` Allocation in `MobilePlayerScreen`
 * **Severity:** **P1 - High**
-* **Location:** [`mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L99-L123)
+* **Location:** [`mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt`](file://mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L99-L123)
 * **Mechanism:** `MobilePlayerScreen` declares `viewModel: PlaybackViewModel = viewModel()` as a default parameter. Inside the composable body, it ignores this parameter and instantiates a second `activityScopedViewModel = viewModel(viewModelStoreOwner = activity)`.
   - Every player navigation allocates an unneeded backstack-scoped `PlaybackViewModel` that connects to `StreamingPlaybackService` and registers listeners.
   - When navigating back, the backstack-scoped ViewModel is popped and destroyed, calling `controller.stop()`, `serviceConnection.disconnect()`, and resetting `serviceStartRequested`.
@@ -57,7 +57,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 4: Swallowed `CancellationException` in `EpgFileManager`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt#L1188-L1240)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt#L1188-L1240)
 * **Mechanism:** In `downloadSource` (lines 1188 & 1235) and `ingestDownloadedSource` (line 1391), `catch (e: Exception)` blocks do not rethrow `CancellationException`.
   - When an EPG sync is cancelled by the user or timed out by WorkManager, `CancellationException` is caught as a network failure.
   - It records a false failure in the database (`sourceDao.markError`), retries up to 5 times with exponential backoff delays, and prevents graceful worker termination.
@@ -68,9 +68,9 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 ### Finding 5: Cross-Thread Visibility Without `@Volatile`
 * **Severity:** **P1 - High**
 * **Locations:**
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt:25`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt#L25) (`private var repository: MediaRepository? = null`)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt:76`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt#L76) (`private var mediaRepository: MediaRepository? = null`)
-* **Mechanism:** These fields are written from `Dispatchers.IO` in `ensureRepo()`/`loadMovieDetail()`, but read on the Main UI thread by composables (e.g. [`EpisodeSelectionScreen.kt:218`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt#L218): `mediaRepository = viewModel.mediaRepository!!`).
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt:25`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt#L25) (`private var repository: MediaRepository? = null`)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt:76`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt#L76) (`private var mediaRepository: MediaRepository? = null`)
+* **Mechanism:** These fields are written from `Dispatchers.IO` in `ensureRepo()`/`loadMovieDetail()`, but read on the Main UI thread by composables (e.g. [`EpisodeSelectionScreen.kt:218`](file://tv/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt#L218): `mediaRepository = viewModel.mediaRepository!!`).
   - Without `@Volatile`, memory writes across CPU cores may not be visible immediately, causing `NullPointerException` crashes during rapid screen transitions.
 * **Remediation:** Annotate repository fields with `@Volatile`.
 
@@ -79,8 +79,8 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 ### Finding 6: Unmanaged Duplicate Provider Creation in `ContentTypeSelectionScreen`
 * **Severity:** **P2 - Medium**
 * **Locations:**
-  - [`tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt:167`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L167)
-  - [`mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt:128`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L128)
+  - [`tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt:167`](file://tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L167)
+  - [`mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt:128`](file://mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L128)
 * **Mechanism:** Both screens call `MediaProviderFactory.create(activeProvider, context, password)` directly on launch instead of retrieving the repository singleton from `AppContainer`.
   - Creates standalone `XtreamMediaProvider` instances with unmanaged background `writeScope` coroutines and separate OkHttp client connections.
 * **Remediation:** Use `AppContainer.getInstance(context).getMediaRepository(activeProvider.id)` to reuse the existing managed repository and provider instance.
@@ -89,7 +89,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 7: Excessive Native RAM Allocation During EPG FTS Rebuild
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt:421-422`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L421-L422)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt:421-422`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L421-L422)
 * **Mechanism:** Rebuilding the SQLite FTS4 table issues `PRAGMA temp_store = MEMORY` and `PRAGMA cache_size = -64000` (64 MB).
   - For XMLTV files with 2M–4M programmes, sorting and indexing intermediate segments in RAM consumes 150MB+ of native process memory, risking Low Memory Killer (LMK) process termination on 1GB–2GB RAM Android TV devices.
 * **Remediation:** Use `PRAGMA temp_store = FILE` on memory-constrained devices or scale `cache_size` down to `-16000` (16 MB).
@@ -98,7 +98,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 8: Unsynchronized Stream Teardown Race in `SmbClient`
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt:88-101`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt#L88-L101)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt:88-101`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt#L88-L101)
 * **Mechanism:** `disconnect()` closes and nulls out `share`, `session`, and `connection` under `synchronized(this)`. However, `openInputStream(path)` and `listDirectory(path)` access `share` outside synchronization.
   - If a user cancels playback or navigates away while a stream is opening, `openInputStream()` can attempt to operate on a closed or null share, throwing an unexpected exception.
 * **Remediation:** Synchronize `openInputStream` and `listDirectory` or read a local volatile reference before delegating.
@@ -107,7 +107,7 @@ This plan details the verified root causes, concrete mechanisms, and a prioritiz
 
 ### Finding 9: Hot-Path Regex Compilation in DNS Resolution
 * **Severity:** **P3 - Low**
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/network/NetworkModule.kt:126`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/network/NetworkModule.kt#L126)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/network/NetworkModule.kt:126`](file://core/player/network/NetworkModule.kt#L126)
 * **Mechanism:** `isIpAddress(hostname)` evaluates `Regex("""^(\d{1,3}\.){3}\d{1,3}$""")` on every DNS lookup call, recompiling the pattern repeatedly during image loading bursts.
 * **Remediation:** Hoist the regex into a `private val IP_REGEX = Regex(...)` top-level constant.
 

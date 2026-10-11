@@ -18,7 +18,7 @@ Config (env):
   CACHE_TTL          seconds to cache catalog lists   (default: 300)
 
 Test mode for shared logins (docs/plans/20261005_shared-logins-plan.md), all off by default:
-  BRIDGE_TEST_PASSWORD   extra logins: username "<jellyfin user>+<anything>" (e.g. "tahiry+2") with
+  BRIDGE_TEST_PASSWORD   extra logins: username "<jellyfin user>+<anything>" (e.g. "alice+2") with
                          this password signs in as that Jellyfin user, once the user itself has
                          signed in through the bridge since it started. Same catalogue, same ids,
                          counted as its own account.

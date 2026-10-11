@@ -11,8 +11,8 @@ blur, and the numbers corrected it.
 
 ## Measured baseline
 
-Device: `192.168.68.21` — NVIDIA Shield (darcy), **Android 11 / API 30**, app surface 1920x1080.
-Provider: stream4ktv (Xtream), 915 Live / 441 Movies / 374 TV Shows categories.
+Device: `192.168.1.21` — NVIDIA Shield (phone-a), **Android 11 / API 30**, app surface 1920x1080.
+Provider: panel-d (Xtream), 915 Live / 441 Movies / 374 TV Shows categories.
 Build: debug. Tool: `dumpsys gfxinfo` + `atrace`.
 
 The **after** column was measured 2026-08-26 on the same device and provider. Rows other than the
@@ -478,11 +478,11 @@ checking first, all of which emit into the list after it is already on screen: `
 (`_favoriteIds`, `_watchProgress`, `_watchedIds`), and the preview's `loadStreamLight` EPG fetch.
 Guessing further without that attribution has already cost two wrong theories.
 
-**Re-measured 2026-09-16, on darcy, real data (no injection).** Skipped `tracing-perfetto` in favor
+**Re-measured 2026-09-16, on phone-a, real data (no injection).** Skipped `tracing-perfetto` in favor
 of temporary `Log.d` markers (VM identity + `SystemClock.elapsedRealtime()`) at `CategoryViewModel`
 init, `emitStreams`, `refreshPerItemData` entry/exit/each StateFlow write, `loadNowPlaying`
 entry/each emission, and a `SideEffect` recomposition counter in `StreamList` — cheaper than wiring
-Perfetto and sufficient to answer the question. Provider 1 ("Bears Club"), Recent list at 25 rows
+Perfetto and sufficient to answer the question. Provider 1 ("panel-b"), Recent list at 25 rows
 (the same worst-case size as the original measurement).
 
 Two distinct findings, not one:
@@ -816,7 +816,7 @@ The gate is **recomposition count, not frame count** — a draw-only animation s
 design, so `Total frames rendered` cannot distinguish a fixed screen from a broken one:
 
 ```bash
-D=192.168.68.21:5555
+D=192.168.1.21:5555
 PID=$(adb -s $D shell pidof org.njarasoa.fijerena | tr -d '\r')
 adb -s $D shell 'atrace --async_start -b 20000 -a org.njarasoa.fijerena gfx view'
 sleep 4   # screen settled, no input
@@ -834,7 +834,7 @@ Then re-measure every flow in the table. Two process notes learned the hard way:
 
 Reproduce with:
 ```bash
-D=192.168.68.21:5555
+D=192.168.1.21:5555
 adb -s $D shell dumpsys gfxinfo org.njarasoa.fijerena reset
 # ... drive the flow (adb shell input keyevent 20/21/22/23/4) ...
 adb -s $D shell dumpsys gfxinfo org.njarasoa.fijerena | sed -n '6,17p'

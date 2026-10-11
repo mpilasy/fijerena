@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.player.source
 /**
  * HTTP statuses IPTV providers send when the account already has its maximum number of streams
  * open ("connection limit"). Retrying at once never helps: the slot frees only when the other
- * stream ends — and some providers (bears: 460) keep a stopped stream counted for about five
+ * stream ends — and some providers (panel-a: 460) keep a stopped stream counted for about five
  * minutes when the next one comes from a different internet address (a phone on mobile data, a
  * device routed through a VPN), so switching devices is refused for that long.
  */

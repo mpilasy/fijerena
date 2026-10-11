@@ -34,7 +34,7 @@ class CatchupAvailabilityTest {
 
     @Test
     fun `the panel's own flag wins over the days`() {
-        // bears: a 3-day channel still lists programmes from 72.6 h ago as in the archive.
+        // panel-a: a 3-day channel still lists programmes from 72.6 h ago as in the archive.
         assertTrue(CatchupAvailability.isPlayable(3, program(now - 3 * day - hour, now - 3 * day, hasArchive = 1), now))
         assertFalse(CatchupAvailability.isPlayable(3, program(now - 10 * hour, now - 9 * hour, hasArchive = 0), now))
     }

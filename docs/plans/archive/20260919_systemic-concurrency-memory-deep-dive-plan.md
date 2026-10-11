@@ -42,7 +42,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 1: Permanent Playback Lockout via `serviceStartRequested` Race & Leak
 * **Severity:** **P0 - Critical (Showstopper)**
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L120-L126)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L120-L126)
 * **Mechanism:**
   1. `serviceStartRequested` is declared in `PlaybackViewModel.companion object` as a static `AtomicBoolean(false)`.
   2. `startService()` guards `context.startService(intent)` with `serviceStartRequested.compareAndSet(false, true)`.
@@ -60,7 +60,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 2: Unbounded Coroutine Collectors & Memory Leak in `observeServiceState`
 * **Severity:** **P1 - High**
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L103-L118)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L103-L118)
 * **Mechanism:**
   1. `observeServiceState()` launches collectors using `viewModelScope.launch`:
      ```kotlin
@@ -97,7 +97,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 3: Fragile `!!` in Service Teardown Causing WakeLock & Teardown Leak
 * **Severity:** **P1 - High**
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L1001-L1018)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L1001-L1018)
 * **Mechanism:**
   1. `releasePlayerAndSession()` contains:
      ```kotlin
@@ -131,8 +131,8 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 #### Finding 4: Missing Write-Ahead Logging (WAL) in `XtreamDatabase` and `SettingsDatabase`
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/db/XtreamDatabase.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xtream/db/XtreamDatabase.kt#L195-L207)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/SettingsDatabase.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/provider/SettingsDatabase.kt#L180-L197)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/db/XtreamDatabase.kt`](file://core/network/xtream/db/XtreamDatabase.kt#L195-L207)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/SettingsDatabase.kt`](file://core/network/provider/SettingsDatabase.kt#L180-L197)
 * **Mechanism:**
   1. Neither database builder configures `.setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)`.
   2. SQLite defaults to rollback journal mode (DELETE / TRUNCATE).
@@ -145,7 +145,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 5: `runBlocking(Dispatchers.IO)` Under Monitor Lock in `MediaRepository`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaRepository.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/MediaRepository.kt#L870-L885)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaRepository.kt`](file://core/network/MediaRepository.kt#L870-L885)
 * **Mechanism:**
   1. In `loadFavoriteSnapshotLocked()`:
      ```kotlin
@@ -170,8 +170,8 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 #### Finding 6: Swallowed `CancellationException` in Search Pipelines
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/XmltvSearchService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/XmltvSearchService.kt#L170-L173)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/SearchViewModel.kt#L148-L150)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/XmltvSearchService.kt`](file://core/network/xmltv/XmltvSearchService.kt#L170-L173)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt`](file://core/ui/viewmodels/SearchViewModel.kt#L148-L150)
 * **Mechanism:**
   1. In `XmltvSearchService.search()`:
      ```kotlin
@@ -195,7 +195,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 7: Unbounded Synchronized Socket Mutex in `SmbClient`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/smb/SmbClient.kt#L34-L65)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt`](file://core/network/smb/SmbClient.kt#L34-L65)
 * **Mechanism:**
   1. `connect()` is a suspending function running on `Dispatchers.IO`:
      ```kotlin
@@ -222,8 +222,8 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 #### Finding 8: `NetworkOnMainThreadException` and Main-Thread Disk I/O in Providers
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/remote/RemoteM3uMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/remote/RemoteM3uMediaProvider.kt#L41-L58)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/local/LocalMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/local/LocalMediaProvider.kt#L33-L60)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/remote/RemoteM3uMediaProvider.kt`](file://core/network/remote/RemoteM3uMediaProvider.kt#L41-L58)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/local/LocalMediaProvider.kt`](file://core/network/local/LocalMediaProvider.kt#L33-L60)
 * **Mechanism:**
   1. `RemoteM3uMediaProvider.connect()` and `LocalMediaProvider.connect()` are suspending functions, but they do not switch dispatchers.
   2. `CategoryViewModel.init` launches on `viewModelScope` (which defaults to `Dispatchers.Main.immediate` on Android) and invokes `repository.connect()`.
@@ -237,8 +237,8 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 #### Finding 9: Missing `@Volatile` on Cross-Thread Mutable Fields
 * **Severity:** **P2 - Medium**
 * **Location:**
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt#L158)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/SearchViewModel.kt#L27)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt`](file://core/ui/viewmodels/EpgBrowserViewModel.kt#L158)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt`](file://core/ui/viewmodels/SearchViewModel.kt#L27)
 * **Mechanism:**
   1. In `EpgBrowserViewModel.kt`, `channelMatcher` is written on `Dispatchers.IO` and read from other coroutines without `@Volatile` (unlike the adjacent `lastMatcherProviderId`).
   2. In `SearchViewModel.kt`, `repository` is lazily set without `@Volatile` or synchronization.
@@ -249,7 +249,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 10: Non-Atomic Provider Creation Race in `MediaProviderFactory`
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/MediaProviderFactory.kt#L44-L65)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt`](file://core/network/MediaProviderFactory.kt#L44-L65)
 * **Mechanism:**
   1. In `MediaProviderFactory.create()`:
      ```kotlin
@@ -268,7 +268,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 11: Static Lifetime Retention of Massive Channel Datasets in `EpgChannelMatcher`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgChannelMatcher.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/EpgChannelMatcher.kt#L15-L33)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgChannelMatcher.kt`](file://core/network/xmltv/EpgChannelMatcher.kt#L15-L33)
 * **Mechanism:**
   1. `EpgChannelMatcher.companion object` maintains `private var cachedInstance: EpgChannelMatcher? = null`.
   2. Each instance stores:
@@ -287,7 +287,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 12: Unshared OkHttpClient Engines in `TmdbApiService`
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/tmdb/TmdbApiService.kt#L34-L43)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`](file://core/network/tmdb/TmdbApiService.kt#L34-L43)
 * **Mechanism:**
   1. `TmdbApiService` constructs a Ktor client via `HttpClient(OkHttp)`.
   2. It omits `engine { preconfigured = NetworkModule.okHttpClient }` (unlike `JellyfinApiService`).
@@ -300,9 +300,9 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 #### Finding 13: Activity Context Leaks via ViewModel Factories
 * **Severity:** **P2 - Medium**
 * **Location:**
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModelFactory.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/CategoryViewModelFactory.kt#L8)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt#L750)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModelFactory.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/SearchViewModelFactory.kt#L8)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModelFactory.kt`](file://core/ui/viewmodels/CategoryViewModelFactory.kt#L8)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt`](file://core/ui/viewmodels/StreamLoaderViewModel.kt#L750)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModelFactory.kt`](file://core/ui/viewmodels/SearchViewModelFactory.kt#L8)
 * **Mechanism:**
   1. Factories declare constructor parameters as `private val context: Context`.
   2. Even if `context.applicationContext` is passed to the constructed ViewModel, the factory object itself retains a reference to the incoming `Context` (which is typically an `Activity`).
@@ -314,7 +314,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 14: Unbounded In-Memory Playlist Retention in `BaseM3uMediaProvider`
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/BaseM3uMediaProvider.kt#L15)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt`](file://core/network/BaseM3uMediaProvider.kt#L15)
 * **Mechanism:**
   1. `BaseM3uMediaProvider` stores all parsed playlist entries in `protected var items = emptyList<MediaItem>()`.
   2. For large IPTV playlists with 50,000–100,000 channels, this retains tens of thousands of `MediaItem` objects and strings directly on the JVM heap (40MB–100MB).
@@ -329,8 +329,8 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 #### Finding 15: `UninitializedPropertyAccessException` Crash Vector on Asynchronous Repository Initialization
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/CategoryViewModel.kt#L157-L182)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/viewmodels/EpgViewModel.kt#L67-L77)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`](file://core/ui/viewmodels/CategoryViewModel.kt#L157-L182)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt`](file://core/ui/viewmodels/EpgViewModel.kt#L67-L77)
 * **Mechanism:**
   1. `CategoryViewModel` declares `private lateinit var repository: MediaRepository`.
   2. `repository` is initialized asynchronously inside `viewModelScope.launch` in `init`.
@@ -343,7 +343,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 #### Finding 16: EPG Staleness Threshold Disparity in `EpgFileManager`
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/EpgFileManager.kt#L1435-L1470)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file://core/network/xmltv/EpgFileManager.kt#L1435-L1470)
 * **Mechanism:**
   1. `EpgFileManager` defines a dynamic property `staleThresholdMs` based on user settings (defaulting to 24h if disabled or "Never").
   2. However, in `refreshOutdatedSources` (line 1435) and `getStaleSources` (line 1470), it checks:

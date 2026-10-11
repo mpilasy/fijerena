@@ -1,6 +1,6 @@
 # Device Info Screen Plan
 
-**Status:** Complete (2026-10-05). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model); checked on both emulators, darcy, mdarcy and the Xperia; findings 4 and 6 fixed (`307850a3`), the rest left as they are. Adversarial review findings R1–R8 dealt with (below).
+**Status:** Complete (2026-10-05). P1, P2 and P3 built in parallel (P2 and P3 on their own branches against a shared row model); checked on both emulators, phone-a, phone-b and the Xperia; findings 4 and 6 fixed (`307850a3`), the rest left as they are. Adversarial review findings R1–R8 dealt with (below).
 
 ## Decisions (2026-10-04)
 
@@ -58,7 +58,7 @@ in the player stats overlays, and `DeviceDetector` (device type, HEVC/AV1 yes/no
   types (`Display.hdrCapabilities`, or `Display.Mode` on API 34+).
 
 - **Test:** unit tests of the pure parts: byte formatting, `asText` (sections in order, labels
-  and values, `Redact` applied). Device check on darcy (Shield, Android 11) and the Xperia
+  and values, `Redact` applied). Device check on phone-a (Shield, Android 11) and the Xperia
   (Android 15): every row filled or "—", no crash, D-pad reaches every section on TV.
 - **Docs:** FEATURES (Device info), NAVIGATION_GUIDE (Settings → About → Device info), RELEASE_NOTES.
 
@@ -82,8 +82,8 @@ their WAL, free-of-total, yes/no). Device check: not yet done.
   `AudioManager` encodings): AC3, EAC3, EAC3-JOC, DTS, DTS-HD, TrueHD; max channel count.
 
 - **Test:** unit test of the decoder summary from a fake codec list (hardware/software split,
-  resolution text, Dolby Vision row). Device check: darcy shows `OMX.Nvidia.h265.decode` as
-  hardware and no Dolby Vision decoder; mdarcy shows `OMX.Nvidia.DOVI.decode`.
+  resolution text, Dolby Vision row). Device check: phone-a shows `OMX.Nvidia.h265.decode` as
+  hardware and no Dolby Vision decoder; phone-b shows `OMX.Nvidia.DOVI.decode`.
 
 **Done (2026-10-04):** `core/ui/.../deviceinfo/MediaInfo.kt` (`mediaSections`), built on its own
 branch and cherry-picked. Decoders come from `MediaCodecList(REGULAR_CODECS)`, aliases left out; a
@@ -103,7 +103,7 @@ uses to pick passthrough), so a phone with no HDMI output shows Media3's default
   provider sync stats); last guide refresh time and result. This is where a sync failing in the
   background shows without adb.
 
-- **Test:** unit test of the standby bucket and transport names. Device check on darcy and the
+- **Test:** unit test of the standby bucket and transport names. Device check on phone-a and the
   Xperia, plus one emulator with Wi-Fi off (Ethernet/cellular transport shown).
 
 **Done (2026-10-04):** `core/ui/.../deviceinfo/NetworkPowerInfo.kt` (`networkPowerSections`), built on
@@ -136,20 +136,20 @@ chooser, no secret on screen or in the shared text, no crash. Findings, none fix
 
 ## Shield check (2026-10-05, build `35ceaaef`)
 
-darcy (Shield 2017) and mdarcy (Shield 2019 Pro), both Android 11, Ethernet: every section reads,
-no crash. "Detected as: NVIDIA_SHIELD" on both (finding 1 is the emulator image only). darcy:
+phone-a (Shield 2017) and phone-b (Shield 2019 Pro), both Android 11, Ethernet: every section reads,
+no crash. "Detected as: NVIDIA_SHIELD" on both (finding 1 is the emulator image only). phone-a:
 `OMX.Nvidia.h265.decode` hardware, 3840×2176 @ 61 fps, Main10/HDR10; Dolby Vision and AV1 "No
-decoder"; passthrough AC3 only; HDR None. mdarcy: `OMX.Nvidia.DOVI.decode` hardware, "DV 4, 5, 8,
+decoder"; passthrough AC3 only; HDR None. phone-b: `OMX.Nvidia.DOVI.decode` hardware, "DV 4, 5, 8,
 9"; passthrough AC3, EAC3, EAC3-JOC, DTS, TrueHD; HDR Dolby Vision, HDR10; 24 display modes. Both
-showed bears' last catalogue sync failed at 08:00 with "Can't reach the server". Findings:
+showed panel-a's last catalogue sync failed at 08:00 with "Can't reach the server". Findings:
 
-6. **Charging: Yes** (`BatteryManager.isCharging`) while `dumpsys deviceidle` on darcy says
+6. **Charging: Yes** (`BatteryManager.isCharging`) while `dumpsys deviceidle` on phone-a says
    `mCharging=false` — the flag that lets the Shield doze. The row doesn't show what Doze sees.
-   **Fixed 2026-10-05:** `dumpsys battery` on darcy says `AC powered: true`, `present: false`;
+   **Fixed 2026-10-05:** `dumpsys battery` on phone-a says `AC powered: true`, `present: false`;
    `DeviceIdleController` counts a device as charging only with a battery present and power
    plugged in. The rows are now Power source, Battery present, and "Charging, as Doze sees it"
    (present and plugged); `BatteryManager.isCharging` is no longer shown.
-7. A source named "sm2.njarasoa.org" shows that name in Sync and in the shared text: it is the
+7. A source named "media2.example.org" shows that name in Sync and in the shared text: it is the
    user's own name for the source, not a value read from its server settings.
 
 ## Xperia check (2026-10-05, build `307850a3`)
@@ -168,14 +168,14 @@ from before the Charging fix.
 No crash or data risk found. All eight dealt with on 2026-10-05:
 
 - **R1. "Device idle (Doze) now" misses light Doze** (`NetworkPowerInfo.kt`, `readPower`).
-  `PowerManager.isDeviceIdleMode` is deep Doze only; darcy showed `mLightState=IDLE` in `dumpsys
+  `PowerManager.isDeviceIdleMode` is deep Doze only; phone-a showed `mLightState=IDLE` in `dumpsys
   deviceidle` on 2026-10-05, where the row would say No. Light Doze also cuts background jobs off
   the network — the Shield failure this section is for. `isDeviceLightIdleMode` is API 33, the
   Shields are API 30: there the row can only be relabelled "Deep Doze now".
   **Fixed:** the row is "Deep Doze now", and a "Light Doze now" row reads `isDeviceLightIdleMode` on API 33+ ("—" below, so on the Shields).
 - **R2. "Max channels" isn't measured** (`MediaInfo.kt`, `readAudioOutput`). Media3 1.7.1 fills
   `AudioCapabilities` with `DEFAULT_MAX_CHANNEL_COUNT = 10` when the output doesn't report one, hence
-  10 on darcy (AC3 only), the phone emulator and the Xperia (no passthrough). Hide the row when it is
+  10 on phone-a (AC3 only), the phone emulator and the Xperia (no passthrough). Hide the row when it is
   that default, or drop it.
   **Fixed:** the row is gone.
 - **R3. Private DNS shows the server name** (`NetworkPowerInfo.kt`, `privateDnsValue`), against the
@@ -190,7 +190,7 @@ No crash or data risk found. All eight dealt with on 2026-10-05:
 - **R5. A failed load shows an empty screen** (header and Refresh, Share disabled), not an error
   state (AGENTS rule 13).
   **Fixed:** a failed load shows "Couldn't read the device info" above Refresh (TV and phone).
-- **R6. The Doze charging rule rests on `dumpsys` on two devices** (darcy Android 11, the Xperia
+- **R6. The Doze charging rule rests on `dumpsys` on two devices** (phone-a Android 11, the Xperia
   Android 15), not on the platform source; "a battery present and plugged in" is from memory of
   `DeviceIdleController`.
   **Settled:** `DeviceIdleController` in android11-release and android15-release calls `updateChargingLocked(present && plugged)` on `ACTION_BATTERY_CHANGED`; the KDoc cites it.

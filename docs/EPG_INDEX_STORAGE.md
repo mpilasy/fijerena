@@ -1,7 +1,7 @@
 # EPG Index Storage and Reclaim
 
 How `epg_index.db` is configured, how it reclaims space, and the 2026-08-20/21 investigation
-(darcy, mdarcy and the TV emulator) that led there. Tables and columns: `docs/DATABASE_SCHEMA.md` §2.
+(phone-a, phone-b and the TV emulator) that led there. Tables and columns: `docs/DATABASE_SCHEMA.md` §2.
 How ingestion, the staging swap and the FTS rebuild use it: `docs/epg_guide.md`.
 
 ---
@@ -29,14 +29,14 @@ All in `EpgIndexDatabase.kt` and `EpgIndexer.kt`.
 
 ## 1. The symptom
 
-`epg_index.db` had grown larger than the entire Xtream catalogue on both Shields, and darcy was
+`epg_index.db` had grown larger than the entire Xtream catalogue on both Shields, and phone-a was
 at 81% disk usage with 2.1 GB free.
 
 | Device | `epg_index.db` | pages | page size | free pages | dead space |
 |---|---|---|---|---|---|
-| mdarcy | 1.70 GB | 1,782,121 | 1024 | 1,562,995 | **1.49 GB (87.7%)** |
-| darcy | 1.59 GB | 1,670,552 | 1024 | 1,445,207 | **1.38 GB (86.5%)** |
-| `xtream_v2.db` (mdarcy) | 1.24 GB | 324,759 | 4096 | 0 | 0% |
+| phone-b | 1.70 GB | 1,782,121 | 1024 | 1,562,995 | **1.49 GB (87.7%)** |
+| phone-a | 1.59 GB | 1,670,552 | 1024 | 1,445,207 | **1.38 GB (86.5%)** |
+| `xtream_v2.db` (phone-b) | 1.24 GB | 324,759 | 4096 | 0 | 0% |
 
 The EPG index was 87% empty. Auto-vacuum was enabled, `incrementalVacuum()` was called after every
 purge and every ingest, and none of it was reclaiming anything.
@@ -74,7 +74,7 @@ The same pattern silently disabled three more statements:
 
 ## 3. Second cause: the reclaim stalls in WAL mode
 
-With the cursor fixed, the first real run on darcy reclaimed 41,998 of 1,431,134 free pages and
+With the cursor fixed, the first real run on phone-a reclaimed 41,998 of 1,431,134 free pages and
 stopped. A batch that frees nothing is not the end of the freelist: in WAL mode the moved pages
 only leave the file when the log is checkpointed, and once the log reaches `journal_size_limit`
 with a reader holding it open, the vacuum stops making progress.
@@ -121,7 +121,7 @@ per connection before any callback of ours runs. There is no configuration hook 
 
 Two approaches that **do not work**, both tried on hardware first:
 
-- `PRAGMA page_size = 4096` + `VACUUM` — inert on a WAL database. SQLite documents this. mdarcy
+- `PRAGMA page_size = 4096` + `VACUUM` — inert on a WAL database. SQLite documents this. phone-b
   spent 77 s vacuuming 506 MB and stayed on 1024.
 - Seeding the file through Requery before Room opens it — Requery stamps its own size on the
   connection first.
@@ -169,9 +169,9 @@ accumulated freelist once. Every later sync is short.
 
 | | before | after |
 |---|---|---|
-| darcy `epg_index.db` | 1.60 GB, 86.5% free | 261 MB |
-| darcy `/data` free | 2.1 GB (81% used) | 3.4 GB (69% used) |
-| mdarcy `epg_index.db` | 1.70 GB, 87.7% free | deleted, 5.1 GB free |
+| phone-a `epg_index.db` | 1.60 GB, 86.5% free | 261 MB |
+| phone-a `/data` free | 2.1 GB (81% used) | 3.4 GB (69% used) |
+| phone-b `epg_index.db` | 1.70 GB, 87.7% free | deleted, 5.1 GB free |
 | emulator (rebuilt, 4 KB pages) | 396 MB, 49.2% free | 198 MB, **0% free** |
 
 The index settles at a few tens of MB of slack rather than zero, because the vacuum runs
@@ -208,7 +208,7 @@ an `Explicit` GC in the target and dumps DB stats, which shows up as app activit
 
 ---
 
-## 10. Related memory findings (2026-08-20, mdarcy, live playback)
+## 10. Related memory findings (2026-08-20, phone-b, live playback)
 
 Measured while chasing GC-related playback stutter. Recorded here because they bound what the app
 can afford, and they are not derivable from the code.

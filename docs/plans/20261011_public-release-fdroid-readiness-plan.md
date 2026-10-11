@@ -53,10 +53,9 @@ dependencies, and a first-run experience written for the developer rather than a
   `sync.example.com`) and no update checks or third-party hosts.
 - **Reviewer optics (not an anti-feature, but F-Droid pushes back on IPTV apps that look
   piracy-oriented):** no content or playlist ships, which is good. But docs, comments and tests
-  name grey-market panels and channels: "bears" (38 files, including shipped comments in
-  `XtreamLoginPicker.kt`, `XtreamApiService.kt`, `XtreamPanelClock.kt` and `AccountBusy.kt`),
-  "gr8iptv" (`XtreamModels.kt:34`, a test, RELEASE_NOTES), "Sky Sports UHD", "FR| FRANCE SPORT
-  VIP RAW", "CANAL+". Scrub them (R3).
+  named real panels and their domains. That was scrubbed on 2026-10-11: they're now `panel-a`
+  to `panel-d` and `*.example`. Channel names ("Sky Sports UHD", "FR| FRANCE SPORT VIP RAW",
+  "CANAL+") remain in docs and examples; they are broadcasters, not providers.
 
 ## F-Droid metadata and process
 
@@ -80,7 +79,7 @@ dependencies, and a first-run experience written for the developer rather than a
 |---|---|---|---|
 | R1 | The export file carries the Xtream password in clear | `SettingsExportManager.kt:277-288` exports EPG source `url` raw; the auto-added guide source is `xmltv.php?username=…&password=…` (`AutoXmltvSources.kt:47`). The same URL sits unencrypted in `providers.db`, which bypasses the encrypted credential store | On export, drop auto-XMLTV sources (they're recreated on import) or strip the query. Longer term, store them credential-less and rebuild the URL at fetch time from the secret store. Check that live sync doesn't send the same URL outside the E2E envelope |
 | R2 | Release builds aren't signed, minified or built in CI | `isMinifyEnabled = false` (tv:63, mobile:52); no `signingConfig`; CI builds only `assembleDebug` | Add a signing config from env or `keystore.properties` (never committed). Enable R8 and `shrinkResources`. Move the core modules' rules to `consumerProguardFiles` (they currently apply only to the libraries themselves); fix the invalid `-keepattrs` in core/player; replace the blanket `-keep androidx.media3.**/io.ktor.**/kotlinx.coroutines.**`; add `-dontwarn` for smbj/BouncyCastle/slf4j and keep rules for `@Serializable` routes. Add `assembleRelease` plus a launch smoke test to CI. Strip `Log.d` with `-assumenosideeffects` |
-| R3 | Personal and household data in tracked files | `192.168.68.x` (AGENTS.md:264, RUN_GUIDE.md:187, gradle.properties:38, two archived plans); `sm.njarasoa.org` (tools/jellyfin-xtream/restart.sh:4,12; RUN_GUIDE.md:177); `/home/tahiry/...` (13 files); "mdarcy" (EPG_INDEX_STORAGE.md); `.claude/projects/-home-tahiry-…/memory/*.md` committed; provider names above | Scrub the tree. History is not rewritten: the public repository starts from a squashed snapshot at the end (see "Public repository cut-over") |
+| R3 | Personal and household data in tracked files | LAN IPs, a personal domain, home-directory paths, device host names, a committed agent memory file, an Xtream login name, real panel names and domains | **Done 2026-10-11** (tree only): replaced with `192.168.1.x`, `*.example`, repo-relative paths, `phone-a`/`phone-b`, `panel-a`…`panel-d`, `alice`/`user1`; memory file removed. History is not rewritten: the public repository starts from a squashed snapshot at the end (see "Public repository cut-over") |
 | R4 | No disclaimer or privacy policy | Only `login_footer_text`; no PRIVACY file | Show "Fijerena does not provide or host any content" on first run and in About. Add a `PRIVACY.md` covering: no telemetry; credentials stay on the device; the sync server (user-chosen) receives E2E-encrypted data (AES-256-GCM + HKDF, `SyncCrypto.kt`); camera only for QR pairing; cleartext HTTP allowed for LAN and IPTV panels. Link it from the store listings |
 | R5 | Unused dangerous permissions on TV | tv/AndroidManifest.xml:12-14 `READ_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE`; local files go through SAF | Remove both |
 
@@ -209,12 +208,12 @@ repository, with its full history, becomes private.
 tokens, keystores, `local.properties` or real passwords, only test values. What it does hold is
 personal and provider detail that only a fresh root removes for certain:
 
-- `PCAPdroid_18_Mar_19_04_11.csv`, a phone traffic capture showing an IPTV host
-  (`m3u.best-smarter.me`, 185.245.2.100) and iMPlayer. Added in `09f0d660` (2026-03-19), deleted
-  in `0dc16169` (2026-04-24).
-- Real panel domains (`bearsclub.online`, `bearstv.online`, `cf.bearsp.xyz`), mostly in archived
-  plans, plus one shipped comment (`XtreamLoginCheck.kt:71-72`).
-- LAN IPs, `sm.njarasoa.org`, `/home/tahiry` paths and device names.
+- A phone traffic capture (CSV) naming a real IPTV host and another player app. Added in
+  `09f0d660` (2026-03-19), deleted in `0dc16169` (2026-04-24); not in the tree since.
+- Real panel names, domains and a login name. Scrubbed from the tree on 2026-10-11 but still in
+  older commits.
+- LAN IPs, a personal domain, home-directory paths and device names. Same: scrubbed from the tree
+  on 2026-10-11, still in history.
 - Two personal author emails (353 commits carry the gmail address) and one "Your Name" commit.
 
 `git filter-repo` could remove these too, but it changes every commit hash (the plans cite commits
@@ -226,7 +225,8 @@ commits and agent files are not a reason to rewrite either way.
 1. Make the current repository **private** now, without waiting for this phase, if it is public.
 2. Freeze `main`: every earlier phase is merged and CI is green.
 3. Final scrub check on the tree: `gitleaks detect --no-git` and a grep for the names, domains,
-   IPs and paths above. Decide whether `docs/plans/` (and its commit-hash citations, which won't
+   IPs and paths that were scrubbed on 2026-10-11 (keep that list privately, outside the repo), in
+   case any came back. Decide whether `docs/plans/` (and its commit-hash citations, which won't
    resolve in the new repository) goes public. If it does, add a note that hashes refer to the
    private history.
 4. Create the new public repository from `git archive main` (a tree only, no `.git`), as a single

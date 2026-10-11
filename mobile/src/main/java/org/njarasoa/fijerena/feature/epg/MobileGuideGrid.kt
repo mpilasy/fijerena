@@ -433,7 +433,7 @@ private fun ProgramCell(
         if (cell.labelFits) {
             // The label follows the left edge while the programme's start is scrolled off screen:
             // a long programme on air since before the visible window (opened at "now") showed a
-            // blank bar, its title off to the left (phone UI audit, TV guide on bears). Read in
+            // blank bar, its title off to the left (phone UI audit, TV guide on panel-a). Read in
             // graphicsLayer, so scrolling moves it at draw time without recomposing the row.
             Column(
                 modifier =

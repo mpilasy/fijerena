@@ -289,7 +289,7 @@ internal fun powerRows(facts: PowerFacts): List<DeviceInfoRow> =
  * (`DeviceIdleController` reads both from `ACTION_BATTERY_CHANGED`: `updateChargingLocked(present &&
  * plugged)` in the android11-release and android15-release sources). A Shield has no battery, so
  * it never counts as charging and dozes on mains power (`dumpsys deviceidle` `mCharging=false`
- * beside `dumpsys battery` `AC powered: true`, `present: false` on darcy, 2026-10-05).
+ * beside `dumpsys battery` `AC powered: true`, `present: false` on phone-a, 2026-10-05).
  * `BatteryManager.isCharging` said yes there, so it isn't used.
  */
 internal fun chargingForDoze(

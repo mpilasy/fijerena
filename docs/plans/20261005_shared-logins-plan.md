@@ -1,6 +1,6 @@
 # Shared Logins Plan
 
-**Status:** In progress (written 2026-10-05). Phases 1–3 done and checked on the emulators against the jellyxtream bridge's one-stream test mode (`tools/jellyfin-xtream/xtream_bridge.py`, `BRIDGE_TEST_PASSWORD`, `BRIDGE_MAX_CONNECTIONS`). Phase 4 (real bears, two devices) waits for the second bears login.
+**Status:** In progress (written 2026-10-05). Phases 1–3 done and checked on the emulators against the jellyxtream bridge's one-stream test mode (`tools/jellyfin-xtream/xtream_bridge.py`, `BRIDGE_TEST_PASSWORD`, `BRIDGE_MAX_CONNECTIONS`). Phase 4 (real panel-a, two devices) waits for the second panel-a login.
 
 ## Goal
 
@@ -10,17 +10,17 @@ device, an Xtream source holds 2–3 logins on the same panel, and each playback
 login is free at that moment.
 
 No server, proxy or Worker: the app reads the panel's own connection count. A Cloudflare Worker
-was considered (2026-10-05) and dropped. Streaming through it would hit bears from data-centre
-addresses, which bears blocks (404) and its cross-address lock (460) punishes. Using it only to
+was considered (2026-10-05) and dropped. Streaming through it would hit panel-a from data-centre
+addresses, which panel-a blocks (404) and its cross-address lock (460) punishes. Using it only to
 hand out logins adds a service to keep running for little gain over the in-app check.
 
-## Facts measured (2026-10-05, bears login `1fb5318f4d`, panel "World 8K")
+## Facts measured (2026-10-05, panel-a login `user1`)
 
 - `player_api.php?username=…&password=…` returns `user_info.active_cons` and
   `user_info.max_connections` (here `1`). These API calls don't use up a stream slot.
 - The count is accurate in both directions: `1` while the Xperia played, `0` within ~20 s of
   stopping (12:29:33 still 1, 12:29:55 0).
-- Known from 2026-10-04 (`AccountBusy.kt`): bears refuses a stream from a **different public
+- Known from 2026-10-04 (`AccountBusy.kt`): panel-a refuses a stream from a **different public
   address** with HTTP 460 for ~5 minutes after the previous stream stops, even when the count
   already reads 0. Home devices share one address (except the Bravia, which the router sends out
   another way); phones on mobile data don't.
@@ -137,7 +137,7 @@ docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES).
 | 1. Extra logins stored and edited | `ProviderSettings.extraLogins`, extra passwords in `provider_creds_<id>`, same-panel check, distinct usernames, Edit Source section on TV and mobile (add, remove, expiry per login, Make main, remove the main login), delete with the source, `extraPasswords` in live sync | Unit: same-panel check (same server, missing ids, different server); duplicate username refused; Make main swaps the two logins and keeps the source id; removing the main promotes the next; last login can't be removed; settings JSON round trip with and without the field; sync payload with and without `extraPasswords` |
 | 2. Picker at play time | `XtreamLoginPicker`, `suspend` URL builders, `XtreamMediaProvider` passes the login on, dev-mode `Login n of m` | Unit (fake API): prefers last-used, skips full, skips expired or banned, skips failed, all full falls back to main, timeout falls back to main, single login does no `player_api` call |
 | 3. Switch on refusal | `AlternateLogin` in `core:player`, implemented in `core:network`; `handleAccountBusy` tries it first; 6 min busy mark; busy message names the login count | Unit: busy mark expires after 6 min; order after refusals; null hands over to `AccountBusyWait` |
-| 4. Device check | Two real devices, two bears logins: both play at once; stop one and the other device takes its login; a phone on mobile data gets 460 and moves on | Manual, recorded here |
+| 4. Device check | Two real devices, two panel-a logins: both play at once; stop one and the other device takes its login; a phone on mobile data gets 460 and moves on | Manual, recorded here |
 
 Phase 2 with a single login must behave exactly like today: no extra requests, same URL.
 
@@ -165,7 +165,7 @@ Phase 2 with a single login must behave exactly like today: no extra requests, s
   extra logins too.
 - `XtreamLoginCheck` (`core:network/.../xtream/`): `status` (`player_api.php` → active, expiry,
   connections) for Phase 2 to reuse, and `samePanel`, which compares the stream ids of the first live
-  and the first VOD category, not the server name (bears answers under two domains).
+  and the first VOD category, not the server name (panel-a answers under two domains).
 - `ExtraLoginsViewModel` (`core:ui`) serves both screens; `statusText` words a login's line the
   same on TV and mobile. TV: `tv/.../provider/components/ProviderLoginsSection.kt`, between
   Behaviour and Guide, buttons on a line under each row. Mobile:
@@ -179,10 +179,10 @@ The bridge's test mode stands in for a one-stream panel: `<user>+N` / the test p
 login on the same catalogue, each username holds one stream for `BRIDGE_HOLD_SECONDS` (it only
 redirects, so it can't see a stream stop), a stream over the limit gets HTTP 458, a reopen within
 5 s counts as the same stream (mkv index, resume seek), and `BRIDGE_HIDE_CONS=1` hides the counts
-so the refusal path runs. What it can't show: bears' 5-minute lock for a different public address
+so the refusal path runs. What it can't show: panel-a's 5-minute lock for a different public address
 (460) and its real timings — Phase 4.
 
-## bears measurements for Phase 4 (2026-10-05, darcy, one login)
+## panel-a measurements for Phase 4 (2026-10-05, phone-a, one login)
 
 - A movie stream stops counting ~20 s after it stops (Xperia, morning). A **live HLS** stream
   (`m3u8`) keeps the login counted **~46 s to ~1 min** after the player stops; **live MPEG-TS**
@@ -199,6 +199,6 @@ so the refusal path runs. What it can't show: bears' 5-minute lock for a differe
 | Phase | Status | Commit |
 |---|---|---|
 | 1 | Done; checked on both emulators 2026-10-05 (add, duplicate and wrong-password refusals, Make main, Remove); focus walk updated by hand for the Logins rows | db5f1c9c |
-| 2 | Done; checked on both emulators against the bridge's test mode: with `tahiry` held, the phone played on `tahiry+2`, Stats "Login 2 of 3" | (branch) |
+| 2 | Done; checked on both emulators against the bridge's test mode: with `alice` held, the phone played on `alice+2`, Stats "Login 2 of 3" | (branch) |
 | 3 | Done; checked: a 458 moved the stream to the next login in ~0.3 s with no message; all three held gave "All 3 logins … in use". Found and fixed: after an all-busy moment the refused logins were skipped for 6 min even once free; a new playback now asks every login and only puts those last | (branch) |
 | 4 | Not started | |

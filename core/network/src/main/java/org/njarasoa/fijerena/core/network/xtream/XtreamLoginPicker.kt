@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 object XtreamLoginPicker : AlternateLogin {
     private const val CHECK_TIMEOUT_MS = 3_000L
 
-    /** How long a refused login is skipped on this device: longer than bears' ~5 min lock (460). */
+    /** How long a refused login is skipped on this device: longer than panel-a's ~5 min lock (460). */
     const val BUSY_MS = 6 * 60_000L
 
     /** Picks remembered by URL, for [loginCount], [describe] and [next]; only the latest few. */
@@ -37,7 +37,7 @@ object XtreamLoginPicker : AlternateLogin {
 
     /**
      * How long a panel's answer about a login is reused by a new playback (Back, then play again).
-     * Short: at home bears hands a busy login to the newest device instead of refusing it, so a
+     * Short: at home panel-a hands a busy login to the newest device instead of refusing it, so a
      * stale "free" could take another TV's stream.
      */
     private const val STATUS_TTL_MS = 5_000L

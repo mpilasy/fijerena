@@ -29,9 +29,9 @@ The investigation uncovered **10 critical and high-priority architectural defect
 ### Finding 1: Permanent Playback Deadlock & Stale State Flow in `PlaybackViewModel`
 * **Severity:** **P0 - Critical (Showstopper)**
 * **Location:**
-  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L81-L109)
-  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L702-L705)
-  - [`tv/src/main/java/org/njarasoa/fijerena/MainActivity.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/MainActivity.kt#L101-L106)
+  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L81-L109)
+  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L702-L705)
+  - [`tv/src/main/java/org/njarasoa/fijerena/MainActivity.kt`](file://tv/src/main/java/org/njarasoa/fijerena/MainActivity.kt#L101-L106)
 * **Mechanism:**
   1. `PlaybackViewModel` guards service startup with a static companion `AtomicBoolean`:
      ```kotlin
@@ -67,8 +67,8 @@ The investigation uncovered **10 critical and high-priority architectural defect
 ### Finding 2: ExoPlayer Unbounded Memory Buffer & OOM Crash on Low-RAM Devices
 * **Severity:** **P0 - Critical**
 * **Location:**
-  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt#L133-L138)
-  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt#L25-L29)
+  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt#L133-L138)
+  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt#L25-L29)
 * **Mechanism:**
   1. In `AdaptiveLoadControl.kt`:
      ```kotlin
@@ -95,7 +95,7 @@ The investigation uncovered **10 critical and high-priority architectural defect
 
 ### Finding 3: SQLite Connection Pool Native RAM Exhaustion
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDatabase.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDatabase.kt#L89-L97)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDatabase.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDatabase.kt#L89-L97)
 * **Mechanism:**
   1. In `EpgIndexDatabase.addCallback`:
      ```kotlin
@@ -117,7 +117,7 @@ The investigation uncovered **10 critical and high-priority architectural defect
 
 ### Finding 4: `RefreshQueue` Race Condition on Task Dispatch & Cancellation
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt#L104-L147)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt#L104-L147)
 * **Mechanism:**
   1. In `processAvailable()`, line 104 creates an entry with a dummy disconnected `Job()`:
      ```kotlin
@@ -142,10 +142,10 @@ The investigation uncovered **10 critical and high-priority architectural defect
 ### Finding 5: Swallowed `CancellationException` in Workers and Content Sync
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgSyncWorker.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgSyncWorker.kt#L107)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFtsRebuildWorker.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFtsRebuildWorker.kt#L59)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamContentManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamContentManager.kt#L540-L802)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt#L824-L1032)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgSyncWorker.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgSyncWorker.kt#L107)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFtsRebuildWorker.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFtsRebuildWorker.kt#L59)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamContentManager.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamContentManager.kt#L540-L802)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt#L824-L1032)
 * **Mechanism:**
   1. In `EpgSyncWorker.kt` and `EpgFtsRebuildWorker.kt`, `catch (e: Exception)` does not rethrow `CancellationException`. When WorkManager stops or cancels the worker (e.g. constraints lost or timeout), it catches the exception, logs a failure, and schedules a retry.
   2. In `XtreamContentManager.kt`, `syncCategories`, `syncStreams`, and `syncSeries` catch `catch (e: Exception)` inside `RefreshTask.execute()` and only log it. Because `execute()` does not throw, `RefreshQueue` treats the task as successfully completed (`queuedTask.deferred.complete(Unit)`).
@@ -160,7 +160,7 @@ The investigation uncovered **10 critical and high-priority architectural defect
 
 ### Finding 6: Thread-Unsafe Collections in `XtreamMediaProvider`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/XtreamMediaProvider.kt#L41-L45)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt`](file://core/network/XtreamMediaProvider.kt#L41-L45)
 * **Mechanism:**
   1. `searchDataSizes` is declared as `private val searchDataSizes = mutableMapOf<String, Long>()`.
   2. `tmdbOverviewCache` is declared as `private val tmdbOverviewCache = mutableMapOf<Int, Map<Pair<Int, Int>, String>>()`.
@@ -173,7 +173,7 @@ The investigation uncovered **10 critical and high-priority architectural defect
 
 ### Finding 7: Unguarded Database Checkpoint & Vacuum Deadlock in `EpgIndexer`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L688-L720)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L688-L720)
 * **Mechanism:**
   1. All database writes in `EpgIndexer` are guarded by `private val writeMutex = Mutex()`.
   2. `incrementalVacuum()` runs **completely outside `writeMutex`**.
@@ -193,9 +193,9 @@ The investigation uncovered **10 critical and high-priority architectural defect
 ### Finding 8: Activity Context Leaks via Player Listeners & Factories
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt#L81-L151)
-  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L990-L1015)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt#L749-L765)
+  - [`tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt`](file://tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt#L81-L151)
+  - [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L990-L1015)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt#L749-L765)
 * **Mechanism:**
   1. In `TvPlayerScreen.kt:149`:
      ```kotlin
@@ -217,7 +217,7 @@ The investigation uncovered **10 critical and high-priority architectural defect
 
 ### Finding 9: Conditional Composable Execution & Early Return in `LiveTvSplitLayout`
 * **Severity:** **P2 - Medium**
-* **Location:** [`tv/src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvSplitLayout.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvSplitLayout.kt#L204-L236)
+* **Location:** [`tv/src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvSplitLayout.kt`](file://tv/src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvSplitLayout.kt#L204-L236)
 * **Mechanism:**
   1. Lines 204–231:
      ```kotlin
@@ -245,8 +245,8 @@ The investigation uncovered **10 critical and high-priority architectural defect
 ### Finding 10: Positional IDs in SMB and M3U Providers
 * **Severity:** **P2 - Medium**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/smb/SmbMediaProvider.kt#L175)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/local/M3uParser.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/local/M3uParser.kt#L114-L153)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbMediaProvider.kt`](file://core/network/smb/SmbMediaProvider.kt#L175)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/local/M3uParser.kt`](file://core/network/local/M3uParser.kt#L114-L153)
 * **Mechanism:**
   1. In `SmbMediaProvider.kt`:
      ```kotlin

@@ -1,6 +1,6 @@
 # Up next details panel
 
-**Status:** Done — checked on both emulators and on bears 2026-10-06.
+**Status:** Done — checked on both emulators and on panel-a 2026-10-06.
 
 ## Goal
 
@@ -50,7 +50,7 @@ few seconds.
   every stream request, a seek included, as a new connection: every seek hit HTTP 458 for
   about 90 s. Once on the phone the retry resumed from the old position rather than the seek
   target; not looked into, test-mode only. The bridge was restarted in normal mode afterwards.
-- **TV on bears (Kid, "DE - Breaking Bad (2008)"):** three seeks of +5 min, 12 s apart, all
+- **TV on panel-a (Kid, "DE - Breaking Bad (2008)"):** three seeks of +5 min, 12 s apart, all
   played on with no refusal (a real panel sees the old connection close). At the end of S1E1
   the panel gave "Cat's in the Bag..." and three lines of synopsis cut with an ellipsis; S1E2
   then started by itself. With the controls up when the card appeared, Down and Left from

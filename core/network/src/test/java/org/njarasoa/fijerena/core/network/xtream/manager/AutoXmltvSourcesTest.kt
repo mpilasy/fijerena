@@ -99,7 +99,7 @@ class AutoXmltvSourcesTest {
     fun `duplicates collapse to the one on the current login, with their guide rows`() =
         runBlocking {
             val dao = FakeEpgSourceDao()
-            dao.rows += listOf(auto(1, "test"), auto(2, "kilonga"), auto(3, "tahiry"))
+            dao.rows += listOf(auto(1, "test"), auto(2, "kilonga"), auto(3, "alice"))
             val deletedIndex = mutableListOf<Long>()
             val refresh = reconcile(dao, user = "kilonga", hasLive = true, deletedIndex = deletedIndex)
             assertFalse(refresh)
@@ -291,18 +291,18 @@ class AutoXmltvSourcesTest {
         runBlocking {
             val dao = FakeEpgSourceDao()
             val handAdded = source(9, "http://epg.example/guide.xml.gz", label = "guide")
-            dao.rows += listOf(auto(1, "test"), auto(2, "kilonga"), auto(3, "tahiry"), handAdded)
+            dao.rows += listOf(auto(1, "test"), auto(2, "kilonga"), auto(3, "alice"), handAdded)
             // Provider 2: no live channels; provider 3: unknown, no credentials.
             dao.rows += listOf(auto(4, "a", providerId = 2), auto(5, "b", providerId = 3), auto(6, "c", providerId = 3))
             val providers =
                 listOf(
-                    AutoXmltvSources.ProviderState(1, server, AutoXmltvSources.xmltvUrl(server, "tahiry", "pw"), hasLiveChannels = true),
+                    AutoXmltvSources.ProviderState(1, server, AutoXmltvSources.xmltvUrl(server, "alice", "pw"), hasLiveChannels = true),
                     AutoXmltvSources.ProviderState(2, server, AutoXmltvSources.xmltvUrl(server, "a", "pw"), hasLiveChannels = false),
                     AutoXmltvSources.ProviderState(3, server, null, hasLiveChannels = null),
                 )
             AutoXmltvSources.cleanUp(providers, dao) {}
             assertEquals(listOf(3L, 5L, 9L), dao.rows.map { it.id }.sorted())
-            assertEquals(AutoXmltvSources.xmltvUrl(server, "tahiry", "pw"), dao.rows.first { it.id == 3L }.url)
+            assertEquals(AutoXmltvSources.xmltvUrl(server, "alice", "pw"), dao.rows.first { it.id == 3L }.url)
 
             val before = dao.rows.toList()
             dao.writes = 0

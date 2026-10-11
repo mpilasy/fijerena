@@ -174,7 +174,7 @@ HEVC testing on an emulator is limited, and Jellyfin content will be transcoded.
 `tools/jellyfin-xtream/xtream_bridge.py` (Python 3, stdlib only) serves a Jellyfin server as an Xtream panel, so the Xtream code paths can be tested against a known library. It holds no credentials: the Xtream username/password the app sends are checked against Jellyfin. Pointing it at another Jellyfin server only means changing `JELLYFIN_URL`.
 
 ```bash
-tools/jellyfin-xtream/restart.sh          # (re)starts it detached on :8080 for sm.njarasoa.org
+tools/jellyfin-xtream/restart.sh          # (re)starts it detached on :8080 for jellyfin.example.org
 JELLYFIN_URL=https://other.host BRIDGE_PORT=8081 tools/jellyfin-xtream/restart.sh
 ```
 
@@ -184,14 +184,14 @@ Like a real panel, a series' `last_modified` moves when episodes are added (Jell
 
 ### 2. Physical Android TV (NVIDIA Shield, Chromecast, Sony Bravia)
 
-TV devices connect via ADB over TCP/IP (port 5555). Because TV IP addresses drift across sessions via DHCP (on development subnet `192.168.68.0/24`):
+TV devices connect via ADB over TCP/IP (port 5555). Because TV IP addresses drift across sessions via DHCP (on development subnet `192.168.1.0/24`):
 
 1. **Find TV on Network:**
    ```bash
    # Query mDNS for broadcasting ADB devices
    adb mdns services
    ```
-   *(Falls back to `arp -a | grep 192.168.68.` if mDNS is unavailable)*
+   *(Falls back to `arp -a | grep 192.168.1.` if mDNS is unavailable)*
 
 2. **Connect & Verify:**
    ```bash

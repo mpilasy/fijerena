@@ -12,7 +12,7 @@ This is a focused follow-up to the systemic audits already landed (`docs/plans/a
 
 ### 1. `XtreamApiService` is never closed — leaks a full HttpClient + thread pool per use
 **Severity:** P1 — High
-**Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L447-L449)
+**Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L447-L449)
 
 `XtreamApiService.close()` exists (calls `client.close()`) but has zero call sites anywhere in the repo. Every one of these constructs a fresh instance, uses it, and drops it:
 - `XtreamSessionManager.login()` — line 39
@@ -38,7 +38,7 @@ That `GlobalScope` coroutine only completes when `close()` completes `requestsJo
 
 ### 2. The "shared OkHttpClient" doesn't actually share the thread pool
 **Severity:** P2 — Medium (root cause amplifying Finding 1)
-**Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/network/NetworkModule.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/network/NetworkModule.kt#L30-L34) and [`XtreamApiService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L67-L74)
+**Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/network/NetworkModule.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/network/NetworkModule.kt#L30-L34) and [`XtreamApiService.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L67-L74)
 
 `NetworkModule.okHttpClient`'s own doc comment claims: *"Sharing this ensures that we reuse the same connection pool and thread pool (Dispatcher), which is critical for avoiding OutOfMemoryErrors."* This is false for any Ktor client built via `engine { preconfigured = NetworkModule.okHttpClient }` (which is exactly what `XtreamApiService` does).
 
@@ -69,7 +69,7 @@ Because the `ConnectionPool` genuinely *is* shared (not overridden by `createOkH
 
 ### 4. `XtreamSyncWorker` runs a full catalog sync with no `setForeground()` — same Doze failure class as the already-fixed EPG worker
 **Severity:** P1 — High
-**Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/XtreamSyncWorker.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/XtreamSyncWorker.kt)
+**Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/XtreamSyncWorker.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/XtreamSyncWorker.kt)
 
 `doWork()` calls `ProviderSyncRunner.syncProvider()` → `mediaProvider.syncAll()` for every configured Xtream provider — a full network fetch and DB write of the entire live/VOD/series catalog (tens of thousands of rows for large providers). It's a plain `CoroutineWorker`: no wake lock, no `setForeground()`.
 

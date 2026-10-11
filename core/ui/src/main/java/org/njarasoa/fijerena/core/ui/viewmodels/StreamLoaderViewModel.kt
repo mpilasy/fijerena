@@ -385,7 +385,7 @@ class StreamLoaderViewModel(
                     indexed
                 }
             // Catch-up: the programme picked, by its title near its start — the two guides (XMLTV,
-            // the source's own) can place a programme half an hour apart (bears, RTP 1, 2026-10-10).
+            // the source's own) can place a programme half an hour apart (panel-a, RTP 1, 2026-10-10).
             currentProgram =
                 listings.firstOrNull { catchup != null && it.title == programTitle && abs(it.startTime - at) <= CATCHUP_MATCH_SLACK_SEC }
                     ?: listings.firstOrNull { at in it.startTime until it.endTime }

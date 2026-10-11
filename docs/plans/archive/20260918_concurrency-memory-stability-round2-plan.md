@@ -26,7 +26,7 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 ### Finding 1 (Former Finding 2): Non-Atomic State Update Race in `RefreshQueue`
 * **Severity:** **P0 - Critical**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt#L121-L124)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt#L121-L124)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. In `RefreshQueue`, concurrent tasks execute governed by `Semaphore(concurrencyLimit)`.
@@ -55,8 +55,8 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 ### Finding 2 (Former Finding 4): Thread-Unsafe Plain Collections Across Dispatchers
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaRepository.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/MediaRepository.kt#L691) (`cachedRecentCategories`)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/jellyfin/JellyfinMediaProvider.kt#L49-L51) (`playSessionIds`, `mediaSourceIds`, `playMethods`)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaRepository.kt`](file://core/network/MediaRepository.kt#L691) (`cachedRecentCategories`)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinMediaProvider.kt`](file://core/network/jellyfin/JellyfinMediaProvider.kt#L49-L51) (`playSessionIds`, `mediaSourceIds`, `playMethods`)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. `MediaRepository.cachedRecentCategories`: Plain `mutableMapOf<String, List<RecentCategory>>()`. Mutated in `addToCategoryHistory` on `Dispatchers.IO`, read synchronously in `getRecentlyViewedCategories`, and cleared in `clearCache()`.
@@ -71,8 +71,8 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 ### Finding 3 (Former Finding 5): Swallowed `CancellationException` in Sync Runner & Queue
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/ProviderSyncRunner.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xtream/ProviderSyncRunner.kt#L85-L97)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/queue/RefreshQueue.kt#L117-L120)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/ProviderSyncRunner.kt`](file://core/network/xtream/ProviderSyncRunner.kt#L85-L97)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt`](file://core/network/queue/RefreshQueue.kt#L117-L120)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. `ProviderSyncRunner.syncProvider()` catches `catch (e: Exception)`.
@@ -89,7 +89,7 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 ### Finding 4 (Former Finding 6): Unbounded Heap Retention in `EpgChannelMatcher`
 * **Severity:** **P1 - High**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgChannelMatcher.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/EpgChannelMatcher.kt#L15-L54)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgChannelMatcher.kt`](file://core/network/xmltv/EpgChannelMatcher.kt#L15-L54)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. `EpgChannelMatcher` holds a static companion singleton: `private var cachedInstance: EpgChannelMatcher? = null`.
@@ -105,7 +105,7 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 ### Finding 5 (Former Finding 7): Premature Teardown of Application-Wide `NetworkMonitor`
 * **Severity:** **P1 - High**
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/service/StreamingPlaybackService.kt#L1015)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file://core/player/service/StreamingPlaybackService.kt#L1015)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. `NetworkMonitor` is an application-wide singleton that registers a `ConnectivityManager.NetworkCallback`.
@@ -123,8 +123,8 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 ### Finding 6 (Former Finding 8): Indiscriminate Staging Deletion During Partial EPG Swap
 * **Severity:** **P1 - High**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDao.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/epgindex/EpgIndexDao.kt#L69-L74)
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/EpgFileManager.kt#L884-L886)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDao.kt`](file://core/network/xmltv/epgindex/EpgIndexDao.kt#L69-L74)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`](file://core/network/xmltv/EpgFileManager.kt#L884-L886)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. `executeSwap(sourceIds: List<Long>)` selectively transfers channels and programmes for the specified `sourceIds`.
@@ -139,7 +139,7 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 ### Finding 7 (Former Finding 9): SQLite Connection Pool PRAGMA RAM Retention
 * **Severity:** **P2 - Medium**
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L423-L434)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt`](file://core/network/xmltv/epgindex/EpgIndexer.kt#L423-L434)
 * **Status:** **Verified Real on HEAD**
 * **Mechanism:**
   1. During FTS index rebuild, `EpgIndexer` executes:
@@ -157,8 +157,8 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 ### Finding 8 (Former Finding 10): Missing Composite Index on `(source_id, end_epoch)`
 * **Severity:** **P3 - Low / Optimization**
 * **Location:**
-  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgProgrammeEntity.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/xmltv/epgindex/EpgProgrammeEntity.kt#L12-L21)
-  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt#L91-L102)
+  - [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgProgrammeEntity.kt`](file://core/network/xmltv/epgindex/EpgProgrammeEntity.kt#L12-L21)
+  - [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt#L91-L102)
 * **Status:** **Verified Real on HEAD (Downgraded from storm to query optimization)**
 * **Mechanism:**
   1. `EpgManagementViewModel.latestProgrammeTimes` queries `SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId`.
@@ -171,7 +171,7 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 ### Finding 9 (Former Finding 11): Unguarded `lateinit` Access in `CategoryViewModel` Dev Helpers
 * **Severity:** **P3 - Low / Hardening**
-* **Location:** [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt#L78-L116)
+* **Location:** [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt#L78-L116)
 * **Status:** **Verified Real on HEAD (Low Risk)**
 * **Mechanism:**
   1. `getPayloadSize()` and `getFetchTime()` dereference `repository` directly without checking `::repository.isInitialized`.

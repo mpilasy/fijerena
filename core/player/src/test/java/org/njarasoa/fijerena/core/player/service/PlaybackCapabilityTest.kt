@@ -14,7 +14,7 @@ import org.junit.Test
 
 /**
  * docs/plans/archive/20261004_playback-capability-errors-plan.md → P1, P2. The track and codecs values are
- * the ones Media3 reported on darcy and the Xperia XZ2 Compact for the 2026-10-04 test clips.
+ * the ones Media3 reported on phone-a and the Xperia XZ2 Compact for the 2026-10-04 test clips.
  */
 @androidx.media3.common.util.UnstableApi
 class PlaybackCapabilityTest {
@@ -93,7 +93,7 @@ class PlaybackCapabilityTest {
 
     @Test
     fun `a codec error before the first frame on a format the decoder doesn't handle is final`() {
-        // 8K HEVC: DECODING_FAILED on darcy, DECODER_INIT_FAILED on the Xperia, both EXCEEDS.
+        // 8K HEVC: DECODING_FAILED on phone-a, DECODER_INIT_FAILED on the Xperia, both EXCEEDS.
         assertTrue(isFinalCodecError(PlaybackException.ERROR_CODE_DECODING_FAILED, C.FORMAT_EXCEEDS_CAPABILITIES, false))
         assertTrue(isFinalCodecError(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED, C.FORMAT_EXCEEDS_CAPABILITIES, false))
         assertTrue(isFinalCodecError(PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED, C.FORMAT_UNSUPPORTED_SUBTYPE, false))

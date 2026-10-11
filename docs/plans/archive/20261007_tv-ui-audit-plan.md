@@ -75,9 +75,9 @@ Already seen while writing this plan (Home, profile picker, 2026-10-07):
 ## Method
 
 1. **Capture.** I drive the TV emulator screen by screen (scripted D-pad, one driver per device)
-   and screenshot every state in the inventory into `/home/tahiry/data/sary/screenshots/tv-audit/`
+   and screenshot every state in the inventory into `/home/alice/data/sary/screenshots/tv-audit/`
    (outside the repo), named `NN_screen_state.png`. Sources: jellyxtream (films and shows with
-   artwork), iptv and bears (live with and without a guide), njarasoa (Jellyfin) where it differs.
+   artwork), iptv and panel-a (live with and without a guide), njarasoa (Jellyfin) where it differs.
 2. **Findings.** Each screenshot reviewed against the list above; findings written into this plan
    under Findings, grouped by screen, with severity. Root causes noted where a shared component
    is to blame (one fix, many screens).
@@ -111,8 +111,8 @@ asking (emulators only here).
 
 Captured 2026-10-07 on the TV emulator (1920×1080), profile atr (developer mode on), theme Deep
 Night, look Material, **Text & grid size 60 %** (the setting's default is 80 %), English. Sources:
-bears (Live TV, until the user asked to get off it), iptv (Live TV), jellyxtream (films, shows).
-Shots: `/home/tahiry/data/sary/screenshots/tv-audit/NN_*.png` (45). Severity: **B** broken,
+panel-a (Live TV, until the user asked to get off it), iptv (Live TV), jellyxtream (films, shows).
+Shots: `/home/alice/data/sary/screenshots/tv-audit/NN_*.png` (45). Severity: **B** broken,
 **R** rough, **N** nit. Not captured: Live sync's Manage page, Add Source, the profile page, safe mode / newer
 data, the Up next card, loading screens.
 
@@ -156,9 +156,9 @@ data, the Up next card, loading screens.
 | 19 | Edit Source | Three control styles (X5); "Source Name:" label-colon rows with pencil buttons; "25 Edit"; Cancel / Save small | R | 42 |
 | 20 | Guide sources (empty) | Sentence and button at the top of an empty screen (X7) | N | 43 |
 | 21 | Device info | "Detected as GENERIC_MOBILE" on a TV (detection, not looks — flagged for a separate fix) | N | 44 |
-| 22 | TV Guide grid (bears) | Opens hours in the past with "now" at the right edge and cells cut at the left; short programmes unreadable ("Bu…", "B…"); channels without listings are blank rows; no channel logos; two lines of developer counters in the header | R | 46 |
+| 22 | TV Guide grid (panel-a) | Opens hours in the past with "now" at the right edge and cells cut at the left; short programmes unreadable ("Bu…", "B…"); channels without listings are blank rows; no channel logos; two lines of developer counters in the header | R | 46 |
 | 23 | Programme panel | Fine (title, channel, time, Close / Watch channel) | — | 47 |
-| 24 | Live TV lists (bears) | Separator rows ("####### ETHIOPIA VIP #######") are playable rows and can take first focus and get tuned; channels without logos show an empty dark tile instead of a letter | R | (seen while capturing) |
+| 24 | Live TV lists (panel-a) | Separator rows ("####### ETHIOPIA VIP #######") are playable rows and can take first focus and get tuned; channels without logos show an empty dark tile instead of a letter | R | (seen while capturing) |
 
 ## Decisions (user, 2026-10-07)
 

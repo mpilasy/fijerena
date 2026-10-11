@@ -22,8 +22,8 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 #### Finding 1: Home Screen Permanently Stuck on "Sign in to Jellyfin" After Returning from Successful Sign-In
 * **Severity:** P1 — High (Functional Blocker)
 * **Locations:**
-  * [`tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L177-L227`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L177-L227)
-  * [`mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L136-L180`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L136-L180)
+  * [`tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L177-L227`](file://tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L177-L227)
+  * [`mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L136-L180`](file://mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L136-L180)
 * **Mechanism:**
   1. A profile with no login for the active Jellyfin provider opens `ContentTypeSelectionScreen`.
   2. `LaunchedEffect(refreshTrigger)` executes: `needsSignIn = !providerRepo.hasLogin(activeProvider)` evaluates to `true`. `mediaRepositoryRef` and `mediaProviderRef` are set to `null`.
@@ -40,7 +40,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 
 #### Finding 2: `hasLogin` Returns False-Positive for Default Profile with Empty Credentials
 * **Severity:** P2 — Medium
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/ProviderRepository.kt#L379-L384`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/provider/ProviderRepository.kt#L379-L384)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/ProviderRepository.kt#L379-L384`](file://core/network/provider/ProviderRepository.kt#L379-L384)
 * **Mechanism:**
   ```kotlin
   fun hasLogin(entity: ProviderEntity): Boolean {
@@ -61,9 +61,9 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 #### Finding 3: Deletion of `default` Profile Leaves Orphaned Data & Breaks Non-Jellyfin Providers
 * **Severity:** P1 — High (Data Loss & Architectural Invariant Failure)
 * **Locations:**
-  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/profile/ProfileRepository.kt#L51-L65`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/profile/ProfileRepository.kt#L51-L65)
-  * [`tv/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L159-L167`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L159-L167)
-  * [`mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L138-L145`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L138-L145)
+  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/profile/ProfileRepository.kt#L51-L65`](file://core/network/profile/ProfileRepository.kt#L51-L65)
+  * [`tv/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L159-L167`](file://tv/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L159-L167)
+  * [`mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L138-L145`](file://mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsCard.kt#L138-L145)
 * **Mechanism:**
   1. `ProfileRepository.deleteProfile(id)` allows deleting any profile as long as it is not the active profile and `count > 1`.
   2. If a user creates a second profile and switches to it, the `default` profile can be deleted from Settings.
@@ -81,8 +81,8 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 #### Finding 4: In-Memory Credential Cache Desynchronization on Profile Deletion
 * **Severity:** P2 — Medium
 * **Locations:**
-  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/profile/ProfileRepository.kt#L72-L80`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/profile/ProfileRepository.kt#L72-L80)
-  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/ProviderRepository.kt#L71`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/provider/ProviderRepository.kt#L71)
+  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/profile/ProfileRepository.kt#L72-L80`](file://core/network/profile/ProfileRepository.kt#L72-L80)
+  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/ProviderRepository.kt#L71`](file://core/network/provider/ProviderRepository.kt#L71)
 * **Mechanism:**
   `ProviderRepository` caches `EncryptedSharedPreferences` instances in `encryptedPrefsCache` keyed by filename. When `ProfileRepository` deletes a profile's XML files using `context.deleteSharedPreferences(it)`, `ProviderRepository` is not notified, leaving stale in-memory preferences references active in `encryptedPrefsCache`.
 * **Remediation:** Route profile preference file deletion through `ProviderRepository` or provide an invalidation method that evicts matching entries from `encryptedPrefsCache`.
@@ -92,7 +92,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 #### Finding 5: Lack of Automated Migration Tests for `SettingsDatabase` (v10 $\to$ v11, v11 $\to$ v12)
 * **Severity:** P2 — Medium
 * **Locations:**
-  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/SettingsDatabase.kt#L187-L204`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/provider/SettingsDatabase.kt#L187-L204)
+  * [`core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/SettingsDatabase.kt#L187-L204`](file://core/network/provider/SettingsDatabase.kt#L187-L204)
 * **Mechanism:**
   While `XtreamDatabase.MIGRATION_19_20` has an instrumented test in `XtreamDatabaseMigrationTest`, `SettingsDatabase` migrations 10 $\to$ 11 (`profiles` table creation + `insertDefaultProfile`) and 11 $\to$ 12 (`colorIndex` column) have no migration test in `androidTest`.
 * **Remediation:** Add `SettingsDatabaseMigrationTest` verifying migration from v10 to v12 and confirming that existing providers/EPG sources are preserved and the default profile is properly inserted.
@@ -103,7 +103,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 
 #### Finding 6: TV `ProfilePickerScreen` Uses Unscrollable `Row` (Overflows with $\ge 5$ Profiles)
 * **Severity:** P2 — Medium (10-Foot UI Guideline Violation)
-* **Location:** [`tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L86-L119`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L86-L119)
+* **Location:** [`tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L86-L119`](file://tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L86-L119)
 * **Mechanism:**
   ```kotlin
   Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale))) {
@@ -119,7 +119,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 
 #### Finding 7: `ProfileAvatar` Slices UTF-16 Surrogate Pairs (Broken Emoji Names)
 * **Severity:** P3 — Low (Visual Rendering Defect)
-* **Location:** [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/ProfileAvatar.kt#L36`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/components/ProfileAvatar.kt#L36)
+* **Location:** [`core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/ProfileAvatar.kt#L36`](file://core/ui/components/ProfileAvatar.kt#L36)
 * **Mechanism:**
   ```kotlin
   text = name.trim().take(1).uppercase()
@@ -132,7 +132,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 
 #### Finding 8: Unscaled Title in TV `ProfilePickerScreen`
 * **Severity:** P3 — Low
-* **Location:** [`tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L82`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L82)
+* **Location:** [`tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L82`](file://tv/src/main/java/org/njarasoa/fijerena/feature/profile/ProfilePickerScreen.kt#L82)
 * **Mechanism:**
   `style = MaterialTheme.typography.displaySmall` does not apply `.scaled(scale)`, unlike all other typography on TV screens. It fails to adjust when the user modifies UI scale in Settings.
 * **Remediation:** Apply `.copy(fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale))`.
@@ -144,9 +144,9 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 #### Finding 9: Direct Repository Instantiation in UI Composables
 * **Severity:** P3 — Low (Architectural Constraint Violation)
 * **Locations:**
-  * [`tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L184, L544`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L184)
-  * [`mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L143, L440`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L143)
-  * [`tv/src/main/java/org/njarasoa/fijerena/navigation/TvNavHost.kt#L128`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/navigation/TvNavHost.kt#L128)
+  * [`tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L184, L544`](file://tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L184)
+  * [`mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L143, L440`](file://mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt#L143)
+  * [`tv/src/main/java/org/njarasoa/fijerena/navigation/TvNavHost.kt#L128`](file://tv/src/main/java/org/njarasoa/fijerena/navigation/TvNavHost.kt#L128)
 * **Mechanism:**
   `ProviderRepository(context.applicationContext)` and `ProfileRepository(context.applicationContext)` are constructed directly inside `LaunchedEffect` blocks, button listeners, and NavHosts instead of being injected or retrieved from `AppContainer`.
 * **Remediation:** Add `val profileRepository: ProfileRepository` to `AppContainer` and consume both repositories through `AppContainer.getInstance(context)`.
@@ -155,7 +155,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 
 #### Finding 10: Floating CoroutineScope in `MediaProviderFactory.clearProfileScopedProviders()`
 * **Severity:** P3 — Low
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt#L115-L123`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/MediaProviderFactory.kt#L115-L123)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt#L115-L123`](file://core/network/MediaProviderFactory.kt#L115-L123)
 * **Mechanism:**
   `clearProfileScopedProviders()` launches an unmanaged `CoroutineScope(Dispatchers.IO)`. In `AppContainer.switchProfile()`, the function returns immediately while `disconnect()` runs in the background, creating a race if the next profile immediately connects to Jellyfin.
 * **Remediation:** Make `clearProfileScopedProviders()` suspend or accept an application/worker scope, ensuring cleanup is deterministic.
@@ -166,7 +166,7 @@ While database migrations (`providers.db` v11–v12, `xtream_v2.db` v20) and cor
 
 #### Finding 11: Missing Profile Strings in Malagasy Localization (`values-mg/strings.xml`)
 * **Severity:** P3 — Low
-* **Location:** [`core/ui/src/main/res/values-mg/strings.xml`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/res/values-mg/strings.xml)
+* **Location:** [`core/ui/src/main/res/values-mg/strings.xml`](file://core/ui/src/main/res/values-mg/strings.xml)
 * **Mechanism:**
   18 new profile and Jellyfin sign-in strings were added in English and French, but omitted from `values-mg/strings.xml`. Devices set to Malagasy fall back to English for all profile features.
 * **Remediation:** Provide translations for the 18 strings in `values-mg/strings.xml`.

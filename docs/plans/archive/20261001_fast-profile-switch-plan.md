@@ -16,7 +16,7 @@ profile switch re-runs `XtreamCategoryExclusionSync.recompute`, which rewrites t
 category whose visibility changes, then on every stream and series in those categories.
 
 The earlier plan expected about 3 s (280k rows on a TV emulator). Measured on a Shield
-(192.168.68.21, 2026-10-01, `ProfileSwitch` log tag), with all the time in that rewrite for one
+(192.168.1.21, 2026-10-01, `ProfileSwitch` log tag), with all the time in that rewrite for one
 provider:
 
 | Switch | Total | Rewrite |
@@ -41,7 +41,7 @@ category at query time.**
 
 - `xtream_categories.excluded` stays. It holds the visibility of each category for this device's
   active profile, as now. The active profile is per device and never synced, so one flag per
-  category is enough. A switch rewrites only this table: about 1,700 rows for the bears catalogue
+  category is enough. A switch rewrites only this table: about 1,700 rows for the panel-a catalogue
   (876 live, 428 movie and 352 series categories).
 - `xtream_streams.excluded` and `xtream_series.excluded` are no longer read or written. A stream
   or series is hidden when its category is excluded.
@@ -168,7 +168,7 @@ the rows of the current one. Three forms were tried:
 
 The hidden-match count is the only notable rise; it runs once per search.
 
-**On the Shield** (192.168.68.21, after a full backup):
+**On the Shield** (192.168.1.21, after a full backup):
 - The v24 migration kept everything: 255 watch-history rows, 128 favourites, 235k streams.
 - A switch now takes **225 ms** (atr → kilonga) and **124 ms** (kilonga → atr), down from 32–51 s.
 - Home shows the counts the database predicts for each profile: atr 862 / 349 / 271 visible.

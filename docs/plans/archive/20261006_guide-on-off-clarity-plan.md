@@ -4,10 +4,10 @@
 
 ## Problem
 
-Seen on the OnePlus, bears, 2026-10-06. An Xtream source's own guide (`<host> (Bulk)`, its
+Seen on the OnePlus, panel-a, 2026-10-06. An Xtream source's own guide (`<host> (Bulk)`, its
 `xmltv.php`) is switched on and off by **Provides a guide** in Edit Source. The app turned that
 switch off by itself after one download came back with no channels. The guide had held 8.3K
-channels before, and bears is known to throttle and to send empty or cut-off replies. Every screen
+channels before, and panel-a is known to throttle and to send empty or cut-off replies. Every screen
 that depends on the switch then behaved as if nothing were wrong, or said something false:
 
 1. **Auto turn-off on one empty download.** `AutoXmltvSources.onEmptyIngest` turns Provides a guide
@@ -23,7 +23,7 @@ that depends on the switch then behaved as if nothing were wrong, or said someth
 4. **The guide search header says "No guide sources configured"** (`freshnessLabel`,
    `epg_freshness_no_sources`) when the source is configured but off, while its old data still
    shows in the developer-mode index count.
-5. **"-1%" during a download** with no `Content-Length` (bears never sends one):
+5. **"-1%" during a download** with no `Content-Length` (panel-a never sends one):
    `ActiveSourceProgress.progressPercent` is -1 for "unknown", and both cards print it as a
    percentage and draw an empty bar.
 
@@ -49,7 +49,7 @@ phase.
 
 ## Checks
 
-Emulators first (TV and phone, bears for the empty-download case: point the source at a URL that
+Emulators first (TV and phone, panel-a for the empty-download case: point the source at a URL that
 returns an empty `<tv/>` to force it). Then the OnePlus, the device where it was seen.
 
 ## Progress
@@ -64,12 +64,12 @@ returns an empty `<tv/>` to force it). Then the OnePlus, the device where it was
 
 ## Emulator check (2026-10-06)
 
-- **Phone (bears):** the card's switch is on with "Refreshes daily" and the own-guide line; off gives
-  "Off: not used, not refreshed", and bears' Edit Source then shows Provides a guide off (same
-  setting); it stays off after leaving and coming back. With bears in use, Search the guide's
+- **Phone (panel-a):** the card's switch is on with "Refreshes daily" and the own-guide line; off gives
+  "Off: not used, not refreshed", and panel-a's Edit Source then shows Provides a guide off (same
+  setting); it stays off after leaving and coming back. With panel-a in use, Search the guide's
   header reads "Guide off: turn it on in Guide sources" in the warning colour. Back on, then
   Refresh: "Downloading… 30.2 MB", "Ingesting… 68.8 MB", then "29%"; no "-1%".
-- **TV (bearstv):** `scripts/tv-focus-walk.sh` on `epg-management.txt`: 16 steps, 0 mismatches
+- **TV (panel-b):** `scripts/tv-focus-walk.sh` on `epg-management.txt`: 16 steps, 0 mismatches
   (entry focus "Use this guide"). OK on the switch turns it off ("Off: not used, not refreshed",
   status dot grey) and on again ("Refreshes weekly").
 - **Not checked:** Phase 1 (an empty download of a guide that had channels) was not forced on a

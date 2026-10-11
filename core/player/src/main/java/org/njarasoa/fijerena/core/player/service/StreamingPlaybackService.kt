@@ -973,7 +973,7 @@ class StreamingPlaybackService : MediaSessionService() {
         val metadata = _currentMetadata.value
         val endedEmpty = (getPlayer()?.duration ?: C.TIME_UNSET).let { it == C.TIME_UNSET || it <= 0L }
         if (errorMessage == null && metadata.catchupLabel != null && endedEmpty) {
-            // A catch-up answer with nothing in it (bears: a channel without an archive answers
+            // A catch-up answer with nothing in it (panel-a: a channel without an archive answers
             // 200 with an empty body) is not a programme that ended.
             handleFinalError(getString(R.string.player_error_catchup_unavailable))
             return

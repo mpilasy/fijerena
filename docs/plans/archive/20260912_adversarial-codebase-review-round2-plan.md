@@ -23,7 +23,7 @@ The review identified concrete edge cases, resource leaks, logic bugs, unhandled
 ### 2.1 Hardware Capabilities & Media Playback
 
 #### Finding H1: Sony Bravia 4K Capability False Negative Due to AV1 Requirement
-* **Location:** [`DeviceCapabilities.kt:37-43`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/device/DeviceCapabilities.kt#L37-L43)
+* **Location:** [`DeviceCapabilities.kt:37-43`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/device/DeviceCapabilities.kt#L37-L43)
 * **Severity:** High
 * **Mechanism:**
   ```kotlin
@@ -44,7 +44,7 @@ The review identified concrete edge cases, resource leaks, logic bugs, unhandled
 ### 2.2 Resource Leaks & Exception Handling
 
 #### Finding L1: Unclosed SMB `File` Handle in `SmbClient.openInputStream`
-* **Location:** [`SmbClient.kt:86-98`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt#L86-L98)
+* **Location:** [`SmbClient.kt:86-98`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt#L86-L98)
 * **Severity:** High
 * **Mechanism:**
   `openInputStream` opens an SMB `File` via `diskShare.openFile(...)` and returns `file.inputStream`. In the `smbj` library, closing `file.inputStream` does **not** close the underlying SMB `File` handle on the server. Over time, repeated file reads leak SMB server handles and connection slots until the server drops the connection.
@@ -52,7 +52,7 @@ The review identified concrete edge cases, resource leaks, logic bugs, unhandled
   - Wrap `file.inputStream` in a custom `FilterInputStream` whose `close()` method invokes `file.close()`.
 
 #### Finding L2: Swallowed `CancellationException` in `JellyfinApiService`
-* **Location:** [`JellyfinApiService.kt:318-353`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt#L318-L353)
+* **Location:** [`JellyfinApiService.kt:318-353`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt#L318-L353)
 * **Severity:** Medium
 * **Mechanism:**
   `getItemById`, `searchItems`, and other methods catch generic `Exception` and wrap it into `Result.failure(e)` without rethrowing `CancellationException`. If the parent coroutine scope is cancelled during navigation, the request cancellation is treated as a network error, preventing clean coroutine teardown.
@@ -64,7 +64,7 @@ The review identified concrete edge cases, resource leaks, logic bugs, unhandled
 ### 2.3 Unstructured Concurrency & Coroutine Lifecycle
 
 #### Finding C1: Unmanaged `CoroutineScope(Dispatchers.IO)` in `XtreamEpgManager.getEpgForStream`
-* **Location:** [`XtreamEpgManager.kt:123-130`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamEpgManager.kt#L123-L130)
+* **Location:** [`XtreamEpgManager.kt:123-130`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamEpgManager.kt#L123-L130)
 * **Severity:** Medium
 * **Mechanism:**
   `getEpgForStream` launches background refresh using a free-floating `CoroutineScope(Dispatchers.IO).launch`. This scope has no `SupervisorJob()` and is not bound to `writeScope` or `EpgFileManager`'s lifecycle. Repeated calls can spawn unbounded background jobs during rapid scrolling.
@@ -77,10 +77,10 @@ The review identified concrete edge cases, resource leaks, logic bugs, unhandled
 
 #### Finding S1: Multiple Returns in `core:player` Utility Functions
 * **Locations:**
-  - [`PlaybackFormat.kt:42-59`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/model/PlaybackFormat.kt#L42-L59) (`parseDurationToSeconds`)
-  - [`SeriesDetail.kt:85-97`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/domain/SeriesDetail.kt#L85-L97) (`firstSeasonWithUnwatchedEpisode`)
-  - [`SeriesDetail.kt:107-119`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/domain/SeriesDetail.kt#L107-L119) (`resumeAnchorEpisodeId`)
-  - [`StreamingPlaybackService.kt:712-788`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L712-L788) (`getAudioTracks`, `getSubtitleTracks`, `selectSubtitleTrack`)
+  - [`PlaybackFormat.kt:42-59`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/model/PlaybackFormat.kt#L42-L59) (`parseDurationToSeconds`)
+  - [`SeriesDetail.kt:85-97`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/domain/SeriesDetail.kt#L85-L97) (`firstSeasonWithUnwatchedEpisode`)
+  - [`SeriesDetail.kt:107-119`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/domain/SeriesDetail.kt#L107-L119) (`resumeAnchorEpisodeId`)
+  - [`StreamingPlaybackService.kt:712-788`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L712-L788) (`getAudioTracks`, `getSubtitleTracks`, `selectSubtitleTrack`)
 * **Severity:** Low / Style Constraint
 * **Remediation:**
   - Refactor all functions to use a single return statement per function, assigning or computing the result into an immutable or mutable accumulator variable.
@@ -97,15 +97,15 @@ graph TD
 ```
 
 ### Phase 1: Device Detection & 4K Capability (P0)
-- In [`DeviceCapabilities.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/device/DeviceCapabilities.kt), compute `supports4K = supportsHevc || supportsAv1`.
+- In [`DeviceCapabilities.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/device/DeviceCapabilities.kt), compute `supports4K = supportsHevc || supportsAv1`.
 - Verify resolution assignment on Sony Bravia and Shield profiles.
 
 ### Phase 2: SMB Resource Management & Jellyfin Cancellation (P1)
-- In [`SmbClient.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt), close `com.hierynomus.smbj.share.File` when the returned `InputStream` is closed.
-- In [`JellyfinApiService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt), ensure `CancellationException` is rethrown in all `catch (e: Exception)` blocks.
+- In [`SmbClient.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt), close `com.hierynomus.smbj.share.File` when the returned `InputStream` is closed.
+- In [`JellyfinApiService.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt), ensure `CancellationException` is rethrown in all `catch (e: Exception)` blocks.
 
 ### Phase 3: EPG Manager Coroutine Scoping (P2)
-- In [`XtreamEpgManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamEpgManager.kt), replace `CoroutineScope(Dispatchers.IO).launch` with `writeScope.launch`.
+- In [`XtreamEpgManager.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamEpgManager.kt), replace `CoroutineScope(Dispatchers.IO).launch` with `writeScope.launch`.
 
 ### Phase 4: Single Return Refactoring in `core:player` (P3)
 - Refactor `parseDurationToSeconds`, `firstSeasonWithUnwatchedEpisode`, `resumeAnchorEpisodeId`, `getAudioTracks`, and `getSubtitleTracks` to adhere strictly to single return statements.

@@ -1,4 +1,4 @@
-# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile atr, source bearstv (Xtream,
+# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile atr, source panel-b (Xtream,
 # so a profile's page has its Content filters row; the profiles are atr (in use) and Kid).
 # Start: Settings just opened, focus on the rail row "Profiles" (the first of the seven groups).
 # Rail: Up/Down swap the pane live and never leave the rail; Right (or OK) enters the pane on

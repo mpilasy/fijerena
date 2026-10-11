@@ -10,7 +10,7 @@ import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /**
- * The panel's wall clock, in which a timeshift `start` is read (bears: Europe/Amsterdam, while its
+ * The panel's wall clock, in which a timeshift `start` is read (panel-a: Europe/Amsterdam, while its
  * guide gives UTC). Measured at each login from `server_info`: `time_now` (panel wall clock) minus
  * `timestamp_now` (UTC epoch) is the panel's real offset, even when the `timezone` name is missing
  * or wrong. The name is kept when it agrees with that offset, so a DST change inside the archive

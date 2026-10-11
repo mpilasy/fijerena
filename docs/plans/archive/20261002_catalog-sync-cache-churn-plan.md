@@ -1,6 +1,6 @@
 # Catalog Sync Cache Churn Plan
 
-**Status:** Complete (2026-10-02). All four phases landed; Phase 1 verified on bears, Phase 4 against the real Jellyfin through the bridge.
+**Status:** Complete (2026-10-02). All four phases landed; Phase 1 verified on panel-a, Phase 4 against the real Jellyfin through the bridge.
 
 Opening a show the app already has on disk should not re-download it. Today it does: a
 finished 18-season show like Law & Order is fetched again in full from Xtream, plus several TMDB
@@ -10,25 +10,25 @@ detail cache that were meant to prevent this are wiped by every catalog sync.
 Context: `docs/plans/archive/20260827_refresh-change-detection-plan.md` (the `contentHash` change
 detection this builds on).
 
-## Findings (2026-10-02, bears, read-only copies of the app databases)
+## Findings (2026-10-02, panel-a, read-only copies of the app databases)
 
-Databases copied with `run-as … tar` from the phone (`b048cf47`), darcy (`.21`, last bears sync
-13:53) and mdarcy (`.20`, last bears sync 17:13). Nothing installed or cleared. Both Shields hold
+Databases copied with `run-as … tar` from the phone (`b048cf47`), phone-a (`.21`, last panel-a sync
+13:53) and phone-b (`.20`, last panel-a sync 17:13). Nothing installed or cleared. Both Shields hold
 the same 47,513 series, so the two snapshots compare one provider 3h20m apart.
 
 1. **Xtream `num` is a list position, not an identity.** Between the two syncs, `num` changed on
    38,888 of 47,513 series and on 49,285 of 180,873 VOD streams. Live streams: 0 of 54,605.
 2. **`num` is in `contentHash`** (`XtreamSeriesEntity.computeHash`, `XtreamStreamEntity.computeHash`),
-   so those rows look changed on every sync. mdarcy's last sync reported `lastSyncUpdated` 39,754.
+   so those rows look changed on every sync. phone-b's last sync reported `lastSyncUpdated` 39,754.
 3. **A "changed" row is rewritten with `@Insert(onConflict = REPLACE)`** (`XtreamSeriesDao.insertAll`,
    `XtreamStreamDao.insertAll`) from a freshly built entity, so every cache column resets to its
    default:
    - series: `episodesFetchedAt`, `detailFetchedAt`, `contentRating`, `posterPath`
    - VOD: `detailFetchedAt`, `contentRating`, `containerExtension`, `posterPath`
-4. **Effect on devices.** mdarcy has stored episodes for 7 series (Law & Order: 543); all 7 have
-   `episodesFetchedAt` and `detailFetchedAt` null. darcy: 0 stamps. Phone: 1 of 50. VOD on mdarcy:
+4. **Effect on devices.** phone-b has stored episodes for 7 series (Law & Order: 543); all 7 have
+   `episodesFetchedAt` and `detailFetchedAt` null. phone-a: 0 stamps. Phone: 1 of 50. VOD on phone-b:
    17 of 180,881 have `detailFetchedAt`.
-5. **Bears' `last_modified` is a reliable "new episodes" signal.** 39 series changed it in the
+5. **Panel-a's `last_modified` is a reliable "new episodes" signal.** 39 series changed it in the
    3h20m window, nearly all currently airing (Slow Horses, Ted Lasso, Boston Blue, Brothers…), most
    last bumped about a week earlier. `EN - Law & Order (1990)` last changed 2026-05-18. ~1,050
    series changed in the last 7 days; ~27,800 not in over a year.
@@ -57,7 +57,7 @@ a stream's `num` must keep tracking the provider's order.
 Tests (unit, fake DAO): `num` shift only → no row rewrite and `num` updated for streams; real
 change → cache columns kept, series `episodesFetchedAt` cleared; unchanged → untouched.
 
-Check: after two bears syncs on one device, `lastSyncUpdated` drops from ~40k to the hundreds and
+Check: after two panel-a syncs on one device, `lastSyncUpdated` drops from ~40k to the hundreds and
 `episodesFetchedAt` survives on an opened, unchanged series.
 
 **Done (2026-10-02).** `computeHash` drops `num` for series and streams. Stream sync collects
@@ -68,7 +68,7 @@ first stored (series are listed by name). Changed and new rows go through
 `episodesFetchedAt = null`. Unit tests: `CatalogDetailCacheCarryOverTest` (the carry-over rules;
 the fake-DAO sync test was not written, there is no Room unit-test setup in `core:network`).
 
-Verified on the TV emulator, bears, Kid profile:
+Verified on the TV emulator, panel-a, Kid profile:
 - Sync 1 (one-time, new hash formula): 20 added, 282,998 updated, 23s.
 - Opened `AR-SUBS - Law & Order (1990)` and `4K-AR - Inception (2010)`: both got their stamps.
 - Sync 2, 5 minutes later: 0 added, **17 updated**, 11s. Both stamps, content rating, poster and
@@ -121,7 +121,7 @@ it needs a provider to change a series between two syncs.
   missing season requested, fresh details not refetched, stale details refetched). Not checked on
   a device.
 
-## Phase 4 (optional) — Make the bridge behave like bears
+## Phase 4 (optional) — Make the bridge behave like panel-a
 
 `tools/jellyfin-xtream`: send the newest episode's `DateCreated` as the series' `last_modified`, so
 jellyxtream exercises the Phase 1/2 trigger on the emulators.
@@ -132,7 +132,7 @@ Jellyfin fills it for Series (it is the newest media added under the folder), so
 fallback was not needed. Verified only against a local stub Jellyfin on a spare port (a series with
 `DateLastMediaAdded` 2026-09-30 got that epoch, one without kept its `DateCreated` epoch; the
 `Fields` list is honoured as in Jellyfin): the Jellyfin password is not stored anywhere on disk, so
-the real `sm.njarasoa.org` data was not queried. Restart the :8080 bridge to pick it up.
+the real `jellyfin.example.org` data was not queried. Restart the :8080 bridge to pick it up.
 
 
 **Follow-up (2026-10-02).** Checked against the real server after restarting the bridge:

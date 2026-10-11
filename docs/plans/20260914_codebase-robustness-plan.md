@@ -14,8 +14,8 @@ An empirical evaluation of the Fijerena codebase was conducted on 2026-09-14 to 
 - **Style & Formatting:** `./gradlew ktlintCheck` passes cleanly across all 7 modules with zero violations.
 - **Unit Test Suite:** 193 unit tests pass across all modules (`0 failures, 0 skipped, 0 errors`).
 - **Remediation Milestones:** 
-  - 29/29 issues resolved from [`20260824_codebase-audit-fix-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/archive/20260824_codebase-audit-fix-plan.md).
-  - All verified findings from [`20260912_adversarial-codebase-remediation-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/archive/20260912_adversarial-codebase-remediation-plan.md) and [`20260912_adversarial-codebase-review-round2-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/archive/20260912_adversarial-codebase-review-round2-plan.md) applied.
+  - 29/29 issues resolved from [`20260824_codebase-audit-fix-plan.md`](file://docs/plans/archive/20260824_codebase-audit-fix-plan.md).
+  - All verified findings from [`20260912_adversarial-codebase-remediation-plan.md`](file://docs/plans/archive/20260912_adversarial-codebase-remediation-plan.md) and [`20260912_adversarial-codebase-review-round2-plan.md`](file://docs/plans/archive/20260912_adversarial-codebase-review-round2-plan.md) applied.
 
 ### Core Robustness Pillars
 
@@ -45,8 +45,8 @@ Despite high resilience in core layers, five areas of technical debt and fragili
    - High automated test coverage for domain logic, database operations, and parsers (193 tests).
    - Minimal automated Compose UI and navigation test coverage (currently limited to `EpisodeSelectionScreenTest` in `:tv`).
 5. **Upstream Security Deprecation & Multi-Device Sync:**
-   - `androidx.security:security-crypto` is deprecated upstream; owned Keystore replacement documented in [`20260828_secret-store-migration-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260828_secret-store-migration-plan.md) is deferred.
-   - Xtream user state remains device-local; multi-device synchronization is planned in [`20260929_live-sync-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/archive/20260929_live-sync-plan.md) but not started.
+   - `androidx.security:security-crypto` is deprecated upstream; owned Keystore replacement documented in [`20260828_secret-store-migration-plan.md`](file://docs/plans/20260828_secret-store-migration-plan.md) is deferred.
+   - Xtream user state remains device-local; multi-device synchronization is planned in [`20260929_live-sync-plan.md`](file://docs/plans/archive/20260929_live-sync-plan.md) but not started.
 
 ---
 
@@ -64,7 +64,7 @@ graph TD
 ### Phase 1: Lint & Annotation Hygiene (P0 - Immediate)
 - **Goal:** Ensure `./gradlew lintDebug` passes with zero errors.
 - **Tasks:**
-  1. In [`FijerenaApplication.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/FijerenaApplication.kt), add `@OptIn(androidx.media3.common.util.UnstableApi::class)` where `StreamingPlaybackService` playback state is checked.
+  1. In [`FijerenaApplication.kt`](file://core/ui/src/main/java/org/njarasoa/fijerena/core/ui/FijerenaApplication.kt), add `@OptIn(androidx.media3.common.util.UnstableApi::class)` where `StreamingPlaybackService` playback state is checked.
   2. Verify `./gradlew lintDebug` passes across all modules.
 
 ### Phase 2: Single Return Statement Sweep in `core:player` (P1) — dropped 2026-10-03
@@ -96,8 +96,8 @@ graph TD
   3. Ensure all tests run cleanly on connected emulator / device.
 
 ### Phase 6: Long-Term Architecture (Deferred)
-- **SecretStore Migration:** Replace deprecated `EncryptedSharedPreferences` per [`20260828_secret-store-migration-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260828_secret-store-migration-plan.md).
-- **Xtream Multi-Device Sync:** Implement shared state backend per [`20260929_live-sync-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/archive/20260929_live-sync-plan.md).
+- **SecretStore Migration:** Replace deprecated `EncryptedSharedPreferences` per [`20260828_secret-store-migration-plan.md`](file://docs/plans/20260828_secret-store-migration-plan.md).
+- **Xtream Multi-Device Sync:** Implement shared state backend per [`20260929_live-sync-plan.md`](file://docs/plans/archive/20260929_live-sync-plan.md).
 
 ---
 

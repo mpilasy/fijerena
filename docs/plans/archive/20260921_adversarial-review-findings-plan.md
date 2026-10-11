@@ -27,13 +27,13 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 1: `XtreamSessionManager` leaks `HttpClient` on failed authentication or exceptions
 * **Severity:** P1 — High
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt)
 * **Mechanism:** `login()`, `restoreSession()`, `updateProviderUrl()`, and `reinitialize()` each construct `XtreamApiService` (which eagerly builds a Ktor `HttpClient(OkHttp)` with its own `Dispatcher` in its constructor), then call `service.authenticate()`, and only reach `replaceApiService(service)` — which closes whatever it replaces — on the success path. If `authenticate()` throws (`IOException`, timeout, serialization error) or the response is invalid (`auth != 1`, inactive status), the function throws before `replaceApiService(service)` runs. The already-constructed `service` is abandoned unclosed.
 * **Remediation:** Wrap each construction site so `service.close()` runs on any exit that doesn't end in `replaceApiService(service)` — track assignment success and close in a `finally`, or use `.also`/`runCatching` with an explicit close-on-failure branch.
 
 #### Finding 2: `MediaProviderFactory` evicts providers without calling `disconnect()`
 * **Severity:** P2 — Medium
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/MediaProviderFactory.kt)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaProviderFactory.kt`](file://core/network/MediaProviderFactory.kt)
 * **Mechanism:** `clearCache(providerId)` and `clearAllCaches()` remove instances from `providerCache` without invoking `disconnect()`. For `XtreamMediaProvider` this bypasses `repository.logout()` → `sessionManager.logout()`, leaking `apiService`. For `SmbMediaProvider`, the SMB socket connection stays open.
 * **Remediation:** Dispatch removed provider instances to `Dispatchers.IO` to call `disconnect()` on eviction. Also clear `tmdbImagesCache` in `XtreamMediaProvider.trimMemory()` and hook `trimMemory()` into `disconnect()`.
 
@@ -41,7 +41,7 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 3: `StreamingPlaybackService` teardown publication race
 * **Severity:** P1 — High
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L1028-L1045)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L1028-L1045)
 * **Mechanism:** in `releasePlayerAndSession()`:
   ```kotlin
   serviceStartRequested.set(false)
@@ -54,7 +54,7 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 4: Uncaught `CancellationException` in `PlaybackViewModel.playStream`
 * **Severity:** P1 — High
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L180-L186)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L180-L186)
 * **Mechanism:**
   ```kotlin
   try {
@@ -70,7 +70,7 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 5: 10-second hang in `PlaybackViewModel.stopAndRelease()` on a dead service
 * **Severity:** P2 — Medium
-* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L223-L229)
+* **Location:** [`core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`](file://core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt#L223-L229)
 * **Mechanism:**
   ```kotlin
   fun stopAndRelease() {
@@ -86,13 +86,13 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 6: Isolated dispatcher leak in `TmdbApiService`
 * **Severity:** P2 — Medium
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt#L34-L49)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt#L34-L49)
 * **Mechanism:** `TmdbApiService` configures `engine { preconfigured = NetworkModule.okHttpClient }`. Ktor's `OkHttpEngine` always builds its own `Dispatcher` per instance regardless of `preconfigured` (see `docs/plans/archive/20260920_xtream-concurrency-fixes-plan.md`, Finding 2) — only the `ConnectionPool` is actually inherited. `TmdbApiService` has no `close()` method, and one instance is held per `XtreamMediaProvider`.
 * **Remediation:** make `TmdbApiService` a process-wide singleton — it takes only a fixed `BuildConfig.TMDB_API_KEY` and holds no provider state, so nothing about it needs to be per-provider — or give it its own `ConnectionPool` (as `XtreamApiService` now has) plus an explicit `close()`.
 
 #### Finding 7: Missing `trimMemory()` in `BaseM3uMediaProvider`
 * **Severity:** P2 — Medium
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt#L15-L27)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt#L15-L27)
 * **Mechanism:** `items`'s setter maintains an `itemsByCategory: Map<String, List<MediaItem>>` index (built via `groupBy`) to avoid a linear scan on every category open. That index wraps the same `MediaItem` references already held in `items` — no object duplication — but it has no eviction hook: `BaseM3uMediaProvider` implements no `trimMemory()`, so the index (and `items`/`categories`) stay resident under memory pressure even when nothing else on screen needs them.
 * **Remediation:** implement `trimMemory()` to drop `items`/`categories`/`itemsByCategory` when the provider isn't the active one, re-populating on next `connect()`/`getCategories()`. Don't restructure the index itself — it isn't the problem.
 
@@ -100,7 +100,7 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 9: Sequential, independent TMDB calls in `XtreamMediaProvider.getMovieDetail`
 * **Severity:** P1 — High (user-reported)
-* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt#L414-L426)
+* **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt`](file://core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt#L414-L426)
 * **Mechanism:**
   ```kotlin
   return when (val result = repository.getVodInfo(id)) {          // line 414
@@ -119,7 +119,7 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 #### Finding 8: Safety rules omitted in parallel deploy script
 * **Severity:** P1 — High (data-loss risk)
-* **Location:** [`scripts/deploy-tv-ip.sh`](file:///home/tahiry/data/code/mpilasy/fijerena/scripts/deploy-tv-ip.sh)
+* **Location:** [`scripts/deploy-tv-ip.sh`](file://scripts/deploy-tv-ip.sh)
 * **Mechanism:** the script installs to every reachable target with `adb install -r` and:
   1. never verifies device type (e.g. `getprop ro.build.characteristics`) before installing the TV APK;
   2. never backs up `shared_prefs/*` and `providers.db*` (`run-as tar`) before `adb install -r`.
@@ -136,7 +136,7 @@ Ordered for implementation — do these in sequence, not in parallel; each phase
 ### Phase 1 — Deploy script safety (Finding 8) — Done
 Zero code dependency, highest real-world risk, blocks nothing else. Added the device-type check and mandatory `run-as tar` backup to `scripts/deploy-tv-ip.sh` before any other phase touches app code that might need a test deploy.
 * **Files:** `scripts/deploy-tv-ip.sh`
-* **As implemented:** the reachability loop now also reads `getprop ro.build.characteristics` per target and skips (not aborts) any device that doesn't report `tv`, so a stray phone on the network can't get the TV APK. Each parallel install is now preceded, inside the same backgrounded subshell, by a `pm path` check — no existing install means nothing to protect, so it proceeds straight to install; an existing install requires the `run-as tar` backup (`shared_prefs` + `providers.db*`, matching the documented backup/restore procedure) to succeed and be non-empty, and aborts *that device's* install (not the whole run) if it doesn't, rather than risk an unprotected wipe. Backups land in `backups/<device>-<timestamp>.tar` at the repo root, now gitignored. Verified: `bash -n` syntax check, and the `getprop`/`pm path`/backup-tar commands dry-run read-only against both connected Shields (mdarcy, darcy) — both report `tv`, both have an existing install, and the backup command produced a valid non-empty tar for one of them. The install step itself was not run — no code changed here.
+* **As implemented:** the reachability loop now also reads `getprop ro.build.characteristics` per target and skips (not aborts) any device that doesn't report `tv`, so a stray phone on the network can't get the TV APK. Each parallel install is now preceded, inside the same backgrounded subshell, by a `pm path` check — no existing install means nothing to protect, so it proceeds straight to install; an existing install requires the `run-as tar` backup (`shared_prefs` + `providers.db*`, matching the documented backup/restore procedure) to succeed and be non-empty, and aborts *that device's* install (not the whole run) if it doesn't, rather than risk an unprotected wipe. Backups land in `backups/<device>-<timestamp>.tar` at the repo root, now gitignored. Verified: `bash -n` syntax check, and the `getprop`/`pm path`/backup-tar commands dry-run read-only against both connected Shields (phone-b, phone-a) — both report `tv`, both have an existing install, and the backup command produced a valid non-empty tar for one of them. The install step itself was not run — no code changed here.
 
 ### Phase 2 — Xtream session & provider-cache cleanup (Findings 1, 2) — Done
 Same area as the lifecycle work already landed on `XtreamSessionManager`/`XtreamApiService` — closed the exception-path gap left open there, and extended the same close-on-teardown discipline to `MediaProviderFactory`'s eviction paths.

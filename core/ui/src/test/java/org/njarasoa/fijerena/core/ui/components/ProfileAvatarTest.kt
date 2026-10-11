@@ -6,7 +6,7 @@ import org.junit.Test
 class ProfileAvatarTest {
     @Test
     fun `initial is the first letter, uppercased`() {
-        assertEquals("T", initialOf("tahiry"))
+        assertEquals("A", initialOf("alice"))
         assertEquals("É", initialOf(" élodie"))
     }
 

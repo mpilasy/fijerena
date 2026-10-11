@@ -261,7 +261,7 @@ CI runs on every push to `main` (and by hand); other branches run nothing until 
 - **Never uninstall or clear app data** (`adb uninstall`, `pm clear`) to fix a deploy, and ask before uninstalling or clearing data on any device, emulators included, and before installing on a real device. On emulators, installing over the existing app (the deploy scripts, `install -r`) is fine. `scripts/uninstall-app.sh` is the only sanctioned uninstall and asks for confirmation. `./gradlew connectedAndroidTest` uninstalls the app on every connected device: run it only when asked, on one emulator (`ANDROID_SERIAL`).
 - **No auto-launch on install:** never launch the app (`am start`, monkey) after installing unless the user asks.
 - **Incremental deploys:** the deploy scripts don't run `clean`. A `NoClassDefFoundError` after changes across modules (`core:*` consumed by `:tv`/`:mobile`) is a stale DEX shard: `./gradlew clean`, then deploy again.
-- **Finding devices:** network TV IPs drift (DHCP, `192.168.68.0/24`). Run `adb mdns services` first; fall back to `arp -a | grep 192.168.68.` only if it finds nothing. Identify a device by `getprop ro.build.characteristics` (`tv` vs `default`/`nosdcard`) or `product:`/`model:` in `adb devices -l`, never by IP or port — emulator serials follow launch order.
+- **Finding devices:** network TV IPs drift (DHCP, `192.168.1.0/24`). Run `adb mdns services` first; fall back to `arp -a | grep 192.168.1.` only if it finds nothing. Identify a device by `getprop ro.build.characteristics` (`tv` vs `default`/`nosdcard`) or `product:`/`model:` in `adb devices -l`, never by IP or port — emulator serials follow launch order.
 
 ---
 
@@ -341,7 +341,7 @@ Hard-won lessons from production debugging. Read these before making changes in 
 **Fix:** Exclude the hash field itself from `hashCode()` computation.
 
 ### Every catalog sync rewrote most rows and wiped their detail cache
-**Context:** Xtream's `num` is a position in the provider's list; it shifts for tens of thousands of rows whenever the provider adds one (38,888 of 47,513 series between two bears syncs 3h apart). It was in `contentHash`, and a changed row is rewritten with `@Insert(REPLACE)` from a fresh entity, which reset `episodesFetchedAt`, `detailFetchedAt`, `contentRating`, `posterPath` and `containerExtension`.
+**Context:** Xtream's `num` is a position in the provider's list; it shifts for tens of thousands of rows whenever the provider adds one (38,888 of 47,513 series between two panel-a syncs 3h apart). It was in `contentHash`, and a changed row is rewritten with `@Insert(REPLACE)` from a fresh entity, which reset `episodesFetchedAt`, `detailFetchedAt`, `contentRating`, `posterPath` and `containerExtension`.
 **Fix:** `computeHash` leaves `num` out; a stream whose position alone moved gets `updateNums` (lists are ordered by `num`); changed rows go through `insertKeepingDetailCache`, which carries the detail columns over (a changed series still clears `episodesFetchedAt`, the "fetch its episodes again" trigger). **Rule:** a catalog hash covers content only, never list position; never write a catalog row with a bare `insertAll` from sync code. See `docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md`.
 
 ### Clear All EPG Data takes 10+ minutes with DELETE FROM

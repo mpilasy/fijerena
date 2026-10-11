@@ -50,8 +50,8 @@ Severity: **B** broken, **R** rough, **N** nit.
 ## Method
 
 1. **Capture** on the phone emulator (Pixel_10, 1080×2424) screen by screen with taps and swipes,
-   screenshots to `/home/tahiry/data/sary/screenshots/phone-audit/` (outside the repo). Sources:
-   jellyxtream (films and shows), iptv (live), bears where a guide is needed (allowed by the user
+   screenshots to `/home/alice/data/sary/screenshots/phone-audit/` (outside the repo). Sources:
+   jellyxtream (films and shows), iptv (live), panel-a where a guide is needed (allowed by the user
    for the TV audit; asked again before use).
 2. **Findings** into this plan, shared causes first, then per screen.
 3. **Review with the user** before code: plain polish fixed without asking; anything that changes
@@ -73,8 +73,8 @@ phase with its docs; never install, uninstall or clear data on a real device wit
 
 Captured 2026-10-08 on the phone emulator (Pixel_10, 1080×2424, Android 17), profile atr (developer
 mode on), theme Deep Night, English, system font 100 %. Sources: jellyxtream (films, shows), iptv
-(live). Shots: `/home/tahiry/data/sary/screenshots/phone-audit/NN_*.png` (24). Not captured: the
-landscape dock split, PiP, the TV Guide grid (needs a source with guide data — bears), Add Source,
+(live). Shots: `/home/alice/data/sary/screenshots/phone-audit/NN_*.png` (24). Not captured: the
+landscape dock split, PiP, the TV Guide grid (needs a source with guide data — panel-a), Add Source,
 Live sync's page, the track sheets, safe mode. Severity: **B** broken, **R** rough, **N** nit.
 
 ### Shared causes

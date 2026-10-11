@@ -1,13 +1,13 @@
 # Playback Capability Errors Plan
 
-**Status:** Complete (2026-10-04). All four phases built and checked on darcy and the Xperia XZ2 Compact.
+**Status:** Complete (2026-10-04). All four phases built and checked on phone-a and the Xperia XZ2 Compact.
 
 ## Decisions (2026-10-04)
 
 1. **Slow connection: warn, don't stop.** A banner says the connection is too slow; playback goes
    on and the user stops it if they want. **A stalled one (no data for 60 s) stops** with Retry —
    added after the test showed a 13-minute spinner.
-2. **Slow-network test before building P4**, on darcy and the Xperia.
+2. **Slow-network test before building P4**, on phone-a and the Xperia.
 3. **P1–P3 built now**, one commit each.
 
 A stream the device can't decode should stop at once with a clear message, not play a black
@@ -19,7 +19,7 @@ silence.
 Five 30 s, 60 fps, video-only clips from repo.jellyfin.org/test-videos, played from a local M3U
 source with the Media3 `EventLogger` attached (debug builds, commit `15f18682`).
 
-| Clip | darcy (Shield 2017, Android 11) | Xperia XZ2 Compact (LineageOS, Android 15) |
+| Clip | phone-a (Shield 2017, Android 11) | Xperia XZ2 Compact (LineageOS, Android 15) |
 |---|---|---|
 | Dolby Vision profile 5, 4K | `NO_UNSUPPORTED_TYPE`, track not selected, **plays nothing, no error** | same |
 | Dolby Vision profile 8.1, 4K | Falls back to `OMX.Nvidia.h265.decode`, plays, 29 frames dropped | Falls back to `OMX.qcom.video.decoder.hevc`, plays, 39 dropped |
@@ -27,7 +27,7 @@ source with the Media3 `EventLogger` attached (debug builds, commit `15f18682`).
 | HEVC HDR10 4K, 150 Mbps | `NO_EXCEEDS_CAPABILITIES`, plays, 0 dropped | `NO_EXCEEDS_CAPABILITIES`, plays, 0 dropped |
 | HEVC HDR10 8K, 150 Mbps | `DECODING_FAILED`, 3 retries, error after ~19 s | `DECODER_INIT_FAILED`, 3 retries, error after ~19 s |
 
-Neither device has a Dolby Vision decoder (mdarcy does: `OMX.Nvidia.DOVI.decode`).
+Neither device has a Dolby Vision decoder (phone-b does: `OMX.Nvidia.DOVI.decode`).
 
 What this rules out: `FORMAT_EXCEEDS_CAPABILITIES` before playback is **not** a usable signal —
 both devices played 4K60 at 150 Mbps cleanly with that flag set. Not covered by the test: MKV/TS
@@ -38,7 +38,7 @@ colours and nothing to detect), and clips with audio.
 
 ### P1 — Unplayable video track stops playback
 
-**Today:** a stream whose only video track has no decoder (Dolby Vision profile 5 on darcy and
+**Today:** a stream whose only video track has no decoder (Dolby Vision profile 5 on phone-a and
 the Xperia) is never selected; Media3 reaches READY and plays audio only (or nothing). No error.
 
 **Change:** in the service's `onTracksChanged`, when the tracks contain a video group, no video
@@ -49,7 +49,7 @@ player and show an error naming the format. Audio-only streams (no video group) 
   otherwise the MIME type short name (HEVC, AV1, …) and resolution.
 - Final: no retry (a retry gets the same tracks).
 - **Test:** unit test of the decision as a pure function over a tracks summary (video group
-  unsupported / supported / absent / selected); device check with the DV P5 clip on darcy.
+  unsupported / supported / absent / selected); device check with the DV P5 clip on phone-a.
 
 ### P2 — Codec errors are final
 
@@ -68,7 +68,7 @@ stream fails 4 times over ~19 s before the error shows.
   decoder) than incapable, so that case keeps today's retry.
 
 - **Test:** unit test of the retry decision (error code × first-frame-rendered); device check
-  with the 8K clip on darcy: error in under 2 s, no "Stream retry" log lines.
+  with the 8K clip on phone-a: error in under 2 s, no "Stream retry" log lines.
 
 ### P3 — Error text
 
@@ -89,7 +89,7 @@ stream fails 4 times over ~19 s before the error shows.
 
 ### P4 — Slow connection and stalls
 
-**Tested 2026-10-04** (darcy and Xperia, same results on both): the 4K 60 Mbps clip through a
+**Tested 2026-10-04** (phone-a and Xperia, same results on both): the 4K 60 Mbps clip through a
 throttling proxy on the host.
 
 | Link | What happens today |
@@ -124,12 +124,12 @@ giving up.
    rebuffer.*
 
 - **Test:** unit tests for `StallWatchdog` and the banner decision; device check with the
-  throttling proxy on darcy and the Xperia (cap 20 → banner with numbers; stall → error about a
+  throttling proxy on phone-a and the Xperia (cap 20 → banner with numbers; stall → error about a
   minute after the buffer runs dry).
 
 ## Device check (2026-10-04)
 
-| Check | darcy | Xperia (French UI) |
+| Check | phone-a | Xperia (French UI) |
 |---|---|---|
 | P1: DV profile 5 | "…not supported on this device: Dolby Vision profile 5" in 0.4 s, no retry | same, in French |
 | P2+P3: 8K HEVC | "…: HEVC 7680×4320" in 0.55 s, no retry, dev details shown | same, in French, raw error beneath |

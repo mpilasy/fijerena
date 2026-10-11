@@ -108,7 +108,7 @@ XMLTV mirrors — those don't represent what this app's users are pointed at and
 here. Exported settings supplied with the original request were stale (per user correction);
 pulled the real `providers.db` off the TV emulator (`emulator-5554`, `run-as org.njarasoa.fijerena
 cat databases/providers.db` — see [[reference_backup_restore_app_data]]) to find the live one.
-Active provider is `bears 2` on `bearsclub.online`; its EPG source row carries
+Active provider is `panel-a 2` on `panel-b.example`; its EPG source row carries
 `xmltv.php?username=...&password=...` (the EPG URL embeds live credentials directly), and its
 last real sync recorded 8307 channels / 79951 programmes.
 
@@ -127,7 +127,7 @@ last real sync recorded 8307 channels / 79951 programmes.
   about a first-party client request was passing that a bare `curl` didn't.
 - **Update, 2026-08-27, verified from inside the app:** Phases 1a/1/2 were implemented (see
   below) and deployed to the same TV emulator (`emulator-5554`) to check this specifically —
-  `EpgSyncDebugReceiver` triggered for real, no probing tool involved. Result: `bearsclub.online`
+  `EpgSyncDebugReceiver` triggered for real, no probing tool involved. Result: `panel-b.example`
   is *currently* blocked from the on-device app too — `epg_source.last_error` reads
   `server returned HTTP 513` after all 5 retry attempts, the identical signature the external
   `curl` probe hit. This isn't a sandbox-egress quirk after all; whatever let the app through
@@ -138,23 +138,23 @@ last real sync recorded 8307 channels / 79951 programmes.
   endpoint is reachable again; the mechanism itself needs no further validation to be trustworthy
   in the meantime (see "fails safe" note below).
 
-**Second, independent provider — `cf.stream4ktv.cc` (also live on a device per
+**Second, independent provider — `panel-d.example` (also live on a device per
 [[reference_emulator_providers]]), same pattern:**
 
 - `player_api.php?...&action=get_live_streams` answers normally from external `curl`, real
-  ~20MB JSON payload, same headers as `bearsclub.online` — `Cache-Control: public,
+  ~20MB JSON payload, same headers as `panel-b.example` — `Cache-Control: public,
   must-revalidate, proxy-revalidate`, no `ETag`, no `Last-Modified`. Two panels now agree: Phase
   3's row-diff is the mechanism for Xtream catalog data, not conditional GET or a response hash.
 - `get.php?...&type=m3u_plus&output=ts` (the bulk M3U-playlist export — not an endpoint this
   codebase calls; `XtreamApiService` uses `player_api.php` JSON, not M3U) returned a custom
   Cloudflare status (`HTTP 884`, empty body) on every attempt, while `player_api.php` on the same
-  host kept answering normally around it. Not the same CDN as bearsclub's (`cloudflare` here vs.
+  host kept answering normally around it. Not the same CDN as panel-b's (`cloudflare` here vs.
   `CDN PROXY SERVICE` there), so this is two unrelated panels independently choosing to gate their
   bulk-export endpoint while leaving the per-request JSON API open — reinforcing that "the
   full-catalog/full-guide export gets treated as scraping traffic" is a pattern to expect from
   Xtream-style panels generally, not an artifact of one provider's specific CDN. Strengthens the
   case for verifying EPG byte-stability from inside the app as the default assumption for any new
-  provider, not a one-off workaround for `bearsclub.online`.
+  provider, not a one-off workaround for `panel-b.example`.
 
 ---
 
@@ -341,7 +341,7 @@ twice in succession, confirm the second run finishes in a fraction of the time a
 still complete afterwards. Emulators first.
 
 **Unrelated bug noticed while verifying on device, not fixed here:** two `epg_source` rows both
-labeled `cf.stream4ktv.cc (Bulk)` failed ingestion with `XmlPullParserException` (`Dangling <`,
+labeled `panel-d.example (Bulk)` failed ingestion with `XmlPullParserException` (`Dangling <`,
 `Unexpected EOF`) — a truncated download. `downloadSource`'s read loop treats any `input.read()`
 returning `-1` as a clean finish; it never compares `totalRead` against the response's
 `Content-Length`, so a connection cut short reads as success and the truncation is only caught

@@ -1,6 +1,6 @@
 # Catch-up TV Plan
 
-**Status:** Done 2026-10-10. Phases 1–4 on `main`, Xtream only (Phase 5 dropped). Checked on the TV and phone emulators against bears; not checked on a device: the "not available to replay" message and the end of a programme still on air (see "Phase 4 checks"). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
+**Status:** Done 2026-10-10. Phases 1–4 on `main`, Xtream only (Phase 5 dropped). Checked on the TV and phone emulators against panel-a; not checked on a device: the "not available to replay" message and the end of a programme still on air (see "Phase 4 checks"). Scope decided 2026-10-10: the full Phases 1–4, Xtream only
 (Phase 5 dropped), checked on the emulators only. Per-source differences are detected, not configured
 (see "Detected per source"); "Decided while building" overrides the design where they differ.
 
@@ -61,10 +61,10 @@ Nothing plays catch-up, but several pieces are already there.
   with no change.
 - No timeshift URL builder, no programme / start-time argument on any route.
 
-## Facts measured (2026-10-10, bears login `1fb5318f4d`, from the host on the home ISP address)
+## Facts measured (2026-10-10, panel-a login `user1`, from the host on the home ISP address)
 
-Login and hosts taken from the TV emulator's sources (`bears` = `cf.bearsp.xyz`, `bearstv` =
-`bearstv.online`). A few KB per request (`Range: bytes=0-1023`), no full playback.
+Login and hosts taken from the TV emulator's sources (`panel-a` = `panel-a.example`, `panel-b` =
+`panel-b2.example`). A few KB per request (`Range: bytes=0-1023`), no full playback.
 
 - **Archive flags:** 978 of 54,148 live streams have `tv_archive = 1`; `tv_archive_duration` is `3`
   (921) or `7` (57).
@@ -78,12 +78,12 @@ Login and hosts taken from the TV emulator's sources (`bears` = `cf.bearsp.xyz`,
 - **`has_archive`:** present and mixed per programme (RTP 1, a 3-day channel: 69 of 187 listings;
   a 7-day channel: 200 of 443). The native EPG reaches back ~4 days and ahead ~5 for both, so a
   7-day archive has only ~4 days of guide from it.
-- **URL form depends on the host:** on `cf.bearsp.xyz` the path form (`.ts` and `.m3u8`) and
+- **URL form depends on the host:** on `panel-a.example` the path form (`.ts` and `.m3u8`) and
   `streaming/timeshift.php` all answer (302 to a stream server with a token, then the video). On
-  `bearstv.online` all three give **404**. A 404 on every form means "this source has no
+  `panel-b2.example` all three give **404**. A 404 on every form means "this source has no
   catch-up", not "keep trying the other form".
 - **`.ts`:** `206 Partial Content`, `video/mp2t`, `Content-Range: bytes 0-1023/624975872`,
-  `Accept-Ranges` set: byte-range seeking works, so bears doesn't need seek-by-new-URL.
+  `Accept-Ranges` set: byte-range seeking works, so panel-a doesn't need seek-by-new-URL.
 - **`.m3u8`:** a VOD playlist (`#EXT-X-PLAYLIST-TYPE:VOD`) of 60 s segments named by start minute,
   so HLS seeks too.
 - **Out of range:** a start older than the channel's days (4 days back on a 3-day channel) gives
@@ -161,7 +161,7 @@ one is detected and kept per source (or per stream), never asked of the user:
 
 A detected value is a cache: it is re-detected when it fails (the remembered URL form gets a 404, the
 offset changes at the next login), never trusted forever. There are no background probes. A probe
-would use a connection slot, and bears punishes a second address with HTTP 460, so detection
+would use a connection slot, and panel-a punishes a second address with HTTP 460, so detection
 happens only inside a play the user asked for. Phase 0 still measures one real panel, to confirm the
 detection is right, not to hard-code its answers.
 
@@ -245,7 +245,7 @@ guide work on both apps.
 ## Decided (2026-10-10)
 
 - The full Phases 1–4, not the first version. Xtream only: Phase 5 (Remote M3U) is dropped.
-- Checked on the emulators only (bears and the bridge from the emulators), not on the Shields.
+- Checked on the emulators only (panel-a and the bridge from the emulators), not on the Shields.
 
 ## Decided while building
 
@@ -265,37 +265,37 @@ These replace the design above where the two differ.
    panel's own guide (`get_simple_data_table`), which also says programme by programme what is in
    the archive. Keeping 7 days in the index would multiply it on the TVs for little gain.
 5. **One URL form, always HLS:** the path form `/timeshift/…/<id>.m3u8`, whatever the source's
-   live output. Measured on bears (2026-10-10, from the host): the playlist takes ~6 s per hour of
+   live output. Measured on panel-a (2026-10-10, from the host): the playlist takes ~6 s per hour of
    window to arrive (15 min: 2 s, 4 h: 25 s), but seeks are quick segment requests. `.ts` answers
    in under a second, but has no index: each seek is a binary search of range requests (~23 s for
    5 min on the phone emulator), and a window still on air (start over) has no end to measure, so
    it never becomes seekable and the opening jump past the lead-in never happens. A 404 or an
    empty answer is "This programme is not available to replay", with no retries. No
-   `timeshift.php` fallback: on bears every host answers both forms or neither.
+   `timeshift.php` fallback: on panel-a every host answers both forms or neither.
 6. **No end card for catch-up.** A replayed programme that ends leaves the player, as a film does.
    **Watch live** in the controls replaces the player with the channel's preview (TV) or dock
    (phone). A programme still on air carries on past the point it was asked for (see Phase 2).
-7. **No fake `/timeshift/` in the bridge.** The emulators reach bears directly (the host leaves by
+7. **No fake `/timeshift/` in the bridge.** The emulators reach panel-a directly (the host leaves by
    the home ISP address), so catch-up is checked against the real panel.
 
 ## Phases
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | Measure a real panel (bears): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Done 2026-10-10 (see "Facts measured") |
-| 1 | Data: `getCatchupDays` (by channel id); the panel clock from each login; `supportsCatchup`; `resolveCatchupStream`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Done 2026-10-10 (`7013da3e`). Also fixed: the panel's own guide never showed (text times, base64 titles); it now reads `start_timestamp` / `stop_timestamp` and decodes the text. A start-over window past now gets a playlist that ends at now (bears) — Phase 2 continues it |
+| 0 | Measure a real panel (panel-a): `tv_archive` / `tv_archive_duration` values on several channels; `server_info.timezone`; which timeshift form answers (path / php, `.ts` / `.m3u8`); `Content-Length` and `Range` on the answer; whether it takes a connection slot (`active_cons`); `has_archive` in `get_simple_data_table`. Record the facts here like the shared-logins plan does. | Done 2026-10-10 (see "Facts measured") |
+| 1 | Data: `getCatchupDays` (by channel id); the panel clock from each login; `supportsCatchup`; `resolveCatchupStream`; `CatchupAvailability` + tests; `buildTimeshiftUrl` + tests (zone conversion around DST) | Done 2026-10-10 (`7013da3e`). Also fixed: the panel's own guide never showed (text times, base64 titles); it now reads `start_timestamp` / `stop_timestamp` and decodes the text. A start-over window past now gets a playlist that ends at now (panel-a) — Phase 2 continues it |
 | 2 | Player: catch-up plays with `isLive = false` (decision 3), `Screen.Player` catch-up arguments, every `isLive` and Live-TV content-type branch reviewed; a start-over that reaches now fetches the window again and carries on; "not available to replay" with no retries; overlay title / Live action / end card. Bridge: a fake `/timeshift/` in `tools/jellyfin-xtream/xtream_bridge.py` (serve a Jellyfin item from an offset, `tv_archive: 1`) so the emulators can test without a real panel | Done 2026-10-10 (`6613f53f`); checked on the emulators in Phase 4 (nothing opens catch-up before Phase 3) |
 | 3 | Guide: past hours on archive channels from the panel's guide (decision 4), replay icon, **Watch from start** on TV and mobile, mobile past-day chips, **Start over** in the live OSD; strings in `values` / `-fr` / `-mg`; focus walks updated | Done 2026-10-10 (`cdd1f05e`); checked on the TV emulator. Found and fixed while checking: the player hand-off between screens (see AGENTS.md → "Handing the player to another screen"), a stale index hiding the programme on air, the replayed programme's description picked by time from the other guide |
-| 4 | Check on the emulators against the bridge, bears from the TV and phone emulators (decision 2026-10-10: emulators only); docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | Done 2026-10-10 (`d6c9c07a`): found and fixed the phone's system Back skipping the hand-off, the past date tabs missing on a stale guide, doubled programmes in the merge, and switched to HLS for good (decision 5) |
+| 4 | Check on the emulators against the bridge, panel-a from the TV and phone emulators (decision 2026-10-10: emulators only); docs (`NAVIGATION_GUIDE.md`, `DATABASE_SCHEMA.md` if the zone is a column, `RELEASE_NOTES.md`) | Done 2026-10-10 (`d6c9c07a`): found and fixed the phone's system Back skipping the hand-off, the past date tabs missing on a stale guide, doubled programmes in the merge, and switched to HLS for good (decision 5) |
 | 5 | Remote M3U catch-up (attribute reader, modes, templates) | Dropped 2026-10-10 (Xtream only) |
 
-## Phase 4 checks (2026-10-10, emulators, bears)
+## Phase 4 checks (2026-10-10, emulators, panel-a)
 
-TV emulator (Television_1080p), source `bears`, PT: RTP 1 HD (3-day archive):
+TV emulator (Television_1080p), source `panel-a`, PT: RTP 1 HD (3-day archive):
 
 - Start over from the live controls: `/timeshift/…/277/2026-10-10:17-28/386405.m3u8` — 10:28 on the
   emulator's clock (UTC−5) for a programme at 10:30, so the panel clock is right. Ready in 20–25 s
-  (bears' timeshift is slow to answer; live starts in 1–3 s). Controls: "CATCH-UP · Estrelas ao
+  (panel-a's timeshift is slow to answer; live starts in 1–3 s). Controls: "CATCH-UP · Estrelas ao
   Sábado · PT: RTP 1 HD ◉ · Today 10:30 AM", seek bar, Watch live first, no Favorite.
 - Seek: fast-forward to 3:30 and OK — plays from 3:30. The length grew (2:54 → 3:02) as the
   programme on air was asked for again.
@@ -304,7 +304,7 @@ TV emulator (Television_1080p), source `bears`, PT: RTP 1 HD (3-day archive):
   doesn't. Watch from start is the focused button; "Bom Dia Portugal" played from
   `…/247/2026-10-09:06-58/…` with the whole 4:07 window. Today's page showed "No listings": the
   emulator's XMLTV guide was two days old (today isn't filled from the source's guide, by design).
-- Not checked on a device: "This programme is not available to replay" (bearstv, the host that
+- Not checked on a device: "This programme is not available to replay" (panel-b, the host that
   answers 404, can't log in on the emulator: "Session expired"); reaching the end of a programme.
 
 Phone emulator (Pixel_10), same source and channel (a tester agent, then by hand):
@@ -315,14 +315,14 @@ Phone emulator (Pixel_10), same source and channel (a tester agent, then by hand
   8 Thu, Yesterday (3-day archive) before Today. Yesterday: replay marks on RTP 1 HD, none on ANT1;
   the sheet's Watch from start plays.
 - Seen, not from catch-up: the phone keeps the landscape split after the full-screen player; two
-  XMLTV guide sources listing the same channel show overlapping programmes; bears' live streams
+  XMLTV guide sources listing the same channel show overlapping programmes; panel-a's live streams
   often fail from the emulators ("unexpected end of stream") while the host plays them.
 
 ## Follow-ups (not in this plan)
 
 - Keep the XMLTV index's past as far back as the source's longest archive, for channels with an
   archive only (asked by the user, 2026-10-10): one guide for past and present, days 5–7 of
-  7-day archives, today's morning on a stale guide. Measure index size and import time on bears
+  7-day archives, today's morning on a stale guide. Measure index size and import time on panel-a
   first.
 
 ## Risks and open questions
