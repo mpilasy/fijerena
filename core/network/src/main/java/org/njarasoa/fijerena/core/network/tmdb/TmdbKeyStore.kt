@@ -8,6 +8,7 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.BuildConfig
 import org.njarasoa.fijerena.core.network.CredentialStoreHealth
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
@@ -115,8 +116,20 @@ class TmdbKeyStore(
                             CredentialStoreHealth.InMemoryPrefs()
                         }
                     }
-                }.also { shared = it }
+                }.also {
+                    seedDebugKey(it)
+                    shared = it
+                }
             }
+
+        // Debug builds only: the developer's key from local.properties, once, when this device has
+        // never had a key set or removed. Not synced; each debug install seeds itself.
+        private fun seedDebugKey(prefs: SharedPreferences) {
+            val debugKey = BuildConfig.DEBUG_TMDB_API_KEY
+            if (debugKey.isNotBlank() && !prefs.contains(KEY_API_KEY)) {
+                prefs.edit { putString(KEY_API_KEY, debugKey.trim()) }
+            }
+        }
 
         // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
         // credential store; replacing it is tracked in docs/plans/20260828_secret-store-migration-plan.md.
