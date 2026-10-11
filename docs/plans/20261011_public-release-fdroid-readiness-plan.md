@@ -329,11 +329,30 @@ Phase 8 always comes last: nothing goes to the public repository before the tree
 
 ## Progress
 
+**Phase 1 done (2026-10-11, b1f78c65).** `LICENSE` (GPL-3.0-or-later) and `server/LICENSE`
+(AGPL-3.0-or-later), `server/package.json` licence; README rewritten user-first (licence, "does
+not provide or host any content", Android 11+, "Artwork and fonts": Blue Marble is NASA public
+domain, Manrope OFL-1.1 in `docs/licenses/`); copyright holder Orinasa Njarasoa (F1). R3
+re-checked clean in the tree, and household device details dropped from docs and comments.
+Full-history secret scan (regex over `git log --all -p`, gitleaks not installed): no real
+secrets, only test values. TV storage permissions removed (R5). `deployToShield`, its LAN IP and
+`tune-system-memory.sh` removed; `tools/jellyfin-xtream` kept as development only. Open: the
+source and licence of the icon's 3D-glasses art; SPDX headers (optional); the OFL notice in an
+in-app licences screen.
+
+**Phase 2 done (2026-10-11, c6994c46).** F2: ML Kit replaced by zxing `QRCodeMultiReader` on the
+CameraX luminance plane (`QrFrameDecoder.kt`, unit-tested); `QRCodeReader` alone missed ~1% of
+pairing codes in one orientation (finder-like patterns in the data). No mlkit/gms/datatransport
+on the runtime classpaths; mobile debug APK ~23.5 MB smaller. F3: Cronet entries deleted. F5: s01
+repository removed (FFmpeg resolves from Maven Central). F7: daemon JVM and CI on JDK 21. Open:
+`gradlew-fdroid` checksums for AGP 9.4.1 / Gradle 9.6.0; the QR scanner's device check.
+
+
 | Phase | Status | Commit |
 |---|---|---|
 | 0 | Done (2026-10-11) | |
-| 1 | In progress (2026-10-11) | |
-| 2 | In progress (2026-10-11) | |
+| 1 | Done (2026-10-11) | b1f78c65 |
+| 2 | Done (2026-10-11) | c6994c46 |
 | 3 | Not started | |
 | 4 | In progress (2026-10-11) | |
 | 5 | Not started | |

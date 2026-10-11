@@ -1,5 +1,18 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: No Google components
+**Release Date:** 2026-10-11
+
+- **The phone's QR scanner for Live Sync reads codes with the open-source zxing library** instead of Google ML Kit, so the app no longer ships Google's barcode library or its usage logging. The phone app is about 23 MB smaller. Scanning works as before, including codes seen sideways or light-on-dark.
+- Developers: the unused Play Services Cronet entries and the redundant Sonatype repository are gone, and Gradle runs on JDK 21, as F-Droid's build server does.
+
+## Version: Open source
+**Release Date:** 2026-10-11
+
+- **Fijerena is free software:** the apps are GPL-3.0-or-later, the sync server AGPL-3.0-or-later. The README is rewritten for users: what the app is, that it ships no content, that it needs Android 11 or later, and where the icon and font come from.
+- **TV: the unused storage permissions are gone** (`READ_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE`). Import still goes through the system file picker.
+- Developers: the `deployToShield` Gradle task and the host memory-tuning script are gone; the deploy scripts replace the task.
+
 ## Version: Catch-up badge on channels
 **Release Date:** 2026-10-11
 
