@@ -198,6 +198,56 @@ dependencies, and a first-run experience written for the developer rather than a
 
 ---
 
+## Without a TMDB key (D4)
+
+Without a key, an Xtream source still gives a complete app. TMDB only fills gaps
+(`XtreamMediaProvider.kt:298, 387, 541`) and adds extras. **Kept:** the provider's catalogue,
+posters, categories, seasons and episode lists, plots, cast, genre, rating, release date and
+backdrop (`XtreamMapper.kt:87`), plus all of playback. **Lost:**
+- missing plots, years and release dates filled in (the year still comes from titles like
+  "… (1972)");
+- missing episode summaries;
+- age ratings (display only; nothing filters on them);
+- the detail screen's title logo and TMDB backdrop and poster;
+- the More like this, Similar and collection rows (`getRelatedTitles`, `:747`).
+
+Jellyfin and M3U never use TMDB.
+
+**Check before release (Phase 6, with the key field).** Development builds always had a key, so
+the keyless path is the least exercised. On TV and phone, with no key, open a film, a series, a
+series whose provider sends no episode plots, and a film from a franchise. Look for:
+- More like this, Similar or collection sections that are empty or stay on a spinner;
+- blank space where the title logo would be;
+- a hero with no backdrop when the provider sent none (poster or ambient fallback instead);
+- an empty age-rating chip.
+
+Then do the same with a key that has been revoked: a 401 must look like "no key", not an error
+on every screen. Record the result in this plan.
+
+**Keyless fallback: Wikidata?** Not for 1.0. Wikidata is free (CC0, no key, no anti-feature) and
+can match on the TMDB id (P4947 film, P4983 series). But for this app it adds little:
+- its descriptions are one-liners ("1972 film by …"), not plots;
+- the year is mostly already covered;
+- age ratings are patchy;
+- it has no posters, backdrops or logos;
+- it has no episode summaries;
+- it has nothing like recommendations.
+
+It also brings an extra network dependency with Wikimedia's User-Agent and rate-limit rules, and
+a query service that has had availability trouble. The one thing it does well is franchises (P179
+"part of the series" lists the other films with their TMDB ids), and that only pays off if
+joined to the user's own catalogue.
+
+**Better keyless option (Phase 9), with no network at all:**
+- **More like this from the user's own catalogue,** ranked by shared genre, cast and director.
+  Xtream sends all three, and `xtream_streams` / `xtream_series` already hold them.
+- **A "same series" row by title prefix** (e.g. "Harry Potter and …").
+
+Every result is a title the user can actually play, with the provider's poster. Revisit Wikidata
+only for franchise rows, if the title-prefix heuristic proves too weak.
+
+---
+
 ## Public repository cut-over (Option C, last step)
 
 **Decision (2026-10-11):** history is not rewritten. When every other phase that goes into 1.0 is
@@ -261,10 +311,10 @@ commits and agent files are not a reason to rewrite either way.
 | 3 | **Packaging:** applicationId split or universal APK, one version source (F6), reproducible `BUILD_TIME` (F8), `dependenciesInfo` (F9), signing, R8 + consumer rules (R2), `assembleRelease` + CI on PRs | D2 | M; R8 needs a full regression pass on both apps |
 | 4 | **Privacy and security:** export without credentialed guide URLs, credential-less guide URLs at rest (R1), `PRIVACY.md` + in-app disclaimer (R4), data extraction rules | none | S-M; at-rest needs a `providers.db` migration and a `DATABASE_SCHEMA.md` update |
 | 5 | **First-run UX:** welcome screen, source-type subtitles and paste hint, go to Home after the first add (U-H1, U-H3), login errors (U-H4), Undo without a Menu key (U-H2), phone swipe thresholds (U-H5) | Phase 4 disclaimer text | M; focus walks to update |
-| 6 | **TMDB key in Settings (D4)**, then the **copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
+| 6 | **TMDB key in Settings (D4)** and the keyless/revoked-key check (see "Without a TMDB key"), then the **copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
 | 7 | **Store presence:** fastlane metadata in en/fr/mg, TV and phone screenshots, CHANGELOG | 1–3 | S |
 | 8 | **Public repository cut-over (Option C), always the last step:** final scrub check, archived plans left out (citations rewritten first), fresh squashed public repository, tag `v1.0.0`, signed release, F-Droid RFP / fdroiddata MR; old repository archived private | 1–7 | S |
-| 9 | **After 1.0** (in the new public repository): sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
+| 9 | **After 1.0** (in the new public repository): keyless More like this and same-series rows from the local catalogue, sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
 
 Phases 1–3 are the minimum for F-Droid. Phases 4–5 are the minimum before inviting strangers.
 Phase 8 always comes last: nothing goes to the public repository before the tree is final.
