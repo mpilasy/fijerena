@@ -166,7 +166,7 @@ class EpgViewModel(
                 val itemsResult = loadChannels()
                 val loaded = itemsResult.getOrNull()
                 if (loaded == null) {
-                    val reason = itemsResult.exceptionOrNull()?.message
+                    val reason = friendlyErrorMessage(itemsResult.exceptionOrNull() ?: Exception(), context, AppSettings(context).isDevMode)
                     _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, reason))
                     return
                 }
@@ -193,7 +193,8 @@ class EpgViewModel(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, e.message))
+            val reason = friendlyErrorMessage(e, context, AppSettings(context).isDevMode)
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, reason))
             return
         }
         firstPageMs = System.currentTimeMillis() - startTime

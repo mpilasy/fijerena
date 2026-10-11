@@ -711,8 +711,6 @@
     <!-- Connection test error messages -->
     <string name="provider_error_invalid_credentials">Identifiants invalides</string>
     <string name="provider_error_account_inactive_format">Le compte n\'est pas actif : %1$s</string>
-    <string name="provider_error_http_status_format">Le serveur a retourné HTTP %1$d</string>
-    <string name="provider_error_invalid_m3u">Fichier M3U invalide : en-tête #EXTM3U manquant</string>
     <string name="provider_error_connection_failed">Échec de la connexion</string>
     <string name="category_select_to_view_channels">Sélectionnez une catégorie pour voir les chaînes</string>
     <string name="category_no_channels">Aucune chaîne dans cette catégorie</string>

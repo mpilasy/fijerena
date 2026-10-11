@@ -18,6 +18,9 @@
     <string name="error_saved_login_lost">Cet appareil a perdu un identifiant enregistré (son coffre de clés sécurisé a été réinitialisé). Modifiez la source et saisissez à nouveau le mot de passe.</string>
     <string name="error_guide_login_missing">Ce guide se télécharge avec l\'identifiant de la source, et cet appareil n\'en a pas le mot de passe. Modifiez la source et saisissez le mot de passe.</string>
     <string name="error_generic">Une erreur s\'est produite. Veuillez réessayer.</string>
+    <string name="error_not_found">Rien n\'a été trouvé à cette adresse. Vérifiez l\'URL.</string>
+    <string name="error_server">Le serveur a rencontré un problème. Veuillez réessayer plus tard.</string>
+    <string name="error_invalid_playlist">Cette adresse ne mène pas à une playlist M3U. Vérifiez l\'URL.</string>
     <string name="error_catalog_sync_failed">Échec de la synchronisation du catalogue. %1$s</string>
     <string name="sync_error_download_failed">Échec du téléchargement</string>
     <string name="sync_error_upload_failed">Échec de l\'envoi</string>
@@ -57,10 +60,8 @@
     <string name="epg_freshness_updated_format">Actualisé %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
-    <string name="epg_error_unknown">Erreur inconnue</string>
     <string name="epg_error_task_failed_retries_format">Échec après %1$d tentatives</string>
     <string name="epg_error_no_sources">Aucune source de guide à traiter</string>
-    <string name="epg_error_processing_failed">Échec du traitement</string>
     <string name="epg_error_came_back_empty">Le guide est revenu vide (aucune chaîne). La prochaine actualisation réessaiera.</string>
     <string name="epg_error_source_not_found">Source de guide introuvable</string>
 </resources>

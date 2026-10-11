@@ -603,8 +603,6 @@
     <!-- Connection test error messages -->
     <string name="provider_error_invalid_credentials">Diso ny fangatahana fidirana</string>
     <string name="provider_error_account_inactive_format">Tsy mavitrika ny kaonty: %1$s</string>
-    <string name="provider_error_http_status_format">Namaly HTTP %1$d ny mpizara</string>
-    <string name="provider_error_invalid_m3u">Tsy rakitra M3U marina: tsy misy loha #EXTM3U</string>
     <string name="provider_error_connection_failed">Tsy nahomby ny fifandraisana</string>
     <string name="category_select_to_view_channels">Misafidiana sokajy hijerena ny fantsona</string>
     <string name="category_no_channels">Tsy misy fantsona amin\'ity sokajy ity</string>

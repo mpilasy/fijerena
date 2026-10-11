@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
@@ -481,11 +483,11 @@ class EpgIndexer private constructor(
             } catch (e: CancellationException) {
                 // Stopped mid-rebuild: show Failed, as before, rather than leaving the state on
                 // Optimizing. The FTS stays marked stale, so the next start rebuilds it.
-                _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild cancelled")
+                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
-                _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
+                _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
             }
         }
 

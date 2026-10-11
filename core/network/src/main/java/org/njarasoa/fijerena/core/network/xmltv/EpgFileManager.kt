@@ -36,6 +36,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
@@ -559,7 +560,7 @@ class EpgFileManager private constructor(
                                                 attempt = currentAttempt,
                                                 maxAttempts = maxAttempts,
                                                 nextRetryAtMs = nextRetryAt,
-                                                reason = e.message ?: context.getString(R.string.epg_error_unknown),
+                                                reason = friendlyErrorMessage(e, context, appSettings.isDevMode),
                                             )
                                         Log.w(
                                             TAG,
@@ -573,7 +574,8 @@ class EpgFileManager private constructor(
                             Log.e(TAG, "Task $taskId failed after $maxAttempts retries: ${lastException?.message}", lastException)
                             _state.value =
                                 MultiSourceState.Error(
-                                    lastException?.message ?: context.getString(R.string.epg_error_task_failed_retries_format, maxAttempts),
+                                    lastException?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                                        ?: context.getString(R.string.epg_error_task_failed_retries_format, maxAttempts),
                                 )
                             onComplete?.invoke()
                         }
@@ -971,7 +973,7 @@ class EpgFileManager private constructor(
                     throw e
                 }
                 Log.e(TAG, "processAllSources failed: ${e.message}", e)
-                _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
+                _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
 
@@ -1206,7 +1208,7 @@ class EpgFileManager private constructor(
                     throw e
                 }
                 Log.e(TAG, "processSingleSource failed: ${e.message}", e)
-                _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
+                _state.value = MultiSourceState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
 
@@ -1303,6 +1305,7 @@ class EpgFileManager private constructor(
                             }
                             if (!response.isSuccessful) {
                                 lastError = "server returned HTTP ${response.code}"
+                                lastException = HttpStatusException(response.code)
                                 Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
                                 return@use
                             }
@@ -1364,6 +1367,7 @@ class EpgFileManager private constructor(
                             // exact expected size to check the read against.
                             if (contentLength > 0 && totalRead != contentLength) {
                                 lastError = "truncated download: got $totalRead of $contentLength bytes"
+                                lastException = java.io.IOException(lastError)
                                 Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
                             } else {
                                 downloadedBytes = tmpFile.length()

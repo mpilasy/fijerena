@@ -18,6 +18,9 @@ class FriendlyErrorTest {
             every { getString(R.string.error_timeout) } returns "timeout"
             every { getString(R.string.error_unauthorized) } returns "unauthorized"
             every { getString(R.string.error_saved_login_lost) } returns "lost"
+            every { getString(R.string.error_not_found) } returns "not found"
+            every { getString(R.string.error_server) } returns "server"
+            every { getString(R.string.error_invalid_playlist) } returns "invalid playlist"
             every { applicationContext } returns this
             every { getSharedPreferences(any(), any()) } returns healthPrefs
         }
@@ -78,6 +81,46 @@ class FriendlyErrorTest {
         lostLogins = mapOf("provider_creds_4" to true)
 
         assertEquals("generic", friendlyErrorMessage(Exception("Unexpected JSON token"), context))
+    }
+
+    // docs/plans/20261011_everyday-ux-fixes-plan.md → Phase 3: never a bare HTTP code.
+    @Test
+    fun httpStatus_mapsToWhatItMeans() {
+        assertEquals("unauthorized", friendlyErrorMessage(HttpStatusException(401), context))
+        assertEquals("unauthorized", friendlyErrorMessage(HttpStatusException(403), context))
+        assertEquals("not found", friendlyErrorMessage(HttpStatusException(404), context))
+        assertEquals("not found", friendlyErrorMessage(HttpStatusException(410), context))
+        assertEquals("server", friendlyErrorMessage(HttpStatusException(503), context))
+        assertEquals("generic", friendlyErrorMessage(HttpStatusException(418), context))
+    }
+
+    @Test
+    fun httpStatusRefusedLogin_afterASavedLoginWasReset_saysTheLoginWasLost() {
+        lostLogins = mapOf("provider_creds_4" to true)
+
+        assertEquals("lost", friendlyErrorMessage(HttpStatusException(401), context))
+    }
+
+    @Test
+    fun notAPlaylist_mapsToInvalidPlaylist() {
+        assertEquals("invalid playlist", friendlyErrorMessage(InvalidPlaylistException(), context))
+    }
+
+    @Test
+    fun jellyfinRefusedLogin_isAnAuthFailure() {
+        val e =
+            org.njarasoa.fijerena.core.network.jellyfin
+                .JellyfinLoginRejectedException("Access denied. Account may be disabled.")
+
+        assertEquals("unauthorized", friendlyErrorMessage(e, context))
+    }
+
+    @Test
+    fun rawText_followsOnlyInDeveloperMode() {
+        val e = HttpStatusException(404)
+
+        assertEquals("not found", friendlyErrorMessage(e, context, includeRaw = false))
+        assertEquals("not found\n\n[dev] HTTP 404", friendlyErrorMessage(e, context, includeRaw = true))
     }
 
     @Test

@@ -618,8 +618,9 @@ fun MobileAddProviderScreen(
                     onDismissRequest = { viewModel.resetSaveState() },
                     title = { Text(stringResource(R.string.provider_connection_failed)) },
                     text = { Text(failedState.errorMessage) },
+                    // Going back to fix the login is the main action; saving anyway stays secondary.
                     confirmButton = {
-                        CinemaDialogActionButton(
+                        CinemaDialogTextButton(
                             onClick = {
                                 viewModel.forceSave(
                                     id = if (isEditMode) editId else null,
@@ -642,7 +643,7 @@ fun MobileAddProviderScreen(
                         }
                     },
                     dismissButton = {
-                        CinemaDialogTextButton(
+                        CinemaDialogActionButton(
                             onClick = { viewModel.resetSaveState() },
                         ) {
                             Text(stringResource(R.string.provider_go_back))

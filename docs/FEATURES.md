@@ -16,6 +16,8 @@ A native Android media player for Xtream IPTV, Jellyfin, SMB shares, local files
 
 Add Source offers SMB and Local only in developer mode: SMB can't play yet (no SMB data source) and Local has no folder picker. An existing SMB or Local source stays editable. The source type can't be changed once a source is saved.
 
+Saving a source checks its login first. When the check fails, "Connection failed" says why in plain words (login refused, nothing at this address, not an M3U playlist, server problem, no connection), never an HTTP code or exception text; the main action is **Go back** (focused on TV) and **Save anyway** is the secondary one. Guide errors (the TV Guide, guide source status, guide updates) read the same way.
+
 Several sources can be configured; one is active per device. Switch it from the source picker on Home (with two or more sources) or Settings → Source & guide → Manage sources.
 
 **Jellyfin Quick Connect:** when adding a Jellyfin source, choose **Use Quick Connect** instead of a password. The app shows a 6-digit code to approve in Jellyfin's web UI or another client; on approval it stores the access token. No password is stored.
@@ -262,6 +264,7 @@ Backup & storage → Export / Import, through the system file picker.
 Per profile, off for a new profile. **Turned on by tapping the version row in Settings → About & advanced 7 times** (as on Android; the last three taps count down), for the profile in use. A profile's page shows its Developer mode switch only while it is on, to turn it off. What it adds follows the profile in use:
 
 - SMB and Local in Add Source
+- The raw error text under the plain-words message (adding a source, the guide, guide sources, catalogue sync)
 - Payload sizes beside a category's item count (TV)
 - Programme and channel counts in Search the guide's header, and the guide source's name on each airing
 - The resolution/codec line in the TV player (mobile always shows it)

@@ -18,6 +18,9 @@
     <string name="error_saved_login_lost">This device lost a saved login (its secure key store was reset). Edit the source and enter the password again.</string>
     <string name="error_guide_login_missing">This guide is downloaded with the source\'s login, and this device has no password for it. Edit the source and enter the password.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_not_found">Nothing was found at this address. Check the URL.</string>
+    <string name="error_server">The server ran into a problem. Please try again later.</string>
+    <string name="error_invalid_playlist">This address doesn\'t lead to an M3U playlist. Check the URL.</string>
     <string name="error_catalog_sync_failed">Catalogue sync failed. %1$s</string>
     <string name="sync_error_download_failed">Download failed</string>
     <string name="sync_error_upload_failed">Upload failed</string>
@@ -57,10 +60,8 @@
     <string name="epg_freshness_updated_format">Updated %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
-    <string name="epg_error_unknown">Unknown error</string>
     <string name="epg_error_task_failed_retries_format">Task failed after %1$d retries</string>
     <string name="epg_error_no_sources">No guide sources to process</string>
-    <string name="epg_error_processing_failed">Processing failed</string>
     <string name="epg_error_came_back_empty">The guide came back empty (no channels). The next refresh tries again.</string>
     <string name="epg_error_source_not_found">Guide source not found</string>
 </resources>

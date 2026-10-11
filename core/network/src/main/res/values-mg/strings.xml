@@ -16,6 +16,9 @@
     <string name="error_network">Nisy olana tamin\'ny tambajotra. Jereo ny fifandraisanao ary andramo indray.</string>
     <string name="error_unauthorized">Tsy nahomby ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
     <string name="error_generic">Nisy olana. Andramo indray.</string>
+    <string name="error_not_found">Tsy nisy hita tamin\'io adiresy io. Jereo ny URL.</string>
+    <string name="error_server">Nisy olana tamin\'ny mpizara. Andramo indray rehefa afaka kelikely.</string>
+    <string name="error_invalid_playlist">Tsy lisitra M3U no hita amin\'io adiresy io. Jereo ny URL.</string>
     <string name="error_catalog_sync_failed">Tsy nahomby ny fanavaozana ny lisitra. %1$s</string>
     <string name="sync_error_download_failed">Tsy nahomby ny fakana</string>
     <string name="sync_error_upload_failed">Tsy nahomby ny fandefasana</string>
@@ -55,10 +58,8 @@
     <string name="epg_freshness_updated_format">Navaozina %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
-    <string name="epg_error_unknown">Fahadisoana tsy fantatra</string>
     <string name="epg_error_task_failed_retries_format">Tsy nahomby aorian\'ny fanandramana %1$d</string>
     <string name="epg_error_no_sources">Tsy misy loharanon\'ny fitarihana hodinihina</string>
-    <string name="epg_error_processing_failed">Tsy nahomby ny fanodinana</string>
     <string name="epg_error_came_back_empty">Foana ny fitarihana azo (tsy misy fantsona). Hamerina indray ny fanavaozana manaraka.</string>
     <string name="epg_error_source_not_found">Tsy hita ny loharanon\'ny fitarihana</string>
     <!-- Translations backfill 2026-10-03 -->

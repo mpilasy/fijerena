@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.HttpStatusException
+import org.njarasoa.fijerena.core.network.InvalidPlaylistException
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -528,7 +530,9 @@ class ProviderViewModel(
                         try {
                             val statusCode = connection.responseCode
                             if (statusCode !in 200..299) {
-                                Result.failure(Exception(context.getString(R.string.provider_error_http_status_format, statusCode)))
+                                Result.failure(
+                                    Exception(friendlyErrorMessage(HttpStatusException(statusCode), context, appSettings.isDevMode)),
+                                )
                             } else {
                                 val header =
                                     connection.inputStream.bufferedReader().use { reader ->
@@ -539,7 +543,8 @@ class ProviderViewModel(
                                 if (header.trimStart().startsWith("#EXTM3U")) {
                                     Result.success(Unit)
                                 } else {
-                                    Result.failure(Exception(context.getString(R.string.provider_error_invalid_m3u)))
+                                    val message = friendlyErrorMessage(InvalidPlaylistException(), context, appSettings.isDevMode)
+                                    Result.failure(Exception(message))
                                 }
                             }
                         } finally {
@@ -577,7 +582,12 @@ class ProviderViewModel(
                             android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
                         }
                         MediaProviderFactory.clearCache(tempEntity.id)
-                        result
+                        val error = result.exceptionOrNull()
+                        if (error == null) {
+                            result
+                        } else {
+                            Result.failure(Exception(friendlyErrorMessage(error, context, appSettings.isDevMode), error))
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {

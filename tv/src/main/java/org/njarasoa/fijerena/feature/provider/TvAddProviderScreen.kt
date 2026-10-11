@@ -94,7 +94,6 @@ import org.njarasoa.fijerena.feature.provider.components.XtreamForm
 import org.njarasoa.fijerena.feature.provider.components.rowNeighbours
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
-import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
@@ -858,7 +857,7 @@ fun TvAddProviderScreen(
                 onDismissRequest = { viewModel.resetSaveState() },
                 title = {
                     Text(
-                        "Connection Failed",
+                        stringResource(R.string.provider_connection_failed),
                         color = CinemaTextPrimary,
                     )
                 },
@@ -868,8 +867,10 @@ fun TvAddProviderScreen(
                         color = CinemaTextSecondary,
                     )
                 },
+                // Going back to fix the login is the main action; saving a source that failed its
+                // check stays possible but secondary. Focus lands on Go back (the dismiss slot).
                 confirmButton = {
-                    CinemaDangerButton(
+                    CinemaSecondaryButton(
                         onClick = {
                             viewModel.forceSave(
                                 id = if (isEditMode) editId else null,
@@ -891,7 +892,7 @@ fun TvAddProviderScreen(
                     )
                 },
                 dismissButton = {
-                    CinemaSecondaryButton(
+                    CinemaPrimaryButton(
                         onClick = { viewModel.resetSaveState() },
                         text = stringResource(R.string.provider_go_back),
                     )

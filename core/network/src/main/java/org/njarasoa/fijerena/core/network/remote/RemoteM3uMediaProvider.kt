@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
+import org.njarasoa.fijerena.core.network.HttpStatusException
+import org.njarasoa.fijerena.core.network.InvalidPlaylistException
 import org.njarasoa.fijerena.core.network.local.M3uParser
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
@@ -108,7 +110,7 @@ class RemoteM3uMediaProvider(
 
                 val statusCode = connection.responseCode
                 if (statusCode !in 200..299) {
-                    lastError = Exception("Server returned HTTP $statusCode")
+                    lastError = HttpStatusException(statusCode)
                     if (statusCode in 400..499) break // Client errors won't recover
                     if (attempt < MAX_RETRIES) {
                         delay(RETRY_BASE_DELAY_MS * attempt)
@@ -136,7 +138,7 @@ class RemoteM3uMediaProvider(
                             if (read > 0) String(buf, 0, read) else ""
                         }
                     if (!header.trimStart().startsWith("#EXTM3U")) {
-                        throw Exception("Invalid M3U file: missing #EXTM3U header")
+                        throw InvalidPlaylistException()
                     }
 
                     if (cacheFile.exists()) {
