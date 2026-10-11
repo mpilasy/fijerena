@@ -104,8 +104,8 @@ dependencies, and a first-run experience written for the developer rather than a
   - `scripts/tune-system-memory.sh` (sudo host tuning)
   - `tools/jellyfin-xtream` (or document it as a dev-only bridge)
 - **Docs and agent files:**
-  - Decide whether `docs/plans/` (60 plans) stays public. It's valuable history, but it's where
-    most of the personal detail lives.
+  - **Decided 2026-10-11: archived plans don't go public.** `docs/plans/archive/` stays in the
+    private repository only; open plans stay. See Phase 8, step 3.
   - Keep `AGENTS.md`; drop or ignore the other AI-vendor stubs and `.claude/projects/`.
 - **`data_extraction_rules.xml`** still holds the template TODO and isn't referenced. With
   `allowBackup="false"`, device-to-device transfer on 31+ still copies data. Reference explicit
@@ -226,9 +226,23 @@ commits and agent files are not a reason to rewrite either way.
 2. Freeze `main`: every earlier phase is merged and CI is green.
 3. Final scrub check on the tree: `gitleaks detect --no-git` and a grep for the names, domains,
    IPs and paths that were scrubbed on 2026-10-11 (keep that list privately, outside the repo), in
-   case any came back. Decide whether `docs/plans/` (and its commit-hash citations, which won't
-   resolve in the new repository) goes public. If it does, add a note that hashes refer to the
-   private history.
+   case any came back.
+3a. **Archived plans stay private** (decided 2026-10-11). Leave `docs/plans/archive/` out of the
+   snapshot. About 260 files cite archived plans by path, including 392 citations in Kotlin and
+   the scripts; they're mostly `// … docs/plans/archive/<plan>.md → Phase N` comments. Before
+   the cut-over, on `main`:
+   - Move anything an archived plan still records as live into the standing docs (`AGENTS.md`,
+     `docs/*.md`), e.g. the watch-state plan's "Known adjacent problems". Grep the archive for
+     "out of scope", "follow-up", "deferred" and "known".
+   - Rewrite the citations with a script: keep each comment's own explanation and drop the
+     archive path, or replace it with the standing doc that now holds the rule. Check the
+     `scripts/check-*.sh` messages, `.github/workflows/checks.yml`, `server/` files and
+     `AGENTS.md` by hand.
+   - Remove the Archive table from `docs/plans/README.md`. Change the AGENTS.md "Plans" rule:
+     a finished plan is deleted from the public repository (its record is the repository
+     history and `RELEASE_NOTES`), not moved to `archive/`.
+   - The open plans that go public lose their commit-hash citations, which don't resolve in the
+     new repository. Drop them or note that they refer to the private history.
 4. Create the new public repository from `git archive main` (a tree only, no `.git`), as a single
    commit authored with the GitHub noreply address, with the message "Initial public release
    (v1.0.0)".
@@ -249,7 +263,7 @@ commits and agent files are not a reason to rewrite either way.
 | 5 | **First-run UX:** welcome screen, source-type subtitles and paste hint, go to Home after the first add (U-H1, U-H3), login errors (U-H4), Undo without a Menu key (U-H2), phone swipe thresholds (U-H5) | Phase 4 disclaimer text | M; focus walks to update |
 | 6 | **Copy and IA pass:** Advanced disclosures (U-M1), guide source form (U-M2), Quick Connect (U-M3), neutral look names (U-M4), jargon (U-M6), developer-mode 7-tap, Low items | none | M, mostly strings in three languages |
 | 7 | **Store presence:** fastlane metadata in en/fr/mg, TV and phone screenshots, CHANGELOG | 1–3 | S |
-| 8 | **Public repository cut-over (Option C), always the last step:** final scrub check, fresh squashed public repository, tag `v1.0.0`, signed release, F-Droid RFP / fdroiddata MR; old repository archived private | 1–7 | S |
+| 8 | **Public repository cut-over (Option C), always the last step:** final scrub check, archived plans left out (citations rewritten first), fresh squashed public repository, tag `v1.0.0`, signed release, F-Droid RFP / fdroiddata MR; old repository archived private | 1–7 | S |
 | 9 | **After 1.0** (in the new public repository): sync progress detail (U-M5), TV seek (U-M7), text scale above 100 % (U-M8), targetSdk 36 + tablets (U-M9), FFmpeg srclib (D3), secret-store migration, lint baseline | none | L |
 
 Phases 1–3 are the minimum for F-Droid. Phases 4–5 are the minimum before inviting strangers.
