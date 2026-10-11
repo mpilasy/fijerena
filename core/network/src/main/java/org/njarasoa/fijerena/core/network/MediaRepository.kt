@@ -2073,7 +2073,7 @@ class MediaRepository(
 
     /**
      * [setWatched] for every episode of a season ([season]) or of the whole show ([season] null),
-     * in one transaction (docs/plans/20261011_season-show-watched-plan.md). The mark stays per
+     * in one transaction (docs/plans/archive/20261011_season-show-watched-plan.md). The mark stays per
      * episode: one `watch_state` row for each episode that exists now, so an episode the provider
      * adds later has no row and shows unwatched. Watched leaves `lastPlayedAt` alone (nothing joins
      * Recent); unwatched clears only the flag, plus the TMDB sibling group, keeping positions.

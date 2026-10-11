@@ -307,7 +307,7 @@ fun SearchScreen(
                             // there is no synchronous in-memory cache for watch_state — the
                             // menu target has to wait on one suspend fetch before it opens.
                             // A show offers "Mark show watched / unwatched" instead
-                            // (docs/plans/20261011_season-show-watched-plan.md Phase 3).
+                            // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3).
                             val isShow = result.isShow
                             val isWatchable =
                                 result.contentType == ContentType.MOVIES || (result.contentType == ContentType.TV_SHOWS && !isShow)

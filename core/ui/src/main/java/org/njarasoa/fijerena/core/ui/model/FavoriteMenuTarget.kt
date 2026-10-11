@@ -32,7 +32,7 @@ sealed class FavoriteMenuTarget {
         val seriesId: String? = null,
         /**
          * For a show row's "Mark show watched / unwatched"
-         * (docs/plans/20261011_season-show-watched-plan.md Phase 3): `MediaRepository
+         * (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3): `MediaRepository
          * .episodesWatchState` for the whole show — true offers "unwatched", false or null (never
          * opened here) offers "watched". Whether the action shows at all is the menu's
          * `onToggleShowWatched`.

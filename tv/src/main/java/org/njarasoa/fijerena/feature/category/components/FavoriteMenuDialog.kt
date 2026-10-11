@@ -61,7 +61,7 @@ fun FavoriteContextMenuDialog(
     onRemoveFromRecent: (() -> Unit)? = null,
     list: RowMenuList = RowMenuList.OTHER,
     // A show row's "Mark show watched / unwatched", worded from `target.isShowWatched`
-    // (docs/plans/20261011_season-show-watched-plan.md Phase 3). Null hides it.
+    // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3). Null hides it.
     onToggleShowWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()

@@ -724,7 +724,7 @@ class CategoryViewModel(
 
     /**
      * Marks every episode of [seriesId] watched or unwatched
-     * (docs/plans/20261011_season-show-watched-plan.md Phase 3), then republishes the rows'
+     * (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3), then republishes the rows'
      * watched checks and progress as [toggleWatchedStream] does. A failure (a show never opened
      * here, offline) reaches [onError] as a plain-words message.
      */

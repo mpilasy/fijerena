@@ -605,7 +605,7 @@ internal fun EpisodeListContent(
     }
 
     // Mark a whole season (hold OK / Menu on its tab) or the whole show (the hero's action)
-    // watched or unwatched (docs/plans/20261011_season-show-watched-plan.md). Hidden for a source
+    // watched or unwatched (docs/plans/archive/20261011_season-show-watched-plan.md). Hidden for a source
     // that keeps watched state on its server (Jellyfin). The wording follows episodesWatchState:
     // "unwatched" only when every episode in scope is already watched.
     val canMarkManyWatched = remember(mediaRepository) { mediaRepository.supportsMarkEpisodesWatched }

@@ -237,7 +237,7 @@ internal fun StreamList(
         // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
         // the browse list's favoriteIds may not cover) the repository says.
         val isFavorite = isFavoritesList || item.id in favoriteIds || categoryViewModel.isFavorite(item.id, contentType)
-        // A show row (docs/plans/20261011_season-show-watched-plan.md Phase 3) offers "Mark show
+        // A show row (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3) offers "Mark show
         // watched / unwatched" for all its episodes instead of the one-item toggle, except where
         // the source keeps watched state on its server. The menu opens once its wording is known.
         val showSeriesId = item.showSeriesId(contentType)

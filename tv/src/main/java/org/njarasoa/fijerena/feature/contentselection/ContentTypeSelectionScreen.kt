@@ -642,7 +642,7 @@ fun ContentTypeSelectionScreen(
                         }
                     }
                 // A favourite show's "Mark show watched / unwatched"
-                // (docs/plans/20261011_season-show-watched-plan.md Phase 3): null hides it, as on a
+                // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3): null hides it, as on a
                 // source that keeps watched state on its server.
                 val isShowWatched =
                     if (shelf == HomeShelf.FAVORITE_SHOWS && repo.supportsMarkEpisodesWatched) {

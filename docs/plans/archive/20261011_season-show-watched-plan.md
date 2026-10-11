@@ -1,6 +1,8 @@
 # Mark a season or a whole show watched
 
-**Status:** In progress, 2026-10-11 (go-ahead given).
+**Status:** Done, 2026-10-11. Checked on the TV and phone emulators (`jellyxtream`): list menus,
+season menu / chip, show header action, swipe action (phone), Search, a never-opened show, French
+label fit, no crash. Resume points survive a mark and unmark by design (unwatched keeps positions).
 
 Today only one episode at a time can be marked watched or unwatched
 (`MediaRepository.setWatched`). The user wants to mark a whole season or a whole show watched or
@@ -54,4 +56,4 @@ focus changes.
 | 1 | Done (2026-10-11) | 0d881379 |
 | 2 | Done (2026-10-11) | 0f32d48b |
 | 3 | Done (2026-10-11); follow-up fix 0dfdb995 (old show-level row) | 102c7950 |
-| 4 | In progress | |
+| 4 | Done (2026-10-11) | emulators |

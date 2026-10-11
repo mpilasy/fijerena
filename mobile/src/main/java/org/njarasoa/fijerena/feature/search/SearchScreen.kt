@@ -958,7 +958,7 @@ private fun MobileSearchFavoriteDialog(
     target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    // A show's "Mark show watched / unwatched" (docs/plans/20261011_season-show-watched-plan.md
+    // A show's "Mark show watched / unwatched" (docs/plans/archive/20261011_season-show-watched-plan.md
     // Phase 3), worded from the target's isShowWatched. Null hides it.
     onToggleShowWatched: (() -> Unit)? = null,
 ) {

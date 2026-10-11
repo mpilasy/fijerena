@@ -514,7 +514,7 @@ class SearchViewModel(
 
     /**
      * For a show result's "Mark show watched / unwatched"
-     * (docs/plans/20261011_season-show-watched-plan.md Phase 3): null when the source keeps watched
+     * (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3): null when the source keeps watched
      * state on its server (no such action), else whether every episode is watched (true) or not
      * (false, also when the show was never opened here or the read failed).
      */

@@ -1473,7 +1473,7 @@ private fun StreamsList(
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     // A show row's swipe action is "Mark show watched / unwatched" for all its episodes
-    // (docs/plans/20261011_season-show-watched-plan.md Phase 3), absent when this is false (a
+    // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3), absent when this is false (a
     // source that keeps watched state on its server); worded from showWatchState when revealed.
     showWatchedMark: Boolean = false,
     showWatchState: suspend (seriesId: String) -> Boolean? = { null },
