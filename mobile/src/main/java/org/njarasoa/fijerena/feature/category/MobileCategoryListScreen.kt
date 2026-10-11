@@ -84,6 +84,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -144,8 +145,10 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
+import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
@@ -855,6 +858,10 @@ fun MobileCategoryListScreen(
                                                     }
                                                 }
                                             }
+                                            // Channels whose source keeps an archive get a catch-up badge.
+                                            val catchupDays by produceState(ImmutableCatchupDays(), displayedStreams) {
+                                                value = ImmutableCatchupDays(displayedStreams?.let { viewModel.catchupDays(it) }.orEmpty())
+                                            }
                                             // Keyed on docking: the docked list and the one left when the
                                             // dock closes may both be Recent, and a row left revealed
                                             // (its delete showing) must not carry over (phone UI audit #12).
@@ -865,6 +872,7 @@ fun MobileCategoryListScreen(
                                                     selectedCategoryId = displayedCategoryId,
                                                     lastPlayedItemId = state.lastPlayedItemId,
                                                     nowPlaying = nowPlaying,
+                                                    catchupDays = catchupDays,
                                                     watchedIds = watchedIds,
                                                     watchProgress = watchProgress,
                                                     currentlyPlayingId = target?.id,
@@ -1442,6 +1450,7 @@ private fun StreamsList(
     selectedCategoryId: String?,
     lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
+    catchupDays: ImmutableCatchupDays = ImmutableCatchupDays(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     currentlyPlayingId: String? = null,
@@ -1559,6 +1568,7 @@ private fun StreamsList(
                             StreamCard(
                                 item = item,
                                 nowPlayingProgram = nowPlaying[item.id],
+                                catchupDays = catchupDays[item.id] ?: 0,
                                 isCurrentlyPlaying = item.id == currentlyPlayingId,
                                 isCurrent = item.id == (currentlyPlayingId ?: lastPlayedItemId),
                                 isWatched = item.id in watchedIds,
@@ -1774,6 +1784,8 @@ private fun selectCategoryText(contentType: String): String =
 private fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     nowPlayingProgram: EpgProgram? = null,
+    /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
+    catchupDays: Int = 0,
     isCurrentlyPlaying: Boolean = false,
     /** The channel playing, else the last played item: its title in the accent colour. */
     isCurrent: Boolean = false,
@@ -1863,6 +1875,7 @@ private fun StreamCard(
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
+                    if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
                     parsedTitle.badge?.let { LanguageBadge(it) }
                     Text(
                         text = displayTitle,

@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Catch-up badge on channels
+**Release Date:** 2026-10-11
+
+- **Channel lists show which channels you can rewind (Xtream).** A channel whose source keeps an archive carries a small badge beside its name — the replay mark and the days it keeps ("↻ 7d") — in Live TV's categories, Recent and Favorites, on TV (and in the Live TV channel panel) and on the phone.
+
 ## Version: Phone Search tab
 **Release Date:** 2026-10-10
 

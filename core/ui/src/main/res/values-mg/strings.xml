@@ -777,6 +777,8 @@
     <string name="epg_details_watch_channel">Hijery ny fantsona</string>
     <string name="epg_details_watch_from_start">Hijery hatrany am-piandohana</string>
     <string name="epg_replayable">Azo averina jerena</string>
+    <!-- A channel row's catch-up badge: how many days its archive keeps. -->
+    <string name="catchup_badge_days">%1$d andro</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Fantsona</string>
     <string name="player_osd_more">Hafa</string>
@@ -1101,6 +1103,10 @@
     <string name="device_info_job_failed">Tsy nahomby</string>
     <string name="device_info_job_cancelled">Nofoanana</string>
     <!-- TV polish: browse and Live TV -->
+    <plurals name="catchup_badge_description">
+        <item quantity="one">Azo averina jerena: %1$d andro</item>
+        <item quantity="other">Azo averina jerena: %1$d andro</item>
+    </plurals>
     <plurals name="browse_channel_count">
         <item quantity="one">Fantsona %1$d</item>
         <item quantity="other">Fantsona %1$d</item>

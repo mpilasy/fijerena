@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,13 +15,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatRating
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -114,4 +123,43 @@ fun RatingBadge(
         maxLines = 1,
         modifier = modifier,
     )
+}
+
+/**
+ * A channel whose source keeps an archive (catch-up): the guide's replay mark and the days it
+ * keeps ("↻ 7d"), on the same pill as [LanguageBadge]. [iconSize] is the platform's small icon.
+ */
+@Composable
+fun CatchupBadge(
+    days: Int,
+    iconSize: Dp,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.labelSmall,
+) {
+    val radius = CinemaCornerRadius.small
+    val shape = remember(radius) { RoundedCornerShape(radius) }
+    val description = pluralStringResource(R.plurals.catchup_badge_description, days, days)
+    Row(
+        modifier =
+            modifier
+                .clearAndSetSemantics { contentDescription = description }
+                .clip(shape)
+                .background(CinemaSurfaceVariant)
+                .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = CinemaIcons.Replay,
+            contentDescription = null,
+            tint = CinemaTextSecondary,
+            modifier = Modifier.size(iconSize),
+        )
+        Text(
+            text = stringResource(R.string.catchup_badge_days, days),
+            style = style,
+            color = CinemaTextSecondary,
+            maxLines = 1,
+        )
+    }
 }

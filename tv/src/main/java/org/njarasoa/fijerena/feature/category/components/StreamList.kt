@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -62,6 +63,7 @@ import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -194,6 +196,12 @@ internal fun StreamList(
         remember(streams) {
             streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.id }.orEmpty()
         }
+
+    // Channels whose source keeps an archive get a catch-up badge. Asked per list, so the Live TV
+    // panel's Recent and Favourites tabs, which the browse list doesn't cover, get it too.
+    val catchupDays by produceState(emptyMap<String, Int>(), streams) {
+        value = streams?.let { categoryViewModel.catchupDays(it) }.orEmpty()
+    }
 
     // A removal (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A): done at once, with an Undo
     // bar instead of a confirmation. When the row leaves this list, focus goes to the row that took
@@ -437,6 +445,7 @@ internal fun StreamList(
                                         watchProgress = watchProgress[item.id] ?: 0f,
                                         isWatched = item.id in watchedIds,
                                         nowPlayingProgram = nowPlaying[item.id],
+                                        catchupDays = catchupDays[item.id] ?: 0,
                                         isCurrent = item.id == lastPlayedItemId,
                                         editMode = editMode,
                                         onClick = {
@@ -564,6 +573,8 @@ private fun StreamItem(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     nowPlayingProgram: EpgProgram? = null,
+    /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
+    catchupDays: Int = 0,
     /** The channel playing / the last played item: the P5 "current" bar and title colour. */
     isCurrent: Boolean = false,
     /** Edit mode: OK removes the row, and the focused row shows a ✕ instead of the ⋮. */
@@ -677,6 +688,8 @@ private fun StreamItem(
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
                     }
+
+                    if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
 
                     parsedTitle.badge?.let { LanguageBadge(it) }
 

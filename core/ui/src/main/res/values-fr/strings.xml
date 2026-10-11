@@ -970,6 +970,8 @@
     <string name="epg_details_watch_channel">Regarder la chaîne</string>
     <string name="epg_details_watch_from_start">Regarder depuis le début</string>
     <string name="epg_replayable">Disponible en replay</string>
+    <!-- A channel row's catch-up badge: how many days its archive keeps. -->
+    <string name="catchup_badge_days">%1$d j</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Chaînes</string>
     <string name="player_osd_more">Plus</string>
@@ -1109,6 +1111,10 @@
     <string name="device_info_job_failed">Échouée</string>
     <string name="device_info_job_cancelled">Annulée</string>
     <!-- TV polish: browse and Live TV -->
+    <plurals name="catchup_badge_description">
+        <item quantity="one">Replay : %1$d jour</item>
+        <item quantity="other">Replay : %1$d jours</item>
+    </plurals>
     <plurals name="browse_channel_count">
         <item quantity="one">%1$d chaîne</item>
         <item quantity="other">%1$d chaînes</item>

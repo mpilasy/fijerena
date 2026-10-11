@@ -41,3 +41,9 @@ data class ImmutableStringSet(
 data class ImmutableWatchProgress(
     private val map: Map<String, Float> = emptyMap(),
 ) : Map<String, Float> by map
+
+/** Archive days per channel id, for the lists' catch-up badge. */
+@Immutable
+data class ImmutableCatchupDays(
+    private val map: Map<String, Int> = emptyMap(),
+) : Map<String, Int> by map
