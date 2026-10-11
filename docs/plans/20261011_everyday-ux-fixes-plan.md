@@ -25,7 +25,7 @@ Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is
 | 1 | In progress | |
 | 2 | In progress | |
 | 3 | In progress | |
-| 4 | In progress | |
-| 5 | In progress | |
-| 6 | In progress | |
+| 4 | Done (2026-10-11); needs a phone check | fc5825d3 |
+| 5 | Queued (max 4 agents at once) | |
+| 6 | Queued | |
 | 7 | In progress | |
