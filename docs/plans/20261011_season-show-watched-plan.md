@@ -1,6 +1,6 @@
 # Mark a season or a whole show watched
 
-**Status:** Proposed, 2026-10-11. Not started; waiting for the go-ahead.
+**Status:** In progress, 2026-10-11 (go-ahead given).
 
 Today only one episode at a time can be marked watched or unwatched
 (`MediaRepository.setWatched`). The user wants to mark a whole season or a whole show watched or
@@ -51,7 +51,7 @@ focus changes.
 
 | # | Status | Commit |
 |---|---|---|
-| 1 | Not started | |
+| 1 | In progress | |
 | 2 | Not started | |
 | 3 | Not started | |
 | 4 | Not started | |
