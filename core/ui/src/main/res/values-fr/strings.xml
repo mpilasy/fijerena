@@ -1152,7 +1152,7 @@
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Chaînes favorites</string>
     <!-- TV Recent and Favorites -->
-    <string name="undo_removed_format">Retiré de la liste\u00A0: %1$s · Appuyez sur Menu pour annuler</string>
+    <string name="undo_removed_format">Retiré de la liste\u00A0: %1$s · Maintenez OK ou appuyez sur Menu pour annuler</string>
     <string name="edit_list_action">Modifier la liste</string>
     <string name="edit_list_done">Terminer la modification</string>
     <string name="edit_recent_hint">Modifier les récents · OK retire · Retour pour terminer</string>

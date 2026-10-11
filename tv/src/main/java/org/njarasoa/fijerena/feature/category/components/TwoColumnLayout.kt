@@ -61,7 +61,7 @@ import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
-import org.njarasoa.fijerena.ui.components.undoOnMenuKey
+import org.njarasoa.fijerena.ui.components.undoOnRemoteKeys
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
@@ -192,7 +192,7 @@ internal fun TwoColumnLayout(
         modifier =
             Modifier
                 .fillMaxSize()
-                .undoOnMenuKey(undoBar)
+                .undoOnRemoteKeys(undoBar)
                 .onPreviewKeyEvent { event ->
                     // Back ends edit mode before anything else takes it — in onPreviewKeyEvent, as a
                     // BackHandler misses the first press while a row holds focus (NAVIGATION_GUIDE →

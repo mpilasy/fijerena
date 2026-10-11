@@ -77,7 +77,7 @@ fun <T> HomeRow(
 
 /**
  * The Menu key on a Home card opens its actions, as long-press OK does (row actions, AGENTS.md →
- * D-Pad & Focus). While an Undo bar shows, the screen's `undoOnMenuKey` takes the key first.
+ * D-Pad & Focus). While an Undo bar shows, the screen's `undoOnRemoteKeys` takes Menu and a held OK first.
  */
 internal fun Modifier.openActionsOnMenuKey(onOpenActions: () -> Unit): Modifier =
     onKeyEvent { event ->

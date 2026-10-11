@@ -117,7 +117,7 @@ import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
-import org.njarasoa.fijerena.ui.components.undoOnMenuKey
+import org.njarasoa.fijerena.ui.components.undoOnRemoteKeys
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -230,7 +230,7 @@ fun SearchScreen(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize().undoOnMenuKey(undoBar),
+        modifier = Modifier.fillMaxSize().undoOnRemoteKeys(undoBar),
     ) {
         Column(
             modifier =

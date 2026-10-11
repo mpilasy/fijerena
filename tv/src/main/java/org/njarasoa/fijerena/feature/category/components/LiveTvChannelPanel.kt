@@ -42,7 +42,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
-import org.njarasoa.fijerena.ui.components.undoOnMenuKey
+import org.njarasoa.fijerena.ui.components.undoOnRemoteKeys
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -141,7 +141,7 @@ internal fun LiveTvChannelPanel(
     val undoBar = rememberUndoBarState()
     LaunchedEffect(context) { undoBar.dismiss() }
 
-    Box(modifier = modifier.undoOnMenuKey(undoBar)) {
+    Box(modifier = modifier.undoOnRemoteKeys(undoBar)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
                 modifier =

@@ -1144,7 +1144,7 @@
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Fantsona ankafizina</string>
     <!-- TV Recent and Favorites -->
-    <string name="undo_removed_format">Nesorina i %1$s · Tsindrio Menu hanafoanana</string>
+    <string name="undo_removed_format">Nesorina i %1$s · Tazony ny OK na tsindrio Menu hanafoanana</string>
     <string name="edit_list_action">Hanova ny lisitra</string>
     <string name="edit_list_done">Vita ny fanovana</string>
     <string name="edit_recent_hint">Fanovana ny vao haingana · OK manala · Hiverina rehefa vita</string>

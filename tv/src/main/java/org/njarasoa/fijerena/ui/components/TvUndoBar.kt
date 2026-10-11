@@ -43,7 +43,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  *
  * ```
  * val undoBar = rememberUndoBarState()
- * Box(Modifier.undoOnMenuKey(undoBar)) {
+ * Box(Modifier.undoOnRemoteKeys(undoBar)) {
  *     // a row's removal:
  *     val undo = viewModel.removeFromRecent(item.id, contentType)
  *     undoBar.show(item.name, undo)
@@ -83,6 +83,9 @@ class UndoBarState {
         entry = null
     }
 
+    /** OK is held from an Undo ([undoOnRemoteKeys]): the rest of that press is not the list's. */
+    internal var swallowingOk = false
+
     internal fun expire(expired: Entry) {
         if (entry === expired) entry = null
     }
@@ -98,26 +101,49 @@ class UndoBarState {
 fun rememberUndoBarState(): UndoBarState = remember { UndoBarState() }
 
 /**
- * The remote's way to Undo: the Menu key while the bar shows. The bar itself never takes focus —
- * a focusable bar that goes away after a few seconds would drop focus with it, the very bug the
+ * The remote's ways to Undo while the bar shows: the Menu key, or holding OK (for remotes without
+ * a Menu key, such as the Chromecast with Google TV's). The bar itself never takes focus — a
+ * focusable bar that goes away after a few seconds would drop focus with it, the very bug the
  * removal fix is about — so focus stays on the list (on the row that took the removed row's
- * place) and Menu, which otherwise opens a row's actions, undoes instead. Hold OK still opens the
- * row's actions. Put this on the screen's (or the panel's) root: it previews the key before the
- * focused row sees it.
+ * place) and Menu or a held OK, which otherwise open a row's actions, undo instead. A short OK
+ * still does the focused row's job. Put this on the screen's (or the panel's) root: it previews
+ * the keys before the focused row sees them.
+ *
+ * A held OK is caught on its first auto-repeat, where a row's `onLongClick` would fire; the
+ * press's later repeats and its key-up are swallowed too, so the row neither opens its actions
+ * nor takes the release as a click.
  */
-fun Modifier.undoOnMenuKey(state: UndoBarState): Modifier =
+fun Modifier.undoOnRemoteKeys(state: UndoBarState): Modifier =
     onPreviewKeyEvent { event ->
-        if (event.key == Key.Menu && state.isShowing) {
-            if (event.type == KeyEventType.KeyDown) state.undo()
-            true
-        } else {
-            false
+        val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
+        // A new press: a held press whose key-up went elsewhere must not swallow this one.
+        if (isOk && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) state.swallowingOk = false
+        when {
+            event.key == Key.Menu && state.isShowing -> {
+                if (event.type == KeyEventType.KeyDown) state.undo()
+                true
+            }
+
+            isOk && state.swallowingOk -> {
+                if (event.type == KeyEventType.KeyUp) state.swallowingOk = false
+                true
+            }
+
+            isOk && state.isShowing && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 0 -> {
+                state.swallowingOk = true
+                state.undo()
+                true
+            }
+
+            else -> {
+                false
+            }
         }
     }
 
 /**
- * A small bar, "Removed 24Hrs TV · Press Menu to undo", for [state]'s last removal; place it at
- * the bottom centre of the screen or panel. Not focusable — see [undoOnMenuKey].
+ * A small bar, "Removed 24Hrs TV · Hold OK or press Menu to undo", for [state]'s last removal; place it at
+ * the bottom centre of the screen or panel. Not focusable — see [undoOnRemoteKeys].
  */
 @Composable
 fun TvUndoBar(
@@ -151,7 +177,7 @@ fun TvUndoBar(
             text = stringResource(R.string.undo_removed_format, entry.name),
             style = MaterialTheme.typography.bodyMedium,
             color = CinemaTextPrimary,
-            maxLines = 2, // the panels are narrow: "Press Menu to undo" must not be cut off
+            maxLines = 2, // the panels are narrow: "Hold OK or press Menu to undo" must not be cut off
             overflow = TextOverflow.Ellipsis,
         )
     }

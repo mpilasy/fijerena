@@ -154,7 +154,7 @@ import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
-import org.njarasoa.fijerena.ui.components.undoOnMenuKey
+import org.njarasoa.fijerena.ui.components.undoOnRemoteKeys
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -319,7 +319,7 @@ fun TvGuideGrid(
     // A removal's Undo (plan → A): the bar at the guide's foot, Menu undoes while it shows.
     val undoBar = rememberUndoBarState()
 
-    Box(modifier = Modifier.fillMaxSize().undoOnMenuKey(undoBar)) {
+    Box(modifier = Modifier.fillMaxSize().undoOnRemoteKeys(undoBar)) {
         Column(
             modifier =
                 Modifier

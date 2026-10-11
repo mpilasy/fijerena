@@ -181,7 +181,7 @@ Listed before the source's categories:
 
 Recent and Favourites live in `xtream_v2.db` (`watch_state`, `favorite_state`); Recent Categories in per-source SharedPreferences. All are per profile. Storage: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
-**Removing on TV.** Hold OK or press Menu on a row or a Home card: in Recent the menu opens on **Remove from Recent**, in Favourites on **Remove from Favourites**. It goes at once — no confirmation — focus moves to the next row or card, and a bar shows "Removed X · Press Menu to undo" for 10 s (Menu puts it back, in its place). Recent and Favourites lists have an **edit mode** (pencil in the header): OK removes the focused row, Back ends it; Recent's edit mode adds **Clear Recent** (this section only, asks once). Home's Continue Watching, Channels and favourite rows have the same menu (Mark as watched too on films).
+**Removing on TV.** Hold OK or press Menu on a row or a Home card: in Recent the menu opens on **Remove from Recent**, in Favourites on **Remove from Favourites**. It goes at once — no confirmation — focus moves to the next row or card, and a bar shows "Removed X · Hold OK or press Menu to undo" for 10 s (holding OK or Menu puts it back, in its place). Recent and Favourites lists have an **edit mode** (pencil in the header): OK removes the focused row, Back ends it; Recent's edit mode adds **Clear Recent** (this section only, asks once). Home's Continue Watching, Channels and favourite rows have the same menu (Mark as watched too on films).
 
 ---
 

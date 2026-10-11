@@ -157,7 +157,7 @@ import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.components.rememberUndoBarState
-import org.njarasoa.fijerena.ui.components.undoOnMenuKey
+import org.njarasoa.fijerena.ui.components.undoOnRemoteKeys
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -737,7 +737,7 @@ fun ContentTypeSelectionScreen(
     val scale = LocalUiScale.current
 
     // Menu undoes the last removal while its bar shows.
-    Box(modifier = Modifier.fillMaxSize().undoOnMenuKey(undoBar)) {
+    Box(modifier = Modifier.fillMaxSize().undoOnRemoteKeys(undoBar)) {
         HomeBackdrop(fallbackUrl = backdropImageUrl, focusedUrl = { focusedArtUrl })
         Box(
             modifier =

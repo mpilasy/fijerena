@@ -1150,7 +1150,7 @@
     <!-- TV Recent and Favorites (lane B) -->
     <string name="home_favorite_channels">Favourite channels</string>
     <!-- TV Recent and Favorites -->
-    <string name="undo_removed_format">Removed %1$s · Press Menu to undo</string>
+    <string name="undo_removed_format">Removed %1$s · Hold OK or press Menu to undo</string>
     <string name="edit_list_action">Edit list</string>
     <string name="edit_list_done">Finish editing</string>
     <string name="edit_recent_hint">Edit Recent · OK removes · Back to finish</string>
