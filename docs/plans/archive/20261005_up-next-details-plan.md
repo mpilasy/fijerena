@@ -41,7 +41,7 @@ few seconds.
   the card), so in practice the panel is up for as long as the card is. Focus leaves the card
   only when the controls are already up as the card appears and the viewer moves into them;
   that case was not reached.
-- **Phone (jellyxtream, atr), landscape:** Breaking Bad S1E2 with the controls up: the card below
+- **Phone (jellyxtream, main), landscape:** Breaking Bad S1E2 with the controls up: the card below
   the clock, the panel under it with "...And the Bag's in the River" and two lines of synopsis
   cut with an ellipsis. S1E1 ended into S1E2 by itself. No portrait case: the full-screen player
   is locked to landscape (`SCREEN_ORIENTATION_SENSOR_LANDSCAPE`, MobilePlayerScreen), and the

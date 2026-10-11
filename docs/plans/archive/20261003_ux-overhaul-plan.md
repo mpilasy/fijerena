@@ -70,7 +70,7 @@ at the end.
 Settings and every screen it opens were walked on both emulators:
 
 - **TV** — Television_1080p, 1920×1080, UI scale 60%, profile Kid, source iptv.
-- **Mobile** — Pixel_10, 1080×2424, profile atr, source jellyxtream.
+- **Mobile** — Pixel_10, 1080×2424, profile main, source jellyxtream.
 
 Screens covered: Settings, Sources, Source actions menu, Edit Source, EPG Management, Live sync,
 Diagnostics, Cellular Buffers (mobile), profile and language dialogs.
@@ -343,9 +343,9 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 section headers, no per-setting cards:
 
 ```
-←  Settings                         (A) atr
+←  Settings                         (A) main
 PROFILES
-  (A) atr  · Using on this device          ›
+  (A) main  · Using on this device          ›
   (K) Kid                                   ›
   + Add profile
   Content filters are set per source        ›
@@ -849,7 +849,7 @@ emulator with guide data; approved for this walk, both profiles switched back af
 - TV — Television_1080p, Kid. First with an **empty** XMLTV index (the guide fell back to the
   provider's native EPG), then after a forced guide refresh (80 MB, 8 343 channels, 182 k
   programmes, ~20 s).
-- Mobile — Pixel_10, atr, with the index it already had (a day old).
+- Mobile — Pixel_10, main, with the index it already had (a day old).
 
 Screens: Live TV category screen → "TV Guide" for Recent, 4K| RELAX and FR| GÉNÉRAL HD/4K;
 date navigation; "Now"; in-guide search; OK/tap on a programme and on a channel; Back.
@@ -1063,8 +1063,8 @@ side effects first — `epg_source` rows are synced since live sync phase 4b).
   on-disk `epg_index.db` grew accordingly); Kid switched iptv → panel-b for the walk and
   **back to iptv**; TF1 and a few 3ABN/24 Horas channels added to Kid's Recent; one
   `##### RELAX #####` marker row opened by accident.
-- Mobile: atr switched jellyxtream → panel-b for the walk and **back to jellyxtream**; TF1 (UHD)
-  added to atr's Recent.
+- Mobile: main switched jellyxtream → panel-b for the walk and **back to jellyxtream**; TF1 (UHD)
+  added to main's Recent.
 
 
 ---

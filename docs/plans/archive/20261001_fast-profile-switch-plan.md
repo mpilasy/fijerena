@@ -21,11 +21,11 @@ provider:
 
 | Switch | Total | Rewrite |
 |---|---|---|
-| atr → kilonga | 51 s | 51 s |
+| main → kilonga | 51 s | 51 s |
 | kilonga → rae | 46 s | 46 s |
-| rae → atr | 39 s | 39 s |
-| atr → kilonga | 34 s | 34 s |
-| kilonga → atr | 32 s | 32 s |
+| rae → main | 39 s | 39 s |
+| main → kilonga | 34 s | 34 s |
+| kilonga → main | 32 s | 32 s |
 
 No time is spent waiting for a lock or closing repositories, and a provider whose filters are the
 same in both profiles takes 3–9 ms. The cost is the per-row update: each changed row also
@@ -133,7 +133,7 @@ They use the same recompute, so editing a provider's filters becomes as fast as 
    - Time each rewritten query against the current one on the host and on the Shield.
    - Acceptance: browsing and search no more than about 10% slower; paging stays instant to the
      eye.
-2. **Switch time on the Shield:** under 1 s for atr ↔ kilonga (today 32–51 s), from the
+2. **Switch time on the Shield:** under 1 s for main ↔ kilonga (today 32–51 s), from the
    `ProfileSwitch` log.
 3. **Tests:**
    - Unit tests for `XtreamCategoryExclusionSync` updated: only categories change.
@@ -170,8 +170,8 @@ The hidden-match count is the only notable rise; it runs once per search.
 
 **On the Shield** (192.168.1.21, after a full backup):
 - The v24 migration kept everything: 255 watch-history rows, 128 favourites, 235k streams.
-- A switch now takes **225 ms** (atr → kilonga) and **124 ms** (kilonga → atr), down from 32–51 s.
-- Home shows the counts the database predicts for each profile: atr 862 / 349 / 271 visible.
+- A switch now takes **225 ms** (main → kilonga) and **124 ms** (kilonga → main), down from 32–51 s.
+- Home shows the counts the database predicts for each profile: main 862 / 349 / 271 visible.
 
 **Also removed:** each streaming catalogue sync fetched the category list again only to set item
 flags; that network call is gone.

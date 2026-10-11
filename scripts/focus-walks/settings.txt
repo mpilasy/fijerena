@@ -1,5 +1,5 @@
-# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile atr, source panel-b (Xtream,
-# so a profile's page has its Content filters row; the profiles are atr (in use) and Kid).
+# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile main, source panel-b (Xtream,
+# so a profile's page has its Content filters row; the profiles are main (in use) and Kid).
 # Start: Settings just opened, focus on the rail row "Profiles" (the first of the seven groups).
 # Rail: Up/Down swap the pane live and never leave the rail; Right (or OK) enters the pane on
 # the group's first row; Left (or Back) from anywhere in the pane returns to the rail row of
@@ -50,7 +50,7 @@ UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).
 UP	Profiles
 # Right lands on the first profile row; its text is the profile's name.
-RIGHT	A / atr / Using on this device
+RIGHT	M / main / Using on this device
 # OK opens the profile's page in place of the rows (P9), focus on the name's Edit button; Down
 # walks Colour, Developer mode, Play next episode, Content filters (Xtream only). The profile in
 # use has no Switch to this profile row. Left leaves the page unsaved, focus back on the
@@ -60,7 +60,7 @@ DOWN	Colour / ›
 DOWN	Developer Mode / Enable stats for nerds and debug features
 DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
 DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
-LEFT	A / atr / Using on this device
+LEFT	M / main / Using on this device
 # Kid's page (not in use): same rows plus Switch to this profile, then Save, Cancel, Delete
 # profile (never pressed). Down at the end stays put.
 DOWN	K / Kid

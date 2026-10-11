@@ -1,7 +1,8 @@
 # Public release and F-Droid readiness
 
-**Status:** Proposed, 2026-10-11. Audit only; nothing built yet. Decisions D1–D3 are open and
-block phases 1 and 2; D4 (TMDB) is decided. Decided 2026-10-11: the public repository starts from a fresh squashed
+**Status:** Proposed, 2026-10-11. Audit only; nothing built yet. Every decision is made (D1–D11,
+2026-10-11); Phase 1 can start. Personal and provider details were scrubbed from the tree on
+2026-10-11, ahead of Phase 1. Decided 2026-10-11: the public repository starts from a fresh squashed
 snapshot (Option C), and that cut-over is the **last** step of this plan (Phase 8).
 
 The audit was read-only and covered three areas: F-Droid compliance, release readiness, and
@@ -12,19 +13,26 @@ are from `02c2ea5`.
 **Verdict: not ready for public release, and not acceptable to F-Droid as it stands.** The
 engineering itself is in good shape: 840 unit tests, credentials redacted in logs, crash-loop
 safe mode, E2E-encrypted sync, complete fr/mg translations, and no analytics, ads or crash
-upload. What blocks release is the licensing, the packaging, two proprietary or prebuilt
-dependencies, and a first-run experience written for the developer rather than a stranger.
+upload. What blocks release is the licensing, the packaging, one proprietary dependency (ML Kit),
+and a first-run experience written for the developer rather than a stranger.
 
 ---
 
-## Decisions needed first
+## Decisions
 
 | # | Question | Recommendation |
 |---|---|---|
-| D1 | License | **GPL-3.0-or-later.** The repo is public but README says "proprietary, all rights reserved". `org.jellyfin.media3:media3-ffmpeg-decoder` is GPL-3.0, so shipping it in a closed APK is already a violation. GPLv3 is compatible with every other dependency (Apache-2.0 androidx/Media3/Ktor, smbj, OFL Manrope). The server needs a license too. |
-| D2 | TV and phone packages | **Separate applicationIds** (`org.njarasoa.fijerena` and `org.njarasoa.fijerena.tv`): two F-Droid entries with their own screenshots. Costs: installs that exist today don't migrate, so data has to move by export/import or live sync. The alternative is one universal APK that picks its UI at runtime. |
-| D3 | FFmpeg extension in the F-Droid build | **An `fdroid` flavor without it at first** (`FfmpegLibrary.isAvailable()` already gates it, `StreamingPlaybackService.kt:445`). Later, build Media3 `decoder_ffmpeg` from source through an F-Droid srclib. That's harder, but brings back the audio codecs (AC-3/E-AC-3/DTS on devices without passthrough). |
+| D1 | License | **Decided 2026-10-11: GPL-3.0-or-later for the app, AGPL-3.0-or-later for `server/`.** README currently says "proprietary, all rights reserved". `org.jellyfin.media3:media3-ffmpeg-decoder` is GPL-3.0, so a closed APK was already a violation. GPLv3 is compatible with every other dependency (Apache-2.0 androidx/Media3/Ktor, smbj, OFL Manrope). With AGPL, anyone hosting a modified sync server has to publish their changes. |
+| D2 | TV and phone packages | **Decided 2026-10-11: separate applicationIds, and the TV keeps `org.njarasoa.fijerena`.** The phone becomes `org.njarasoa.fijerena.mobile`. Existing TV installs upgrade in place; phones move their data by export/import or live sync, and the 1.0 release notes say so. Two F-Droid listings with their own screenshots. |
+| D3 | FFmpeg extension | **Decided 2026-10-11: keep it as is, in every build.** F-Droid's inclusion policy accepts prebuilt FLOSS binaries from trusted Maven repositories (Maven Central, Google Maven, OSS Sonatype, JitPack and others), provided they are freely licensed. `org.jellyfin.media3:media3-ffmpeg-decoder` is GPL-3.0 and on Maven Central. GitHub and F-Droid builds are then identical, which the reproducible builds of D6 need anyway. If a reviewer still asks for a source build, the fallback is an F-Droid srclib for Media3 `decoder_ffmpeg`. |
 | D4 | TMDB | **Decided 2026-10-11: the user enters their own TMDB key; without one, TMDB is off.** No key is built into any build: remove the `TMDB_API_KEY` `buildConfigField` (core/network/build.gradle.kts:23-29) so a release APK can never ship one extractably. Accept a v3 API key or a v4 read token (`TmdbApiService.authenticate()` already handles both), keep it in the encrypted credential store, carry it in live sync inside the E2E envelope, and send it in exports only if passwords are exported too. Settings needs a field with a "Get a free key at themoviedb.org" hint, a Test button, and TMDB's required attribution ("This product uses the TMDB API but is not endorsed or certified by TMDB" plus their logo) in About. Expect F-Droid to add **NonFreeNet** even though it is opt-in. Also: `language` is pinned to `en-US`; use the app language. |
+| D5 | Distribution | **F-Droid and GitHub Releases for 1.0; Google Play later.** Play's requirements (targetSdk 36, a hosted privacy policy, the Data safety form, IPTV policy review) become an after-1.0 phase. |
+| D6 | F-Droid signing | **Your signature, through reproducible builds.** F-Droid rebuilds each release, checks it matches the developer-signed APK and ships that APK, so users can move between GitHub and F-Droid builds without losing data. That makes F8/F9 (deterministic `BUILD_TIME`, `dependenciesInfo`) and stripping nondeterminism hard requirements; check reproducibility locally (`apksigcopier` / two clean builds) before the RFP. |
+| D7 | Signing key | **One release key, kept locally and in a GitHub Actions secret, with an encrypted offline backup.** Locally it is read from `keystore.properties` or env (never committed); CI signs tagged builds from the secret. The same key signs both packages. |
+| D8 | Repository visibility | **The owner makes the current repository private before the cut-over** (not done yet). Until then its history still holds what the 2026-10-11 scrub removed from the tree. |
+| D9 | Agent files | **Only `AGENTS.md` goes public.** `CLAUDE.md`, `GEMINI.md`, `CODEX.md`, `.cursorrules`, `.github/copilot-instructions.md`, `.jules/` and `.claude/` are left out of the snapshot (and the AGENTS.md intro that names them is updated). |
+| D10 | UX rules | Phone vertical swipe: **keep it for channel switching but make it safer** (U-H5: about 56 dp, edge exclusion, one-time hint). TV VOD seeking: **a tap jumps ±10 s at once, holding enters the scrub cursor** (U-M7). PiP: **films and shows too, not only live** (L9). TV text scale: **unchanged** (40–100 %, default 80 %; U-M8 dropped). |
+| D11 | Minimum Android | **Stays Android 11 (API 30).** README and store text say "Android 11 or later" up front, naming the common boxes it excludes. |
 
 ---
 
@@ -35,8 +43,8 @@ dependencies, and a first-run experience written for the developer rather than a
 | F1 | No license, declared proprietary | README.md:12, :226-232; no `LICENSE`; `server/package.json` `"private": true`, no license | D1: add `LICENSE`, rewrite the README section and badge, set `"license"` in `server/package.json`, add SPDX headers (optional) |
 | F2 | ML Kit barcode scanning (proprietary, bundles `libbarhopper` and GMS `datatransport` logging) | libs.versions.toml:67, :166; mobile/build.gradle.kts:135; `QrScanner.kt:40-43,101` | Decode in the existing CameraX `ImageAnalysis` with `zxing:core` (already a dependency in core:ui: `QRCodeReader` + `PlanarYUVLuminanceSource`), then remove ML Kit |
 | F3 | Play Services Cronet in the version catalog (unused, but the fdroidserver scanner matches `com.google.android.gms`) | libs.versions.toml:63, :153, :162 | Delete the three entries |
-| F4 | Prebuilt `libsqlite3x.so` from JitPack (requery 3.49.0 isn't on Maven Central) | settings.gradle.kts:20; core/network/build.gradle.kts:84; `EpgIndexDatabase.kt:10,82` | Only `epg_index.db` uses it. Move it to `androidx.sqlite:sqlite-bundled` (`BundledSQLiteDriver`, Google Maven, built from AOSP) or framework SQLite (FTS4/unicode61 is available on API 30+). **Careful:** the page-size and PRAGMA notes in `EpgIndexDatabase.kt:47-100` and `docs/EPG_INDEX_STORAGE.md` exist because of requery, so re-measure size and ingest time on a Shield. Then remove the JitPack repo |
-| F5 | Prebuilt `libffmpegJNI.so` (GPL-3.0) from Jellyfin, and the unnecessary `s01.oss.sonatype` repo | core/player/build.gradle.kts:58; settings.gradle.kts:22 | D3. The artifact is on Maven Central, so drop the s01 repo regardless |
+| F4 | ~~Blocker~~ **Nit (downgraded 2026-10-11):** prebuilt `libsqlite3x.so` from JitPack (requery 3.49.0, Apache-2.0) | settings.gradle.kts:20; core/network/build.gradle.kts:84; `EpgIndexDatabase.kt:10,82` | JitPack is one of F-Droid's trusted repositories for prebuilt FLOSS binaries, so it can stay for 1.0. Optional later: `androidx.sqlite:sqlite-bundled` (`BundledSQLiteDriver`) or framework SQLite, re-measuring size and ingest on a Shield first (the PRAGMA notes in `EpgIndexDatabase.kt:47-100` and `docs/EPG_INDEX_STORAGE.md` exist because of requery). |
+| F5 | ~~Blocker~~ **Nit (downgraded 2026-10-11):** prebuilt `libffmpegJNI.so` (GPL-3.0) from Jellyfin, and the `s01.oss.sonatype` repo | core/player/build.gradle.kts:58; settings.gradle.kts:22 | Kept (D3). The artifact is on Maven Central, so the s01 repo is redundant: remove it to keep the repository list short. |
 | F6 | Both apps are `org.njarasoa.fijerena`, versionCode 4; versionName `"1.0"` (tv) vs `"1.0.0"` (mobile) | tv/build.gradle.kts:26-30; mobile/build.gradle.kts:15-19 | D2. Keep one version source (`gradle.properties` or catalog) for both apps |
 | F7 | Daemon JVM toolchain 25, auto-download off | gradle/gradle-daemon-jvm.properties:2; android-build.yml:33 | Set it to 21 (the sources target 21; F-Droid's buildserver has 17/21). Confirm AGP 9.4.1 / Gradle 9.6.0 are in fdroidserver's `gradlew-fdroid` checksums |
 | F8 | Builds aren't reproducible: `BUILD_TIME = Date()` | tv/build.gradle.kts:49-51; mobile/build.gradle.kts:39-41 | Use `SOURCE_DATE_EPOCH` or the commit time (`git log -1 --format=%ct`). `GIT_HASH` is fine |
@@ -305,9 +313,9 @@ commits and agent files are not a reason to rewrite either way.
 
 | Phase | Content | Depends on | Size |
 |---|---|---|---|
-| 0 | Decide D1–D3 (D4 decided) | none | none |
+| 0 | Decisions D1–D11 | none | Done 2026-10-11 |
 | 1 | **Legal and hygiene:** LICENSE + README rewrite (F1), scrub personal data and provider names (R3), full-history secret scan, remove the TV storage permissions (R5), drop the household tooling, image provenance notes | D1 | S |
-| 2 | **FOSS dependencies:** ML Kit → zxing (F2), delete the Cronet entries (F3), requery → `sqlite-bundled` with a Shield re-measure (F4), `fdroid` flavor without FFmpeg and drop s01 (F5), daemon JVM 21 (F7) | D3 | M; F4 is the risky item |
+| 2 | **FOSS dependencies:** ML Kit → zxing (F2), delete the Cronet entries (F3), drop the redundant s01 repository (F5), daemon JVM 21 (F7). requery and FFmpeg stay (D3, F4) | none | S |
 | 3 | **Packaging:** applicationId split or universal APK, one version source (F6), reproducible `BUILD_TIME` (F8), `dependenciesInfo` (F9), signing, R8 + consumer rules (R2), `assembleRelease` + CI on PRs | D2 | M; R8 needs a full regression pass on both apps |
 | 4 | **Privacy and security:** export without credentialed guide URLs, credential-less guide URLs at rest (R1), `PRIVACY.md` + in-app disclaimer (R4), data extraction rules | none | S-M; at-rest needs a `providers.db` migration and a `DATABASE_SCHEMA.md` update |
 | 5 | **First-run UX:** welcome screen, source-type subtitles and paste hint, go to Home after the first add (U-H1, U-H3), login errors (U-H4), Undo without a Menu key (U-H2), phone swipe thresholds (U-H5) | Phase 4 disclaimer text | M; focus walks to update |
@@ -323,7 +331,7 @@ Phase 8 always comes last: nothing goes to the public repository before the tree
 
 | Phase | Status | Commit |
 |---|---|---|
-| 0 | Open | |
+| 0 | Done (2026-10-11) | |
 | 1 | Not started | |
 | 2 | Not started | |
 | 3 | Not started | |

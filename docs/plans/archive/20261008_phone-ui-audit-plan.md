@@ -71,7 +71,7 @@ phase with its docs; never install, uninstall or clear data on a real device wit
 
 ## Findings
 
-Captured 2026-10-08 on the phone emulator (Pixel_10, 1080×2424, Android 17), profile atr (developer
+Captured 2026-10-08 on the phone emulator (Pixel_10, 1080×2424, Android 17), profile main (developer
 mode on), theme Deep Night, English, system font 100 %. Sources: jellyxtream (films, shows), iptv
 (live). Shots: `/home/alice/data/sary/screenshots/phone-audit/NN_*.png` (24). Not captured: the
 landscape dock split, PiP, the TV Guide grid (needs a source with guide data — panel-a), Add Source,

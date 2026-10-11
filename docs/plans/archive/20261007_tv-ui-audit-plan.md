@@ -109,7 +109,7 @@ asking (emulators only here).
 
 ## Findings
 
-Captured 2026-10-07 on the TV emulator (1920×1080), profile atr (developer mode on), theme Deep
+Captured 2026-10-07 on the TV emulator (1920×1080), profile main (developer mode on), theme Deep
 Night, look Material, **Text & grid size 60 %** (the setting's default is 80 %), English. Sources:
 panel-a (Live TV, until the user asked to get off it), iptv (Live TV), jellyxtream (films, shows).
 Shots: `/home/alice/data/sary/screenshots/tv-audit/NN_*.png` (45). Severity: **B** broken,

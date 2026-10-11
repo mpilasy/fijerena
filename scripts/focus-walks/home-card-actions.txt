@@ -1,4 +1,4 @@
-# TV Recent and Favorites, TV emulator, source iptv, profile atr: Home with a Channels row of at
+# TV Recent and Favorites, TV emulator, source iptv, profile main: Home with a Channels row of at
 # least three cards and a Favorite channels row. Start: Home just opened, focus on the first
 # Channels card ("Last watched").
 # Covers: Menu on a Channels card opens on Remove from Recent; the card leaves, focus on the next

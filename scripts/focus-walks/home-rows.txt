@@ -1,7 +1,7 @@
-# Home's rows (TV home overhaul plan, Phase 7), TV emulator, profile atr, source jellyxtream:
+# Home's rows (TV home overhaul plan, Phase 7), TV emulator, profile main, source jellyxtream:
 # Continue Watching (The Matrix, 101 Dalmatians II, The Godfather ×2), Favorite movies (The Godfather),
 # Favorite shows (Agatha Christie's Marple); Live TV has no channels, so its tile is dimmed and
-# there is no Channels row. Start: a fresh launch, atr picked.
+# there is no Channels row. Start: a fresh launch, main picked.
 # Entry focus: the first Continue Watching card.
 # Left on a row's first card goes to the navigation rail (Home), Right comes back; Right walks the
 # row and stays put on its last card.

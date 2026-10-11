@@ -1,11 +1,11 @@
 # Search the guide: Watch plays the wrong channel
 
-**Status:** Done 2026-10-07, all three fixes checked on the TV emulator (atr on panel-a). Found while testing the TV home overhaul on panel-a 2026-10-07; user said do
+**Status:** Done 2026-10-07, all three fixes checked on the TV emulator (main on panel-a). Found while testing the TV home overhaul on panel-a 2026-10-07; user said do
 all three fixes, hidden-category results hidden (2026-10-07).
 
 ## Problem
 
-On panel-a with profile atr (14 of 875 live categories visible), Watch on a Search the guide result
+On panel-a with profile main (14 of 875 live categories visible), Watch on a Search the guide result
 played another channel: the last channel watched (EPT 1 HD), or a category separator row
 ("#### ΑΘΛΗΤΙΚΑ/SPORTS ⱽᴵᴾ ####", stream 2153213), which then went into Recent and Home's
 Channels row as "Last watched".
@@ -31,13 +31,13 @@ Channels row as "Last watched".
 
 ## Checks
 
-TV emulator, atr on panel-a (user asked for panel-a): Watch on a result in a visible category plays it;
+TV emulator, main on panel-a (user asked for panel-a): Watch on a result in a visible category plays it;
 no result from a hidden category; a sync then a search still matches by guide id.
 
 ## Progress
 
 | Fix | Status | Commit |
 |---|---|---|
-| 1 Preview seed | Done: the last channel seeds only an entry with no channel asked for (guide return, then the requested channel, keep their order). Checked on the TV emulator, atr on panel-a: Watch on AL: SUPER SPORT 1 (matched to SAT: SUPERSPORT 1, category hidden) opens the Recent list with nothing playing | |
-| 2 Matcher cache + separators | Done: `warmCache` gets `getAllStreamsIncludingExcluded`; rows whose name starts with `#` skip the name levels (3–5) of `EpgChannelMatcher`, guide-id levels unchanged; test `a separator row never matches by name`. Checked on the TV emulator, atr on panel-a: sync, then Search the guide used the warmed cache (no "new matcher" log) and Watch played no separator | |
-| 3 Hidden categories | Done: `EpgBrowserViewModel` reads the profile's hidden live categories with each search (`ensureChannelMatcherCurrent`) and drops airings matched into them in both result paths, as for excluded streams; phone and TV share it. Checked on the TV emulator, atr on panel-a: "news" went from 330 programmes to 1 (GR: EPSILON TV, visible); Watch played it (stream 1473962). The header's airing count still counts before the filter ("1 programs (498 airings)"), as it did for excluded streams — left | |
+| 1 Preview seed | Done: the last channel seeds only an entry with no channel asked for (guide return, then the requested channel, keep their order). Checked on the TV emulator, main on panel-a: Watch on AL: SUPER SPORT 1 (matched to SAT: SUPERSPORT 1, category hidden) opens the Recent list with nothing playing | |
+| 2 Matcher cache + separators | Done: `warmCache` gets `getAllStreamsIncludingExcluded`; rows whose name starts with `#` skip the name levels (3–5) of `EpgChannelMatcher`, guide-id levels unchanged; test `a separator row never matches by name`. Checked on the TV emulator, main on panel-a: sync, then Search the guide used the warmed cache (no "new matcher" log) and Watch played no separator | |
+| 3 Hidden categories | Done: `EpgBrowserViewModel` reads the profile's hidden live categories with each search (`ensureChannelMatcherCurrent`) and drops airings matched into them in both result paths, as for excluded streams; phone and TV share it. Checked on the TV emulator, main on panel-a: "news" went from 330 programmes to 1 (GR: EPSILON TV, visible); Watch played it (stream 1473962). The header's airing count still counts before the filter ("1 programs (498 airings)"), as it did for excluded streams — left | |

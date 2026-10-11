@@ -1,4 +1,4 @@
-# TV Recent and Favorites, TV emulator, source iptv, profile atr, with at least three channels in
+# TV Recent and Favorites, TV emulator, source iptv, profile main, with at least three channels in
 # Recent. Start: Home → the first Channels card → OK: the preview, focus on the playing channel's
 # row in the panel's Recent tab.
 # Covers: removing a row in the panel moves focus to the next row, not to the tabs; Menu undoes.

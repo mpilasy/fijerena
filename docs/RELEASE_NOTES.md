@@ -749,7 +749,7 @@ code, most reproduced on an emulator before and after the fix.
 **Release Date:** 2026-02-28
 
 ### Branding & Naming
-- Replaced all "IPTV.atr" references with "fijerena" across login screens, category headers, and player
+- Replaced all references to the old app name with "fijerena" across login screens, category headers, and player
 - Content type selection screen now shows "fijerena" as app title instead of provider name
 - TV category page loads actual provider name from database instead of hardcoded "My Provider"
 

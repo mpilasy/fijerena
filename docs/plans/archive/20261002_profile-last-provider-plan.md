@@ -173,7 +173,7 @@ Single phase, one commit.
 - Tests: `AppSettingsLastProviderTest` (JVM, passing); `ProfileLastProviderTest` (instrumented,
   2/2 passing on a read-only Pixel_10 emulator, with the rest of the `provider` and `profile`
   instrumented tests: 13 + 1 passing).
-- Verified by hand on the TV emulator (`Television_1080p`, profiles atr and Kid, three
+- Verified by hand on the TV emulator (`Television_1080p`, profiles main and Kid, three
   providers): a pick is remembered per profile; switching to a profile with no pick stays put
   (`provider moved false`); switching between profiles on different providers moves the device
   and home opens on the right provider (`provider moved true`, 23–52 ms for the switch itself);

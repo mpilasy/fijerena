@@ -1,10 +1,10 @@
-# Home (ContentTypeSelectionScreen), TV emulator, profile atr, source iptv.
+# Home (ContentTypeSelectionScreen), TV emulator, profile main, source iptv.
 # Phase 4: Home opens on the first content card (F-H-1); Down from any header button goes to
 # the card focused last, default the leftmost (F-H-2, R8); Up from a card still goes to the header.
 # Recorded on the emulator 2026-10-04 (category counts blanked).
 # Phase 4: start on the first card, not the Switch Source chip.
 # TV home overhaul Phase 4: home opens on the first card of the first row (Continue Watching, else
-# the Live row); atr on iptv has no Continue Watching, so the last channel watched. Up reaches the tiles.
+# the Live row); main on iptv has no Continue Watching, so the last channel watched. Up reaches the tiles.
 # TV navigation rail, Phase 3: Left on a row's first card goes to the rail (Home), Right comes back.
 # P7: Search the guide (needs iptv's guide index); the TV Guide button is gone (the grid opens
 # from Search the guide's header). TV navigation rail, Phase 4: Search, the avatar and Settings

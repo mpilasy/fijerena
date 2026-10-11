@@ -1,6 +1,6 @@
 # TV Recent and Favorites: removal and Live TV Recent
 
-**Status:** Done 2026-10-09 on the TV emulator (iptv and jellyxtream, atr). Not walked: the TV Guide's removal (no guide source without panel-a), the phone's zap rule on a phone, Clear Recent confirmed (only its dialog, cancelled — it deletes data). Focus walks not recorded for the new flows.
+**Status:** Done 2026-10-09 on the TV emulator (iptv and jellyxtream, main). Not walked: the TV Guide's removal (no guide source without panel-a), the phone's zap rule on a phone, Clear Recent confirmed (only its dialog, cancelled — it deletes data). Focus walks not recorded for the new flows.
 the user said removing from Recent / Favorites is "a chore and error-prone" and Live TV's Recent "a
 disaster", and asked for a proposal without questions.
 
