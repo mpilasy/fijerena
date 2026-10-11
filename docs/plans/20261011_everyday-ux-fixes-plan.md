@@ -1,6 +1,6 @@
 # Everyday UX fixes
 
-**Status:** In progress, 2026-10-11. Seven independent fixes taken from the on-hold
+**Status:** Done except Phase 5 (on hold), 2026-10-11; device checks pending. Seven independent fixes taken from the on-hold
 [public release plan](./20261011_public-release-fdroid-readiness-plan.md) because they help
 everyday use, public or not. Built in parallel, one commit each on main.
 
@@ -24,7 +24,7 @@ Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is
 |---|---|---|
 | 1 | Done (2026-10-11); needs a TV check | ace3a4e8 |
 | 2 | Done (2026-10-11); needs a TV check | 18aae1bc |
-| 3 | In progress | |
+| 3 | Done (2026-10-11); needs a device check | 94e377c9 |
 | 4 | Done (2026-10-11); needs a phone check | fc5825d3 |
 | 5 | On hold (2026-10-11, user decision); not started. Expect a providers.db migration (offset stored in minutes), sync and export compatibility | |
 | 6 | Done (2026-10-11); needs a device check. Follow-up b2567e2b: a new Xtream source now starts its full sync on save (user request) | 272e2bfd |
