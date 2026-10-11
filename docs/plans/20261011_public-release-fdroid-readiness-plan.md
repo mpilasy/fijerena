@@ -329,6 +329,30 @@ Phase 8 always comes last: nothing goes to the public repository before the tree
 
 ## Progress
 
+**Phase 6 done (2026-10-11, 0a81775f).** D4: the TMDB key is entered in Settings → Source &
+guide → Film and series details (TMDB) on TV and phone; no build embeds one. `TmdbKeyStore`
+keeps it encrypted and app-wide; live sync carries it as `tmdb_api_key` inside the encrypted
+records; exports never do. No key ⇒ no TMDB request; a 401 marks the key refused ⇒ treated as no
+key, shown only as "Key refused" in Settings. Plots in French for a French UI. TMDB logo and
+attribution in About. Copy and IA: guide instead of EPG (U-M6), guide source labels and hints and
+the no-guide message (U-M2), Quick Connect wording (U-M3), neutral localised look and theme names
+(U-M4: Standard, Rounded, Sharp, Balanced; Deep night, Pure black, Amethyst, Teal), developer mode
+behind 7 taps on the version, language names in their own language, unused strings removed,
+sentence case and British spelling in English. **Keyless / refused-key check, 2026-10-11, TV
+emulator (jellyxtream):** no key — no More like this / collection sections, no spinner, title as
+text, backdrop hero, no empty age chip; valid key — logo, More like this, collection and age
+rating appear at once on re-open; refused key — same as no key, no error on any screen, Settings
+reads "Key refused"; developer mode 7 taps on and profile switch off both work. Fixed during the
+check: the refused banner stayed up while a different key was tested. Focus walks: edit-source
+updated; settings needs re-recording on a device with a "main" profile; settings-guide and the
+live-TV walks need the iptv source (not run). Left for the user: Advanced disclosures (U-M1), the
+±hh:mm guide picker (U-M2), Quick Connect first on TV (U-M3), the 1 s splash floor, contrast
+tokens, HTTP codes in the remaining player format strings.
+
+**F7 checked (2026-10-11):** Gradle 9.6.0 is in F-Droid's gradle-transparency-log checksums
+(which `gradlew-fdroid` uses; it lists up to 9.8.1). AGP is a normal Google Maven dependency and
+needs no entry.
+
 **Phase 4 done (2026-10-11, e062432b).** R1: the automatic Xtream guide source is stored as
 `<server>/xmltv.php` (providers.db v17 strips existing rows, sync triggers held off) and the login
 is added at download time from the encrypted store; with no password on the device the source
@@ -369,7 +393,7 @@ repository removed (FFmpeg resolves from Maven Central). F7: daemon JVM and CI o
 | 3 | Not started | |
 | 4 | Done (2026-10-11) | e062432b |
 | 5 | Not started | |
-| 6 | In progress (2026-10-11) | |
+| 6 | Done (2026-10-11) | 0a81775f |
 | 7 | Not started | |
 | 8 | Not started (last) | |
 | 9 | Not started | |

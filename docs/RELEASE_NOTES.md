@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TMDB is opt-in, clearer wording
+**Release Date:** 2026-10-11
+
+- **TMDB uses your own key:** no build includes a TMDB key any more. Enter your own free key (v3 API key or v4 read token from themoviedb.org) in Settings → Source & guide → Film and series details (TMDB); Test checks it, Save keeps it, and live sync shares it with your other devices inside the encrypted records (exports never carry it). Without a key nothing is sent to TMDB and the app works as before minus the TMDB extras (filled-in plots and episode synopses, age ratings, title logos, More like this and collection rows). A key TMDB refuses stops all TMDB requests and shows only as "Key refused" in Settings. Plots come in French when the app is in French. TMDB's attribution and logo are in About.
+- **Clearer wording for new users:** "guide" instead of "EPG" everywhere; the guide source form asks for a "Guide link (XMLTV)" and a "Time correction", with a hint under each; Quick Connect points to your Jellyfin profile menu; look-and-feel and theme names are neutral and translated (Standard, Rounded, Sharp, Balanced; Deep night, Pure black, Amethyst, Teal; your choice is kept); language names show in their own language; calmer guide status lines; sentence case and British spelling throughout.
+- **Developer mode is hidden:** tap the version in Settings → About 7 times to turn it on for the profile in use; turn it off from the profile's page.
+
 ## Version: Privacy
 **Release Date:** 2026-10-11
 
