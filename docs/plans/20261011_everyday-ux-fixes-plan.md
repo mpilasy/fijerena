@@ -27,5 +27,5 @@ Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is
 | 3 | In progress | |
 | 4 | Done (2026-10-11); needs a phone check | fc5825d3 |
 | 5 | In progress | |
-| 6 | Queued | |
-| 7 | In progress | |
+| 6 | In progress | |
+| 7 | Done (2026-10-11): splash floor removed; the unused strings were already gone (Phase 6 of the release plan) | 1284a9d4 |
