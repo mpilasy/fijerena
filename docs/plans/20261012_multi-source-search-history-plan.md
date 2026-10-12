@@ -1,7 +1,7 @@
 # Multi-source search and history
 
-**Status:** Draft, 2026-10-12. Summary only. Open questions Q1–Q7 still need answers; there are no
-phases yet. Nothing has been built.
+**Status:** Draft, 2026-10-12. Questions Q1–Q7 answered 2026-10-12; phases not written yet.
+Nothing has been built.
 
 ## Today
 
@@ -16,7 +16,7 @@ Sources stay separate, but search and play history are shared across them. A sea
 results from every source the profile has enabled. Playing a result just works, whichever source it
 came from. History is merged.
 
-## Summary (working reading, to be confirmed)
+## Summary
 
 - **Browsing stays per source.** Live TV, Movies, TV Shows and the categories still show only the
   source picked in the header, and the source picker stays.
@@ -30,18 +30,18 @@ came from. History is merged.
 - **History is merged.** Recent and Continue Watching (TV Home, phone tab Recents) list items from
   every enabled source, newest first, and each item plays from its own source.
 
-## Open questions
+## Decisions (2026-10-12)
 
-| # | Question | Notes |
+| # | Question | Decision |
 |---|---|---|
-| Q1 | Same title on several sources: one result per source, or merge them into one row and pick a source? | If merged, which one plays: the active source first, or the source last watched? |
-| Q2 | Progress across sources: a film half-watched on source A, is it half-watched on source B? | Cross-variant TMDB matching already does this within a source (movies by `tmdbId`, episodes by series TMDB id + season/episode). Extending it across sources is a bigger job. |
-| Q3 | Favourites: per source, or merged like history? | |
-| Q4 | Live channels in merged history: on TV, zapping with Up/Down through Recent would cross sources, so each zap might switch logins. OK, or should Live TV Recent stay per source? | |
-| Q5 | Search the guide (EPG): does it also span all enabled sources, or only regular search? | Guide sources are per source today. |
-| Q6 | Jellyfin and M3U: include them from the start, or Xtream only first? | Jellyfin search goes to its server, so a merged search makes several network calls. |
-| Q7 | Live sync: should the new per-profile "enabled sources" setting sync to other devices? | Each profile's last picked source already syncs. |
+| Q1 | The same title on several sources | **One row per source**, each with a source badge. No merging. |
+| Q2 | Progress across sources | **Per source.** Progress stays with the copy that was watched; merged history still lists it. Cross-variant TMDB matching stays within a source. |
+| Q3 | Favourites | **Stay per source**, as today. |
+| Q4 | Live channels in merged history | **Merged list, zap within source.** Recent shows channels from every enabled source; Up/Down zaps only through the playing channel's own source. |
+| Q5 | Search the guide (EPG) | **All enabled sources.** Each source's guide sources are searched; an airing opens its channel on its own source. |
+| Q6 | Source types | **Xtream only first** (searched in the local cached catalogue). Jellyfin and M3U later. |
+| Q7 | Live sync of "enabled sources" | **Synced**, like the profile's content filters. |
 
 ## Phases
 
-To be written once Q1–Q7 are answered.
+To be written: needs a read of search, watch history, the player and the guide index first.
