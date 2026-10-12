@@ -88,6 +88,27 @@ graph TD
   2. Profile Coil channel logo loading under `Dispatchers.IO` to reduce `DiskLruCache` worker lock contention.
   3. Validate against measured baselines on hardware (NVIDIA Shield / Sony Bravia).
 
+#### Phase 4 measurement (2026-10-12, darcy, debug build)
+
+Live TV, bears, category "US| ESPN+ PPV VIP" (1,000 channels): D-pad down through the channel list
+(60 single presses, then 250 queued), `dumpsys gfxinfo` and a Perfetto trace (atrace gfx, view,
+dalvik, input; sched).
+
+- **Frames:** 2,292 frames, 36% janky, 90th percentile 46 ms, 99th 77 ms; 414 frames late from
+  the UI thread. Walking the category list: 24% janky, 90th 20 ms. Idle: no frames drawn.
+- **GC is not the problem:** 25 background young collections (1.0 s in all, longest 49 ms) and one
+  full concurrent one (296 ms), all on `HeapTaskDaemon`, concurrent with the UI thread.
+- **Accessibility semantics is the biggest cost:** darcy runs Button Mapper
+  (`flar2.homebutton`), an accessibility service that listens for window content changes; mdarcy
+  has none. With any such service on, Compose diffs the whole semantics tree:
+  `getAllUncoveredSemanticsNodesToIntObjectMap` 7.5 s, `checkForSemanticsChanges` 5.9 s,
+  `sendAccessibilitySemanticsStructureChangeEvents` 5.1 s on the UI thread over the run. 113 of
+  the 208 frames over 16.7 ms would have been on time without it.
+- **The rest of a slow frame** (avg 23 ms): semantics 5.6 ms, layout 5.4 ms, draw 4.0 ms,
+  recomposition 2.9 ms; `FocusOwnerImpl:dispatchKeyEvent` 2.2 s in all.
+- Not measured yet: Coil's disk cache contention, and the same run without an accessibility
+  service (mdarcy).
+
 ### Phase 5: Compose UI Instrumented Testing Expansion (P3) — in progress, as Robolectric JVM tests
 - **Goal:** Protect fragile UI lifecycle and focus handoffs from regression.
 - **Tasks:**
