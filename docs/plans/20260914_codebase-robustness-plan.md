@@ -121,6 +121,22 @@ dalvik, input; sched).
   diffing the tree on every change, larger in this debug build than in a release one.
 
 ### Phase 5: Compose UI Instrumented Testing Expansion (P3) — in progress, as Robolectric JVM tests
+
+#### Progress (2026-10-12)
+
+- Robolectric Compose tests set up in `tv` and `mobile` (`src/test/resources/robolectric.properties`:
+  a plain `Application`, since `FijerenaApplication` starts WorkManager; TV: a 960 × 540 dp screen).
+  They run with `testDebugUnitTest`, so in CI's build workflow, on no device.
+- `EpisodeSelectionScreenTest` (season memory across disposal, focus, Back never swallowed, many
+  seasons) moved from `tv/src/androidTest` and passes unchanged; the nightly device run dropped
+  its TV job (no TV device tests left).
+- New: `StreamItemTest` (a channel row is one accessibility node — fails without the Phase 4 fix),
+  `FavoriteMenuDialogTest` (focus opens on the list's action, Back closes without acting, OK
+  commits and closes), mobile `MobileBottomBarLabelsTest` (names on a wide phone, icons only under
+  380 dp, long-press tooltip).
+- Left from the task list: Live TV category selection and focus recovery on Back for the
+  two-pane browse (`CategoryList`/`StreamList` need a `CategoryViewModel`: a fake repository or a
+  smaller seam first).
 - **Goal:** Protect fragile UI lifecycle and focus handoffs from regression.
 - **Tasks:**
   1. Expand `tv/src/androidTest` to cover Live TV category selection, focus recovery on back-navigation, and modal dismissals.
