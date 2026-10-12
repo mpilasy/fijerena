@@ -106,8 +106,13 @@ dalvik, input; sched).
   the 208 frames over 16.7 ms would have been on time without it.
 - **The rest of a slow frame** (avg 23 ms): semantics 5.6 ms, layout 5.4 ms, draw 4.0 ms,
   recomposition 2.9 ms; `FocusOwnerImpl:dispatchKeyEvent` 2.2 s in all.
-- Not measured yet: Coil's disk cache contention, and the same run without an accessibility
-  service (mdarcy).
+- **The same run on mdarcy** (same model and build, no accessibility service, profile atr): 13.5%
+  janky (darcy 36%), 90th percentile 22 ms (46), 114 frames late from the UI thread (414). Only
+  38 of 3,715 frames over 16.7 ms on the UI thread, the longest 27 ms (avg 18.6 ms: layout 8.8,
+  draw 4.5, recomposition 3.5); 3 GCs. The rows' own layout is not worth a change.
+- **Decision:** Phase 4 is the accessibility cost: give each channel row one semantics node (its
+  name and state) instead of one per text and badge, then measure darcy again. No allocation
+  hoisting. Not measured: Coil's disk cache contention (no sign of it in either trace's UI thread).
 
 ### Phase 5: Compose UI Instrumented Testing Expansion (P3) — in progress, as Robolectric JVM tests
 - **Goal:** Protect fragile UI lifecycle and focus handoffs from regression.
