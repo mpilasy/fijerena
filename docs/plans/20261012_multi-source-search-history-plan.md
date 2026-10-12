@@ -240,6 +240,25 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 - Live sync: the "last source" setting is dropped; older builds that still send it are ignored.
 - Tests: merged category list and keys, every former current-source caller given a source,
   migration test.
+- **Part 1 done 2026-10-12 (`7f1ce07a`), merged browsing.** `MediaCategory.providerId` / `key`
+  (`"<source>/<id>"`), `categoryKey`, `sourceKey`; `CategoryViewModel` merges every Xtream source's
+  categories around `MergedLists.browsingProviderId` (the profile's first Xtream source); per-row
+  state (`favoriteIds`, `watchProgress`, `watchedIds`, `nowPlaying`, `catchupDays`) keyed by source.
+  Recent/Favourite Categories rows `recent_cat_<source>/<id>` / `fav_cat_<source>/<id>` (the Phase 4
+  mismatch was real: it favourited a stream named `recent_cat_X`; fixed). `core/ui/home/ProfileSections`
+  (`merged`, `browse`, `opening`); TV rail Browse items under the sections (dialog when several
+  sections); phone Browse rows in the profile sheet; SMB and Local count as Browse sources too.
+  Malagasy "Jereo %1$s" for Browse needs a check.
+- **Part 2 (removal) must handle** what part 1 left on the active source: the fallbacks in
+  `MergedLists.browsingProviderId`, `TvSections.loadRailSource`, `loadActiveSource`; the rail hidden
+  with no active provider; `ActiveSource` and the phone tab header (source line, sync status,
+  `MobileSourceTopBar` picker); `JellyfinSignInPanel` / `showsSignIn`; TV Home
+  (`ContentTypeSelectionScreen`: repo, rows, pill, `onCapabilitiesResolved`);
+  `CategoryViewModel.lastPlayedItemId` / `supportsNativeEpg` (primary source only; the current-row
+  marker compares bare ids); the TwoColumnLayout header count and fallback name; `TvNavHost` Xtream
+  auto-restore, `MobileNavHost`, `EpgBrowserViewModel`, Settings / Provider / Profiles VMs,
+  `CoreInfo`, Movie / Episode screens (`getProviderOrActive`). Known risk: a section fails as a
+  whole when the profile's first Xtream source can't connect.
 
 ### Phase 7 — Search the guide across sources, and their guides kept fresh (Q5)
 
