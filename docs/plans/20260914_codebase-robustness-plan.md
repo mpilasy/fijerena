@@ -1,6 +1,6 @@
 # Codebase Robustness & Technical Debt Plan
 
-**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-3 (single-return sweeps) dropped by the user 2026-10-03, the AGENTS.md rule stays for new code; Phases 4-5 in progress (started 2026-10-12): Phase 4 measured first with a Perfetto trace on a Shield (mdarcy), changes only where the trace shows a cost; Phase 5 as Robolectric Compose tests on the JVM (user decision: `connectedAndroidTest` uninstalls the app and wipes the device's data). Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
+**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-3 (single-return sweeps) dropped by the user 2026-10-03, the AGENTS.md rule stays for new code; Phase 4 done 2026-10-12: measured on darcy and mdarcy; the cost was accessibility semantics (darcy runs Button Mapper), fixed by one node per channel row (36% → 20% janky frames); Phase 5 in progress (started 2026-10-12) Phase 5 as Robolectric Compose tests on the JVM (user decision: `connectedAndroidTest` uninstalls the app and wipes the device's data). Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
 **Date:** 2026-09-14  
 **Scope:** Full codebase review (`core:player`, `core:network`, `core:ui`, `core:data`, `core:navigation`, `tv`, `mobile`)
 
@@ -81,7 +81,7 @@ graph TD
   2. Refactor while preserving coroutine cancellation propagation (`if (e is CancellationException) throw e`).
   3. Verify with `./gradlew :core:network:testDebugUnitTest`.
 
-### Phase 4: Android TV UI Compose Allocations & Image Contention (P2) — in progress
+### Phase 4: Android TV UI Compose Allocations & Image Contention (P2) — done 2026-10-12 (measured; the fix was the rows' semantics, not allocations)
 - **Goal:** Mitigate GC spikes during category browsing on Android TV.
 - **Tasks:**
   1. Hoist allocations out of composables in `tv/.../feature/category/` and `tv/.../feature/livetv/`.
@@ -113,6 +113,12 @@ dalvik, input; sched).
 - **Decision:** Phase 4 is the accessibility cost: give each channel row one semantics node (its
   name and state) instead of one per text and badge, then measure darcy again. No allocation
   hoisting. Not measured: Coil's disk cache contention (no sign of it in either trace's UI thread).
+- **After (darcy, same run):** each channel row's content is one node (`StreamItem`:
+  `clearAndSetSemantics` with the parts it used to read, in the same order). Janky 36% → 20%,
+  90th percentile 46 → 40 ms, UI-thread-late frames 414 → 336; semantics time on the UI thread
+  18.5 s → 11.3 s. The screen now holds 112 accessibility nodes, about 80 of them the category
+  pane's (3 per row); collapsing those too would save little. The rest of the cost is Compose
+  diffing the tree on every change, larger in this debug build than in a release one.
 
 ### Phase 5: Compose UI Instrumented Testing Expansion (P3) — in progress, as Robolectric JVM tests
 - **Goal:** Protect fragile UI lifecycle and focus handoffs from regression.

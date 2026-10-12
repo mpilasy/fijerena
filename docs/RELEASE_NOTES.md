@@ -3,6 +3,7 @@
 ## Version: Catch-up landscape, guide overlaps
 **Release Date:** 2026-10-11
 
+- **Smoother channel lists on a TV with an accessibility app:** on a Shield running an accessibility service such as Button Mapper, scrolling a long channel list stuttered (36% of frames late on a 1,000-channel list). Each channel row now gives one description instead of one per text and badge; the same scroll is down to 20%. Screen readers read the row as before.
 - **Icons-only bottom bar on small phones:** on a screen under 380 dp wide (a compact phone such as the Xperia XZ2 Compact) the phone's bottom bar drops the tab names and shows icons only; long-press an icon for its name. Wider screens keep the names.
 - **No more stacked listings in the TV Guide:** on a device short of storage, a guide update that changed the schedule (a game added at 19:00, say) kept the old programmes beside the new ones, so cards overlapped and two showed as on air. The update now removes the listings the new guide no longer has; the next guide update clears what is already there.
 - **No more day-long programmes in the guide:** some guides list a live event until a fixed cut-off on top of the normal schedule (bears: a fifth of all listings overlapped, NFL games ran 27 hours and showed ON AIR the next evening). A programme now ends where the next one on its channel starts, in the guide, search and catch-up. Search also shows the end's day when a programme ends on another day ("18:25 – Mon 15:00"). Guides are cleaned at their next refresh.

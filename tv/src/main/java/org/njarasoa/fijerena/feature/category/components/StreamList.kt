@@ -40,7 +40,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Card
@@ -646,17 +649,52 @@ private fun StreamItem(
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
     ) {
+        val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+        val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
+        // Films and shows: what the row already carries — year · length · rating (TV UI
+        // audit #11). The rating is a plain number: a star here means favourite (X9).
+        val metaLine =
+            remember(item.metadata) {
+                listOfNotNull(
+                    extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
+                    item.metadata.duration
+                        ?.takeIf(::hasMeaningfulDuration)
+                        ?.let(::formatDuration),
+                    item.metadata.rating
+                        ?.takeIf { it.isNotBlank() && it.trim().toDoubleOrNull() != 0.0 }
+                        ?.let(::formatRating),
+                ).joinToString(" · ")
+            }
+        val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // One accessibility node for the row's content, read as its parts were. With an
+        // accessibility service on (Button Mapper on a Shield), Compose walks and diffs every
+        // semantics node on scroll; a node per text and badge made that the biggest cost of a
+        // frame (docs/plans/20260914_codebase-robustness-plan.md, Phase 4 measurement).
+        val description =
+            listOfNotNull(
+                "★".takeIf { isFavorite },
+                stringResource(R.string.content_watched_badge).takeIf { isWatched },
+                if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
+                parsedTitle.badge,
+                displayTitle,
+                metaLine.ifEmpty { null },
+                nowLine,
+                when {
+                    isFocused && editMode -> stringResource(R.string.edit_remove_row)
+                    isFocused -> stringResource(R.string.row_actions_hint)
+                    else -> null
+                },
+            ).joinToString(", ")
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .clearAndSetSemantics { contentDescription = description }
                     .currentIndicator(isCurrent)
                     .padding(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-            val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
             // The resume bar sits on the thumbnail's bottom edge, inside its row (TV UI audit
             // #11) — under the row it read as the next row's.
             val thumbnailRadius = CinemaCornerRadius.medium
@@ -733,20 +771,6 @@ private fun StreamItem(
                         modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                     )
                 }
-                // Films and shows: what the row already carries — year · length · rating (TV UI
-                // audit #11). The rating is a plain number: a star here means favourite (X9).
-                val metaLine =
-                    remember(item.metadata) {
-                        listOfNotNull(
-                            extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
-                            item.metadata.duration
-                                ?.takeIf(::hasMeaningfulDuration)
-                                ?.let(::formatDuration),
-                            item.metadata.rating
-                                ?.takeIf { it.isNotBlank() && it.trim().toDoubleOrNull() != 0.0 }
-                                ?.let(::formatRating),
-                        ).joinToString(" · ")
-                    }
                 if (metaLine.isNotEmpty()) {
                     Text(
                         text = metaLine,
@@ -756,9 +780,9 @@ private fun StreamItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                nowPlayingProgram?.let { program ->
+                nowLine?.let { line ->
                     Text(
-                        text = stringResource(R.string.epg_now_prefix, program.title),
+                        text = line,
                         style = cardStyle.bodyMedium,
                         color = CinemaOrangeLight,
                         maxLines = 1,
