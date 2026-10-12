@@ -102,9 +102,9 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 | 1 | Source on routes and screens (no visible change) | Done (2026-10-12, `0abab248`) |
 | 2 | Per-profile source access | Done (2026-10-12, `e2af80e0`) |
 | 3 | Search across the profile's sources | Done (2026-10-12, `4460c434`) |
-| 4 | Merged Recent, Continue Watching, favourites and Recent Categories | In progress (2026-10-12) |
-| 5 | Live TV Recent across sources, zap within source | In progress (2026-10-12) |
-| 6 | Merged browsing; the current source goes | Not started |
+| 4 | Merged Recent, Continue Watching, favourites and Recent Categories | Done (2026-10-12, `a31954e4`) |
+| 5 | Live TV Recent across sources, zap within source | Done (2026-10-12, `896e7200`) |
+| 6 | Merged browsing; the current source goes | In progress (2026-10-12) |
 | 7 | Search the guide across sources, and their guides kept fresh | Done (2026-10-12, `ba78d9a1`) |
 | 8 | Device walks and docs | Not started |
 
@@ -192,6 +192,16 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 - Dedup and list keys by (source, id) — `LiveRow.mergeLiveRow`, Recent and Favourites lists.
 - Cards open with their `providerId`.
 - Tests: two-source merge order with per-source caps, removal/Undo on the right source, dedup keys.
+- **Done 2026-10-12 (`a31954e4`).** `core/ui/.../history/MergedLists.kt` (`forProfile`, `withOthers`,
+  `repoFor`, `recentItems` flow over every source, `favorites`, `continueWatching`,
+  `recentCategories`, `lastWatchedChannel`, `removeFromRecent` / `restoreRecent` / `clearRecent`);
+  `MediaItem.lastPlayedAt` / `resumable` / `sourceKey`; `ContinueWatchingItem.providerId`;
+  `RecentRemoval.providerId`; `AppContainer.getStoredDataRepository(id)` (other sources restore
+  their session in the background). **Carried into Phase 6:** per-row state in `CategoryViewModel`
+  (`favoriteIds`, `watchProgress`, `watchedIds`, `nowPlaying`) is still keyed by raw id, so the same
+  id on two sources can show the other row's star or progress; the merged Recent Categories row id
+  is still `recent_cat_<id>` (probable favourite mismatch, unverified). TV Home reloads on resume,
+  not on a live-sync change while open (as before).
 
 ### Phase 5 — Live TV Recent across sources, zap within source (Q4)
 
@@ -201,6 +211,11 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
   across the profile's sources.
 - Tests: zap skips other sources' channels and wraps within the source; stable order with
   duplicate ids across sources.
+- **Done 2026-10-12 (`896e7200`).** `neighborChannel` zaps within the playing channel's source;
+  preview and dock loaders keyed `loader:<source>` / `dockLoader:<source>`, the old one stopped with
+  `StreamLoaderViewModel.abandon()` so its delayed Recent write doesn't land. The phone's Last
+  watched sheet stays on the loader's own source. Focus after removal/Undo and Home return-focus
+  (rekeyed to `sourceKey`) need the Phase 8 walk.
 
 ### Phase 6 — Merged browsing; the current source goes (P3)
 
