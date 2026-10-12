@@ -33,10 +33,12 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -64,17 +66,20 @@ fun TvLiveRow(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     itemModifier: (LiveRowEntry) -> Modifier = { Modifier },
+    /** Each source's name while the row mixes several: a badge on its cards. */
+    sourceNames: Map<Long, String> = emptyMap(),
 ) {
     HomeRow(
         title = title,
         items = entries,
-        key = { it.item.id },
+        key = { it.item.sourceKey },
         listState = listState,
         firstItemFocus = firstItemFocus,
         modifier = modifier,
     ) { entry, rowModifier ->
         TvLiveChannelCard(
             entry = entry,
+            sourceName = sourceNames[entry.item.providerId],
             now = nowPlaying[entry.item.id],
             onClick = { onEntrySelected(entry) },
             onOpenActions = { onOpenActions(entry) },
@@ -86,6 +91,7 @@ fun TvLiveRow(
 @Composable
 private fun TvLiveChannelCard(
     entry: LiveRowEntry,
+    sourceName: String?,
     now: EpgProgram?,
     onClick: () -> Unit,
     onOpenActions: () -> Unit,
@@ -148,6 +154,7 @@ private fun TvLiveChannelCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = entry.item.name,
                         style = MaterialTheme.typography.titleMedium,

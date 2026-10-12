@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 
 class MergeLiveRowTest {
     private fun channel(id: String) = MediaItem(id = id, name = "ch$id", mediaType = MediaType.LIVE_CHANNEL, categoryId = "c")
@@ -65,6 +66,30 @@ class MergeLiveRowTest {
         val rows = favoriteChannelsRow(listOf(separator, channel("f1")))
 
         assertEquals(listOf("f1"), rows.map { it.item.id })
+    }
+
+    @Test
+    fun theSameIdOnTwoSourcesIsTwoChannels() {
+        val rows = mergeLiveRow(lastItemId = null, recent = listOf(channel("7").copy(providerId = 1), channel("7").copy(providerId = 2)))
+
+        assertEquals(listOf(1L, 2L), rows.map { it.item.providerId })
+        assertEquals(listOf("1/7", "2/7"), rows.map { it.item.sourceKey })
+    }
+
+    @Test
+    fun lastWatchedIsTheChannelOfItsOwnSource() {
+        val recent = listOf(channel("7").copy(providerId = 1), channel("7").copy(providerId = 2), channel("8").copy(providerId = 1))
+        val rows = mergeLiveRow(lastItemId = "7", recent = recent, lastSource = 2L)
+
+        assertEquals(listOf("2/7", "1/7", "1/8"), rows.map { it.item.sourceKey })
+        assertEquals(listOf(true, false, false), rows.map { it.lastWatched })
+    }
+
+    @Test
+    fun favouriteChannelsOfTwoSourcesWithOneIdAreBothKept() {
+        val rows = favoriteChannelsRow(listOf(channel("5").copy(providerId = 1), channel("5").copy(providerId = 2)))
+
+        assertEquals(listOf("1/5", "2/5"), rows.map { it.item.sourceKey })
     }
 
     @Test

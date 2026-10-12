@@ -41,10 +41,12 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.episodeTitleWithoutSeries
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -72,17 +74,20 @@ fun TvContinueWatchingShelf(
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
     itemModifier: (ContinueWatchingItem) -> Modifier = { Modifier },
+    /** Each source's name while the shelf mixes several: a badge on its cards. */
+    sourceNames: Map<Long, String> = emptyMap(),
 ) {
     HomeRow(
         title = stringResource(R.string.series_continue_watching_badge),
         items = items,
-        key = { it.id },
+        key = { it.sourceKey },
         listState = listState,
         firstItemFocus = firstItemFocus,
         modifier = modifier,
     ) { item, rowModifier ->
         TvContinueWatchingCard(
             item = item,
+            sourceName = sourceNames[item.providerId],
             onClick = { onItemSelected(item) },
             onOpenActions = { onOpenActions(item) },
             modifier = itemModifier(item).then(rowModifier),
@@ -93,6 +98,7 @@ fun TvContinueWatchingShelf(
 @Composable
 private fun TvContinueWatchingCard(
     item: ContinueWatchingItem,
+    sourceName: String?,
     onClick: () -> Unit,
     onOpenActions: () -> Unit,
     modifier: Modifier = Modifier,
@@ -160,6 +166,7 @@ private fun TvContinueWatchingCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     parsedTitle.badge?.let { LanguageBadge(it) }
+                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = parsedTitle.title.ifBlank { item.name },
                         style = MaterialTheme.typography.titleMedium,

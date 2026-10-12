@@ -22,9 +22,11 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 class CategoryViewModel(
@@ -155,13 +157,26 @@ class CategoryViewModel(
     private val _supportsNativeEpg = MutableStateFlow(false)
     val supportsNativeEpg: StateFlow<Boolean> = _supportsNativeEpg.asStateFlow()
 
-    // Mirrors the repository's shared Recent list so the Live TV preview panels can render it
-    // without owning a fetch of their own. null until the first load lands.
+    // Mirrors the shared Recent list — every source of the profile's, merged (multi-source plan,
+    // Phase 4) — so the Live TV preview panels can render it without owning a fetch of their own.
+    // null until the first load lands.
     private val _recentItems = MutableStateFlow<List<MediaItem>?>(null)
     val recentItems: StateFlow<List<MediaItem>?> = _recentItems.asStateFlow()
 
     val supportsRemoveFromRecent: Boolean
         get() = repositoryOrNull?.supportsRemoveFromRecent ?: true
+
+    // Each source's name by id while the Recent and Favourites lists mix several (their rows show
+    // it, SourceBadge); empty with one.
+    private val _sourceNames = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val sourceNames: StateFlow<Map<Long, String>> = _sourceNames.asStateFlow()
+
+    /** This list's own source, resolved (the active one's id for 0) once the repository is built. */
+    val sourceId: Long
+        get() = repositorySnapshot?.getProviderId() ?: providerId
+
+    /** Whether a row of [rowSource] is on another source than this list (its route opens there). */
+    fun isOtherSource(rowSource: Long): Boolean = rowSource != 0L && rowSource != sourceId
 
     // Pre-computed per-item data — avoids calling ViewModel methods inline per visible item
     private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
@@ -200,6 +215,18 @@ class CategoryViewModel(
 
     private val repositoryOrNull: MediaRepository?
         get() = repositorySnapshot
+
+    // The Recent, Favourites and Recent Categories lists of every source of the profile (Phase 4),
+    // built with the repository; this list's own source is its primary.
+    private val mergedDeferred = CompletableDeferred<MergedLists>()
+
+    @Volatile
+    private var mergedSnapshot: MergedLists? = null
+
+    private suspend fun awaitMerged(): MergedLists = mergedDeferred.await()
+
+    /** [rowSource]'s repository (a merged list's row), this list's own for 0. */
+    private suspend fun repoFor(rowSource: Long): MediaRepository = awaitMerged().repoFor(rowSource)
 
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
@@ -242,17 +269,23 @@ class CategoryViewModel(
 
     private fun startRepository(): Job =
         viewModelScope.launchGuarded("CategoryViewModel.init", onError = ::showError) {
-            val repo = AppContainer.getInstance(context).getMediaRepository(providerId)
+            val container = AppContainer.getInstance(context)
+            val repo = container.getMediaRepository(providerId)
             repositorySnapshot = repo
             repositoryDeferred.complete(repo)
-            launch { repo.recentItems(contentType).collect { _recentItems.value = it } }
+            if (!mergedDeferred.isCompleted) {
+                val merged = MergedLists.withOthers(container, repo)
+                mergedSnapshot = merged
+                mergedDeferred.complete(merged)
+                _sourceNames.value = merged.sourceNames
+            }
+            val merged = awaitMerged()
+            launch { merged.recentItems(contentType).collect { _recentItems.value = it } }
             loadCategoriesInternal()
             // Entering on a real category (from the EPG, search, or a saved selection) never
             // loads the Recent row, but the Live TV preview panel shows that list regardless of
             // what was browsed into — without this warm-up it would sit on its spinner forever.
-            if (repo.recentItems(contentType).value == null) {
-                repo.refreshRecentItems(contentType)
-            }
+            merged.loadRecentItems(contentType)
         }
 
     private fun showError(e: Throwable) {
@@ -425,9 +458,15 @@ class CategoryViewModel(
 
         val handledVirtual =
             when (categoryId) {
-                RECENT_CATEGORY_ID, FAVORITES_CATEGORY_ID -> {
-                    val items = checkNotNull(virtualCategoryItems(repo, categoryId, contentType))
-                    emitStreams(if (categoryId == RECENT_CATEGORY_ID) inRecentOrder(items) else items)
+                // Every source of the profile's (Phase 4).
+                RECENT_CATEGORY_ID -> {
+                    emitStreams(inRecentOrder(awaitMerged().refreshRecentItems(contentType)))
+                    loadNowPlaying(currentStreams)
+                    true
+                }
+
+                FAVORITES_CATEGORY_ID -> {
+                    emitStreams(awaitMerged().favorites(contentType))
                     loadNowPlaying(currentStreams)
                     true
                 }
@@ -438,15 +477,17 @@ class CategoryViewModel(
                 }
 
                 RECENTLY_VIEWED_CATEGORIES_ID -> {
-                    val recentCategories = repo.getRecentlyViewedCategories(contentType)
+                    // Every source's, newest first; a row of another source opens there (its route).
+                    val recentCategories = awaitMerged().recentCategories(contentType)
                     emitStreams(
-                        recentCategories.map { recent ->
+                        recentCategories.map { (source, recent) ->
                             MediaItem(
                                 id = "recent_cat_${recent.categoryId}",
                                 name = recent.categoryName,
                                 mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
                                 categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
                                 target = BrowseTarget.CategoryRef(recent.categoryId),
+                                providerId = source,
                             )
                         },
                     )
@@ -496,32 +537,33 @@ class CategoryViewModel(
         nowPlayingJob?.cancel()
         nowPlayingJob =
             viewModelScope.launchGuarded("CategoryViewModel.loadNowPlaying") {
-                val repo = awaitRepository()
+                val ownSource = awaitRepository().getProviderId()
+                // A merged list's rows each from their own source's guide (Phase 4).
+                val bySource = items.take(50).groupBy { it.sourceOr(ownSource) }
                 // Phase 1: Fast SQLite query for indexed channels
-                val indexResult = repo.getNowPlayingFromIndex(items.take(50))
+                val indexResult = HashMap<String, EpgProgram>()
+                for ((source, rows) in bySource) indexResult += repoFor(source).getNowPlayingFromIndex(rows)
                 if (indexResult.isNotEmpty()) {
                     _nowPlaying.value = indexResult
                 }
 
                 // Phase 2: Xtream API fallback for unmatched items
-                val caps = repo.getCapabilities()
-                if (caps?.supportsEpg != true) return@launchGuarded
-
-                val unmatchedItems = items.take(50).filter { it.id !in indexResult }
-                if (unmatchedItems.isEmpty()) return@launchGuarded
-
-                val now = System.currentTimeMillis() / 1000
                 // Accumulate across chunks and emit once. Emitting per chunk published a fresh map up
                 // to five times per list load (50 items / 10 per request), and every one of those is a
                 // new ImmutableNowPlaying that recomposes the whole channel list — interleaved with the
                 // network waits between chunks, so the list churned for as long as the fallback ran.
                 val collected = mutableMapOf<String, EpgProgram>()
-                for (chunk in unmatchedItems.chunked(10)) {
-                    val streamIds = chunk.map { it.id }
-                    val epgResult = repo.getEpgBulk(streamIds)?.getOrNull() ?: continue
-                    for ((itemId, resp) in epgResult) {
-                        val airing = resp.listings.firstOrNull { now in it.startTime..it.endTime }
-                        if (airing != null) collected[itemId] = airing
+                val now = System.currentTimeMillis() / 1000
+                for ((source, rows) in bySource) {
+                    val repo = repoFor(source)
+                    if (repo.getCapabilities()?.supportsEpg != true) continue
+                    for (chunk in rows.filter { it.id !in indexResult }.chunked(10)) {
+                        val streamIds = chunk.map { it.id }
+                        val epgResult = repo.getEpgBulk(streamIds)?.getOrNull() ?: continue
+                        for ((itemId, resp) in epgResult) {
+                            val airing = resp.listings.firstOrNull { now in it.startTime..it.endTime }
+                            if (airing != null) collected[itemId] = airing
+                        }
                     }
                 }
                 if (collected.isNotEmpty()) {
@@ -539,13 +581,22 @@ class CategoryViewModel(
      * ([MediaRepository.getCatchupDaysForRows]). Asked by the list itself, so every list of
      * channels (a category, Recent, Favourites, the Live TV panel's tabs) gets it. Empty off Live TV.
      */
-    suspend fun catchupDays(items: List<MediaItem>): Map<String, Int> =
-        if (contentType == ContentType.LIVE_TV) awaitRepository().getCatchupDaysForRows(items) else emptyMap()
+    suspend fun catchupDays(items: List<MediaItem>): Map<String, Int> {
+        val days = HashMap<String, Int>()
+        if (contentType == ContentType.LIVE_TV) {
+            val ownSource = awaitRepository().getProviderId()
+            // A merged list's rows each from their own source (Phase 4).
+            for ((source, rows) in items.groupBy { it.sourceOr(ownSource) }) days += repoFor(source).getCatchupDaysForRows(rows)
+        }
+        return days
+    }
 
+    /** Whether [itemId] is a favourite on [rowSource] (a merged list's row; 0: this list's source). */
     fun isFavorite(
         itemId: String,
         contentType: String,
-    ): Boolean = repositoryOrNull?.isFavorite(itemId, contentType) ?: false
+        rowSource: Long = 0L,
+    ): Boolean = (mergedSnapshot?.repoFor(rowSource) ?: repositoryOrNull)?.isFavorite(itemId, contentType) ?: false
 
     fun isFavoriteCategory(
         categoryId: String,
@@ -557,60 +608,66 @@ class CategoryViewModel(
      * Called after streams change or favorites are toggled.
      */
     private suspend fun refreshPerItemData() {
-        val repo = awaitRepository()
+        val ownRepo = awaitRepository()
+        val merged = awaitMerged()
+        val ownSource = ownRepo.getProviderId()
         val streams = currentStreams
         val ct = contentType
         val cats = categories
 
         withContext(Dispatchers.Default) {
-            // Build favorite IDs set using single-lock batch lookups. A Favorite Categories row
-            // is starred by its category, not by its own id.
-            val favItemIds = repo.getFavoriteItemIds(ct)
-            val favCatIds = repo.getFavoriteCategoryIds(ct)
-            _favoriteIds.value =
-                streams
+            val favoriteIds = HashSet<String>()
+            val progressMap = HashMap<String, Float>()
+            val watched = HashSet<String>()
+            // A merged list's rows (Recent, Favourites) each read their own source (Phase 4).
+            for ((source, rows) in streams.groupBy { it.sourceOr(ownSource) }) {
+                val repo = merged.repoFor(source)
+                // Build favorite IDs set using single-lock batch lookups. A Favorite Categories row
+                // is starred by its category, not by its own id.
+                val favItemIds = repo.getFavoriteItemIds(ct)
+                val favCatIds = repo.getFavoriteCategoryIds(ct)
+                rows
                     .filter { it.id in favItemIds || (it.target as? BrowseTarget.CategoryRef)?.categoryId in favCatIds }
-                    .mapTo(HashSet()) { it.id }
+                    .mapTo(favoriteIds) { it.id }
 
+                val positions = repo.getPlaybackPositions(rows.map { it.id }, ct)
+                for ((id, item) in positions) {
+                    // Resumable band only, so a card's bar means the same thing everywhere:
+                    // barely-started and finished items get no bar rather than a sliver or a full one.
+                    item.resumeProgress()?.let { progressMap[id] = it }
+                    if (item.isCompleted) watched.add(id)
+                }
+                // Series rows track episodes completed, not minutes: watch history is keyed by
+                // episode, so a series id never resolves through the lookup above. A fully watched
+                // series drops out of the bar map and gets the check instead, matching movies.
+                if (ct == ContentType.TV_SHOWS) {
+                    val seriesProgress = repo.getSeriesWatchProgress()
+                    for (item in rows) {
+                        val fraction = seriesProgress[item.id]
+                        if (fraction != null) {
+                            if (fraction >= 1f) {
+                                watched.add(item.id)
+                            } else {
+                                progressMap[item.id] = fraction
+                            }
+                        }
+                    }
+                }
+                // TMDB dedup (Phase 5): a different catalogue entry for the same title — a second
+                // language track, a 4K re-rip — completed under its own id. Movies only for now; a
+                // sibling only ever adds a check, never a resume bar, so it can't undo a progress
+                // entry this item already has above.
+                if (ct == ContentType.MOVIES) {
+                    watched.addAll(repo.getSiblingCompletedMovieIds())
+                }
+            }
+            _favoriteIds.value = favoriteIds
+
+            val favCatIds = ownRepo.getFavoriteCategoryIds(ct)
             _favoriteCategoryIds.value =
                 cats
                     .filter { it.id in favCatIds }
                     .mapTo(HashSet()) { it.id }
-
-            val itemIds = streams.map { it.id }
-            val positions = repo.getPlaybackPositions(itemIds, ct)
-
-            val progressMap = HashMap<String, Float>(positions.size)
-            val watched = HashSet<String>()
-            for ((id, item) in positions) {
-                // Resumable band only, so a card's bar means the same thing everywhere:
-                // barely-started and finished items get no bar rather than a sliver or a full one.
-                item.resumeProgress()?.let { progressMap[id] = it }
-                if (item.isCompleted) watched.add(id)
-            }
-            // Series rows track episodes completed, not minutes: watch history is keyed by
-            // episode, so a series id never resolves through the lookup above. A fully watched
-            // series drops out of the bar map and gets the check instead, matching movies.
-            if (ct == ContentType.TV_SHOWS) {
-                val seriesProgress = repo.getSeriesWatchProgress()
-                for (item in streams) {
-                    val fraction = seriesProgress[item.id]
-                    if (fraction != null) {
-                        if (fraction >= 1f) {
-                            watched.add(item.id)
-                        } else {
-                            progressMap[item.id] = fraction
-                        }
-                    }
-                }
-            }
-            // TMDB dedup (Phase 5): a different catalogue entry for the same title — a second
-            // language track, a 4K re-rip — completed under its own id. Movies only for now; a
-            // sibling only ever adds a check, never a resume bar, so it can't undo a progress
-            // entry this item already has above.
-            if (ct == ContentType.MOVIES) {
-                watched.addAll(repo.getSiblingCompletedMovieIds())
-            }
 
             _watchProgress.value = progressMap
             _watchedIds.value = watched
@@ -635,13 +692,15 @@ class CategoryViewModel(
         }
     }
 
+    /** Favourite or not, on [rowSource] (a merged list's row; 0: this list's source). */
     fun toggleFavoriteStream(
         itemId: String,
         itemName: String,
         categoryId: String,
         contentType: String,
+        rowSource: Long = 0L,
     ) {
-        val repo = repositoryOrNull
+        val repo = mergedSnapshot?.repoFor(rowSource) ?: repositoryOrNull
         if (itemId.startsWith(FAVORITE_CATEGORY_ROW_PREFIX)) {
             // A Favorite Categories row: its star is the category's, never a stream favourite.
             toggleFavoriteCategory(itemId.removePrefix(FAVORITE_CATEGORY_ROW_PREFIX), itemName, contentType)
@@ -649,7 +708,10 @@ class CategoryViewModel(
             if (repo.isFavorite(itemId, contentType)) {
                 repo.removeFavorite(itemId, contentType)
                 // The Favourites list loses the row at once, the rest staying where they are.
-                if (currentCategoryId == FAVORITES_CATEGORY_ID) currentStreams = currentStreams.filterNot { it.id == itemId }
+                if (currentCategoryId == FAVORITES_CATEGORY_ID) {
+                    val source = repo.getProviderId()
+                    currentStreams = currentStreams.filterNot { it.id == itemId && it.sourceOr(sourceId) == source }
+                }
             } else {
                 repo.addFavorite(itemId, itemName, categoryId, contentType)
             }
@@ -669,17 +731,17 @@ class CategoryViewModel(
         item: MediaItem,
         contentType: String,
     ): () -> Unit {
-        val index = currentStreams.indexOfFirst { it.id == item.id }
+        val index = currentStreams.indexOfFirst { it.id == item.id && it.providerId == item.providerId }
         val listId = currentCategoryId
-        if (isFavoriteRow(item, contentType)) toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+        if (isFavoriteRow(item, contentType)) toggleFavoriteStream(item.id, item.name, item.categoryId, contentType, item.providerId)
         return {
             if (!isFavoriteRow(item, contentType)) {
                 if (listId == FAVORITES_CATEGORY_ID && currentCategoryId == listId && index >= 0 &&
-                    currentStreams.none { it.id == item.id }
+                    currentStreams.none { it.id == item.id && it.providerId == item.providerId }
                 ) {
                     currentStreams = currentStreams.toMutableList().apply { add(index.coerceAtMost(size), item) }
                 }
-                toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+                toggleFavoriteStream(item.id, item.name, item.categoryId, contentType, item.providerId)
             }
         }
     }
@@ -691,7 +753,7 @@ class CategoryViewModel(
         if (item.id.startsWith(FAVORITE_CATEGORY_ROW_PREFIX)) {
             isFavoriteCategory(item.id.removePrefix(FAVORITE_CATEGORY_ROW_PREFIX), contentType)
         } else {
-            isFavorite(item.id, contentType)
+            isFavorite(item.id, contentType, item.providerId)
         }
 
     /**
@@ -704,10 +766,11 @@ class CategoryViewModel(
     fun toggleWatchedStream(
         itemId: String,
         contentType: String,
+        rowSource: Long = 0L,
     ) {
         val nowWatched = itemId !in _watchedIds.value
         viewModelScope.launchGuarded("CategoryViewModel.toggleWatchedStream") {
-            val repo = awaitRepository()
+            val repo = repoFor(rowSource)
             repo.setWatched(itemId, contentType, nowWatched)
             refreshPerItemData()
         }
@@ -724,8 +787,10 @@ class CategoryViewModel(
      * Whether every episode of [seriesId] is watched — the wording of the show row's mark; null
      * when not known here (or the read failed: the menu then offers "watched").
      */
-    suspend fun showWatchState(seriesId: String): Boolean? =
-        suspendRunCatching { awaitRepository().episodesWatchState(seriesId, null) }.getOrNull()
+    suspend fun showWatchState(
+        seriesId: String,
+        rowSource: Long = 0L,
+    ): Boolean? = suspendRunCatching { repoFor(rowSource).episodesWatchState(seriesId, null) }.getOrNull()
 
     /**
      * Marks every episode of [seriesId] watched or unwatched
@@ -736,10 +801,11 @@ class CategoryViewModel(
     fun setShowWatched(
         seriesId: String,
         watched: Boolean,
+        rowSource: Long = 0L,
         onError: (String) -> Unit,
     ) {
         viewModelScope.launchGuarded("CategoryViewModel.setShowWatched") {
-            awaitRepository()
+            repoFor(rowSource)
                 .setEpisodesWatched(seriesId, null, watched)
                 .onSuccess { refreshPerItemData() }
                 .onFailure { e ->
@@ -760,6 +826,8 @@ class CategoryViewModel(
         itemId: String,
         contentType: String,
         seriesId: String? = null,
+        // The row's source (a merged list's row, Phase 4); 0: this list's.
+        rowSource: Long = 0L,
     ): () -> Unit {
         var removal: RecentRemoval? = null
         val removing =
@@ -767,38 +835,38 @@ class CategoryViewModel(
                 // The Recent row (unlike category streams) can be visible before loadCategories()
                 // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
                 // into — so this can race ahead of the repository's assignment.
-                // awaitRepository() below waits for it rather than dropping the removal.
-                val repo = awaitRepository()
-                removal = repo.removeFromRecent(itemId, contentType, seriesId)
-                showRecentChange(repo)
+                // awaitMerged() below waits for it rather than dropping the removal.
+                val merged = awaitMerged()
+                removal = merged.removeFromRecent(rowSource, itemId, contentType, seriesId)
+                showRecentChange(merged)
             }
         return {
             viewModelScope.launchGuarded("CategoryViewModel.undoRemoveFromRecent") {
                 removing.join()
-                val repo = awaitRepository()
-                removal?.let { repo.restoreRecent(it) }
-                showRecentChange(repo)
+                val merged = awaitMerged()
+                removal?.let { merged.restoreRecent(it) }
+                showRecentChange(merged)
             }
         }
     }
 
     /**
-     * Clear Recent (edit mode): this section's whole Recent list, after the screen's one
-     * confirmation. Progress and watched marks stay.
+     * Clear Recent (edit mode): this section's whole Recent list — on every source of the profile —
+     * after the screen's one confirmation. Progress and watched marks stay.
      */
     fun clearRecent() {
         viewModelScope.launchGuarded("CategoryViewModel.clearRecent") {
-            val repo = awaitRepository()
-            repo.clearRecent(contentType)
-            showRecentChange(repo)
+            val merged = awaitMerged()
+            merged.clearRecent(contentType)
+            showRecentChange(merged)
         }
     }
 
-    /** Recent on screen after a removal, an Undo or a clear: the repository's list, in place for Live TV. */
-    private fun showRecentChange(repo: MediaRepository) {
+    /** Recent on screen after a removal, an Undo or a clear: the sources' lists, in place for Live TV. */
+    private fun showRecentChange(merged: MergedLists) {
         val currentState = _uiState.value
         if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
-            val updatedStreams = inRecentOrder(repo.recentItems(contentType).value.orEmpty())
+            val updatedStreams = inRecentOrder(merged.publishedRecent(contentType))
             currentStreams = updatedStreams
             _uiState.value =
                 currentState.copy(
@@ -832,10 +900,10 @@ class CategoryViewModel(
         val onRecent = state is UiState.Success && state.selectedCategoryId == RECENT_CATEGORY_ID && !state.streamsLoading
         if (contentType == ContentType.LIVE_TV && onRecent) {
             viewModelScope.launchGuarded("CategoryViewModel.reloadRecentOnEntry") {
-                val repo = awaitRepository()
-                repo.refreshRecentItems(contentType)
+                val merged = awaitMerged()
+                merged.refreshRecentItems(contentType)
                 liveRecentOrder = emptyList()
-                showRecentChange(repo)
+                showRecentChange(merged)
             }
         }
     }
@@ -914,7 +982,7 @@ class CategoryViewModel(
                 ),
             )
         }
-        val recentCategories = repo.getRecentlyViewedCategories(contentType)
+        val recentCategories = mergedSnapshot?.recentCategories(contentType) ?: repo.getRecentlyViewedCategories(contentType)
         if (recentCategories.isNotEmpty()) {
             virtualCats.add(
                 MediaCategory(
@@ -997,14 +1065,14 @@ class CategoryViewModel(
      * selection or its streams list. The result arrives via [recentItems].
      */
     suspend fun refreshRecentItems() {
-        awaitRepository().refreshRecentItems(contentType)
+        awaitMerged().refreshRecentItems(contentType)
     }
 
     /**
      * Favorites fetch, bypassing [uiState] the same way — for the same Live TV preview panel,
-     * toggling between the two without disturbing the selected/browsed category.
+     * toggling between the two without disturbing the selected/browsed category. Every source's.
      */
-    suspend fun getFavoritesSnapshot(): List<MediaItem> = awaitRepository().getFavoritesForContentTypeSuspend(contentType)
+    suspend fun getFavoritesSnapshot(): List<MediaItem> = awaitMerged().favorites(contentType)
 }
 
 /** Splits into (virtual, regular) categories — single pass instead of two filters. */

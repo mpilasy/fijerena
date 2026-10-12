@@ -30,8 +30,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -56,17 +58,20 @@ fun TvFavoritesRow(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     itemModifier: (MediaItem) -> Modifier = { Modifier },
+    /** Each source's name while the row mixes several: a badge on its cards. */
+    sourceNames: Map<Long, String> = emptyMap(),
 ) {
     HomeRow(
         title = title,
         items = items,
-        key = { it.id },
+        key = { it.sourceKey },
         listState = listState,
         firstItemFocus = firstItemFocus,
         modifier = modifier,
     ) { item, rowModifier ->
         TvFavoriteCard(
             item = item,
+            sourceName = sourceNames[item.providerId],
             thumbnailType = thumbnailType,
             onClick = { onItemSelected(item) },
             onOpenActions = { onOpenActions(item) },
@@ -78,6 +83,7 @@ fun TvFavoritesRow(
 @Composable
 private fun TvFavoriteCard(
     item: MediaItem,
+    sourceName: String?,
     thumbnailType: ThumbnailContentType,
     onClick: () -> Unit,
     onOpenActions: () -> Unit,
@@ -132,6 +138,7 @@ private fun TvFavoriteCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     parsedTitle.badge?.let { LanguageBadge(it) }
+                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = parsedTitle.title.ifBlank { item.name },
                         style = MaterialTheme.typography.titleMedium,

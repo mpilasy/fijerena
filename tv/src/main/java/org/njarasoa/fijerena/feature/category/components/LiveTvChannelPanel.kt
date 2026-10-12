@@ -83,7 +83,7 @@ internal fun LiveTvChannelPanel(
     watchProgress: ImmutableWatchProgress,
     watchedIds: ImmutableStringSet,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onStreamPromote: (MediaItem) -> Unit,
     onRefresh: () -> Unit,
     /** Full screen: the panel has just opened over the video and must hold focus at once. */
@@ -207,17 +207,17 @@ internal fun LiveTvChannelPanel(
                 favoriteIds = favoriteIds,
                 watchProgress = watchProgress,
                 watchedIds = watchedIds,
-                onStreamSelected = { streamId, streamName, categoryId, target ->
-                    if (target is BrowseTarget.CategoryRef) {
+                onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
+                    if (target is BrowseTarget.CategoryRef && !categoryViewModel.isOtherSource(providerId)) {
                         onCategorySelected(target.categoryId)
                     } else {
-                        val item = streams?.firstOrNull { it.id == streamId }
-                        if (item != null) {
+                        val item = streams?.firstOrNull { it.id == streamId && it.providerId == providerId }
+                        if (item != null && target !is BrowseTarget.CategoryRef) {
                             onStreamPromote(item)
                         } else {
-                            // Not resolvable from the current list (shouldn't normally happen) — fall
-                            // back to the caller's own handling.
-                            onStreamSelected(streamId, streamName, categoryId, target)
+                            // Not resolvable from the current list (shouldn't normally happen), or
+                            // another source's category — fall back to the caller's own handling.
+                            onStreamSelected(streamId, streamName, categoryId, target, providerId)
                         }
                     }
                 },

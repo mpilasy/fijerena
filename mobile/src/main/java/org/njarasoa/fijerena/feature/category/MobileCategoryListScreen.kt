@@ -134,10 +134,10 @@ import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
-import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -159,6 +159,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
@@ -213,6 +214,9 @@ fun MobileCategoryListScreen(
         categoryId: String,
         contentType: String,
         target: BrowseTarget,
+        // The row's source (a merged Recent / Favourites row, or another source's category); 0
+        // for the list's own.
+        providerId: Long,
     ) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
@@ -259,6 +263,8 @@ fun MobileCategoryListScreen(
     val watchProgress = remember(watchProgressMap) { ImmutableWatchProgress(watchProgressMap) }
     val favoriteCategoryIdsSet by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
     val favoriteCategoryIds = remember(favoriteCategoryIdsSet) { ImmutableStringSet(favoriteCategoryIdsSet) }
+    // Each source's name while Recent and Favourites mix several: a badge on their rows.
+    val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Null-safe instead of a hard `context as ComponentActivity` cast (F-37).
     val activity = LocalActivity.current as? ComponentActivity
@@ -852,6 +858,7 @@ fun MobileCategoryListScreen(
                                                     itemName = toggled.name,
                                                     categoryId = toggled.categoryId,
                                                     contentType = contentType,
+                                                    rowSource = toggled.providerId,
                                                 )
                                                 if (target == null) {
                                                     // Only reload when Favorites is what's on screen (so an
@@ -886,24 +893,32 @@ fun MobileCategoryListScreen(
                                                     watchedIds = watchedIds,
                                                     watchProgress = watchProgress,
                                                     currentlyPlayingId = target?.id,
-                                                    onItemSelected = { itemId, itemName, categoryId ->
-                                                        val item = displayedStreams?.firstOrNull { it.id == itemId }
-                                                        val selected =
-                                                            item?.browseTarget(contentType) ?: browseTargetFor(contentType, itemId)
+                                                    sourceNames = sourceNames,
+                                                    onItemSelected = { item ->
+                                                        val selected = item.browseTarget(contentType)
                                                         when {
-                                                            // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play.
-                                                            selected is BrowseTarget.CategoryRef -> {
+                                                            // A row from "Recent Categories"/"Favorite Categories" browses, it
+                                                            // doesn't play; one of another source's categories opens there.
+                                                            selected is BrowseTarget.CategoryRef &&
+                                                                !viewModel.isOtherSource(item.providerId) -> {
                                                                 viewModel.loadStreams(selected.categoryId)
                                                             }
 
-                                                            isLiveTv && item != null -> {
+                                                            isLiveTv && selected !is BrowseTarget.CategoryRef -> {
                                                                 // Dock locally instead of navigating away — mirrors
                                                                 // TV's LiveTvChannelList.onStreamPromote interception.
                                                                 dockTarget = item
                                                             }
 
                                                             else -> {
-                                                                onStreamSelected(itemId, itemName, categoryId, contentType, selected)
+                                                                onStreamSelected(
+                                                                    item.id,
+                                                                    item.name,
+                                                                    item.categoryId,
+                                                                    contentType,
+                                                                    selected,
+                                                                    item.providerId,
+                                                                )
                                                             }
                                                         }
                                                     },
@@ -911,18 +926,25 @@ fun MobileCategoryListScreen(
                                                     favoriteIds = favoriteIds,
                                                     onToggleFavorite = toggleFavorite,
                                                     onToggleWatched = { toggled ->
-                                                        viewModel.toggleWatchedStream(toggled.id, contentType)
+                                                        viewModel.toggleWatchedStream(toggled.id, contentType, toggled.providerId)
                                                     },
                                                     showWatchedMark = viewModel.supportsWatchedMark,
                                                     showWatchState = viewModel::showWatchState,
-                                                    onSetShowWatched = { seriesId, watched ->
-                                                        viewModel.setShowWatched(seriesId, watched) { message ->
+                                                    onSetShowWatched = { seriesId, watched, rowSource ->
+                                                        viewModel.setShowWatched(seriesId, watched, rowSource) { message ->
                                                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                                                         }
                                                     },
                                                     onRemoveItem =
                                                         if (viewModel.supportsRemoveFromRecent) {
-                                                            { item -> viewModel.removeFromRecent(item.id, contentType, item.seriesId) }
+                                                            { item ->
+                                                                viewModel.removeFromRecent(
+                                                                    item.id,
+                                                                    contentType,
+                                                                    item.seriesId,
+                                                                    item.providerId,
+                                                                )
+                                                            }
                                                         } else {
                                                             null
                                                         },
@@ -1474,7 +1496,9 @@ private fun StreamsList(
     currentlyPlayingId: String? = null,
     contentType: String,
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
-    onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
+    // Each source's name while the list mixes several (Recent, Favourites): a badge on its rows.
+    sourceNames: Map<Long, String> = emptyMap(),
+    onItemSelected: (MediaItem) -> Unit,
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     // The swipe's "Mark watched / unwatched", absent when this is false (a source that keeps
@@ -1482,8 +1506,9 @@ private fun StreamsList(
     // episodes (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3), worded from
     // showWatchState when revealed.
     showWatchedMark: Boolean = false,
-    showWatchState: suspend (seriesId: String) -> Boolean? = { null },
-    onSetShowWatched: (seriesId: String, watched: Boolean) -> Unit = { _, _ -> },
+    // A row's own source answers for it (a merged list's row; 0: the list's).
+    showWatchState: suspend (seriesId: String, providerId: Long) -> Boolean? = { _, _ -> null },
+    onSetShowWatched: (seriesId: String, watched: Boolean, providerId: Long) -> Unit = { _, _, _ -> },
     onRemoveItem: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
     onRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
 ) {
@@ -1516,7 +1541,7 @@ private fun StreamsList(
     val openRowMenu: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = { item ->
         val seriesId = item.showSeriesId(contentType)
         if (seriesId != null && showWatchedMark) {
-            scope.launch { rowMenu = RowMenu(item, showWatchState(seriesId)) }
+            scope.launch { rowMenu = RowMenu(item, showWatchState(seriesId, item.providerId)) }
         } else {
             rowMenu = RowMenu(item, isShowWatched = null)
         }
@@ -1588,7 +1613,9 @@ private fun StreamsList(
                 ) {
                     itemsIndexed(
                         items,
-                        key = { _, item -> item.id },
+                        // By source and id: Recent and Favourites mix the profile's sources, and the
+                        // same id on two of them is two rows (multi-source plan, Phase 4).
+                        key = { _, item -> item.sourceKey },
                         contentType = { _, item -> if (item.isSeparatorRow) "separator" else "stream" },
                     ) { index, item ->
                         if (item.isSeparatorRow) {
@@ -1596,7 +1623,7 @@ private fun StreamsList(
                             return@itemsIndexed
                         }
                         val cardModifier =
-                            if (remember(item.id) { enteredStreamIds.add(item.id) }) {
+                            if (remember(item.sourceKey) { enteredStreamIds.add(item.sourceKey) }) {
                                 Modifier.staggeredEntrance(index)
                             } else {
                                 Modifier
@@ -1605,6 +1632,7 @@ private fun StreamsList(
                         val streamCard = @Composable { modifier: Modifier ->
                             StreamCard(
                                 item = item,
+                                sourceName = sourceNames[item.providerId],
                                 nowPlayingProgram = nowPlaying[item.id],
                                 catchupDays = catchupDays[item.id] ?: 0,
                                 isCurrentlyPlaying = item.id == currentlyPlayingId,
@@ -1613,7 +1641,7 @@ private fun StreamsList(
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 cardColors = streamCardColors,
                                 onClick = {
-                                    onItemSelected(item.id, item.name, item.categoryId)
+                                    onItemSelected(item)
                                 },
                                 onLongClick = { openRowMenu(item) },
                                 onLongClickLabel = stringResource(R.string.row_more_actions),
@@ -1649,11 +1677,11 @@ private fun StreamsList(
                             }
                         LaunchedEffect(revealState) {
                             snapshotFlow { revealState.targetValue }.collect { value ->
-                                if (value != SwipeReveal.CLOSED) openRowId = item.id
+                                if (value != SwipeReveal.CLOSED) openRowId = item.sourceKey
                             }
                         }
                         LaunchedEffect(openRowId, revealState) {
-                            if (openRowId != item.id && revealState.currentValue != SwipeReveal.CLOSED) {
+                            if (openRowId != item.sourceKey && revealState.currentValue != SwipeReveal.CLOSED) {
                                 revealState.animateTo(SwipeReveal.CLOSED)
                             }
                         }
@@ -1691,7 +1719,7 @@ private fun StreamsList(
                                     if (showSeriesId != null && showWatchedMark) {
                                         val revealed = revealState.targetValue == SwipeReveal.FAVORITE_ACTIONS
                                         val isShowWatched by produceState<Boolean?>(null, revealed, showSeriesId) {
-                                            if (revealed) value = showWatchState(showSeriesId)
+                                            if (revealed) value = showWatchState(showSeriesId, item.providerId)
                                         }
                                         SwipeActionButton(
                                             icon = if (isShowWatched == true) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
@@ -1707,7 +1735,7 @@ private fun StreamsList(
                                                 ),
                                             tint = CinemaAccent,
                                             onClick = {
-                                                onSetShowWatched(showSeriesId, isShowWatched != true)
+                                                onSetShowWatched(showSeriesId, isShowWatched != true, item.providerId)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
                                             },
                                         )
@@ -1796,7 +1824,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show,
                                             ),
-                                        onClick = { showSeriesId?.let { onSetShowWatched(it, !isShowWatched) } },
+                                        onClick = { showSeriesId?.let { onSetShowWatched(it, !isShowWatched, item.providerId) } },
                                     )
                                 }
 
@@ -1928,6 +1956,8 @@ private fun selectCategoryText(contentType: String): String =
 @Composable
 internal fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
+    /** The row's source, where the list mixes several (Recent, Favourites): a badge. */
+    sourceName: String? = null,
     nowPlayingProgram: EpgProgram? = null,
     /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
     catchupDays: Int = 0,
@@ -2006,6 +2036,7 @@ internal fun StreamCard(
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
                 parsedTitle.badge,
+                sourceName?.let { stringResource(R.string.source_badge_description, it) },
                 displayTitle,
                 nowPlayingText,
                 metaLine.ifEmpty { null },
@@ -2071,6 +2102,7 @@ internal fun StreamCard(
                     }
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
                     parsedTitle.badge?.let { LanguageBadge(it) }
+                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.bodyLarge,

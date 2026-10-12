@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardBorder
 import androidx.tv.material3.CardColors
@@ -63,6 +64,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
@@ -77,6 +79,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
@@ -154,7 +157,8 @@ internal fun StreamList(
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    /** [providerId]: the row's source (a merged Recent / Favourites row), 0 for the list's own. */
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
@@ -198,10 +202,14 @@ internal fun StreamList(
     // Separator rows from the provider ("####### ETHIOPIA VIP #######", TV UI audit #24) are
     // headings, not channels: drawn as non-focusable section headers, never a focus or play
     // target. Up/Down pass over them, as over any non-focusable item.
+    // Rows are keyed by source and id (sourceKey): Recent and Favourites mix the profile's sources,
+    // and the same id on two of them is two rows (multi-source plan, Phase 4).
     val markerIds =
         remember(streams) {
-            streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.id }.orEmpty()
+            streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.sourceKey }.orEmpty()
         }
+    // Each source's name while the list mixes several: a badge on its rows.
+    val sourceNames by categoryViewModel.sourceNames.collectAsStateWithLifecycle()
 
     // Channels whose source keeps an archive get a catch-up badge. Asked per list, so the Live TV
     // panel's Recent and Favourites tabs, which the browse list doesn't cover, get it too.
@@ -216,17 +224,17 @@ internal fun StreamList(
     val currentStreams by rememberUpdatedState(streams)
     var rowFocusAfterChange by remember { mutableStateOf<RowFocusAfterChange?>(null) }
     val rowKeys: (ImmutableMediaList?) -> List<String> = { list ->
-        list?.mapNotNull { it.id.takeUnless(markerIds::contains) }.orEmpty()
+        list?.mapNotNull { it.sourceKey.takeUnless(markerIds::contains) }.orEmpty()
     }
     val showUndo: (MediaItem, () -> Unit, Boolean) -> Unit = { item, undo, rowLeaves ->
-        if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(streams, item.id, rowKeys(streams))
+        if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(streams, item.sourceKey, rowKeys(streams))
         undoBar.show(parseDisplayTitle(item.name).title.ifBlank { item.name }) {
             undo()
-            if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(currentStreams, item.id, rowKeys(currentStreams))
+            if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(currentStreams, item.sourceKey, rowKeys(currentStreams))
         }
     }
     val removeFromRecent: (MediaItem) -> Unit = { item ->
-        showUndo(item, categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId), true)
+        showUndo(item, categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId, item.providerId), true)
     }
     val removeFavorite: (MediaItem) -> Unit = { item ->
         showUndo(item, categoryViewModel.removeFavorite(item, contentType), isFavoritesList)
@@ -239,7 +247,7 @@ internal fun StreamList(
     actionsItem?.let { item ->
         // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
         // the browse list's favoriteIds may not cover) the repository says.
-        val isFavorite = isFavoritesList || item.id in favoriteIds || categoryViewModel.isFavorite(item.id, contentType)
+        val isFavorite = isFavoritesList || item.id in favoriteIds || categoryViewModel.isFavorite(item.id, contentType, item.providerId)
         // A show row (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3) offers "Mark show
         // watched / unwatched" for all its episodes instead of the one-item toggle, except where
         // the source keeps watched state on its server. The menu opens once its wording is known.
@@ -250,7 +258,7 @@ internal fun StreamList(
         var showStateKnown by remember(item) { mutableStateOf(showMarkId == null) }
         LaunchedEffect(item) {
             if (showMarkId != null) {
-                isShowWatched = categoryViewModel.showWatchState(showMarkId)
+                isShowWatched = categoryViewModel.showWatchState(showMarkId, item.providerId)
                 showStateKnown = true
             }
         }
@@ -273,16 +281,16 @@ internal fun StreamList(
                     if (isFavorite) {
                         removeFavorite(item)
                     } else {
-                        categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+                        categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType, item.providerId)
                     }
                 },
                 onDismiss = { actionsItem = null },
                 onToggleWatched =
-                    if (canMarkItem) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
+                    if (canMarkItem) ({ categoryViewModel.toggleWatchedStream(item.id, contentType, item.providerId) }) else null,
                 onToggleShowWatched =
                     showMarkId?.let { seriesId ->
                         {
-                            categoryViewModel.setShowWatched(seriesId, isShowWatched != true) { message ->
+                            categoryViewModel.setShowWatched(seriesId, isShowWatched != true, item.providerId) { message ->
                                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -317,8 +325,10 @@ internal fun StreamList(
     // series only: Live TV keeps following lastPlayedItemId, which tracks channel zapping in the
     // player.
     var openedItemId by rememberSaveable(selectedCategoryId) { mutableStateOf<String?>(null) }
-    // A separator is never a focus target, even when it was once played (before #24).
-    val focusTargetId = (openedItemId ?: lastPlayedItemId)?.takeUnless { it in markerIds }
+    // A separator is never a focus target, even when it was once played (before #24). The last
+    // played item is an id: its row's key is the first row with that id.
+    val lastPlayedKey = remember(streams, lastPlayedItemId) { streams?.firstOrNull { it.id == lastPlayedItemId }?.sourceKey }
+    val focusTargetId = (openedItemId ?: lastPlayedKey)?.takeUnless { it in markerIds }
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
@@ -331,14 +341,14 @@ internal fun StreamList(
     // re-emitted again and again as programme info arrives, and each emission relaunched this
     // effect. When the target can't take focus (a hidden list behind the full-screen player, a row
     // never composed) every relaunch failed again — a log flood that never stopped while watching.
-    val focusTargetIndex = remember(streams, focusTargetId) { streams?.indexOfFirst { it.id == focusTargetId } ?: -1 }
+    val focusTargetIndex = remember(streams, focusTargetId) { streams?.indexOfFirst { it.sourceKey == focusTargetId } ?: -1 }
     val pane = paneFocus ?: rememberPaneFocus()
     pane.bind(
         selectedKey = focusTargetId,
         // Entry lands on the first channel, never on a separator above it.
-        firstKey = streams?.firstOrNull { it.id !in markerIds }?.id,
+        firstKey = streams?.firstOrNull { it.sourceKey !in markerIds }?.sourceKey,
         listState = listState,
-        indexOf = { key -> if (key in markerIds) -1 else streams?.indexOfFirst { it.id == key } ?: -1 },
+        indexOf = { key -> if (key in markerIds) -1 else streams?.indexOfFirst { it.sourceKey == key } ?: -1 },
     )
     // Entry focus (F-C-1): a pane's list takes focus once per composition when it first has rows,
     // even with no target — on the remembered row (a Back return), else the first.
@@ -466,14 +476,15 @@ internal fun StreamList(
                         ) {
                             itemsIndexed(
                                 items = streams,
-                                key = { _, item -> item.id },
-                                contentType = { _, item -> if (item.id in markerIds) "separator" else "stream" },
+                                key = { _, item -> item.sourceKey },
+                                contentType = { _, item -> if (item.sourceKey in markerIds) "separator" else "stream" },
                             ) { index, item ->
-                                if (item.id in markerIds) {
+                                if (item.sourceKey in markerIds) {
                                     SeparatorRow(name = item.name)
                                 } else {
                                     StreamItem(
                                         item = item,
+                                        sourceName = sourceNames[item.providerId],
                                         isFavorite = item.id in favoriteIds,
                                         watchProgress = watchProgress[item.id] ?: 0f,
                                         isWatched = item.id in watchedIds,
@@ -495,15 +506,21 @@ internal fun StreamList(
                                                     if (isWatchable) {
                                                         // Already focused: mark handled too, so the effect above
                                                         // doesn't scroll this row to the top as the screen leaves.
-                                                        lastFocusedItemId = item.id
-                                                        openedItemId = item.id
+                                                        lastFocusedItemId = item.sourceKey
+                                                        openedItemId = item.sourceKey
                                                     }
-                                                    onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
+                                                    onStreamSelected(
+                                                        item.id,
+                                                        item.name,
+                                                        item.categoryId,
+                                                        item.browseTarget(contentType),
+                                                        item.providerId,
+                                                    )
                                                 }
                                             }
                                         },
                                         onOpenActions = { actionsItem = item },
-                                        cardModifier = Modifier.paneItem(pane, item.id),
+                                        cardModifier = Modifier.paneItem(pane, item.sourceKey),
                                         thumbnailScale = thumbnailScale,
                                         cardStyle = cardStyle,
                                         modifier =
@@ -511,7 +528,7 @@ internal fun StreamList(
                                             // reuses the same answer. Called bare, add() returned false on
                                             // the first recomposition and dropped staggeredEntrance from the
                                             // chain mid-animation, detaching the node.
-                                            if (remember(item.id) { enteredStreamIds.add(item.id) }) {
+                                            if (remember(item.sourceKey) { enteredStreamIds.add(item.sourceKey) }) {
                                                 Modifier.staggeredEntrance(index)
                                             } else {
                                                 Modifier
@@ -603,6 +620,8 @@ private fun SeparatorRow(name: String) {
 @Composable
 internal fun StreamItem(
     item: MediaItem,
+    /** The row's source, where the list mixes several (Recent, Favourites): a badge. */
+    sourceName: String? = null,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
@@ -677,6 +696,7 @@ internal fun StreamItem(
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
                 parsedTitle.badge,
+                sourceName?.let { stringResource(R.string.source_badge_description, it) },
                 displayTitle,
                 metaLine.ifEmpty { null },
                 nowLine,
@@ -761,6 +781,8 @@ internal fun StreamItem(
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
 
                     parsedTitle.badge?.let { LanguageBadge(it) }
+
+                    sourceName?.let { SourceBadge(it) }
 
                     Text(
                         // See mobile's StreamCard — provider data occasionally sends a blank

@@ -84,7 +84,7 @@ internal fun TwoColumnLayout(
     supportsNativeEpg: Boolean,
     epgIndexState: EpgIndexState,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
@@ -322,12 +322,13 @@ internal fun TwoColumnLayout(
                     favoriteIds = favoriteIds,
                     watchProgress = watchProgress,
                     watchedIds = watchedIds,
-                    onStreamSelected = { streamId, streamName, categoryId, target ->
-                        // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play.
-                        if (target is BrowseTarget.CategoryRef) {
+                    onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
+                        // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play;
+                        // one of another source's categories opens on that source (its own route).
+                        if (target is BrowseTarget.CategoryRef && !categoryViewModel.isOtherSource(providerId)) {
                             onCategorySelected(target.categoryId)
                         } else {
-                            onStreamSelected(streamId, streamName, categoryId, target)
+                            onStreamSelected(streamId, streamName, categoryId, target, providerId)
                         }
                     },
                     onRefreshStreams = onRefreshStreams,

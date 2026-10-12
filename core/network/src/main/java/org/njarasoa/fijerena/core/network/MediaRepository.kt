@@ -121,10 +121,14 @@ private fun WatchStateEntity.toWatchedItem(): WatchedItem =
         subtitleTrackIndex = subtitleTrackIndex,
     )
 
-/** What [MediaRepository.removeFromRecent] took out of Recent, for [MediaRepository.restoreRecent]. */
+/**
+ * What [MediaRepository.removeFromRecent] took out of Recent, for [MediaRepository.restoreRecent]
+ * — on [providerId]'s source, which a merged list's Undo goes back to.
+ */
 data class RecentRemoval(
     val contentType: String,
     val plays: List<RecentPlay>,
+    val providerId: Long = 0L,
 )
 
 @Serializable
@@ -1619,6 +1623,8 @@ class MediaRepository(
             categoryId = categoryId,
             target = recentTarget(seriesCardId),
             providerId = this@MediaRepository.providerId,
+            lastPlayedAt = timestamp,
+            resumable = resumeProgress() != null,
         )
     }
 
@@ -1829,6 +1835,8 @@ class MediaRepository(
                 remainingMs = 0L,
                 target = seriesTarget?.copy(resumeEpisodeId = EpisodeId(next.episodeId)) ?: requireNotNull(item.target),
                 upNext = true,
+                providerId = providerId,
+                lastPlayedAt = lastPlayedAt ?: 0L,
             )
         return upNextItem to (lastPlayedAt ?: 0L)
     }
@@ -1852,6 +1860,8 @@ class MediaRepository(
                 progress = (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f),
                 remainingMs = (durationMs - positionMs).coerceAtLeast(0L),
                 target = requireNotNull(item.target) { "toRecentMediaItem always sets target" },
+                providerId = providerId,
+                lastPlayedAt = lastPlayedAt ?: 0L,
             )
         return continueWatchingItem to (lastPlayedAt ?: 0L)
     }
@@ -2212,7 +2222,7 @@ class MediaRepository(
         val now = System.currentTimeMillis()
         val plays = watchStateDao.takeRecentSeries(providerId, profileId, seriesId ?: itemId, contentType, now)
         refreshRecentItems(contentType)
-        return RecentRemoval(contentType, plays)
+        return RecentRemoval(contentType, plays, providerId)
     }
 
     /**

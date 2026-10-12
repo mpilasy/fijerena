@@ -958,7 +958,9 @@ private fun CategoryListDestination(
         initialCategoryId = route.initialCategoryId,
         initialStreamId = route.initialStreamId,
         providerId = route.providerId,
-        onStreamSelected = { itemId, itemName, categoryId, contentType, target ->
+        onStreamSelected = { itemId, itemName, categoryId, contentType, target, rowSource ->
+            // A merged Recent / Favourites row opens on its own source (multi-source plan, Phase 4).
+            val source = rowSource.takeIf { it != 0L } ?: route.providerId
             when (target) {
                 // Continue Watching: the card stands for the show, so open episode
                 // selection with the last-watched episode's panel already up.
@@ -969,7 +971,7 @@ private fun CategoryListDestination(
                             seriesName = itemName,
                             categoryId = categoryId,
                             initialEpisodeId = target.resumeEpisodeId?.raw,
-                            providerId = route.providerId,
+                            providerId = source,
                         ),
                     )
                 }
@@ -987,7 +989,7 @@ private fun CategoryListDestination(
                             episodeExtension = target.extension,
                             seriesId = target.seriesId?.raw,
                             seriesName = target.seriesName,
-                            providerId = route.providerId,
+                            providerId = source,
                         ),
                     )
                 }
@@ -998,7 +1000,7 @@ private fun CategoryListDestination(
                             movieId = target.movieId,
                             movieName = itemName,
                             categoryId = categoryId,
-                            providerId = route.providerId,
+                            providerId = source,
                         ),
                     )
                 }
@@ -1010,13 +1012,16 @@ private fun CategoryListDestination(
                 // case, same as TV.
                 is BrowseTarget.Channel -> {
                     navController.navigateOnce(
-                        Screen.Player(target.streamId, itemName, categoryId, contentType, providerId = route.providerId),
+                        Screen.Player(target.streamId, itemName, categoryId, contentType, providerId = source),
                     )
                 }
 
-                // Browsed into by the list screen itself; it never reaches nav.
+                // Browsed into by the list screen itself, unless it is another source's category
+                // (Recent Categories across sources): that source's list, on it.
                 is BrowseTarget.CategoryRef -> {
-                    Unit
+                    navController.navigateOnce(
+                        Screen.CategoryList(contentType = contentType, initialCategoryId = target.categoryId, providerId = source),
+                    )
                 }
             }
         },

@@ -332,7 +332,9 @@ fun TvNavHost(
             showPreviewPane = showPreviewPane,
             closeSavedLivePreview = closeSavedLivePreview,
             providerId = providerId,
-            onStreamSelected = { itemId, streamName, categoryId, target ->
+            onStreamSelected = { itemId, streamName, categoryId, target, rowSource ->
+                // A merged Recent / Favourites row opens on its own source (multi-source plan, Phase 4).
+                val source = rowSource.takeIf { it != 0L } ?: providerId
                 when (target) {
                     // Continue Watching: the card represents the show, not the
                     // episode — open episode selection with the last-watched
@@ -344,7 +346,7 @@ fun TvNavHost(
                                 seriesName = streamName,
                                 categoryId = categoryId,
                                 initialEpisodeId = target.resumeEpisodeId?.raw,
-                                providerId = providerId,
+                                providerId = source,
                             ),
                         )
                     }
@@ -362,7 +364,7 @@ fun TvNavHost(
                                 episodeExtension = target.extension,
                                 seriesId = target.seriesId?.raw,
                                 seriesName = target.seriesName,
-                                providerId = providerId,
+                                providerId = source,
                             ),
                         )
                     }
@@ -373,7 +375,7 @@ fun TvNavHost(
                                 movieId = target.movieId,
                                 movieName = streamName,
                                 categoryId = categoryId,
-                                providerId = providerId,
+                                providerId = source,
                             ),
                         )
                     }
@@ -387,14 +389,22 @@ fun TvNavHost(
                                 contentType = contentType,
                                 initialCategoryId = categoryId,
                                 initialStreamId = target.streamId,
-                                providerId = providerId,
+                                providerId = source,
                             ),
                         )
                     }
 
-                    // Browsed into by the list screen itself; it never reaches nav.
+                    // Browsed into by the list screen itself, unless it is another source's
+                    // category (Recent Categories across sources): that source's list, on it.
                     is BrowseTarget.CategoryRef -> {
-                        Unit
+                        navController.navigateOnce(
+                            Screen.CategoryList(
+                                contentType = contentType,
+                                initialCategoryId = target.categoryId,
+                                showPreviewPane = false,
+                                providerId = source,
+                            ),
+                        )
                     }
                 }
             },
@@ -510,12 +520,13 @@ fun TvNavHost(
                                 },
                                 // A Live row channel opens its preview, zapping through the list the card
                                 // came from (TV home overhaul plan, Phase 4); Back pops back to Home.
-                                onLiveChannelSelected = { streamId, listId ->
+                                onLiveChannelSelected = { streamId, listId, source ->
                                     navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = ContentType.LIVE_TV,
                                             initialCategoryId = listId,
                                             initialStreamId = streamId,
+                                            providerId = source,
                                         ),
                                     )
                                 },
@@ -552,6 +563,7 @@ fun TvNavHost(
                                                     seriesName = item.name,
                                                     categoryId = item.categoryId,
                                                     initialEpisodeId = target.resumeEpisodeId?.raw,
+                                                    providerId = item.providerId,
                                                 ),
                                             )
                                         }
@@ -567,6 +579,7 @@ fun TvNavHost(
                                                     episodeExtension = target.extension,
                                                     seriesId = target.seriesId?.raw,
                                                     seriesName = target.seriesName,
+                                                    providerId = item.providerId,
                                                 ),
                                             )
                                         }
@@ -577,6 +590,7 @@ fun TvNavHost(
                                                     movieId = target.movieId,
                                                     movieName = item.name,
                                                     categoryId = item.categoryId,
+                                                    providerId = item.providerId,
                                                 ),
                                             )
                                         }

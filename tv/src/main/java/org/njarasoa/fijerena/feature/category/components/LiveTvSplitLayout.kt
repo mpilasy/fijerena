@@ -109,7 +109,7 @@ internal fun LiveTvSplitLayout(
     watchProgress: ImmutableWatchProgress,
     watchedIds: ImmutableStringSet,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onBack: () -> Unit,
@@ -513,7 +513,7 @@ internal fun LiveTvSplitLayout(
                 onBack = { fullScreen = false },
                 isFavorite = favoriteIds.contains(target.id),
                 onToggleFavorite = {
-                    categoryViewModel.toggleFavoriteStream(target.id, target.name, target.categoryId, contentType)
+                    categoryViewModel.toggleFavoriteStream(target.id, target.name, target.categoryId, contentType, target.providerId)
                 },
                 currentEpgProgram = success?.currentEpgProgram,
                 nextEpgProgram = success?.nextEpgProgram,

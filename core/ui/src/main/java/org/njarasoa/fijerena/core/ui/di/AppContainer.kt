@@ -52,60 +52,80 @@ class AppContainer(
         // Callers reach this from LaunchedEffect, which runs on Main, so without this the whole
         // ~500ms lands on the UI thread during startup — measured with StrictMode on a Shield.
         withContext(Dispatchers.IO) {
-            val resolvedId =
-                if (providerId > 0L) {
-                    providerId
-                } else {
-                    providerRepository.getActiveProvider()?.id ?: 0L
-                }
-
-            val repo =
-                mutex.withLock {
-                    mediaRepositories[resolvedId] ?: run {
-                        val settings = providerRepository.getProviderSettings(resolvedId)
-                        val profileId = AppSettings(context.applicationContext).activeProfileId
-                        val newRepo = MediaRepository(context.applicationContext, resolvedId, profileId, settings)
-
-                        val entity =
-                            if (providerId > 0L) {
-                                providerRepository.getProviderById(providerId)
-                            } else {
-                                providerRepository.getActiveProvider()
-                            }
-
-                        if (entity != null) {
-                            // This profile's login — its own for Jellyfin, the shared one otherwise.
-                            val login = providerRepository.getLogin(entity)
-                            val provider =
-                                MediaProviderFactory.create(
-                                    entity.copy(username = login.username),
-                                    context.applicationContext,
-                                    login.password,
-                                )
-                            newRepo.setProvider(provider)
-                            // Only cache once we actually have a backing provider — otherwise this
-                            // provider-less repo would get stuck at mediaRepositories[0L] forever,
-                            // even after a real active provider is set up later.
-                            mediaRepositories[resolvedId] = newRepo
-                        }
-                        newRepo
-                    }
-                }
+            val repo = cachedOrNewRepository(providerId)
 
             // Auto-restore session if not connected outside the global mutex so slow/failing
             // network calls for one provider don't block other repository operations.
-            if (!repo.isConnected()) {
-                try {
-                    repo.connect()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    android.util.Log.e("AppContainer", "Auto-connect failed for provider $resolvedId", e)
-                }
-            }
+            if (!repo.isConnected()) connectLogged(repo)
 
             repo
         }
+
+    /**
+     * [getMediaRepository] for a caller that reads only what is stored on the device (the merged
+     * Recent, favourites and Continue Watching of the profile's other sources, multi-source plan
+     * Phase 4): the session is restored in the background, so a source that is slow or offline
+     * doesn't hold the lists up.
+     */
+    suspend fun getStoredDataRepository(providerId: Long): MediaRepository =
+        withContext(Dispatchers.IO) {
+            val repo = cachedOrNewRepository(providerId)
+            if (!repo.isConnected()) scope.launch { connectLogged(repo) }
+            repo
+        }
+
+    private suspend fun connectLogged(repo: MediaRepository) {
+        try {
+            repo.connect()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("AppContainer", "Auto-connect failed for provider ${repo.getProviderId()}", e)
+        }
+    }
+
+    private suspend fun cachedOrNewRepository(providerId: Long): MediaRepository {
+        val resolvedId =
+            if (providerId > 0L) {
+                providerId
+            } else {
+                providerRepository.getActiveProvider()?.id ?: 0L
+            }
+
+        val repo =
+            mutex.withLock {
+                mediaRepositories[resolvedId] ?: run {
+                    val settings = providerRepository.getProviderSettings(resolvedId)
+                    val profileId = AppSettings(context.applicationContext).activeProfileId
+                    val newRepo = MediaRepository(context.applicationContext, resolvedId, profileId, settings)
+
+                    val entity =
+                        if (providerId > 0L) {
+                            providerRepository.getProviderById(providerId)
+                        } else {
+                            providerRepository.getActiveProvider()
+                        }
+
+                    if (entity != null) {
+                        // This profile's login — its own for Jellyfin, the shared one otherwise.
+                        val login = providerRepository.getLogin(entity)
+                        val provider =
+                            MediaProviderFactory.create(
+                                entity.copy(username = login.username),
+                                context.applicationContext,
+                                login.password,
+                            )
+                        newRepo.setProvider(provider)
+                        // Only cache once we actually have a backing provider — otherwise this
+                        // provider-less repo would get stuck at mediaRepositories[0L] forever,
+                        // even after a real active provider is set up later.
+                        mediaRepositories[resolvedId] = newRepo
+                    }
+                    newRepo
+                }
+            }
+        return repo
+    }
 
     /**
      * Clears all cached repositories and providers.

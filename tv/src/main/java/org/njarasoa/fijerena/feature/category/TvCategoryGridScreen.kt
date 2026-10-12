@@ -83,7 +83,8 @@ fun TvCategoryGridScreen(
      * (docs/plans/archive/20261008_tv-nav-rail-plan.md → Risks).
      */
     closeSavedLivePreview: Boolean = false,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    /** [providerId]: the row's source (a merged Recent / Favourites row), 0 for the list's own. */
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
     onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit = { _, _, _ -> },
     /** Live TV: the full-screen OSD's Start over, the programme on air from the channel's archive. */
@@ -178,7 +179,7 @@ private fun CategoryGridContent(
     epgIndexState: EpgIndexState,
     configuration: android.content.res.Configuration,
     catViewModel: CategoryViewModel,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit,
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)?,
     onBack: () -> Unit,
@@ -380,7 +381,7 @@ private fun CategoryGridContent(
                                     onCategorySelected = { categoryId ->
                                         catViewModel.loadStreams(categoryId)
                                     },
-                                    onStreamSelected = { streamId, streamName, categoryId, target ->
+                                    onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
                                         // OK on a channel opens the preview layer on it (LT7). The
                                         // list it was picked from — the browsed category, Recent or
                                         // Favourites — is this CategoryViewModel's selection, so it
@@ -388,7 +389,7 @@ private fun CategoryGridContent(
                                         if (target is BrowseTarget.Channel) {
                                             livePreviewChannelId = target.streamId
                                         } else {
-                                            onStreamSelected(streamId, streamName, categoryId, target)
+                                            onStreamSelected(streamId, streamName, categoryId, target, providerId)
                                         }
                                     },
                                     onRefreshCategories = {

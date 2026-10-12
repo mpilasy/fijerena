@@ -75,6 +75,13 @@ data class MediaItem(
      * it 0. See docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
      */
     val providerId: Long = 0L,
+    /**
+     * A Recent row's last play (epoch ms), 0 elsewhere: what merges Recent across sources, newest
+     * first (docs/plans/20261012_multi-source-search-history-plan.md → Phase 4).
+     */
+    val lastPlayedAt: Long = 0L,
+    /** A Recent row worth resuming (its progress in the resumable band): those come first. */
+    val resumable: Boolean = false,
 ) {
     /** The series ID associated with this media item if it represents a series or episode. */
     val seriesId: String?
@@ -82,6 +89,16 @@ data class MediaItem(
             (target as? BrowseTarget.Series)?.seriesId?.raw
                 ?: (target as? BrowseTarget.Episode)?.seriesId?.raw
 }
+
+/**
+ * The row's key across sources: the same id on two sources is two rows (multi-source plan → Q1).
+ * For list keys and dedup; rows of one list all carry a source or all leave it 0.
+ */
+val MediaItem.sourceKey: String
+    get() = "$providerId/$id"
+
+/** The row's source: [MediaItem.providerId], or [listSource] (the list's own) for a row that leaves it 0. */
+fun MediaItem.sourceOr(listSource: Long): Long = if (providerId != 0L) providerId else listSource
 
 /**
  * A heading dressed as a row: IPTV catalogues separate their channel lists with fake channels

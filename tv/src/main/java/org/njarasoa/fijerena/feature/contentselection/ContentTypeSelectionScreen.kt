@@ -108,6 +108,7 @@ import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -116,6 +117,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
 import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
@@ -174,9 +176,9 @@ fun ContentTypeSelectionScreen(
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
-    // A channel from the Live row, and the list it zaps through (CategoryViewModel's virtual
-    // "favorites" or "recent" category id).
-    onLiveChannelSelected: (streamId: String, contextCategoryId: String) -> Unit = { _, _ -> },
+    // A channel from the Live row, the list it zaps through (CategoryViewModel's virtual
+    // "favorites" or "recent" category id) and the source it is on.
+    onLiveChannelSelected: (streamId: String, contextCategoryId: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A favourite movie (ContentType.MOVIES) or show (ContentType.TV_SHOWS) from its Home row.
     onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
     onSignInRequired: (providerId: Long) -> Unit = {},
@@ -213,6 +215,14 @@ fun ContentTypeSelectionScreen(
 
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
     var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
+
+    // The rows' lists: every source of the profile's, merged around the active source's
+    // repository (multi-source plan, Phase 4). Each card acts on, and opens on, its own source.
+    var mergedLists by remember { mutableStateOf<MergedLists?>(null) }
+    LaunchedEffect(mediaRepositoryRef) {
+        mergedLists = mediaRepositoryRef?.let { MergedLists.withOthers(AppContainer.getInstance(context.applicationContext), it) }
+    }
+    val sourceNames = mergedLists?.sourceNames.orEmpty()
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
 
     // Art of the row card focused last (Phase 6). Read only inside HomeBackdrop, so a focus move
@@ -331,50 +341,53 @@ fun ContentTypeSelectionScreen(
 
     // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
     // on every ON_RESUME, so returning from playback immediately reflects updated progress.
-    LaunchedEffect(mediaRepositoryRef) {
+    LaunchedEffect(mergedLists) {
         // A removal's Undo belongs to the source it was made on.
         undoBar.dismiss()
-        val repo = mediaRepositoryRef ?: return@LaunchedEffect
-        continueWatchingItems = repo.getContinueWatchingItems()
+        val merged = mergedLists ?: return@LaunchedEffect
+        continueWatchingItems = merged.continueWatching()
         continueWatchingLoaded = true
     }
-    LaunchedEffect(mediaRepositoryRef, supportedContentTypes) {
-        val repo = mediaRepositoryRef ?: return@LaunchedEffect
-        liveRowEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadLiveRow(repo) else emptyList()
-        favoriteChannelEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadFavoriteChannels(repo) else emptyList()
-        favoriteMovies = loadFavorites(repo, ContentType.MOVIES, supportedContentTypes)
-        favoriteShows = loadFavorites(repo, ContentType.TV_SHOWS, supportedContentTypes)
+    LaunchedEffect(mergedLists, supportedContentTypes) {
+        val merged = mergedLists ?: return@LaunchedEffect
+        liveRowEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadLiveRow(merged) else emptyList()
+        favoriteChannelEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadFavoriteChannels(merged) else emptyList()
+        favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
+        favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
         liveRowLoaded = true
     }
-    LaunchedEffect(mediaRepositoryRef, liveRowEntries, favoriteChannelEntries) {
-        val repo = mediaRepositoryRef ?: return@LaunchedEffect
-        val items = (liveRowEntries + favoriteChannelEntries).map { it.item }.distinctBy { it.id }
+    LaunchedEffect(mergedLists, liveRowEntries, favoriteChannelEntries) {
+        val merged = mergedLists ?: return@LaunchedEffect
+        val items = (liveRowEntries + favoriteChannelEntries).map { it.item }.distinctBy { it.sourceKey }
         if (items.isEmpty()) return@LaunchedEffect
         while (true) {
-            liveNowPlaying = repo.getNowPlayingFromIndex(items)
+            // Each channel from its own source's guide.
+            val now = HashMap<String, EpgProgram>()
+            for ((source, channels) in items.groupBy { it.providerId }) now += merged.repoFor(source).getNowPlayingFromIndex(channels)
+            liveNowPlaying = now
             val nowMs = System.currentTimeMillis()
             delay(DateUtils.MINUTE_IN_MILLIS - nowMs % DateUtils.MINUTE_IN_MILLIS)
         }
     }
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, mediaRepositoryRef) {
-        val repo = mediaRepositoryRef
+    DisposableEffect(lifecycleOwner, mergedLists) {
+        val merged = mergedLists
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) syncStatsReload++
-                if (event == Lifecycle.Event.ON_RESUME && repo != null) {
+                if (event == Lifecycle.Event.ON_RESUME && merged != null) {
                     coroutineScope.launch {
-                        continueWatchingItems = repo.getContinueWatchingItems()
+                        continueWatchingItems = merged.continueWatching()
                     }
                     if (ContentType.LIVE_TV in supportedContentTypes) {
                         coroutineScope.launch {
-                            liveRowEntries = loadLiveRow(repo)
-                            favoriteChannelEntries = loadFavoriteChannels(repo)
+                            liveRowEntries = loadLiveRow(merged)
+                            favoriteChannelEntries = loadFavoriteChannels(merged)
                         }
                     }
                     coroutineScope.launch {
-                        favoriteMovies = loadFavorites(repo, ContentType.MOVIES, supportedContentTypes)
-                        favoriteShows = loadFavorites(repo, ContentType.TV_SHOWS, supportedContentTypes)
+                        favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
+                        favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
                     }
                 }
             }
@@ -438,9 +451,9 @@ fun ContentTypeSelectionScreen(
             val itemId = key.removePrefix(RETURN_CONTINUE_WATCHING_PREFIX)
             val items =
                 withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
-                    snapshotFlow { continueWatchingItems }.first { items -> items.any { it.id == itemId } }
+                    snapshotFlow { continueWatchingItems }.first { items -> items.any { it.sourceKey == itemId } }
                 }
-            val index = items?.indexOfFirst { it.id == itemId } ?: -1
+            val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
             if (index >= 0) shelfListState.scrollToItem(index)
         }
         for ((prefix, row) in listOf(
@@ -452,9 +465,9 @@ fun ContentTypeSelectionScreen(
             val entries =
                 withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
                     snapshotFlow { if (prefix == RETURN_LIVE_ROW_PREFIX) liveRowEntries else favoriteChannelEntries }
-                        .first { entries -> entries.any { it.item.id == itemId } }
+                        .first { entries -> entries.any { it.item.sourceKey == itemId } }
                 }
-            val index = entries?.indexOfFirst { it.item.id == itemId } ?: -1
+            val index = entries?.indexOfFirst { it.item.sourceKey == itemId } ?: -1
             if (index >= 0) row.scrollToItem(index)
         }
         for ((prefix, row) in listOf(
@@ -466,9 +479,9 @@ fun ContentTypeSelectionScreen(
             val items =
                 withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
                     snapshotFlow { if (prefix == RETURN_FAVORITE_MOVIES_PREFIX) favoriteMovies else favoriteShows }
-                        .first { items -> items.any { it.id == itemId } }
+                        .first { items -> items.any { it.sourceKey == itemId } }
                 }
-            val index = items?.indexOfFirst { it.id == itemId } ?: -1
+            val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
             if (index >= 0) row.scrollToItem(index)
         }
     }
@@ -489,11 +502,11 @@ fun ContentTypeSelectionScreen(
     var cardFocusRequest by remember { mutableStateOf<CardFocusRequest?>(null) }
     val shelfKeys: (HomeShelf) -> List<String> = { shelf ->
         when (shelf) {
-            HomeShelf.CONTINUE_WATCHING -> continueWatchingItems.map { it.id }
-            HomeShelf.CHANNELS -> liveRowEntries.map { it.item.id }
-            HomeShelf.FAVORITE_CHANNELS -> favoriteChannelEntries.map { it.item.id }
-            HomeShelf.FAVORITE_MOVIES -> favoriteMovies.map { it.id }
-            HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.id }
+            HomeShelf.CONTINUE_WATCHING -> continueWatchingItems.map { it.sourceKey }
+            HomeShelf.CHANNELS -> liveRowEntries.map { it.item.sourceKey }
+            HomeShelf.FAVORITE_CHANNELS -> favoriteChannelEntries.map { it.item.sourceKey }
+            HomeShelf.FAVORITE_MOVIES -> favoriteMovies.map { it.sourceKey }
+            HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.sourceKey }
         }
     }
     val listStateOf: (HomeShelf) -> LazyListState = { shelf ->
@@ -555,29 +568,29 @@ fun ContentTypeSelectionScreen(
     ): () -> Unit =
         when (shelf) {
             HomeShelf.CONTINUE_WATCHING -> {
-                takeOut(continueWatchingItems, key, { it.id }, { continueWatchingItems }) {
+                takeOut(continueWatchingItems, key, { it.sourceKey }, { continueWatchingItems }) {
                     continueWatchingItems =
                         it
                 }
             }
 
             HomeShelf.CHANNELS -> {
-                takeOut(liveRowEntries, key, { it.item.id }, { liveRowEntries }) { liveRowEntries = it }
+                takeOut(liveRowEntries, key, { it.item.sourceKey }, { liveRowEntries }) { liveRowEntries = it }
             }
 
             HomeShelf.FAVORITE_CHANNELS -> {
-                takeOut(favoriteChannelEntries, key, { it.item.id }, { favoriteChannelEntries }) {
+                takeOut(favoriteChannelEntries, key, { it.item.sourceKey }, { favoriteChannelEntries }) {
                     favoriteChannelEntries =
                         it
                 }
             }
 
             HomeShelf.FAVORITE_MOVIES -> {
-                takeOut(favoriteMovies, key, { it.id }, { favoriteMovies }) { favoriteMovies = it }
+                takeOut(favoriteMovies, key, { it.sourceKey }, { favoriteMovies }) { favoriteMovies = it }
             }
 
             HomeShelf.FAVORITE_SHOWS -> {
-                takeOut(favoriteShows, key, { it.id }, { favoriteShows }) { favoriteShows = it }
+                takeOut(favoriteShows, key, { it.sourceKey }, { favoriteShows }) { favoriteShows = it }
             }
         }
 
@@ -605,18 +618,18 @@ fun ContentTypeSelectionScreen(
         }
     }
 
-    val reloadFavorites: suspend (MediaRepository, String) -> Unit = { repo, contentType ->
+    val reloadFavorites: suspend (MergedLists, String) -> Unit = { merged, contentType ->
         when (contentType) {
-            ContentType.LIVE_TV -> favoriteChannelEntries = loadFavoriteChannels(repo)
-            ContentType.MOVIES -> favoriteMovies = loadFavorites(repo, contentType, supportedContentTypes)
-            ContentType.TV_SHOWS -> favoriteShows = loadFavorites(repo, contentType, supportedContentTypes)
+            ContentType.LIVE_TV -> favoriteChannelEntries = loadFavoriteChannels(merged)
+            ContentType.MOVIES -> favoriteMovies = loadFavorites(merged, contentType, supportedContentTypes)
+            ContentType.TV_SHOWS -> favoriteShows = loadFavorites(merged, contentType, supportedContentTypes)
         }
     }
     // The shelf again after a watched mark; a card it no longer has hands focus on (an episode's
     // card turns into its show's "Up next" and stays).
-    val reloadContinueWatching: suspend (MediaRepository, String?) -> Unit = { repo, focusedKey ->
+    val reloadContinueWatching: suspend (MergedLists, String?) -> Unit = { merged, focusedKey ->
         val oldKeys = shelfKeys(HomeShelf.CONTINUE_WATCHING)
-        continueWatchingItems = repo.getContinueWatchingItems()
+        continueWatchingItems = merged.continueWatching()
         if (focusedKey != null && focusedKey in oldKeys && focusedKey !in shelfKeys(HomeShelf.CONTINUE_WATCHING)) {
             focusAfterChange(HomeShelf.CONTINUE_WATCHING, oldKeys, focusedKey)
         }
@@ -624,7 +637,8 @@ fun ContentTypeSelectionScreen(
 
     // Opens the menu once the card's favourite and watched states are known.
     val openCardMenu: (HomeShelf, HomeCardItem) -> Unit = { shelf, ref ->
-        mediaRepositoryRef?.let { repo ->
+        // The card's own source.
+        mergedLists?.repoFor(ref.providerId)?.let { repo ->
             coroutineScope.launchGuarded("Home.openCardMenu") {
                 val isFavorite = shelf.isFavorites || repo.isFavoriteSuspend(ref.id, ref.contentType)
                 // Null hides "Mark watched", as on a source that keeps watched state on its server.
@@ -673,17 +687,19 @@ fun ContentTypeSelectionScreen(
         }
     }
     cardMenu?.let { menu ->
-        val repo = mediaRepositoryRef
+        val merged = mergedLists
         val ref = menu.ref
+        // The card's own source acts on it (multi-source plan, Phase 4).
+        val repo = merged?.repoFor(ref.providerId)
         val markShowFailed = stringResource(R.string.watched_mark_many_failed)
         FavoriteContextMenuDialog(
             target = menu.target,
             onConfirm = {
                 when {
-                    repo == null -> {}
+                    repo == null || merged == null -> {}
 
                     menu.shelf.isFavorites -> {
-                        removeCard(menu.shelf, ref.id, ref.name) {
+                        removeCard(menu.shelf, ref.key, ref.name) {
                             repo.removeFavoriteSuspend(ref.id, ref.contentType)
                             suspend { repo.addFavoriteSuspend(ref.id, ref.name, ref.categoryId, ref.contentType) }
                         }
@@ -693,12 +709,12 @@ fun ContentTypeSelectionScreen(
                         // The card stays in its row; its favourite leaves the favourites row below.
                         coroutineScope.launchGuarded("Home.removeFavorite") {
                             repo.removeFavoriteSuspend(ref.id, ref.contentType)
-                            reloadFavorites(repo, ref.contentType)
+                            reloadFavorites(merged, ref.contentType)
                         }
                         undoBar.show(parseDisplayTitle(ref.name).title.ifBlank { ref.name }) {
                             coroutineScope.launchGuarded("Home.undoRemoveFavorite") {
                                 repo.addFavoriteSuspend(ref.id, ref.name, ref.categoryId, ref.contentType)
-                                reloadFavorites(repo, ref.contentType)
+                                reloadFavorites(merged, ref.contentType)
                             }
                         }
                     }
@@ -706,7 +722,7 @@ fun ContentTypeSelectionScreen(
                     else -> {
                         coroutineScope.launchGuarded("Home.addFavorite") {
                             repo.addFavoriteSuspend(ref.id, ref.name, ref.categoryId, ref.contentType)
-                            reloadFavorites(repo, ref.contentType)
+                            reloadFavorites(merged, ref.contentType)
                         }
                     }
                 }
@@ -716,11 +732,11 @@ fun ContentTypeSelectionScreen(
                 ref.watchedItemId?.let { watchedItemId ->
                     {
                         when {
-                            repo == null -> {}
+                            repo == null || merged == null -> {}
 
                             // A film watched leaves Continue Watching: a removal, with its Undo.
                             menu.shelf == HomeShelf.CONTINUE_WATCHING && ref.contentType == ContentType.MOVIES -> {
-                                removeCard(menu.shelf, ref.id, ref.name) {
+                                removeCard(menu.shelf, ref.key, ref.name) {
                                     repo.setWatched(watchedItemId, ref.contentType, true)
                                     suspend { repo.setWatched(watchedItemId, ref.contentType, false) }
                                 }
@@ -729,7 +745,7 @@ fun ContentTypeSelectionScreen(
                             else -> {
                                 coroutineScope.launchGuarded("Home.toggleWatched") {
                                     repo.setWatched(watchedItemId, ref.contentType, menu.target.isWatched != true)
-                                    reloadContinueWatching(repo, ref.id.takeIf { menu.shelf == HomeShelf.CONTINUE_WATCHING })
+                                    reloadContinueWatching(merged, ref.key.takeIf { menu.shelf == HomeShelf.CONTINUE_WATCHING })
                                 }
                             }
                         }
@@ -738,7 +754,7 @@ fun ContentTypeSelectionScreen(
             onRemoveFromRecent =
                 if (menu.target.isInRecent && repo != null) {
                     {
-                        removeCard(menu.shelf, ref.id, ref.name) {
+                        removeCard(menu.shelf, ref.key, ref.name) {
                             val removal = repo.removeFromRecent(ref.id, ref.contentType)
                             suspend { removal?.let { repo.restoreRecent(it) } }
                         }
@@ -750,11 +766,11 @@ fun ContentTypeSelectionScreen(
             onToggleShowWatched =
                 menu.target.isShowWatched?.let { isShowWatched ->
                     {
-                        repo?.let {
+                        if (repo != null && merged != null) {
                             coroutineScope.launchGuarded("Home.setShowWatched") {
                                 repo
                                     .setEpisodesWatched(ref.id, null, !isShowWatched)
-                                    .onSuccess { reloadContinueWatching(repo, null) }
+                                    .onSuccess { reloadContinueWatching(merged, null) }
                                     .onFailure { e ->
                                         val message = markShowFailed + "\n" + friendlyErrorMessage(e, context, appSettings.isDevMode)
                                         android.widget.Toast
@@ -960,16 +976,17 @@ fun ContentTypeSelectionScreen(
                                     items = continueWatchingItems,
                                     firstItemFocus = shelfFirstFocus,
                                     onItemSelected = { item ->
-                                        leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
+                                        leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.sourceKey) { onContinueWatchingSelected(item) }
                                     },
                                     onOpenActions = { item -> openCardMenu(HomeShelf.CONTINUE_WATCHING, item.toCardItem()) },
                                     listState = shelfListState,
                                     itemModifier = { item ->
                                         Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
-                                            .then(cardFocusTarget(HomeShelf.CONTINUE_WATCHING, item.id))
+                                            .navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.sourceKey)
+                                            .then(cardFocusTarget(HomeShelf.CONTINUE_WATCHING, item.sourceKey))
                                             .then(artOnFocus(item.thumbnailUrl))
                                     },
+                                    sourceNames = sourceNames,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -983,24 +1000,22 @@ fun ContentTypeSelectionScreen(
                                     entries = liveRowEntries,
                                     nowPlaying = liveNowPlaying,
                                     onEntrySelected = { entry ->
-                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.id) {
-                                            onLiveChannelSelected(entry.item.id, zapListId(entry))
+                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey) {
+                                            onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
                                         }
                                     },
                                     firstItemFocus = liveRowFirstFocus,
                                     onOpenActions = { entry ->
-                                        openCardMenu(
-                                            HomeShelf.CHANNELS,
-                                            HomeCardItem(entry.item.id, entry.item.name, entry.item.categoryId, ContentType.LIVE_TV),
-                                        )
+                                        openCardMenu(HomeShelf.CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
                                     },
                                     listState = liveRowListState,
                                     itemModifier = { entry ->
                                         Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.id)
-                                            .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.id))
+                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey)
+                                            .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.sourceKey))
                                             .then(artOnFocus(entry.item.thumbnailUrl))
                                     },
+                                    sourceNames = sourceNames,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -1014,24 +1029,22 @@ fun ContentTypeSelectionScreen(
                                     entries = favoriteChannelEntries,
                                     nowPlaying = liveNowPlaying,
                                     onEntrySelected = { entry ->
-                                        leaveTo(RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.id) {
-                                            onLiveChannelSelected(entry.item.id, zapListId(entry))
+                                        leaveTo(RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey) {
+                                            onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
                                         }
                                     },
                                     firstItemFocus = favoriteChannelsFirstFocus,
                                     onOpenActions = { entry ->
-                                        openCardMenu(
-                                            HomeShelf.FAVORITE_CHANNELS,
-                                            HomeCardItem(entry.item.id, entry.item.name, entry.item.categoryId, ContentType.LIVE_TV),
-                                        )
+                                        openCardMenu(HomeShelf.FAVORITE_CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
                                     },
                                     listState = favoriteChannelsListState,
                                     itemModifier = { entry ->
                                         Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.id)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_CHANNELS, entry.item.id))
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_CHANNELS, entry.item.sourceKey))
                                             .then(artOnFocus(entry.item.thumbnailUrl))
                                     },
+                                    sourceNames = sourceNames,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -1045,22 +1058,25 @@ fun ContentTypeSelectionScreen(
                                     items = favoriteMovies,
                                     thumbnailType = ThumbnailContentType.MOVIE,
                                     onItemSelected = { item ->
-                                        leaveTo(RETURN_FAVORITE_MOVIES_PREFIX + item.id) { onFavoriteSelected(item, ContentType.MOVIES) }
+                                        leaveTo(
+                                            RETURN_FAVORITE_MOVIES_PREFIX + item.sourceKey,
+                                        ) { onFavoriteSelected(item, ContentType.MOVIES) }
                                     },
                                     firstItemFocus = favoriteMoviesFirstFocus,
                                     onOpenActions = { item ->
                                         openCardMenu(
                                             HomeShelf.FAVORITE_MOVIES,
-                                            HomeCardItem(item.id, item.name, item.categoryId, ContentType.MOVIES, watchedItemId = item.id),
+                                            item.toCardItem(ContentType.MOVIES, watchedItemId = item.id),
                                         )
                                     },
                                     listState = favoriteMoviesListState,
                                     itemModifier = { item ->
                                         Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.id)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_MOVIES, item.id))
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.sourceKey)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_MOVIES, item.sourceKey))
                                             .then(artOnFocus(item.thumbnailUrl))
                                     },
+                                    sourceNames = sourceNames,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -1074,22 +1090,22 @@ fun ContentTypeSelectionScreen(
                                     items = favoriteShows,
                                     thumbnailType = ThumbnailContentType.TV_SHOW,
                                     onItemSelected = { item ->
-                                        leaveTo(RETURN_FAVORITE_SHOWS_PREFIX + item.id) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
+                                        leaveTo(
+                                            RETURN_FAVORITE_SHOWS_PREFIX + item.sourceKey,
+                                        ) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
                                     },
                                     firstItemFocus = favoriteShowsFirstFocus,
                                     onOpenActions = { item ->
-                                        openCardMenu(
-                                            HomeShelf.FAVORITE_SHOWS,
-                                            HomeCardItem(item.id, item.name, item.categoryId, ContentType.TV_SHOWS),
-                                        )
+                                        openCardMenu(HomeShelf.FAVORITE_SHOWS, item.toCardItem(ContentType.TV_SHOWS))
                                     },
                                     listState = favoriteShowsListState,
                                     itemModifier = { item ->
                                         Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.id)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_SHOWS, item.id))
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.sourceKey)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_SHOWS, item.sourceKey))
                                             .then(artOnFocus(item.thumbnailUrl))
                                     },
+                                    sourceNames = sourceNames,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -1204,7 +1220,17 @@ private class HomeCardItem(
     val contentType: String,
     /** What Mark as watched marks: the film, or the episode a show's card resumes; null: no such action. */
     val watchedItemId: String? = null,
+    /** The card's source, which its actions go to. */
+    val providerId: Long,
+    /** The card's key in its row ([sourceKey]). */
+    val key: String,
 )
+
+/** A Live, favourite movie or favourite show card's menu target. */
+private fun MediaItem.toCardItem(
+    contentType: String,
+    watchedItemId: String? = null,
+): HomeCardItem = HomeCardItem(id, name, categoryId, contentType, watchedItemId, providerId, sourceKey)
 
 /** A Continue Watching card: Mark as watched on a film and on an episode to resume, not on an "Up next" one. */
 private fun ContinueWatchingItem.toCardItem(): HomeCardItem =
@@ -1213,6 +1239,8 @@ private fun ContinueWatchingItem.toCardItem(): HomeCardItem =
         name = name,
         categoryId = categoryId,
         contentType = contentType,
+        providerId = providerId,
+        key = sourceKey,
         watchedItemId =
             when (val browseTarget = target) {
                 is BrowseTarget.Series -> browseTarget.resumeEpisodeId?.raw
@@ -1235,16 +1263,17 @@ private class CardFocusRequest(
 
 /** The active profile's favourites of [contentType], none when the source doesn't have that type. */
 private suspend fun loadFavorites(
-    repo: MediaRepository,
+    merged: MergedLists,
     contentType: String,
     supportedContentTypes: Set<String>,
-): List<MediaItem> = if (contentType in supportedContentTypes) repo.getFavoritesForContentTypeSuspend(contentType) else emptyList()
+): List<MediaItem> = if (contentType in supportedContentTypes) merged.favorites(contentType) else emptyList()
 
 /** The Channels row for the active profile: last watched, then Recent. */
-private suspend fun loadLiveRow(repo: MediaRepository): List<LiveRowEntry> =
+private suspend fun loadLiveRow(merged: MergedLists): List<LiveRowEntry> =
     mergeLiveRow(
-        lastItemId = repo.getLastItemId(ContentType.LIVE_TV),
-        recent = repo.getRecentItemsSuspend(ContentType.LIVE_TV),
+        lastItemId = merged.primary.getLastItemId(ContentType.LIVE_TV),
+        recent = merged.recent(ContentType.LIVE_TV),
+        lastSource = merged.primary.getProviderId(),
     )
 
 /** The list a Live card zaps through once opened: Favorites from Favorite channels, Recent from Channels. */
@@ -1252,8 +1281,8 @@ private fun zapListId(entry: LiveRowEntry): String =
     if (entry.fromFavorites) CategoryViewModel.FAVORITES_CATEGORY_ID else CategoryViewModel.RECENT_CATEGORY_ID
 
 /** The Favorite channels row for the active profile. */
-private suspend fun loadFavoriteChannels(repo: MediaRepository): List<LiveRowEntry> =
-    favoriteChannelsRow(repo.getFavoritesForContentTypeSuspend(ContentType.LIVE_TV))
+private suspend fun loadFavoriteChannels(merged: MergedLists): List<LiveRowEntry> =
+    favoriteChannelsRow(merged.favorites(ContentType.LIVE_TV))
 
 /** How long Back waits for the Continue Watching shelf to reload before giving up on its card. */
 private const val RETURN_SHELF_WAIT_MS = 2_000L

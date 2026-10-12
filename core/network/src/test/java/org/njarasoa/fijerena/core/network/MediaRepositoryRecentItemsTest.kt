@@ -224,6 +224,28 @@ class MediaRepositoryRecentItemsTest {
     }
 
     @Test
+    fun rowsCarryWhatMergesThemAcrossSources() {
+        // docs/plans/20261012_multi-source-search-history-plan.md → Phase 4: the source, the last
+        // play and whether the row resumes.
+        val repository = repositoryWith(movie("half", position = 50L, duration = 100L), movie("untouched"))
+
+        val recent = repository.fetchRecent(ContentType.MOVIES)
+
+        assertEquals(listOf(1L, 1L), recent.map { it.providerId })
+        assertEquals(listOf(1_000_000L, 999_999L), recent.map { it.lastPlayedAt })
+        assertEquals(listOf(true, false), recent.map { it.resumable })
+    }
+
+    @Test
+    fun aRemovalNamesItsSource() {
+        val repository = repositoryWith(channel("bbc"))
+
+        val removal = runBlocking { repository.removeFromRecent("bbc", ContentType.LIVE_TV) }
+
+        assertEquals(1L, removal?.providerId)
+    }
+
+    @Test
     fun restoreRecentPutsAnItemBackInItsPlace() {
         val repository = repositoryWith(channel("bbc"), channel("cnn"), channel("arte"))
 
