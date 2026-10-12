@@ -1,47 +1,64 @@
-# Multi-source search and history
+# Multi-source: no current source
 
-**Status:** Proposed, 2026-10-12. Decisions Q1–Q7 made; phases written from a read-only survey of
-the code (2026-10-12). Proposals P1–P5 below need a yes before Phase 1 starts. Nothing has been
-built.
+**Status:** Proposed, 2026-10-12. Decisions Q1–Q7 and P1–P5 made 2026-10-12 (P1–P5 widened the
+plan: there is no current source any more, browsing is merged too). Open points O1–O4 below need
+an answer before the phases they block. Nothing has been built.
 
 ## Today
 
-One source is active per device. Search, Recent and Continue Watching only cover that source.
-`watch_state` and `favorite_state` (`xtream_v2.db`) are keyed per source, and so are Recent
-Categories (per-source SharedPreferences). See [FEATURES.md](../FEATURES.md) → Search, Recent and
-Favourites, and [DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md).
+One source is active per device (`ProviderEntity.isActive`), picked in the header. Browsing,
+search, Recent, Continue Watching and favourites only cover that source. `watch_state` and
+`favorite_state` (`xtream_v2.db`) are keyed per source, and so are Recent Categories (per-source
+SharedPreferences). Each profile remembers the source it last picked, and switching profile moves
+the device to it. See [FEATURES.md](../FEATURES.md) → Home, Search, Recent and Favourites, Profiles,
+and [DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md).
 
 ## Goal
 
-Sources stay separate, but search and play history are shared across them. A search returns
-results from every source the profile has enabled. Playing a result just works, whichever source it
-came from. History is merged.
+The idea of a device's source, or a current source, goes away. Each profile has access to a set of
+sources, and everything it sees is merged across them: Live TV, Movies and TV Shows, search,
+Recent, Continue Watching, favourites, Recent Categories and Search the guide. Each source's data
+stays stored separately; only the screens merge it. Every item plays from its own source.
 
 ## Summary
 
-- **Browsing stays per source.** Live TV, Movies, TV Shows and the categories still show only the
-  source picked in the header, and the source picker stays.
-- **New per-profile setting: which sources join in.** Each profile turns sources on or off for
-  search and history. A new profile defaults to all on. This switch is separate from the active
-  source.
-- **Search covers every enabled source.** Results are still grouped by type (Live, Movies, Shows),
-  and each item shows a source badge.
-- **Playing a result just works.** It plays from the source it came from without switching the
-  active source. Back returns to Search. Details, episodes and Live TV open with that source's data.
-- **History is merged.** Recent and Continue Watching (TV Home, phone tab Recents) list items from
-  every enabled source, newest first, and each item plays from its own source.
+- **Per-profile source access.** Each profile has the sources it can use. A newly added source is
+  on for the profile that added it and off for every other profile until turned on on that
+  profile's page. A profile never sees or plays a source it has no access to. The setting syncs.
+- **Browsing is merged.** Live TV, Movies and TV Shows list the categories of all the profile's
+  sources in one list, each tagged with its source. No source picker anywhere.
+- **Search covers all the profile's sources.** Grouped by type as today, each result tagged with its
+  source, one result per source.
+- **Everything plays from its own source.** Details, episodes, Live TV and the player open with the
+  item's own source's data, logins and stream addresses.
+- **History, favourites and Recent Categories are merged in the UI**, stored per source as today.
+  Each source keeps its own Recent size; the merged list is all of them, newest first.
 
 ## Decisions (2026-10-12)
 
 | # | Question | Decision |
 |---|---|---|
 | Q1 | The same title on several sources | **One row per source**, each with a source badge. No merging. |
-| Q2 | Progress across sources | **Per source.** Progress stays with the copy that was watched; merged history still lists it. Cross-variant TMDB matching stays within a source. |
-| Q3 | Favourites | **Stay per source**, as today. |
-| Q4 | Live channels in merged history | **Merged list, zap within source.** Recent shows channels from every enabled source; Up/Down zaps only through the playing channel's own source. |
-| Q5 | Search the guide (EPG) | **All enabled sources.** Each source's guide sources are searched; an airing opens its channel on its own source. |
-| Q6 | Source types | **Xtream only first** (searched in the local cached catalogue). Jellyfin and M3U later. |
-| Q7 | Live sync of "enabled sources" | **Synced**, like the profile's content filters. |
+| Q2 | Progress across sources | **Per source.** Progress stays with the copy that was watched; the merged list still shows it. Cross-variant TMDB matching stays within a source. |
+| Q3 | Favourites | **Stored per source, shown merged** (superseded by P5). |
+| Q4 | Live channels in merged history | **Merged list, zap within source.** Recent shows channels from every source; Up/Down zaps only through the playing channel's own source. |
+| Q5 | Search the guide (EPG) | **All the profile's sources.** Each source's guide sources are searched; an airing opens its channel on its own source. |
+| Q6 | Source types | **Xtream only first** (searched in the local cached catalogue). Jellyfin and M3U later — see O1. |
+| Q7 | Live sync of source access | **Synced**, like the profile's content filters. |
+| P1 | New source | **Opt in.** On for the profile that added it, off for every other profile. The setting stores the sources a profile has (`providerKey`s, stable across devices). |
+| P2 | Source access | A profile can only use the sources it has; there is nothing outside them to switch to. |
+| P3 | Current source | **Goes away.** No device source, no current source, no source picker. Browsing is merged across the profile's sources, each category tagged with its source. |
+| P4 | Merged Recent size | **Each source's own cap** (`watchHistorySize`); the merged list is all of them, newest first. |
+| P5 | What else merges | Recent Categories, favourites and search history stay stored as today (per source, or per profile), but **every list shows them merged** across the profile's sources. |
+
+## Open points
+
+| # | Question | Blocks |
+|---|---|---|
+| O1 | With no current source, how does a profile use a Jellyfin or M3U source? Q6 said Xtream only first, but there is nothing left to pick one with. Options: merge them into browsing in the same phase (Jellyfin categories are server calls), or keep a temporary "browse this Jellyfin/M3U source" entry until they are merged. | Phase 6 |
+| O2 | Upgrade: do existing profiles get every existing source (nothing disappears), or only the one each profile last picked? | Phase 2 |
+| O3 | Header status: today it shows the current source's sync status ("Updated 2 hours ago"). With several, one line for all ("Updating 1 of 3…", "1 failed"), with the per-source detail in a sheet? | Phase 6 |
+| O4 | Content filters and guide sources are edited for "the source in use" (profile page, Search the guide's buttons). They need a source chooser instead. Fine to add one wherever that happens? | Phases 6–7 |
 
 ## What the code already gives us (survey, 2026-10-12)
 
@@ -74,120 +91,133 @@ came from. History is merged.
   / `SYNCED_SETTING_KEYS`, `SettingsSyncQueue.setting`); the server sees ciphertext only, so nothing
   changes there.
 
-## Proposals (need a yes)
-
-| # | Proposal | Why |
-|---|---|---|
-| P1 | Store the **sources left out**, not the ones in: a per-profile synced setting holding a JSON array of the left-out sources' `providerKey`s (stable across devices, unlike local ids). | A source added later is in by default, with nothing to update. |
-| P2 | **The source in use is always included**, whatever the setting says. The setting only adds or removes the others. | Search and Recent never come up empty on the source being browsed. |
-| P3 | Opening another source's item shows **that source's screens** (details, episodes, Live TV on its channel, player), its name in the header, without moving the device's source. Back returns to Search or Home. Browsing onward from there (a category, related titles) stays on that source until Back. | Matches "plays from its own source" without a source switch. |
-| P4 | Merged Recent keeps **one cap** per list: the largest `watchHistorySize` of the included sources. Continue Watching unchanged (all resumable). | Simple; a per-source cap makes no sense in one list. |
-| P5 | Unchanged per source: Recent Categories, favourites (Q3), search history (already per profile), Mark watched cross-variant matching (Q2). Clear Recent clears the **included sources'** Recent for that list. | Keeps the scope to search and history. |
-
 ## Phases
 
-One commit per phase on main, each with its tests, docs and plan update. Xtream sources only (Q6):
-a Jellyfin or M3U source is never searched or merged in from another source; when it is the source
-in use, it behaves as today.
+One commit per phase on main, each with its tests, docs and plan update. Phases 1–5 keep a
+current source under the hood and only widen what is shown; Phase 6 removes it.
 
 | Phase | What | Status |
 |---|---|---|
 | 1 | Source on routes and screens (no visible change) | Not started |
-| 2 | "Sources in search and history" setting | Not started |
-| 3 | Search across sources | Not started |
-| 4 | Merged Recent and Continue Watching | Not started |
+| 2 | Per-profile source access | Not started |
+| 3 | Search across the profile's sources | Not started |
+| 4 | Merged Recent, Continue Watching, favourites and Recent Categories | Not started |
 | 5 | Live TV Recent across sources, zap within source | Not started |
-| 6 | Search the guide across sources, and their guides kept fresh | Not started |
-| 7 | Device walks and docs | Not started |
+| 6 | Merged browsing; the current source goes | Not started |
+| 7 | Search the guide across sources, and their guides kept fresh | Not started |
+| 8 | Device walks and docs | Not started |
 
 ### Phase 1 — Source on routes and screens (no visible change)
 
 - `Screen.MovieDetails`, `EpisodeSelection`, `Player`, `CategoryList`, `EpgGuide` and
-  `catchupRoute` get `providerId: Long = 0L` (`0` = the source in use, as `getMediaRepository`).
+  `catchupRoute` get `providerId: Long = 0L` (`0` = the current source, until Phase 6 removes it).
 - Both nav hosts read it at each destination and copy it onto every onward route: details →
   Player, related titles, Watch live, episodes → Player, the guide → catch-up.
-- The four VM factories (MovieDetails, SeriesDetails, StreamLoader, Category) take it and call
+- The VM factories (MovieDetails, SeriesDetails, StreamLoader, Category, Epg) take it and call
   `getMediaRepository(providerId)`; `viewModel(key = …)` includes it. Next episode, zap and progress
   writes then follow the VM's repository with no further change.
 - `MediaItem` / `BrowseTarget` (or a wrapper) carry the source id so the cards that build routes
   can pass it.
-- Header source name on details, episodes and the TV two-column layout: the route's source, not
-  the active one.
+- Header source name on details, episodes and the TV two-column layout: the route's source.
 - Tests: route round-trip with and without the id; a VM built with an explicit id reads that
   source (fake repositories).
 
-### Phase 2 — "Sources in search and history" setting
+### Phase 2 — Per-profile source access
 
-- Per-profile synced setting (P1) in `AppSettings`: getter/setter, `PER_PROFILE_SETTING_KEYS`,
-  `SYNCED_SETTING_KEYS`, `applyRemoteSetting` / `syncedSetting`, removed on profile delete, copied
-  on profile add.
-- One resolver, `includedSources(profileId)`: Xtream sources with a login, minus the left-out ones,
-  plus the source in use (P2). Re-emits when sources, the setting or the source in use change.
-- Profile page, beside **Content filters ›**: **Sources in search and history ›**, a list of the
-  Xtream sources with a switch each (the source in use shown on and locked). Shown only with two or
-  more Xtream sources. TV `ProfileEditPane` sub-pane like the filters one; phone
-  `MobileProfileEditScreen`.
+- Per-profile synced setting in `AppSettings`: the `providerKey`s the profile has (P1).
+  `PER_PROFILE_SETTING_KEYS`, `SYNCED_SETTING_KEYS`, `applyRemoteSetting` / `syncedSetting`;
+  removed on profile delete; a new profile starts with the adding profile's sources (as filters
+  are copied today) — to confirm in O2's answer.
+- Adding a source turns it on for the profile in use only; deleting one drops it everywhere. A
+  source synced in from another device is on for the profile that added it there (its key arrives
+  in that profile's setting).
+- Upgrade per O2.
+- One resolver, `profileSources(profileId)`: the profile's sources that still exist. Re-emits when
+  sources or the setting change. Until Phase 6, the current source is kept inside the profile's
+  sources (switching to a source the profile lacks is not offered; P2).
+- Profile page, beside **Content filters ›**: **Sources ›**, every source with a switch. TV
+  `ProfileEditPane` sub-pane like the filters one; phone `MobileProfileEditScreen`. A profile must
+  keep at least one source.
 - Strings in en/fr/mg (British spelling).
-- Tests: resolver (new source in by default, deleted source ignored, source in use always in), sync
-  round-trip of the setting, profile copy/delete.
+- Tests: resolver, opt-in for other profiles, sync round-trip, profile copy/delete, source delete.
 
-### Phase 3 — Search across sources
+### Phase 3 — Search across the profile's sources
 
-- `SearchViewModel` runs `repo.search` on every included source's repository in parallel, the
-  category-name matches and the hidden counts too; `"ALL"` is the union of their content types.
+- `SearchViewModel` runs `repo.search` on every one of the profile's Xtream sources in parallel,
+  the category-name matches and the hidden counts too; `"ALL"` is the union of their content types.
 - `SearchResult` / `CategorySearchResult` get `providerId` and the source name. One result per
-  source (Q1), with a source badge when more than one source is included. Grouping unchanged
-  (type, then categories, then items); ranking as today, then source in use first on ties.
+  source (Q1), with a source badge when the profile has more than one source. Grouping unchanged
+  (type, then categories, then items); ranking as today.
 - List keys include the source (TV `SearchScreen` row keys, phone list keys).
-- Opening a result passes its `providerId` (Phase 1 routes) from both nav hosts. Favourite,
-  Mark watched and Mark show watched use the result's own repository.
+- Opening a result passes its `providerId`. Favourite, Mark watched and Mark show watched use the
+  result's own repository.
 - A source whose search fails is left out quietly (developer mode: its error under the results).
-- Tests: merge and ordering across two fake sources, a failing source, keys unique across sources.
+- Search history: unchanged (already per profile).
+- Tests: merge across two fake sources, a failing source, keys unique across sources.
 
-### Phase 4 — Merged Recent and Continue Watching
+### Phase 4 — Merged Recent, Continue Watching, favourites and Recent Categories
 
-- A small merger over the included sources' repositories: Recent per content type (P4 cap) and
-  Continue Watching, newest `lastPlayedAt` first, each item tagged with its source. Listens to
-  every included repository's `recentItems` flow, so a Live sync change on any of them shows.
-- TV Home (`ContentTypeSelectionScreen`): Continue watching and the Channels row from the merger;
-  favourites rows stay on the source in use (Q3). Posters and up-next still come from each item's
-  own repository (`rehydrateThumbnails`, `upNextForShows`).
-- `CategoryViewModel` Recent virtual category (TV and phone tabs) from the merger.
-- Remove from Recent and its Undo act on the item's source (`RecentRemoval` gets the provider);
-  Clear Recent on the included sources (P5).
-- Dedup and list keys by (source, id) — `LiveRow.mergeLiveRow`, Recent lists.
+- A merger over the profile's sources' repositories: Recent per content type (each source's own
+  cap, P4), Continue Watching, favourites and Recent Categories, newest first (favourites by name as
+  today), each item tagged with its source. Listens to every repository's flows, so a Live sync
+  change on any of them shows.
+- TV Home (`ContentTypeSelectionScreen`): Continue watching, Channels, Favourite channels /
+  movies / shows from the merger. Posters and up-next still come from each item's own repository
+  (`rehydrateThumbnails`, `upNextForShows`).
+- `CategoryViewModel` Recent and Favourites virtual categories (TV and phone tabs) from the merger.
+- Remove from Recent / Favourites and their Undo act on the item's source (`RecentRemoval` gets the
+  provider); Clear Recent clears every source of the profile for that list.
+- Dedup and list keys by (source, id) — `LiveRow.mergeLiveRow`, Recent and Favourites lists.
 - Cards open with their `providerId`.
-- Tests: two-source merge order and cap, removal/Undo on the right source, dedup keys.
+- Tests: two-source merge order with per-source caps, removal/Undo on the right source, dedup keys.
 
 ### Phase 5 — Live TV Recent across sources, zap within source (Q4)
 
-- The Recent list shows every included source's channels (from Phase 4).
 - `rememberStableRecentOrder` and `neighborChannel` key by (source, id); Up/Down in full screen
   steps only through channels of the playing channel's source, keeping the list's order.
 - "Last watched" (first card of Home's Channels row, the phone dock's start channel): the newest
-  across included sources.
-- Playing a channel of another source opens Live TV on that source (P3); its own category lists
-  are that source's.
+  across the profile's sources.
 - Tests: zap skips other sources' channels and wraps within the source; stable order with
   duplicate ids across sources.
 
-### Phase 6 — Search the guide across sources, and their guides kept fresh (Q5)
+### Phase 6 — Merged browsing; the current source goes (P3)
 
-- `EpgBrowserViewModel` / `XmltvSearchService`: guide source ids of every included source;
+- Live TV, Movies and TV Shows: the category list is every source's categories, each tagged with
+  its source (badge, and source name on the category's header). Category ids are keyed by
+  (source, id). A category opens on its own source; its channel list and zap stay within it.
+- Sections shown: the union of the profile's sources' content types.
+- Remove: `ProviderEntity.isActive` and `setActiveProvider` / `getActiveProvider` callers, the
+  per-profile last source (`activateLastProvider` and its synced setting), the source picker
+  (TV `TvSections`, phone `MobileSourceTopBar`), `LocalActiveProviderId`, and
+  `getMediaRepository()`'s `0` default — every caller passes a source. Room migration of
+  `providers.db` dropping `isActive`; DATABASE_SCHEMA updated in the same commit.
+- Header: sync status of all the profile's sources (O3).
+- Catalogue sync: runs for every source of the profile in use, not only one (still
+  foreground-only).
+- Content filters and guide sources choose their source (O4). Jellyfin and M3U per O1.
+- Live sync: the "last source" setting is dropped; older builds that still send it are ignored.
+- Tests: merged category list and keys, every former current-source caller given a source,
+  migration test.
+
+### Phase 7 — Search the guide across sources, and their guides kept fresh (Q5)
+
+- `EpgBrowserViewModel` / `XmltvSearchService`: guide source ids of every source of the profile;
   `EpgChannelMatcher` cache keyed by provider; each airing matched against its own source's
   channels and hidden categories; `EpgBrowserMatchedStream` gets `providerId`.
-- "Matched only" keeps airings matched on any included source; "In <category> only" stays on the
-  guide's own source. Opening an airing opens Live TV on its channel and source.
-- Guide freshness: `EpgSyncWorker` refreshes the stale guide sources of every included source, not
-  only the source in use (inline in `doWork`, foreground as today). The header's freshness line
-  covers all searched guide sources.
-- Now-playing on Recent channel cards of another source reads that source's guide.
+- "Matched only" keeps airings matched on any of the profile's sources; "In <category> only" stays
+  on the guide's own source. Opening an airing opens Live TV on its channel and source.
+- Guide freshness: `EpgSyncWorker` refreshes the stale guide sources of every source of the
+  profile (inline in `doWork`, foreground as today). The header's freshness line covers all of
+  them.
+- Now-playing on channel cards of any source reads that source's guide.
 - Tests: multi-source source-id list, matcher per provider, airing → (source, channel).
 
-### Phase 7 — Device walks and docs
+### Phase 8 — Device walks and docs
 
-- Emulators with two Xtream sources (jellyxtream for VOD, iptv for live; see the test-provider
-  notes): search, open and play from the other source, Recent and Continue Watching on TV Home and
-  phone tabs, zap within source, guide search, the setting synced between two devices.
-- Docs: FEATURES (Search, Search the guide, Recent and Favourites, Profiles, Live sync),
-  NAVIGATION_GUIDE (routes with a source), RELEASE_NOTES; DATABASE_SCHEMA only if a schema changes.
+- Emulators with two Xtream sources (jellyxtream for VOD, iptv for live) and two profiles with
+  different sources: browse, search, open and play from either source, Recent, Continue Watching
+  and favourites on TV Home and phone tabs, zap within source, guide search, source access synced
+  between two devices, a profile never seeing a source it lacks.
+- Docs: FEATURES (Home, Search, Search the guide, Recent and Favourites, Profiles, Sources, Live
+  sync), NAVIGATION_GUIDE (no source picker; routes with a source), RUN_GUIDE if adding sources
+  changes, RELEASE_NOTES, DATABASE_SCHEMA (Phase 6).
