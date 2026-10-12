@@ -59,4 +59,11 @@ class XtreamListNamesTest {
 
         assertEquals("" to "", stream.categoryId to stream.streamType)
     }
+
+    @Test
+    fun `a show with a null category id no longer fails the list`() {
+        val body = """[{"num":1,"name":"Alpha","series_id":20,"category_id":null,"category_ids":[]}]"""
+
+        assertEquals("", json.decodeFromString<List<XtreamSeries>>(body).single().categoryId)
+    }
 }

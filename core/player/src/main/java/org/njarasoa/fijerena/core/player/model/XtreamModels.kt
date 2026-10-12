@@ -123,8 +123,9 @@ data class XtreamSeries(
     val youtubeTrailer: String? = null,
     @SerialName("episode_run_time")
     val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
+    // See XtreamStream: a null category id (a series list, 2026-10-12) no longer fails the list.
     @SerialName("category_id")
-    val categoryId: String,
+    val categoryId: String = "",
     @SerialName("tmdb")
     val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
