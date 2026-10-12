@@ -10,6 +10,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -20,11 +22,13 @@ import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.time.LocalDate
 import java.time.ZoneId
@@ -60,8 +64,10 @@ class EpgViewModel(
             val lastListingEndSec: Long? = null,
             /** Indexes of the pages loaded; null: all of them. */
             val loadedPages: Set<Int>? = null,
-            /** Archive days per channel id, for the channels whose programmes can be replayed (catch-up). */
+            /** Archive days per row ([sourceKey]), for the channels whose programmes can be replayed (catch-up). */
             val catchupDays: Map<String, Int> = emptyMap(),
+            /** Each source's name by id when the rows mix more than one (their channel cells show it), else empty. */
+            val sourceNames: Map<Long, String> = emptyMap(),
         ) : UiState() {
             /** Whether row [index]'s page has loaded, so an empty row means "no listings", not "not yet". */
             fun isRowLoaded(index: Int): Boolean = loadedPages?.contains(index / PAGE_SIZE) ?: true
@@ -107,13 +113,20 @@ class EpgViewModel(
     // Lazily initialized in init coroutine to avoid blocking the UI thread
     private lateinit var repository: MediaRepository
 
+    // The sources the rows come from: the route's alone for a category; for Recent or Favourites
+    // every Xtream source of the profile, merged as the lists show them, each row on its own source.
+    private lateinit var merged: MergedLists
+
+    // The profile's Xtream sources [merged] was last built on: a change to them builds it again.
+    private val builtOn = MutableStateFlow<List<Long>?>(null)
+
     private var currentDate = LocalDate.now()
 
     // The whole channel list (ids, names, logos), resolved once and kept across day changes;
     // Refresh resolves it again. Listings come per page, cached per (day, page) by the pager.
     private var channels: List<MediaItem>? = null
 
-    // Archive days of [channels] that keep an archive (catch-up), looked up with them. Also a flow
+    // Archive days of [channels] that keep an archive (catch-up) by row key, looked up with them. Also a flow
     // of its own: the phone's past date tabs need it on a day with no listings (a stale guide).
     private var catchupDays: Map<String, Int> = emptyMap()
     private val _archiveDays = MutableStateFlow<Map<String, Int>>(emptyMap())
@@ -130,9 +143,41 @@ class EpgViewModel(
     init {
         loadJob =
             viewModelScope.launchGuarded("EpgViewModel.init", onError = ::showError) {
-                repository = AppContainer.getInstance(context).getMediaRepository(providerId)
+                ensureSources()
                 loadEpgDataInternal(currentDate)
             }
+        if (CategoryViewModel.isMergedList(categoryId)) {
+            viewModelScope.launchGuarded("EpgViewModel.followProfileSources") { followProfileSources() }
+        }
+    }
+
+    /** The route's repository and the rows' sources, built once (again with [rebuild]). */
+    private suspend fun ensureSources(rebuild: Boolean = false) {
+        val container = AppContainer.getInstance(context)
+        if (!::repository.isInitialized) repository = container.getMediaRepository(providerId)
+        if (rebuild || !::merged.isInitialized) {
+            builtOn.value = MergedLists.xtreamSourceIds(container)
+            merged = CategoryViewModel.guideLists(container, repository, categoryId)
+        }
+    }
+
+    /**
+     * Recent and Favourites follow the profile's sources (one turned on or off, added or deleted):
+     * the rows are built again on them, on the same day. Nothing happens while they stay the same.
+     */
+    private suspend fun followProfileSources() {
+        val container = AppContainer.getInstance(context)
+        MergedLists.xtreamSourceIdChanges(container, AppSettings(context).activeProfileId).collect { ids ->
+            if (ids != builtOn.filterNotNull().first()) {
+                loadJob?.cancel()
+                loadJob =
+                    viewModelScope.launchGuarded("EpgViewModel.sourcesChanged", onError = ::showError) {
+                        ensureSources(rebuild = true)
+                        channels = null
+                        loadEpgDataInternal(currentDate)
+                    }
+            }
+        }
     }
 
     private fun showError(e: Throwable) {
@@ -143,9 +188,7 @@ class EpgViewModel(
         loadJob?.cancel()
         loadJob =
             viewModelScope.launchGuarded("EpgViewModel.loadEpgData", onError = ::showError) {
-                if (!::repository.isInitialized) {
-                    repository = AppContainer.getInstance(context).getMediaRepository(providerId)
-                }
+                ensureSources()
                 loadEpgDataInternal(date)
             }
     }
@@ -156,9 +199,9 @@ class EpgViewModel(
         cancelPageLoads()
         val startTime = System.currentTimeMillis()
 
-        // Per source (GD4): this source's own EPG or its guide sources, not whether some other
+        // Per source (GD4): the rows' sources' own EPG or guide sources, not whether some other
         // source's guide happens to be indexed.
-        if (!repository.hasGuideForSource()) {
+        if (merged.sources.none { it.repo.hasGuideForSource() }) {
             _uiState.value = UiState.NoGuide
             return
         }
@@ -175,7 +218,7 @@ class EpgViewModel(
                 loaded.also {
                     channels = it
                     pager.channels = it
-                    catchupDays = repository.getCatchupDays(it.map { channel -> channel.id })
+                    catchupDays = catchupDaysOf(it)
                     _archiveDays.value = catchupDays
                 }
             }
@@ -215,7 +258,10 @@ class EpgViewModel(
         _uiState.value = readyState(date, guide)
     }
 
-    /** One page's listings for [date], from the index or the source (whichever answers), sorted. */
+    /**
+     * One page's listings for [date], each row's from its own source's index or EPG (whichever
+     * answers), sorted, by row key ([sourceKey]).
+     */
     private suspend fun loadPage(
         date: LocalDate,
         items: List<MediaItem>,
@@ -223,14 +269,29 @@ class EpgViewModel(
         val zone = ZoneId.systemDefault()
         val dayStart = date.atStartOfDay(zone).toEpochSecond()
         val dayEnd = date.plusDays(1).atStartOfDay(zone).toEpochSecond()
-        val guide = repository.getGuideForItemsInWindow(items, dayStart, dayEnd).getOrThrow()
-        return GuidePage(
-            listings = guide.epg.mapValues { (_, response) -> response.listings.sortedBy { it.startTime } },
-            source = guide.source,
-            updatedAtMs = guide.updatedAtMs,
-            latestEndSec = guide.latestEndSec,
-        )
+        val pages =
+            items.groupBy { it.providerId }.map { (source, sourceItems) ->
+                val guide = merged.repoFor(source).getGuideForItemsInWindow(sourceItems, dayStart, dayEnd).getOrThrow()
+                GuidePage(
+                    listings =
+                        guide.epg.entries.associate { (id, response) ->
+                            sourceKey(source, id) to response.listings.sortedBy { it.startTime }
+                        },
+                    source = guide.source,
+                    updatedAtMs = guide.updatedAtMs,
+                    latestEndSec = guide.latestEndSec,
+                )
+            }
+        return mergeGuidePages(pages)
     }
+
+    /** Archive days of [items] by row key, each looked up on its own source. */
+    private suspend fun catchupDaysOf(items: List<MediaItem>): Map<String, Int> =
+        items
+            .groupBy { it.providerId }
+            .flatMap { (source, sourceItems) ->
+                merged.repoFor(source).getCatchupDays(sourceItems.map { it.id }).map { (id, days) -> sourceKey(source, id) to days }
+            }.toMap()
 
     private fun readyState(
         date: LocalDate,
@@ -253,6 +314,7 @@ class EpgViewModel(
             lastListingEndSec = guide.lastListingEndSec,
             loadedPages = pager.pages(date).keys,
             catchupDays = catchupDays,
+            sourceNames = merged.sourceNames,
         )
     }
 
@@ -297,12 +359,15 @@ class EpgViewModel(
         pageJobs.clear()
     }
 
-    /** Recent and Favourites resolved the way the category screen does; anything else from the source. */
+    /**
+     * Recent and Favourites resolved the way the category screen does, every source's; anything
+     * else from the route's source. Each row on its source.
+     */
     private suspend fun loadChannels(): kotlin.Result<List<MediaItem>> {
         val items =
-            CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
+            CategoryViewModel.virtualCategoryItems(merged, categoryId, ContentType.LIVE_TV)
                 ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrElse { return kotlin.Result.failure(it) }
-        return kotlin.Result.success(guideChannels(items))
+        return kotlin.Result.success(guideChannels(items.onSources(repository.getProviderId())))
     }
 
     fun forceRefresh() {
@@ -311,11 +376,11 @@ class EpgViewModel(
             viewModelScope.launch {
                 _isRefreshing.value = true
                 try {
-                    if (!::repository.isInitialized) {
-                        repository = AppContainer.getInstance(context).getMediaRepository(providerId)
+                    ensureSources()
+                    merged.sources.forEach {
+                        it.repo.clearEpgCache()
+                        it.repo.clearXmltvCache()
                     }
-                    repository.clearEpgCache()
-                    repository.clearXmltvCache()
                     cancelPageLoads()
                     channels = null
                     pager.clear()
@@ -329,22 +394,24 @@ class EpgViewModel(
             }
     }
 
-    // Row actions on a guide channel (GD6, plan Part II P3): the channel lists' menu, same calls.
+    // Row actions on a guide channel (GD6, plan Part II P3): the channel lists' menu, same calls,
+    // each on the row's own source.
 
-    /** Whether [channelId] is a favourite; off the main thread, as the first read loads the favourites table. */
-    suspend fun isFavoriteChannel(channelId: String): Boolean =
-        withContext(Dispatchers.Default) { repository.isFavorite(channelId, ContentType.LIVE_TV) }
+    /** Whether [channel] is a favourite; off the main thread, as the first read loads the favourites table. */
+    suspend fun isFavoriteChannel(channel: MediaItem): Boolean =
+        withContext(Dispatchers.Default) { merged.repoFor(channel.providerId).isFavorite(channel.id, ContentType.LIVE_TV) }
 
     /**
      * Returns whether the rows reload: a favourite removed in the Favourites guide leaves it, as
      * Remove from Recent does in the Recent guide — reloaded without it, on the same day.
      */
     fun toggleFavoriteChannel(channel: MediaItem): Boolean {
-        val removing = repository.isFavorite(channel.id, ContentType.LIVE_TV)
+        val repo = merged.repoFor(channel.providerId)
+        val removing = repo.isFavorite(channel.id, ContentType.LIVE_TV)
         if (removing) {
-            repository.removeFavorite(channel.id, ContentType.LIVE_TV)
+            repo.removeFavorite(channel.id, ContentType.LIVE_TV)
         } else {
-            repository.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
+            repo.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
         }
         val reload = removing && categoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
         if (reload) reloadRows("EpgViewModel.toggleFavoriteChannel")
@@ -357,8 +424,9 @@ class EpgViewModel(
      * the Favourites guide gets the channel back in its place.
      */
     fun restoreFavoriteChannel(channel: MediaItem): Boolean {
-        val restoring = !repository.isFavorite(channel.id, ContentType.LIVE_TV)
-        if (restoring) repository.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
+        val repo = merged.repoFor(channel.providerId)
+        val restoring = !repo.isFavorite(channel.id, ContentType.LIVE_TV)
+        if (restoring) repo.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
         val reload = restoring && categoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
         if (reload) reloadRows("EpgViewModel.restoreFavoriteChannel")
         return reload
@@ -379,15 +447,15 @@ class EpgViewModel(
         get() = categoryId == CategoryViewModel.RECENT_CATEGORY_ID && ::repository.isInitialized && repository.supportsRemoveFromRecent
 
     /**
-     * Removes [channel] from Recent and reloads the rows without it, on the same day. Returns the
-     * Undo, which puts it back in its place and reloads them again.
+     * Removes [channel] from Recent, on its own source, and reloads the rows without it, on the same
+     * day. Returns the Undo, which puts it back in its place and reloads them again.
      */
     fun removeFromRecent(channel: MediaItem): () -> Unit {
         var removal: RecentRemoval? = null
         loadJob?.cancel()
         val removing =
             viewModelScope.launchGuarded("EpgViewModel.removeFromRecent", onError = ::showError) {
-                removal = repository.removeFromRecent(channel.id, ContentType.LIVE_TV)
+                removal = merged.removeFromRecent(channel.providerId, channel.id, ContentType.LIVE_TV)
                 channels = null
                 loadEpgDataInternal(currentDate)
             }
@@ -397,7 +465,7 @@ class EpgViewModel(
             loadJob =
                 viewModelScope.launchGuarded("EpgViewModel.undoRemoveFromRecent", onError = ::showError) {
                     removing.join()
-                    removal?.let { repository.restoreRecent(it) }
+                    removal?.let { merged.restoreRecent(it) }
                     channels = null
                     loadEpgDataInternal(currentDate)
                 }
@@ -494,7 +562,7 @@ fun guideListingsEnded(
     dayEndSec: Long,
 ): Boolean = lastListingEndSec != null && nowSec >= dayStartSec && nowSec < dayEndSec && nowSec >= lastListingEndSec
 
-/** One page of the guide for one day: item id → the day's programmes, sorted by start. */
+/** One page of the guide for one day: row key ([sourceKey]) → the day's programmes, sorted by start. */
 internal data class GuidePage(
     val listings: Map<String, List<EpgProgram>>,
     val source: GuideSource,
@@ -556,6 +624,24 @@ internal class GuidePager(
     fun clear() = cache.clear()
 }
 
+/**
+ * One page from each source's part of it ([pages], one per source of the page's rows): every
+ * listing; the status from the first part with listings (else the first); the latest end of all.
+ */
+internal fun mergeGuidePages(pages: List<GuidePage>): GuidePage {
+    val lead = pages.firstOrNull { it.hasListings } ?: pages.first()
+    return if (pages.size == 1) {
+        lead
+    } else {
+        GuidePage(
+            listings = pages.flatMap { it.listings.entries }.associate { it.key to it.value },
+            source = lead.source,
+            updatedAtMs = lead.updatedAtMs,
+            latestEndSec = pages.mapNotNull { it.latestEndSec }.maxOrNull(),
+        )
+    }
+}
+
 /** The grid's rows and counts for a day, built from whichever pages are loaded. */
 internal data class AssembledGuide(
     val rows: List<EpgChannelRow>,
@@ -588,8 +674,8 @@ internal fun assembleGuide(
         channels.mapIndexed { index, channel ->
             val page = pages[index / pageSize]
             if (page != null) loaded++
-            val programs = page?.listings?.get(channel.id).orEmpty()
-            if (page != null && page.listings.containsKey(channel.id)) answered++
+            val programs = page?.listings?.get(channel.sourceKey).orEmpty()
+            if (page != null && page.listings.containsKey(channel.sourceKey)) answered++
             if (programs.isNotEmpty()) {
                 listed++
                 val end = programs.maxOf { it.endTime }

@@ -44,7 +44,9 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
+import org.njarasoa.fijerena.core.ui.catchup.guideChannelRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -841,31 +843,18 @@ fun TvNavHost(
                                 categoryName = epgScreen.categoryName,
                                 focusChannelId = epgScreen.focusChannelId,
                                 providerId = epgScreen.providerId,
+                                // Each row on its own source: a Recent or Favourites guide lists every source's.
                                 onProgramSelected = { _, channel ->
                                     // Land on the preview pane, not full-screen. Pushing (not popUpTo)
                                     // means Back from the preview pops back to the EPG guide for free.
-                                    navController.navigateOnce(
-                                        Screen.CategoryList(
-                                            contentType = ContentType.LIVE_TV,
-                                            initialCategoryId = channel.categoryId,
-                                            initialStreamId = channel.id,
-                                            providerId = epgScreen.providerId,
-                                        ),
-                                    )
+                                    navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
                                 },
                                 // Catch-up: the programme from the channel's archive, full screen.
                                 onWatchFromStart = { program, channel ->
-                                    navController.navigateOnce(catchupRoute(program, channel, epgScreen.providerId))
+                                    navController.navigateOnce(catchupRoute(program, channel, channel.sourceOr(epgScreen.providerId)))
                                 },
-                                onChannelSelected = { streamId, _, categoryId ->
-                                    navController.navigateOnce(
-                                        Screen.CategoryList(
-                                            contentType = ContentType.LIVE_TV,
-                                            initialCategoryId = categoryId,
-                                            initialStreamId = streamId,
-                                            providerId = epgScreen.providerId,
-                                        ),
-                                    )
+                                onChannelSelected = { channel ->
+                                    navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
                                 },
                                 // One search (G-9): "Search the guide", filtered to this guide's channels.
                                 onSearch = {

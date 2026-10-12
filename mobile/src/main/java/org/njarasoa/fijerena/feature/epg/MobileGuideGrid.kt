@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -108,7 +109,7 @@ fun MobileGuideGrid(
     modifier: Modifier = Modifier,
     /** Whether row [index]'s page has loaded: an empty row then says "No listings", not a blank bar. */
     isRowLoaded: (index: Int) -> Boolean = { true },
-    /** Archive days per channel id: past programmes the archive holds get a replay mark (catch-up). */
+    /** Archive days per row (`sourceKey`): past programmes the archive holds get a replay mark (catch-up). */
     catchupDays: Map<String, Int> = emptyMap(),
 ) {
     val density = LocalDensity.current
@@ -195,7 +196,7 @@ fun MobileGuideGrid(
         ) {
             items(
                 count = channelRows.size,
-                key = { channelRows[it].channel.id },
+                key = { channelRows[it].channel.sourceKey },
                 contentType = { "guide_row" },
             ) { index ->
                 val row = channelRows[index]
@@ -207,7 +208,7 @@ fun MobileGuideGrid(
                     nowEpochSeconds = nowEpochSeconds,
                     channelColumnWidth = channelColumnWidth,
                     noListings = row.programs.isEmpty() && isRowLoaded(index),
-                    archiveDays = catchupDays[row.channel.id] ?: 0,
+                    archiveDays = catchupDays[row.channel.sourceKey] ?: 0,
                     onChannelClick = { onChannelClick(row.channel) },
                     onProgramClick = { program -> onProgramClick(program, row.channel) },
                 )

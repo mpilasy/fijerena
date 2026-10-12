@@ -375,7 +375,7 @@ private fun EpgBrowserContent(
     onClearSearch: () -> Unit = {},
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     contextName: String? = null,
-    contextChannels: GuideChannels? = null,
+    contextChannels: List<GuideChannels>? = null,
     // Back is handing focus to a header button: no first-open focus or keyboard here.
     headerReturnPending: Boolean = false,
 ) {
@@ -752,7 +752,7 @@ private fun ResultsContent(
     firstItemFocusRequester: FocusRequester? = null,
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
-    contextChannels: GuideChannels? = null,
+    contextChannels: List<GuideChannels>? = null,
 ) {
     val scale = LocalUiScale.current
 

@@ -4,6 +4,7 @@ import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 
 /**
@@ -29,3 +30,19 @@ fun catchupRoute(
         providerId = providerId,
     )
 }
+
+/**
+ * The Live TV route a TV Guide row opens — its channel, in its category — on the row's own source
+ * ([sourceOr]; [guideSource], the guide's, for a row that leaves it 0): a Recent or Favourites
+ * guide lists every source's channels.
+ */
+fun guideChannelRoute(
+    channel: MediaItem,
+    guideSource: Long,
+): Screen.CategoryList =
+    Screen.CategoryList(
+        contentType = ContentType.LIVE_TV,
+        initialCategoryId = channel.categoryId,
+        initialStreamId = channel.id,
+        providerId = channel.sourceOr(guideSource),
+    )

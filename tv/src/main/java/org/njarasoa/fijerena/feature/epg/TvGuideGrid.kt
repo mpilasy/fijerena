@@ -111,12 +111,14 @@ import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
@@ -215,18 +217,18 @@ private const val HEADER_REFRESH = "refresh"
 private val HEADER_KEYS = listOf(HEADER_PREV, HEADER_NOW, HEADER_NEXT, HEADER_SEARCH, HEADER_REFRESH)
 
 // Keys for cells, shared by GuideFocus and NavReturnFocus (the cell that opened a preview gets
-// focus back). A programme key is prefix + channel id + separator + programme id, so its channel
-// cell can tell it is the fallback.
+// focus back). A programme key is prefix + row key (`sourceKey`: source and channel id) +
+// separator + programme id, so its channel cell can tell it is the fallback.
 private const val KEY_CHANNEL_PREFIX = "channel:"
 private const val KEY_PROGRAM_PREFIX = "program:"
 private const val KEY_SEPARATOR = "\n"
 
-private fun channelKey(channelId: String) = KEY_CHANNEL_PREFIX + channelId
+private fun channelKey(rowKey: String) = KEY_CHANNEL_PREFIX + rowKey
 
 private fun programKey(
-    channelId: String,
+    rowKey: String,
     programId: String,
-) = KEY_PROGRAM_PREFIX + channelId + KEY_SEPARATOR + programId
+) = KEY_PROGRAM_PREFIX + rowKey + KEY_SEPARATOR + programId
 
 /** Frames to wait for the canvas to be measured before placing "now" (first open). */
 private const val VIEWPORT_WAIT_FRAMES = 30
@@ -264,7 +266,7 @@ fun TvGuideGrid(
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     /** The details panel's Watch from start: [EpgProgram] replayed from the channel's archive (catch-up). */
     onWatchFromStart: (EpgProgram, MediaItem) -> Unit,
-    onChannelSelected: (String, String, String) -> Unit,
+    onChannelSelected: (MediaItem) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
@@ -273,7 +275,7 @@ fun TvGuideGrid(
     onSearch: () -> Unit,
     onBack: () -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
-    isFavoriteChannel: suspend (channelId: String) -> Boolean,
+    isFavoriteChannel: suspend (MediaItem) -> Boolean,
     /** Returns whether the rows reload without the channel (a favourite removed in the Favourites guide). */
     onToggleFavorite: (MediaItem) -> Boolean,
     /**
@@ -283,7 +285,8 @@ fun TvGuideGrid(
     onRemoveFromRecent: ((MediaItem) -> () -> Unit)?,
     /** The Undo of a favourite removed with [onToggleFavorite]; returns whether the rows reload. */
     onRestoreFavorite: (MediaItem) -> Boolean = { false },
-    focusChannelId: String? = null,
+    /** The row ([sourceKey]) entry focus lands on: the playing channel's (GD5). */
+    focusRowKey: String? = null,
 ) {
     val scale = LocalUiScale.current
     val scope = rememberCoroutineScope()
@@ -291,7 +294,7 @@ fun TvGuideGrid(
     // Back from the EPG Browser on the Search button — not on the guide's first-open target.
     val returnFocus = rememberNavReturnFocus()
     val headerPane = rememberPaneFocus()
-    val focus = remember { GuideFocus().apply { entryChannelId = focusChannelId } }
+    val focus = remember { GuideFocus().apply { entryRowKey = focusRowKey } }
     // Shared by the ruler and every row: the one time axis (G-T1). Saveable, so Back from a
     // preview keeps the hours the user was looking at.
     val scrollState = rememberScrollState()
@@ -810,8 +813,8 @@ private class GuideFocus {
      */
     var anchorSec: Long? = null
 
-    /** The channel whose row the first "now" focus lands on (the playing one, GD5); null: the first on air. */
-    var entryChannelId: String? = null
+    /** The row ([sourceKey]) the first "now" focus lands on (the playing channel's, GD5); null: the first on air. */
+    var entryRowKey: String? = null
 
     private var movers: GuideMovers? = null
 
@@ -960,9 +963,9 @@ private fun GuideBody(
     returnFocus: NavReturnFocus,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     onWatchFromStart: (EpgProgram, MediaItem) -> Unit,
-    onChannelSelected: (String, String, String) -> Unit,
+    onChannelSelected: (MediaItem) -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
-    isFavoriteChannel: suspend (channelId: String) -> Boolean,
+    isFavoriteChannel: suspend (MediaItem) -> Boolean,
     /** The channel, and whether it was a favourite when its menu opened. */
     onToggleFavorite: (MediaItem, Boolean) -> Unit,
     onRemoveFromRecent: ((MediaItem) -> Unit)?,
@@ -996,7 +999,7 @@ private fun GuideBody(
         remember(channelRows) {
             HashMap<String, Int>(channelRows.size * 2).also { m ->
                 channelRows.forEachIndexed { i, r ->
-                    m[r.channel.id] =
+                    m[r.channel.sourceKey] =
                         i
                 }
             }
@@ -1092,7 +1095,7 @@ private fun GuideBody(
                             right <= scroll || left >= visibleEnd
                         }
                     ensureRowComposed(row)
-                    val key = programKey(channelRows[row].channel.id, program.id)
+                    val key = programKey(channelRows[row].channel.sourceKey, program.id)
                     // A composed target takes focus before the scroll, not after: scrolling first
                     // can carry the cell that still has focus out of the composed range (a long
                     // programme reached by Left from the end of the day), focus drops, the grid
@@ -1109,7 +1112,7 @@ private fun GuideBody(
                 private suspend fun focusChannel(row: Int): Boolean {
                     focus.moveTo(row, null)
                     ensureRowComposed(row)
-                    return focus.focusKey(channelKey(channelRows[row].channel.id))
+                    return focus.focusKey(channelKey(channelRows[row].channel.sourceKey))
                 }
 
                 override fun stepInRow(step: Int) {
@@ -1197,7 +1200,7 @@ private fun GuideBody(
                     // channel cell and moves on to the on-air cell when the page arrives.
                     val row =
                         focus.focusedRow.takeIf { it in channelRows.indices }
-                            ?: focus.entryChannelId?.let { rowIndexById[it] }
+                            ?: focus.entryRowKey?.let { rowIndexById[it] }
                             ?: channelRows
                                 .indexOfFirst { r -> r.programs.any { at >= it.startTime && at < it.endTime } }
                                 .takeIf { it >= 0 }
@@ -1258,21 +1261,21 @@ private fun GuideBody(
     details?.let { (program, channel) ->
         val replayable =
             remember(program, channel) {
-                CatchupAvailability.isPlayable(state.catchupDays[channel.id] ?: 0, program, System.currentTimeMillis() / 1000)
+                CatchupAvailability.isPlayable(state.catchupDays[channel.sourceKey] ?: 0, program, System.currentTimeMillis() / 1000)
             }
         ProgramDetailsDialog(
             program = program,
             channel = channel,
             onWatchChannel = {
                 details = null
-                returnFocus.leaveFrom(programKey(channel.id, program.id), verticalListState)
+                returnFocus.leaveFrom(programKey(channel.sourceKey, program.id), verticalListState)
                 onProgramSelected(program, channel)
             },
             onWatchFromStart =
                 if (replayable) {
                     {
                         details = null
-                        returnFocus.leaveFrom(programKey(channel.id, program.id), verticalListState)
+                        returnFocus.leaveFrom(programKey(channel.sourceKey, program.id), verticalListState)
                         onWatchFromStart(program, channel)
                     }
                 } else {
@@ -1302,7 +1305,7 @@ private fun GuideBody(
             list = if (onRemoveFromRecent != null) RowMenuList.RECENT else RowMenuList.OTHER,
         )
     }
-    val openActions: (MediaItem) -> Unit = { channel -> scope.launch { actions = channel to isFavoriteChannel(channel.id) } }
+    val openActions: (MediaItem) -> Unit = { channel -> scope.launch { actions = channel to isFavoriteChannel(channel) } }
 
     Column(
         modifier =
@@ -1362,7 +1365,7 @@ private fun GuideBody(
         ) {
             items(
                 count = channelRows.size,
-                key = { channelRows[it].channel.id },
+                key = { channelRows[it].channel.sourceKey },
                 contentType = { "channel_row" },
             ) { index ->
                 val row = channelRows[index]
@@ -1379,13 +1382,14 @@ private fun GuideBody(
                     cardStyle = cardStyle,
                     focus = focus,
                     returnFocus = returnFocus,
-                    returnChannelRequester = returnChannelRequester.takeIf { returnRowId == row.channel.id },
-                    archiveDays = state.catchupDays[row.channel.id] ?: 0,
+                    returnChannelRequester = returnChannelRequester.takeIf { returnRowId == row.channel.sourceKey },
+                    archiveDays = state.catchupDays[row.channel.sourceKey] ?: 0,
+                    sourceName = state.sourceNames[row.channel.providerId],
                     channelColumnWidth = channelColumnWidth,
                     columnGap = columnGap,
                     onChannelClick = {
-                        returnFocus.leaveFrom(channelKey(row.channel.id), verticalListState)
-                        onChannelSelected(row.channel.id, row.channel.name, row.channel.categoryId)
+                        returnFocus.leaveFrom(channelKey(row.channel.sourceKey), verticalListState)
+                        onChannelSelected(row.channel)
                     },
                     onProgramClick = { program -> details = program to row.channel },
                     onRowActions = { openActions(row.channel) },
@@ -1475,6 +1479,8 @@ private fun GuideRow(
     returnChannelRequester: FocusRequester?,
     /** The channel's archive days (0 none): its past programmes that can be replayed get a mark. */
     archiveDays: Int,
+    /** The channel's source, when the rows mix several (a Recent or Favourites guide); else null. */
+    sourceName: String?,
     channelColumnWidth: androidx.compose.ui.unit.Dp,
     columnGap: androidx.compose.ui.unit.Dp,
     onChannelClick: () -> Unit,
@@ -1483,14 +1489,15 @@ private fun GuideRow(
 ) {
     val scale = LocalUiScale.current
     val rowHeight = TvDimensions.epgRowHeight.scaled(scale)
-    val channelId = row.channel.id
+    val rowKey = row.channel.sourceKey
     val cells = remember(row.programs, layout, composeRange) { layout.cellsIn(row.programs, composeRange.first, composeRange.last) }
     val totalWidthPx = layout.totalWidthPx.roundToInt()
 
     Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
-        val chKey = channelKey(channelId)
+        val chKey = channelKey(rowKey)
         ChannelCell(
             channel = row.channel,
+            sourceName = sourceName,
             cardStyle = cardStyle,
             onClick = onChannelClick,
             onLongClick = onRowActions,
@@ -1520,7 +1527,7 @@ private fun GuideRow(
                 content = {
                     cells.forEach { cell ->
                         androidx.compose.runtime.key(cell.program.id) {
-                            val key = programKey(channelId, cell.program.id)
+                            val key = programKey(rowKey, cell.program.id)
                             ProgramCell(
                                 cell = cell,
                                 scrollState = scrollState,
@@ -1745,6 +1752,7 @@ private fun guideCardStyle(): GuideCardStyle {
 @Composable
 private fun ChannelCell(
     channel: MediaItem,
+    sourceName: String?,
     cardStyle: GuideCardStyle,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -1779,14 +1787,17 @@ private fun ChannelCell(
                 contentType = ThumbnailContentType.LIVE_TV,
                 modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
             )
-            Text(
-                text = channel.name,
-                style = cardStyle.channelStyle,
-                color = CinemaTextPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            // The name on one line over its source's badge when the rows mix sources.
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                Text(
+                    text = channel.name,
+                    style = cardStyle.channelStyle,
+                    color = CinemaTextPrimary,
+                    maxLines = if (sourceName != null) 1 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                sourceName?.let { SourceBadge(it) }
+            }
             // The row-actions hint, as on the channel lists' rows; programme cells are too narrow for it.
             if (isFocused) RowActionsHint()
         }

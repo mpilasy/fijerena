@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -37,7 +38,7 @@ fun TvEpgGuideScreen(
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
     onWatchFromStart: (program: EpgProgram, channel: MediaItem) -> Unit,
-    onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onChannelSelected: (channel: MediaItem) -> Unit,
     onSearch: () -> Unit,
     onBack: () -> Unit,
     focusChannelId: String? = null,
@@ -110,7 +111,8 @@ fun TvEpgGuideScreen(
                     onToggleFavorite = viewModel::toggleFavoriteChannel,
                     onRestoreFavorite = viewModel::restoreFavoriteChannel,
                     onRemoveFromRecent = if (viewModel.canRemoveFromRecent) viewModel::removeFromRecent else null,
-                    focusChannelId = focusChannelId,
+                    // Rows are keyed by source and id: the player's channel is on the route's source.
+                    focusRowKey = focusChannelId?.let { sourceKey(providerId, it) },
                 )
             }
         }

@@ -9,6 +9,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import java.time.LocalDate
 
@@ -154,7 +155,7 @@ class EpgGuidePagingTest {
         runTest {
             val pager =
                 GuidePager(pageSize = 2) { _, items ->
-                    page(if (items.any { it.id == "ch5" }) mapOf("ch5" to listOf(program("ch5", 100, 200))) else emptyMap())
+                    page(if (items.any { it.id == "ch5" }) mapOf(sourceKey(0L, "ch5") to listOf(program("ch5", 100, 200))) else emptyMap())
                 }
             pager.channels = (0 until 8).map(::channel)
 
@@ -173,7 +174,7 @@ class EpgGuidePagingTest {
     @Test
     fun rowsOfPagesNotLoadedAreEmptyPlaceholders() {
         val channels = (0 until 5).map(::channel)
-        val pages = mapOf(0 to page(mapOf("ch0" to listOf(program("ch0", 100, 200)), "ch1" to emptyList())))
+        val pages = mapOf(0 to page(mapOf(sourceKey(0L, "ch0") to listOf(program("ch0", 100, 200)), sourceKey(0L, "ch1") to emptyList())))
 
         val guide = assembleGuide(channels, pageSize = 2, pages = pages)
 
@@ -192,7 +193,7 @@ class EpgGuidePagingTest {
         val pages =
             mapOf(
                 0 to page(emptyMap(), source = GuideSource.NATIVE, updatedAtMs = null, latestEndSec = null),
-                1 to page(mapOf("ch2" to listOf(program("ch2", 100, 300))), updatedAtMs = 42L),
+                1 to page(mapOf(sourceKey(0L, "ch2") to listOf(program("ch2", 100, 300))), updatedAtMs = 42L),
             )
 
         val guide = assembleGuide(channels, pageSize = 2, pages = pages)

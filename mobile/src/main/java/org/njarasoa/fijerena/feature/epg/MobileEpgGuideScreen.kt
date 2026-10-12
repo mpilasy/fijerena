@@ -51,6 +51,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
@@ -100,7 +101,7 @@ fun MobileEpgGuideScreen(
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
     onWatchFromStart: (program: EpgProgram, channel: MediaItem) -> Unit,
-    onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onChannelSelected: (channel: MediaItem) -> Unit,
     onSearch: () -> Unit,
     onBack: () -> Unit,
     focusChannelId: String? = null,
@@ -251,7 +252,8 @@ fun MobileEpgGuideScreen(
                     is EpgViewModel.UiState.Ready -> {
                         if (entryRowPending) {
                             LaunchedEffect(Unit) {
-                                val row = state.channelRows.indexOfFirst { it.channel.id == focusChannelId }
+                                val entryKey = focusChannelId?.let { sourceKey(providerId, it) }
+                                val row = state.channelRows.indexOfFirst { it.channel.sourceKey == entryKey }
                                 if (row >= 0) listState.scrollToItem(row)
                                 entryRowPending = false
                             }
@@ -271,7 +273,7 @@ fun MobileEpgGuideScreen(
                                     onNowScrolled = { nowScroll = null },
                                     onProgramClick = { program, channel -> selection = GuideSelection(program, channel) },
                                     onChannelClick = { channel ->
-                                        onChannelSelected(channel.id, channel.name, channel.categoryId)
+                                        onChannelSelected(channel)
                                     },
                                     onRowsVisible = viewModel::onRowsVisible,
                                     isRowLoaded = state::isRowLoaded,
@@ -341,7 +343,11 @@ fun MobileEpgGuideScreen(
     selection?.let { picked ->
         val replayable =
             remember(picked) {
-                CatchupAvailability.isPlayable(catchupDays[picked.channel.id] ?: 0, picked.program, System.currentTimeMillis() / 1000)
+                CatchupAvailability.isPlayable(
+                    catchupDays[picked.channel.sourceKey] ?: 0,
+                    picked.program,
+                    System.currentTimeMillis() / 1000,
+                )
             }
         ProgramDetailsSheet(
             selection = picked,

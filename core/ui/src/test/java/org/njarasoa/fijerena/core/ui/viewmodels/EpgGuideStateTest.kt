@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.ui.history.MergedLists
 
 /** GD1: the guide's channel set and the reason it shows when nothing is listed. */
 class EpgGuideStateTest {
@@ -42,7 +43,11 @@ class EpgGuideStateTest {
 
             assertEquals(
                 recent,
-                CategoryViewModel.virtualCategoryItems(repo, CategoryViewModel.RECENT_CATEGORY_ID, ContentType.LIVE_TV),
+                CategoryViewModel.virtualCategoryItems(
+                    MergedLists(listOf(MergedLists.Source(1L, "", repo))),
+                    CategoryViewModel.RECENT_CATEGORY_ID,
+                    ContentType.LIVE_TV,
+                ),
             )
         }
 
@@ -55,7 +60,11 @@ class EpgGuideStateTest {
 
             assertEquals(
                 favourites,
-                CategoryViewModel.virtualCategoryItems(repo, CategoryViewModel.FAVORITES_CATEGORY_ID, ContentType.LIVE_TV),
+                CategoryViewModel.virtualCategoryItems(
+                    MergedLists(listOf(MergedLists.Source(1L, "", repo))),
+                    CategoryViewModel.FAVORITES_CATEGORY_ID,
+                    ContentType.LIVE_TV,
+                ),
             )
         }
 

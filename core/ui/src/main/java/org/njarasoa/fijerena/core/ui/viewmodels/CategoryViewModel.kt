@@ -80,19 +80,38 @@ class CategoryViewModel(
             }
 
         /**
-         * The rows of Recent or Favourites for [contentType], or null when [categoryId] is a real
-         * category the source knows. Shared with the TV Guide, which otherwise sends the virtual
-         * id to the source and gets the catalogue's first page back.
+         * The rows of Recent or Favourites for [contentType], every source's of [lists] merged, or
+         * null when [categoryId] is a real category the source knows. Shared with the TV Guide,
+         * which otherwise sends the virtual id to the source and gets the catalogue's first page back.
          */
         suspend fun virtualCategoryItems(
-            repo: MediaRepository,
+            lists: MergedLists,
             categoryId: String,
             contentType: String,
         ): List<MediaItem>? =
             when (categoryId) {
-                RECENT_CATEGORY_ID -> repo.refreshRecentItems(contentType)
-                FAVORITES_CATEGORY_ID -> repo.getFavoritesForContentTypeSuspend(contentType)
+                RECENT_CATEGORY_ID -> lists.refreshRecentItems(contentType)
+                FAVORITES_CATEGORY_ID -> lists.favorites(contentType)
                 else -> null
+            }
+
+        /** Whether [categoryId] is Recent or Favourites: a list merged across the profile's sources. */
+        fun isMergedList(categoryId: String?): Boolean = categoryId == RECENT_CATEGORY_ID || categoryId == FAVORITES_CATEGORY_ID
+
+        /**
+         * The lists a TV Guide of [categoryId] reads around [repo], the route's source: for Recent
+         * or Favourites every Xtream source of the profile's, as the lists show them; a category
+         * stays on [repo]'s own source.
+         */
+        suspend fun guideLists(
+            container: AppContainer,
+            repo: MediaRepository,
+            categoryId: String,
+        ): MergedLists =
+            if (isMergedList(categoryId)) {
+                MergedLists.withOthers(container, repo)
+            } else {
+                MergedLists(listOf(MergedLists.Source(repo.getProviderId(), "", repo)))
             }
     }
 

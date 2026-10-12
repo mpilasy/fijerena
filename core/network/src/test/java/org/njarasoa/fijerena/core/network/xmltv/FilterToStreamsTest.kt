@@ -116,4 +116,35 @@ class FilterToStreamsTest {
                 .map { it.providerId },
         )
     }
+
+    @Test
+    fun `a merged guide keeps each source's airings on its own source's channels`() {
+        // Recent with channel 1 on source 1 and channel 2 on source 2: each id counts on its own source only.
+        val groups =
+            listOf(
+                group(
+                    "today",
+                    program(
+                        "news",
+                        airing("tf1", 1, providerId = 1L),
+                        airing("tf1", 1, providerId = 2L),
+                        airing("fr2", 2, providerId = 2L),
+                        airing("fr2", 2, providerId = 3L),
+                    ),
+                ),
+            )
+
+        val filtered =
+            filterToStreams(groups, listOf(GuideChannels(setOf("1"), providerId = 1L), GuideChannels(setOf("2"), providerId = 2L)))
+
+        assertEquals(
+            listOf(1L to 1, 2L to 2),
+            filtered
+                .single()
+                .programs
+                .single()
+                .airings
+                .map { it.providerId to it.matchedStream?.streamId },
+        )
+    }
 }

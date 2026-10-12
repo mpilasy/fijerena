@@ -75,16 +75,26 @@ data class GuideChannels(
 fun filterToStreams(
     dateGroups: List<EpgBrowserDateGroup>,
     channels: GuideChannels,
+): List<EpgBrowserDateGroup> = filterToStreams(dateGroups, listOf(channels))
+
+/**
+ * [filterToStreams] for a guide whose channels are on several sources (a merged Recent or
+ * Favourites, one [GuideChannels] per source): each airing is kept on its own source's channels.
+ */
+fun filterToStreams(
+    dateGroups: List<EpgBrowserDateGroup>,
+    channels: List<GuideChannels>,
 ): List<EpgBrowserDateGroup> =
     dateGroups.mapNotNull { group ->
         val programs =
             group.programs.mapNotNull { program ->
                 val airings =
                     program.airings.mapNotNull { airing ->
+                        val own = channels.firstOrNull { it.providerId == airing.providerId }
                         when {
-                            airing.providerId != channels.providerId -> null
-                            airing.matchedStream?.streamId?.toString() in channels.streamIds -> airing
-                            else -> channels.byEpgChannelId[airing.channelId.lowercase()]?.let { airing.copy(matchedStream = it) }
+                            own == null -> null
+                            airing.matchedStream?.streamId?.toString() in own.streamIds -> airing
+                            else -> own.byEpgChannelId[airing.channelId.lowercase()]?.let { airing.copy(matchedStream = it) }
                         }
                     }
                 if (airings.isEmpty()) null else program.copy(airings = airings)

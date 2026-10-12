@@ -185,10 +185,10 @@ class EpgBrowserViewModel(
 
     /**
      * The stream ids of [categoryId]'s channels, resolved the way the TV Guide resolves them
-     * (virtual lists included); null without a [categoryId] or until they are loaded.
+     * (virtual lists included), one entry per source; null without a [categoryId] or until they are loaded.
      */
-    private val _contextChannels = MutableStateFlow<GuideChannels?>(null)
-    val contextChannels: StateFlow<GuideChannels?> = _contextChannels.asStateFlow()
+    private val _contextChannels = MutableStateFlow<List<GuideChannels>?>(null)
+    val contextChannels: StateFlow<List<GuideChannels>?> = _contextChannels.asStateFlow()
 
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
@@ -358,28 +358,36 @@ class EpgBrowserViewModel(
     }
 
     private suspend fun loadContextStreamIds(categoryId: String) {
-        // "In <category> only" stays on the guide's own source.
+        // "In <category> only" stays on the guide's own source; Recent and Favourites are every
+        // source's, as the TV Guide lists them, each channel on its own source.
         val guideProviderId = contextProviderId.takeIf { it > 0L } ?: return
-        val repository = AppContainer.getInstance(context).getMediaRepository(guideProviderId)
+        val container = AppContainer.getInstance(context)
+        val repository = container.getMediaRepository(guideProviderId)
+        val lists = CategoryViewModel.guideLists(container, repository, categoryId)
         val items =
-            CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
-                ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrThrow()
-        val itemsById = items.associateBy { it.id }
+            (
+                CategoryViewModel.virtualCategoryItems(lists, categoryId, ContentType.LIVE_TV)
+                    ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrThrow()
+            ).onSources(guideProviderId)
         _contextChannels.value =
-            GuideChannels(
-                streamIds = items.mapTo(HashSet()) { it.id },
-                byEpgChannelId =
-                    repository
-                        .matchGuideChannels(items)
-                        .entries
-                        .mapNotNull { (itemId, xmltvId) ->
-                            val item = itemsById[itemId] ?: return@mapNotNull null
-                            val streamId = item.id.toIntOrNull() ?: return@mapNotNull null
-                            xmltvId.lowercase() to
-                                EpgBrowserMatchedStream(streamId, item.name, item.categoryId, providerId = guideProviderId)
-                        }.toMap(),
-                providerId = guideProviderId,
-            )
+            items.groupBy { it.providerId }.map { (source, sourceItems) ->
+                val itemsById = sourceItems.associateBy { it.id }
+                GuideChannels(
+                    streamIds = sourceItems.mapTo(HashSet()) { it.id },
+                    byEpgChannelId =
+                        lists
+                            .repoFor(source)
+                            .matchGuideChannels(sourceItems)
+                            .entries
+                            .mapNotNull { (itemId, xmltvId) ->
+                                val item = itemsById[itemId] ?: return@mapNotNull null
+                                val streamId = item.id.toIntOrNull() ?: return@mapNotNull null
+                                xmltvId.lowercase() to
+                                    EpgBrowserMatchedStream(streamId, item.name, item.categoryId, providerId = source)
+                            }.toMap(),
+                    providerId = source,
+                )
+            }
     }
 
     private fun loadGuideSourceOwners() {

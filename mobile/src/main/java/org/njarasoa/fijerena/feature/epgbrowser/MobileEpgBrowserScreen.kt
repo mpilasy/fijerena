@@ -529,7 +529,7 @@ private fun MobileResultsContent(
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
-    contextChannels: GuideChannels? = null,
+    contextChannels: List<GuideChannels>? = null,
 ) {
     // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
     val contextFilter = contextChannels?.takeIf { contextName != null }
