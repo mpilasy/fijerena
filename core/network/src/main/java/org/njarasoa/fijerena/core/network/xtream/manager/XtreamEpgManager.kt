@@ -52,6 +52,11 @@ class XtreamEpgManager(
     @Volatile
     private var labelsLocalAsUtc = sharedPreferences.getBoolean(KEY_PANEL_GUIDE_LOCAL_AS_UTC, false)
 
+    // Set once a comparison reached a verdict in this process. Until then cached answers are
+    // compared too, so an update or a restart doesn't wait for the 6-hour cache to expire.
+    @Volatile
+    private var measuredThisRun = false
+
     init {
         purgeLegacyPrefsCache()
         evictStaleCache()
@@ -191,6 +196,7 @@ class XtreamEpgManager(
                         remeasure(fetched.map { it.second })
                     }
                 }
+                if (!measuredThisRun) remeasure(results.values)
                 results.mapValues { (_, epg) -> shown(epg) }
             }
         }
@@ -229,7 +235,7 @@ class XtreamEpgManager(
     /**
      * Compare [fresh] answers with the source's own `xmltv.php` and keep the verdict when there is
      * one ([PanelGuideTimes.labelsLocalAsUtc]); off the caller's thread. See
-     * docs/plans/20261012_panel-guide-local-time-plan.md.
+     * docs/plans/archive/20261012_panel-guide-local-time-plan.md.
      */
     private fun remeasure(fresh: Collection<EpgResponse>) {
         val own = ownXmltv ?: return
@@ -246,6 +252,7 @@ class XtreamEpgManager(
                         panel.maxOf { it.startSec } + REMEASURE_MARGIN_SEC,
                     ) ?: return@launch
                 val verdict = PanelGuideTimes.labelsLocalAsUtc(panel, index, zone) ?: return@launch
+                measuredThisRun = true
                 if (verdict != labelsLocalAsUtc) {
                     labelsLocalAsUtc = verdict
                     sharedPreferences.edit { putBoolean(KEY_PANEL_GUIDE_LOCAL_AS_UTC, verdict) }

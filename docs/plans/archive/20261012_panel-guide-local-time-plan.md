@@ -1,6 +1,6 @@
 # Panel guide times labelled as UTC
 
-**Status:** Phase 1 done (2026-10-12); Phase 2 in progress.
+**Status:** Done 2026-10-12. Checked on the phone emulator against bears.
 
 ## Problem
 
@@ -45,6 +45,9 @@ Detect it per source, never assume it, and never use a fixed offset:
   wall time (per listing, so a DST change inside the archive window is right). Applied when the
   guide is read, not when cached: the cache keeps the panel's raw answer.
 
+Added while checking: until a comparison reaches a verdict in a process, cached answers are compared
+too, so an update or a restart doesn't wait for the 6-hour cache to expire.
+
 Not covered, on purpose:
 
 - **`xmltv.php` mislabelled instead** (the mirror case): not seen on a real panel. The comparison
@@ -62,4 +65,16 @@ Not covered, on purpose:
 | # | What | Status |
 |---|---|---|
 | 1 | `PanelGuideTimes` (pure: the verdict and the correction) with unit tests; `XtreamEpgManager` applies the stored verdict to what it returns and re-measures after each fresh fetch against the provider's own `xmltv.php` rows in the index (`OwnXmltvIndex`) | Done 2026-10-12 |
-| 2 | Check on the phone emulator against bears: catch-up channels 2–3 days back line up with XMLTV, a replay from a per-channel listing lands on its programme (on-screen clock), jellyxtream unchanged; docs (FEATURES, epg_guide, release notes) | In progress |
+| 2 | Check on the phone emulator against bears: catch-up channels 2–3 days back line up with XMLTV, a replay from a per-channel listing lands on its programme (on-screen clock), jellyxtream unchanged; docs (FEATURES, epg_guide, release notes) | Done 2026-10-12 |
+
+## Phase 2 checks (phone emulator, bears, 2026-10-12)
+
+- Log on the first guide page after a restart: `Provider 1: panel guide labels local time
+  (Europe/Amsterdam) as UTC = true`; stored as `panel_guide_local_as_utc` in `xtream_cache_1`.
+  jellyxtream (`xtream_cache_5`) has no verdict and is unchanged.
+- Replay from a corrected per-channel listing two days back: CNN PT 4K, Fri 9 "CNN Meia Noite"
+  at 10:06 PM CDT (04:06 Lisbon). The app asked for 04:04 (lead-in); CNN's on-screen clock read
+  04:05 over the programme's opening titles. Uncorrected, the listing sat at 12:06 AM and would
+  have replayed 06:04.
+- Overlapping cells on that evening are in bears' own answer (two schedules: Contrapoder 01:52 and
+  "7 de outubro" 01:55 UTC, CNN Meia Noite at 03:01 and 03:06), not from the correction.

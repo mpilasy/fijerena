@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-11
 
 - **No more stacked listings in the TV Guide:** on a device short of storage, a guide update that changed the schedule (a game added at 19:00, say) kept the old programmes beside the new ones, so cards overlapped and two showed as on air. The update now removes the listings the new guide no longer has; the next guide update clears what is already there.
+- **Catch-up from older days plays the right programme:** some sources' own guides give their local time as if it were UTC (bears: two hours late), so older days on catch-up channels sat two hours late in the guide and Watch from start replayed the wrong two hours. The app now spots this by comparing that guide with the source's own XMLTV and corrects it by the source's own time zone; sources that get it right are left alone.
 - **The guide keeps its whole past:** every programme a guide source lists is now kept, however long ago it ended (it used to drop anything that ended more than 12 hours earlier), so past days show the source's own listings.
 - **Start over stays full screen in landscape (phone):** Start over from a live channel in full screen used to drop the catch-up to portrait; it now stays landscape. Watch live from a catch-up opened in the guide lets the Live TV dock rotate again, and Home from a catch-up no longer leaves the app rotating.
 

@@ -13,7 +13,7 @@ import java.time.ZoneOffset
 /**
  * bears' guide: Flamengo x Fluminense, 20:45 Amsterdam (18:45 UTC), comes from `get_simple_data_table`
  * as `start_timestamp` 1791751500 = 20:45 UTC, while its `xmltv.php` says `20261011204500 +0200`.
- * See docs/plans/20261012_panel-guide-local-time-plan.md.
+ * See docs/plans/archive/20261012_panel-guide-local-time-plan.md.
  */
 class PanelGuideTimesTest {
     private val amsterdam = ZoneId.of("Europe/Amsterdam")
