@@ -65,7 +65,7 @@ fun MobileMovieDetailsScreen(
     movieId: String,
     movieName: String,
     categoryId: String,
-    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean, categoryId: String) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
@@ -162,7 +162,14 @@ fun MobileMovieDetailsScreen(
                             isWatched = isWatched,
                             onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
                             onToggleWatched = if (viewModel.supportsWatchedMark) ({ viewModel.toggleWatched() }) else null,
-                            onPlayMovie = onPlayMovie,
+                            onPlayMovie = {
+                                id,
+                                name,
+                                extension,
+                                fromStart,
+                                ->
+                                onPlayMovie(id, name, extension, fromStart, viewModel.currentCategoryId)
+                            },
                             onCategorySelected = { onCategorySelected(shown.categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
                             // A copy on another source opens on that source, as a related title does.

@@ -749,12 +749,12 @@ fun TvNavHost(
                                 movieName = movieDetailsScreen.movieName,
                                 categoryId = movieDetailsScreen.categoryId,
                                 providerId = movieDetailsScreen.providerId,
-                                onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
+                                onPlayMovie = { movieId, movieName, extension, startFromBeginning, playedCategoryId ->
                                     navController.navigateOnce(
                                         Screen.Player(
                                             streamId = movieId,
                                             streamName = movieName,
-                                            categoryId = movieDetailsScreen.categoryId,
+                                            categoryId = playedCategoryId,
                                             contentType = ContentType.MOVIES,
                                             episodeExtension = extension,
                                             startFromBeginning = startFromBeginning,
@@ -795,17 +795,17 @@ fun TvNavHost(
                                 categoryId = episodeSelectionScreen.categoryId,
                                 initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
                                 providerId = episodeSelectionScreen.providerId,
-                                onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
+                                onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning, series ->
                                     navController.navigateOnce(
                                         Screen.Player(
                                             streamId = episodeId,
                                             streamName = episodeTitle,
-                                            categoryId = episodeSelectionScreen.categoryId,
+                                            categoryId = series.categoryId,
                                             contentType = ContentType.TV_SHOWS,
                                             episodeId = episodeId,
                                             episodeExtension = extension,
-                                            seriesId = episodeSelectionScreen.seriesId,
-                                            seriesName = episodeSelectionScreen.seriesName,
+                                            seriesId = series.seriesId,
+                                            seriesName = series.seriesName,
                                             startFromBeginning = startFromBeginning,
                                             providerId = episodeSelectionScreen.providerId,
                                         ),

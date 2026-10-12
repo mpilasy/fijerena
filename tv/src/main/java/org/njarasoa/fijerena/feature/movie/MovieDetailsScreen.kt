@@ -124,7 +124,7 @@ fun MovieDetailsScreen(
     movieId: String,
     movieName: String,
     categoryId: String,
-    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean, categoryId: String) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
@@ -179,7 +179,14 @@ fun MovieDetailsScreen(
                 resumePositionMs = state.resumePositionMs,
                 resumeDurationMs = state.resumeDurationMs,
                 categoryName = state.categoryName,
-                onPlayMovie = onPlayMovie,
+                onPlayMovie = {
+                    id,
+                    name,
+                    extension,
+                    fromStart,
+                    ->
+                    onPlayMovie(id, name, extension, fromStart, viewModel.currentCategoryId)
+                },
                 onCategorySelected = { onCategorySelected(state.categoryId) },
                 onToggleFavorite = { viewModel.toggleFavorite(state.streamName) },
                 onToggleWatched = if (viewModel.supportsWatchedMark) ({ viewModel.toggleWatched() }) else null,

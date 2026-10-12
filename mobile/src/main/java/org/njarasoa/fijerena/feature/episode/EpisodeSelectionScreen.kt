@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
+import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
@@ -106,7 +107,13 @@ fun MobileEpisodeSelectionScreen(
     seriesName: String,
     categoryId: String,
     initialEpisodeId: String? = null,
-    onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onEpisodeSelected: (
+        episodeId: String,
+        episodeTitle: String,
+        extension: String,
+        startFromBeginning: Boolean,
+        series: PlayedSeries,
+    ) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
@@ -235,7 +242,7 @@ fun MobileEpisodeSelectionScreen(
                         onNavigate = { next -> selectedEpisode = next },
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                             resumeState.setResumeEpisode(episodeId, season = null)
-                            onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
+                            onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning, viewModel.playedSeries())
                         },
                     )
                 }
@@ -262,7 +269,7 @@ fun MobileEpisodeSelectionScreen(
                             onToggleFavorite = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
                             onPlayEpisode = { episodeId, episodeTitle, extension, startFromBeginning ->
                                 resumeState.setResumeEpisode(episodeId, season = null)
-                                onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
+                                onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning, viewModel.playedSeries())
                             },
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode

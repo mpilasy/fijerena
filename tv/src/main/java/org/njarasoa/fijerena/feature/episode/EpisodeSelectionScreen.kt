@@ -145,6 +145,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
+import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
@@ -188,7 +189,13 @@ fun EpisodeSelectionScreen(
     seriesName: String,
     categoryId: String,
     initialEpisodeId: String? = null,
-    onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onEpisodeSelected: (
+        episodeId: String,
+        episodeTitle: String,
+        extension: String,
+        startFromBeginning: Boolean,
+        series: PlayedSeries,
+    ) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
@@ -250,7 +257,14 @@ fun EpisodeSelectionScreen(
                 categoryName = shown.categoryName,
                 isRefreshing = isRefreshing,
                 onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
-                onEpisodeSelected = onEpisodeSelected,
+                onEpisodeSelected = {
+                    id,
+                    title,
+                    extension,
+                    fromStart,
+                    ->
+                    onEpisodeSelected(id, title, extension, fromStart, viewModel.playedSeries())
+                },
                 onCategorySelected = { onCategorySelected(shown.categoryId) },
                 onRefresh = { viewModel.refreshSeriesInfo() },
                 onBack = onBack,

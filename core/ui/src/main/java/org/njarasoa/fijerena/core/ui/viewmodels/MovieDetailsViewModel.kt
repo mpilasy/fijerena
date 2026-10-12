@@ -119,6 +119,10 @@ class MovieDetailsViewModel(
      * navigation, and [uiState] never passes through [UiState.Loading], so the current content
      * stays on screen until the new stream's detail is ready and swaps in place.
      */
+
+    /** The film shown's category: the route's, or the copy's after [switchToAlternateStream] — what Play records. */
+    val currentCategoryId: String get() = categoryId
+
     fun switchToAlternateStream(alternate: MediaItem) {
         if (alternate.id == movieId || otherSourceOf(alternate) != null) return
         movieId = alternate.id

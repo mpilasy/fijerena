@@ -89,6 +89,19 @@ class AlternateStreamSourceTest {
         coVerify(timeout = TIMEOUT_MS) { repository.getCachedSeriesDetail(SeriesId("s3")) }
     }
 
+    @Test
+    fun `after switching to a copy, Play records the copy's category and show, not the route's`() {
+        val film = MovieDetailsViewModelFactory(context, "m1", "c1", "Film", SOURCE).create(MovieDetailsViewModel::class.java)
+        assertEquals("c1", film.currentCategoryId)
+        film.switchToAlternateStream(copy("m3", SOURCE))
+        assertEquals("c", film.currentCategoryId)
+
+        val show = SeriesDetailsViewModelFactory(context, "s1", "c1", "Show", SOURCE).create(SeriesDetailsViewModel::class.java)
+        assertEquals(PlayedSeries("s1", "Show", "c1"), show.playedSeries())
+        show.switchToAlternateStream(copy("s3", SOURCE))
+        assertEquals(PlayedSeries("s3", "Film s3", "c"), show.playedSeries())
+    }
+
     private companion object {
         const val SOURCE = 7L
         const val OTHER = 9L

@@ -144,6 +144,10 @@ class SeriesDetailsViewModel(
      * navigation, and [uiState] never passes through [UiState.Loading], so the current content
      * stays on screen until the new stream's detail is ready and swaps in place.
      */
+
+    /** The show shown: the route's, or the copy's after [switchToAlternateStream] — what Play records. */
+    fun playedSeries(): PlayedSeries = PlayedSeries(seriesId, seriesName, categoryId)
+
     fun switchToAlternateStream(alternate: MediaItem) {
         if (alternate.id == seriesId || otherSourceOf(alternate) != null) return
         seriesId = alternate.id
@@ -369,3 +373,10 @@ class SeriesDetailsViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         SeriesDetailsViewModel(appContext, seriesId, categoryId, seriesName, providerId) as T
 }
+
+/** The show an episode is played from, as Play records it in Recent and progress. */
+data class PlayedSeries(
+    val seriesId: String,
+    val seriesName: String,
+    val categoryId: String,
+)
