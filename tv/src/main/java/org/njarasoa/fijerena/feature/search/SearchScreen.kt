@@ -323,38 +323,12 @@ fun SearchScreen(
                             onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType, result.providerId)
                         },
                         onResultLongPress = { result ->
-                            // Manual watched/unwatched mark (Phase 6,
-                            // docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike isFavorite,
-                            // there is no synchronous in-memory cache for watch_state — the
-                            // menu target has to wait on one suspend fetch before it opens.
-                            // A show offers "Mark show watched / unwatched" instead
-                            // (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3).
-                            val isShow = result.isShow
-                            val isWatchable =
-                                result.contentType == ContentType.MOVIES || (result.contentType == ContentType.TV_SHOWS && !isShow)
+                            // Favourite, Mark watched (a film or an episode) or Mark show watched (a
+                            // show), on the result's own source: the menu waits for one watch-state read.
                             longPressScope.launch {
-                                val isWatched =
-                                    if (isWatchable) {
-                                        viewModel.isWatchedSuspend(
-                                            result.providerId,
-                                            result.itemId,
-                                            result.contentType,
-                                        )
-                                    } else {
-                                        null
-                                    }
-                                val isShowWatched = if (isShow) viewModel.showWatchedMarkState(result.providerId, result.itemId) else null
+                                val target = viewModel.menuTarget(result)
                                 favoriteMenuSource = result.providerId
-                                favoriteMenuTarget =
-                                    FavoriteMenuTarget.Stream(
-                                        itemId = result.itemId,
-                                        itemName = result.streamName,
-                                        categoryId = result.categoryId,
-                                        contentType = result.contentType,
-                                        isFavorite = viewModel.isFavorite(result.providerId, result.itemId, result.contentType),
-                                        isWatched = isWatched,
-                                        isShowWatched = isShowWatched,
-                                    )
+                                favoriteMenuTarget = target
                             }
                         },
                         onCategoryClick = { catResult ->

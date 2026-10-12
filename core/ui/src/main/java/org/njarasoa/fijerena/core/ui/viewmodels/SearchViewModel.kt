@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.util.concurrent.ConcurrentHashMap
 
@@ -652,6 +653,26 @@ class SearchViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             repoFor(providerId).setWatched(itemId, contentType, !isWatched)
         }
+    }
+
+    /**
+     * [result]'s long-press menu, on its own source: its favourite; a film's or an episode's "Mark
+     * watched / unwatched" and a show's "Mark show watched / unwatched" (neither where the source
+     * keeps watched state on its server). The TV and the phone open the same menu.
+     */
+    suspend fun menuTarget(result: SearchResult): FavoriteMenuTarget.Stream {
+        val isWatchable = result.contentType == ContentType.MOVIES || (result.contentType == ContentType.TV_SHOWS && !result.isShow)
+        val isWatched = if (isWatchable) isWatchedSuspend(result.providerId, result.itemId, result.contentType) else null
+        val isShowWatched = if (result.isShow) showWatchedMarkState(result.providerId, result.itemId) else null
+        return FavoriteMenuTarget.Stream(
+            itemId = result.itemId,
+            itemName = result.streamName,
+            categoryId = result.categoryId,
+            contentType = result.contentType,
+            isFavorite = isFavorite(result.providerId, result.itemId, result.contentType),
+            isWatched = isWatched,
+            isShowWatched = isShowWatched,
+        )
     }
 
     /**

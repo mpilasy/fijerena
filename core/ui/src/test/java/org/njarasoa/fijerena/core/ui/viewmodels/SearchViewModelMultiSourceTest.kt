@@ -162,6 +162,22 @@ class SearchViewModelMultiSourceTest {
         coVerify(exactly = 0) { alpha.addFavorite(any(), any(), any(), any()) }
     }
 
+    @Test
+    fun `a film result's menu offers Mark watched, read on its own source`() {
+        givenSources(xtream(A, "Alpha"), xtream(B, "Beta"))
+        val alpha = source(A, items = emptyList())
+        val beta = source(B, items = emptyList())
+        every { beta.supportsMarkWatched } returns true
+        coEvery { beta.getPlaybackPositionSuspend("1", ContentType.MOVIES) } returns null
+        val result = SearchViewModel.SearchResult("1", "Matrix", "c", "Films", ContentType.MOVIES, providerId = B, sourceName = "Beta")
+
+        val target = runBlocking { withTimeout(TIMEOUT_MS) { SearchViewModel(context, ContentType.MOVIES).menuTarget(result) } }
+
+        assertEquals(false, target.isWatched)
+        assertNull(target.isShowWatched)
+        coVerify(exactly = 0) { alpha.getPlaybackPositionSuspend(any(), any()) }
+    }
+
     private fun search(query: String): SearchViewModel.UiState.Success {
         val viewModel = SearchViewModel(context, ContentType.MOVIES)
         viewModel.performSearch(query)

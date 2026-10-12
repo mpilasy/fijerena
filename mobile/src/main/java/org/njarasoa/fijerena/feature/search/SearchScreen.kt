@@ -159,6 +159,11 @@ fun MobileSearchScreen(
                 }
             },
             onDismiss = { favoriteMenuTarget = null },
+            // Null when the result isn't a film or an episode, or its source keeps watched state on its server.
+            onToggleWatched =
+                (target as? FavoriteMenuTarget.Stream)?.isWatched?.let { isWatched ->
+                    { viewModel.toggleWatched(source, target.itemId, target.contentType, isWatched) }
+                },
             // Null when the result isn't a show or its source keeps watched state on its server.
             onToggleShowWatched =
                 (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
@@ -352,27 +357,12 @@ fun MobileSearchScreen(
                                 )
                             },
                             onResultLongPress = { result ->
-                                // A show's menu waits for its "Mark show watched / unwatched" wording.
+                                // Favourite, Mark watched (a film or an episode) or Mark show watched (a
+                                // show), on the result's own source: the menu waits for one watch-state read.
                                 longPressScope.launch {
-                                    val isShowWatched =
-                                        if (result.isShow) {
-                                            viewModel.showWatchedMarkState(
-                                                result.providerId,
-                                                result.itemId,
-                                            )
-                                        } else {
-                                            null
-                                        }
+                                    val target = viewModel.menuTarget(result)
                                     favoriteMenuSource = result.providerId
-                                    favoriteMenuTarget =
-                                        FavoriteMenuTarget.Stream(
-                                            itemId = result.itemId,
-                                            itemName = result.streamName,
-                                            categoryId = result.categoryId,
-                                            contentType = result.contentType,
-                                            isFavorite = viewModel.isFavorite(result.providerId, result.itemId, result.contentType),
-                                            isShowWatched = isShowWatched,
-                                        )
+                                    favoriteMenuTarget = target
                                 }
                             },
                             onCategoryClick = { catResult ->
@@ -1005,15 +995,19 @@ private fun SearchResultCard(
 }
 
 @Composable
-private fun MobileSearchFavoriteDialog(
+internal fun MobileSearchFavoriteDialog(
     target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    // A film's or an episode's "Mark watched / unwatched", worded from the target's isWatched.
+    // Null hides it.
+    onToggleWatched: (() -> Unit)? = null,
     // A show's "Mark show watched / unwatched" (docs/plans/archive/20261011_season-show-watched-plan.md
     // Phase 3), worded from the target's isShowWatched. Null hides it.
     onToggleShowWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
+    val isWatched = (target as? FavoriteMenuTarget.Stream)?.isWatched == true
     val isShowWatched = (target as? FavoriteMenuTarget.Stream)?.isShowWatched == true
     val showWatchedLabel = stringResource(if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show)
 
@@ -1024,6 +1018,13 @@ private fun MobileSearchFavoriteDialog(
         onDismiss = onDismiss,
         actions =
             listOfNotNull(
+                onToggleWatched?.let { toggle ->
+                    ItemMenuAction(
+                        icon = if (isWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                        label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                        onClick = toggle,
+                    )
+                },
                 onToggleShowWatched?.let { toggle ->
                     ItemMenuAction(
                         icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
