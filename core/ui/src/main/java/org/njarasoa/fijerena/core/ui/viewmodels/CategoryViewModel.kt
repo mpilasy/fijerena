@@ -104,6 +104,8 @@ class CategoryViewModel(
             val streamsLoading: Boolean,
             val categoriesRefreshing: Boolean = false,
             val lastPlayedItemId: String? = null,
+            // [lastPlayedItemId]'s source: the item played last across the list's sources (Phase 6).
+            val lastPlayedSource: Long = 0L,
             val categoriesPayloadSize: String? = null,
             val streamsPayloadSize: String? = null,
             // The selected category's source; 0 for a virtual one (Recent, Favourites…).
@@ -111,6 +113,9 @@ class CategoryViewModel(
         ) : UiState() {
             /** The selection as a [MediaCategory.key]: what the category lists compare and focus by. */
             val selectedCategoryKey: String? get() = selectedCategoryId?.let { categoryKey(it, selectedCategorySource) }
+
+            /** The item played last as a row key ([sourceKey]): what the lists mark as current. */
+            val lastPlayedKey: String? get() = lastPlayedItemId?.let { sourceKey(lastPlayedSource, it) }
 
             /** The selected category itself; null with none, or one no longer listed. */
             val selectedCategory: MediaCategory? get() = selectedCategoryKey?.let { key -> categories.firstOrNull { it.key == key } }
@@ -198,7 +203,7 @@ class CategoryViewModel(
     private val _sourceNames = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceNames: StateFlow<Map<Long, String>> = _sourceNames.asStateFlow()
 
-    /** This list's own source, resolved (the active one's id for 0) once the repository is built. */
+    /** This list's own source (a section's: the profile's first Xtream source) once the repository is built. */
     val sourceId: Long
         get() = repositorySnapshot?.getProviderId() ?: providerId
 
@@ -263,6 +268,11 @@ class CategoryViewModel(
     private suspend fun repoFor(rowSource: Long): MediaRepository = awaitMerged().repoFor(rowSource)
 
     private var categories: List<MediaCategory> = emptyList()
+
+    // The item played last across the list's sources, (source, id): the rows' current marker
+    // (Phase 6). Read with each load ([readLastPlayed]); the synchronous rebuilds reuse it.
+    @Volatile
+    private var lastPlayed: Pair<Long, String>? = null
     private var currentStreams: List<MediaItem> = emptyList()
     private var currentCategoryId: String? = null
 
@@ -307,8 +317,16 @@ class CategoryViewModel(
     private fun startRepository(): Job =
         viewModelScope.launchGuarded("CategoryViewModel.init", onError = ::showError) {
             val container = AppContainer.getInstance(context)
-            // A section's list is built around the profile's first Xtream source, not the active one.
-            val repo = container.getMediaRepository(MergedLists.browsingProviderId(container, providerId))
+            // A section's list is built around the profile's first Xtream source; with none there
+            // is nothing to list (the sections aren't offered then).
+            val ownId = MergedLists.browsingProviderId(container, providerId)
+            if (ownId == null) {
+                _uiState.value = UiState.Error(context.getString(R.string.home_no_sources))
+                return@launchGuarded
+            }
+            // A section waits for no source's session: each connects when its categories are read,
+            // so an offline first source doesn't hold the others up.
+            val repo = if (providerId == 0L) container.getStoredDataRepository(ownId) else container.getMediaRepository(ownId)
             repositorySnapshot = repo
             repositoryDeferred.complete(repo)
             if (!mergedDeferred.isCompleted) {
@@ -354,86 +372,85 @@ class CategoryViewModel(
                 UiState.Loading
             }
 
-        val connectError =
-            if (repo.isConnected()) {
-                null
-            } else {
-                val connectResult = repo.connect()
-                if (connectResult.isFailure) {
-                    // Never a Room/HTTP/serialization exception's own message verbatim (e.g. a JSON
-                    // parse error from an EOF response body): friendlyErrorMessage maps it to
-                    // something a viewer can act on, with the raw text appended only in dev mode.
-                    val reason =
-                        connectResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
-                            ?: context.getString(R.string.error_generic_unknown)
-                    context.getString(R.string.category_error_connection_failed_format, reason)
+        val merged = awaitMerged()
+        val result = mergedCategories(repo)
+        // Every source of the list is Xtream, or the one Browse source: any with its own guide.
+        _supportsNativeEpg.value = merged.inProfileOrder.any { it.repo.getCapabilities()?.supportsEpg == true }
+        readLastPlayed()
+
+        result.fold(
+            onSuccess = { fetchedCategories ->
+                // Retry once if provider returned no categories (server session may not be ready)
+                if (fetchedCategories.isEmpty() && !categoriesRetried) {
+                    categoriesRetried = true
+                    delay(1500)
+                    val retryResult = mergedCategories(repo)
+                    retryResult.fold(
+                        onSuccess = { buildAndShowCategories(repo, it) },
+                        onFailure = { buildAndShowCategories(repo, emptyList()) },
+                    )
                 } else {
-                    null
+                    buildAndShowCategories(repo, fetchedCategories)
                 }
-            }
-
-        if (connectError != null) {
-            _uiState.value = UiState.Error(connectError)
-        } else {
-            _supportsNativeEpg.value = repo.getCapabilities()?.supportsEpg == true
-
-            val result = mergedCategories(repo)
-
-            result.fold(
-                onSuccess = { fetchedCategories ->
-                    // Retry once if provider returned no categories (server session may not be ready)
-                    if (fetchedCategories.isEmpty() && !categoriesRetried) {
-                        categoriesRetried = true
-                        delay(1500)
-                        val retryResult = mergedCategories(repo)
-                        retryResult.fold(
-                            onSuccess = { buildAndShowCategories(repo, it) },
-                            onFailure = { buildAndShowCategories(repo, emptyList()) },
-                        )
-                    } else {
-                        buildAndShowCategories(repo, fetchedCategories)
-                    }
-                },
-                onFailure = { error ->
-                    // Same reasoning as the connect-failure branch above: raw exception text
-                    // (e.g. "executor rejected", a Room/HTTP internal) is meaningless to a user
-                    // and must go through friendlyErrorMessage, not straight to the UI.
-                    _uiState.value = UiState.Error(friendlyErrorMessage(error, context, appSettings.isDevMode))
-                },
-            )
-        }
+            },
+            onFailure = { error ->
+                // Never raw exception text (a Room/HTTP internal, "executor rejected"):
+                // friendlyErrorMessage maps it, with the raw text appended only in dev mode.
+                _uiState.value = UiState.Error(sectionErrorMessage(error))
+            },
+        )
     }
 
     /**
      * Every source's categories (each its own filters and hidden categories), one list: by source in
-     * the profile's order, then each source's own order, each tagged with its source (Phase 6). This
-     * list's own source failing fails it; another one failing is left out.
+     * the profile's order, then each source's own order, each tagged with its source (Phase 6). A
+     * source that can't connect or read its categories is left out; the list fails only when none
+     * of its sources loads ([loadedCategories]).
      */
     private suspend fun mergedCategories(repo: MediaRepository): kotlin.Result<List<MediaCategory>> {
-        val ownSource = repo.getProviderId()
         val reads =
             coroutineScope {
                 awaitMerged()
                     .inProfileOrder
                     .map { source ->
                         async {
-                            val read =
-                                if (source.providerId == ownSource) {
-                                    repo.getFilteredCategories(contentType)
-                                } else {
-                                    suspendRunCatching { source.repo.getFilteredCategories(contentType).getOrThrow() }
-                                        .onFailure { android.util.Log.w(TAG, "Source ${source.providerId} left out of the categories", it) }
-                                }
-                            source.providerId to read
+                            val read = suspendRunCatching { sourceCategories(source.repo) }
+                            read.onFailure { android.util.Log.w(TAG, "Source ${source.providerId} left out of the categories", it) }
+                            SourceRead(source.providerId, source.name, read)
                         }
                     }.awaitAll()
+                    .ifEmpty { listOf(SourceRead(repo.getProviderId(), "", suspendRunCatching { sourceCategories(repo) })) }
             }
-        val ownFailure = reads.firstOrNull { it.first == ownSource }?.second?.exceptionOrNull()
-        return if (ownFailure != null) {
-            kotlin.Result.failure(ownFailure)
-        } else {
-            val lists = reads.map { (source, read) -> source to read.getOrNull().orEmpty() }
-            kotlin.Result.success(withContext(Dispatchers.Default) { mergeCategories(lists) })
+        return withContext(Dispatchers.Default) { loadedCategories(reads) }
+    }
+
+    /** [repo]'s categories of this list's type, its session restored first. */
+    private suspend fun sourceCategories(repo: MediaRepository): List<MediaCategory> {
+        if (!repo.isConnected()) {
+            repo.connect().exceptionOrNull()?.let { throw SourceConnectException(it) }
+        }
+        return repo.getFilteredCategories(contentType).getOrThrow()
+    }
+
+    /**
+     * The message when no source of the list loads: the first failure's, friendly (a connection
+     * failure says so). In developer mode with several sources, each source's own, raw detail
+     * included (the dev-mode raw error pattern), one per line.
+     */
+    private fun sectionErrorMessage(error: Throwable): String {
+        val devMode = appSettings.isDevMode
+
+        fun messageOf(e: Throwable): String =
+            if (e is SourceConnectException) {
+                context.getString(R.string.category_error_connection_failed_format, friendlyErrorMessage(e.cause ?: e, context, devMode))
+            } else {
+                friendlyErrorMessage(e, context, devMode)
+            }
+        val failures = (error as? SectionLoadException)?.failures.orEmpty()
+        return when {
+            failures.isEmpty() -> messageOf(error)
+            devMode && failures.size > 1 -> failures.joinToString("\n") { (name, e) -> "$name: ${messageOf(e)}" }
+            else -> messageOf(failures.first().second)
         }
     }
 
@@ -443,7 +460,7 @@ class CategoryViewModel(
     ) {
         categories = rebuildVirtualCategories(repo, fetchedCategories)
 
-        val lastItemId = repo.getLastItemId(contentType)
+        val last = lastPlayed
         _uiState.value =
             UiState.Success(
                 categories = categories,
@@ -451,7 +468,8 @@ class CategoryViewModel(
                 streams = null,
                 streamsLoading = false,
                 categoriesRefreshing = false,
-                lastPlayedItemId = lastItemId,
+                lastPlayedItemId = last?.second,
+                lastPlayedSource = last?.first ?: 0L,
                 categoriesPayloadSize = getCategoriesPayloadSize(),
                 streamsPayloadSize = null,
             )
@@ -504,6 +522,8 @@ class CategoryViewModel(
         isRetryEnabled: Boolean,
     ) {
         val ownRepo = awaitRepository()
+        // Read before this load claims the selection below: a load started meanwhile must find it set.
+        val last = readLastPlayed()
         val ownSource = ownRepo.getProviderId()
         // A real category plays, lists and records on its own source; a virtual list has none.
         val category = findCategory(categoryId, requestedSource)
@@ -517,7 +537,6 @@ class CategoryViewModel(
         val repo = if (categorySource == 0L) ownRepo else repoFor(categorySource)
         currentCategoryId = categoryId
         currentCategorySource = categorySource
-        val lastItemId = ownRepo.getLastItemId(contentType)
 
         _uiState.value =
             UiState.Success(
@@ -526,7 +545,8 @@ class CategoryViewModel(
                 streams = null,
                 streamsLoading = true,
                 categoriesRefreshing = false,
-                lastPlayedItemId = lastItemId,
+                lastPlayedItemId = last?.second,
+                lastPlayedSource = last?.first ?: 0L,
                 categoriesPayloadSize = getCategoriesPayloadSize(),
                 streamsPayloadSize = null,
                 selectedCategorySource = categorySource,
@@ -548,7 +568,8 @@ class CategoryViewModel(
                         streams = currentStreams,
                         streamsLoading = false,
                         categoriesRefreshing = false,
-                        lastPlayedItemId = lastItemId,
+                        lastPlayedItemId = last?.second,
+                        lastPlayedSource = last?.first ?: 0L,
                         categoriesPayloadSize = getCategoriesPayloadSize(),
                         streamsPayloadSize = payloadSize,
                         selectedCategorySource = categorySource,
@@ -1057,13 +1078,18 @@ class CategoryViewModel(
      * Called when returning from the player screen to update focus target.
      */
     fun refreshLastPlayedItem() {
-        val repo = repositoryOrNull ?: return
-        val current = _uiState.value
-        if (current is UiState.Success) {
-            val lastItemId = repo.getLastItemId(contentType)
-            _uiState.value = current.copy(lastPlayedItemId = lastItemId)
+        if (!mergedDeferred.isCompleted) return
+        viewModelScope.launchGuarded("CategoryViewModel.refreshLastPlayedItem") {
+            val last = readLastPlayed()
+            val current = _uiState.value
+            if (current is UiState.Success) {
+                _uiState.value = current.copy(lastPlayedItemId = last?.second, lastPlayedSource = last?.first ?: 0L)
+            }
         }
     }
+
+    /** The item played last across the list's sources, read again ([lastPlayed]). */
+    private suspend fun readLastPlayed(): Pair<Long, String>? = awaitMerged().lastPlayed(contentType).also { lastPlayed = it }
 
     /**
      * Re-reads favorites/watch progress/watched checks for whatever's currently on screen. Call
@@ -1158,7 +1184,7 @@ class CategoryViewModel(
         if (currentCategoryId == FAVORITE_CATEGORIES_ID) {
             currentStreams = favoriteCategoryRows(browsingSources())
         }
-        val lastItemId = repo.getLastItemId(contentType)
+        val last = lastPlayed
         _uiState.value =
             UiState.Success(
                 categories = categories,
@@ -1166,7 +1192,8 @@ class CategoryViewModel(
                 streams = currentStreams,
                 streamsLoading = false,
                 categoriesRefreshing = false,
-                lastPlayedItemId = lastItemId,
+                lastPlayedItemId = last?.second,
+                lastPlayedSource = last?.first ?: 0L,
                 categoriesPayloadSize = getCategoriesPayloadSize(),
                 streamsPayloadSize = getPayloadSize(currentCategoryId ?: ""),
                 selectedCategorySource = currentCategorySource,
@@ -1185,7 +1212,7 @@ class CategoryViewModel(
             val result = mergedCategories(repo)
             result.onSuccess { fetchedCategories ->
                 categories = rebuildVirtualCategories(repo, fetchedCategories)
-                val freshLastItemId = repo.getLastItemId(contentType)
+                val last = readLastPlayed()
                 _uiState.value =
                     UiState.Success(
                         categories = categories,
@@ -1193,7 +1220,8 @@ class CategoryViewModel(
                         streams = currentStreams,
                         streamsLoading = false,
                         categoriesRefreshing = false,
-                        lastPlayedItemId = freshLastItemId,
+                        lastPlayedItemId = last?.second,
+                        lastPlayedSource = last?.first ?: 0L,
                         categoriesPayloadSize = getCategoriesPayloadSize(),
                         streamsPayloadSize = getPayloadSize(currentCategoryId ?: ""),
                         selectedCategorySource = currentCategorySource,
@@ -1256,3 +1284,34 @@ internal fun mergeCategories(lists: List<Pair<Long, List<MediaCategory>>>): List
  */
 internal fun List<MediaItem>.onSources(listSource: Long): List<MediaItem> =
     if (none { it.providerId == 0L }) this else map { if (it.providerId == 0L) it.copy(providerId = listSource) else it }
+
+/** A source of a list that couldn't connect: its message says so ([CategoryViewModel]). */
+internal class SourceConnectException(
+    cause: Throwable,
+) : Exception(cause.message, cause)
+
+/** No source of a list loaded: each one's name and failure. */
+internal class SectionLoadException(
+    val failures: List<Pair<String, Throwable>>,
+) : Exception(failures.firstOrNull()?.second?.message, failures.firstOrNull()?.second)
+
+/** One source's categories read for a merged list ([loadedCategories]). */
+internal class SourceRead(
+    val providerId: Long,
+    val name: String,
+    val categories: kotlin.Result<List<MediaCategory>>,
+)
+
+/**
+ * The list a section shows (multi-source plan, Phase 6): the categories of every source that
+ * loaded, merged ([mergeCategories]); a source that didn't is left out. A failure only when none
+ * loaded, carrying each one's ([SectionLoadException]).
+ */
+internal fun loadedCategories(reads: List<SourceRead>): kotlin.Result<List<MediaCategory>> {
+    val loaded = reads.filter { it.categories.isSuccess }
+    return if (loaded.isEmpty() && reads.isNotEmpty()) {
+        kotlin.Result.failure(SectionLoadException(reads.map { it.name to it.categories.exceptionOrNull()!! }))
+    } else {
+        kotlin.Result.success(mergeCategories(loaded.map { it.providerId to it.categories.getOrThrow() }))
+    }
+}

@@ -7,15 +7,15 @@
 # Left after the first pass (2026-10-02, 98 → 60): mostly loads that already catch their own
 # failures or return a Result, and user actions with no init-path impact.
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/DiagnosticsViewModel.kt 1 # clear(): local file delete
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt 5 # refresh/search actions; provider name and source labels catch their own
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt 4 # refresh/search actions; source labels catch their own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt 1 # refreshDbStats catches its own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt 1 # forceRefresh
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt 9 # loadMovieDetail catches its own; favourite/watched actions
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProfilesViewModel.kt 4 # profile actions
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt 12 # incl. init; deferred while the R-08 sync-error work is in this file
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt 11 # incl. init; deferred while the R-08 sync-error work is in this file
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SafeModeViewModel.kt 1 # safe-mode actions
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt 4 # search jobs; repo results
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt 8 # loadSeriesDetail catches its own; episode actions
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SettingsViewModel.kt 3 # incl. init; deferred while the R-08 sync-error work is in this file
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SettingsViewModel.kt 2 # incl. init; deferred while the R-08 sync-error work is in this file
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt 4 # loadStream/playNextEpisode/loadStreamLight: loadStreamInternal catches its own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SyncSettingsViewModel.kt 4 # sync actions catch their own

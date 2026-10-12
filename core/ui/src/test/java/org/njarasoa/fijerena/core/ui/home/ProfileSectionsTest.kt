@@ -10,7 +10,8 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -41,12 +42,13 @@ class ProfileSectionsTest {
             ProfileSections.of(
                 listOf(source(1), source(2, "JELLYFIN"), source(3), source(4, "REMOTE_M3U")),
                 emptySet(),
-                activeId = 2,
             )
 
         assertEquals(setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS), sections.merged)
-        // Every non-Xtream source, the active one too, in the profile's order.
+        // Every non-Xtream source, in the profile's order.
         assertEquals(listOf(BrowseSource(2, "S2"), BrowseSource(4, "S4")), sections.browse)
+        assertEquals(listOf(1L, 3L), sections.xtreamIds)
+        assertFalse(sections.hasNoSources)
     }
 
     @Test
@@ -55,17 +57,27 @@ class ProfileSectionsTest {
 
         assertEquals(
             setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
-            ProfileSections.of(sources, setOf(1), null).merged,
+            ProfileSections.of(sources, setOf(1)).merged,
         )
-        assertEquals(setOf(ContentType.MOVIES, ContentType.TV_SHOWS), ProfileSections.of(sources, setOf(1, 3), null).merged)
+        assertEquals(setOf(ContentType.MOVIES, ContentType.TV_SHOWS), ProfileSections.of(sources, setOf(1, 3)).merged)
     }
 
     @Test
-    fun `with no Xtream source the sections stay the active source's, and it gets no Browse entry`() {
-        val sections = ProfileSections.of(listOf(source(2, "JELLYFIN"), source(4, "REMOTE_M3U")), emptySet(), activeId = 2)
+    fun `with no Xtream source there are no sections, only a Browse entry per source`() {
+        val sections = ProfileSections.of(listOf(source(2, "JELLYFIN"), source(4, "REMOTE_M3U")), emptySet())
 
-        assertNull(sections.merged)
-        assertEquals(listOf(BrowseSource(4, "S4")), sections.browse)
+        assertTrue(sections.merged.isEmpty())
+        assertEquals(listOf(BrowseSource(2, "S2"), BrowseSource(4, "S4")), sections.browse)
+        assertFalse(sections.hasNoSources)
+    }
+
+    @Test
+    fun `a profile with no source has nothing to browse`() {
+        val sections = ProfileSections.of(emptyList(), emptySet())
+
+        assertTrue(sections.merged.isEmpty())
+        assertTrue(sections.browse.isEmpty())
+        assertTrue(sections.hasNoSources)
     }
 
     @Test

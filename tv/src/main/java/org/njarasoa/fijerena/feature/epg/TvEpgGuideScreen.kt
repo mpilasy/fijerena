@@ -41,7 +41,7 @@ fun TvEpgGuideScreen(
     onSearch: () -> Unit,
     onBack: () -> Unit,
     focusChannelId: String? = null,
-    // The source whose channels the guide shows; 0 = the active source.
+    // The source whose channels the guide shows (the route's).
     providerId: Long = 0L,
     viewModel: EpgViewModel =
         viewModel(

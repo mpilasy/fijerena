@@ -1,24 +1,22 @@
 # T4 — Sources (ProviderSelectionScreen), TV emulator, two or more sources.
 # Start: Sources just opened from Settings → Source & guide → Manage sources,
-# focus on the active source's row (T-8; the row shows name / Active / URL / username, so its
-# text depends on the device — unasserted). Rows are ordered active first, then by name.
-# Each row: the row itself (OK = Edit), then fixed slots Use (empty on the active row, and on a
-# source the profile in use doesn't have — so the profile must have both sources here), Guide
-# (empty on a source without live channels: Jellyfin, SMB) and ⋮ ("More actions for <name>").
-# Right walks the slots, Left walks back, Up/Down keep the column, Up from the first row lands
-# on the header "+" (Add Source). Expectations assume the active source is iptv (M3U, so it has
-# a Guide slot) and the next row is panel-a (Xtream: Use, Guide, ⋮) — the TV AVD on 2026-10-03.
-# Written 2026-10-03 from the plan, re-recorded 2026-10-04.
-@start iptv / Active / https://iptv-org.github.io/iptv/index.m3u
-# Use is empty on the active row, so Right lands on Guide (on a source without live channels it
-# would land on ⋮).
+# focus on the first row (T-8; the row shows name / URL / username, so its text depends on the
+# device — unasserted). Rows are ordered by name.
+# Each row: the row itself (OK = Edit), then fixed slots Guide (empty on a source without live
+# channels: Jellyfin, SMB) and ⋮ ("More actions for <name>"). Right walks the slots, Left walks
+# back, Up/Down keep the column, Up from the first row lands on the header "+" (Add Source).
+# Expectations assume the first row is iptv (M3U, so it has a Guide slot) and the next panel-a
+# (Xtream: Guide, ⋮) — the TV AVD on 2026-10-03.
+# Written 2026-10-03 from the plan, re-recorded 2026-10-04. Multi-source Phase 6 (part 2): the
+# Use slot and the Active label are gone (there is no source in use); edited by hand 2026-10-12,
+# not re-recorded.
+@start iptv / https://iptv-org.github.io/iptv/index.m3u
 RIGHT	Guide
 RIGHT	More actions for iptv
 # Down from ⋮ lands on the ⋮ of the next row.
 DOWN	More actions for panel-a
 LEFT	Guide
-LEFT	Use
 LEFT	panel-a / http://panel-a.example / user1
-UP	iptv / Active / https://iptv-org.github.io/iptv/index.m3u
+UP	iptv / https://iptv-org.github.io/iptv/index.m3u
 # Up from the first row lands on the header "+".
 UP	Add Source

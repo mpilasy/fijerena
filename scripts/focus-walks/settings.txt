@@ -43,7 +43,7 @@ CENTER	10 s
 LEFT	Count as watched after / How long to watch a channel before it's added to Last Watched / 10 s ›
 LEFT	Playback
 UP	Source & guide
-# P4 (D6): one Manage sources row (the source in use as its value); Guide auto-refresh went
+# P4 (D6): one Manage sources row (the profile's sources as its value, multi-source Phase 6); Guide auto-refresh went
 # with P5b (each guide source has its own). Then the TMDB key row (Phase 6, D4), the last.
 RIGHT	Manage sources
 DOWN	Film and series details (TMDB)

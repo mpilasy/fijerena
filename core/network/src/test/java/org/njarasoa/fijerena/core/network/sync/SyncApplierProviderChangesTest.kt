@@ -101,24 +101,26 @@ class SyncApplierProviderChangesTest {
     private val providerDeletion = SyncRecord(SyncKey(SyncKind.SHARED, "prov-1", SyncKind.PROVIDER), hlc = 14, deleted = true)
 
     @Test
-    fun `deleting this device's active provider is reported, so the UI follows the next one`() =
+    fun `deleting a provider this device has is reported, so no screen stays on it`() =
         runBlocking {
-            coEvery { sync.providerByKey("prov-1") } returns provider.copy(isActive = true)
+            coEvery { sync.providerByKey("prov-1") } returns provider
 
             val result = applier().apply(listOf(providerDeletion))
 
             coVerify { anyConstructed<ProviderRepository>().deleteProvider(provider.id, fromRemote = true) }
             assertEquals(setOf(provider.id), result.providerChangedIds)
-            assertTrue(result.activeProviderDeleted)
+            assertTrue(result.providerDeleted)
         }
 
     @Test
-    fun `deleting another provider is not an active-provider change`() =
+    fun `deleting a provider this device doesn't have is not reported`() =
         runBlocking {
+            coEvery { sync.providerByKey("prov-1") } returns null
+
             val result = applier().apply(listOf(providerDeletion))
 
-            assertEquals(setOf(provider.id), result.providerChangedIds)
-            assertFalse(result.activeProviderDeleted)
+            assertTrue(result.providerChangedIds.isEmpty())
+            assertFalse(result.providerDeleted)
         }
 
     @Test

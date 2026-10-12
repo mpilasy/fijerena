@@ -37,7 +37,7 @@ class SyncApplierTest {
     private suspend fun newProfile(): String = ProfileRepository(context).addProfile("P-${UUID.randomUUID()}", 1)
 
     private suspend fun newProvider(type: String = "XTREAM"): Pair<Long, String> {
-        val id = ProviderRepository(context).addProvider("prov", "http://${UUID.randomUUID()}.test", "u", "p", type, activate = false)
+        val id = ProviderRepository(context).addProvider("prov", "http://${UUID.randomUUID()}.test", "u", "p", type)
         return id to settingsDb.providerDao().getProviderById(id)!!.providerKey
     }
 
@@ -143,7 +143,6 @@ class SyncApplierTest {
 
             val provider = sync.providerByKey(key)!!
             assertEquals("From phone", provider.name)
-            assertFalse(provider.isActive)
             assertEquals("secret", ProviderRepository(context).getPassword(provider.id))
             assertReceived(SyncKind.PROVIDER, SyncKind.SHARED, key, FAR_FUTURE)
 

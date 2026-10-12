@@ -97,7 +97,6 @@ class ProfileRepository(
                     }
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
-                    AppSettings(context).removeLastProvider(id)
                     AppSettings(context).removeAutoplayNextEpisode(id)
                     AppSettings(context).removeProfileSearchHistory(id)
                     AppSettings(context).removeLastTab(id)

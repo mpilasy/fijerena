@@ -97,7 +97,13 @@ private suspend fun appSection(
     val pkg = readOrNull { context.packageManager.getPackageInfo(context.packageName, 0) }
     val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
     val providers = readOrNull { AppContainer.getInstance(context).providerRepository.getAllProvidersList() }
-    val active = readOrNull { AppContainer.getInstance(context).providerRepository.getActiveProvider() }
+    // The profile in use's sources, by type ("XTREAM 2 · JELLYFIN 1"): there is no source in use.
+    val profileSources =
+        readOrNull { AppContainer.getInstance(context).providerRepository.profileSourcesList() }
+            ?.groupingBy { it.type }
+            ?.eachCount()
+            ?.entries
+            ?.joinToString(" · ") { (type, count) -> "$type $count" }
     val profiles = readOrNull { ProfileRepository(context).count() }
     return DeviceInfoSection(
         R.string.device_info_section_app,
@@ -106,7 +112,7 @@ private suspend fun appSection(
             infoRow(R.string.device_info_build, "$gitHash · $buildTime · ${if (debuggable) "debug" else "release"}"),
             infoRow(R.string.device_info_installed, pkg?.let { formatDateTime(it.firstInstallTime) }),
             infoRow(R.string.device_info_updated, pkg?.let { formatDateTime(it.lastUpdateTime) }),
-            infoRow(R.string.device_info_active_source_type, active?.type),
+            infoRow(R.string.device_info_profile_sources, profileSources),
             infoRow(R.string.device_info_source_count, providers?.size?.toString()),
             infoRow(R.string.device_info_profile_count, profiles?.toString()),
         ),

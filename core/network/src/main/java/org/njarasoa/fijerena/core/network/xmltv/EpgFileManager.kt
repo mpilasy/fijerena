@@ -451,16 +451,20 @@ class EpgFileManager private constructor(
 
             if (oldUrl.isNotBlank()) {
                 val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-                // EPG belongs to a provider - the legacy global URL migrates onto the active one.
-                val activeProviderId = ProviderRepository(context).getActiveProvider()?.id
-                if (sourceDao.getSourceCount() == 0 && activeProviderId != null) {
+                // EPG belongs to a provider - the legacy global URL migrates onto the profile's first.
+                val ownerId =
+                    ProviderRepository(context)
+                        .profileSourcesList()
+                        .firstOrNull()
+                        ?.id
+                if (sourceDao.getSourceCount() == 0 && ownerId != null) {
                     val label = extractLabel(oldUrl)
                     sourceDao.insertSource(
                         EpgSourceEntity(
                             url = oldUrl,
                             label = label,
                             timezoneOffsetHours = oldTz,
-                            providerId = activeProviderId,
+                            providerId = ownerId,
                         ),
                     )
                 }

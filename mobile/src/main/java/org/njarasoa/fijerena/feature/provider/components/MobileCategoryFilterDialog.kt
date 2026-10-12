@@ -51,7 +51,7 @@ import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * The content-filter editor (exclude / include-only rules by category name, allowed scripts),
- * opened from a profile's page for the source in use (D8); [title] names the source.
+ * opened from a profile's page for one of its sources (D8); [title] names the source.
  */
 @Composable
 fun MobileCategoryFilterDialog(

@@ -56,12 +56,6 @@ class RouteSourceViewModelTest {
     }
 
     @Test
-    fun `movie details with no source read the active one`() {
-        create<MovieDetailsViewModel>(MovieDetailsViewModelFactory(context, "m1", "c1", "Film"))
-        coVerify(timeout = TIMEOUT_MS) { container.getMediaRepository(0L) }
-    }
-
-    @Test
     fun `episodes read the route's source`() {
         create<SeriesDetailsViewModel>(SeriesDetailsViewModelFactory(context, "s1", "c1", "Show", providerId = SOURCE))
         coVerify(timeout = TIMEOUT_MS) { container.getMediaRepository(SOURCE) }

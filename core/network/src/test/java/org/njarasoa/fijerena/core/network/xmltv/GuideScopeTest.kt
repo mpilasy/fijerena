@@ -12,10 +12,10 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
 /** Search the guide across the profile's sources (multi-source plan, Phase 7). */
 class GuideScopeTest {
-    private val xtreamA = ProviderEntity(id = 1, name = "A", url = "http://a.test", username = "me", isActive = true)
+    private val xtreamA = ProviderEntity(id = 1, name = "A", url = "http://a.test", username = "me")
     private val xtreamB = ProviderEntity(id = 2, name = "B", url = "http://b.test", username = "me")
     private val jellyfin = ProviderEntity(id = 3, name = "J", url = "http://j.test", username = "me", type = "JELLYFIN")
-    private val m3uActive = ProviderEntity(id = 4, name = "M", url = "http://m.test", username = "", type = "REMOTE_M3U", isActive = true)
+    private val m3u = ProviderEntity(id = 4, name = "M", url = "http://m.test", username = "", type = "REMOTE_M3U")
 
     private fun guide(
         id: Long,
@@ -55,8 +55,8 @@ class GuideScopeTest {
     }
 
     @Test
-    fun `the source in use is searched whatever its type`() {
-        assertEquals(listOf(xtreamB, m3uActive), GuideScope.searchedProviders(listOf(xtreamB, jellyfin, m3uActive)))
+    fun `an M3U source is searched too`() {
+        assertEquals(listOf(xtreamB, m3u), GuideScope.searchedProviders(listOf(xtreamB, jellyfin, m3u)))
     }
 
     @Test

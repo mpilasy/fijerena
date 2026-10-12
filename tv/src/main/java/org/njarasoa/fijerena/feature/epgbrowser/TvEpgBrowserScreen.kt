@@ -96,6 +96,7 @@ import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -119,6 +120,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
+import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -144,9 +146,10 @@ private const val RETURN_TV_GUIDE = "header:tvGuide"
 /**
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
  * toggle — on by default — keeps the results on that guide's channels. One search, programme
- * titles (D7: the channel mode is gone). For a source with live channels the header has TV Guide,
- * opening the grid for Recent ([onTvGuide], D7), and Guide sources next to Refresh, opening the
- * guide sources of the source in use ([onGuideSources]).
+ * titles (D7: the channel mode is gone). When the profile has a source with live channels the
+ * header has TV Guide, opening the grid for Recent on the first of them ([onTvGuide], D7), and
+ * Guide sources next to Refresh, opening a source's guide sources ([onGuideSources]) — which
+ * source, asked first when there are several (multi-source plan, O4).
  */
 @Composable
 fun TvEpgBrowserScreen(
@@ -156,7 +159,7 @@ fun TvEpgBrowserScreen(
     categoryName: String? = null,
     providerId: Long = 0L,
     onGuideSources: (providerId: Long) -> Unit = {},
-    onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -167,12 +170,16 @@ fun TvEpgBrowserScreen(
     val contextName = categoryName?.takeIf { categoryId != null }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
-    val guideSourcesProviderId by viewModel.guideSourcesProviderId.collectAsStateWithLifecycle()
+    val guideSourceOwners by viewModel.guideSourceOwners.collectAsStateWithLifecycle()
     // Back from a header button's screen lands on that button (the results' own hand-back is
     // ResultsContent's).
     val headerReturnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(headerReturnFocus)
+    var choosingGuideSources by remember { mutableStateOf(false) }
+    val openGuideSources = { providerId: Long ->
+        headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
+        onGuideSources(providerId)
+    }
     val recentLabel = stringResource(R.string.category_recent_label)
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
@@ -216,17 +223,15 @@ fun TvEpgBrowserScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            // The shared TV header (TV UI audit #15): title, the source as its subtitle, the icon
-            // actions on the right; how fresh the guides are goes on its own line beneath it.
-            TvScreenHeader(
-                title = stringResource(R.string.epg_browser_title),
-                subtitle = activeProviderName,
-            ) {
-                if (guideSourcesProviderId != null) {
+            // The shared TV header (TV UI audit #15): the title, the icon actions on the right (no
+            // source subtitle: the search covers every source of the profile); how fresh the
+            // guides are goes on its own line beneath it.
+            TvScreenHeader(title = stringResource(R.string.epg_browser_title)) {
+                guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
                     TvIconAction(
                         onClick = {
                             headerReturnFocus.leaveFrom(RETURN_TV_GUIDE)
-                            onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel)
+                            onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource)
                         },
                         icon = CinemaIcons.DateRange,
                         label = stringResource(R.string.common_tv_guide),
@@ -249,18 +254,31 @@ fun TvEpgBrowserScreen(
                     iconTint = if (staleSourceCount > 0) CinemaWarning else null,
                     iconModifier = if (isRefreshing) Modifier.rotate(refreshAngle) else Modifier,
                 )
-                // The guides this search runs over, for a source that can have them.
-                guideSourcesProviderId?.let { providerId ->
+                // The guides this search runs over, of a source that can have them.
+                if (guideSourceOwners.isNotEmpty()) {
                     TvIconAction(
                         onClick = {
-                            headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
-                            onGuideSources(providerId)
+                            when (val choice = SourceChoice.of(guideSourceOwners)) {
+                                is SourceChoice.One -> openGuideSources(choice.source.first)
+                                is SourceChoice.Ask -> choosingGuideSources = true
+                                SourceChoice.None -> Unit
+                            }
                         },
                         icon = CinemaIcons.Tune,
                         label = stringResource(R.string.epg_sources_header),
                         modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_GUIDE_SOURCES),
                     )
                 }
+            }
+            if (choosingGuideSources) {
+                TvSourceChooserDialog(
+                    sources = guideSourceOwners,
+                    onChosen = { providerId ->
+                        choosingGuideSources = false
+                        openGuideSources(providerId)
+                    },
+                    onDismiss = { choosingGuideSources = false },
+                )
             }
 
             val freshnessColor =

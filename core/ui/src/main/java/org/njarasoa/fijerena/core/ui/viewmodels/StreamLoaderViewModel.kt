@@ -57,7 +57,7 @@ class StreamLoaderViewModel(
     // like a film (seek, pause, no Recent, no zapping); [programTitle] is the programme.
     private val catchup: CatchupWindow? = null,
     private val programTitle: String? = null,
-    // The source the stream is on; 0 = the active source.
+    // The source the stream is on (the route's).
     private val providerId: Long = 0L,
 ) : ViewModel() {
     // Live TV as it airs; false for catch-up, which plays a live channel's archive like a film.

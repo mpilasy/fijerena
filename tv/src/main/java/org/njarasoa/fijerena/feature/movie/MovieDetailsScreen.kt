@@ -127,7 +127,7 @@ fun MovieDetailsScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
-    // The route's source; 0 = the active source.
+    // The route's source.
     providerId: Long = 0L,
 ) {
     val context = LocalContext.current
@@ -226,7 +226,7 @@ private fun MovieDetailsContent(
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getProviderOrActive(providerId)?.let { providerName = it.name }
+        repo.getProviderById(providerId)?.let { providerName = it.name }
     }
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current

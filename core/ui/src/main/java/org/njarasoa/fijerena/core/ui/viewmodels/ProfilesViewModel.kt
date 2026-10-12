@@ -16,6 +16,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -34,23 +35,20 @@ data class ProfileSettings(
     val autoplayNextEpisode: Boolean,
 )
 
-/** The source this device uses, as a profile's page shows it: only its name heads the filters. */
-data class SourceInUse(
+/** One of a profile's sources whose content filters its page edits; its name heads the filters. */
+data class FilterSource(
     val id: Long,
     val name: String,
-    val type: String,
 )
 
 /**
  * One source on a profile's Sources pane: whether the profile has it ([isOn]), and whether its
- * switch may turn it off — not its last source, nor the one this device is on for the profile in
- * use (until the current source goes, multi-source plan Phase 6).
+ * switch may turn it off — not the profile's last source.
  */
 data class ProfileSourceUi(
     val providerKey: String,
     val name: String,
     val isOn: Boolean,
-    val inUse: Boolean,
     val canTurnOff: Boolean,
 )
 
@@ -130,18 +128,15 @@ class ProfilesViewModel(
         viewModelScope.launch { repository.updateProfile(id, name, colorIndex) }
     }
 
-    // The source in use, for a profile page's Content filters; null until loaded, or with no source.
-    private val _sourceInUse = MutableStateFlow<SourceInUse?>(null)
-    val sourceInUse: StateFlow<SourceInUse?> = _sourceInUse.asStateFlow()
-
-    fun loadSourceInUse() {
-        viewModelScope.launchGuarded("ProfilesViewModel.loadSourceInUse") {
-            _sourceInUse.value =
-                AppContainer
-                    .getInstance(context)
-                    .providerRepository
-                    .getActiveProvider()
-                    ?.let { SourceInUse(it.id, it.name, it.type) }
+    /**
+     * The sources whose content filters [profileId]'s page edits: its Xtream sources, in its order
+     * (filters only hide Xtream categories). With two or more the page asks which first (O4).
+     * Re-emits when a source or the profile's sources change.
+     */
+    fun filterSources(profileId: String): Flow<List<FilterSource>> {
+        val providers = AppContainer.getInstance(context).providerRepository
+        return combine(providers.getAllProviders(), appSettings.observeProfileSourceKeys(profileId)) { all, keys ->
+            filterSourcesOf(ProviderRepository.resolveProfileSources(all, keys))
         }
     }
 
@@ -174,7 +169,7 @@ class ProfilesViewModel(
     fun profileSources(profileId: String): Flow<List<ProfileSourceUi>> {
         val providers = AppContainer.getInstance(context).providerRepository
         return combine(providers.getAllProviders(), appSettings.observeProfileSourceKeys(profileId)) { all, keys ->
-            profileSourceRows(all, keys, profileId == appSettings.activeProfileId)
+            profileSourceRows(all, keys)
         }
     }
 
@@ -219,21 +214,22 @@ class ProfilesViewModel(
 
         /**
          * [providers] as a profile's Sources pane shows them, for a profile with [keys] (its
-         * `providerKey`s; null for none stored). For the profile in use ([profileInUse]) the source
-         * the device is on counts as on, as `ProviderRepository.profileSources` has it.
+         * `providerKey`s; null for none stored).
          */
         fun profileSourceRows(
             providers: List<ProviderEntity>,
             keys: Set<String>?,
-            profileInUse: Boolean,
         ): List<ProfileSourceUi> {
-            val inUse = { p: ProviderEntity -> profileInUse && p.isActive }
-            val onCount = providers.count { keys?.contains(it.providerKey) == true || inUse(it) }
+            val onCount = providers.count { keys?.contains(it.providerKey) == true }
             return providers.map { p ->
-                val isOn = keys?.contains(p.providerKey) == true || inUse(p)
-                ProfileSourceUi(p.providerKey, p.name, isOn, inUse(p), isOn && !inUse(p) && onCount > 1)
+                val isOn = keys?.contains(p.providerKey) == true
+                ProfileSourceUi(p.providerKey, p.name, isOn, isOn && onCount > 1)
             }
         }
+
+        /** The content-filter sources among a profile's [sources]: its Xtream ones. */
+        fun filterSourcesOf(sources: List<ProviderEntity>): List<FilterSource> =
+            sources.filter { it.type == "XTREAM" }.map { FilterSource(it.id, it.name) }
 
         /**
          * The keys to store after turning [providerKey] on or off, or null to change nothing (a

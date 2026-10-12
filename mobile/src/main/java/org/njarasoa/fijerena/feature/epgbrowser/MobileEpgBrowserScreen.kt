@@ -81,6 +81,7 @@ import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -93,6 +94,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -104,8 +106,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
  * checkbox — on by default — keeps the results on that guide's channels. One search, programme
- * titles (D7). For a source with live channels the top bar has TV Guide (the grid for Recent,
- * [onTvGuide]) and Guide sources (the source in use's, [onGuideSources]) beside Refresh.
+ * titles (D7). When the profile has a source with live channels the top bar has TV Guide (the
+ * grid for Recent on the first of them, [onTvGuide]) and Guide sources (a source's,
+ * [onGuideSources] — which source, asked first when there are several, O4) beside Refresh.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +119,7 @@ fun MobileEpgBrowserScreen(
     categoryName: String? = null,
     providerId: Long = 0L,
     onGuideSources: (providerId: Long) -> Unit = {},
-    onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -129,8 +132,18 @@ fun MobileEpgBrowserScreen(
     var inContextOnly by rememberSaveable { mutableStateOf(true) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
-    val guideSourcesProviderId by viewModel.guideSourcesProviderId.collectAsStateWithLifecycle()
+    val guideSourceOwners by viewModel.guideSourceOwners.collectAsStateWithLifecycle()
+    var choosingGuideSources by remember { mutableStateOf(false) }
+    if (choosingGuideSources) {
+        MobileSourceChooserDialog(
+            sources = guideSourceOwners,
+            onChosen = { id ->
+                choosingGuideSources = false
+                onGuideSources(id)
+            },
+            onDismiss = { choosingGuideSources = false },
+        )
+    }
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     val recentLabel = stringResource(R.string.category_recent_label)
@@ -167,21 +180,9 @@ fun MobileEpgBrowserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                // The source as a subtitle, as on Search; the guide's status goes below the bar.
-                title = {
-                    Column {
-                        Text(stringResource(R.string.epg_browser_title))
-                        activeProviderName?.let { providerName ->
-                            Text(
-                                text = providerName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                },
+                // No source subtitle: the search covers every source of the profile. The guide's
+                // status goes below the bar.
+                title = { Text(stringResource(R.string.epg_browser_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
@@ -189,8 +190,8 @@ fun MobileEpgBrowserScreen(
                 },
                 actions = {
                     // The grid for Recent (D7); Back from it returns here.
-                    if (guideSourcesProviderId != null) {
-                        IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel) }) {
+                    guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
+                        IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource) }) {
                             Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide))
                         }
                     }
@@ -216,9 +217,17 @@ fun MobileEpgBrowserScreen(
                             )
                         }
                     }
-                    // The guides this search runs over, for a source that can have them.
-                    guideSourcesProviderId?.let { providerId ->
-                        IconButton(onClick = { onGuideSources(providerId) }) {
+                    // The guides this search runs over, of a source that can have them.
+                    if (guideSourceOwners.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                when (val choice = SourceChoice.of(guideSourceOwners)) {
+                                    is SourceChoice.One -> onGuideSources(choice.source.first)
+                                    is SourceChoice.Ask -> choosingGuideSources = true
+                                    SourceChoice.None -> Unit
+                                }
+                            },
+                        ) {
                             Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
                         }
                     }

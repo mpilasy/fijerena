@@ -9,7 +9,7 @@ class EpgBrowserViewModelFactory(
     context: Context,
     /** The TV Guide list the browser was opened from (GD5); null for the whole guide. */
     private val categoryId: String? = null,
-    /** That TV Guide's source; 0 = the active one. */
+    /** That TV Guide's source; 0 when not opened from one. */
     private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.

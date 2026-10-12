@@ -32,7 +32,6 @@ class SettingsSyncTriggersTest {
             val added = queued(SyncKind.PROVIDER, key).single()
             assertEquals(SyncKind.SHARED, added.profileId)
 
-            db.providerDao().activateProvider(id)
             db.providerDao().updateSyncStats(id, 1L, 1L, null, 1, 1, 1)
             assertEquals(added.hlc, queued(SyncKind.PROVIDER, key).single().hlc)
 

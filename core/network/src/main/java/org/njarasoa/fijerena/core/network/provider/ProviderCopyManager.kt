@@ -156,7 +156,6 @@ class ProviderCopyManager(
                     type = source.type,
                     config = source.config,
                     initialSettings = providerRepo.getProviderSettings(source.id),
-                    activate = false,
                 )
             providerRepo.copyCategoryFilters(sourceId, newId)
             copyProviderData(

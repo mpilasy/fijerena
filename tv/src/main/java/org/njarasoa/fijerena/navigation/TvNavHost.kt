@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -31,7 +30,6 @@ import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
@@ -80,7 +78,6 @@ import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 @Composable
 fun TvNavHost(
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel = viewModel(),
     onThemeChanged: (String) -> Unit = {},
     onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
@@ -89,7 +86,6 @@ fun TvNavHost(
 
     // Profile, source and live-sync switches start over from Home: every section's saved place may
     // hold the previous one's repository, so it goes too.
-    var railSourceVersion by remember { mutableIntStateOf(0) }
 
     fun clearSectionStacks() = TvSection.entries.forEach { navController.clearBackStack(it.route) }
 
@@ -171,7 +167,7 @@ fun TvNavHost(
         if (section == TvSection.LIVE_TV) {
             coroutineScope.launch {
                 // The newest of the profile's sources' last channels (multi-source plan, Phase 5).
-                liveTvOpenOn = MergedLists.forProfile(context).lastWatchedChannel()
+                liveTvOpenOn = MergedLists.forSections(context)?.lastWatchedChannel()
                 showSection(section)
             }
         } else {
@@ -306,8 +302,6 @@ fun TvNavHost(
         }
     }
 
-    val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
-
     val startDestination =
         remember(initializationComplete, hasProvider) {
             if (!initializationComplete) {
@@ -325,30 +319,8 @@ fun TvNavHost(
             }
         }
 
-    // Auto-restore Xtream session if the active provider is Xtream
-    LaunchedEffect(initializationComplete, hasProvider, isAuthenticated) {
-        if (initializationComplete && hasProvider == true && isAuthenticated == null) {
-            val providerRepo = ProviderRepository(context.applicationContext)
-            val activeProvider = providerRepo.getActiveProvider()
-            if (activeProvider != null && activeProvider.type == "XTREAM") {
-                // Use AppContainer to get the shared repository instance.
-                // AppContainer.getMediaRepository() now handles connect() internally.
-                val repo =
-                    org.njarasoa.fijerena.core.ui.di.AppContainer
-                        .getInstance(context)
-                        .getMediaRepository(activeProvider.id)
-
-                if (repo.isConnected()) {
-                    // Update AuthViewModel for UI consistency
-                    val authResponse = accountManager.getAuthResponse()
-                    val credentials = accountManager.getCredentials()
-                    if (authResponse != null && credentials != null) {
-                        authViewModel.setAuthSession(authResponse, credentials.url)
-                    }
-                }
-            }
-        }
-    }
+    // No session restore here: each Xtream source of the profile restores its own when it is first
+    // used (AppContainer.getMediaRepository / getStoredDataRepository), as there is no source in use.
 
     // A category list — a section's browse, or one pushed from Search, a guide or a title — with
     // the routes its rows and header open.
@@ -359,7 +331,7 @@ fun TvNavHost(
         initialStreamId: String? = null,
         showPreviewPane: Boolean = true,
         closeSavedLivePreview: Boolean = false,
-        // The list's source (0 = the active one); every route it opens stays on it.
+        // The source the list was opened on (0: a section's, every Xtream source merged).
         providerId: Long = 0L,
         // initialStreamId's source when it isn't the list's (0 = the list's).
         initialStreamSource: Long = 0L,
@@ -532,37 +504,22 @@ fun TvNavHost(
                                 TvSection.of(contentType.name)?.let(::openSection)
                             }
                             ContentTypeSelectionScreen(
-                                onCapabilitiesResolved = { activeTypes ->
-                                    // Skip the picker tap entirely when the profile has one section — its
-                                    // Xtream sources' merged, or the active source's without one — but
-                                    // only on the very first resolve per NavHost lifetime, so
+                                onCapabilitiesResolved = { mergedTypes ->
+                                    // Skip the picker tap entirely when the profile has one section,
+                                    // but only on the very first resolve per NavHost lifetime, so
                                     // Back-navigation into this screen later still lands on a real,
-                                    // interactive Home (the source switch lives here).
+                                    // interactive Home.
                                     if (!hasAutoSkippedSingleContentType) {
                                         hasAutoSkippedSingleContentType = true
-                                        coroutineScope.launch {
-                                            val supportedTypes = ProfileSections.load(context).merged ?: activeTypes
-                                            if (supportedTypes.size == 1) {
-                                                org.njarasoa.fijerena.core.navigation.ContentType
-                                                    .fromString(supportedTypes.first())
-                                                    ?.let(navigateToContentType)
-                                            }
+                                        if (mergedTypes.size == 1) {
+                                            org.njarasoa.fijerena.core.navigation.ContentType
+                                                .fromString(mergedTypes.first())
+                                                ?.let(navigateToContentType)
                                         }
                                     }
                                 },
-                                // Home's source pill switched the source: the sections' saved places
-                                // hold the old source's lists (its Movies showed under the new one).
-                                onProviderChanged = {
-                                    clearSectionStacks()
-                                    railSourceVersion++
-                                },
-                                onSignInRequired = { providerId ->
-                                    // Plain navigate, not navigateOnce: this fires from home's load, often
-                                    // while home is still entering after a profile switch — not RESUMED yet,
-                                    // so navigateOnce's double-tap guard would drop it (and the prompt is
-                                    // only offered once per process).
-                                    navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
-                                },
+                                onBrowse = ::browseSource,
+                                onAddSource = { navController.navigateOnce(Screen.AddProvider()) },
                                 onEpgBrowser = {
                                     navController.navigateOnce(Screen.EpgBrowser())
                                 },
@@ -684,8 +641,10 @@ fun TvNavHost(
                                     navController.navigateOnce(Screen.EpgManagement(providerId = id))
                                 },
                                 // Its TV Guide opens on Recent (D7); Back from the grid returns here.
-                                onTvGuide = { categoryId, categoryName ->
-                                    navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
+                                onTvGuide = { categoryId, categoryName, providerId ->
+                                    navController.navigateOnce(
+                                        Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName, providerId = providerId),
+                                    )
                                 },
                                 onNavigateToPlayer = { matched ->
                                     // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
@@ -982,39 +941,6 @@ fun TvNavHost(
 
                         composable<Screen.ProviderSelection> {
                             TvProviderSelectionScreen(
-                                onProviderSelected = { provider ->
-                                    coroutineScope.launch {
-                                        val providerRepo = ProviderRepository(context.applicationContext)
-                                        providerRepo.pickProvider(provider.id)
-
-                                        // Clear AppContainer caches to force a fresh repository for the new provider
-                                        val container =
-                                            org.njarasoa.fijerena.core.ui.di.AppContainer
-                                                .getInstance(context)
-                                        container.clearAllCaches()
-
-                                        // For Xtream providers, restore session to update AuthViewModel
-                                        if (provider.type == "XTREAM") {
-                                            val repo = container.getMediaRepository(provider.id)
-                                            if (repo.isConnected()) {
-                                                val authResponse = accountManager.getAuthResponse()
-                                                val credentials = accountManager.getCredentials()
-                                                if (authResponse != null && credentials != null) {
-                                                    authViewModel.setAuthSession(authResponse, credentials.url)
-                                                }
-                                            }
-                                        }
-
-                                        // From the root, like a profile switch: every screen below holds
-                                        // a repository clearAllCaches() just closed, so Back used to walk
-                                        // into the old provider's Home, where writes went nowhere. See
-                                        // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-18.
-                                        clearSectionStacks()
-                                        navController.navigateOnce(Screen.ContentTypeSelection) {
-                                            popUpTo(navController.graph.id) { inclusive = true }
-                                        }
-                                    }
-                                },
                                 onAddProvider = {
                                     navController.navigateOnce(Screen.AddProvider())
                                 },
@@ -1085,26 +1011,15 @@ fun TvNavHost(
                                 },
                                 onProviderChanged = {
                                     coroutineScope.launch {
-                                        val providerRepo = ProviderRepository(context.applicationContext)
-                                        val activeProvider = providerRepo.getActiveProvider()
+                                        // The first source was added: no screen may keep a repository
+                                        // from before it.
+                                        org.njarasoa.fijerena.core.ui.di.AppContainer
+                                            .getInstance(context)
+                                            .clearAllCaches()
 
-                                        val container =
-                                            org.njarasoa.fijerena.core.ui.di.AppContainer
-                                                .getInstance(context)
-                                        container.clearAllCaches()
-
-                                        if (activeProvider != null && activeProvider.type == "XTREAM") {
-                                            val repo = container.getMediaRepository(activeProvider.id)
-                                            if (repo.isConnected()) {
-                                                val authResponse = accountManager.getAuthResponse()
-                                                val credentials = accountManager.getCredentials()
-                                                if (authResponse != null && credentials != null) {
-                                                    authViewModel.setAuthSession(authResponse, credentials.url)
-                                                }
-                                            }
-                                        }
-
-                                        // From the root — see the provider-selection switch above.
+                                        // From the root, like a profile switch: every screen below holds a
+                                        // repository clearAllCaches() just closed. See
+                                        // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-18.
                                         clearSectionStacks()
                                         navController.navigateOnce(Screen.ContentTypeSelection) {
                                             popUpTo(navController.graph.id) { inclusive = true }
@@ -1120,7 +1035,6 @@ fun TvNavHost(
                         navController = navController,
                         onSelect = ::selectRailItem,
                         onBrowse = ::browseSource,
-                        sourceVersion = railSourceVersion,
                     )
                     browseChoice?.let { (source, contentTypes) ->
                         BrowseSectionsDialog(

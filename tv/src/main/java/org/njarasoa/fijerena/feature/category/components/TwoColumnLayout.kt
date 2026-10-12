@@ -76,6 +76,8 @@ internal fun TwoColumnLayout(
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
     lastPlayedItemId: String?,
+    // [lastPlayedItemId]'s source: the current marker never lights the same id on another source.
+    lastPlayedSource: Long = 0L,
     nowPlaying: ImmutableNowPlaying,
     contentType: String,
     /** Live TV, Back from the preview: the channel it was playing (LT6). */
@@ -96,16 +98,16 @@ internal fun TwoColumnLayout(
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    var providerName by remember { mutableStateOf(appSettings.providerName) }
+    var providerName by remember { mutableStateOf("") }
     // Read once — avoids SharedPreferences disk I/O on every recomposition
     val isDevMode = remember { appSettings.isDevMode }
 
-    // Load the list's source's name from database (AppSettings default is "My Provider")
+    // The list's own source's name, from the database (shown while the list has only that source).
     LaunchedEffect(categoryViewModel.sourceId) {
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getProviderOrActive(categoryViewModel.sourceId)?.let { providerName = it.name }
+        repo.getProviderById(categoryViewModel.sourceId)?.let { providerName = it.name }
     }
 
     // By key: the list holds every source's categories, the same id on two of them (Phase 6).
@@ -216,11 +218,14 @@ internal fun TwoColumnLayout(
         Column(modifier = Modifier.fillMaxSize()) {
             // TV UI audit X6: the section is the title, the source and its category count the
             // subtitle (the source no longer repeated at the far right), the icon actions at the end.
-            // The source: the selected category's own while the list mixes several (Phase 6).
-            val headerSource = selectedCategory?.let { sourceNames[it.providerId] } ?: providerName
+            // The source: the list's own with one; the selected category's own while the list mixes
+            // several (Phase 6), none on a virtual list (Recent, Favourites) — the count stays.
+            val headerSource =
+                if (sourceNames.isEmpty()) providerName.ifEmpty { null } else selectedCategory?.let { sourceNames[it.providerId] }
             TvScreenHeader(
                 title = sectionTitle(contentType),
-                subtitle = "$headerSource · ${stringResource(R.string.category_count_format, categoryCount)}",
+                subtitle =
+                    listOfNotNull(headerSource, stringResource(R.string.category_count_format, categoryCount)).joinToString(" · "),
             ) {
                 val hasEpgData =
                     supportsNativeEpg ||
@@ -325,6 +330,8 @@ internal fun TwoColumnLayout(
                     selectedCategoryKey = selectedCategoryKey,
                     selectedCategoryName = selectedCategory?.name,
                     lastPlayedItemId = currentItemId,
+                    // A channel handed back by the preview names no source: by id within the list.
+                    lastPlayedSource = if (returnedPlayingId != null) 0L else lastPlayedSource,
                     nowPlaying = nowPlaying,
                     contentType = contentType,
                     categoryViewModel = categoryViewModel,

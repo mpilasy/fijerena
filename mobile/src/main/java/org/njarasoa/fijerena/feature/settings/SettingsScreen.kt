@@ -14,11 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,6 +26,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -39,10 +36,10 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
@@ -265,7 +262,18 @@ fun MobileSettingsScreen(
         )
     }
 
-    val activeProviderId = uiState.activeProviderId
+    // Edit Source for its playback settings: the profile's source, picked first when it has several (O4).
+    var choosingEditSource by remember { mutableStateOf(false) }
+    if (choosingEditSource) {
+        MobileSourceChooserDialog(
+            sources = uiState.profileSources,
+            onChosen = { id ->
+                choosingEditSource = false
+                onEditSource(id)
+            },
+            onDismiss = { choosingEditSource = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -307,7 +315,7 @@ fun MobileSettingsScreen(
                 // One way in (D6): switching, editing and guide sources live on the Sources list.
                 SettingsListRow(
                     title = stringResource(R.string.settings_provider_manage_button),
-                    summary = manageSourcesSummary(uiState),
+                    summary = uiState.profileSources.joinToString { it.second }.ifEmpty { stringResource(R.string.provider_none_label) },
                     onClick = onManageProviders,
                 )
                 TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
@@ -328,8 +336,14 @@ fun MobileSettingsScreen(
                 SettingsListRow(
                     title = stringResource(R.string.provider_edit_title),
                     summary = stringResource(R.string.settings_per_source_playback_hint),
-                    onClick = { activeProviderId?.let(onEditSource) },
-                    enabled = activeProviderId != null,
+                    onClick = {
+                        when (val choice = SourceChoice.of(uiState.profileSources)) {
+                            is SourceChoice.One -> onEditSource(choice.source.first)
+                            is SourceChoice.Ask -> choosingEditSource = true
+                            SourceChoice.None -> Unit
+                        }
+                    },
+                    enabled = uiState.profileSources.isNotEmpty(),
                 )
             }
 
@@ -499,35 +513,6 @@ fun MobileSettingsScreen(
             }
         }
     }
-}
-
-/**
- * Manage sources' value: the source in use, its URL, then subscription facts when the source
- * reports them; an expired subscription date stands out in the error colour.
- */
-@Composable
-private fun manageSourcesSummary(uiState: SettingsUiState): AnnotatedString {
-    val sourceName = uiState.providerName.ifEmpty { stringResource(R.string.provider_none_label) }
-    val expiresLabel = stringResource(R.string.settings_provider_expires_label)
-    val isExpired = uiState.subscriptionStatus?.equals("Expired", ignoreCase = true) == true
-    val errorColor = MaterialTheme.colorScheme.error
-    val trailingLines =
-        listOfNotNull(
-            uiState.subscriptionMaxCons?.let { "${stringResource(R.string.settings_provider_max_connections_label)} $it" },
-            if (uiState.subscriptionIsTrial) stringResource(R.string.settings_provider_trial_account_label) else null,
-        )
-    val summary =
-        buildAnnotatedString {
-            append(sourceName)
-            uiState.currentUrl.ifEmpty { null }?.let { append("\n$it") }
-            uiState.subscriptionExpiry?.let { expiry ->
-                append("\n")
-                append("$expiresLabel ")
-                if (isExpired) withStyle(SpanStyle(color = errorColor)) { append(expiry) } else append(expiry)
-            }
-            trailingLines.forEach { line -> append("\n$line") }
-        }
-    return summary
 }
 
 /** Live sync's line in Settings: whether it's on, and the way into its own screen. */

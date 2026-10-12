@@ -168,15 +168,15 @@ fun SettingsScreen(
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED) {
-            val activeProvider = providerRepo.getActiveProvider()
+            val hasProvider = providerRepo.getProviderCount() > 0
             val hadOnLoad = hadProviderOnLoad
             viewModel.refreshProviderInfo()
             viewModel.refreshDevMode()
             tmdbKeyViewModel.refresh()
 
             if (hadOnLoad == null) {
-                hadProviderOnLoad = activeProvider != null
-            } else if (hadOnLoad == false && activeProvider != null) {
+                hadProviderOnLoad = hasProvider
+            } else if (hadOnLoad == false && hasProvider) {
                 hadProviderOnLoad = true
                 onProviderChanged()
             }
@@ -286,13 +286,10 @@ fun SettingsScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            // The profile and the source in use, as the subtitle (T-7).
+            // The profile in use, as the subtitle (T-7); there is no source in use any more.
             TvScreenHeader(
                 title = stringResource(R.string.settings_title),
-                subtitle =
-                    listOfNotNull(profiles.firstOrNull { it.isActive }?.name, uiState.providerName.ifEmpty { null })
-                        .joinToString(" · ")
-                        .ifEmpty { null },
+                subtitle = profiles.firstOrNull { it.isActive }?.name,
             )
 
             Row(modifier = Modifier.fillMaxSize()) {
@@ -458,12 +455,7 @@ fun SettingsScreen(
                                         SettingsGroup.SOURCE_GUIDE -> {
                                             item {
                                                 ProviderSettingsCard(
-                                                    providerName = uiState.providerName,
-                                                    currentUrl = uiState.currentUrl,
-                                                    subscriptionExpiry = uiState.subscriptionExpiry,
-                                                    subscriptionMaxCons = uiState.subscriptionMaxCons,
-                                                    subscriptionIsTrial = uiState.subscriptionIsTrial,
-                                                    subscriptionStatus = uiState.subscriptionStatus,
+                                                    sourceNames = uiState.profileSources.map { it.second },
                                                     onManageProviders = {
                                                         returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
                                                         onManageProviders()

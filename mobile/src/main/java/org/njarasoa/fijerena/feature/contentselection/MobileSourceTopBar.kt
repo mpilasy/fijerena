@@ -62,127 +62,36 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
-import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
-import org.njarasoa.fijerena.core.ui.home.sourceSyncStatus
+import org.njarasoa.fijerena.core.ui.home.rememberProfileSyncStates
+import org.njarasoa.fijerena.core.ui.home.syncSummary
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceLine
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
 import org.njarasoa.fijerena.feature.profile.ProfileSheet
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * The source the phone's tabs show, as their top bar and the bottom bar need it
- * (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home on the phone).
- */
-data class ActiveSource(
-    val id: Long,
-    val name: String,
-    val type: String,
-    /**
-     * A Jellyfin server this profile hasn't signed in to: each profile is its own Jellyfin user
-     * (docs/plans/archive/20260929_live-sync-plan.md → User profiles). The tab roots show a
-     * sign-in panel in place of the library.
-     */
-    val needsSignIn: Boolean,
-    /** The sections the source has; null while [needsSignIn] (no repository is built for it). */
-    val supportedTypes: Set<String>?,
-    /** The source has Live TV but its last sync found no channels (see [loadActiveSource]). */
-    val noChannels: Boolean = false,
-    /**
-     * The profile's Xtream sources' sections, merged (multi-source plan, Phase 6); null when it
-     * has none, where the tabs stay the active source's own.
-     */
-    val merged: Set<String>? = null,
-    /** A "Browse <source>" entry for each of the profile's other sources (O1), in the profile sheet. */
-    val browse: List<BrowseSource> = emptyList(),
-) {
-    /**
-     * The sections the tabs offer: the merged ones, else [supportedTypes] without a Live TV that
-     * has no channels — as on TV, where that card is dimmed and skipped.
-     */
-    val sections: Set<String>?
-        get() = merged ?: if (noChannels) supportedTypes?.minus(ContentType.LIVE_TV) else supportedTypes
-
-    /** The tab roots show the sign-in panel: the tabs are the active Jellyfin source's, not signed in to. */
-    val showsSignIn: Boolean
-        get() = needsSignIn && merged == null
-}
-
-/**
- * The active source, or null with none. Its sections are read from the app-wide repository's
- * provider — kept from [known] when it is the same source, so a re-read is only a database lookup.
- */
-suspend fun loadActiveSource(
-    context: Context,
-    known: ActiveSource? = null,
-): ActiveSource? =
-    withContext(Dispatchers.IO) {
-        val providerRepo = ProviderRepository(context.applicationContext)
-        val provider = providerRepo.getActiveProvider()
-        if (provider == null) {
-            null
-        } else {
-            // No repository for a Jellyfin server without a login: it could only fail to authenticate.
-            val needsSignIn = !providerRepo.hasLogin(provider)
-            val supportedTypes =
-                when {
-                    needsSignIn -> {
-                        null
-                    }
-
-                    known?.id == provider.id && known.supportedTypes != null -> {
-                        known.supportedTypes
-                    }
-
-                    else -> {
-                        AppContainer
-                            .getInstance(context.applicationContext)
-                            .getMediaRepository(provider.id)
-                            .getProvider()
-                            ?.capabilities
-                            ?.supportedContentTypes
-                    }
-                }
-            // Re-read on every call, so channels a later sync brings show the tab again. Only for
-            // Xtream once it has synced: a count of its stored live categories, no network call.
-            // Not for M3U (listing its channels downloads the playlist) nor Jellyfin (no Live TV).
-            val noChannels =
-                provider.type == "XTREAM" &&
-                    provider.lastSyncedAtMs > 0 &&
-                    supportedTypes?.contains(ContentType.LIVE_TV) == true &&
-                    (
-                        AppContainer
-                            .getInstance(context.applicationContext)
-                            .getMediaRepository(provider.id)
-                            .getProvider() as? XtreamMediaProvider
-                    )?.getCategoryTotalCount(ContentType.LIVE_TV) == 0
-            val profile = ProfileSections.load(context)
-            ActiveSource(provider.id, provider.name, provider.type, needsSignIn, supportedTypes, noChannels, profile.merged, profile.browse)
-        }
-    }
-
-/**
  * The top bar of every tab root on the phone: no back arrow; [title] (the section's name) over one
- * line with the source and its sync status, which switches source when there are two or more. Then
- * Search the guide ([onSearchGuide], Live TV only, once the guide index is ready), the section's
- * Search ([onSearch]; null while signed out of the source) and the profile avatar, whose sheet
- * switches profile ([onProfileChosen] runs after the switch) and opens Settings, and lists a
- * "Browse <source>" row per source outside the merged tabs (O1): [onBrowseSection] opens the
- * section picked (a dialog asks which when it has several), [onBrowseSignIn] the source's sign-in
- * while this profile has no login for it. [onSourcePicked] runs after another source was made the
- * active one.
+ * line for all the profile's sources (O3 of docs/plans/20261012_multi-source-search-history-plan.md:
+ * "Updated 2 hours ago", "Updating 1 of 3…", "1 failed"), which opens a sheet with each source's
+ * status and reason; nothing when no source syncs. Then Search the guide ([onSearchGuide], Live TV
+ * only, once the guide index is ready), the section's Search ([onSearch]) and the profile avatar,
+ * whose sheet switches profile ([onProfileChosen] runs after the switch) and opens Settings, and
+ * lists a "Browse <source>" row per source outside the merged tabs ([sections]' Browse entries,
+ * O1): [onBrowseSection] opens the section picked (a dialog asks which when it has several),
+ * [onBrowseSignIn] the source's sign-in while this profile has no login for it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileSourceTopBar(
     title: String,
-    source: ActiveSource?,
-    onSourcePicked: () -> Unit,
+    sections: ProfileSections?,
     onSearch: (() -> Unit)?,
     onSearchGuide: (() -> Unit)?,
     onProfileChosen: () -> Unit,
@@ -190,74 +99,23 @@ fun MobileSourceTopBar(
     onBrowseSignIn: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val appSettings = remember { AppSettings(context.applicationContext) }
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
-    val sourceId = source?.id ?: 0L
-    var allProviders by remember { mutableStateOf<List<ProviderEntity>>(emptyList()) }
-    var showProviderPicker by remember { mutableStateOf(false) }
     var showProfileSheet by remember { mutableStateOf(false) }
     // A Browse entry's sections, when it has more than one: picked in a dialog.
     var browseChoice by remember { mutableStateOf<Pair<BrowseSource, List<String>>?>(null) }
 
-    // The status on the source line (phone home overhaul plan, Phase 2): the source's last
-    // catalogue sync, re-read when a sync of it ends and on every ON_RESUME.
-    var lastSyncedAtMs by remember { mutableLongStateOf(0L) }
-    var lastSyncError by remember { mutableStateOf<String?>(null) }
-    var syncStatsReload by remember { mutableIntStateOf(0) }
-    var showSyncError by remember { mutableStateOf(false) }
-    val runningSyncs by ProviderSyncRunner.running.collectAsStateWithLifecycle(initialValue = emptySet())
-    val syncing = sourceId in runningSyncs
-    val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
+    // The summary line (phone home overhaul plan, Phase 2; one line for all sources since
+    // multi-source Phase 6): re-read as each source's sync starts, ends and records its result.
+    val syncStates = rememberProfileSyncStates()
+    val syncSummary = remember(syncStates) { syncSummary(syncStates) }
+    var showSourcesSheet by remember { mutableStateOf(false) }
 
     // Collected live, so a guide that finishes indexing while the tab is up shows the button at once.
     val epgIndexState by remember { EpgIndexer.getInstance(context.applicationContext).state }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is EpgIndexState.Indexed
 
-    LaunchedEffect(sourceId) {
-        // The picker offers the profile's own sources only (multi-source plan, P2).
-        allProviders = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).profileSourcesList() }
-    }
-
-    LaunchedEffect(sourceId, syncing, syncStatsReload) {
-        if (sourceId == 0L || syncing) return@LaunchedEffect
-        val provider = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).getProviderById(sourceId) }
-        if (provider != null) {
-            lastSyncedAtMs = provider.lastSyncedAtMs
-            lastSyncError = provider.lastSyncError
-        }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) syncStatsReload++
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    val appName = stringResource(R.string.login_app_name)
-    // The name alone: developer mode's type suffix cut the status short; the picker still shows it.
-    val displayName = source?.name.orEmpty().ifEmpty { appName }
-    // The picker only opens with two or more sources; with one, the line opens the failure's reason.
-    val hasPicker = allProviders.size > 1
-    val onSourceLineClick: (() -> Unit)? =
-        when {
-            hasPicker -> {
-                { showProviderPicker = true }
-            }
-
-            syncStatus == SourceSyncStatus.FAILED -> {
-                { showSyncError = true }
-            }
-
-            else -> {
-                null
-            }
-        }
     TopAppBar(
         title = {
             Column {
@@ -267,17 +125,13 @@ fun MobileSourceTopBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                MobileSourceLine(
-                    name = displayName,
-                    status = syncStatus,
-                    lastSyncedAtMs = lastSyncedAtMs,
-                    providerId = sourceId,
-                    showsPicker = hasPicker,
-                    onClick = onSourceLineClick,
+                MobileSyncSummaryLine(
+                    summary = syncSummary,
+                    onClick = { showSourcesSheet = true },
                 )
             }
         },
-        // The title plus the source line's 48 dp touch row, whatever the status.
+        // The title plus the summary line's 48 dp touch row, whatever the status.
         expandedHeight = MobileDimensions.homeTopBarHeight,
         actions = {
             if (onSearchGuide != null && hasEpgData) {
@@ -309,7 +163,7 @@ fun MobileSourceTopBar(
             viewModel = profilesViewModel,
             onProfileChosen = onProfileChosen,
             onDismiss = { showProfileSheet = false },
-            browse = source?.browse.orEmpty(),
+            browse = sections?.browse.orEmpty(),
             onBrowse = { browsed ->
                 coroutineScope.launch {
                     when (val opening = ProfileSections.opening(context, browsed.providerId)) {
@@ -369,108 +223,19 @@ fun MobileSourceTopBar(
         )
     }
 
-    if (showSyncError) {
-        // The line only says "Update failed"; the reason is here. It already carries the raw detail
-        // in developer mode (ProviderSyncRunner).
-        CinemaAlertDialog(
-            onDismissRequest = { showSyncError = false },
-            title = { Text(stringResource(R.string.home_source_update_failed)) },
-            text = { Text(lastSyncError.orEmpty()) },
-            confirmButton = {
-                CinemaDialogTextButton(onClick = { showSyncError = false }) {
-                    Text(stringResource(R.string.common_close))
-                }
-            },
-        )
-    }
-
-    if (showProviderPicker && hasPicker) {
-        CinemaAlertDialog(
-            onDismissRequest = { showProviderPicker = false },
-            title = { Text(stringResource(R.string.content_switch_provider_title)) },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                ) {
-                    // The line only says "Update failed"; the reason is here, as on TV. It already
-                    // carries the raw detail in developer mode (ProviderSyncRunner).
-                    lastSyncError?.takeIf { syncStatus == SourceSyncStatus.FAILED }?.let { error ->
-                        Text(
-                            text = stringResource(R.string.home_source_update_failed_detail, error),
-                            color = CinemaError,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(bottom = CinemaSpacing.sm),
-                        )
-                    }
-                    allProviders.forEach { provider ->
-                        val isActive = provider.id == sourceId
-                        val label =
-                            if (appSettings.isDevMode) {
-                                "${provider.name} (${provider.type})"
-                            } else {
-                                provider.name
-                            }
-                        Surface(
-                            onClick = {
-                                if (!isActive) {
-                                    coroutineScope.launch {
-                                        ProviderRepository(context.applicationContext).pickProvider(provider.id)
-                                        showProviderPicker = false
-                                        onSourcePicked()
-                                    }
-                                } else {
-                                    showProviderPicker = false
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            color =
-                                if (isActive) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                },
-                            shape = RoundedCornerShape(CinemaCornerRadius.small),
-                        ) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(CinemaSpacing.md),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = label,
-                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                )
-                                if (isActive) {
-                                    Text(
-                                        text = stringResource(R.string.provider_active_label),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            // The sole action: the app's dialog button, as other one-button dialogs (OK), not a text link.
-            confirmButton = {
-                CinemaDialogActionButton(onClick = { showProviderPicker = false }) {
-                    Text(stringResource(R.string.common_close))
-                }
-            },
-        )
+    if (showSourcesSheet) {
+        MobileSourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
     }
 }
 
-/** In place of a tab's library while this profile has no login for the active Jellyfin server. */
+/**
+ * In place of a tab's library while the profile has no merged sections: [message] over one button
+ * per action — a "Browse <source>" per source (O1), or Add Source with none.
+ */
 @Composable
-fun JellyfinSignInPanel(
-    providerName: String,
-    onSignIn: () -> Unit,
+fun MobileSourcesPanel(
+    message: String,
+    actions: List<Pair<String, () -> Unit>>,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -479,11 +244,13 @@ fun JellyfinSignInPanel(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(R.string.profile_jellyfin_sign_in_prompt, providerName),
+            text = message,
             style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-        Button(onClick = onSignIn) { Text(stringResource(R.string.profile_jellyfin_sign_in_button)) }
+        actions.forEachIndexed { index, (label, onClick) ->
+            Spacer(modifier = Modifier.height(if (index == 0) CinemaSpacing.lg else CinemaSpacing.sm))
+            Button(onClick = onClick) { Text(label) }
+        }
     }
 }

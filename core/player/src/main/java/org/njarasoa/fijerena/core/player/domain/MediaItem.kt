@@ -70,9 +70,9 @@ data class MediaItem(
      */
     val target: BrowseTarget? = null,
     /**
-     * The source this row belongs to, so a card can open its route on it; 0 = the active source.
-     * Set on the rows a `MediaRepository` builds itself (Recent, favourites); catalogue rows leave
-     * it 0. See docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
+     * The source this row belongs to, so a card can open its route on it; 0 = the list's own
+     * source (see [sourceOr]). Set on the rows a `MediaRepository` builds itself (Recent,
+     * favourites); catalogue rows leave it 0 until a list puts them on their source. See docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
      */
     val providerId: Long = 0L,
     /**
@@ -102,6 +102,16 @@ fun sourceKey(
     providerId: Long,
     id: String,
 ): String = "$providerId/$id"
+
+/**
+ * Whether this row is the item played last, [id] on [source] (0: any source — a channel the
+ * player hands back, whose source the list already narrows): a list's current-row marker, which
+ * must not light the same id on another source (multi-source plan, Phase 6).
+ */
+fun MediaItem.isLastPlayed(
+    id: String?,
+    source: Long,
+): Boolean = id != null && this.id == id && (source == 0L || providerId == source)
 
 /** The row's source: [MediaItem.providerId], or [listSource] (the list's own) for a row that leaves it 0. */
 fun MediaItem.sourceOr(listSource: Long): Long = if (providerId != 0L) providerId else listSource

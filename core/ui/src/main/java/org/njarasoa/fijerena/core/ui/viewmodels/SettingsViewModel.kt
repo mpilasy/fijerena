@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -17,15 +16,11 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 data class SettingsUiState(
-    val providerName: String = "",
-    val currentUrl: String = "",
-    val currentUsername: String = "",
-    val activeProviderId: Long? = null,
-    val providerType: String = "",
-    val subscriptionExpiry: String? = null,
-    val subscriptionStatus: String? = null,
-    val subscriptionMaxCons: String? = null,
-    val subscriptionIsTrial: Boolean = false,
+    /**
+     * The profile in use's sources (id to name), in its order — Manage sources' value, and what the
+     * phone's Edit Source row chooses from. There is no source in use (multi-source plan, Phase 6).
+     */
+    val profileSources: List<Pair<Long, String>> = emptyList(),
     val themeId: String = "deep_night",
     val uiStyleId: String = "material",
     val isDevMode: Boolean = false,
@@ -75,39 +70,9 @@ class SettingsViewModel(
     }
 
     fun refreshProviderInfo() {
-        viewModelScope.launch {
-            val activeProvider = providerRepo.getActiveProvider()
-
-            // Base provider info
-            var newState =
-                _uiState.value.copy(
-                    providerName = activeProvider?.name ?: "",
-                    currentUrl = activeProvider?.url ?: "",
-                    currentUsername = activeProvider?.username ?: "",
-                    activeProviderId = activeProvider?.id,
-                    providerType = activeProvider?.type ?: "",
-                    // Reset subscription info before re-fetching
-                    subscriptionExpiry = null,
-                    subscriptionStatus = null,
-                    subscriptionMaxCons = null,
-                    subscriptionIsTrial = false,
-                )
-
-            // Xtream-specific subscription info
-            if (activeProvider?.type == "XTREAM") {
-                val accountManager = AccountManager(context.applicationContext, activeProvider.id)
-                accountManager.getAuthResponse()?.userInfo?.let { info ->
-                    newState =
-                        newState.copy(
-                            subscriptionStatus = info.status,
-                            subscriptionMaxCons = info.maxConnections,
-                            subscriptionIsTrial = info.isTrial == "1",
-                            subscriptionExpiry = formatExpiryDate(info.expDate),
-                        )
-                }
-            }
-
-            _uiState.value = newState
+        viewModelScope.launchGuarded("SettingsViewModel.refreshProviderInfo") {
+            val sources = providerRepo.profileSourcesList().map { it.id to it.name }
+            _uiState.value = _uiState.value.copy(profileSources = sources)
         }
     }
 
@@ -230,37 +195,4 @@ class SettingsViewModel(
                 )
         }
     }
-
-    private fun formatExpiryDate(expDate: String?): String? =
-        when {
-            expDate.isNullOrEmpty() -> {
-                null
-            }
-
-            expDate.equals("Unlimited", ignoreCase = true) -> {
-                context.getString(R.string.subscription_unlimited)
-            }
-
-            else -> {
-                val epoch = expDate.toLongOrNull()
-                if (epoch != null) {
-                    try {
-                        val date =
-                            java.time.Instant
-                                .ofEpochSecond(epoch)
-                                .atZone(java.time.ZoneId.systemDefault())
-                                .toLocalDate()
-                        date.format(
-                            java.time.format.DateTimeFormatter
-                                .ofPattern("MMM d, yyyy"),
-                        )
-                    } catch (_: Exception) {
-                        // cancellation-ok: non-suspend date formatting
-                        expDate
-                    }
-                } else {
-                    expDate
-                }
-            }
-        }
 }

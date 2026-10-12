@@ -48,7 +48,7 @@ class LocalRecordsTest {
             val providerId =
                 ProviderRepository(
                     context,
-                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM")
             val providerKey = settingsDb.providerDao().getProviderById(providerId)!!.providerKey
             xtreamDb.favoriteStateDao().upsertClearingTombstone(
                 FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L),
@@ -74,7 +74,7 @@ class LocalRecordsTest {
             val providerId =
                 ProviderRepository(
                     context,
-                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM")
             xtreamDb.favoriteStateDao().upsertClearingTombstone(
                 FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L),
             )
@@ -97,7 +97,7 @@ class LocalRecordsTest {
             val providerId =
                 ProviderRepository(
                     context,
-                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM")
             val favorite = FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L)
             xtreamDb.favoriteStateDao().upsertClearingTombstone(favorite)
 
@@ -116,7 +116,7 @@ class LocalRecordsTest {
             val providerId =
                 ProviderRepository(
                     context,
-                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM")
             xtreamDb.favoriteStateDao().upsertClearingTombstone(
                 FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 123L),
             )
@@ -137,7 +137,7 @@ class LocalRecordsTest {
         runBlocking {
             everythingPending()
             val url = "http://${UUID.randomUUID()}.test"
-            val providerId = ProviderRepository(context).addProvider("mine", url, "same-user", "pw", "XTREAM", activate = false)
+            val providerId = ProviderRepository(context).addProvider("mine", url, "same-user", "pw", "XTREAM")
             val otherKey = UUID.randomUUID().toString()
 
             SyncApplier(context).apply(

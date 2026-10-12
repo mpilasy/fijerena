@@ -317,7 +317,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | `EpgViewModel` | TV Guide: channel rows, paged listings per day, row actions |
 | `EpgBrowserViewModel` | Search the guide: FTS search, grouping, stale refresh |
 | `EpgManagementViewModel` | Guide sources CRUD, refresh, maintenance |
-| `ProviderViewModel` | Sources CRUD, active source, sync |
+| `ProviderViewModel` | Sources CRUD, sync |
 | `MovieDetailsViewModel` / `SeriesDetailsViewModel` | Detail screens, TMDB, episode lists |
 | `StreamLoaderViewModel` | Resolves what to play and starts it (zaps, next episode, history) |
 | `SettingsViewModel` | Settings state |

@@ -118,10 +118,13 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
+import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
 import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
-import org.njarasoa.fijerena.core.ui.home.sourceSyncStatus
+import org.njarasoa.fijerena.core.ui.home.rememberProfileSyncStates
+import org.njarasoa.fijerena.core.ui.home.syncSummary
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
@@ -144,7 +147,8 @@ import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDial
 import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
 import org.njarasoa.fijerena.feature.category.components.RowMenuList
 import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
-import org.njarasoa.fijerena.feature.contentselection.components.SourceSyncStatusLine
+import org.njarasoa.fijerena.feature.contentselection.components.SourcesStatusSheet
+import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
@@ -173,7 +177,7 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 @Composable
 fun ContentTypeSelectionScreen(
     onEpgBrowser: () -> Unit = {},
-    onProviderChanged: () -> Unit = {},
+    // The merged sections, once read (with none: nothing is called).
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
     // A channel from the Live row, the list it zaps through (CategoryViewModel's virtual
@@ -181,46 +185,34 @@ fun ContentTypeSelectionScreen(
     onLiveChannelSelected: (streamId: String, contextCategoryId: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A favourite movie (ContentType.MOVIES) or show (ContentType.TV_SHOWS) from its Home row.
     onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
-    onSignInRequired: (providerId: Long) -> Unit = {},
+    // A "Browse <source>" entry of a profile with no Xtream source (O1): that source's sections.
+    onBrowse: (BrowseSource) -> Unit = {},
+    // A profile with no source: Add Source.
+    onAddSource: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val signInResources = LocalResources.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
-    var providerName by remember { mutableStateOf("") }
-    var providerType by remember { mutableStateOf("") }
-    var supportedContentTypes by remember {
-        mutableStateOf<Set<String>>(
-            setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
-        )
-    }
-    var showProviderPicker by remember { mutableStateOf(false) }
-    var allProviders by remember { mutableStateOf<List<org.njarasoa.fijerena.core.network.provider.ProviderEntity>>(emptyList()) }
-    var activeProviderId by remember { mutableStateOf(0L) }
-    // The active provider is a Jellyfin server this profile hasn't signed in to: home shows a
-    // sign-in panel in place of the library (docs/plans/archive/20260929_live-sync-plan.md → User profiles).
-    var needsSignIn by remember { mutableStateOf(false) }
-    var refreshTrigger by remember { mutableStateOf(0) }
+    // What the profile browses (multi-source plan, Phase 6): its Xtream sources' sections, merged,
+    // and a Browse entry per other source; null until read. There is no source in use.
+    var sections by remember { mutableStateOf<ProfileSections?>(null) }
+    val supportedContentTypes = sections?.merged.orEmpty()
 
-    // The source pill's status (TV home overhaul plan, Phase 1): the active source's last catalogue
-    // sync, re-read when a sync of it ends and on every ON_RESUME.
-    var lastSyncedAtMs by remember { mutableLongStateOf(0L) }
-    var lastSyncError by remember { mutableStateOf<String?>(null) }
-    var syncStatsReload by remember { mutableIntStateOf(0) }
-    val runningSyncs by ProviderSyncRunner.running.collectAsStateWithLifecycle(initialValue = emptySet())
-    val syncing = activeProviderId in runningSyncs
+    // The header's one line for all the profile's sources (O3), and its sheet.
+    val syncStates = rememberProfileSyncStates()
+    val syncSummary = remember(syncStates) { syncSummary(syncStates) }
+    var showSourcesSheet by remember { mutableStateOf(false) }
     val firstSyncs by ProviderSyncRunner.firstSyncs.collectAsStateWithLifecycle()
 
-    // Category counts per content type: Pair(filtered, total) — null while loading
-
-    var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
-    var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
-
-    // The rows' lists: every source of the profile's, merged around the active source's
-    // repository (multi-source plan, Phase 4). Each card acts on, and opens on, its own source.
+    // The rows' lists: every Xtream source of the profile's, merged (multi-source plan, Phases 4
+    // and 6). Each card acts on, and opens on, its own source. Stored data only: an offline source
+    // holds nothing up.
     var mergedLists by remember { mutableStateOf<MergedLists?>(null) }
-    LaunchedEffect(mediaRepositoryRef) {
-        mergedLists = mediaRepositoryRef?.let { MergedLists.withOthers(AppContainer.getInstance(context.applicationContext), it) }
+    LaunchedEffect(Unit) {
+        val loaded = ProfileSections.load(context.applicationContext)
+        sections = loaded
+        mergedLists = MergedLists.forSections(context.applicationContext)
+        if (loaded.merged.isNotEmpty()) onCapabilitiesResolved(loaded.merged)
     }
     val sourceNames = mergedLists?.sourceNames.orEmpty()
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
@@ -260,73 +252,11 @@ fun ContentTypeSelectionScreen(
     }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
-    LaunchedEffect(refreshTrigger) {
-        val resolvedTypes =
-            withContext(Dispatchers.IO) {
-                val providerRepo = ProviderRepository(context.applicationContext)
-                // The picker offers the profile's own sources only (multi-source plan, P2).
-                allProviders = providerRepo.profileSourcesList()
-                val activeProvider = providerRepo.getActiveProvider()
-                if (activeProvider != null) {
-                    providerName = activeProvider.name
-                    providerType = activeProvider.type
-                    activeProviderId = activeProvider.id
-                    lastSyncedAtMs = activeProvider.lastSyncedAtMs
-                    lastSyncError = activeProvider.lastSyncError
-                    // A Jellyfin server this profile hasn't signed in to: each profile is its own
-                    // Jellyfin user (docs/plans/archive/20260929_live-sync-plan.md → User profiles). No
-                    // repository is built — it could only fail to authenticate — and the first time
-                    // per process the sign-in screen opens by itself; after that the panel stays.
-                    needsSignIn = !providerRepo.hasLogin(activeProvider)
-                    if (needsSignIn) {
-                        mediaRepositoryRef = null
-                        mediaProviderRef = null
-                        if (AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(activeProvider.id)) {
-                            val message = signInResources.getString(R.string.profile_jellyfin_sign_in_prompt, activeProvider.name)
-                            withContext(Dispatchers.Main) {
-                                android.widget.Toast
-                                    .makeText(context, message, android.widget.Toast.LENGTH_LONG)
-                                    .show()
-                                onSignInRequired(activeProvider.id)
-                            }
-                        }
-                        null
-                    } else {
-                        // Reuse the app-wide managed repository/provider instead of creating an
-                        // unmanaged standalone one: same cached auth session, and connect() has
-                        // already been run for it.
-                        val repo = AppContainer.getInstance(context.applicationContext).getMediaRepository(activeProvider.id)
-                        mediaRepositoryRef = repo
-                        val mediaProvider = repo.getProvider()
-                        if (mediaProvider != null) {
-                            supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
-                            mediaProviderRef = mediaProvider
-                        }
-                        mediaProvider?.capabilities?.supportedContentTypes
-                    }
-                } else {
-                    needsSignIn = false
-                    providerName = appSettings.providerName
-                    null
-                }
-            }
-        resolvedTypes?.let(onCapabilitiesResolved)
-    }
-
-    LaunchedEffect(activeProviderId, syncing, syncStatsReload) {
-        if (activeProviderId == 0L || syncing) return@LaunchedEffect
-        val provider = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).getProviderById(activeProviderId) }
-        if (provider != null) {
-            lastSyncedAtMs = provider.lastSyncedAtMs
-            lastSyncError = provider.lastSyncError
-        }
-    }
-
     // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
     // gradient (AmbientBackdrop's default) if there's no watch history yet or the provider
-    // doesn't support it.
-    LaunchedEffect(mediaProviderRef) {
-        val mp = mediaProviderRef ?: return@LaunchedEffect
+    // doesn't support it. From the profile's first Xtream source.
+    LaunchedEffect(mergedLists) {
+        val mp = mergedLists?.primary?.getProvider() ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
             backdropImageUrl =
                 listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV).firstNotNullOfOrNull { contentType ->
@@ -374,7 +304,11 @@ fun ContentTypeSelectionScreen(
         val merged = mergedLists
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) syncStatsReload++
+                // A source turned on or off, added or deleted meanwhile: the header and the Browse
+                // entries follow (the rows' sources are read again on the next visit).
+                if (event == Lifecycle.Event.ON_RESUME && sections != null) {
+                    coroutineScope.launch { sections = ProfileSections.load(context.applicationContext) }
+                }
                 if (event == Lifecycle.Event.ON_RESUME && merged != null) {
                     coroutineScope.launch {
                         continueWatchingItems = merged.continueWatching()
@@ -424,6 +358,8 @@ fun ContentTypeSelectionScreen(
             else -> null
         }
     val rail = LocalTvNavRail.current
+    // The first button of the panel shown in place of the rows without merged sections.
+    val sourcesPanelFocus = remember { FocusRequester() }
     // Read by the entry focus below after it has waited for the rows: the value from its launch
     // was from before they loaded (null: no focus at all after a profile switch).
     val currentFirstRowFocus by rememberUpdatedState(firstRowFocus)
@@ -433,9 +369,13 @@ fun ContentTypeSelectionScreen(
         // Wait for the shelf and the Live row, which take entry focus when they have something
         // (TV home overhaul plan, Phase 3).
         withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
-            snapshotFlow { needsSignIn || (continueWatchingLoaded && liveRowLoaded) }.first { it }
+            snapshotFlow { sections?.merged?.isEmpty() == true || (continueWatchingLoaded && liveRowLoaded) }.first { it }
         }
-        if (needsSignIn) return@LaunchedEffect
+        // No merged sections: the panel's first button (Browse <source>, or Add Source).
+        if (sections?.merged?.isEmpty() == true) {
+            sourcesPanelFocus.requestFocusWithRetry(fallback = rail?.entry)
+            return@LaunchedEffect
+        }
         // No row at all (a new source, nothing watched yet): the sections are on the rail, so
         // focus starts there.
         // After a profile or source switch the rows can come later than that wait: keep waiting
@@ -833,7 +773,7 @@ fun ContentTypeSelectionScreen(
                                 .weight(1f)
                                 .padding(start = Spacing.md)
                                 .then(
-                                    if (needsSignIn || firstRowFocus == null) {
+                                    if (firstRowFocus == null) {
                                         Modifier
                                     } else {
                                         Modifier.focusProperties { down = firstRowFocus }
@@ -842,86 +782,45 @@ fun ContentTypeSelectionScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                     ) {
-                        // Shown with one source too, for its sync status; only a picker (and
-                        // focusable) with two or more. The header's first focusable item hands Left
-                        // to the navigation rail: the pill when it can pick, else Search the guide.
-                        val canPick = providerName.isNotEmpty() && allProviders.size > 1
-                        if (providerName.isNotEmpty()) {
-                            val syncStatus = sourceSyncStatus(syncing, lastSyncedAtMs, lastSyncError)
-                            val displayName =
-                                if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                                    "$providerName ($providerType)"
-                                } else {
-                                    providerName
-                                }
-                            val switchProviderDescription =
-                                stringResource(R.string.content_switch_provider_description_format, displayName)
-                            var providerPillFocused by remember { mutableStateOf(false) }
-                            val pillScale by animateFloatAsState(
-                                targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
+                        // One line for all the profile's sources (O3): focusable, opening the sources
+                        // sheet, only when there is something to say. The header's first focusable
+                        // item hands Left to the navigation rail: the line when it opens, else
+                        // Search the guide.
+                        val summaryOpens = syncSummary.opensSheet
+                        if (summaryOpens) {
+                            var summaryFocused by remember { mutableStateOf(false) }
+                            val summaryScale by animateFloatAsState(
+                                targetValue = if (summaryFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
                                 animationSpec =
                                     tween(
                                         durationMillis = org.njarasoa.fijerena.core.ui.theme.CinemaAnimation.focusDurationMs,
                                     ),
-                                label = "provider_pill_scale",
+                                label = "sources_summary_scale",
                             )
+                            val summaryDescription = stringResource(R.string.home_sources_status_title)
                             GlassPanel(
                                 modifier =
                                     Modifier
                                         .weight(1f, fill = false)
-                                        .scale(pillScale)
+                                        .scale(summaryScale)
                                         .border(
                                             width = TvFocusTokens.focusBorderWidth,
                                             color =
-                                                if (providerPillFocused) {
+                                                if (summaryFocused) {
                                                     CinemaAccentLight
                                                 } else {
                                                     androidx.compose.ui.graphics.Color.Transparent
                                                 },
                                             shape = RoundedCornerShape(CinemaCornerRadius.large),
-                                        ).then(
-                                            if (canPick) {
-                                                Modifier
-                                                    .leftToRail()
-                                                    .onFocusChanged { providerPillFocused = it.isFocused }
-                                                    .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                                    .semantics { contentDescription = switchProviderDescription }
-                                            } else {
-                                                Modifier
-                                            },
-                                        ),
+                                        ).leftToRail()
+                                        .onFocusChanged { summaryFocused = it.isFocused }
+                                        .clickable(role = Role.Button) { showSourcesSheet = true }
+                                        .semantics { contentDescription = summaryDescription },
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal = Spacing.md,
-                                            vertical = Spacing.xs,
-                                        ),
-                                ) {
-                                    Text(
-                                        text = displayName,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false),
-                                    )
-                                    SourceSyncStatusLine(
-                                        status = syncStatus,
-                                        lastSyncedAtMs = lastSyncedAtMs,
-                                        providerId = activeProviderId,
-                                        modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.sm),
-                                    )
-                                    if (canPick) {
-                                        Icon(
-                                            imageVector = CinemaIcons.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                            modifier = Modifier.padding(start = Spacing.xs),
-                                        )
-                                    }
-                                }
+                                SyncSummaryLine(
+                                    summary = syncSummary,
+                                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                                )
                             }
                         }
                         if (hasEpgData) {
@@ -929,7 +828,7 @@ fun ContentTypeSelectionScreen(
                                 onClick = { leaveTo(RETURN_EPG_BROWSER, onEpgBrowser) },
                                 modifier =
                                     Modifier
-                                        .then(if (canPick) Modifier else Modifier.leftToRail())
+                                        .then(if (summaryOpens) Modifier else Modifier.leftToRail())
                                         .navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
                                 icon = {
                                     Icon(
@@ -943,14 +842,28 @@ fun ContentTypeSelectionScreen(
                     }
                 }
 
-                if (needsSignIn) {
-                    JellyfinSignInPanel(
-                        providerName = providerName,
-                        onSignIn = { leaveTo(RETURN_SIGN_IN) { onSignInRequired(activeProviderId) } },
+                val loadedSections = sections
+                if (loadedSections != null && loadedSections.merged.isEmpty()) {
+                    // No Xtream source: a Browse entry per source (O1); no source at all: Add Source.
+                    HomeSourcesPanel(
+                        message =
+                            stringResource(
+                                if (loadedSections.hasNoSources) R.string.home_no_sources else R.string.home_only_browse_sources,
+                            ),
+                        actions =
+                            if (loadedSections.hasNoSources) {
+                                listOf(stringResource(R.string.provider_add_title) to onAddSource)
+                            } else {
+                                loadedSections.browse.map { source ->
+                                    stringResource(R.string.browse_source, source.name) to
+                                        { onBrowse(source) }
+                                }
+                            },
+                        firstActionFocus = sourcesPanelFocus,
                         scale = scale,
-                        signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
+                        modifier = Modifier.weight(1f),
                     )
-                } else if (firstRowFocus == null && activeProviderId in firstSyncs) {
+                } else if (firstRowFocus == null && loadedSections?.xtreamIds.orEmpty().any { it in firstSyncs }) {
                     // The source's first catalogue sync: nothing to show yet, and blank would read as
                     // an empty library. Not focusable; the sections stay on the navigation rail.
                     TvEmptyState(
@@ -1119,85 +1032,8 @@ fun ContentTypeSelectionScreen(
                 TvUndoBar(undoBar, Modifier.align(Alignment.CenterHorizontally).padding(top = Spacing.sm))
             }
 
-            if (showProviderPicker && allProviders.size > 1) {
-                // A new dialog window starts with focus on the Close button *below* the list, so
-                // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
-                // current provider's row instead (F-38).
-                val pickerInitialFocus = remember { FocusRequester() }
-                val pickerFocusId = (allProviders.firstOrNull { it.id == activeProviderId } ?: allProviders.first()).id
-                CinemaAlertDialog(
-                    initialFocus = pickerInitialFocus,
-                    onDismissRequest = { showProviderPicker = false },
-                    // The darkest surface behind the rows, so the option rows (resting container)
-                    // stand out from it rather than dark on dark (TV UI audit #3).
-                    containerColor = CinemaBackground,
-                    titleContentColor = CinemaTextPrimary,
-                    textContentColor = CinemaTextSecondary,
-                    title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
-                    text = {
-                        Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        ) {
-                            // The pill only says "Update failed"; the reason is here. It already
-                            // carries the raw detail in developer mode (ProviderSyncRunner).
-                            lastSyncError?.takeIf { !syncing }?.let { error ->
-                                androidx.compose.material3.Text(
-                                    text = stringResource(R.string.home_source_update_failed_detail, error),
-                                    color = CinemaError,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(bottom = Spacing.sm),
-                                )
-                            }
-                            allProviders.forEach { provider ->
-                                val isActive = provider.id == activeProviderId
-                                val label =
-                                    if (appSettings.isDevMode) {
-                                        "${provider.name} (${provider.type})"
-                                    } else {
-                                        provider.name
-                                    }
-                                TvOptionRow(
-                                    title = label,
-                                    selected = isActive,
-                                    activeLabel = stringResource(R.string.provider_active_label),
-                                    onClick = {
-                                        if (!isActive) {
-                                            coroutineScope.launch {
-                                                val providerRepo = ProviderRepository(context.applicationContext)
-                                                providerRepo.pickProvider(provider.id)
-                                                showProviderPicker = false
-                                                refreshTrigger++
-                                                onProviderChanged()
-                                            }
-                                        } else {
-                                            showProviderPicker = false
-                                        }
-                                    },
-                                    modifier =
-                                        if (provider.id ==
-                                            pickerFocusId
-                                        ) {
-                                            Modifier.focusRequester(pickerInitialFocus)
-                                        } else {
-                                            Modifier
-                                        },
-                                )
-                            }
-                        }
-                    },
-                    // A standard dialog button, as the TV Guide's programme panel's Close.
-                    confirmButton = {
-                        CinemaDialogActionButton(
-                            onClick = { showProviderPicker = false },
-                            colors =
-                                androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = CinemaSurfaceVariant,
-                                    contentColor = CinemaTextPrimary,
-                                ),
-                        ) { androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
-                    },
-                )
+            if (showSourcesSheet) {
+                SourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
             }
         }
     }
@@ -1205,7 +1041,6 @@ fun ContentTypeSelectionScreen(
 
 // Keys for the controls that navigate away from Home — see rememberNavReturnFocus.
 private const val RETURN_EPG_BROWSER = "epgBrowser"
-private const val RETURN_SIGN_IN = "signIn"
 private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
 private const val RETURN_LIVE_ROW_PREFIX = "live:"
 private const val RETURN_FAVORITE_CHANNELS_PREFIX = "favLive:"
@@ -1316,21 +1151,26 @@ private fun HomeBackdrop(
 /** How long focus rests on a card before the backdrop switches to its art. */
 private const val BACKDROP_SETTLE_MS = 250L
 
-/** In place of the library while this profile has no login for the active Jellyfin server. */
+/**
+ * In place of the rows when the profile has no merged sections: [message] over one button per
+ * action — a "Browse <source>" per source (O1), or Add Source with none. Buttons stack, so Up/Down
+ * walk them; each hands Left to the navigation rail.
+ */
 @Composable
-private fun JellyfinSignInPanel(
-    providerName: String,
-    onSignIn: () -> Unit,
+private fun HomeSourcesPanel(
+    message: String,
+    actions: List<Pair<String, () -> Unit>>,
+    firstActionFocus: FocusRequester,
     scale: Float,
-    signInButtonFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(R.string.profile_jellyfin_sign_in_prompt, providerName),
+            text = message,
             style =
                 MaterialTheme.typography.headlineSmall.copy(
                     fontSize =
@@ -1339,12 +1179,13 @@ private fun JellyfinSignInPanel(
                 ),
             color = CinemaTextPrimary,
         )
-        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-        CinemaPrimaryButton(
-            onClick = onSignIn,
-            text = stringResource(R.string.profile_jellyfin_sign_in_button),
-            // Home's only focusable item besides the header: Left goes to the navigation rail.
-            modifier = (signInButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier).leftToRail(),
-        )
+        actions.forEachIndexed { index, (label, onClick) ->
+            Spacer(modifier = Modifier.height(if (index == 0) Spacing.lg.scaled(scale) else Spacing.sm.scaled(scale)))
+            CinemaPrimaryButton(
+                onClick = onClick,
+                text = label,
+                modifier = (if (index == 0) Modifier.focusRequester(firstActionFocus) else Modifier).leftToRail(),
+            )
+        }
     }
 }

@@ -48,23 +48,17 @@ class SearchViewModel(
 
     /**
      * The sources searched (docs/plans/20261012_multi-source-search-history-plan.md Phase 3): every
-     * Xtream source of the profile in use, each in its own cached catalogue. A Jellyfin or M3U
-     * source in use is searched alone, as before. With none set up yet, the active repository (0).
+     * Xtream source of the profile in use, each in its own cached catalogue. A profile with no
+     * Xtream source searches its other sources (Jellyfin, M3U…) instead, each its own way, as the
+     * one in use was before Phase 6; one with no source searches nothing.
      */
     private suspend fun ensureSources(): List<SearchSource> =
         sources ?: run {
             val profileSources = AppContainer.getInstance(context).providerRepository.profileSourcesList()
-            val active = profileSources.firstOrNull { it.isActive }
-            val searched =
-                if (active == null || active.type != XTREAM_TYPE) {
-                    listOfNotNull(active)
-                } else {
-                    profileSources.filter { it.type == XTREAM_TYPE }
-                }
+            val searched = profileSources.filter { it.type == XTREAM_TYPE }.ifEmpty { profileSources }
             val named = searched.size > 1
             searched
                 .map { SearchSource(it.id, it.name.takeIf { named }) }
-                .ifEmpty { listOf(SearchSource(0L, null)) }
                 .also { sources = it }
         }
 

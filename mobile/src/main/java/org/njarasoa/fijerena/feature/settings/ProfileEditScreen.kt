@@ -29,10 +29,13 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
 import org.njarasoa.fijerena.feature.provider.components.MobileCategoryFilterDialog
 import org.njarasoa.fijerena.feature.settings.components.ProfileColourPicker
 import org.njarasoa.fijerena.feature.settings.components.ProfileNameField
@@ -45,8 +48,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * A profile's page (`Screen.ProfileEdit`, D8): name, colour, its own Developer mode and Play next
- * episode automatically, Sources › (with two or more sources), Content filters › (the source in
- * use, for this profile; Xtream only), Switch to this profile, Save / Cancel, and Delete last.
+ * episode automatically, Sources › (with two or more sources), Content filters › (this profile's,
+ * on one of its Xtream sources — picked first when it has several, O4 of
+ * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, Save / Cancel,
+ * and Delete last.
  * Content filters are saved by their own editor's Save, and Sources by each switch, at once; the
  * rest by Save. See docs/plans/archive/20261003_sources-guide-profiles-plan.md → P9.
  */
@@ -60,8 +65,8 @@ fun MobileProfileEditScreen(
     onProfileSwitched: () -> Unit,
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
-    val sourceInUse by viewModel.sourceInUse.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.loadSourceInUse() }
+    // Content filters act on Xtream catalogues only (as they did in Edit Source).
+    val filterSources by remember(profileId) { viewModel.filterSources(profileId) }.collectAsStateWithLifecycle(emptyList())
     val sources by remember(profileId) { viewModel.profileSources(profileId) }.collectAsStateWithLifecycle(emptyList())
     val profile = profiles.firstOrNull { it.id == profileId }
 
@@ -87,11 +92,13 @@ fun MobileProfileEditScreen(
             var devMode by rememberSaveable(profileId) { mutableStateOf(stored.devMode) }
             var autoplayNextEpisode by rememberSaveable(profileId) { mutableStateOf(stored.autoplayNextEpisode) }
             var showNameError by remember { mutableStateOf(false) }
-            var editingFilters by remember { mutableStateOf<CategoryFilters?>(null) }
+            var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
+            var choosingFiltersSource by remember { mutableStateOf(false) }
+            val editFilters = { source: FilterSource ->
+                viewModel.loadCategoryFilters(source.id, profileId) { editingFilters = source to it }
+            }
             var confirmDelete by remember { mutableStateOf(false) }
             var editingSources by rememberSaveable { mutableStateOf(false) }
-            // Content filters act on Xtream catalogues only (as they did in Edit Source).
-            val filtersSource = sourceInUse?.takeIf { it.type == "XTREAM" }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
 
@@ -135,12 +142,18 @@ fun MobileProfileEditScreen(
                         onClick = { editingSources = true },
                     )
                 }
-                if (filtersSource != null) {
+                if (filterSources.isNotEmpty()) {
                     SettingsListRow(
                         title = stringResource(R.string.profile_content_filters_title),
-                        summary = filtersSource.name,
+                        summary = filterSources.joinToString { it.name },
                         scope = SettingsScope.SOURCE,
-                        onClick = { viewModel.loadCategoryFilters(filtersSource.id, profileId) { editingFilters = it } },
+                        onClick = {
+                            when (val choice = SourceChoice.of(filterSources)) {
+                                is SourceChoice.One -> editFilters(choice.source)
+                                is SourceChoice.Ask -> choosingFiltersSource = true
+                                SourceChoice.None -> Unit
+                            }
+                        },
                     )
                 }
                 // Switching to the profile already in use would do nothing.
@@ -178,8 +191,7 @@ fun MobileProfileEditScreen(
                 }
             }
 
-            val filters = editingFilters
-            if (filters != null && filtersSource != null) {
+            editingFilters?.let { (filtersSource, filters) ->
                 MobileCategoryFilterDialog(
                     title = stringResource(R.string.provider_section_content_filters_format, filtersSource.name),
                     currentFilters = filters,
@@ -188,6 +200,17 @@ fun MobileProfileEditScreen(
                         editingFilters = null
                     },
                     onDismiss = { editingFilters = null },
+                )
+            }
+
+            if (choosingFiltersSource) {
+                MobileSourceChooserDialog(
+                    sources = filterSources.map { it.id to it.name },
+                    onChosen = { id ->
+                        choosingFiltersSource = false
+                        filterSources.firstOrNull { it.id == id }?.let(editFilters)
+                    },
+                    onDismiss = { choosingFiltersSource = false },
                 )
             }
 
@@ -207,7 +230,6 @@ fun MobileProfileEditScreen(
                                     title = source.name,
                                     checked = source.isOn,
                                     onCheckedChange = { viewModel.setProfileSource(profileId, sources, source.providerKey, it) },
-                                    summary = if (source.inUse) stringResource(R.string.settings_profiles_active_marker) else null,
                                 )
                             }
                         }

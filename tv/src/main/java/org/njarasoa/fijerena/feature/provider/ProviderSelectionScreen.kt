@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,7 +75,6 @@ import org.njarasoa.fijerena.ui.theme.*
 
 @Composable
 fun TvProviderSelectionScreen(
-    onProviderSelected: (ProviderEntity) -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
@@ -88,7 +86,6 @@ fun TvProviderSelectionScreen(
             factory = ProviderViewModelFactory(context),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val profileSourceIds by viewModel.profileSourceIds.collectAsStateWithLifecycle()
     val copyResultMessage by viewModel.copyResultMessage.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
@@ -111,7 +108,7 @@ fun TvProviderSelectionScreen(
         }
     }
 
-    // First open lands on the active source's row, not on "+" (T-8). Once per composition: a
+    // First open lands on the first source's row, not on "+" (T-8). Once per composition: a
     // pending hand-back (Back from a child screen) has the last word instead.
     val entryRowFocusRequester = remember { FocusRequester() }
     val listLoaded = uiState is ProviderUiState.SingleProvider || uiState is ProviderUiState.MultipleProviders
@@ -180,12 +177,10 @@ fun TvProviderSelectionScreen(
             is ProviderUiState.SingleProvider, is ProviderUiState.MultipleProviders -> {
                 ProviderList(
                     providers = allProviders,
-                    profileSourceIds = profileSourceIds,
                     onEdit = { id ->
                         returnFocus.leaveFrom(RETURN_ROW_PREFIX + id, listState)
                         onEditProvider(id)
                     },
-                    onSelect = onProviderSelected,
                     onManageEpg = { id ->
                         returnFocus.leaveFrom(RETURN_EPG_PREFIX + id, listState)
                         onManageEpg(id)
@@ -317,10 +312,7 @@ fun TvProviderSelectionScreen(
 @Composable
 private fun ProviderList(
     providers: List<ProviderEntity>,
-    // The profile's own sources: Use is offered on those only (multi-source plan, P2).
-    profileSourceIds: Set<Long>,
     onEdit: (Long) -> Unit,
-    onSelect: (ProviderEntity) -> Unit,
     onManageEpg: (Long) -> Unit,
     onMoreActions: (ProviderEntity) -> Unit,
     listState: LazyListState,
@@ -328,9 +320,8 @@ private fun ProviderList(
     entryRowFocusRequester: FocusRequester,
 ) {
     val scale = LocalUiScale.current
-    // The active source comes first (ProviderDao orders by isActive); fall back to the first row
-    // should none be active.
-    val entryId = providers.firstOrNull { it.isActive }?.id ?: providers.firstOrNull()?.id
+    // Focus opens on the first row: there is no source in use to land on (multi-source plan, Phase 6).
+    val entryId = providers.firstOrNull()?.id
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
@@ -338,10 +329,10 @@ private fun ProviderList(
         modifier = Modifier.fillMaxSize().focusRestorer(),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
-            // One focus stop per row, OK = Edit; the trailing actions sit in fixed-width slots that
-            // stay in place when empty (Use on the active row, Guide on a source without live
-            // channels), so Up/Down from a slot lands on the same slot of the next row and Right
-            // from the row walks Use → Guide → ⋮ (TV focus contract, rule 1; A-10).
+            // One focus stop per row, OK = Edit; the trailing actions sit in a fixed-width slot that
+            // stays in place when empty (Guide on a source without live channels), so Up/Down from
+            // a slot lands on the same slot of the next row and Right from the row walks Guide → ⋮
+            // (TV focus contract, rule 1; A-10).
             // The row's resting surface spans the whole width, slots included, so a row reads as
             // one full-width row whatever buttons it shows (TV UI audit #18).
             Row(
@@ -354,7 +345,7 @@ private fun ProviderList(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TvInputListItem(
-                    selected = provider.isActive,
+                    selected = false,
                     onClick = { onEdit(provider.id) },
                     modifier =
                         Modifier
@@ -363,16 +354,7 @@ private fun ProviderList(
                             .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id)
                             .leftToRail(),
                     headlineContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = provider.name, style = MaterialTheme.typography.titleSmall)
-                            if (provider.isActive) {
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                Text(
-                                    text = stringResource(R.string.provider_active_label),
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                        }
+                        Text(text = provider.name, style = MaterialTheme.typography.titleSmall)
                     },
                     supportingContent = {
                         Column {
@@ -391,15 +373,6 @@ private fun ProviderList(
                 )
                 // Icons at the slot's end: the focused one's name grows into the slot, so nothing
                 // beside it moves (icon-buttons plan).
-                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH), contentAlignment = Alignment.CenterEnd) {
-                    if (!provider.isActive && provider.id in profileSourceIds) {
-                        TvIconAction(
-                            onClick = { onSelect(provider) },
-                            icon = CinemaIcons.SwapHoriz,
-                            label = stringResource(R.string.provider_use_button),
-                        )
-                    }
-                }
                 Box(modifier = Modifier.width(ACTION_SLOT_WIDTH), contentAlignment = Alignment.CenterEnd) {
                     // Guide sources only apply to sources that carry live channels
                     if (MediaProviderFactory.hasLiveTv(provider)) {
@@ -429,7 +402,7 @@ private fun ProviderList(
 }
 
 /**
- * Width of the Use and Guide slots. Fixed so the ⋮ column lines up across rows whatever a row
+ * Width of the Guide slot. Fixed so the ⋮ column lines up across rows whatever a row
  * shows; a Settings input width, since these are the Settings-side controls of a row.
  */
 private val ACTION_SLOT_WIDTH = TvDimensions.settingsInputWidth

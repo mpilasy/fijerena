@@ -94,8 +94,22 @@ class MergedLists(
      * The last channel watched: each source's own (as one source chose it before), the newest of
      * them; null when none is in its source's Recent.
      */
-    suspend fun lastWatchedChannel(): MediaItem? =
-        newestLastWatched(each { repo -> repo.getLastItemId(ContentType.LIVE_TV) to repo.getRecentItemsSuspend(ContentType.LIVE_TV) })
+    suspend fun lastWatchedChannel(): MediaItem? = lastPlayedItem(ContentType.LIVE_TV)
+
+    /**
+     * The item of [contentType] played last across the sources, as (source, id) — what a list
+     * marks as current (Phase 6): each source's own last item, the newest of them. With one source
+     * its last item alone, without reading its Recent; null when there is none.
+     */
+    suspend fun lastPlayed(contentType: String): Pair<Long, String>? =
+        if (sources.size == 1) {
+            sources.first().let { source -> source.repo.getLastItemId(contentType)?.let { source.providerId to it } }
+        } else {
+            lastPlayedItem(contentType)?.let { it.providerId to it.id }
+        }
+
+    private suspend fun lastPlayedItem(contentType: String): MediaItem? =
+        newestLastWatched(each { repo -> repo.getLastItemId(contentType) to repo.getRecentItemsSuspend(contentType) })
 
     /** Takes a row out of Recent on its own source; null where that source keeps its own history. */
     suspend fun removeFromRecent(
@@ -138,20 +152,21 @@ class MergedLists(
         const val CONTINUE_WATCHING_LIMIT = 10
 
         /**
-         * The lists of the profile in use, with [providerId]'s source (0 = the active one) first:
-         * its own repository, then the profile's other Xtream sources' when it is one. The others'
+         * The lists of the merged sections (Phase 6): the profile's Xtream sources, its first one
+         * first; null when it has none. Stored data only, so no source's session is waited for —
+         * one that is offline holds nothing up.
+         */
+        suspend fun forSections(context: Context): MergedLists? {
+            val container = AppContainer.getInstance(context)
+            return browsingProviderId(container, 0L)?.let { withOthers(container, container.getStoredDataRepository(it)) }
+        }
+
+        /**
+         * The lists of the profile in use around [primary], a repository the screen already holds:
+         * it first, then the profile's other Xtream sources' when it is one. The others'
          * repositories don't wait for their session (only stored data is read here); one that can't
          * be opened is left out.
          */
-        suspend fun forProfile(
-            context: Context,
-            providerId: Long = 0L,
-        ): MergedLists {
-            val container = AppContainer.getInstance(context)
-            return withOthers(container, container.getMediaRepository(providerId))
-        }
-
-        /** [forProfile] around a repository the screen already holds. */
         suspend fun withOthers(
             container: AppContainer,
             primary: MediaRepository,
@@ -188,21 +203,20 @@ class MergedLists(
         /**
          * The source a list opened on [providerId] is built around: that one when given; for a
          * section (0) the profile's first Xtream source, so Live TV, Movies and TV Shows list every
-         * Xtream source's categories whichever source is active (Phase 6). 0 (the active source, as
-         * before) when the profile has none.
+         * Xtream source's categories (Phase 6). Null for a section when the profile has none (the
+         * sections aren't offered then).
          */
         suspend fun browsingProviderId(
             container: AppContainer,
             providerId: Long,
-        ): Long =
+        ): Long? =
             if (providerId != 0L) {
                 providerId
             } else {
-                suspendRunCatching { container.providerRepository.profileSourcesList() }
-                    .onFailure { Log.w(TAG, "Profile sources unreadable; the section stays on the active source", it) }
-                    .getOrNull()
-                    ?.firstOrNull { it.type == XTREAM }
-                    ?.id ?: 0L
+                container.providerRepository
+                    .profileSourcesList()
+                    .firstOrNull { it.type == XTREAM }
+                    ?.id
             }
 
         /**

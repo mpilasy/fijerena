@@ -285,7 +285,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ### Search UI
 
-**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, "In <category> only" and "Matched only" toggles. The header has **TV Guide** (`EpgGuide` for Recent; Back from the grid lands on it), Refresh, then **Guide sources** (when the source in use has live channels, `EpgBrowserViewModel.guideSourcesProviderId`) opening `EpgManagement` for it — the source in use only, until the plan's Phase 6 adds a source chooser; Back lands on that button (its own `NavReturnFocus`, which also holds off the search field's first-open focus).
+**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, "In <category> only" and "Matched only" toggles. The header has **TV Guide** (`EpgGuide` for Recent; Back from the grid lands on it), Refresh, then **Guide sources** (when the profile has a source with live channels, `EpgBrowserViewModel.guideSourceOwners`) opening `EpgManagement` for it — with two or more, a source chooser first (`SourceChoice`, multi-source plan O4); Back lands on that button (its own `NavReturnFocus`, which also holds off the search field's first-open focus).
 
 **Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, the same toggles; the top bar's actions are TV Guide, Refresh and Guide sources, as on TV.
 
@@ -293,7 +293,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ## Settings & Configuration
 
-**Guide sources** (`Screen.EpgManagement(providerId)`, titled "Guide sources · <source>"; `TvEpgManagementScreen` / `MobileEpgManagementScreen`, `EpgManagementViewModel`): opened from the source's Edit Source (Guide sources ›, with the count and last refresh as its value), the Sources list's Guide button, or Search the guide's Guide sources button (the source in use); Back returns focus to the control that opened it. Guide sources belong to one provider (`epg_source.provider_id`); several XMLTV sources can be added, edited, enabled/disabled and deleted. Fields: see `epg_source` in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §1.
+**Guide sources** (`Screen.EpgManagement(providerId)`, titled "Guide sources · <source>"; `TvEpgManagementScreen` / `MobileEpgManagementScreen`, `EpgManagementViewModel`): opened from the source's Edit Source (Guide sources ›, with the count and last refresh as its value), the Sources list's Guide button, or Search the guide's Guide sources button (a source of the profile, chosen first with several); Back returns focus to the control that opened it. Guide sources belong to one provider (`epg_source.provider_id`); several XMLTV sources can be added, edited, enabled/disabled and deleted. Fields: see `epg_source` in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §1.
 
 **Actions:** Refresh Stale (N), Retry Failed (N), Refresh (N) for the sources selected with the row checkboxes, a per-source Refresh, Edit, Auto-refresh and Delete, and Delete selected.
 

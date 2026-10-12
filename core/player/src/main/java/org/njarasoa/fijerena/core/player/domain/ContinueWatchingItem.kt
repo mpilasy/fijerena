@@ -25,7 +25,7 @@ data class ContinueWatchingItem(
      * "Up next" instead of a progress bar and time remaining.
      */
     val upNext: Boolean = false,
-    /** The source the card is on, so it opens there; 0 = the active source. */
+    /** The source the card is on, so it opens there. */
     val providerId: Long = 0L,
     /** When it was last played (epoch ms): the shelf is merged across sources newest first. */
     val lastPlayedAt: Long = 0L,

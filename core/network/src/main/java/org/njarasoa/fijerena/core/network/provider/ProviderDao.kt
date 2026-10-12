@@ -12,14 +12,18 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 @Dao
 interface ProviderDao {
-    @Query("SELECT * FROM providers ORDER BY isActive DESC, name COLLATE NOCASE ASC")
+    @Query("SELECT * FROM providers ORDER BY name COLLATE NOCASE ASC")
     fun getAllProviders(): Flow<List<ProviderEntity>>
 
-    @Query("SELECT * FROM providers ORDER BY isActive DESC, name COLLATE NOCASE ASC")
+    @Query("SELECT * FROM providers ORDER BY name COLLATE NOCASE ASC")
     suspend fun getAllProvidersList(): List<ProviderEntity>
 
-    @Query("SELECT * FROM providers WHERE isActive = 1 LIMIT 1")
-    suspend fun getActiveProvider(): ProviderEntity?
+    /**
+     * The source an older build had this device on (`isActive`, unused since multi-source Phase 6),
+     * for the one-time upgrade to per-profile sources only.
+     */
+    @Query("SELECT providerKey FROM providers WHERE isActive = 1 LIMIT 1")
+    suspend fun legacyActiveProviderKey(): String?
 
     @Query("SELECT * FROM providers WHERE id = :id")
     suspend fun getProviderById(id: Long): ProviderEntity?
@@ -59,15 +63,6 @@ interface ProviderDao {
 
     @Query("SELECT * FROM sync_tombstone")
     suspend fun getAllTombstones(): List<SettingsTombstoneEntity>
-
-    @Query("UPDATE providers SET isActive = 0")
-    suspend fun deactivateAll()
-
-    @Query("UPDATE providers SET isActive = 1, lastUsedAt = :timestamp WHERE id = :id")
-    suspend fun activateProvider(
-        id: Long,
-        timestamp: Long = System.currentTimeMillis(),
-    )
 
     // inserted/updated/deleted are nullable and COALESCE onto the existing value when null: a
     // failed sync (delta unknown) must leave the last real delta in place rather than overwrite

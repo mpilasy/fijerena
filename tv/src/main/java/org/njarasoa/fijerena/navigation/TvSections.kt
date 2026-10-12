@@ -54,9 +54,8 @@ internal enum class TvSection(
 
 /**
  * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the profile's
- * Xtream sources' content types, merged; with none, the active source's; none while they are
- * unknown, before a Jellyfin sign-in), Search, Settings. The Browse entries go between the
- * sections and Search (`TvNavRail`).
+ * Xtream sources' content types, merged; none while unknown or when it has no Xtream source),
+ * Search, Settings. The Browse entries go between the sections and Search (`TvNavRail`).
  */
 internal fun railItems(sections: Set<String>?): List<RailItem> =
     listOf(RailItem.PROFILE, RailItem.HOME) +
@@ -119,81 +118,18 @@ private fun NavController.isOnBackStack(route: Screen): Boolean =
     }
 
 /**
- * What the rail needs of the profile's sources: [sections] the merged sections of its Xtream
- * sources (multi-source plan, Phase 6) — or, with none, the active source's own, null while unknown
- * (a Jellyfin sign-in pending) — and a Browse entry for each of its other sources (O1).
+ * What the rail shows of the profile's sources (multi-source plan, Phase 6): the merged sections of
+ * its Xtream sources and a Browse entry for each of its other sources (O1); null when the profile
+ * has no source at all, where the rail stays hidden (Home offers Add Source).
  */
-private data class RailSource(
-    val providerId: Long,
-    val sections: Set<String>?,
-    /** The sections are the active Xtream source's, synced with no live categories: Live TV is left off. */
-    val noChannels: Boolean = false,
-    val browse: List<BrowseSource> = emptyList(),
-    /** [sections] are the merged ones, not the active source's. */
-    val merged: Boolean = false,
-)
-
-/**
- * The profile's sections and Browse entries, or null with no active source. Without an Xtream
- * source, the active source's sections are kept from [known] when it is the same source and they
- * were read, so a re-read is only a database lookup.
- */
-private suspend fun loadRailSource(
-    context: Context,
-    known: RailSource?,
-): RailSource? =
-    withContext(Dispatchers.IO) {
-        val providerRepo = ProviderRepository(context.applicationContext)
-        val provider = providerRepo.getActiveProvider() ?: return@withContext null
-        val profile = ProfileSections.load(context)
-        val sections =
-            when {
-                // The profile's Xtream sources' sections, merged.
-                profile.merged != null -> {
-                    profile.merged
-                }
-
-                // No repository for a Jellyfin server without a login: it could only fail to authenticate.
-                !providerRepo.hasLogin(provider) -> {
-                    null
-                }
-
-                known?.providerId == provider.id && known.sections != null && !known.merged -> {
-                    known.sections
-                }
-
-                else -> {
-                    AppContainer
-                        .getInstance(context.applicationContext)
-                        .getMediaRepository(provider.id)
-                        .getProvider()
-                        ?.capabilities
-                        ?.supportedContentTypes
-                }
-            }
-        // Live TV leaves the rail when the source has no channels — what Home's dimmed Live TV tile
-        // used to say. Re-read every time (a later sync may bring them), as the phone does: only for
-        // Xtream once it has synced, a count of its stored live categories, no network call.
-        val noChannels =
-            profile.merged == null &&
-                provider.type == "XTREAM" &&
-                provider.lastSyncedAtMs > 0 &&
-                sections?.contains(ContentType.LIVE_TV) == true &&
-                (
-                    AppContainer
-                        .getInstance(context.applicationContext)
-                        .getMediaRepository(provider.id)
-                        .getProvider() as? XtreamMediaProvider
-                )?.getCategoryTotalCount(ContentType.LIVE_TV) == 0
-        RailSource(provider.id, sections, noChannels, profile.browse, merged = profile.merged != null)
-    }
+private suspend fun loadRailSource(context: Context): ProfileSections? = ProfileSections.load(context).takeUnless { it.hasNoSources }
 
 /**
  * The rail over the nav host: its items from the profile's sources (the merged sections, then a
  * Browse entry per other source), the profile's initial, and the lit
- * item from the back stack. The source and profile are re-read on every destination change — a
- * source or profile switch, a Jellyfin sign-in or a rename all end on another screen. Hidden while
- * there is no source, and without Home under the screen (Settings, Safe mode or Newer data as the
+ * item from the back stack. The sources and profile are re-read on every destination change — a
+ * profile switch, a source turned on or off, added or renamed all end on another screen. Hidden
+ * while the profile has no source, and without Home under the screen (Settings, Safe mode or Newer data as the
  * first screen): the rail's picks all lead from Home. Its own composable, so a destination change recomposes the rail, not the
  * NavHost.
  */
@@ -204,23 +140,20 @@ internal fun TvSectionRail(
     onSelect: (RailItem) -> Unit,
     // A "Browse <source>" entry picked (O1): that source's sections, browsed on it alone.
     onBrowse: (BrowseSource) -> Unit,
-    // Bumped when the source changes without a screen change (Home's source pill): the rail
-    // re-reads its sections then too, not only on navigation.
-    sourceVersion: Int = 0,
 ) {
     val context = LocalContext.current
     val entry by navController.currentBackStackEntryAsState()
-    var source by remember { mutableStateOf<RailSource?>(null) }
+    var source by remember { mutableStateOf<ProfileSections?>(null) }
     var homeOnStack by remember { mutableStateOf(false) }
     var activeProfileId by remember { mutableStateOf<String?>(null) }
     val profiles by remember { ProfileRepository(context.applicationContext).observeProfiles() }
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
-    LaunchedEffect(entry?.id, sourceVersion) {
+    LaunchedEffect(entry?.id) {
         val destination = entry?.destination ?: return@LaunchedEffect
         rail.current = railCurrent(destination.topScreen(), navController.currentSection())
         homeOnStack = navController.isOnBackStack(Screen.ContentTypeSelection)
-        source = loadRailSource(context, source)
+        source = loadRailSource(context)
         activeProfileId = withContext(Dispatchers.IO) { AppSettings(context.applicationContext).activeProfileId }
     }
 
@@ -232,7 +165,7 @@ internal fun TvSectionRail(
     rail.profileColorIndex = activeProfile?.colorIndex ?: 0
     TvNavRail(
         state = rail,
-        items = railItems(source?.let { if (it.noChannels) it.sections?.minus(ContentType.LIVE_TV) else it.sections }),
+        items = railItems(source?.merged),
         profileInitial = profileInitial,
         onSelect = onSelect,
         browse = source?.browse.orEmpty(),

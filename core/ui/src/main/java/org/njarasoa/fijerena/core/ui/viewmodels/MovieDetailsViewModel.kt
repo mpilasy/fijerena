@@ -24,7 +24,7 @@ class MovieDetailsViewModel(
     private var movieId: String,
     private var categoryId: String,
     private var streamName: String,
-    // The source the film is on; 0 = the active source.
+    // The source the film is on (the route's).
     private val providerId: Long = 0L,
 ) : ViewModel() {
     sealed class UiState {

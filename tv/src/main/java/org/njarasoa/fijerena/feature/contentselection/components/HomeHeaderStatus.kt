@@ -9,11 +9,16 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,44 +27,40 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
-import org.njarasoa.fijerena.core.ui.home.rememberSyncPhase
-import org.njarasoa.fijerena.core.ui.home.updatingText
+import org.njarasoa.fijerena.core.ui.home.SyncSummary
+import org.njarasoa.fijerena.core.ui.home.rememberMinuteTick
+import org.njarasoa.fijerena.core.ui.home.sourceStatusText
+import org.njarasoa.fijerena.core.ui.home.syncSummaryText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.util.Date
-
-/**
- * The wall clock, re-read on each minute boundary. Only the composable reading it recomposes, once
- * a minute — never the whole of Home.
- */
-@Composable
-private fun rememberMinuteTick(): Long {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(DateUtils.MINUTE_IN_MILLIS - now % DateUtils.MINUTE_IN_MILLIS)
-        }
-    }
-    return now
-}
 
 /** Home's clock, in the system's 12/24 h format. */
 @Composable
@@ -74,41 +75,27 @@ fun HomeClock(modifier: Modifier = Modifier) {
 }
 
 /**
- * The source pill's status: a dot and "Updating…" (or, once the sync has counted something, its
- * phase: "Loading films… 12 400") / "Update failed" / "Updated 2 hours ago".
- * Nothing for a source that has never synced (Jellyfin, M3U, a new Xtream source).
+ * Home's one line for all the profile's sources (O3): a dot and "Updated 2 hours ago" /
+ * "Updating 1 of 3…" (with the running sync's phase once it has counted something) / "1 failed".
+ * Nothing when no source syncs its catalogue (Jellyfin, M3U, a new Xtream source).
  */
 @Composable
-internal fun SourceSyncStatusLine(
-    status: SourceSyncStatus,
-    lastSyncedAtMs: Long,
-    providerId: Long,
+internal fun SyncSummaryLine(
+    summary: SyncSummary,
     modifier: Modifier = Modifier,
 ) {
-    if (status == SourceSyncStatus.NONE) return
     // Ticks so "Updated 2 minutes ago" keeps counting while Home stays up.
-    val now = rememberMinuteTick()
-    val text =
-        when (status) {
-            SourceSyncStatus.UPDATING -> {
-                updatingText(rememberSyncPhase(providerId))
-            }
+    val text = syncSummaryText(summary, rememberMinuteTick()) ?: return
+    StatusLine(summary.status, text, modifier)
+}
 
-            SourceSyncStatus.FAILED -> {
-                stringResource(R.string.home_source_update_failed)
-            }
-
-            else -> {
-                // Under a minute, getRelativeTimeSpanString says "0 minutes ago".
-                val ago =
-                    if (now - lastSyncedAtMs < DateUtils.MINUTE_IN_MILLIS) {
-                        stringResource(R.string.live_sync_just_now)
-                    } else {
-                        DateUtils.getRelativeTimeSpanString(lastSyncedAtMs, now, DateUtils.MINUTE_IN_MILLIS).toString()
-                    }
-                stringResource(R.string.home_source_updated, ago)
-            }
-        }
+/** A dot coloured by [status] and [text] beside it: the summary line, or one source's in the sheet. */
+@Composable
+private fun StatusLine(
+    status: SourceSyncStatus,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
     val dotColor =
         when (status) {
             SourceSyncStatus.UPDATING -> CinemaWarning
@@ -126,6 +113,59 @@ internal fun SourceSyncStatusLine(
             modifier = Modifier.padding(start = Spacing.xs),
         )
     }
+}
+
+/**
+ * The summary line's sheet: each of the profile's sources with its status and, after a failed
+ * update, its reason — already with the raw detail in developer mode (ProviderSyncRunner). One
+ * focus stop per source (the information is reachable by D-pad), focus on the first; OK and Back
+ * close it.
+ */
+@Composable
+internal fun SourcesStatusSheet(
+    states: List<SourceSyncState>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+    val now = rememberMinuteTick()
+    val firstRow = remember { FocusRequester() }
+    CinemaAlertDialog(
+        initialFocus = firstRow,
+        onDismissRequest = onDismiss,
+        // The darkest surface behind the rows, as the TV pickers (TV UI audit #3).
+        containerColor = CinemaBackground,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+        title = { androidx.compose.material3.Text(stringResource(R.string.home_sources_status_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                states.forEachIndexed { index, state ->
+                    val status = sourceStatusText(state, now)
+                    val reason =
+                        state.lastSyncError
+                            ?.takeIf { state.status == SourceSyncStatus.FAILED }
+                            ?.let { stringResource(R.string.home_source_update_failed_detail, it) }
+                    TvOptionRow(
+                        title = if (isDevMode) "${state.name} (${state.type})" else state.name,
+                        subtitle = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null },
+                        selected = false,
+                        onClick = onDismiss,
+                        modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary),
+            ) { androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
+        },
+    )
 }
 
 @Composable

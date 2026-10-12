@@ -135,6 +135,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
+import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.domain.sourceKey
@@ -623,7 +624,7 @@ fun MobileCategoryListScreen(
                                 // after the catch-up has started on the same player.
                                 StreamingPlaybackService.getInstance()?.stop()
                                 handedOff = true
-                                start(program, target)
+                                start(program, target.copy(providerId = target.sourceOr(viewModel.sourceId)))
                             }
                             startOver
                         }
@@ -676,7 +677,7 @@ fun MobileCategoryListScreen(
                                                     onEpgClick(
                                                         selectedCatId,
                                                         selectedCatName,
-                                                        selectedCat.providerId,
+                                                        selectedCat.providerId.takeIf { it != 0L } ?: viewModel.sourceId,
                                                     )
                                                 }
                                             },
@@ -829,7 +830,7 @@ fun MobileCategoryListScreen(
                                                         onEpgClick(
                                                             guideCategoryId,
                                                             guideCategoryName,
-                                                            guideCategory.providerId,
+                                                            guideCategory.providerId.takeIf { it != 0L } ?: viewModel.sourceId,
                                                         )
                                                     }
                                                 }
@@ -933,6 +934,7 @@ fun MobileCategoryListScreen(
                                                     selectedCategoryId = displayedCategoryId,
                                                     selectedCategoryKey = displayedCategoryKey,
                                                     lastPlayedItemId = state.lastPlayedItemId,
+                                                    lastPlayedSource = state.lastPlayedSource,
                                                     nowPlaying = nowPlaying,
                                                     catchupDays = catchupDays,
                                                     watchedIds = watchedIds,
@@ -963,7 +965,7 @@ fun MobileCategoryListScreen(
                                                                     item.categoryId,
                                                                     contentType,
                                                                     selected,
-                                                                    item.providerId,
+                                                                    item.sourceOr(viewModel.sourceId),
                                                                 )
                                                             }
                                                         }
@@ -1551,6 +1553,8 @@ private fun StreamsList(
     selectedCategoryKey: String? = selectedCategoryId,
     libraryLoading: Boolean = false,
     lastPlayedItemId: String? = null,
+    // [lastPlayedItemId]'s source (0: any): the same id on another source isn't current (Phase 6).
+    lastPlayedSource: Long = 0L,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
     catchupDays: ImmutableCatchupDays = ImmutableCatchupDays(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
@@ -1611,7 +1615,7 @@ private fun StreamsList(
 
     LaunchedEffect(items, lastPlayedItemId) {
         if (!items.isNullOrEmpty() && lastPlayedItemId != null) {
-            val index = items.indexOfFirst { it.id == lastPlayedItemId }
+            val index = items.indexOfFirst { it.isLastPlayed(lastPlayedItemId, lastPlayedSource) }
             if (index > 0) {
                 listState.animateScrollToItem(index)
             }
@@ -1699,7 +1703,12 @@ private fun StreamsList(
                                 nowPlayingProgram = nowPlaying[item.sourceKey],
                                 catchupDays = catchupDays[item.sourceKey] ?: 0,
                                 isCurrentlyPlaying = item.id == currentlyPlayingId,
-                                isCurrent = item.id == (currentlyPlayingId ?: lastPlayedItemId),
+                                isCurrent =
+                                    if (currentlyPlayingId != null) {
+                                        item.id == currentlyPlayingId
+                                    } else {
+                                        item.isLastPlayed(lastPlayedItemId, lastPlayedSource)
+                                    },
                                 isWatched = item.sourceKey in watchedIds,
                                 watchProgress = watchProgress[item.sourceKey] ?: 0f,
                                 cardColors = streamCardColors,

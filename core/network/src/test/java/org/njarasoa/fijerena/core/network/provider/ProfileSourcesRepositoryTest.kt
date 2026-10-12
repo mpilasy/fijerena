@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -25,9 +24,8 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
- * A new source is on for the profile that added it only, the upgrade seeds profiles before the
- * first add, and deleting the source in use stays within the profile's sources (multi-source plan,
- * Phase 2).
+ * A new source is on for the profile that added it only, and the upgrade seeds profiles before the
+ * first add (multi-source plan, Phase 2).
  */
 class ProfileSourcesRepositoryTest {
     private val prefsFiles = mutableMapOf<String, SharedPreferences>()
@@ -79,8 +77,10 @@ class ProfileSourcesRepositoryTest {
     fun `adding a source before the upgrade ran seeds profiles first`() =
         runBlocking {
             val settings = AppSettings(context)
-            val existing = ProviderEntity(id = 1, name = "A", url = "http://a.test", username = "me", isActive = true, providerKey = "a")
+            val existing = ProviderEntity(id = 1, name = "A", url = "http://a.test", username = "me", providerKey = "a")
             coEvery { dao.getAllProvidersList() } returns listOf(existing)
+            // The source an older build had the device on.
+            coEvery { dao.legacyActiveProviderKey() } returns "a"
             coEvery { profileDao.getAll() } returns
                 listOf(ProfileEntity(ProfileEntity.DEFAULT_ID, "Me", 0L), ProfileEntity(OTHER, "Kids", 1L))
             val inserted = slot<ProviderEntity>()
@@ -91,22 +91,6 @@ class ProfileSourcesRepositoryTest {
             // Both had the device's current source; only the profile in use gets the new one.
             assertEquals(setOf("a", inserted.captured.providerKey), settings.profileSourceKeys(ProfileEntity.DEFAULT_ID))
             assertEquals(setOf("a"), settings.profileSourceKeys(OTHER))
-        }
-
-    @Test
-    fun `deleting the source in use moves to one of the profile's own`() =
-        runBlocking {
-            val active = ProviderEntity(id = 1, name = "A", url = "http://a.test", username = "me", isActive = true, providerKey = "a")
-            val notMine = ProviderEntity(id = 2, name = "B", url = "http://b.test", username = "me", providerKey = "b")
-            val mine = ProviderEntity(id = 3, name = "C", url = "http://c.test", username = "me", providerKey = "c")
-            AppSettings(context).setProfileSourceKeys(ProfileEntity.DEFAULT_ID, setOf("a", "c"))
-            coEvery { dao.getProviderById(1) } returns active
-            coEvery { dao.getAllProvidersList() } returns listOf(notMine, mine)
-
-            ProviderRepository(context).deleteProvider(1)
-
-            coVerify { dao.activateProvider(3, any()) }
-            coVerify(exactly = 0) { dao.activateProvider(2, any()) }
         }
 
     private companion object {

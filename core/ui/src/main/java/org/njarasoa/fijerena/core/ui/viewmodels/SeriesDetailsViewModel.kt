@@ -25,7 +25,7 @@ class SeriesDetailsViewModel(
     private var seriesId: String,
     private var categoryId: String,
     private var seriesName: String,
-    // The source the show is on; 0 = the active source.
+    // The source the show is on (the route's).
     private val providerId: Long = 0L,
 ) : ViewModel() {
     private val appSettings = AppSettings(context)

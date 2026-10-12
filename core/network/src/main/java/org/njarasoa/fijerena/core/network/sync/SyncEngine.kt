@@ -37,8 +37,8 @@ class SyncEngine(
         /** Another device deleted the profile this one is using: switch away, then sync again. */
         fun onActiveProfileDeleted() {}
 
-        /** Another device deleted the active provider; this one has moved to the next. Follow it. */
-        fun onActiveProviderDeleted() {}
+        /** Another device deleted a provider this one had: no screen may stay on it. */
+        fun onProviderDeleted() {}
     }
 
     data class Outcome(
@@ -88,7 +88,7 @@ class SyncEngine(
         val applier = SyncApplier(context)
         var applied = 0
         var activeProfileDeleted = false
-        var activeProviderDeleted = false
+        var providerDeleted = false
         var waiting = store.deferred.mapNotNull { runCatching { json.decodeFromString<SyncWire.Record>(it) }.getOrNull() }
         while (true) {
             val page = api.pull(link.serverUrl, link.deviceToken, store.cursor)
@@ -104,7 +104,7 @@ class SyncEngine(
             val result = applier.apply(batch.mapNotNull { SyncCodec.decode(it, crypto) })
             applied += result.applied
             activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
-            activeProviderDeleted = activeProviderDeleted || result.activeProviderDeleted
+            providerDeleted = providerDeleted || result.providerDeleted
             if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
             if (result.providerChangedIds.isNotEmpty()) listener?.onProvidersChanged(result.providerChangedIds)
             val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
@@ -120,7 +120,7 @@ class SyncEngine(
             if (!page.more) break
         }
         if (activeProfileDeleted) listener?.onActiveProfileDeleted()
-        if (activeProviderDeleted) listener?.onActiveProviderDeleted()
+        if (providerDeleted) listener?.onProviderDeleted()
         return PullOutcome(applied, waiting.size, activeProfileDeleted)
     }
 

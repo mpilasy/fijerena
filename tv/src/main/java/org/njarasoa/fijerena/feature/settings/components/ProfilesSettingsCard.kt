@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -62,12 +63,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSourceUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -159,7 +162,8 @@ fun ProfilesSettingsCard(
 /**
  * A profile's page, in place of the Profiles group's rows (D8): name, colour, its own Developer
  * mode and Play next episode automatically, Sources › (with two or more sources), Content
- * filters › (the source in use, for this profile; Xtream only), Switch to this profile, Save /
+ * filters › (this profile's, on one of its Xtream sources — picked first when it has several, O4 of
+ * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, Save /
  * Cancel, and Delete last. Left and Back leave it unsaved, like Cancel. Content filters are saved
  * by their own editor's Save, and Sources by each switch, at once.
  */
@@ -184,7 +188,8 @@ fun ProfileEditPane(
     var returnToColour by remember { mutableStateOf(false) }
     var choosingSources by rememberSaveable { mutableStateOf(false) }
     var returnToSources by remember { mutableStateOf(false) }
-    var editingFilters by remember { mutableStateOf<CategoryFilters?>(null) }
+    var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
+    var choosingFiltersSource by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     // Set when a dialog opened from the page closes: focus goes back to the row that opened it.
     var refocus by remember { mutableStateOf<FocusRequester?>(null) }
@@ -194,10 +199,11 @@ fun ProfileEditPane(
     val sourcesFocus = remember { FocusRequester() }
     val deleteFocus = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) { viewModel.loadSourceInUse() }
-    val sourceInUse by viewModel.sourceInUse.collectAsStateWithLifecycle()
     // Content filters act on Xtream catalogues only (as they did in Edit Source).
-    val filtersSource = sourceInUse?.takeIf { it.type == "XTREAM" }
+    val filterSources by remember(profile.id) { viewModel.filterSources(profile.id) }.collectAsStateWithLifecycle(emptyList())
+    val editFilters = { source: FilterSource ->
+        viewModel.loadCategoryFilters(source.id, profile.id) { editingFilters = source to it }
+    }
     val sources by remember(profile.id) { viewModel.profileSources(profile.id) }.collectAsStateWithLifecycle(emptyList())
 
     if (choosingColour) {
@@ -330,13 +336,17 @@ fun ProfileEditPane(
                         focusRequester = sourcesFocus,
                     )
                 }
-                if (filtersSource != null) {
+                if (filterSources.isNotEmpty()) {
                     SettingsRow(
                         title = stringResource(R.string.profile_content_filters_title),
                         description = stringResource(R.string.provider_category_filters_desc),
-                        value = filtersSource.name,
+                        value = filterSources.joinToString { it.name },
                         onClick = {
-                            viewModel.loadCategoryFilters(filtersSource.id, profile.id) { editingFilters = it }
+                            when (val choice = SourceChoice.of(filterSources)) {
+                                is SourceChoice.One -> editFilters(choice.source)
+                                is SourceChoice.Ask -> choosingFiltersSource = true
+                                SourceChoice.None -> Unit
+                            }
                         },
                         focusRequester = filtersFocus,
                     )
@@ -383,8 +393,21 @@ fun ProfileEditPane(
             }
         }
 
-        val filters = editingFilters
-        if (filters != null && filtersSource != null) {
+        if (choosingFiltersSource) {
+            TvSourceChooserDialog(
+                sources = filterSources.map { it.id to it.name },
+                onChosen = { id ->
+                    choosingFiltersSource = false
+                    filterSources.firstOrNull { it.id == id }?.let(editFilters)
+                },
+                onDismiss = {
+                    choosingFiltersSource = false
+                    refocus = filtersFocus
+                },
+            )
+        }
+
+        editingFilters?.let { (filtersSource, filters) ->
             CategoryFilterDialog(
                 title = stringResource(R.string.provider_section_content_filters_format, filtersSource.name),
                 currentFilters = filters,
@@ -478,7 +501,6 @@ private fun ProfileSourcesPane(
                     checked = source.isOn,
                     onCheckedChange = { onToggle(source.providerKey, it) },
                     label = source.name,
-                    description = if (source.inUse) stringResource(R.string.settings_profiles_active_marker) else null,
                     modifier = if (index == 0) Modifier.focusRequester(firstFocus) else Modifier,
                 )
             }

@@ -24,14 +24,16 @@ data class BrowseSource(
  * the merged lists (O1).
  */
 data class ProfileSections(
-    /**
-     * The merged sections' content types; null when the profile has no Xtream source, where the
-     * sections stay the active source's own, as before.
-     */
-    val merged: Set<String>?,
-    /** The profile's other sources, in its order; not the active one while the sections are its own. */
+    /** The merged sections' content types; empty when the profile has no Xtream source. */
+    val merged: Set<String>,
+    /** The profile's other sources, in its order. */
     val browse: List<BrowseSource>,
+    /** The profile's Xtream sources, in its order: what the merged sections list. */
+    val xtreamIds: List<Long> = emptyList(),
 ) {
+    /** The profile has no source at all (all deleted, or none turned on): Home offers Add source. */
+    val hasNoSources: Boolean get() = xtreamIds.isEmpty() && browse.isEmpty()
+
     /** What a Browse entry opens. */
     sealed interface Opening {
         /** This profile has no login for the source (a Jellyfin server): its sign-in. */
@@ -56,25 +58,21 @@ data class ProfileSections(
         /**
          * [sources] are the profile's, in its order; [noChannels] the Xtream ones whose last sync
          * found no live categories (Live TV is left out when every one of them has none, as one
-         * source's empty Live TV was); [activeId] the active source.
+         * source's empty Live TV was).
          */
         internal fun of(
             sources: List<ProviderEntity>,
             noChannels: Set<Long>,
-            activeId: Long?,
         ): ProfileSections {
             val xtream = sources.filter { it.type == XTREAM }
             val merged =
                 when {
-                    xtream.isEmpty() -> null
+                    xtream.isEmpty() -> emptySet()
                     xtream.all { it.id in noChannels } -> XTREAM_SECTIONS - ContentType.LIVE_TV
                     else -> XTREAM_SECTIONS
                 }
-            val browse =
-                sources
-                    .filter { it.type != XTREAM && (merged != null || it.id != activeId) }
-                    .map { BrowseSource(it.id, it.name) }
-            return ProfileSections(merged, browse)
+            val browse = sources.filter { it.type != XTREAM }.map { BrowseSource(it.id, it.name) }
+            return ProfileSections(merged, browse, xtream.map { it.id })
         }
 
         /** [of] for the profile in use: its sources, and a count of each synced Xtream one's live categories. */
@@ -94,7 +92,7 @@ data class ProfileSections(
                             }.onFailure { Log.w(TAG, "Source ${entity.id}'s channels unknown", it) }
                                 .getOrDefault(false)
                         }.mapTo(HashSet()) { it.id }
-                of(sources, noChannels, providerRepo.getActiveProvider()?.id)
+                of(sources, noChannels)
             }
 
         /** [contentTypes] in section order. */

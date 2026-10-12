@@ -476,9 +476,6 @@
 
     <!-- Settings: Provider Card -->
     <string name="settings_provider_section_title">Source</string>
-    <string name="settings_provider_expires_label">Expire le</string>
-    <string name="settings_provider_max_connections_label">Connexions max.</string>
-    <string name="settings_provider_trial_account_label">Compte d\'essai</string>
     <string name="settings_provider_manage_button">Gérer les sources</string>
 
     <!-- EPG Management extras -->
@@ -556,7 +553,7 @@
     <string name="device_info_build">Build</string>
     <string name="device_info_installed">Installée le</string>
     <string name="device_info_updated">Mise à jour le</string>
-    <string name="device_info_active_source_type">Source utilisée</string>
+    <string name="device_info_profile_sources">Sources du profil</string>
     <string name="device_info_source_count">Sources</string>
     <string name="device_info_profile_count">Profils</string>
     <string name="device_info_model">Modèle</string>
@@ -612,8 +609,6 @@
     <string name="settings_ui_style_desc">Choisir une apparence</string>
 
     <!-- Content Type Selection -->
-    <string name="content_switch_provider_title">Changer de source</string>
-    <string name="content_switch_provider_description_format">Changer de source, source actuelle : %1$s</string>
     <string name="home_source_updating">Mise à jour…</string>
     <string name="home_source_updated">Mis à jour %1$s</string>
     <string name="home_source_update_failed">Échec de la mise à jour</string>
@@ -728,7 +723,6 @@
     <string name="stream_error_initialization_failed">Échec de l\'initialisation</string>
     <string name="stream_error_resolve_failed">Échec de la résolution du flux</string>
     <string name="stream_error_unknown">Erreur inconnue lors du chargement du flux</string>
-    <string name="subscription_unlimited">Illimité</string>
 
     <!-- ViewModel error-fallback audit fixes -->
     <string name="login_error_timeout">Délai de connexion dépassé. Vérifiez votre réseau ou l\'URL du serveur.</string>
@@ -776,13 +770,11 @@
     <string name="profile_switching">Passage à %1$s…</string>
     <string name="profile_picker_title">Qui regarde ?</string>
     <string name="profile_switch_description">Changer de profil (%1$s)</string>
-    <string name="profile_jellyfin_sign_in_prompt">Connectez-vous à %1$s pour ce profil</string>
-    <string name="profile_jellyfin_sign_in_button">Se connecter</string>
     <string name="profile_switch_to_button">Passer à ce profil</string>
     <string name="profile_content_filters_title">Filtres de contenu</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d sur %2$d</string>
-    <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n\'est activée que pour le profil qui l\'a ajoutée. Un profil garde au moins une source, ainsi que celle qu\'il utilise sur cet appareil.</string>
+    <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n\'est activée que pour le profil qui l\'a ajoutée. Un profil garde au moins une source.</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
     <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter. Pour installer un serveur, voir le dossier server sur github.com/mpilasy/fijerena.</string>
@@ -892,7 +884,6 @@
     <string name="settings_watch_delay_row_title">Compter comme regardé après</string>
     <string name="settings_language_desc">Langue des menus et des messages</string>
     <!-- M3 -->
-    <string name="provider_use_button">Utiliser</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Maintenez OK ou appuyez sur Menu pour les actions</string>
     <string name="row_more_actions">Plus d\'actions</string>
@@ -1205,4 +1196,14 @@
     <string name="theme_teal">Bleu canard</string>
     <string name="source_badge_description">Source : %1$s</string>
     <string name="browse_source">Parcourir %1$s</string>
+    <string name="source_chooser_title">Choisir une source</string>
+    <string name="home_sync_updating_count">Mise à jour de %1$d sur %2$d…</string>
+    <string name="home_sync_updating_count_phase">Mise à jour de %1$d sur %2$d · %3$s</string>
+    <plurals name="home_sync_failed_count">
+        <item quantity="one">%1$d en échec</item>
+        <item quantity="other">%1$d en échec</item>
+    </plurals>
+    <string name="home_sources_status_title">Vos sources</string>
+    <string name="home_no_sources">Ce profil n\'a encore aucune source.</string>
+    <string name="home_only_browse_sources">Choisissez une source à parcourir.</string>
 </resources>

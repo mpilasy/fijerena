@@ -93,9 +93,9 @@ fun hidesBottomBar(destination: NavDestination?): Boolean =
         )
 
 /**
- * The tabs the bar shows: the sections the active source has, then Search and Settings — none, so no bar,
- * when the source has no section yet. [supportedTypes] is null until the source is resolved, and
- * stays null while a Jellyfin source waits for its sign-in: there is no library to open yet. A
+ * The tabs the bar shows: the profile's merged sections (its Xtream sources', multi-source plan
+ * Phase 6), then Search and Settings — none, so no bar, when it has no section (no Xtream source:
+ * the tab roots show the sources panel). [supportedTypes] is null until the sources are read. A
  * single section still shows the bar, for Search and Settings.
  */
 fun visibleTabs(supportedTypes: Collection<String>?): List<MobileTab> {
@@ -104,9 +104,9 @@ fun visibleTabs(supportedTypes: Collection<String>?): List<MobileTab> {
 }
 
 /**
- * The tab the app opens on: [lastTab] (the section the profile last had open) when the source has
- * it, else the first the source has in bar order — Live TV, Movies, TV Shows. With the source's
- * sections not known ([supportedTypes] null or empty), [lastTab] or Live TV.
+ * The tab the app opens on: [lastTab] (the section the profile last had open) when its sources have
+ * it, else the first they have in bar order — Live TV, Movies, TV Shows. With the sections not
+ * known or none ([supportedTypes] null or empty), [lastTab] or Live TV.
  */
 fun startTab(
     lastTab: String?,

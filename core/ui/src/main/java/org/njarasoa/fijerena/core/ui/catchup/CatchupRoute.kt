@@ -8,13 +8,13 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 
 /**
  * The player route that replays [program] from [channel]'s archive (catch-up), from the start of
- * its window ([CatchupAvailability.window]), on [providerId]'s source (0 = the active one). See
+ * its window ([CatchupAvailability.window]), on [providerId]'s source. See
  * docs/plans/archive/20261010_catchup-plan.md.
  */
 fun catchupRoute(
     program: EpgProgram,
     channel: MediaItem,
-    providerId: Long = 0L,
+    providerId: Long,
 ): Screen.Player {
     val window = CatchupAvailability.window(program)
     return Screen.Player(

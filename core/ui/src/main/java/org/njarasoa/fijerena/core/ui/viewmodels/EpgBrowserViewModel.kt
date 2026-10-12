@@ -74,7 +74,7 @@ class EpgBrowserViewModel(
      * whole guide, no such filter.
      */
     private val categoryId: String? = null,
-    /** The source of the TV Guide it was opened from; 0 = the active source. */
+    /** The source of the TV Guide it was opened from; 0 when not opened from one. */
     private val contextProviderId: Long = 0L,
 ) : ViewModel() {
     /**
@@ -155,12 +155,13 @@ class EpgBrowserViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _activeProviderName = MutableStateFlow<String?>(null)
-    val activeProviderName: StateFlow<String?> = _activeProviderName.asStateFlow()
-
-    /** The source in use when it can have guide sources (it has live channels), else null. */
-    private val _guideSourcesProviderId = MutableStateFlow<Long?>(null)
-    val guideSourcesProviderId: StateFlow<Long?> = _guideSourcesProviderId.asStateFlow()
+    /**
+     * The profile's sources that can have guide sources (they have live channels), id to name, in
+     * its order: what the Guide sources button opens, picking the source first when there are
+     * several (multi-source plan, O4).
+     */
+    private val _guideSourceOwners = MutableStateFlow<List<Pair<Long, String>>>(emptyList())
+    val guideSourceOwners: StateFlow<List<Pair<Long, String>>> = _guideSourceOwners.asStateFlow()
 
     /** Indexer state exposed for UI (progress banner, settings display). */
     val indexState: StateFlow<EpgIndexState> = EpgIndexer.getInstance(context).state
@@ -350,7 +351,7 @@ class EpgBrowserViewModel(
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
         loadSourceLabels()
         viewModelScope.launchGuarded("EpgBrowserViewModel.channelMatcher") { ensureChannelMatcherCurrent(loadScope()) }
-        loadActiveProviderName()
+        loadGuideSourceOwners()
         categoryId?.let { id ->
             viewModelScope.launchGuarded("EpgBrowserViewModel.contextStreams") { loadContextStreamIds(id) }
         }
@@ -358,7 +359,7 @@ class EpgBrowserViewModel(
 
     private suspend fun loadContextStreamIds(categoryId: String) {
         // "In <category> only" stays on the guide's own source.
-        val guideProviderId = withContext(Dispatchers.IO) { providerRepository.getProviderOrActive(contextProviderId)?.id } ?: return
+        val guideProviderId = contextProviderId.takeIf { it > 0L } ?: return
         val repository = AppContainer.getInstance(context).getMediaRepository(guideProviderId)
         val items =
             CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
@@ -381,23 +382,15 @@ class EpgBrowserViewModel(
             )
     }
 
-    private fun loadActiveProviderName() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val provider =
-                        SettingsDatabase
-                            .getInstance(context)
-                            .providerDao()
-                            .getActiveProvider()
-                    _activeProviderName.value = provider?.name
-                    _guideSourcesProviderId.value = provider?.takeIf { MediaProviderFactory.hasLiveTv(it) }?.id
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    android.util.Log.e("EpgBrowserViewModel", "Failed to load active provider name", e)
+    private fun loadGuideSourceOwners() {
+        viewModelScope.launchGuarded("EpgBrowserViewModel.guideSourceOwners") {
+            _guideSourceOwners.value =
+                withContext(Dispatchers.IO) {
+                    providerRepository
+                        .profileSourcesList()
+                        .filter { MediaProviderFactory.hasLiveTv(it) }
+                        .map { it.id to it.name }
                 }
-            }
         }
     }
 

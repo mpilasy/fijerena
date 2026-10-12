@@ -43,10 +43,10 @@ class AppContainer(
     }
 
     /**
-     * Provides a MediaRepository instance for the specified provider ID.
-     * If the ID is 0, the active provider is used.
+     * Provides a MediaRepository instance for the source [providerId]. Every caller names a real
+     * source: there is no device or current source to fall back to (multi-source plan, Phase 6).
      */
-    suspend fun getMediaRepository(providerId: Long = 0L): MediaRepository =
+    suspend fun getMediaRepository(providerId: Long): MediaRepository =
         // Everything below touches disk: provider Room lookups, several SharedPreferences loads
         // (MediaRepository's cache, XtreamRepository's cache) and an OkHttp/Ktor client build.
         // Callers reach this from LaunchedEffect, which runs on Main, so without this the whole
@@ -85,26 +85,14 @@ class AppContainer(
     }
 
     private suspend fun cachedOrNewRepository(providerId: Long): MediaRepository {
-        val resolvedId =
-            if (providerId > 0L) {
-                providerId
-            } else {
-                providerRepository.getActiveProvider()?.id ?: 0L
-            }
-
         val repo =
             mutex.withLock {
-                mediaRepositories[resolvedId] ?: run {
-                    val settings = providerRepository.getProviderSettings(resolvedId)
+                mediaRepositories[providerId] ?: run {
+                    val settings = providerRepository.getProviderSettings(providerId)
                     val profileId = AppSettings(context.applicationContext).activeProfileId
-                    val newRepo = MediaRepository(context.applicationContext, resolvedId, profileId, settings)
+                    val newRepo = MediaRepository(context.applicationContext, providerId, profileId, settings)
 
-                    val entity =
-                        if (providerId > 0L) {
-                            providerRepository.getProviderById(providerId)
-                        } else {
-                            providerRepository.getActiveProvider()
-                        }
+                    val entity = providerRepository.getProviderById(providerId)
 
                     if (entity != null) {
                         // This profile's login — its own for Jellyfin, the shared one otherwise.
@@ -116,10 +104,9 @@ class AppContainer(
                                 login.password,
                             )
                         newRepo.setProvider(provider)
-                        // Only cache once we actually have a backing provider — otherwise this
-                        // provider-less repo would get stuck at mediaRepositories[0L] forever,
-                        // even after a real active provider is set up later.
-                        mediaRepositories[resolvedId] = newRepo
+                        // Only cache once we actually have a backing provider — otherwise a
+                        // provider-less repo (a source deleted meanwhile) would stay cached.
+                        mediaRepositories[providerId] = newRepo
                     }
                     newRepo
                 }
@@ -146,30 +133,16 @@ class AppContainer(
         }
     }
 
-    // (providerId, profileId) pairs already sent to sign in this process — see [shouldPromptSignIn].
-    private val signInPrompted =
-        java.util.concurrent.ConcurrentHashMap
-            .newKeySet<Pair<Long, String>>()
-
-    /**
-     * Whether the home screen should send this device's profile to sign in to [providerId]: true
-     * the first time per process for each provider/profile pair, false after. Once is enough —
-     * backing out of the sign-in screen must land on a usable home (to switch profile, say), not
-     * bounce straight back into sign-in.
-     */
-    fun shouldPromptSignIn(providerId: Long): Boolean =
-        signInPrompted.add(providerId to AppSettings(context.applicationContext).activeProfileId)
-
     /**
      * Makes [profileId] the profile this device uses. Every cached MediaRepository belongs to the
      * previous profile (see its `profileId`), so all of them are closed and dropped; the next
      * getMediaRepository() builds one for the new profile. Shared provider sessions are kept —
      * switching person doesn't mean logging back in to Xtream — but Jellyfin's are dropped, since
      * each profile signs in to Jellyfin as its own user. Xtream providers whose category filters
-     * differ between the two profiles get their hidden-category flags recomputed. The device moves to
-     * the provider the new profile last picked, if it still exists; otherwise it stays on its current
-     * one (see docs/plans/archive/20261002_profile-last-provider-plan.md). Callers must also drop any screen still
-     * holding a repository, which the nav hosts do by rebuilding the back stack from home.
+     * differ between the two profiles get their hidden-category flags recomputed. No source moves:
+     * the lists reload over the new profile's own sources (multi-source plan, Phase 6). Callers must
+     * also drop any screen still holding a repository, which the nav hosts do by rebuilding the back
+     * stack from home.
      */
     suspend fun switchProfile(profileId: String) {
         withContext(Dispatchers.IO) {
@@ -180,7 +153,6 @@ class AppContainer(
                 val previousProfileId = appSettings.activeProfileId
                 appSettings.activeProfileId = profileId
                 providerRepository.applyCategoryFiltersForSwitch(previousProfileId, profileId)
-                val movedProvider = providerRepository.activateLastProvider(profileId)
                 val filtered = android.os.SystemClock.elapsedRealtime()
                 mediaRepositories.values.forEach { repo ->
                     try {
@@ -195,7 +167,7 @@ class AppContainer(
                 val done = android.os.SystemClock.elapsedRealtime()
                 android.util.Log.i(
                     "ProfileSwitch",
-                    "to $profileId: ${done - started} ms (lock wait ${locked - started}, filters+provider ${filtered - locked}, teardown ${done - filtered}, provider moved $movedProvider)",
+                    "to $profileId: ${done - started} ms (lock wait ${locked - started}, filters ${filtered - locked}, teardown ${done - filtered})",
                 )
             }
         }
@@ -204,9 +176,9 @@ class AppContainer(
     private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
-     * The profile or the active provider changed without the user picking one — live sync moving
-     * this device off a profile, or a provider, another device deleted. The nav hosts rebuild the
-     * back stack from home on each, as the profile picker does after [switchProfile].
+     * The profile or its sources changed without the user picking — live sync moving this device
+     * off a profile, or a source another device deleted. The nav hosts rebuild the back stack from
+     * home on each, as the profile picker does after [switchProfile].
      */
     val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
 
@@ -217,12 +189,11 @@ class AppContainer(
     }
 
     /**
-     * Another device deleted the provider this one was using, and `ProviderRepository.deleteProvider`
-     * moved it to the first remaining one: every cached repository is dropped, and the switch is
-     * announced on [externalSwitches] so no screen stays on the deleted provider. See
+     * Another device deleted a source this one had: every cached repository is dropped, and it is
+     * announced on [externalSwitches] so no screen stays on the deleted source. See
      * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
      */
-    suspend fun activeProviderChangedExternally() {
+    suspend fun providerDeletedExternally() {
         clearAllCaches()
         _externalSwitches.emit(Unit)
     }

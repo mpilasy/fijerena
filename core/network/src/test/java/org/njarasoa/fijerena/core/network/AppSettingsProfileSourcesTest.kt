@@ -18,16 +18,25 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
  */
 class AppSettingsProfileSourcesTest {
     private lateinit var settings: AppSettings
+    private val prefs = FakeSharedPreferences()
 
     @Before
     fun setup() {
-        settings = newSettings()
+        settings = newSettings(prefs)
     }
 
-    private fun newSettings(): AppSettings {
+    private fun newSettings(prefs: FakeSharedPreferences = FakeSharedPreferences()): AppSettings {
         val context = mockk<Context>()
-        every { context.getSharedPreferences("app_settings", any()) } returns FakeSharedPreferences()
+        every { context.getSharedPreferences("app_settings", any()) } returns prefs
         return AppSettings(context)
+    }
+
+    /** The source [profileId] last picked, as a build from before Phase 6 stored it. */
+    private fun legacyLastPick(
+        profileId: String,
+        providerKey: String,
+    ) {
+        prefs.edit().putString("last_provider_$profileId", providerKey).commit()
     }
 
     @Test
@@ -90,8 +99,8 @@ class AppSettingsProfileSourcesTest {
 
     @Test
     fun `upgrade gives each profile its last-picked source, else the device's current one`() {
-        settings.setLastProviderKey(ProfileEntity.DEFAULT_ID, "a")
-        settings.setLastProviderKey(OTHER, "gone")
+        legacyLastPick(ProfileEntity.DEFAULT_ID, "a")
+        legacyLastPick(OTHER, "gone")
 
         settings.seedProfileSourcesOnce(listOf(ProfileEntity.DEFAULT_ID, OTHER, NEVER_PICKED), setOf("a", "b"), activeKey = "b")
 
@@ -123,12 +132,25 @@ class AppSettingsProfileSourcesTest {
     @Test
     fun `upgrade keeps sources received from another device before it ran`() {
         settings.applyRemoteSetting("profile_sources", OTHER, JsonPrimitive("[\"x\",\"y\"]"))
-        settings.setLastProviderKey(OTHER, "a")
+        legacyLastPick(OTHER, "a")
 
         settings.seedProfileSourcesOnce(listOf(ProfileEntity.DEFAULT_ID, OTHER), setOf("a"), activeKey = "a")
 
         assertEquals(setOf("x", "y"), settings.profileSourceKeys(OTHER))
         assertEquals(setOf("a"), settings.profileSourceKeys(ProfileEntity.DEFAULT_ID))
+    }
+
+    @Test
+    fun `the retired last pick is no longer synced, and one received from an older build is ignored`() {
+        legacyLastPick(OTHER, "a")
+        settings.applyRemoteSetting("last_provider", ProfileEntity.DEFAULT_ID, JsonPrimitive("b"))
+
+        assertTrue("last_provider" !in AppSettings.SYNCED_SETTING_KEYS)
+        assertNull(settings.syncedSetting("last_provider", OTHER))
+        settings.seedProfileSourcesOnce(listOf(ProfileEntity.DEFAULT_ID, OTHER), setOf("a", "b", "c"), activeKey = "c")
+        // The received pick didn't land: Default gets the device's source, as one that never picked.
+        assertEquals(setOf("c"), settings.profileSourceKeys(ProfileEntity.DEFAULT_ID))
+        assertEquals(setOf("a"), settings.profileSourceKeys(OTHER))
     }
 
     private companion object {

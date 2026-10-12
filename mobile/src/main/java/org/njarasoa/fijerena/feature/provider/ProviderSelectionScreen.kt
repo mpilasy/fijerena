@@ -41,7 +41,6 @@ import org.njarasoa.fijerena.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileProviderSelectionScreen(
-    onProviderSelected: (ProviderEntity) -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
@@ -53,7 +52,6 @@ fun MobileProviderSelectionScreen(
             factory = ProviderViewModelFactory(context),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val profileSourceIds by viewModel.profileSourceIds.collectAsStateWithLifecycle()
     val copyResultMessage by viewModel.copyResultMessage.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
@@ -117,8 +115,6 @@ fun MobileProviderSelectionScreen(
                 is ProviderUiState.SingleProvider -> {
                     MobileProviderList(
                         providers = listOf(state.provider),
-                        profileSourceIds = profileSourceIds,
-                        onSelect = onProviderSelected,
                         onEdit = onEditProvider,
                         onManageEpg = onManageEpg,
                         onDelete = { deleteConfirmProvider = it },
@@ -130,8 +126,6 @@ fun MobileProviderSelectionScreen(
                 is ProviderUiState.MultipleProviders -> {
                     MobileProviderList(
                         providers = state.providers,
-                        profileSourceIds = profileSourceIds,
-                        onSelect = onProviderSelected,
                         onEdit = onEditProvider,
                         onManageEpg = onManageEpg,
                         onDelete = { deleteConfirmProvider = it },
@@ -216,9 +210,6 @@ fun MobileProviderSelectionScreen(
 @Composable
 private fun MobileProviderList(
     providers: List<ProviderEntity>,
-    // The profile's own sources: Use is offered on those only (multi-source plan, P2).
-    profileSourceIds: Set<Long>,
-    onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit,
@@ -232,9 +223,7 @@ private fun MobileProviderList(
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             MobileProviderRow(
                 provider = provider,
-                canUse = !provider.isActive && provider.id in profileSourceIds,
                 canCopyTo = providers.size > 1,
-                onSelect = onSelect,
                 onEdit = onEdit,
                 onManageEpg = onManageEpg,
                 onDelete = onDelete,
@@ -246,15 +235,13 @@ private fun MobileProviderList(
 }
 
 /**
- * One source: tapping the card edits it (the one way in, no chevron); "Use" switches to it
- * (only when [canUse]: not the active one, and one the profile has); everything else sits in the overflow menu, Delete last and separated.
+ * One source: tapping the card edits it (the one way in, no chevron); everything else sits in the
+ * overflow menu, Delete last and separated.
  */
 @Composable
 private fun MobileProviderRow(
     provider: ProviderEntity,
-    canUse: Boolean,
     canCopyTo: Boolean,
-    onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit,
@@ -280,22 +267,12 @@ private fun MobileProviderRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = provider.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (provider.isActive) {
-                        Text(
-                            text = stringResource(R.string.provider_active_label),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
+                Text(
+                    text = provider.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = provider.url,
                     style = MaterialTheme.typography.bodySmall,
@@ -309,13 +286,6 @@ private fun MobileProviderRow(
                     color = dimmed,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (canUse) {
-                IconAction(
-                    onClick = { onSelect(provider) },
-                    icon = CinemaIcons.SwapHoriz,
-                    label = stringResource(R.string.provider_use_button),
                 )
             }
             Box {

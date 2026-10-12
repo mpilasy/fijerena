@@ -123,7 +123,8 @@ class SettingsExportManager(
         val type: String,
         val config: String = "",
         val providerSettings: String = "{}",
-        val isActive: Boolean = false,
+        // No `isActive` since there is no device source (multi-source plan, Phase 6): an older
+        // file's is ignored (ignoreUnknownKeys).
     )
 
     @Serializable
@@ -282,7 +283,6 @@ class SettingsExportManager(
                         config = entity.config,
                         // With the active profile's category filters, like favourites and history.
                         providerSettings = json.encodeToString(providerRepo.getProviderSettings(entity.id)),
-                        isActive = entity.isActive,
                     )
                 }
 
@@ -580,29 +580,6 @@ class SettingsExportManager(
                         addNewProvider(providerRepo, ep)
                         providersAdded++
                     }
-
-                    // If we had an active provider in the export and none is currently active, activate the matching one
-                    val activeExport = exported.providers.find { it.isActive }
-                    if (activeExport != null) {
-                        val currentActive = providerRepo.getActiveProvider()
-                        if (currentActive == null) {
-                            // Re-fetch only if providers were actually added/updated
-                            val updatedProviders =
-                                if (providersAdded > 0 || providersUpdated > 0) {
-                                    providerRepo.getAllProvidersList()
-                                } else {
-                                    existingProviders
-                                }
-                            val updatedByNameUrl = updatedProviders.associateBy { "${it.name}\u0000${it.url}" }
-                            val updatedByName = updatedProviders.associateBy { it.name }
-                            val matching =
-                                updatedByNameUrl["${activeExport.name}\u0000${activeExport.url}"]
-                                    ?: updatedByName["${activeExport.name} (imported)"]
-                            if (matching != null) {
-                                providerRepo.setActiveProvider(matching.id)
-                            }
-                        }
-                    }
                 }
 
                 // Re-fetch providers once for every provider-scoped section below (EPG sources,
@@ -815,7 +792,6 @@ class SettingsExportManager(
                 password = "",
                 type = ep.type,
                 config = ep.config,
-                rememberForProfile = false,
             )
         if (ep.providerSettings != "{}") {
             try {

@@ -88,7 +88,7 @@ class EpgSyncWorker(
         val providerRepo = ProviderRepository(applicationContext)
         val providerIds = GuideScope.searchedProviders(providerRepo.profileSourcesList()).map { it.id }
         if (providerIds.isEmpty()) {
-            Log.i(TAG, "doWork: no source in use, nothing to sync")
+            Log.i(TAG, "doWork: the profile has no source with a guide, nothing to sync")
             return Result.success()
         }
 

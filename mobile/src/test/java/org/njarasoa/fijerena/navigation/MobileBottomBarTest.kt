@@ -5,7 +5,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.ContentType
-import org.njarasoa.fijerena.feature.contentselection.ActiveSource
 
 class MobileBottomBarTest {
     @Test
@@ -87,11 +86,16 @@ class MobileBottomBarTest {
     }
 
     @Test
-    fun `no Live TV tab for a source without channels`() {
-        val source = ActiveSource(1L, "jellyxtream", "XTREAM", needsSignIn = false, supportedTypes = ALL.toSet(), noChannels = true)
-        assertEquals(listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SEARCH, MobileTab.SETTINGS), visibleTabs(source.sections))
-        assertEquals(MobileTab.MOVIES, startTab(ContentType.LIVE_TV, source.sections))
-        assertEquals(ALL.toSet(), source.copy(noChannels = false).sections)
+    fun `no Live TV tab when the profile's sources have no channels`() {
+        // ProfileSections.merged when no Xtream source of the profile has live categories.
+        val sections = setOf(ContentType.MOVIES, ContentType.TV_SHOWS)
+        assertEquals(listOf(MobileTab.MOVIES, MobileTab.TV_SHOWS, MobileTab.SEARCH, MobileTab.SETTINGS), visibleTabs(sections))
+        assertEquals(MobileTab.MOVIES, startTab(ContentType.LIVE_TV, sections))
+    }
+
+    @Test
+    fun `no tabs without merged sections, the tab roots show the sources panel`() {
+        assertEquals(emptyList<MobileTab>(), visibleTabs(emptySet()))
     }
 
     private companion object {

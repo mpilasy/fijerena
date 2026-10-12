@@ -191,7 +191,7 @@ fun EpisodeSelectionScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
-    // The route's source; 0 = the active source.
+    // The route's source.
     providerId: Long = 0L,
 ) {
     val context = LocalContext.current
@@ -300,7 +300,7 @@ internal fun EpisodeListContent(
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getProviderOrActive(mediaRepository.getProviderId())?.let { providerName = it.name }
+        repo.getProviderById(mediaRepository.getProviderId())?.let { providerName = it.name }
     }
     val listState = rememberLazyListState()
     val scale = LocalUiScale.current

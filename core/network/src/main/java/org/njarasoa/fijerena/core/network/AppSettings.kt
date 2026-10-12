@@ -27,6 +27,12 @@ class AppSettings(
     companion object {
         private const val KEY_DEV_MODE = "dev_mode"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
+
+        /**
+         * Retired: the source each profile last picked, from when a device had one source at a
+         * time. No longer written nor synced; a value an older build sends is ignored. Read only
+         * by the one-time upgrade to per-profile sources ([seedProfileSourcesOnce]).
+         */
         private const val KEY_LAST_PROVIDER = "last_provider"
         private const val KEY_PROFILE_SOURCES = "profile_sources"
         private const val KEY_PROFILE_SOURCES_SEEDED = "profile_sources_seeded_v1"
@@ -85,12 +91,11 @@ class AppSettings(
             listOf(
                 KEY_THEME_ID,
                 KEY_DEV_MODE,
-                KEY_LAST_PROVIDER,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_TMDB_API_KEY,
                 KEY_PROFILE_SOURCES,
             )
-        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER, KEY_AUTOPLAY_NEXT_EPISODE, KEY_PROFILE_SOURCES)
+        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_PROFILE_SOURCES)
 
         private val sourceKeysSerializer = ListSerializer(String.serializer())
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
@@ -166,21 +171,8 @@ class AppSettings(
         SettingsSyncQueue.setting(context, KEY_AUTOPLAY_NEXT_EPISODE, profileId)
     }
 
-    /**
-     * The `providerKey` of the provider [profileId] last picked, on any device — synced, unlike
-     * `providers.isActive`, which is the provider this device is on. A profile switch moves the
-     * device to it. See docs/plans/archive/20261002_profile-last-provider-plan.md.
-     */
-    fun lastProviderKey(profileId: String): String? = prefs.getString(profileKey(KEY_LAST_PROVIDER, profileId), null)
-
-    fun setLastProviderKey(
-        profileId: String,
-        providerKey: String,
-    ) {
-        if (lastProviderKey(profileId) == providerKey) return
-        prefs.edit { putString(profileKey(KEY_LAST_PROVIDER, profileId), providerKey) }
-        SettingsSyncQueue.setting(context, KEY_LAST_PROVIDER, profileId)
-    }
+    /** The source [profileId] last picked under the retired [KEY_LAST_PROVIDER], if this device has it stored. */
+    private fun lastProviderKey(profileId: String): String? = prefs.getString(profileKey(KEY_LAST_PROVIDER, profileId), null)
 
     /**
      * The `providerKey`s of the sources [profileId] has (multi-source plan, P1): per profile and
@@ -288,10 +280,6 @@ class AppSettings(
                     value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 }
 
-                KEY_LAST_PROVIDER -> {
-                    if (value.isString) putString(profileKey(key, profileId), value.content)
-                }
-
                 KEY_PROFILE_SOURCES -> {
                     decodeSourceKeys(value.content.takeIf { value.isString })?.let {
                         putString(profileKey(key, profileId), encodeSourceKeys(it))
@@ -323,7 +311,7 @@ class AppSettings(
                 )
             }
 
-            KEY_THEME_ID, KEY_LAST_PROVIDER, KEY_PROFILE_SOURCES -> {
+            KEY_THEME_ID, KEY_PROFILE_SOURCES -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 
@@ -338,9 +326,6 @@ class AppSettings(
 
     /** Drops a deleted profile's autoplay-next-episode choice. */
     fun removeAutoplayNextEpisode(profileId: String) = prefs.edit { remove(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId)) }
-
-    /** Drops a deleted profile's last picked provider. */
-    fun removeLastProvider(profileId: String) = prefs.edit { remove(profileKey(KEY_LAST_PROVIDER, profileId)) }
 
     private fun devModeKey(profileId: String) = profileKey(KEY_DEV_MODE, profileId)
 

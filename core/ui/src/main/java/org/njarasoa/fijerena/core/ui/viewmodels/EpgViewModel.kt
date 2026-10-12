@@ -32,7 +32,7 @@ import java.time.ZoneId
 class EpgViewModel(
     private val context: Context,
     private val categoryId: String,
-    // The source whose channels the guide shows; 0 = the active source.
+    // The source whose channels the guide shows (the route's).
     private val providerId: Long = 0L,
 ) : ViewModel() {
     sealed class UiState {

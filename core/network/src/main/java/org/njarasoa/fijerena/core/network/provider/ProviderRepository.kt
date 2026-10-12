@@ -107,33 +107,12 @@ class ProviderRepository(
         /**
          * The sources a profile with [keys] (its `providerKey`s, null for none stored) can use, in
          * [providers]' order: those of its keys this device has — a key with no source here is
-         * skipped — and, until the current source goes (multi-source plan, Phase 6), always the
-         * source this device is on.
+         * skipped. Nothing else: there is no device or current source (multi-source plan, P3).
          */
-        internal fun resolveProfileSources(
+        fun resolveProfileSources(
             providers: List<ProviderEntity>,
             keys: Set<String>?,
-        ): List<ProviderEntity> = providers.filter { it.isActive || keys?.contains(it.providerKey) == true }
-
-        /**
-         * Where a device goes when [profileId]'s profile becomes the one in use, or null to stay:
-         * the source it last picked if the profile has it, else the one the device is on if the
-         * profile has that, else its first. A profile with none of its sources here (or none
-         * stored) goes to its last pick as before, wherever that is.
-         */
-        internal fun profileSourceToActivate(
-            providers: List<ProviderEntity>,
-            keys: Set<String>?,
-            lastKey: String?,
-        ): ProviderEntity? {
-            val owned = providers.filter { keys?.contains(it.providerKey) == true }
-            val target =
-                owned.firstOrNull { it.providerKey == lastKey }
-                    ?: owned.firstOrNull { it.isActive }
-                    ?: owned.firstOrNull()
-                    ?: providers.firstOrNull { it.providerKey == lastKey }
-            return target?.takeUnless { it.isActive }
-        }
+        ): List<ProviderEntity> = providers.filter { keys?.contains(it.providerKey) == true }
 
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
@@ -181,13 +160,7 @@ class ProviderRepository(
 
     suspend fun getAllProvidersList(): List<ProviderEntity> = dao.getAllProvidersList()
 
-    suspend fun getActiveProvider(): ProviderEntity? = dao.getActiveProvider()
-
     suspend fun getProviderById(id: Long): ProviderEntity? = dao.getProviderById(id)
-
-    /** The source [providerId] names, or the active one for 0 (a route's source, see `Screen`). */
-    suspend fun getProviderOrActive(providerId: Long): ProviderEntity? =
-        if (providerId > 0L) getProviderById(providerId) else getActiveProvider()
 
     suspend fun getProviderCount(): Int = dao.getProviderCount()
 
@@ -202,13 +175,17 @@ class ProviderRepository(
     suspend fun profileSourcesList(profileId: String = activeProfileId()): List<ProviderEntity> =
         resolveProfileSources(dao.getAllProvidersList(), AppSettings(context).profileSourceKeys(profileId))
 
-    /** See [AppSettings.seedProfileSourcesOnce]; at startup, and before a source is added. */
+    /**
+     * See [AppSettings.seedProfileSourcesOnce]; at startup, and before a source is added. The
+     * source the device was on is the one an older build marked `isActive`
+     * ([ProviderDao.legacyActiveProviderKey]).
+     */
     suspend fun seedProfileSourcesOnce() {
         val providers = dao.getAllProvidersList()
         AppSettings(context).seedProfileSourcesOnce(
             db.profileDao().getAll().map { it.id },
             providers.map { it.providerKey }.toSet(),
-            providers.firstOrNull { it.isActive }?.providerKey,
+            dao.legacyActiveProviderKey(),
         )
     }
 
@@ -216,12 +193,8 @@ class ProviderRepository(
     fun getGuideSources(providerId: Long): Flow<List<EpgSourceEntity>> = db.epgSourceDao().getSourcesForProvider(providerId)
 
     /**
-     * Add a new provider. Stores the password in a per-provider encrypted prefs file.
-     * Deactivates all other providers and activates this one, unless [activate] is false — used
-     * by [ProviderCopyManager.duplicateProvider] so cloning a provider doesn't steal "active" away
-     * from whatever the user currently has selected.
-     * [rememberForProfile] records it as the active profile's last picked provider (synced); the
-     * settings import turns it off, as an imported provider isn't a pick.
+     * Add a new provider. Stores the password in a per-provider encrypted prefs file. The new
+     * source is on for the profile in use (multi-source plan, P1); nothing else changes.
      */
     suspend fun addProvider(
         name: String,
@@ -231,12 +204,9 @@ class ProviderRepository(
         type: String = "XTREAM",
         config: String = "",
         initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
-        activate: Boolean = true,
-        rememberForProfile: Boolean = activate,
     ): Long {
         // Before the insert, so the upgrade gives profiles their old source, not this one.
         seedProfileSourcesOnce()
-        if (activate) dao.deactivateAll()
         // Category filters are per profile and live in [filtersStore], not in the provider's JSON.
         val settingsJson = json.encodeToString(initialSettings.copy(categoryFilters = CategoryFilters()))
         val entity =
@@ -247,7 +217,6 @@ class ProviderRepository(
                 type = type,
                 config = config,
                 providerSettings = settingsJson,
-                isActive = activate,
             )
         val id = dao.insertProvider(entity)
         // The shared credentials file is the Default profile's Jellyfin login; once Default has been
@@ -273,8 +242,6 @@ class ProviderRepository(
         }
         // A new source is on for the profile that added it only (multi-source plan, P1).
         AppSettings(context).addProfileSource(activeProfileId(), entity.providerKey)
-        // Adding a provider moves the device to it, so it is the profile's pick — see [pickProvider].
-        if (rememberForProfile) AppSettings(context).setLastProviderKey(activeProfileId(), entity.providerKey)
         return id
     }
 
@@ -330,10 +297,8 @@ class ProviderRepository(
     /**
      * Delete a provider and clean up its encrypted prefs and cache. The deletion is recorded for
      * live sync; its favourite and history tombstones go with it, the provider's own covers them.
-     * If it was the active provider, the first remaining one becomes active — whether the user
-     * deleted it here or another device did ([fromRemote]); only the UI path used to, which left a
-     * device whose provider was deleted elsewhere on "No provider set". See
-     * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
+     * [fromRemote]: another device deleted it. Its key may stay in profiles' sources settings, which
+     * skip a source this device doesn't have.
      */
     suspend fun deleteProvider(
         id: Long,
@@ -354,13 +319,6 @@ class ProviderRepository(
             settingsCache.keys.removeAll { it.first == id }
             filtersStore.removeProvider(id)
             MediaProviderFactory.providerChanged(id)
-            if (entity.isActive) {
-                // One of the profile's own sources when it has another (P2), else the first left.
-                val remaining = dao.getAllProvidersList()
-                val keys = AppSettings(context).profileSourceKeys(activeProfileId())
-                (remaining.firstOrNull { keys?.contains(it.providerKey) == true } ?: remaining.firstOrNull())
-                    ?.let { setActiveProvider(it.id) }
-            }
             AppSettings(context).orphanSweepPending = false
         }
     }
@@ -543,47 +501,6 @@ class ProviderRepository(
                 db.settingsSyncDao().setApplying(false)
             }
         }
-    }
-
-    /**
-     * Set a provider as active (deactivates all others), in one transaction: never a moment with
-     * no active provider, nor two.
-     */
-    suspend fun setActiveProvider(id: Long) {
-        db.withTransaction {
-            dao.deactivateAll()
-            dao.activateProvider(id)
-        }
-        // Clear all cached providers to ensure fresh session on provider switch
-        MediaProviderFactory.clearAllCaches()
-    }
-
-    /**
-     * The user picked [id]: makes it active and remembers it as the active profile's provider,
-     * synced to the profile's other devices. Automatic changes (fallback after a delete, import,
-     * profile switch) use [setActiveProvider] so they aren't remembered or sent.
-     */
-    suspend fun pickProvider(id: Long) {
-        setActiveProvider(id)
-        dao.getProviderById(id)?.let { AppSettings(context).setLastProviderKey(activeProfileId(), it.providerKey) }
-    }
-
-    /**
-     * Moves this device to the provider [profileId] last picked, if it still exists here, the
-     * profile has it, and it isn't already active; when the profile lacks the source the device is
-     * on, to one it has (see [profileSourceToActivate]). Otherwise the device stays where it is.
-     * Returns whether it moved.
-     */
-    suspend fun activateLastProvider(profileId: String): Boolean {
-        val settings = AppSettings(context)
-        val target =
-            profileSourceToActivate(
-                dao.getAllProvidersList(),
-                settings.profileSourceKeys(profileId),
-                settings.lastProviderKey(profileId),
-            )
-        target?.let { setActiveProvider(it.id) }
-        return target != null
     }
 
     suspend fun updateSyncStats(
@@ -783,7 +700,7 @@ class ProviderRepository(
             .orEmpty()
     }
 
-    /** Adds or updates the provider named [providerKey]; returns its local id. Never activates it. */
+    /** Adds or updates the provider named [providerKey]; returns its local id. */
     internal suspend fun applyRemoteProvider(
         providerKey: String,
         remote: org.njarasoa.fijerena.core.network.sync.SyncPayloads.Provider,
@@ -811,7 +728,6 @@ class ProviderRepository(
                         type = remote.type,
                         config = remote.config,
                         providerSettings = remote.providerSettings,
-                        isActive = false,
                         providerKey = providerKey,
                     ),
                 )

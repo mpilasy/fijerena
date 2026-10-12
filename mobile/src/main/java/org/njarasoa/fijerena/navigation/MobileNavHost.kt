@@ -33,7 +33,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
@@ -51,14 +50,14 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
+import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
-import org.njarasoa.fijerena.feature.contentselection.ActiveSource
-import org.njarasoa.fijerena.feature.contentselection.JellyfinSignInPanel
 import org.njarasoa.fijerena.feature.contentselection.MobileSourceTopBar
-import org.njarasoa.fijerena.feature.contentselection.loadActiveSource
+import org.njarasoa.fijerena.feature.contentselection.MobileSourcesPanel
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgManagementScreen
 import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
@@ -78,7 +77,6 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 @Composable
 fun MobileNavHost(
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel = viewModel(),
     onThemeChanged: (String) -> Unit = {},
     onUiStyleChanged: (String) -> Unit = {},
 ) {
@@ -87,13 +85,14 @@ fun MobileNavHost(
     val coroutineScope = rememberCoroutineScope()
 
     // No Home on the phone (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home on
-    // the phone): the bottom bar's tabs are the active source's sections, read at startup, on each
-    // visit to a tab's root and after every switch.
-    var activeSource by remember { mutableStateOf<ActiveSource?>(null) }
-    // The active source's first catalogue sync is running: an empty list says the library is
-    // still loading, not that the category is empty.
+    // the phone): the bottom bar's tabs are the profile's merged sections (its Xtream sources',
+    // multi-source plan Phase 6), read at startup, on each visit to a tab's root and after every
+    // switch; its other sources are Browse entries.
+    var profileSections by remember { mutableStateOf<ProfileSections?>(null) }
+    // A source's first catalogue sync is running: an empty list says the library is still loading,
+    // not that the category is empty.
     val firstSyncs by ProviderSyncRunner.firstSyncs.collectAsStateWithLifecycle()
-    val libraryLoading = activeSource?.id?.let { it in firstSyncs } == true
+    val libraryLoading = profileSections?.xtreamIds.orEmpty().any { it in firstSyncs }
     // The graph's start destination, decided once at startup.
     var openingTab by remember { mutableStateOf(MobileTab.LIVE_TV) }
     // Each Live TV dock as its screen reports it, by back-stack entry — the tab's root and any
@@ -151,7 +150,7 @@ fun MobileNavHost(
     ) {
         val target = MobileTab.entries.firstOrNull { it.contentType == contentType }
         val current = navController.currentTab()
-        val tabs = visibleTabs(activeSource?.sections)
+        val tabs = visibleTabs(profileSections?.merged)
         if (target == null || current == null || target == current || target !in tabs) {
             navController.navigateOnce(screen)
             return
@@ -181,25 +180,25 @@ fun MobileNavHost(
         }
     }
 
-    // Back-Stack Rule 4's switches (source, profile, live sync, Settings' source change): every
-    // screen may hold the previous one's repository, so start over on the new profile's last tab,
-    // or the first the source has.
+    // Back-Stack Rule 4's switches (profile, live sync, Settings' first source): every screen may
+    // hold the previous one's repository, so start over on the new profile's last tab, or the first
+    // its sources have.
     suspend fun startOver() {
-        val source = loadActiveSource(context)
-        activeSource = source
-        restartOn(startTab(appSettings.lastTab, source?.sections))
+        val sections = ProfileSections.load(context)
+        profileSections = sections
+        restartOn(startTab(appSettings.lastTab, sections.merged))
     }
 
-    // Each visit to a tab's root re-reads the source, as Home did: back from signing in to it, or
-    // from renaming it.
+    // Each visit to a tab's root re-reads the profile's sources: a source turned on or off, added,
+    // signed in to or renamed meanwhile.
     fun refreshSource() {
-        coroutineScope.launch { activeSource = loadActiveSource(context, known = activeSource) }
+        coroutineScope.launch { profileSections = ProfileSections.load(context) }
     }
 
     // Remote Stop (live sync) leaves the screen that was playing for the Live TV tab's root — the
     // start tab when the source has no Live TV.
     fun openLiveTvRoot() {
-        val types = activeSource?.sections
+        val types = profileSections?.merged
         val tab = if (types == null || ContentType.LIVE_TV in types) MobileTab.LIVE_TV else startTab(appSettings.lastTab, types)
         if (!navController.popBackStack(tab.route, inclusive = false)) {
             navController.clearBackStack(tab.route)
@@ -209,8 +208,8 @@ fun MobileNavHost(
         }
     }
 
-    // Live sync moved this device off a profile or a provider another device deleted: every screen
-    // may hold the old one's repository, so start over — what the profile picker does.
+    // Live sync moved this device off a profile, or deleted a source on another device: every
+    // screen may hold the old one's repository, so start over — what the profile picker does.
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
@@ -239,11 +238,11 @@ fun MobileNavHost(
         }
         val anyProvider = providerRepo.getProviderCount() > 0
         if (anyProvider) {
-            // The tab the app opens on depends on the source's sections: read them before the
-            // graph exists, rather than open on a tab the source doesn't have.
-            val source = loadActiveSource(context)
-            activeSource = source
-            openingTab = startTab(appSettings.lastTab, source?.sections)
+            // The tab the app opens on depends on the profile's sections: read them before the
+            // graph exists, rather than open on a tab its sources don't have.
+            val sections = ProfileSections.load(context)
+            profileSections = sections
+            openingTab = startTab(appSettings.lastTab, sections.merged)
         }
         hasProvider = anyProvider
     }
@@ -259,8 +258,6 @@ fun MobileNavHost(
             initializeStartup()
         }
     }
-
-    val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
     // Provider lookup / credential migration still running.
     if (hasProvider == null) {
@@ -279,41 +276,21 @@ fun MobileNavHost(
             Screen.Settings
         }
 
-    // Auto-restore Xtream session if the active provider is Xtream
-    LaunchedEffect(hasProvider, isAuthenticated) {
-        if (hasProvider == true && isAuthenticated == null) {
-            val providerRepo = ProviderRepository(context.applicationContext)
-            val activeProvider = providerRepo.getActiveProvider()
-            if (activeProvider != null && activeProvider.type == "XTREAM") {
-                // The shared repository instance; AppContainer.getMediaRepository() handles connect().
-                val repo =
-                    org.njarasoa.fijerena.core.ui.di.AppContainer
-                        .getInstance(context)
-                        .getMediaRepository(activeProvider.id)
-
-                if (repo.isConnected()) {
-                    // Update AuthViewModel for UI consistency
-                    val authResponse = accountManager.getAuthResponse()
-                    val credentials = accountManager.getCredentials()
-                    if (authResponse != null && credentials != null) {
-                        authViewModel.setAuthSession(authResponse, credentials.url)
-                    }
-                }
-            }
-        }
-    }
+    // No session restore here: each Xtream source of the profile restores its own when it is first
+    // used (AppContainer), as there is no source in use.
 
     // The bar shows on every screen inside a tab — its root and what's pushed on it (details,
     // episodes, Search, guides…) — so the current tab always leads back to its start and each tab
     // keeps its place; not on the player, Settings and its screens, or with a single section.
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentTab = currentEntry?.let { navController.currentTab() }
-    val tabs = visibleTabs(activeSource?.sections)
+    val tabs = visibleTabs(profileSections?.merged)
 
-    // The app opens next time on the tab used last. A tab the source doesn't have (opened while its
-    // sections were unknown, before a Jellyfin sign-in) gives way to one it has.
-    LaunchedEffect(currentTab, activeSource) {
-        val types = activeSource?.sections ?: return@LaunchedEffect
+    // The app opens next time on the tab used last. A tab the profile's sources don't have (one
+    // turned off meanwhile) gives way to one they have; with none, the tab roots show the sources
+    // panel instead.
+    LaunchedEffect(currentTab, profileSections) {
+        val types = profileSections?.merged?.takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
         // Settings is a tab but not a section: never the tab the app opens on.
         val tab = currentTab?.takeIf { it.isSection } ?: return@LaunchedEffect
         if (tab.contentType in types) {
@@ -323,14 +300,13 @@ fun MobileNavHost(
         }
     }
 
-    // The top bar of [tab]'s root: the section's name over the source and its sync status; Search
-    // the guide on Live TV, the section's Search, and the profile avatar (profiles; Settings is a tab).
+    // The top bar of [tab]'s root: the section's name over the sources' sync summary; Search the
+    // guide on Live TV, the section's Search, and the profile avatar (profiles; Settings is a tab).
     fun sourceTopBar(tab: MobileTab): @Composable ((() -> Unit)?) -> Unit =
         { onSearch ->
             MobileSourceTopBar(
                 title = tab.label(),
-                source = activeSource,
-                onSourcePicked = { coroutineScope.launch { startOver() } },
+                sections = profileSections,
                 onSearch = onSearch,
                 onSearchGuide =
                     if (tab == MobileTab.LIVE_TV) {
@@ -351,19 +327,33 @@ fun MobileNavHost(
             )
         }
 
-    // [tab]'s list under that top bar — or, while this profile has no login for the active
-    // Jellyfin server, the sign-in panel.
+    // [tab]'s list under that top bar — or, while the profile has no merged sections, the sources
+    // panel: a Browse entry per source, or Add Source with none.
     val tabRoot: @Composable (MobileTab, @Composable () -> Unit) -> Unit = { tab, section ->
         TabRoot(
-            source = activeSource,
+            sections = profileSections,
             topBar = sourceTopBar(tab),
             onEnter = ::refreshSource,
-            onSignIn = { providerId ->
-                // Plain navigate, not navigateOnce: this fires from the tab's first frames, often
-                // while it is still entering after a switch — not RESUMED yet, so navigateOnce's
-                // double-tap guard would drop it (and the prompt is only offered once per process).
-                navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
+            onBrowse = { source ->
+                coroutineScope.launch {
+                    when (val opening = ProfileSections.opening(context, source.providerId)) {
+                        ProfileSections.Opening.SignIn -> {
+                            navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
+                        }
+
+                        is ProfileSections.Opening.Sections -> {
+                            opening.contentTypes.firstOrNull()?.let { contentType ->
+                                leaveTabRoot {
+                                    navController.navigateOnce(
+                                        Screen.CategoryList(contentType = contentType, providerId = source.providerId),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             },
+            onAddSource = { navController.navigateOnce(Screen.AddProvider()) },
             section = section,
         )
     }
@@ -500,8 +490,10 @@ fun MobileNavHost(
                         navController.navigateOnce(Screen.EpgManagement(providerId = id))
                     },
                     // Its TV Guide opens on Recent (D7); Back from the grid returns here.
-                    onTvGuide = { categoryId, categoryName ->
-                        navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
+                    onTvGuide = { categoryId, categoryName, providerId ->
+                        navController.navigateOnce(
+                            Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName, providerId = providerId),
+                        )
                     },
                     onNavigateToPlayer = { matched ->
                         // Land on the docked mini-player, not full-screen — same parity as every
@@ -648,33 +640,6 @@ fun MobileNavHost(
 
             composable<Screen.ProviderSelection> {
                 MobileProviderSelectionScreen(
-                    onProviderSelected = { provider ->
-                        coroutineScope.launch {
-                            // Activate the selected provider in Room
-                            val providerRepo = ProviderRepository(context.applicationContext)
-                            providerRepo.pickProvider(provider.id)
-
-                            // Clear AppContainer caches to force a fresh repository for the new provider
-                            val container =
-                                org.njarasoa.fijerena.core.ui.di.AppContainer
-                                    .getInstance(context)
-                            container.clearAllCaches()
-
-                            // For Xtream providers, restore session to update AuthViewModel
-                            if (provider.type == "XTREAM") {
-                                val repo = container.getMediaRepository(provider.id)
-                                if (repo.isConnected()) {
-                                    val authResponse = accountManager.getAuthResponse()
-                                    val credentials = accountManager.getCredentials()
-                                    if (authResponse != null && credentials != null) {
-                                        authViewModel.setAuthSession(authResponse, credentials.url)
-                                    }
-                                }
-                            }
-
-                            startOver()
-                        }
-                    },
                     onAddProvider = {
                         navController.navigateOnce(Screen.AddProvider())
                     },
@@ -733,26 +698,10 @@ fun MobileNavHost(
                     },
                     onProviderChanged = {
                         coroutineScope.launch {
-                            val providerRepo = ProviderRepository(context.applicationContext)
-                            val activeProvider = providerRepo.getActiveProvider()
-
-                            // Clear AppContainer caches for the new provider
-                            val container =
-                                org.njarasoa.fijerena.core.ui.di.AppContainer
-                                    .getInstance(context)
-                            container.clearAllCaches()
-
-                            if (activeProvider != null && activeProvider.type == "XTREAM") {
-                                val repo = container.getMediaRepository(activeProvider.id)
-                                if (repo.isConnected()) {
-                                    val authResponse = accountManager.getAuthResponse()
-                                    val credentials = accountManager.getCredentials()
-                                    if (authResponse != null && credentials != null) {
-                                        authViewModel.setAuthSession(authResponse, credentials.url)
-                                    }
-                                }
-                            }
-
+                            // The first source was added: no screen may keep a repository from before it.
+                            org.njarasoa.fijerena.core.ui.di.AppContainer
+                                .getInstance(context)
+                                .clearAllCaches()
                             startOver()
                         }
                     },
@@ -1061,37 +1010,37 @@ private fun CategoryListDestination(
 }
 
 /**
- * A bottom-bar tab's root: [section] — or, while this profile has no login for the active Jellyfin
- * server, a sign-in panel under [topBar], the sign-in screen opening by itself the first time per
- * process ([AppContainer.shouldPromptSignIn]). [onEnter] runs on each visit.
+ * A bottom-bar tab's root: [section] — or, while the profile has no merged sections (no Xtream
+ * source), the sources panel under [topBar]: a "Browse <source>" per source ([onBrowse], its first
+ * section; the profile sheet lists them too), or Add Source with no source at all ([onAddSource]).
+ * [onEnter] runs on each visit.
  */
 @Composable
 private fun TabRoot(
-    source: ActiveSource?,
+    sections: ProfileSections?,
     topBar: @Composable ((() -> Unit)?) -> Unit,
     onEnter: () -> Unit,
-    onSignIn: (providerId: Long) -> Unit,
+    onBrowse: (BrowseSource) -> Unit,
+    onAddSource: () -> Unit,
     section: @Composable () -> Unit,
 ) {
     LaunchedEffect(Unit) { onEnter() }
-    if (source?.showsSignIn == true) {
-        val context = LocalContext.current
-        val prompt = stringResource(R.string.profile_jellyfin_sign_in_prompt, source.name)
-        LaunchedEffect(source.id) {
-            if (AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(source.id)) {
-                Toast.makeText(context, prompt, Toast.LENGTH_LONG).show()
-                onSignIn(source.id)
-            }
-        }
+    if (sections != null && sections.merged.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize()) {
             AmbientBackdrop(modifier = Modifier.fillMaxSize())
             Scaffold(
                 containerColor = Color.Transparent,
                 topBar = { topBar(null) },
             ) { paddingValues ->
-                JellyfinSignInPanel(
-                    providerName = source.name,
-                    onSignIn = { onSignIn(source.id) },
+                MobileSourcesPanel(
+                    message =
+                        stringResource(if (sections.hasNoSources) R.string.home_no_sources else R.string.home_only_browse_sources),
+                    actions =
+                        if (sections.hasNoSources) {
+                            listOf(stringResource(R.string.provider_add_title) to onAddSource)
+                        } else {
+                            sections.browse.map { source -> stringResource(R.string.browse_source, source.name) to { onBrowse(source) } }
+                        },
                     modifier = Modifier.padding(paddingValues),
                 )
             }

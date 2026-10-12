@@ -79,7 +79,7 @@ Deleted providers and profiles, kept so live sync can tell other devices (see
 | `providerSettings` | TEXT | JSON blob for per-provider preferences. Category filters are no longer kept here but per profile in `category_filters` (section 6); on upgrade they were copied to every profile and stripped from this JSON. Xtream: `extraLogins` lists the usernames of the source's extra logins (shared logins plan), written only by `ProviderRepository.saveSourceLogins`; a settings save keeps the stored list |
 | `createdAt` | INTEGER | Timestamp when created |
 | `lastUsedAt` | INTEGER | Timestamp of last access |
-| `isActive` | INTEGER | Boolean (0/1) if currently selected |
+| `isActive` | INTEGER | Unused since multi-source Phase 6 (there is no current source): never written, kept to avoid a migration. Only the one-time upgrade to per-profile sources reads what an older build left (`ProviderDao.legacyActiveProviderKey`) |
 | `lastSyncedAtMs` | INTEGER | Timestamp of last manual/background content sync (added v6) |
 | `lastSyncDurationMs` | INTEGER | Duration of last sync (added v6) |
 | `lastSyncError` | TEXT | Error message from last failed sync, if any (added v6) |
@@ -147,7 +147,7 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just after they are
 written (no shared transaction): provider passwords (`provider`), Jellyfin logins
 (`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
-`theme_id`, `dev_mode` (per profile), `last_provider` (per profile), `autoplay_next_episode` (per
+`theme_id`, `dev_mode` (per profile), `autoplay_next_episode` (per
 profile), `profile_sources` (per profile). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
@@ -569,9 +569,9 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
 | `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `dev_mode` |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
-| `last_provider_<profileId>` | TEXT | `providerKey` of the provider that profile last picked; applied on profile switch. Synced per profile — see `docs/plans/archive/20261002_profile-last-provider-plan.md` |
+| `last_provider_<profileId>` | TEXT | Retired (multi-source Phase 6): `providerKey` of the provider that profile last picked. No longer written nor synced (a value an older build sends is ignored); read only by the one-time upgrade to per-profile sources (`profile_sources_seeded_v1`) |
 | `profile_sources_<profileId>` | TEXT | The sources that profile has: a JSON array of `providerKey`s (sorted). Absent = none stored (a profile from before the upgrade, or one synced from an older build); a key with no provider on this device is kept and skipped (`ProviderRepository.profileSources`), and until multi-source Phase 6 the device's active provider always counts as one of the profile in use's. A new provider is added to the profile in use's; a new profile copies the profile in use's; removed with the profile. Synced per profile (sent as the JSON string) — see `docs/plans/20261012_multi-source-search-history-plan.md` → Phase 2 |
-| `profile_sources_seeded_v1` | BOOLEAN | One-time flag, per install (never synced): `AppSettings.seedProfileSourcesOnce` has given each profile without `profile_sources_<profileId>` its last-picked provider (if it still exists here), else the active one. Run at startup and before a provider is added; never overwrites a value received by sync; what it writes isn't sent |
+| `profile_sources_seeded_v1` | BOOLEAN | One-time flag, per install (never synced): `AppSettings.seedProfileSourcesOnce` has given each profile without `profile_sources_<profileId>` its last-picked provider (if it still exists here), else the one an older build marked `isActive`. Run at startup and before a provider is added; never overwrites a value received by sync; what it writes isn't sent |
 | `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | LONG | Stats of the last orphan prune (`pruneOrphanedCatalogData`, manual "Shrink Database" or the automatic sweep), shown in dev mode. Per device |
 | `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/archive/20261001_live-sync-now-playing-plan.md` |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
@@ -598,7 +598,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `epg_search_history_<profileId>` | TEXT | Same, for "Search the guide"; replaced `epg_search_history` the same way |
 | `favorite_category_rows_purged_v1` | BOOLEAN | One-time flag, per install (never synced): `FavoriteCategoryRowCleanup` has removed the bogus `fav_cat_<categoryId>` stream favourites from `favorite_state` (every provider and profile, each with a `sync_tombstone`). Set only after the purge succeeds |
 
-The active provider is **not** stored here — it is the `providers.isActive` column in `providers.db`.
+There is no active provider since multi-source Phase 6: each profile's sources are `profile_sources_<profileId>`.
 
 ---
 

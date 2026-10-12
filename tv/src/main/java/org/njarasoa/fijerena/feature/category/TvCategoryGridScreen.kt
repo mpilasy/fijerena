@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
@@ -98,7 +99,7 @@ fun TvCategoryGridScreen(
     onBack: () -> Unit = {},
     /** Leaves for Home — after a remote Stop of the Live TV preview (see LiveTvSplitLayout). */
     onHome: () -> Unit = {},
-    /** The source the list is on; 0 = the active source. */
+    /** The source the list was opened on; 0 = a section's list, every Xtream source merged. */
     providerId: Long = 0L,
     viewModel: CategoryViewModel =
         viewModel(
@@ -161,9 +162,18 @@ fun TvCategoryGridScreen(
         epgIndexState = epgIndexState,
         configuration = configuration,
         catViewModel = viewModel,
-        onStreamSelected = onStreamSelected,
-        onEpgClick = onEpgClick,
-        onStartOver = onStartOver,
+        // A row or category with no source of its own (0: a virtual list's) is on the list's own
+        // source: every route names a real one (multi-source plan, Phase 6).
+        onStreamSelected = { streamId, streamName, categoryId, target, source ->
+            onStreamSelected(streamId, streamName, categoryId, target, source.takeIf { it != 0L } ?: viewModel.sourceId)
+        },
+        onEpgClick = { categoryId, categoryName, focusChannelId, source ->
+            onEpgClick(categoryId, categoryName, focusChannelId, source.takeIf { it != 0L } ?: viewModel.sourceId)
+        },
+        onStartOver =
+            onStartOver?.let { startOver ->
+                { program, channel -> startOver(program, channel.copy(providerId = channel.sourceOr(viewModel.sourceId))) }
+            },
         onBack = onBack,
         onHome = onHome,
         contentType = contentType,
@@ -398,6 +408,7 @@ private fun CategoryGridContent(
                                     streamsLoading = state.streamsLoading,
                                     categoriesRefreshing = state.categoriesRefreshing,
                                     lastPlayedItemId = state.lastPlayedItemId,
+                                    lastPlayedSource = state.lastPlayedSource,
                                     returnedPlayingId = returnedLiveChannelId,
                                     nowPlaying = nowPlaying,
                                     contentType = contentType,

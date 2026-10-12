@@ -15,12 +15,16 @@
 # Up from Movies: whichever header button is above it (geometric) — not asserted.
 # Phase 4: back down to the card focused last (Movies).
 # 2026-10-09: the section tiles are gone (the rail opens the sections); Up from the first row reaches the header, Down from the header the first row.
+# Multi-source Phase 6 (part 2): the source pill is gone. The header's first item is the sources'
+# summary line ("Your sources", focusable only while a source syncs its catalogue), else Search
+# the guide. The profile needs an Xtream source for rows (iptv alone now shows the Browse panel).
+# Edited by hand 2026-10-12, not re-recorded.
 @start Last watched
 LEFT	Home
 RIGHT	Last watched
-UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
+UP	Your sources
 RIGHT	Search the guide
-LEFT	Switch Source
+LEFT	Your sources
 LEFT	Home
-RIGHT	Switch Source
+RIGHT	Your sources
 DOWN	Last watched

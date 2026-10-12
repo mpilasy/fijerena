@@ -109,7 +109,7 @@ fun MobileEpisodeSelectionScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
-    // The route's source; 0 = the active source.
+    // The route's source.
     providerId: Long = 0L,
 ) {
     val context = LocalContext.current

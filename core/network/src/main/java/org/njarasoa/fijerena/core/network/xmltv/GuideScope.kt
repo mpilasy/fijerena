@@ -8,9 +8,10 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 
 /**
  * The guide sources Search the guide reads and [EpgSyncWorker] keeps fresh: the enabled ones of
- * every Xtream source of the profile in use, and of the source in use whatever its type
- * (docs/plans/20261012_multi-source-search-history-plan.md, Phase 7; Jellyfin and M3U sources join
- * later, O1). A guide source belongs to one source, which [providerIdBySourceId] keeps.
+ * every source of the profile in use that can have channels — Xtream, and M3U ones (Remote M3U,
+ * Local), which kept their guide while they could be the source in use
+ * (docs/plans/20261012_multi-source-search-history-plan.md, Phases 6 and 7). A guide source belongs
+ * to one source, which [providerIdBySourceId] keeps.
  */
 data class GuideScope(
     val providers: List<ProviderEntity>,
@@ -25,7 +26,10 @@ data class GuideScope(
     companion object {
         /** The sources of [profileSources] whose guides are searched (see [GuideScope]). */
         fun searchedProviders(profileSources: List<ProviderEntity>): List<ProviderEntity> =
-            profileSources.filter { it.isActive || it.type == "XTREAM" }
+            profileSources.filter { it.type !in NO_CHANNELS }
+
+        /** Source types with no channels, so no guide: Jellyfin and SMB. */
+        private val NO_CHANNELS = setOf("JELLYFIN", "SMB")
 
         internal suspend fun of(
             providers: List<ProviderEntity>,

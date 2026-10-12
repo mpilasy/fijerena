@@ -62,7 +62,7 @@ class SearchViewModelMultiSourceTest {
 
     @Test
     fun `results of two sources are merged and ranked together, each tagged with its source`() {
-        givenSources(xtream(A, "Alpha", active = true), xtream(B, "Beta"))
+        givenSources(xtream(A, "Alpha"), xtream(B, "Beta"))
         source(A, items = listOf(movie("1", "Matrix Reloaded")), category = "Action Matrix", excluded = 2)
         source(B, items = listOf(movie("1", "Matrix")), category = "Sci-fi", excluded = 1)
 
@@ -78,7 +78,7 @@ class SearchViewModelMultiSourceTest {
 
     @Test
     fun `a source whose search fails is left out`() {
-        givenSources(xtream(A, "Alpha", active = true), xtream(B, "Beta"))
+        givenSources(xtream(A, "Alpha"), xtream(B, "Beta"))
         source(A, items = listOf(movie("1", "Matrix")))
         val failing = source(B, items = emptyList())
         coEvery { failing.search(any(), any(), any()) } throws IllegalStateException("boom")
@@ -91,7 +91,7 @@ class SearchViewModelMultiSourceTest {
 
     @Test
     fun `when every source fails the error shows`() {
-        givenSources(xtream(A, "Alpha", active = true))
+        givenSources(xtream(A, "Alpha"))
         val failing = source(A, items = emptyList())
         coEvery { failing.search(any(), any(), any()) } throws IllegalStateException("boom")
 
@@ -103,7 +103,7 @@ class SearchViewModelMultiSourceTest {
 
     @Test
     fun `the same item on two sources has distinct keys`() {
-        givenSources(xtream(A, "Alpha", active = true), xtream(B, "Beta"))
+        givenSources(xtream(A, "Alpha"), xtream(B, "Beta"))
         source(A, items = listOf(movie("1", "Matrix")), category = "Matrix")
         source(B, items = listOf(movie("1", "Matrix")), category = "Matrix")
 
@@ -116,7 +116,7 @@ class SearchViewModelMultiSourceTest {
 
     @Test
     fun `a single source shows no source badge`() {
-        givenSources(xtream(A, "Alpha", active = true))
+        givenSources(xtream(A, "Alpha"))
         source(A, items = listOf(movie("1", "Matrix")), category = "Matrix")
 
         val state = search("matrix")
@@ -127,21 +127,31 @@ class SearchViewModelMultiSourceTest {
     }
 
     @Test
-    fun `a Jellyfin or M3U source in use is searched alone`() {
-        givenSources(ProviderEntity(id = A, name = "Jelly", url = "", username = "", type = "JELLYFIN", isActive = true), xtream(B, "Beta"))
+    fun `a Jellyfin or M3U source is left out while the profile has an Xtream one`() {
+        givenSources(ProviderEntity(id = A, name = "Jelly", url = "", username = "", type = "JELLYFIN"), xtream(B, "Beta"))
         source(A, items = listOf(movie("1", "Matrix")))
         source(B, items = listOf(movie("2", "Matrix")))
 
         val state = search("matrix")
 
+        assertEquals(listOf(B), state.filteredResults.map { it.providerId })
+        coVerify(exactly = 0) { container.getMediaRepository(A) }
+    }
+
+    @Test
+    fun `a profile with no Xtream source searches its other sources`() {
+        givenSources(ProviderEntity(id = A, name = "Jelly", url = "", username = "", type = "JELLYFIN"))
+        source(A, items = listOf(movie("1", "Matrix")))
+
+        val state = search("matrix")
+
         assertEquals(listOf(A), state.filteredResults.map { it.providerId })
         assertNull(state.filteredResults.single().sourceName)
-        coVerify(exactly = 0) { container.getMediaRepository(B) }
     }
 
     @Test
     fun `a result's favourite uses its own source`() {
-        givenSources(xtream(A, "Alpha", active = true), xtream(B, "Beta"))
+        givenSources(xtream(A, "Alpha"), xtream(B, "Beta"))
         val alpha = source(A, items = emptyList())
         val beta = source(B, items = emptyList())
 
@@ -169,8 +179,7 @@ class SearchViewModelMultiSourceTest {
     private fun xtream(
         id: Long,
         name: String,
-        active: Boolean = false,
-    ) = ProviderEntity(id = id, name = name, url = "", username = "", type = "XTREAM", isActive = active)
+    ) = ProviderEntity(id = id, name = name, url = "", username = "", type = "XTREAM")
 
     private fun movie(
         id: String,

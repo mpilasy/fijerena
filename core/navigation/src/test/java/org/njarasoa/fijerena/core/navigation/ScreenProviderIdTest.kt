@@ -6,16 +6,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * The routes that open on a source keep it through serialization, and a route saved without one
- * (an older back stack, a caller that doesn't say) reads as 0, the active source. See
- * docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
+ * The routes that open on a source keep it through serialization. Every one of them but a
+ * section's list names a real source (there is no source in use to fall back to); a section's
+ * list without one reads as 0, every Xtream source merged. See
+ * docs/plans/20261012_multi-source-search-history-plan.md → Phases 1 and 6.
  */
 class ScreenProviderIdTest {
     private val routes: List<Screen> =
         listOf(
-            Screen.MovieDetails(movieId = "m1", movieName = "Film", categoryId = "c1"),
-            Screen.EpisodeSelection(seriesId = "s1", seriesName = "Show", categoryId = "c1", initialEpisodeId = "e1"),
-            Screen.Player(streamId = "v1", streamName = "Film", categoryId = "c1", contentType = "MOVIES"),
+            Screen.MovieDetails(movieId = "m1", movieName = "Film", categoryId = "c1", providerId = SOURCE),
+            Screen.EpisodeSelection(seriesId = "s1", seriesName = "Show", categoryId = "c1", initialEpisodeId = "e1", providerId = SOURCE),
+            Screen.Player(streamId = "v1", streamName = "Film", categoryId = "c1", contentType = "MOVIES", providerId = SOURCE),
             Screen.Player(
                 streamId = "ch1",
                 streamName = "News",
@@ -24,23 +25,15 @@ class ScreenProviderIdTest {
                 catchupStartSec = 1_700_000_000L,
                 catchupDurationSec = 3_600L,
                 programTitle = "Evening news",
+                providerId = SOURCE,
             ),
-            Screen.CategoryList(contentType = "LIVE_TV", initialCategoryId = "c1", initialStreamId = "ch1"),
-            Screen.EpgGuide(categoryId = "c1", categoryName = "News", focusChannelId = "ch1"),
+            Screen.CategoryList(contentType = "LIVE_TV", initialCategoryId = "c1", initialStreamId = "ch1", providerId = SOURCE),
+            Screen.EpgGuide(categoryId = "c1", categoryName = "News", focusChannelId = "ch1", providerId = SOURCE),
         )
 
     @Test
-    fun `routes without a source round-trip with 0`() {
-        routes.forEach { route ->
-            val decoded = roundTrip(route)
-            assertEquals(route, decoded)
-            assertEquals(0L, decoded.providerIdOrNull())
-        }
-    }
-
-    @Test
     fun `routes with a source keep it`() {
-        routes.map { it.withProviderId(SOURCE) }.forEach { route ->
+        routes.forEach { route ->
             val decoded = roundTrip(route)
             assertEquals(route, decoded)
             assertEquals(SOURCE, decoded.providerIdOrNull())
@@ -48,9 +41,10 @@ class ScreenProviderIdTest {
     }
 
     @Test
-    fun `a route saved before routes had a source reads as the active one`() {
-        val old = """{"movieId":"m1","movieName":"Film","categoryId":"c1"}"""
-        assertEquals(0L, Json.decodeFromString(Screen.MovieDetails.serializer(), old).providerId)
+    fun `a section's list has no source of its own`() {
+        val route = Screen.CategoryList(contentType = "MOVIES")
+
+        assertEquals(0L, (roundTrip(route) as Screen.CategoryList).providerId)
     }
 
     // Navigation serializes each route with its own class's serializer.
@@ -68,16 +62,6 @@ class ScreenProviderIdTest {
         serializer: KSerializer<T>,
         route: T,
     ): T = Json.decodeFromString(serializer, Json.encodeToString(serializer, route))
-
-    private fun Screen.withProviderId(id: Long): Screen =
-        when (this) {
-            is Screen.MovieDetails -> copy(providerId = id)
-            is Screen.EpisodeSelection -> copy(providerId = id)
-            is Screen.Player -> copy(providerId = id)
-            is Screen.CategoryList -> copy(providerId = id)
-            is Screen.EpgGuide -> copy(providerId = id)
-            else -> this
-        }
 
     private fun Screen.providerIdOrNull(): Long? =
         when (this) {

@@ -25,6 +25,12 @@ data class ProviderEntity(
     val providerSettings: String = "{}",
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsedAt: Long = System.currentTimeMillis(),
+    /**
+     * Unused since multi-source Phase 6 (docs/plans/20261012_multi-source-search-history-plan.md):
+     * there is no device or current source any more. Kept, never written, so `providers.db` needs
+     * no migration; only the one-time upgrade to per-profile sources reads what an older build left
+     * here ([ProviderDao.legacyActiveProviderKey]).
+     */
     val isActive: Boolean = false,
     val lastSyncedAtMs: Long = 0,
     val lastSyncDurationMs: Long = 0,

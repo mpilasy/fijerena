@@ -77,7 +77,7 @@ fun SettingsNote(
  * chevron on the right (`Theme · Deep Night ›`); without a [value], the chevron alone. OK runs
  * [onClick] — it opens the row's picker or page, it never changes the value itself (plan Part I,
  * B, T-6). [leading] holds an avatar or an icon; [supporting] replaces the description when the
- * row needs more than one line (the source in use, the app's build).
+ * row needs more than one line (the app's build).
  */
 @Composable
 fun SettingsRow(

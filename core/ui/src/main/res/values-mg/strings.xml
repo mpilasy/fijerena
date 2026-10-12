@@ -406,9 +406,6 @@
 
     <!-- Settings: Provider Card -->
     <string name="settings_provider_section_title">Loharano</string>
-    <string name="settings_provider_expires_label">Ho tapitra</string>
-    <string name="settings_provider_max_connections_label">Fifandraisana fara-fahabetsahany</string>
-    <string name="settings_provider_trial_account_label">Kaonty fitsapana</string>
     <string name="settings_provider_manage_button">Hitantana ny loharano</string>
 
     <!-- EPG Management extras -->
@@ -504,8 +501,6 @@
     <string name="settings_ui_style_desc">Safidio ny fomba fisehony</string>
 
     <!-- Content Type Selection -->
-    <string name="content_switch_provider_title">Ovao ny loharano</string>
-    <string name="content_switch_provider_description_format">Ovao ny loharano, loharano ampiasaina izao: %1$s</string>
     <string name="home_source_updating">Manavao…</string>
     <string name="home_source_updated">Nohavaozina %1$s</string>
     <string name="home_source_update_failed">Tsy nahomby ny fanavaozana</string>
@@ -620,7 +615,6 @@
     <string name="stream_error_initialization_failed">Tsy nahomby ny fanombohana</string>
     <string name="stream_error_resolve_failed">Tsy nahomby ny fikarohana ny fantsakana</string>
     <string name="stream_error_unknown">Nisy fahadisoana tsy fantatra teo am-pakana ny fantsakana</string>
-    <string name="subscription_unlimited">Tsy voafetra</string>
 
     <!-- ViewModel error-fallback audit fixes -->
     <string name="login_error_timeout">Ela loatra ny fifandraisana. Jereo ny tambajotra na ny adiresin\'ny mpizara.</string>
@@ -696,7 +690,6 @@
     <string name="settings_watch_delay_row_title">Isaina ho nojerena aorian\'ny</string>
     <string name="settings_language_desc">Fiteny ho an\'ny menio sy ny hafatra</string>
     <!-- M3 -->
-    <string name="provider_use_button">Ampiasaina</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Tazony ny OK na tsindrio Menu hahitana ny asa</string>
     <string name="row_more_actions">Asa hafa</string>
@@ -889,7 +882,7 @@
     <string name="device_info_build">Build</string>
     <string name="device_info_installed">Napetraka tamin\'ny</string>
     <string name="device_info_updated">Nohavaozina tamin\'ny</string>
-    <string name="device_info_active_source_type">Loharano ampiasaina</string>
+    <string name="device_info_profile_sources">Loharanon\'ny mombamomba</string>
     <string name="device_info_source_count">Loharano</string>
     <string name="device_info_profile_count">Mombamomba</string>
     <string name="device_info_model">Modely</string>
@@ -947,13 +940,11 @@
     <string name="profile_switching">Mifindra amin\'i %1$s…</string>
     <string name="profile_picker_title">Iza no mijery?</string>
     <string name="profile_switch_description">Hanova mombamomba (%1$s)</string>
-    <string name="profile_jellyfin_sign_in_prompt">Midira amin\'ny %1$s ho an\'ity mombamomba ity</string>
-    <string name="profile_jellyfin_sign_in_button">Hiditra</string>
     <string name="profile_switch_to_button">Mifindra amin\'ity mombamomba ity</string>
     <string name="profile_content_filters_title">Sivana votoaty</string>
     <string name="profile_sources_title">Loharano</string>
     <string name="profile_sources_count_format">%1$d amin\'ny %2$d</string>
-    <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray, sy ilay ampiasainy amin\'ity fitaovana ity.</string>
+    <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray.</string>
     <string name="live_sync_title">Fampifanarahana mivantana</string>
     <string name="live_sync_desc">Ataovy mitovy amin\'ny fitaovanao rehetra ny mombamomba, ny loharano, ny ankafizina ary ny fandrosoan\'ny fijerena, amin\'ny alalan\'ny mpizara fampifanarahana anao manokana. Voaafina eo amin\'ny fitaovana avokoa ny zava-drehetra alohan\'ny hivoahany. Raha hametraka mpizara, jereo ny lahatahiry server ao amin\'ny github.com/mpilasy/fijerena.</string>
     <string name="live_sync_open">Amboary</string>
@@ -1197,4 +1188,14 @@
     <string name="theme_teal">Manga maitso</string>
     <string name="source_badge_description">Loharano: %1$s</string>
     <string name="browse_source">Jereo %1$s</string>
+    <string name="source_chooser_title">Misafidiana loharano</string>
+    <string name="home_sync_updating_count">Fanavaozana %1$d amin\'ny %2$d…</string>
+    <string name="home_sync_updating_count_phase">Fanavaozana %1$d amin\'ny %2$d · %3$s</string>
+    <plurals name="home_sync_failed_count">
+        <item quantity="one">%1$d tsy nahomby</item>
+        <item quantity="other">%1$d tsy nahomby</item>
+    </plurals>
+    <string name="home_sources_status_title">Ny loharanonao</string>
+    <string name="home_no_sources">Mbola tsy manana loharano ity mombamomba ity.</string>
+    <string name="home_only_browse_sources">Misafidiana loharano hojerena.</string>
 </resources>

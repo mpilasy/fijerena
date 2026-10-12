@@ -29,7 +29,7 @@ class SyncTombstoneTest {
     fun deletingAProvider_recordsItsKeyAndDropsItsItemTombstones() =
         runBlocking {
             val providers = ProviderRepository(context)
-            val id = providers.addProvider("tomb", "http://tomb.test", "u", "p", "XTREAM", activate = false)
+            val id = providers.addProvider("tomb", "http://tomb.test", "u", "p", "XTREAM")
             val key = providers.getProviderById(id)!!.providerKey
             val xtream = XtreamDatabase.getInstance(context)
             xtream.favoriteStateDao().deleteRecordingTombstone(id, "someone", "m1", "MOVIES", FavoriteKind.STREAM, 1L)

@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.domain.sourceKey
@@ -150,6 +151,8 @@ internal fun StreamList(
     selectedCategoryId: String?,
     selectedCategoryName: String?,
     lastPlayedItemId: String?,
+    // [lastPlayedItemId]'s source (0: any), so the same id on another source isn't current (Phase 6).
+    lastPlayedSource: Long = 0L,
     nowPlaying: ImmutableNowPlaying,
     contentType: String,
     categoryViewModel: CategoryViewModel,
@@ -335,7 +338,10 @@ internal fun StreamList(
     var openedItemId by rememberSaveable(selectedCategoryKey) { mutableStateOf<String?>(null) }
     // A separator is never a focus target, even when it was once played (before #24). The last
     // played item is an id: its row's key is the first row with that id.
-    val lastPlayedKey = remember(streams, lastPlayedItemId) { streams?.firstOrNull { it.id == lastPlayedItemId }?.sourceKey }
+    val lastPlayedKey =
+        remember(streams, lastPlayedItemId, lastPlayedSource) {
+            streams?.firstOrNull { it.isLastPlayed(lastPlayedItemId, lastPlayedSource) }?.sourceKey
+        }
     val focusTargetId = (openedItemId ?: lastPlayedKey)?.takeUnless { it in markerIds }
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
@@ -498,7 +504,7 @@ internal fun StreamList(
                                         isWatched = item.sourceKey in watchedIds,
                                         nowPlayingProgram = nowPlaying[item.sourceKey],
                                         catchupDays = catchupDays[item.sourceKey] ?: 0,
-                                        isCurrent = item.id == lastPlayedItemId,
+                                        isCurrent = item.isLastPlayed(lastPlayedItemId, lastPlayedSource),
                                         editMode = editMode,
                                         onClick = {
                                             when {

@@ -167,7 +167,7 @@ when `server/` changes).
 SDK 36; release ABIs arm64-v8a and armeabi-v7a.
 
 Architecture in one line: multi-module MVVM (ViewModel + StateFlow), provider types mapped to shared
-domain models, one `MediaRepository` over the active source, manual DI through `AppContainer`. See
+domain models, one `MediaRepository` per source, manual DI through `AppContainer`. See
 [docs/design.md](docs/design.md).
 
 ### Project structure
