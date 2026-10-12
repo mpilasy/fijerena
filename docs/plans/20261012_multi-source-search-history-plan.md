@@ -101,7 +101,7 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 |---|---|---|
 | 1 | Source on routes and screens (no visible change) | Done (2026-10-12, `0abab248`) |
 | 2 | Per-profile source access | Done (2026-10-12, `e2af80e0`) |
-| 3 | Search across the profile's sources | In progress (2026-10-12) |
+| 3 | Search across the profile's sources | Done (2026-10-12, `4460c434`) |
 | 4 | Merged Recent, Continue Watching, favourites and Recent Categories | In progress (2026-10-12) |
 | 5 | Live TV Recent across sources, zap within source | In progress (2026-10-12) |
 | 6 | Merged browsing; the current source goes | Not started |
@@ -170,6 +170,12 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 - A source whose search fails is left out quietly (developer mode: its error under the results).
 - Search history: unchanged (already per profile).
 - Tests: merge across two fake sources, a failing source, keys unique across sources.
+- **Done 2026-10-12 (`4460c434`).** `SearchViewModel.ensureSources` (the profile's Xtream sources when
+  the active one is Xtream, else only the active one); results get `providerId`, `sourceName` (null
+  with one source, so no badge) and `listKey`; favourite/watched take the result's `providerId`
+  (screens keep it in `favoriteMenuSource`). Tests cover the cache-scan path only (mockk can't
+  stub `MediaRepository.search`'s nullable `Result`). Opening Search now connects every Xtream
+  source of the profile. Badge look and opening on another source: Phase 8 walk.
 
 ### Phase 4 — Merged Recent, Continue Watching, favourites and Recent Categories
 
