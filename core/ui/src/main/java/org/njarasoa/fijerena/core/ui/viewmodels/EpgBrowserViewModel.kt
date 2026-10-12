@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -354,6 +355,17 @@ class EpgBrowserViewModel(
         loadGuideSourceOwners()
         categoryId?.let { id ->
             viewModelScope.launchGuarded("EpgBrowserViewModel.contextStreams") { loadContextStreamIds(id) }
+        }
+        // The profile's sources changed while this screen is open (turned on or off, here or on
+        // another device): what was loaded once above follows, and the results on screen are rerun.
+        viewModelScope.launchGuarded("EpgBrowserViewModel.sources") {
+            searchedProviderIdsFlow.drop(1).collect {
+                loadSourceLabels()
+                loadGuideSourceOwners()
+                ensureChannelMatcherCurrent(loadScope())
+                categoryId?.let { id -> loadContextStreamIds(id) }
+                (_uiState.value as? UiState.Results)?.let { performSearch(it.query) }
+            }
         }
     }
 
