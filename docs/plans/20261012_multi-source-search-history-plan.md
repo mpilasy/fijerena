@@ -64,7 +64,7 @@ stays stored separately; only the screens merge it. Every item plays from its ow
 
 - **Data is already per source.** One shared `XtreamDatabase`: every catalogue table, `watch_state`
   and `favorite_state` carry `providerId` (`watch_state` key `(providerId, profileId, itemId,
-  contentType)`). No Room migration is needed for this plan.
+  contentType)`). No Room migration is needed for this plan (none is made: `isActive` stays, unused).
 - **Several sources can be open at once.** `AppContainer.getMediaRepository(providerId)` builds and
   caches one `MediaRepository` per source; `0` means the active one. The source switcher already
   calls it with an explicit id.
@@ -226,8 +226,9 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 - Remove: `ProviderEntity.isActive` and `setActiveProvider` / `getActiveProvider` callers, the
   per-profile last source (`activateLastProvider` and its synced setting), the source picker
   (TV `TvSections`, phone `MobileSourceTopBar`), `LocalActiveProviderId`, and
-  `getMediaRepository()`'s `0` default — every caller passes a source. Room migration of
-  `providers.db` dropping `isActive`; DATABASE_SCHEMA updated in the same commit.
+  `getMediaRepository()`'s `0` default — every caller passes a source. **No migration** (user,
+  2026-10-12): the `isActive` column stays in `providers.db` v17, unused, so an older build still
+  opens the database; DATABASE_SCHEMA notes it as unused.
 - Header: one summary line for all the profile's sources (O3) — "Updated 2 hours ago",
   "Updating 1 of 3…", "1 failed"; tap / OK opens a sheet with each source's status and reason
   (raw detail in developer mode).
@@ -238,8 +239,7 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 - Jellyfin and M3U (O1): a "Browse <source>" entry per such source the profile has (TV rail, phone
   tab header) opens that source's sections as today, scoped to it through the Phase 1 route source.
 - Live sync: the "last source" setting is dropped; older builds that still send it are ignored.
-- Tests: merged category list and keys, every former current-source caller given a source,
-  migration test.
+- Tests: merged category list and keys, every former current-source caller given a source.
 - **Part 1 done 2026-10-12 (`7f1ce07a`), merged browsing.** `MediaCategory.providerId` / `key`
   (`"<source>/<id>"`), `categoryKey`, `sourceKey`; `CategoryViewModel` merges every Xtream source's
   categories around `MergedLists.browsingProviderId` (the profile's first Xtream source); per-row
