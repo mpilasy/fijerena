@@ -230,10 +230,7 @@ class EpgIndexer private constructor(
             var channelCount = 0
             var programmeCount = 0
 
-            // Keep database size manageable: skip programmes that ended more than 12 hours ago.
-            // No future limit — everything ahead that the source provides is kept and searchable.
-            val now = System.currentTimeMillis() / 1000
-            val cutoffEpoch = now - 43200
+            // Every programme the source provides is kept, past or future — no date filter.
 
             try {
                 val channelBatch = mutableListOf<EpgChannelEntity>()
@@ -296,7 +293,6 @@ class EpgIndexer private constructor(
                                 }
 
                                 XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
-                                    if (it.endEpoch < cutoffEpoch) return@let
                                     if (useStaging) programmeStagingBatch.add(it.toStaging()) else programmeBatch.add(it)
                                     programmeCount++
                                     itemsSinceLastProgressUpdate++

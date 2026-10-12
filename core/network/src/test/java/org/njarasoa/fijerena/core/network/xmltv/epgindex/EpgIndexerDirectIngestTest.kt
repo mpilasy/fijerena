@@ -46,15 +46,24 @@ class EpgIndexerDirectIngestTest {
         db.close()
     }
 
-    private fun at(hhmm: String): String = day.format(DateTimeFormatter.BASIC_ISO_DATE) + hhmm + "00 +0000"
+    private fun at(
+        hhmm: String,
+        on: LocalDate,
+    ): String = on.format(DateTimeFormatter.BASIC_ISO_DATE) + hhmm + "00 +0000"
 
-    private fun epochAt(hhmm: String): Long = day.atTime(hhmm.take(2).toInt(), hhmm.drop(2).toInt()).toEpochSecond(ZoneOffset.UTC)
+    private fun epochAt(
+        hhmm: String,
+        on: LocalDate,
+    ): Long = on.atTime(hhmm.take(2).toInt(), hhmm.drop(2).toInt()).toEpochSecond(ZoneOffset.UTC)
 
-    private fun guide(vararg programmes: Triple<String, String, String>): String =
+    private fun guide(
+        vararg programmes: Triple<String, String, String>,
+        on: LocalDate = day,
+    ): String =
         buildString {
             append("""<?xml version="1.0" encoding="UTF-8"?><tv><channel id="WTIC.us"><display-name>FOX 61</display-name></channel>""")
             for ((start, stop, title) in programmes) {
-                append("""<programme start="${at(start)}" stop="${at(stop)}" channel="WTIC.us"><title>$title</title></programme>""")
+                append("""<programme start="${at(start, on)}" stop="${at(stop, on)}" channel="WTIC.us"><title>$title</title></programme>""")
             }
             append("</tv>")
         }
@@ -69,11 +78,23 @@ class EpgIndexerDirectIngestTest {
         indexer.deleteProgrammesNotRewritten(sourceId, maxIdBefore)
     }
 
-    private suspend fun titles(sourceId: Long): List<String> =
+    private suspend fun titles(
+        sourceId: Long,
+        on: LocalDate = day,
+    ): List<String> =
         db
             .epgIndexDao()
-            .getProgrammesInWindow(listOf("WTIC.us"), listOf(sourceId), epochAt("0000"), epochAt("2359"))
+            .getProgrammesInWindow(listOf("WTIC.us"), listOf(sourceId), epochAt("0000", on), epochAt("2359", on))
             .map { it.title }
+
+    @Test
+    fun `programmes however far in the past are kept`() =
+        runBlocking {
+            val weekAgo = LocalDate.now(ZoneOffset.UTC).minusDays(7)
+            ingest(EpgIndexer.getInstance(context), 1, guide(Triple("1900", "2000", "Last week"), on = weekAgo))
+
+            assertEquals(listOf("Last week"), titles(1, weekAgo))
+        }
 
     @Test
     fun `a direct re-ingest drops the listings the new guide no longer has, and leaves other sources alone`() =

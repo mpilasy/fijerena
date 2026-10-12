@@ -372,7 +372,7 @@ class StreamLoaderViewModel(
             val at = catchup?.let { it.startEpochSec + it.programOffsetSec } ?: (System.currentTimeMillis() / 1000)
             val indexed = epgData?.get(streamId)?.listings ?: emptyList()
             // A channel with an archive (or a catch-up) the index knows nothing about at [at]: the
-            // index keeps 12 h of past and goes stale, while Start over and the replayed programme's
+            // index holds only the past its guide file had and goes stale, while Start over and the replayed programme's
             // title need the programme — the source's own guide has it.
             val listings =
                 if (indexed.none { at in it.startTime until it.endTime } && (archiveDays > 0 || catchup != null)) {

@@ -134,13 +134,12 @@ class EpgFileManager private constructor(
         }
 
         /**
-         * Whether a matching content hash is trustworthy enough to skip re-ingesting. A hash match
-         * alone isn't sufficient: [EpgIndexer] drops programmes against wall-clock time on ingest
-         * (see its `cutoffEpoch`), so re-ingesting a byte-identical static file days later still
-         * clears out programmes that have long ended — skipping that ingest forever would let them
-         * pile up while the source keeps reporting healthy refreshes. Forcing a real ingest once a
-         * day bounds how stale the guide can get. And a skip only makes sense while the live index
-         * actually holds the source's rows ([indexHasRows]) — see [buildDownloadRequest].
+         * Whether a matching content hash is trustworthy enough to skip re-ingesting. A real ingest
+         * is still forced once a day, so a skip never outlives a day. (It used to be needed: ingest
+         * dropped programmes ended over 12 h ago, so re-ingesting an identical file cleared them.
+         * Ingest keeps everything now, and the forced run only rewrites the same rows.) And a skip
+         * only makes sense while the live index actually holds the source's rows ([indexHasRows]) —
+         * see [buildDownloadRequest].
          */
         internal fun canSkipIngest(
             source: EpgSourceEntity,

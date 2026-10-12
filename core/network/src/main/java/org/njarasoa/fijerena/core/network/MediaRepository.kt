@@ -221,9 +221,6 @@ internal fun windowListings(
     windowEndSec: Long,
 ): List<EpgProgram> = listings.filter { it.endTime > windowStartSec && it.startTime < windowEndSec }
 
-/** How far back the XMLTV index keeps programmes (see EpgIndexer: ended more than 12 h ago are skipped). */
-internal const val INDEX_PAST_REACH_SEC = 12 * 60 * 60L
-
 /**
  * [index]'s window listings per channel, with [native]'s programmes in the window ahead of them: for
  * each channel [native] answers, the ones that end by the index's first programme in the window
@@ -833,10 +830,10 @@ class MediaRepository(
     }
 
     /**
-     * A past day's page from the index ([index]), with the hours the index no longer keeps (it drops
-     * programmes ended 12 h before it was built) filled in from the source's own guide, for the
-     * channels whose archive reaches them — the programmes catch-up can replay. Only for a window
-     * that is entirely past and starts before the index's reach: today's page asks nothing more.
+     * A past day's page from the index ([index]), with the hours before its first programme (the
+     * guide file starts where it starts) filled in from the source's own guide, for the channels
+     * whose archive reaches them — the programmes catch-up can replay. Only for a window that is
+     * entirely past: today's page asks nothing more.
      * See docs/plans/archive/20261010_catchup-plan.md → "Decided while building" 4.
      */
     private suspend fun withArchivePast(
@@ -847,7 +844,7 @@ class MediaRepository(
     ): Map<String, EpgResponse> {
         val nowSec = System.currentTimeMillis() / 1000
         val archived =
-            if (windowEndSec <= nowSec && windowStartSec < nowSec - INDEX_PAST_REACH_SEC) {
+            if (windowEndSec <= nowSec) {
                 getCatchupDays(items.map { it.id }).keys
             } else {
                 emptySet()
