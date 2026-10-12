@@ -258,6 +258,20 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_programme WHERE source_id IN (:sourceIds)")
     suspend fun deleteProgrammesBySourceIds(sourceIds: List<Long>)
 
+    @Query("SELECT COALESCE(MAX(id), 0) FROM epg_programme")
+    suspend fun getMaxProgrammeId(): Long
+
+    /**
+     * [sourceId]'s programmes with an id up to [maxId]: after a direct ingest that took
+     * [getMaxProgrammeId] first, the ones the new guide did not write again (REPLACE gives every
+     * rewritten row a new, higher id).
+     */
+    @Query("DELETE FROM epg_programme WHERE source_id = :sourceId AND id <= :maxId")
+    suspend fun deleteProgrammesOfSourceUpTo(
+        sourceId: Long,
+        maxId: Long,
+    ): Int
+
     @Query("DELETE FROM epg_channel WHERE source_id = :sourceId")
     suspend fun deleteChannelsBySourceId(sourceId: Long)
 

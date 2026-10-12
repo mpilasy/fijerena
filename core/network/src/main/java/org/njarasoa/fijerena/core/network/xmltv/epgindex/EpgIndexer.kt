@@ -31,8 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Room withTransaction for atomicity. Network drop or parse error
  * triggers transaction rollback — DB stays consistent.
  *
- * Append-only: uses REPLACE on unique (channel_id, source_id, start_epoch) index
- * so the database stays searchable during sync.
+ * Direct path: REPLACE on the unique (channel_id, source_id, start_epoch) index so the database
+ * stays searchable during sync, then [deleteProgrammesNotRewritten] drops what the new guide no
+ * longer lists.
  */
 class EpgIndexer private constructor(
     private val context: Context,
@@ -703,6 +704,29 @@ class EpgIndexer private constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
+            }
+        }
+
+    /** The highest programme id in the live guide, 0 when empty — the mark [deleteProgrammesNotRewritten] takes. */
+    suspend fun maxProgrammeId(): Long =
+        withContext(Dispatchers.IO) {
+            EpgIndexDatabase.getInstance(context).epgIndexDao().getMaxProgrammeId()
+        }
+
+    /**
+     * After a direct (non-staging) ingest of [sourceId]: delete its programmes the new guide did not
+     * write again, those with an id up to [maxIdBefore] ([maxProgrammeId] taken before the ingest).
+     * REPLACE only overwrites a programme with the same channel and start, so without this a
+     * changed schedule left the old listings beside the new ones, overlapping in the TV Guide. The
+     * staging path needs none of this: its swap replaces a source's guide whole.
+     */
+    suspend fun deleteProgrammesNotRewritten(
+        sourceId: Long,
+        maxIdBefore: Long,
+    ): Int =
+        withContext(Dispatchers.IO) {
+            writeMutex.withLock {
+                EpgIndexDatabase.getInstance(context).epgIndexDao().deleteProgrammesOfSourceUpTo(sourceId, maxIdBefore)
             }
         }
 

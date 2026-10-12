@@ -1535,6 +1535,8 @@ class EpgFileManager private constructor(
             }
 
             val ingestStartMs = System.currentTimeMillis()
+            // Direct ingest: the mark below which this source's rows are the old guide's.
+            val maxIdBefore = if (useStaging) null else indexer.maxProgrammeId()
             val fileSize = downloaded.tmpFile.length()
             val countingStream = CountingInputStream(downloaded.tmpFile.inputStream())
             val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
@@ -1587,6 +1589,10 @@ class EpgFileManager private constructor(
                 val display = context.getString(R.string.epg_error_came_back_empty)
                 sourceDao.markError(source.id, display)
                 return IngestOutcome(SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display))
+            }
+            if (maxIdBefore != null) {
+                val removed = indexer.deleteProgrammesNotRewritten(source.id, maxIdBefore)
+                Log.i(TAG, "EPG source $label: removed $removed programmes the new guide no longer lists")
             }
             Log.i(TAG, "EPG source $label fully ingested, content hash ${contentSha256?.take(12)}")
             val record =
