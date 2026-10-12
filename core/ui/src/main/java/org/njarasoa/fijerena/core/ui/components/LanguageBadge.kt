@@ -107,6 +107,22 @@ fun BadgedTitle(
 }
 
 /**
+ * The source an item comes from, where a list mixes several (search, Recent, favourites), on the
+ * same pill as [LanguageBadge]. Read as "Source: <name>".
+ */
+@Composable
+fun SourceBadge(
+    name: String,
+    modifier: Modifier = Modifier,
+) {
+    val description = stringResource(R.string.source_badge_description, name)
+    CinemaBadge(
+        text = name,
+        modifier = modifier.clearAndSetSemantics { contentDescription = description },
+    )
+}
+
+/**
  * Star rating badge standardizing the `"★ ${formatRating(rating)}"` pattern across mobile and TV.
  */
 @Composable
