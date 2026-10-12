@@ -100,7 +100,7 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 | Phase | What | Status |
 |---|---|---|
 | 1 | Source on routes and screens (no visible change) | In progress (2026-10-12) |
-| 2 | Per-profile source access | In progress (2026-10-12) |
+| 2 | Per-profile source access | Done (2026-10-12, `e2af80e0`) |
 | 3 | Search across the profile's sources | Not started |
 | 4 | Merged Recent, Continue Watching, favourites and Recent Categories | Not started |
 | 5 | Live TV Recent across sources, zap within source | Not started |
@@ -142,6 +142,14 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
   keep at least one source.
 - Strings in en/fr/mg (British spelling).
 - Tests: resolver, opt-in for other profiles, sync round-trip, profile copy/delete, source delete.
+- **Done 2026-10-12 (`e2af80e0`).** Setting `profile_sources_<profileId>` (sorted JSON array of
+  `providerKey`s), resolver `ProviderRepository.profileSources` / `resolveProfileSources`, upgrade
+  flag `profile_sources_seeded_v1` (not synced, so a later-upgrading device can't overwrite an
+  earlier choice). Also beyond the plan: Manage Sources hides **Use** on sources the profile lacks;
+  deleting the source in use moves to another of the profile's sources. **Sources ›** shows with 2+
+  sources ("N of M"); TV pane, phone dialog. Left for Phase 8: the `sources.txt` focus walk needs the
+  profile to have both sources (after the upgrade it has one); the new `settings.txt` step is not
+  re-recorded; settings export/import doesn't carry a profile's sources.
 
 ### Phase 3 — Search across the profile's sources
 
