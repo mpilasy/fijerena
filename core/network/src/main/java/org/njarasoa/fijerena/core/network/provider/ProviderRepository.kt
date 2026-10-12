@@ -9,6 +9,7 @@ import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -103,6 +104,37 @@ class ProviderRepository(
          */
         private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
 
+        /**
+         * The sources a profile with [keys] (its `providerKey`s, null for none stored) can use, in
+         * [providers]' order: those of its keys this device has — a key with no source here is
+         * skipped — and, until the current source goes (multi-source plan, Phase 6), always the
+         * source this device is on.
+         */
+        internal fun resolveProfileSources(
+            providers: List<ProviderEntity>,
+            keys: Set<String>?,
+        ): List<ProviderEntity> = providers.filter { it.isActive || keys?.contains(it.providerKey) == true }
+
+        /**
+         * Where a device goes when [profileId]'s profile becomes the one in use, or null to stay:
+         * the source it last picked if the profile has it, else the one the device is on if the
+         * profile has that, else its first. A profile with none of its sources here (or none
+         * stored) goes to its last pick as before, wherever that is.
+         */
+        internal fun profileSourceToActivate(
+            providers: List<ProviderEntity>,
+            keys: Set<String>?,
+            lastKey: String?,
+        ): ProviderEntity? {
+            val owned = providers.filter { keys?.contains(it.providerKey) == true }
+            val target =
+                owned.firstOrNull { it.providerKey == lastKey }
+                    ?: owned.firstOrNull { it.isActive }
+                    ?: owned.firstOrNull()
+                    ?: providers.firstOrNull { it.providerKey == lastKey }
+            return target?.takeUnless { it.isActive }
+        }
+
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
         private const val KEY_JELLYFIN_TOKEN = "jellyfin_token"
@@ -155,6 +187,27 @@ class ProviderRepository(
 
     suspend fun getProviderCount(): Int = dao.getProviderCount()
 
+    /**
+     * The sources [profileId] can use that this device has (see [resolveProfileSources]),
+     * re-emitted when a source is added, changed or deleted, or the profile's sources change.
+     */
+    fun profileSources(profileId: String): Flow<List<ProviderEntity>> =
+        combine(dao.getAllProviders(), AppSettings(context).observeProfileSourceKeys(profileId), ::resolveProfileSources)
+
+    /** [profileSources] once, for the profile this device uses unless told otherwise. */
+    suspend fun profileSourcesList(profileId: String = activeProfileId()): List<ProviderEntity> =
+        resolveProfileSources(dao.getAllProvidersList(), AppSettings(context).profileSourceKeys(profileId))
+
+    /** See [AppSettings.seedProfileSourcesOnce]; at startup, and before a source is added. */
+    suspend fun seedProfileSourcesOnce() {
+        val providers = dao.getAllProvidersList()
+        AppSettings(context).seedProfileSourcesOnce(
+            db.profileDao().getAll().map { it.id },
+            providers.map { it.providerKey }.toSet(),
+            providers.firstOrNull { it.isActive }?.providerKey,
+        )
+    }
+
     /** [providerId]'s guide sources, as they change (Edit Source's Guide sources row). */
     fun getGuideSources(providerId: Long): Flow<List<EpgSourceEntity>> = db.epgSourceDao().getSourcesForProvider(providerId)
 
@@ -177,6 +230,8 @@ class ProviderRepository(
         activate: Boolean = true,
         rememberForProfile: Boolean = activate,
     ): Long {
+        // Before the insert, so the upgrade gives profiles their old source, not this one.
+        seedProfileSourcesOnce()
         if (activate) dao.deactivateAll()
         // Category filters are per profile and live in [filtersStore], not in the provider's JSON.
         val settingsJson = json.encodeToString(initialSettings.copy(categoryFilters = CategoryFilters()))
@@ -212,6 +267,8 @@ class ProviderRepository(
         if (initialSettings.categoryFilters != CategoryFilters()) {
             filtersStore.set(id, activeProfileId(), initialSettings.categoryFilters)
         }
+        // A new source is on for the profile that added it only (multi-source plan, P1).
+        AppSettings(context).addProfileSource(activeProfileId(), entity.providerKey)
         // Adding a provider moves the device to it, so it is the profile's pick — see [pickProvider].
         if (rememberForProfile) AppSettings(context).setLastProviderKey(activeProfileId(), entity.providerKey)
         return id
@@ -294,7 +351,11 @@ class ProviderRepository(
             filtersStore.removeProvider(id)
             MediaProviderFactory.providerChanged(id)
             if (entity.isActive) {
-                dao.getAllProvidersList().firstOrNull()?.let { setActiveProvider(it.id) }
+                // One of the profile's own sources when it has another (P2), else the first left.
+                val remaining = dao.getAllProvidersList()
+                val keys = AppSettings(context).profileSourceKeys(activeProfileId())
+                (remaining.firstOrNull { keys?.contains(it.providerKey) == true } ?: remaining.firstOrNull())
+                    ?.let { setActiveProvider(it.id) }
             }
             AppSettings(context).orphanSweepPending = false
         }
@@ -504,15 +565,21 @@ class ProviderRepository(
     }
 
     /**
-     * Moves this device to the provider [profileId] last picked, if it still exists here and isn't
-     * already active. Otherwise the device stays where it is. Returns whether it moved.
+     * Moves this device to the provider [profileId] last picked, if it still exists here, the
+     * profile has it, and it isn't already active; when the profile lacks the source the device is
+     * on, to one it has (see [profileSourceToActivate]). Otherwise the device stays where it is.
+     * Returns whether it moved.
      */
     suspend fun activateLastProvider(profileId: String): Boolean {
-        val key = AppSettings(context).lastProviderKey(profileId) ?: return false
-        val provider = db.settingsSyncDao().providerByKey(key) ?: return false
-        if (provider.isActive) return false
-        setActiveProvider(provider.id)
-        return true
+        val settings = AppSettings(context)
+        val target =
+            profileSourceToActivate(
+                dao.getAllProvidersList(),
+                settings.profileSourceKeys(profileId),
+                settings.lastProviderKey(profileId),
+            )
+        target?.let { setActiveProvider(it.id) }
+        return target != null
     }
 
     suspend fun updateSyncStats(

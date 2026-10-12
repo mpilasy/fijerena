@@ -951,6 +951,9 @@
     <string name="profile_jellyfin_sign_in_button">Hiditra</string>
     <string name="profile_switch_to_button">Mifindra amin\'ity mombamomba ity</string>
     <string name="profile_content_filters_title">Sivana votoaty</string>
+    <string name="profile_sources_title">Loharano</string>
+    <string name="profile_sources_count_format">%1$d amin\'ny %2$d</string>
+    <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray, sy ilay ampiasainy amin\'ity fitaovana ity.</string>
     <string name="live_sync_title">Fampifanarahana mivantana</string>
     <string name="live_sync_desc">Ataovy mitovy amin\'ny fitaovanao rehetra ny mombamomba, ny loharano, ny ankafizina ary ny fandrosoan\'ny fijerena, amin\'ny alalan\'ny mpizara fampifanarahana anao manokana. Voaafina eo amin\'ny fitaovana avokoa ny zava-drehetra alohan\'ny hivoahany. Raha hametraka mpizara, jereo ny lahatahiry server ao amin\'ny github.com/mpilasy/fijerena.</string>
     <string name="live_sync_open">Amboary</string>

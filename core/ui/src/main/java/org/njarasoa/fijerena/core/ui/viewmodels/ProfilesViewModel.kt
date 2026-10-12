@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -37,6 +39,19 @@ data class SourceInUse(
     val id: Long,
     val name: String,
     val type: String,
+)
+
+/**
+ * One source on a profile's Sources pane: whether the profile has it ([isOn]), and whether its
+ * switch may turn it off — not its last source, nor the one this device is on for the profile in
+ * use (until the current source goes, multi-source plan Phase 6).
+ */
+data class ProfileSourceUi(
+    val providerKey: String,
+    val name: String,
+    val isOn: Boolean,
+    val inUse: Boolean,
+    val canTurnOff: Boolean,
 )
 
 /** Settings → Profiles. See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles. */
@@ -152,6 +167,28 @@ class ProfilesViewModel(
         }
     }
 
+    /**
+     * Every source on this device, each with whether [profileId] has it — for its profile page's
+     * Sources pane. Re-emits when a source or the profile's sources change, here or from sync.
+     */
+    fun profileSources(profileId: String): Flow<List<ProfileSourceUi>> {
+        val providers = AppContainer.getInstance(context).providerRepository
+        return combine(providers.getAllProviders(), appSettings.observeProfileSourceKeys(profileId)) { all, keys ->
+            profileSourceRows(all, keys, profileId == appSettings.activeProfileId)
+        }
+    }
+
+    /** Turns [providerKey] on or off for [profileId]; refused when [rows] say it can't go off. */
+    fun setProfileSource(
+        profileId: String,
+        rows: List<ProfileSourceUi>,
+        providerKey: String,
+        on: Boolean,
+    ) {
+        toggledSourceKeys(appSettings.profileSourceKeys(profileId).orEmpty(), rows, providerKey, on)
+            ?.let { appSettings.setProfileSourceKeys(profileId, it) }
+    }
+
     /** [id]'s own settings — not necessarily the profile this device uses. */
     fun settingsOf(id: String): ProfileSettings = ProfileSettings(appSettings.devMode(id), appSettings.autoplayNextEpisode(id))
 
@@ -177,7 +214,46 @@ class ProfilesViewModel(
         return (0 until size).firstOrNull { it !in used } ?: profiles.value.size % size
     }
 
-    private companion object {
-        const val STOP_TIMEOUT_MS = 5_000L
+    internal companion object {
+        private const val STOP_TIMEOUT_MS = 5_000L
+
+        /**
+         * [providers] as a profile's Sources pane shows them, for a profile with [keys] (its
+         * `providerKey`s; null for none stored). For the profile in use ([profileInUse]) the source
+         * the device is on counts as on, as `ProviderRepository.profileSources` has it.
+         */
+        fun profileSourceRows(
+            providers: List<ProviderEntity>,
+            keys: Set<String>?,
+            profileInUse: Boolean,
+        ): List<ProfileSourceUi> {
+            val inUse = { p: ProviderEntity -> profileInUse && p.isActive }
+            val onCount = providers.count { keys?.contains(it.providerKey) == true || inUse(it) }
+            return providers.map { p ->
+                val isOn = keys?.contains(p.providerKey) == true || inUse(p)
+                ProfileSourceUi(p.providerKey, p.name, isOn, inUse(p), isOn && !inUse(p) && onCount > 1)
+            }
+        }
+
+        /**
+         * The keys to store after turning [providerKey] on or off, or null to change nothing (a
+         * source that isn't listed, or one that can't go off). Starts from [stored], not from the
+         * rows: a key whose source hasn't reached this device yet must not be dropped.
+         */
+        fun toggledSourceKeys(
+            stored: Set<String>,
+            rows: List<ProfileSourceUi>,
+            providerKey: String,
+            on: Boolean,
+        ): Set<String>? {
+            val row = rows.firstOrNull { it.providerKey == providerKey }
+            val onKeys = stored + rows.filter { it.isOn }.map { it.providerKey }
+            return when {
+                row == null -> null
+                on -> onKeys + providerKey
+                row.canTurnOff -> onKeys - providerKey
+                else -> null
+            }
+        }
     }
 }

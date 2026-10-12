@@ -33,8 +33,10 @@ class ProfileRepository(
     ): String {
         val id = UUID.randomUUID().toString()
         dao.insert(ProfileEntity(id = id, name = name.trim(), createdAt = System.currentTimeMillis(), colorIndex = colorIndex))
-        // Starts with the creator's category filters; dev mode starts off (no flag stored).
-        CategoryFiltersStore(context).copyProfile(AppSettings(context).activeProfileId, id)
+        // Starts with the creator's category filters and sources; dev mode starts off (no flag stored).
+        val settings = AppSettings(context)
+        CategoryFiltersStore(context).copyProfile(settings.activeProfileId, id)
+        settings.profileSourceKeys(settings.activeProfileId)?.let { settings.setProfileSourceKeys(id, it) }
         return id
     }
 
@@ -47,13 +49,15 @@ class ProfileRepository(
     }
 
     /**
-     * See [AppSettings.copyLegacyDevModeToProfiles] and
-     * [AppSettings.moveLegacySearchHistoryToDefaultProfile]; run once at startup.
+     * See [AppSettings.copyLegacyDevModeToProfiles],
+     * [AppSettings.moveLegacySearchHistoryToDefaultProfile] and
+     * [AppSettings.seedProfileSourcesOnce]; run once at startup.
      */
     suspend fun migrateLegacyProfileSettings() {
         val settings = AppSettings(context)
         settings.copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
         settings.moveLegacySearchHistoryToDefaultProfile()
+        ProviderRepository(context).seedProfileSourcesOnce()
     }
 
     /** Why [deleteProfile] refused, or [NONE] when it went ahead. */
@@ -61,7 +65,7 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider, and its developer-mode flag, search history and category filters. Refuses the profile this device is using — switch away first — and the last one
+     * logins on every provider, and its developer-mode flag, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -97,6 +101,7 @@ class ProfileRepository(
                     AppSettings(context).removeAutoplayNextEpisode(id)
                     AppSettings(context).removeProfileSearchHistory(id)
                     AppSettings(context).removeLastTab(id)
+                    AppSettings(context).removeProfileSources(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
                     val settingsDb = SettingsDatabase.getInstance(context)

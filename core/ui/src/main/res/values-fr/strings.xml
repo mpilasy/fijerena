@@ -780,6 +780,9 @@
     <string name="profile_jellyfin_sign_in_button">Se connecter</string>
     <string name="profile_switch_to_button">Passer à ce profil</string>
     <string name="profile_content_filters_title">Filtres de contenu</string>
+    <string name="profile_sources_title">Sources</string>
+    <string name="profile_sources_count_format">%1$d sur %2$d</string>
+    <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n\'est activée que pour le profil qui l\'a ajoutée. Un profil garde au moins une source, ainsi que celle qu\'il utilise sur cet appareil.</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
     <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter. Pour installer un serveur, voir le dossier server sur github.com/mpilasy/fijerena.</string>

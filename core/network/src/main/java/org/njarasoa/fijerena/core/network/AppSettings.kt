@@ -2,6 +2,13 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
@@ -21,6 +28,8 @@ class AppSettings(
         private const val KEY_DEV_MODE = "dev_mode"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
         private const val KEY_LAST_PROVIDER = "last_provider"
+        private const val KEY_PROFILE_SOURCES = "profile_sources"
+        private const val KEY_PROFILE_SOURCES_SEEDED = "profile_sources_seeded_v1"
         private const val KEY_AUTOPLAY_NEXT_EPISODE = "autoplay_next_episode"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
@@ -79,8 +88,11 @@ class AppSettings(
                 KEY_LAST_PROVIDER,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_TMDB_API_KEY,
+                KEY_PROFILE_SOURCES,
             )
-        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER, KEY_AUTOPLAY_NEXT_EPISODE)
+        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER, KEY_AUTOPLAY_NEXT_EPISODE, KEY_PROFILE_SOURCES)
+
+        private val sourceKeysSerializer = ListSerializer(String.serializer())
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
     }
@@ -171,6 +183,85 @@ class AppSettings(
     }
 
     /**
+     * The `providerKey`s of the sources [profileId] has (multi-source plan, P1): per profile and
+     * synced, so a profile has the same sources on every device. Null when nothing is stored — a
+     * profile from before [seedProfileSourcesOnce], or one synced in from an older build. Keys of
+     * sources this device doesn't have (deleted, or not synced here yet) are kept: the resolver
+     * (`ProviderRepository.profileSources`) skips them. See
+     * docs/plans/20261012_multi-source-search-history-plan.md → Phase 2.
+     */
+    fun profileSourceKeys(profileId: String): Set<String>? =
+        decodeSourceKeys(prefs.getString(profileKey(KEY_PROFILE_SOURCES, profileId), null))
+
+    fun setProfileSourceKeys(
+        profileId: String,
+        keys: Set<String>,
+    ) {
+        if (profileSourceKeys(profileId) == keys) return
+        prefs.edit { putString(profileKey(KEY_PROFILE_SOURCES, profileId), encodeSourceKeys(keys)) }
+        SettingsSyncQueue.setting(context, KEY_PROFILE_SOURCES, profileId)
+    }
+
+    /** Turns [providerKey] on for [profileId], keeping the sources it already has. */
+    fun addProfileSource(
+        profileId: String,
+        providerKey: String,
+    ) = setProfileSourceKeys(profileId, profileSourceKeys(profileId).orEmpty() + providerKey)
+
+    /** [profileSourceKeys], now and on every change (an edit here or a value received from another device). */
+    fun observeProfileSourceKeys(profileId: String): Flow<Set<String>?> {
+        val stored = profileKey(KEY_PROFILE_SOURCES, profileId)
+        return callbackFlow {
+            val listener =
+                SharedPreferences.OnSharedPreferenceChangeListener { _, changed ->
+                    if (changed == stored) trySend(profileSourceKeys(profileId))
+                }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(profileSourceKeys(profileId))
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+    }
+
+    /**
+     * One-time upgrade (multi-source plan, O2): each profile in [profileIds] gets only the source it
+     * last picked ([lastProviderKey], when [existingKeys] still has it); one that never picked gets
+     * [activeKey], the source this device is on. A profile that already has its sources — received
+     * from another device before this ran — keeps them. Per device and not sent: every device works
+     * it out the same from the synced last pick, and sending it could overwrite a choice made on a
+     * device that upgraded first. A new link sends it with everything else (`LocalRecords`).
+     */
+    fun seedProfileSourcesOnce(
+        profileIds: List<String>,
+        existingKeys: Set<String>,
+        activeKey: String?,
+    ) {
+        if (prefs.getBoolean(KEY_PROFILE_SOURCES_SEEDED, false)) return
+        prefs.edit(commit = true) {
+            profileIds.filterNot { prefs.contains(profileKey(KEY_PROFILE_SOURCES, it)) }.forEach { id ->
+                val key = lastProviderKey(id)?.takeIf { it in existingKeys } ?: activeKey
+                if (key != null) putString(profileKey(KEY_PROFILE_SOURCES, id), encodeSourceKeys(setOf(key)))
+            }
+            putBoolean(KEY_PROFILE_SOURCES_SEEDED, true)
+        }
+    }
+
+    /** Drops a deleted profile's sources. */
+    fun removeProfileSources(profileId: String) = prefs.edit { remove(profileKey(KEY_PROFILE_SOURCES, profileId)) }
+
+    private fun encodeSourceKeys(keys: Set<String>): String = Json.encodeToString(sourceKeysSerializer, keys.sorted())
+
+    /** Null for nothing stored, or for a value that isn't a JSON array of strings. */
+    private fun decodeSourceKeys(raw: String?): Set<String>? =
+        raw?.let {
+            try {
+                Json.decodeFromString(sourceKeysSerializer, it).toSet()
+            } catch (_: IllegalArgumentException) {
+                // cancellation-ok: non-suspend
+                null
+            }
+        }
+
+    /**
      * A setting received from another device (live sync): written straight to prefs, not through
      * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
      * ignored — a newer app version may sync more, and an older one still sends the retired guide
@@ -189,10 +280,27 @@ class AppSettings(
         }
         prefs.edit {
             when (key) {
-                KEY_DEV_MODE -> value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
-                KEY_AUTOPLAY_NEXT_EPISODE -> value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
-                KEY_LAST_PROVIDER -> if (value.isString) putString(profileKey(key, profileId), value.content)
-                KEY_THEME_ID -> if (value.isString && value.content.isNotBlank()) putString(key, value.content)
+                KEY_DEV_MODE -> {
+                    value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
+                }
+
+                KEY_AUTOPLAY_NEXT_EPISODE -> {
+                    value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
+                }
+
+                KEY_LAST_PROVIDER -> {
+                    if (value.isString) putString(profileKey(key, profileId), value.content)
+                }
+
+                KEY_PROFILE_SOURCES -> {
+                    decodeSourceKeys(value.content.takeIf { value.isString })?.let {
+                        putString(profileKey(key, profileId), encodeSourceKeys(it))
+                    }
+                }
+
+                KEY_THEME_ID -> {
+                    if (value.isString && value.content.isNotBlank()) putString(key, value.content)
+                }
             }
         }
     }
@@ -215,7 +323,7 @@ class AppSettings(
                 )
             }
 
-            KEY_THEME_ID, KEY_LAST_PROVIDER -> {
+            KEY_THEME_ID, KEY_LAST_PROVIDER, KEY_PROFILE_SOURCES -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 

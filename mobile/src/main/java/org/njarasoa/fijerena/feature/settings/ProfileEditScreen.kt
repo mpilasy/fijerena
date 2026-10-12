@@ -45,9 +45,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * A profile's page (`Screen.ProfileEdit`, D8): name, colour, its own Developer mode and Play next
- * episode automatically, Content filters › (the source in use, for this profile; Xtream only),
- * Switch to this profile, Save / Cancel, and Delete last. Content filters are saved by their own
- * editor's Save, at once; the rest by Save. See docs/plans/archive/20261003_sources-guide-profiles-plan.md → P9.
+ * episode automatically, Sources › (with two or more sources), Content filters › (the source in
+ * use, for this profile; Xtream only), Switch to this profile, Save / Cancel, and Delete last.
+ * Content filters are saved by their own editor's Save, and Sources by each switch, at once; the
+ * rest by Save. See docs/plans/archive/20261003_sources-guide-profiles-plan.md → P9.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +62,7 @@ fun MobileProfileEditScreen(
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val sourceInUse by viewModel.sourceInUse.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.loadSourceInUse() }
+    val sources by remember(profileId) { viewModel.profileSources(profileId) }.collectAsStateWithLifecycle(emptyList())
     val profile = profiles.firstOrNull { it.id == profileId }
 
     Scaffold(
@@ -87,6 +89,7 @@ fun MobileProfileEditScreen(
             var showNameError by remember { mutableStateOf(false) }
             var editingFilters by remember { mutableStateOf<CategoryFilters?>(null) }
             var confirmDelete by remember { mutableStateOf(false) }
+            var editingSources by rememberSaveable { mutableStateOf(false) }
             // Content filters act on Xtream catalogues only (as they did in Edit Source).
             val filtersSource = sourceInUse?.takeIf { it.type == "XTREAM" }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
@@ -124,6 +127,14 @@ fun MobileProfileEditScreen(
                     checked = autoplayNextEpisode,
                     onCheckedChange = { autoplayNextEpisode = it },
                 )
+                // With one source there is nothing to choose: it stays on.
+                if (sources.size > 1) {
+                    SettingsListRow(
+                        title = stringResource(R.string.profile_sources_title),
+                        summary = stringResource(R.string.profile_sources_count_format, sources.count { it.isOn }, sources.size),
+                        onClick = { editingSources = true },
+                    )
+                }
                 if (filtersSource != null) {
                     SettingsListRow(
                         title = stringResource(R.string.profile_content_filters_title),
@@ -177,6 +188,33 @@ fun MobileProfileEditScreen(
                         editingFilters = null
                     },
                     onDismiss = { editingFilters = null },
+                )
+            }
+
+            if (editingSources) {
+                // Each switch is saved at once, like the filters' own Save; Close only closes.
+                CinemaAlertDialog(
+                    onDismissRequest = { editingSources = false },
+                    title = { Text(stringResource(R.string.profile_sources_title)) },
+                    text = {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                        ) {
+                            Text(stringResource(R.string.profile_sources_desc))
+                            sources.forEach { source ->
+                                ProfileSwitchRow(
+                                    title = source.name,
+                                    checked = source.isOn,
+                                    onCheckedChange = { viewModel.setProfileSource(profileId, sources, source.providerKey, it) },
+                                    summary = if (source.inUse) stringResource(R.string.settings_profiles_active_marker) else null,
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        CinemaDialogTextButton(onClick = { editingSources = false }) { Text(stringResource(R.string.common_close)) }
+                    },
                 )
             }
 

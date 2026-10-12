@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
@@ -144,6 +147,16 @@ class ProviderViewModel(
 
     private val _providers = MutableStateFlow<List<ProviderEntity>>(emptyList())
     val providers: StateFlow<List<ProviderEntity>> = _providers.asStateFlow()
+
+    /**
+     * The ids of the sources the profile in use has: Manage Sources offers Use only on those (a
+     * profile can't switch to a source it lacks; multi-source plan, P2).
+     */
+    val profileSourceIds: StateFlow<Set<Long>> =
+        providerRepository
+            .profileSources(appSettings.activeProfileId)
+            .map { sources -> sources.map { it.id }.toSet() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), emptySet())
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState: StateFlow<SaveState> = _saveState.asStateFlow()

@@ -186,18 +186,27 @@ internal fun ProfileColourPicker(
     }
 }
 
-/** A profile setting on its page: the title, and the switch on the right; the whole row toggles it. */
+/**
+ * A profile setting on its page: the title (and an optional [summary] under it), and the switch on
+ * the right; the whole row toggles it.
+ */
 @Composable
 internal fun ProfileSwitchRow(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    summary: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (summary != null) {
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+            }
+        }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

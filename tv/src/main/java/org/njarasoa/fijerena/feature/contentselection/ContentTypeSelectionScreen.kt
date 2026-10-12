@@ -254,7 +254,8 @@ fun ContentTypeSelectionScreen(
         val resolvedTypes =
             withContext(Dispatchers.IO) {
                 val providerRepo = ProviderRepository(context.applicationContext)
-                allProviders = providerRepo.getAllProvidersList()
+                // The picker offers the profile's own sources only (multi-source plan, P2).
+                allProviders = providerRepo.profileSourcesList()
                 val activeProvider = providerRepo.getActiveProvider()
                 if (activeProvider != null) {
                     providerName = activeProvider.name

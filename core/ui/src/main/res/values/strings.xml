@@ -815,6 +815,9 @@
     <string name="profile_jellyfin_sign_in_button">Sign in</string>
     <string name="profile_switch_to_button">Switch to this profile</string>
     <string name="profile_content_filters_title">Content filters</string>
+    <string name="profile_sources_title">Sources</string>
+    <string name="profile_sources_count_format">%1$d of %2$d</string>
+    <string name="profile_sources_desc">The sources this profile can use. A new source is on only for the profile that added it. A profile keeps at least one source, and the one it is using on this device.</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Live sync</string>
     <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves. To run a server, see the server folder at github.com/mpilasy/fijerena.</string>

@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +34,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -58,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSourceUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
@@ -153,9 +158,10 @@ fun ProfilesSettingsCard(
 
 /**
  * A profile's page, in place of the Profiles group's rows (D8): name, colour, its own Developer
- * mode and Play next episode automatically, Content filters › (the source in use, for this
- * profile; Xtream only), Switch to this profile, Save / Cancel, and Delete last. Left and Back
- * leave it unsaved, like Cancel. Content filters are saved by their own editor's Save, at once.
+ * mode and Play next episode automatically, Sources › (with two or more sources), Content
+ * filters › (the source in use, for this profile; Xtream only), Switch to this profile, Save /
+ * Cancel, and Delete last. Left and Back leave it unsaved, like Cancel. Content filters are saved
+ * by their own editor's Save, and Sources by each switch, at once.
  */
 @Composable
 fun ProfileEditPane(
@@ -176,6 +182,8 @@ fun ProfileEditPane(
     var showNameError by remember { mutableStateOf(false) }
     var choosingColour by rememberSaveable { mutableStateOf(false) }
     var returnToColour by remember { mutableStateOf(false) }
+    var choosingSources by rememberSaveable { mutableStateOf(false) }
+    var returnToSources by remember { mutableStateOf(false) }
     var editingFilters by remember { mutableStateOf<CategoryFilters?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     // Set when a dialog opened from the page closes: focus goes back to the row that opened it.
@@ -183,12 +191,14 @@ fun ProfileEditPane(
     val nameFocus = remember { FocusRequester() }
     val colourFocus = remember { FocusRequester() }
     val filtersFocus = remember { FocusRequester() }
+    val sourcesFocus = remember { FocusRequester() }
     val deleteFocus = remember { FocusRequester() }
 
     LaunchedEffect(Unit) { viewModel.loadSourceInUse() }
     val sourceInUse by viewModel.sourceInUse.collectAsStateWithLifecycle()
     // Content filters act on Xtream catalogues only (as they did in Edit Source).
     val filtersSource = sourceInUse?.takeIf { it.type == "XTREAM" }
+    val sources by remember(profile.id) { viewModel.profileSources(profile.id) }.collectAsStateWithLifecycle(emptyList())
 
     if (choosingColour) {
         SettingsPickerPane(
@@ -208,10 +218,26 @@ fun ProfileEditPane(
                 choosingColour = false
             },
         )
+    } else if (choosingSources) {
+        ProfileSourcesPane(
+            sources = sources,
+            onToggle = { key, on -> viewModel.setProfileSource(profile.id, sources, key, on) },
+            onBack = {
+                returnToSources = true
+                choosingSources = false
+            },
+        )
     } else {
         LaunchedEffect(Unit) {
-            (if (returnToColour) colourFocus else nameFocus).requestFocusWithRetry()
+            val target =
+                when {
+                    returnToColour -> colourFocus
+                    returnToSources -> sourcesFocus
+                    else -> nameFocus
+                }
+            target.requestFocusWithRetry()
             returnToColour = false
+            returnToSources = false
         }
         LaunchedEffect(refocus) {
             refocus?.requestFocusWithRetry()
@@ -294,6 +320,16 @@ fun ProfileEditPane(
                     label = stringResource(R.string.settings_autoplay_next_episode_title),
                     description = stringResource(R.string.settings_autoplay_next_episode_desc),
                 )
+                // With one source there is nothing to choose: it stays on.
+                if (sources.size > 1) {
+                    SettingsRow(
+                        title = stringResource(R.string.profile_sources_title),
+                        description = null,
+                        value = stringResource(R.string.profile_sources_count_format, sources.count { it.isOn }, sources.size),
+                        onClick = { choosingSources = true },
+                        focusRequester = sourcesFocus,
+                    )
+                }
                 if (filtersSource != null) {
                     SettingsRow(
                         title = stringResource(R.string.profile_content_filters_title),
@@ -379,6 +415,73 @@ fun ProfileEditPane(
                     refocus = deleteFocus
                 },
             )
+        }
+    }
+}
+
+/**
+ * A profile's Sources, in place of its page like the colour picker: every source on this device
+ * with a switch, each change saved at once (multi-source plan, Phase 2). The explanation sits
+ * above the list, always on screen, so no row hides it. Focus opens on the first source; Back and
+ * Left leave (taken in `onPreviewKeyEvent` on the root, as in [SettingsPickerPane]). A switch that
+ * may not go off — the profile's last source, or the one in use here — stays on when pressed.
+ */
+@Composable
+private fun ProfileSourcesPane(
+    sources: List<ProfileSourceUi>,
+    onToggle: (providerKey: String, on: Boolean) -> Unit,
+    onBack: () -> Unit,
+) {
+    BackHandler(onBack = onBack)
+    val firstFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { firstFocus.requestFocusWithRetry() }
+
+    Column(
+        modifier =
+            Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                when (event.key) {
+                    Key.Back -> {
+                        if (event.type == KeyEventType.KeyUp) onBack()
+                        true
+                    }
+
+                    Key.DirectionLeft -> {
+                        if (event.type == KeyEventType.KeyDown) onBack()
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            },
+    ) {
+        Text(
+            text = "‹ ${stringResource(R.string.profile_sources_title)}",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = Spacing.xs),
+        )
+        Text(
+            text = stringResource(R.string.profile_sources_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaTextSecondary,
+            modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            itemsIndexed(sources, key = { _, source -> source.providerKey }) { index, source ->
+                TvSwitchRow(
+                    checked = source.isOn,
+                    onCheckedChange = { onToggle(source.providerKey, it) },
+                    label = source.name,
+                    description = if (source.inUse) stringResource(R.string.settings_profiles_active_marker) else null,
+                    modifier = if (index == 0) Modifier.focusRequester(firstFocus) else Modifier,
+                )
+            }
         }
     }
 }

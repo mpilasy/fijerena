@@ -53,6 +53,7 @@ fun MobileProviderSelectionScreen(
             factory = ProviderViewModelFactory(context),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val profileSourceIds by viewModel.profileSourceIds.collectAsStateWithLifecycle()
     val copyResultMessage by viewModel.copyResultMessage.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
@@ -116,6 +117,7 @@ fun MobileProviderSelectionScreen(
                 is ProviderUiState.SingleProvider -> {
                     MobileProviderList(
                         providers = listOf(state.provider),
+                        profileSourceIds = profileSourceIds,
                         onSelect = onProviderSelected,
                         onEdit = onEditProvider,
                         onManageEpg = onManageEpg,
@@ -128,6 +130,7 @@ fun MobileProviderSelectionScreen(
                 is ProviderUiState.MultipleProviders -> {
                     MobileProviderList(
                         providers = state.providers,
+                        profileSourceIds = profileSourceIds,
                         onSelect = onProviderSelected,
                         onEdit = onEditProvider,
                         onManageEpg = onManageEpg,
@@ -213,6 +216,8 @@ fun MobileProviderSelectionScreen(
 @Composable
 private fun MobileProviderList(
     providers: List<ProviderEntity>,
+    // The profile's own sources: Use is offered on those only (multi-source plan, P2).
+    profileSourceIds: Set<Long>,
     onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
@@ -227,6 +232,7 @@ private fun MobileProviderList(
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             MobileProviderRow(
                 provider = provider,
+                canUse = !provider.isActive && provider.id in profileSourceIds,
                 canCopyTo = providers.size > 1,
                 onSelect = onSelect,
                 onEdit = onEdit,
@@ -241,11 +247,12 @@ private fun MobileProviderList(
 
 /**
  * One source: tapping the card edits it (the one way in, no chevron); "Use" switches to it
- * (hidden on the active one); everything else sits in the overflow menu, Delete last and separated.
+ * (only when [canUse]: not the active one, and one the profile has); everything else sits in the overflow menu, Delete last and separated.
  */
 @Composable
 private fun MobileProviderRow(
     provider: ProviderEntity,
+    canUse: Boolean,
     canCopyTo: Boolean,
     onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
@@ -304,7 +311,7 @@ private fun MobileProviderRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (!provider.isActive) {
+            if (canUse) {
                 IconAction(
                     onClick = { onSelect(provider) },
                     icon = CinemaIcons.SwapHoriz,

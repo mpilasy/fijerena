@@ -195,7 +195,8 @@ fun MobileSourceTopBar(
     val hasEpgData = epgIndexState is EpgIndexState.Indexed
 
     LaunchedEffect(sourceId) {
-        allProviders = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).getAllProvidersList() }
+        // The picker offers the profile's own sources only (multi-source plan, P2).
+        allProviders = withContext(Dispatchers.IO) { ProviderRepository(context.applicationContext).profileSourcesList() }
     }
 
     LaunchedEffect(sourceId, syncing, syncStatsReload) {

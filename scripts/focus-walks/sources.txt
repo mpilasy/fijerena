@@ -2,7 +2,8 @@
 # Start: Sources just opened from Settings → Source & guide → Manage sources,
 # focus on the active source's row (T-8; the row shows name / Active / URL / username, so its
 # text depends on the device — unasserted). Rows are ordered active first, then by name.
-# Each row: the row itself (OK = Edit), then fixed slots Use (empty on the active row), Guide
+# Each row: the row itself (OK = Edit), then fixed slots Use (empty on the active row, and on a
+# source the profile in use doesn't have — so the profile must have both sources here), Guide
 # (empty on a source without live channels: Jellyfin, SMB) and ⋮ ("More actions for <name>").
 # Right walks the slots, Left walks back, Up/Down keep the column, Up from the first row lands
 # on the header "+" (Add Source). Expectations assume the active source is iptv (M3U, so it has

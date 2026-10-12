@@ -88,6 +88,7 @@ fun TvProviderSelectionScreen(
             factory = ProviderViewModelFactory(context),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val profileSourceIds by viewModel.profileSourceIds.collectAsStateWithLifecycle()
     val copyResultMessage by viewModel.copyResultMessage.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
@@ -179,6 +180,7 @@ fun TvProviderSelectionScreen(
             is ProviderUiState.SingleProvider, is ProviderUiState.MultipleProviders -> {
                 ProviderList(
                     providers = allProviders,
+                    profileSourceIds = profileSourceIds,
                     onEdit = { id ->
                         returnFocus.leaveFrom(RETURN_ROW_PREFIX + id, listState)
                         onEditProvider(id)
@@ -315,6 +317,8 @@ fun TvProviderSelectionScreen(
 @Composable
 private fun ProviderList(
     providers: List<ProviderEntity>,
+    // The profile's own sources: Use is offered on those only (multi-source plan, P2).
+    profileSourceIds: Set<Long>,
     onEdit: (Long) -> Unit,
     onSelect: (ProviderEntity) -> Unit,
     onManageEpg: (Long) -> Unit,
@@ -388,7 +392,7 @@ private fun ProviderList(
                 // Icons at the slot's end: the focused one's name grows into the slot, so nothing
                 // beside it moves (icon-buttons plan).
                 Box(modifier = Modifier.width(ACTION_SLOT_WIDTH), contentAlignment = Alignment.CenterEnd) {
-                    if (!provider.isActive) {
+                    if (!provider.isActive && provider.id in profileSourceIds) {
                         TvIconAction(
                             onClick = { onSelect(provider) },
                             icon = CinemaIcons.SwapHoriz,
