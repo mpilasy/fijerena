@@ -10,7 +10,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamUserInfo
 
 /**
  * What a source's Xtream panel says about one of its logins (`player_api.php`), and whether a new
- * login shares the source's catalogue. See docs/plans/20261005_shared-logins-plan.md.
+ * login shares the source's catalogue. See docs/plans/archive/20261005_shared-logins-plan.md.
  */
 object XtreamLoginCheck {
     /** How many stream ids of the main login's catalogue a new login must also have, per type. */

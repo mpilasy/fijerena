@@ -7,7 +7,7 @@ import java.net.URLEncoder
  * The login inside an Xtream stream URL, `…/(live|movie|series|timeshift)/<user>/<pass>/…`, as
  * [XtreamApiService] builds it (both parts URL-encoded). Logins on one panel share stream ids, so
  * a stream plays on another login by swapping these two parts. See
- * docs/plans/20261005_shared-logins-plan.md.
+ * docs/plans/archive/20261005_shared-logins-plan.md.
  */
 object XtreamStreamUrl {
     private val loginPath = Regex("""(/(?:live|movie|series|timeshift)/)([^/?#]+)/([^/?#]+)/""", RegexOption.IGNORE_CASE)

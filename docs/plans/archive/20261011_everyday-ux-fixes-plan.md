@@ -1,13 +1,13 @@
 # Everyday UX fixes
 
-**Status:** Done except Phase 5 (on hold), 2026-10-11. Emulator checks 2026-10-11 (TV and phone
+**Status:** Done, 2026-10-12: Phase 5 (guide time offset) dropped by the user — the panel guide times fix (`docs/plans/archive/20261012_panel-guide-local-time-plan.md`) corrects a source's offset automatically. Archived. As of 2026-10-11: Emulator checks 2026-10-11 (TV and phone
 emulators, `jellyxtream` and `iptv`): seeking (tap ±10 s, three taps add up, hold scrubs), hold OK
 undo, loading screen, phone swipe (35 dp no switch, 100 dp switch, edges ignored, sideways opens
 the sheet) and the error dialog (title, buttons, focus on Go back) pass. Found and fixed: a wrong
 Xtream login said "Something went wrong" (b9c7ba5c; recheck on a device). Not seen: the sync
 progress text — `jellyxtream` syncs in under 1 s; needs a large catalogue. Not checked: Back
 during a hold-scrub, a new source syncing on save. Seven independent fixes taken from the on-hold
-[public release plan](./20261011_public-release-fdroid-readiness-plan.md) because they help
+[public release plan](../20261011_public-release-fdroid-readiness-plan.md) because they help
 everyday use, public or not. Built in parallel, one commit each on main.
 
 Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is closed).
@@ -32,6 +32,6 @@ Decided 2026-10-11: PiP stays live-only (the release plan's "revisit it" note is
 | 2 | Done (2026-10-11); needs a TV check | 18aae1bc |
 | 3 | Done (2026-10-11); needs a device check | 94e377c9 |
 | 4 | Done (2026-10-11); needs a phone check | fc5825d3 |
-| 5 | On hold (2026-10-11, user decision); not started. Expect a providers.db migration (offset stored in minutes), sync and export compatibility | |
+| 5 | Dropped (2026-10-12, user decision); never started | |
 | 6 | Done (2026-10-11); needs a device check. Follow-up b2567e2b: a new Xtream source now starts its full sync on save (user request) | 272e2bfd |
 | 7 | Done (2026-10-11): splash floor removed; the unused strings were already gone (Phase 6 of the release plan) | 1284a9d4 |

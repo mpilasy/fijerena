@@ -3,7 +3,7 @@
 **Status:** On hold, 2026-10-11. Phases 1, 2, 4 and 6 are done and on main; Phases 3, 5, 7 and 8
 are not started (open questions: release signing key, icon artwork source, public repository
 address). Resume from Phase 3. U-H2, U-H4, U-H5, U-M2 (offset), U-M5, U-M7 and the unused-strings and splash Low items moved to
-[Everyday UX fixes](./20261011_everyday-ux-fixes-plan.md).
+[Everyday UX fixes](./archive/20261011_everyday-ux-fixes-plan.md).
 
 **Original status:** Proposed, 2026-10-11. Audit only; nothing built yet. Every decision is made (D1–D11,
 2026-10-11); Phase 1 can start. Personal and provider details were scrubbed from the tree on

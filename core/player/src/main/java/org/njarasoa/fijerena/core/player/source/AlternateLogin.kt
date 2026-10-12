@@ -5,7 +5,7 @@ package org.njarasoa.fijerena.core.player.source
  * logins); when the provider refuses a stream as [AccountBusy], the player asks this for the same
  * stream on another free login before waiting. `core:network` implements it (it holds the logins)
  * and sets [installed]; this module can't depend on that one. See
- * docs/plans/20261005_shared-logins-plan.md → Phase 3.
+ * docs/plans/archive/20261005_shared-logins-plan.md → Phase 3.
  */
 interface AlternateLogin {
     /**

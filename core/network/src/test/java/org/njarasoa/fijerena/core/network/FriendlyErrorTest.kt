@@ -83,7 +83,7 @@ class FriendlyErrorTest {
         assertEquals("generic", friendlyErrorMessage(Exception("Unexpected JSON token"), context))
     }
 
-    // docs/plans/20261011_everyday-ux-fixes-plan.md → Phase 3: never a bare HTTP code.
+    // docs/plans/archive/20261011_everyday-ux-fixes-plan.md → Phase 3: never a bare HTTP code.
     @Test
     fun httpStatus_mapsToWhatItMeans() {
         assertEquals("unauthorized", friendlyErrorMessage(HttpStatusException(401), context))

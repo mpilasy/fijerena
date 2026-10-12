@@ -53,7 +53,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaError
  * Logins, for an Xtream source being edited: the main login and the extra ones playback shares,
  * each with Make main and Remove, and Add login (runs the same-panel check). [onMainLoginChanged]
  * runs when Make main or Remove changed the main login, so the screen reloads its own username
- * and password fields. See docs/plans/20261005_shared-logins-plan.md → Phase 1.
+ * and password fields. See docs/plans/archive/20261005_shared-logins-plan.md → Phase 1.
  */
 @Composable
 fun ColumnScope.ProviderLoginsSection(

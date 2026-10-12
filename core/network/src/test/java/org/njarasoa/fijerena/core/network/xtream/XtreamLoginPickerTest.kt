@@ -6,7 +6,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository.Login
 import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker.Candidate
 
-/** docs/plans/20261005_shared-logins-plan.md → Phase 2. */
+/** docs/plans/archive/20261005_shared-logins-plan.md → Phase 2. */
 class XtreamLoginPickerTest {
     private val main = Login("main", "a")
     private val two = Login("two", "b")

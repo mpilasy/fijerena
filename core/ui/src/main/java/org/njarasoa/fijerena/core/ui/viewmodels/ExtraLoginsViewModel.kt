@@ -22,7 +22,7 @@ import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 /**
  * Edit Source → Logins for an Xtream source: its main login and the extra ones playback shares,
  * each with what the panel says about it (active, expiry). Add runs the same-panel check first.
- * See docs/plans/20261005_shared-logins-plan.md → Phase 1.
+ * See docs/plans/archive/20261005_shared-logins-plan.md → Phase 1.
  *
  * [context] is the application context ([Factory] passes nothing else).
  */

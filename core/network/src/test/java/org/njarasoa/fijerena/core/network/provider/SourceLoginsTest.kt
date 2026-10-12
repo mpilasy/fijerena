@@ -9,7 +9,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository.Login
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 
-/** docs/plans/20261005_shared-logins-plan.md → Phase 1. */
+/** docs/plans/archive/20261005_shared-logins-plan.md → Phase 1. */
 class SourceLoginsTest {
     private val main = Login("main", "pw-main")
     private val two = Login("two", "pw-two")

@@ -55,7 +55,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * Logins, for an Xtream source being edited (docs/plans/20261005_shared-logins-plan.md, Phase 1):
+ * Logins, for an Xtream source being edited (docs/plans/archive/20261005_shared-logins-plan.md, Phase 1):
  * the main login first (marked as current), then the extra ones playback shares, each a row with
  * what the panel says about it and its actions as icons on the right (docs/plans/archive/20261005_icon-buttons-plan.md):
  * Make main (an extra login with a password) and Remove (when the source has more than one login,

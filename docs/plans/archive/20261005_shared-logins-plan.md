@@ -1,6 +1,6 @@
 # Shared Logins Plan
 
-**Status:** In progress (written 2026-10-05). Phases 1–3 done and checked on the emulators against the jellyxtream bridge's one-stream test mode (`tools/jellyfin-xtream/xtream_bridge.py`, `BRIDGE_TEST_PASSWORD`, `BRIDGE_MAX_CONNECTIONS`). Phase 4 (real panel-a, two devices) waits for the second panel-a login.
+**Status:** Done, 2026-10-12: the user tested it and dropped Phase 4; archived. Phases 1–3 done and checked on the emulators against the jellyxtream bridge's one-stream test mode (`tools/jellyfin-xtream/xtream_bridge.py`, `BRIDGE_TEST_PASSWORD`, `BRIDGE_MAX_CONNECTIONS`). Phase 4 (real panel-a, two devices) waits for the second panel-a login.
 
 ## Goal
 
@@ -201,4 +201,4 @@ so the refusal path runs. What it can't show: panel-a's 5-minute lock for a diff
 | 1 | Done; checked on both emulators 2026-10-05 (add, duplicate and wrong-password refusals, Make main, Remove); focus walk updated by hand for the Logins rows | db5f1c9c |
 | 2 | Done; checked on both emulators against the bridge's test mode: with `alice` held, the phone played on `alice+2`, Stats "Login 2 of 3" | (branch) |
 | 3 | Done; checked: a 458 moved the stream to the next login in ~0.3 s with no message; all three held gave "All 3 logins … in use". Found and fixed: after an all-busy moment the refused logins were skipped for 6 min even once free; a new playback now asks every login and only puts those last | (branch) |
-| 4 | Not started | |
+| 4 | Dropped (2026-10-12): tested by the user | |

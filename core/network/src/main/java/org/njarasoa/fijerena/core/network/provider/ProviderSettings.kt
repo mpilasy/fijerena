@@ -43,7 +43,7 @@ data class ProviderSettings(
      * Xtream: usernames of the source's extra logins on the same panel, which playback shares with
      * the main one. Passwords live in `provider_creds_<id>`. Changed only through
      * [ProviderRepository]'s login functions, never by a settings save. See
-     * docs/plans/20261005_shared-logins-plan.md.
+     * docs/plans/archive/20261005_shared-logins-plan.md.
      */
     val extraLogins: List<String> = emptyList(),
 ) {

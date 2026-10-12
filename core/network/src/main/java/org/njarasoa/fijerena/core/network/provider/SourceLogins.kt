@@ -4,7 +4,7 @@ package org.njarasoa.fijerena.core.network.provider
  * An Xtream source's logins: the main one (`providers.username` + `provider_creds_<id>`), which
  * does catalogue sync, the guide and everything but playback, and the extra ones on the same panel
  * that playback shares with it. Changes are pure functions here; [ProviderRepository] stores the
- * result. See docs/plans/20261005_shared-logins-plan.md.
+ * result. See docs/plans/archive/20261005_shared-logins-plan.md.
  */
 data class SourceLogins(
     val main: ProviderRepository.Login,
