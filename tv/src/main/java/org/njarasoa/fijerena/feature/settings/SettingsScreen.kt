@@ -456,6 +456,7 @@ fun SettingsScreen(
                                             item {
                                                 ProviderSettingsCard(
                                                     sourceNames = uiState.profileSources.map { it.second },
+                                                    subscriptions = uiState.subscriptions,
                                                     onManageProviders = {
                                                         returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
                                                         onManageProviders()

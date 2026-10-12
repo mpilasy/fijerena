@@ -231,7 +231,7 @@ Seven groups, in this order, on both platforms. **TV:** two panes — the groups
 | Group | Rows |
 |-------|------|
 | **Profiles** | Profiles (which one this device uses) and Add profile; each profile opens its page: name, colour, its own Developer mode and Play next episode automatically, its sources, its content filters per Xtream source, Switch to this profile, Delete |
-| **Source & guide** | Manage sources, its value the profile in use's sources — opens Sources: add, edit, copy to another source, delete, guide sources (each guide source's auto-refresh is set there); Film and series details (TMDB): On / Off / Key refused — the TMDB key (below) |
+| **Source & guide** | Manage sources, its value the profile in use's sources, then each one's URL and subscription (Xtream: expiry, in the error colour once expired, max connections, trial), under its name when there are several — opens Sources: add, edit, copy to another source, delete, guide sources (each guide source's auto-refresh is set there); Film and series details (TMDB): On / Off / Key refused — the TMDB key (below) |
 | **Playback** | Count as watched after: 5 / 10 / 15 / 30 / 60 / 120 s (default 10; mobile also takes a custom 5–120 s); mobile: a pointer to the per-source playback settings |
 | **Display** | Theme; Look and feel; Text & grid size (TV only: 40 / 60 / 80 / 100 %, default 80 %); Language |
 | **Live sync** | Opens Live sync |

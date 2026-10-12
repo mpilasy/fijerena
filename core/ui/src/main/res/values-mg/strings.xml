@@ -1198,4 +1198,8 @@
     <string name="home_sources_status_title">Ny loharanonao</string>
     <string name="home_no_sources">Mbola tsy manana loharano ity mombamomba ity.</string>
     <string name="home_only_browse_sources">Misafidiana loharano hojerena.</string>
+    <string name="settings_provider_expires_label">Ho tapitra</string>
+    <string name="settings_provider_max_connections_label">Fifandraisana fara-fahabetsahany</string>
+    <string name="settings_provider_trial_account_label">Kaonty fitsapana</string>
+    <string name="subscription_unlimited">Tsy voafetra</string>
 </resources>

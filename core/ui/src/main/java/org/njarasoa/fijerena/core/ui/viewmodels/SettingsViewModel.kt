@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -15,12 +16,27 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
+/**
+ * One of the profile's sources as Manage sources shows it: its URL, then the subscription facts an
+ * Xtream source reports at login (null / false when it reports none).
+ */
+data class SourceSubscription(
+    val name: String,
+    val url: String,
+    val expiry: String? = null,
+    val isExpired: Boolean = false,
+    val maxConnections: String? = null,
+    val isTrial: Boolean = false,
+)
+
 data class SettingsUiState(
     /**
      * The profile in use's sources (id to name), in its order — Manage sources' value, and what the
      * phone's Edit Source row chooses from. There is no source in use (multi-source plan, Phase 6).
      */
     val profileSources: List<Pair<Long, String>> = emptyList(),
+    /** Each of [profileSources] with its URL and subscription, in the same order. */
+    val subscriptions: List<SourceSubscription> = emptyList(),
     val themeId: String = "deep_night",
     val uiStyleId: String = "material",
     val isDevMode: Boolean = false,
@@ -71,8 +87,29 @@ class SettingsViewModel(
 
     fun refreshProviderInfo() {
         viewModelScope.launchGuarded("SettingsViewModel.refreshProviderInfo") {
-            val sources = providerRepo.profileSourcesList().map { it.id to it.name }
-            _uiState.value = _uiState.value.copy(profileSources = sources)
+            val entities = providerRepo.profileSourcesList()
+            val subscriptions =
+                entities.map { entity ->
+                    val info =
+                        if (entity.type == "XTREAM") {
+                            AccountManager(context.applicationContext, entity.id).getAuthResponse()?.userInfo
+                        } else {
+                            null
+                        }
+                    SourceSubscription(
+                        name = entity.name,
+                        url = entity.url,
+                        expiry = formatExpiryDate(info?.expDate),
+                        isExpired = info?.status?.equals("Expired", ignoreCase = true) == true,
+                        maxConnections = info?.maxConnections,
+                        isTrial = info?.isTrial == "1",
+                    )
+                }
+            _uiState.value =
+                _uiState.value.copy(
+                    profileSources = entities.map { it.id to it.name },
+                    subscriptions = subscriptions,
+                )
         }
     }
 
@@ -195,4 +232,37 @@ class SettingsViewModel(
                 )
         }
     }
+
+    private fun formatExpiryDate(expDate: String?): String? =
+        when {
+            expDate.isNullOrEmpty() -> {
+                null
+            }
+
+            expDate.equals("Unlimited", ignoreCase = true) -> {
+                context.getString(R.string.subscription_unlimited)
+            }
+
+            else -> {
+                val epoch = expDate.toLongOrNull()
+                if (epoch != null) {
+                    try {
+                        val date =
+                            java.time.Instant
+                                .ofEpochSecond(epoch)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                        date.format(
+                            java.time.format.DateTimeFormatter
+                                .ofPattern("MMM d, yyyy"),
+                        )
+                    } catch (_: Exception) {
+                        // cancellation-ok: non-suspend date formatting
+                        expDate
+                    }
+                } else {
+                    expDate
+                }
+            }
+        }
 }

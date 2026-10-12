@@ -1206,4 +1206,8 @@
     <string name="home_sources_status_title">Vos sources</string>
     <string name="home_no_sources">Ce profil n\'a encore aucune source.</string>
     <string name="home_only_browse_sources">Choisissez une source à parcourir.</string>
+    <string name="settings_provider_expires_label">Expire le</string>
+    <string name="settings_provider_max_connections_label">Connexions max.</string>
+    <string name="settings_provider_trial_account_label">Compte d\'essai</string>
+    <string name="subscription_unlimited">Illimité</string>
 </resources>

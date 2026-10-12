@@ -14,7 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
@@ -315,7 +320,7 @@ fun MobileSettingsScreen(
                 // One way in (D6): switching, editing and guide sources live on the Sources list.
                 SettingsListRow(
                     title = stringResource(R.string.settings_provider_manage_button),
-                    summary = uiState.profileSources.joinToString { it.second }.ifEmpty { stringResource(R.string.provider_none_label) },
+                    summary = manageSourcesSummary(uiState),
                     onClick = onManageProviders,
                 )
                 TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
@@ -607,3 +612,31 @@ private fun SettingsMessage(text: String) {
 
 private val WATCH_DELAY_PRESETS = listOf(5, 10, 15, 30, 60, 120)
 private const val WATCH_DELAY_CUSTOM = -1
+
+/**
+ * Manage sources' value: the profile's sources, then each one's URL and the subscription facts it
+ * reports — under its name when there are several; an expired subscription date stands out in the
+ * error colour.
+ */
+@Composable
+private fun manageSourcesSummary(uiState: SettingsUiState): AnnotatedString {
+    val names = uiState.profileSources.joinToString { it.second }.ifEmpty { stringResource(R.string.provider_none_label) }
+    val expiresLabel = stringResource(R.string.settings_provider_expires_label)
+    val maxConnectionsLabel = stringResource(R.string.settings_provider_max_connections_label)
+    val trialLabel = stringResource(R.string.settings_provider_trial_account_label)
+    val errorColor = MaterialTheme.colorScheme.error
+    val named = uiState.subscriptions.size > 1
+    return buildAnnotatedString {
+        append(names)
+        uiState.subscriptions.forEach { source ->
+            if (named) append("\n\n${source.name}")
+            source.url.ifEmpty { null }?.let { append("\n$it") }
+            source.expiry?.let { expiry ->
+                append("\n$expiresLabel ")
+                if (source.isExpired) withStyle(SpanStyle(color = errorColor)) { append(expiry) } else append(expiry)
+            }
+            source.maxConnections?.let { append("\n$maxConnectionsLabel $it") }
+            if (source.isTrial) append("\n$trialLabel")
+        }
+    }
+}
