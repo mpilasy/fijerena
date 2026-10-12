@@ -1,6 +1,6 @@
 # Multi-source: no current source
 
-**Status:** Ready, 2026-10-12. Decisions Q1–Q7, P1–P5 and O1–O4 made 2026-10-12 (P1–P5 widened the
+**Status:** In progress, 2026-10-12. Decisions Q1–Q7, P1–P5 and O1–O4 made 2026-10-12 (P1–P5 widened the
 plan: there is no current source any more, browsing is merged too). Phase 1 can start. Nothing has
 been built.
 
@@ -94,12 +94,13 @@ stays stored separately; only the screens merge it. Every item plays from its ow
 ## Phases
 
 One commit per phase on main, each with its tests, docs and plan update. Phases 1–5 keep a
-current source under the hood and only widen what is shown; Phase 6 removes it.
+current source under the hood and only widen what is shown; Phase 6 removes it. Lanes: 1 and 2 in
+parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land before Phase 6.
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | Source on routes and screens (no visible change) | Not started |
-| 2 | Per-profile source access | Not started |
+| 1 | Source on routes and screens (no visible change) | In progress (2026-10-12) |
+| 2 | Per-profile source access | In progress (2026-10-12) |
 | 3 | Search across the profile's sources | Not started |
 | 4 | Merged Recent, Continue Watching, favourites and Recent Categories | Not started |
 | 5 | Live TV Recent across sources, zap within source | Not started |
