@@ -85,7 +85,7 @@ fun filterToStreams(
 /**
  * "18:25 – 19:30", or "18:25 – Mon 15:00" when it ends on another day: guides list overnight blocks
  * and live events that run into the next day, and the end without its day read as ending before it
- * started. See docs/plans/20261012_guide-overlaps-plan.md.
+ * started. See docs/plans/archive/20261012_guide-overlaps-plan.md.
  */
 fun formatAiringTime(
     context: Context,

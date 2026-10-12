@@ -6,7 +6,7 @@ import org.njarasoa.fijerena.core.player.model.EpgResponse
  * [EpgResponse] with each programme that runs past the next start ending there — the rule the guide
  * index applies at ingest ([org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDao.clipOverlaps]),
  * for the panel's own guide, which lists two schedules for one evening too. Programmes sharing a
- * start both end at the next later one. See docs/plans/20261012_guide-overlaps-plan.md.
+ * start both end at the next later one. See docs/plans/archive/20261012_guide-overlaps-plan.md.
  */
 fun EpgResponse.withOverlapsClipped(): EpgResponse {
     val starts = listings.mapNotNull { it.start.toLongOrNull() }.distinct().sorted()

@@ -1,6 +1,6 @@
 # Overlapping guide listings
 
-**Status:** Phase 1 done (2026-10-12); Phase 2: the SQL checked on bears' real file, device check not done yet (emulators off).
+**Status:** Done (2026-10-12). Checked on the phone emulator against bears; archived.
 
 ## Problem
 
@@ -46,3 +46,14 @@ The `EpgIndexDao.clipOverlaps` statement, run on bears' `xmltv.php` loaded into 
 (228,146 rows after the dedup index): 42,437 overlapping before, **0 after**, in 0.1 s. Over 12 h:
 119 → 67 (the overnight blocks of pattern 2). beIN Sports 6: Eagles @ Jaguars 16:30–19:30 UTC (was
 to the next day 20:00), 49ers @ Seahawks 23:25–02:30, the next day's replays unchanged.
+
+## Phase 2: on the phone emulator (2026-10-12)
+
+Phone AVD, bears, forced guide sync: `EPG source cf.bearsp.xyz (Bulk): 45521 programmes ended at the
+next start on their channel`. Pulled `epg_index.db`: bears' source (231,255 rows) has **0**
+overlaps; beIN Sports 6 Eagles @ Jaguars 16:30–19:30 UTC, 49ers @ Seahawks on the US channels
+20:25–23:30. The 26,658 overlaps left belong to another source's guide from Oct 1–3, written before
+the fix and not refreshed in that run; it is cleaned at its own next ingest. 553 zero-length
+programmes (start = stop) come from bears' file itself (DAZN.it lists events that way), not from
+the clip. Search the guide: "jaguars" no longer shows the game as ON AIR the next day; "Maxsport
+Info" shows "7:00 PM – Tue 1:00 AM".

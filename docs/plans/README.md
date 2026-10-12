@@ -16,7 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-12 | [Overlapping guide listings](./20261012_guide-overlaps-plan.md) | Clip each guide programme at the next start on its channel (bears: 22% overlap, NFL games listed for 27 h) and show the end's day in search when it ends on another day | Phases 1–2 |
 | 2026-10-11 | [Everyday UX fixes](./20261011_everyday-ux-fixes-plan.md) | Seven fixes from the release plan that help everyday use: TV seeking, Undo without Menu, login errors, phone swipe, guide offset, sync progress, cleanups | 1–4, 6, 7 done (device checks pending); 5 on hold |
 | 2026-10-11 | [Public release and F-Droid readiness](./20261011_public-release-fdroid-readiness-plan.md) | Audit and plan to make the app releasable to the public and acceptable to F-Droid: license, FOSS dependencies (ML Kit, requery, FFmpeg), separate package IDs, reproducible signed builds, privacy, first-run UX and copy | On hold (2026-10-11): Phases 1, 2, 4 and 6 done; 3, 5, 7 and 8 not started; decisions D1–D11 made; public repo starts from a fresh squashed snapshot as the last step |
 | 2026-10-05 | [Shared logins](./20261005_shared-logins-plan.md) | 2–3 Xtream logins on one source shared by all devices: each playback takes a free login (panel's `active_cons`), switches on refusal | Phases 1–3 done, checked on emulators against the bridge; Phase 4 (real panel-a) needs a second panel-a login |
@@ -27,6 +26,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-12 | [Overlapping guide listings](./archive/20261012_guide-overlaps-plan.md) | Clip each guide programme at the next start on its channel (bears: 22% overlap, NFL games listed for 27 h) and show the end's day in search when it ends on another day | Done on the phone emulator against bears |
 | 2026-10-12 | [Panel guide times labelled as UTC](./archive/20261012_panel-guide-local-time-plan.md) | A source whose own guide stamps its local time as UTC (bears: +2 h) is detected against its own `xmltv.php` and read in the panel's zone, so catch-up from older days replays the right programme | Done on the phone emulator against bears |
 | 2026-10-11 | [Watched follow-ups](./archive/20261011_watched-followups-plan.md) | Play and Home's Continue watching go to the first unwatched episode (a finished show stays on the shelf); no watched marks on Jellyfin; phone list rows get a long-press menu | Done on the TV and phone emulators |
 | 2026-10-11 | [Mark a season or show watched](./archive/20261011_season-show-watched-plan.md) | Mark a whole season or show watched/unwatched in one action (episode screens, show row menus, Search), kept per episode so later episodes stay unwatched | Done on the TV and phone emulators |

@@ -730,7 +730,7 @@ class EpgIndexer private constructor(
      * End [sourceId]'s programmes at the next start on their channel where they run past it
      * ([EpgIndexDao.clipOverlaps]), in the staging table when [useStaging]. After the ingest, and on
      * the direct path after [deleteProgrammesNotRewritten], so only the new guide's rows count.
-     * See docs/plans/20261012_guide-overlaps-plan.md.
+     * See docs/plans/archive/20261012_guide-overlaps-plan.md.
      */
     suspend fun clipOverlaps(
         sourceId: Long,

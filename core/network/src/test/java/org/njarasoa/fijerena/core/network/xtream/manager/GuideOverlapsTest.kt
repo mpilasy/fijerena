@@ -5,7 +5,7 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 
-/** The panel guide's overlapping programmes end at the next start. See docs/plans/20261012_guide-overlaps-plan.md. */
+/** The panel guide's overlapping programmes end at the next start. See docs/plans/archive/20261012_guide-overlaps-plan.md. */
 class GuideOverlapsTest {
     private fun program(
         title: String,

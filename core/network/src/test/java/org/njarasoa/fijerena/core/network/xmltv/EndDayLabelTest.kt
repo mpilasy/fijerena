@@ -7,7 +7,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Locale
 
-/** Search the guide's airing time names the end's day when it ends on another day. See docs/plans/20261012_guide-overlaps-plan.md. */
+/** Search the guide's airing time names the end's day when it ends on another day. See docs/plans/archive/20261012_guide-overlaps-plan.md. */
 class EndDayLabelTest {
     private val chicago = ZoneId.of("America/Chicago")
 

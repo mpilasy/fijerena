@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 /**
  * Ingest ends a programme at the next start on its channel ([EpgIndexer.clipOverlaps]): bears lists
  * "Eagles @ Jaguars" on beIN Sports 6 from 18:30 to the next day's 22:00 over its normal schedule.
- * See docs/plans/20261012_guide-overlaps-plan.md.
+ * See docs/plans/archive/20261012_guide-overlaps-plan.md.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
