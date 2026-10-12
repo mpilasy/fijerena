@@ -17,7 +17,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import org.robolectric.RobolectricTestRunner
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -35,6 +34,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
+import org.robolectric.RobolectricTestRunner
 
 /**
  * Regression test for docs/plans/archive/20260908_episode-selection-fragility-plan.md: playing an episode from a
