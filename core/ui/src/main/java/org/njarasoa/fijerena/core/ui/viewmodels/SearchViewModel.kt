@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,17 +26,50 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.util.concurrent.ConcurrentHashMap
 
 class SearchViewModel(
     private val context: android.content.Context,
     private val contentType: String,
 ) : ViewModel() {
-    @Volatile private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
+    /**
+     * A source this search covers. [name] is its source badge on the results, null when it is the
+     * only source searched (no badge).
+     */
+    private class SearchSource(
+        val providerId: Long,
+        val name: String?,
+    )
 
-    private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
-        val repo = repository ?: AppContainer.getInstance(context).getMediaRepository().also { repository = it }
-        return repo
-    }
+    @Volatile private var sources: List<SearchSource>? = null
+
+    // Each searched source's repository, once built (a result's Favourite and Mark watched use its own).
+    private val repositories = ConcurrentHashMap<Long, MediaRepository>()
+
+    /**
+     * The sources searched (docs/plans/20261012_multi-source-search-history-plan.md Phase 3): every
+     * Xtream source of the profile in use, each in its own cached catalogue. A Jellyfin or M3U
+     * source in use is searched alone, as before. With none set up yet, the active repository (0).
+     */
+    private suspend fun ensureSources(): List<SearchSource> =
+        sources ?: run {
+            val profileSources = AppContainer.getInstance(context).providerRepository.profileSourcesList()
+            val active = profileSources.firstOrNull { it.isActive }
+            val searched =
+                if (active == null || active.type != XTREAM_TYPE) {
+                    listOfNotNull(active)
+                } else {
+                    profileSources.filter { it.type == XTREAM_TYPE }
+                }
+            val named = searched.size > 1
+            searched
+                .map { SearchSource(it.id, it.name.takeIf { named }) }
+                .ifEmpty { listOf(SearchSource(0L, null)) }
+                .also { sources = it }
+        }
+
+    private suspend fun repoFor(providerId: Long): MediaRepository =
+        repositories[providerId] ?: AppContainer.getInstance(context).getMediaRepository(providerId).also { repositories[providerId] = it }
 
     sealed class UiState {
         data class Loading(
@@ -56,6 +92,8 @@ class SearchViewModel(
             val networkCalls: Int = 0,
             val failedCalls: Int = 0,
             val firstError: String? = null,
+            /** One raw "[dev] <source>: <error>" line per source left out because its search failed (developer mode shows them). */
+            val sourceErrors: List<String> = emptyList(),
         ) : UiState()
 
         data class Error(
@@ -63,6 +101,10 @@ class SearchViewModel(
         ) : UiState()
     }
 
+    /**
+     * One title on one source (Q1: the same title on two sources is two results). [sourceName] is
+     * its source badge, null when the search covers a single source.
+     */
     data class SearchResult(
         val itemId: String,
         val streamName: String,
@@ -71,22 +113,48 @@ class SearchViewModel(
         val contentType: String,
         val thumbnailUrl: String? = null,
         val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null,
+        val providerId: Long = 0L,
+        val sourceName: String? = null,
     ) {
         /** A whole show (its id is the series id), not an episode. */
         val isShow: Boolean
             get() = contentType == ContentType.TV_SHOWS && mediaType != org.njarasoa.fijerena.core.player.domain.MediaType.EPISODE
+
+        /** Its list key, unique across sources (the same id can be on two). */
+        val listKey: String
+            get() = "${providerId}_${contentType}_${categoryId}_$itemId"
     }
 
+    /** A matching category on one source; [sourceName] as on [SearchResult]. */
     data class CategorySearchResult(
         val categoryId: String,
         val categoryName: String,
         val contentType: String,
-    )
+        val providerId: Long = 0L,
+        val sourceName: String? = null,
+    ) {
+        /** Its list key, unique across sources. */
+        val listKey: String
+            get() = "${providerId}_${contentType}_$categoryId"
+    }
 
     private data class SearchableCategory(
         val category: org.njarasoa.fijerena.core.player.domain.MediaCategory,
         val contentType: String,
     )
+
+    /** One source's part of a search. */
+    private class SourceResults(
+        val categories: List<CategorySearchResult>,
+        val results: List<SearchResult>,
+        val excludedCountByType: Map<String, Int>,
+        val searchedOnServer: Boolean,
+    )
+
+    /** A source's session couldn't be restored ("session expired" when it is the only one searched). */
+    private class SessionExpiredException(
+        cause: Throwable?,
+    ) : Exception(cause?.message, cause)
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -106,11 +174,12 @@ class SearchViewModel(
     companion object {
         private const val PARALLEL_BATCH_SIZE = 20
         private const val TARGET_RESULTS = 200
+        private const val XTREAM_TYPE = "XTREAM"
         const val CONTENT_TYPE_ALL = "ALL"
     }
 
-    // Pre-fetched categories (loaded in background on init)
-    private var prefetchedCategories: List<SearchableCategory>? = null
+    // Pre-fetched categories per source (loaded in background on init)
+    private val prefetchedCategories = ConcurrentHashMap<Long, List<SearchableCategory>>()
 
     init {
         _uiState.value =
@@ -120,33 +189,50 @@ class SearchViewModel(
                 query = "",
             )
         _searchHistory.value = appSettings.getSearchHistory()
-        // Pre-fetch category list + all missing/stale category items in background.
+        // Pre-fetch each source's category list + all missing/stale category items in background.
         viewModelScope.launchGuarded("SearchViewModel.prefetch", Dispatchers.IO) {
-            val repo =
+            val searchSources =
                 try {
-                    ensureRepo()
+                    ensureSources()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
                     return@launchGuarded
                 }
+            searchSources.forEach { source ->
+                launch {
+                    try {
+                        prefetch(source)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        android.util.Log.e("SearchViewModel", "Prefetch failed for source ${source.providerId}", e)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun targetContentTypes(repo: MediaRepository): List<String> =
+        if (contentType == CONTENT_TYPE_ALL) {
+            repo.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
+        } else {
+            listOf(contentType)
+        }
+
+    private suspend fun prefetch(source: SearchSource) {
+        coroutineScope {
+            val repo = repoFor(source.providerId)
 
             if (!repo.isConnected()) {
                 repo.connect()
             }
 
             val capabilities = repo.getCapabilities()
-            val targetContentTypes =
-                if (contentType == CONTENT_TYPE_ALL) {
-                    capabilities?.supportedContentTypes?.toList() ?: emptyList()
-                } else {
-                    listOf(contentType)
-                }
-
             val allCategories = mutableListOf<SearchableCategory>()
             val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
 
-            targetContentTypes.forEach { type ->
+            targetContentTypes(repo).forEach { type ->
                 val result = repo.getFilteredCategories(type)
                 result.onSuccess { categories ->
                     val realCategories = categories.filter { !it.isVirtual }
@@ -173,7 +259,7 @@ class SearchViewModel(
                     }
                 }
             }
-            prefetchedCategories = allCategories
+            prefetchedCategories[source.providerId] = allCategories
         }
     }
 
@@ -187,7 +273,7 @@ class SearchViewModel(
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch(Dispatchers.IO) {
-                doSearch(this, query)
+                doSearch(query)
             }
     }
 
@@ -249,163 +335,190 @@ class SearchViewModel(
 
     private fun formatSeconds(ms: Long): String = String.format(java.util.Locale.US, "%.1fs", ms / 1000.0)
 
-    private suspend fun doSearch(
-        scope: kotlinx.coroutines.CoroutineScope,
-        query: String,
-    ) {
+    /**
+     * Searches every source in parallel and merges their results, ranked together as before. A
+     * source whose search fails is left out; when every one fails, the screen shows the error.
+     */
+    private suspend fun doSearch(query: String) {
         try {
             val startTime = System.currentTimeMillis()
-
-            val repo = ensureRepo()
-
-            if (!repo.isConnected()) {
-                val connectResult = repo.connect()
-                if (connectResult.isFailure) {
-                    _uiState.value = UiState.Error(context.getString(R.string.search_error_session_expired))
-                    return
-                }
-            }
-
-            val targetContentTypes =
-                if (contentType == CONTENT_TYPE_ALL) {
-                    repo.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
-                } else {
-                    listOf(contentType)
-                }
+            val searchSources = ensureSources()
 
             _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_searching))
 
-            // The background prefetch may not have populated the category list yet (a search fired
-            // right after the screen opened). Fall back to loading categories now — they're
-            // DB-cached and cheap — so category matching never silently sees an empty list.
-            val realCategories =
-                prefetchedCategories?.takeIf { it.isNotEmpty() }
-                    ?: targetContentTypes.flatMap { type ->
-                        repo
-                            .getFilteredCategories(type)
-                            .getOrNull()
-                            ?.filter { !it.isVirtual }
-                            ?.map { SearchableCategory(it, type) }
-                            ?: emptyList()
-                    }
-            // Build the id→name map from the UNFILTERED category list: a stream can belong to a
-            // category hidden from browse by the provider's script/prefix filter (e.g. names with
-            // non-Latin unicode like "FR| PRIME ᴿᴬᵂ"), and we still want its name shown on results
-            // instead of a blank "Category:" line.
-            val categoryNameById =
-                targetContentTypes
-                    .flatMap { type -> repo.getCategories(type).getOrNull().orEmpty() }
-                    .associate { it.id to it.name }
             val normalizedQuery = query.trim().lowercase()
             val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
-
-            val matchingCategories =
-                realCategories.mapNotNull {
-                    if (SearchUtils.matchesQuery(it.category.name, parsedQuery)) {
-                        CategorySearchResult(it.category.id, it.category.name, it.contentType)
-                    } else {
-                        null
-                    }
+            val outcomes =
+                coroutineScope {
+                    searchSources
+                        .map { source ->
+                            async { source to suspendRunCatching { searchSource(source, query, normalizedQuery, parsedQuery) } }
+                        }.awaitAll()
                 }
+            val searched = outcomes.mapNotNull { (_, outcome) -> outcome.getOrNull() }
+            val failures = outcomes.mapNotNull { (source, outcome) -> outcome.exceptionOrNull()?.let { source to it } }
+            failures.forEach { (source, e) -> android.util.Log.w("SearchViewModel", "Search failed on source ${source.providerId}", e) }
 
-            val excludedCountByType =
-                targetContentTypes
-                    .associateWith { repo.countExcludedSearchMatches(query, it) }
-                    .filterValues { it > 0 }
-
-            // Try server-side search first (e.g., Jellyfin)
-            val serverResults = mutableListOf<SearchResult>()
-            var serverSearchSuccess = false
-
-            for (type in targetContentTypes) {
-                val serverResult = repo.search(query, type)
-                if (serverResult != null) {
-                    serverResult.fold(
-                        onSuccess = { items ->
-                            serverSearchSuccess = true
-
-                            items.forEach { item ->
-                                serverResults.add(
-                                    SearchResult(
-                                        itemId = item.id,
-                                        streamName = item.name,
-                                        categoryId = item.categoryId,
-                                        categoryName = categoryNameById[item.categoryId] ?: "",
-                                        contentType = type,
-                                        thumbnailUrl = item.thumbnailUrl,
-                                        mediaType = item.mediaType,
-                                    ),
-                                )
-                            }
-                        },
-                        onFailure = { },
-                    )
-                }
-            }
-
-            if (serverSearchSuccess) {
-                val elapsed = System.currentTimeMillis() - startTime
-                val sortedResults = sortResults(serverResults, normalizedQuery, parsedQuery)
-                android.util.Log.i("SearchViewModel", "Search \"$query\": ${sortedResults.size} results in ${elapsed}ms")
-                _uiState.value =
-                    UiState.Success(
-                        categoryResults = matchingCategories,
-                        allResults = sortedResults,
-                        filteredResults = sortedResults,
-                        query = query,
-                        excludedCountByType = excludedCountByType,
-                        totalDuration = formatSeconds(elapsed),
-                        networkCalls = 1,
-                    )
-                return
-            }
-
-            // Fall back to client-side search
-            _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_fallback_local))
-            kotlinx.coroutines.delay(50) // Allow UI to render the new loading message
-
-            val results = mutableListOf<SearchResult>()
-
-            // Phase 1: Local cache scan
-            for (sc in realCategories) {
-                currentCoroutineContext().job.ensureActive()
-                val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
-                if (!cached.isNullOrEmpty()) {
-                    val categoryMatches = SearchUtils.matchesQuery(sc.category.name, parsedQuery)
-                    cached.mapNotNullTo(results) { item ->
-                        if (categoryMatches || SearchUtils.matchesQuery(item.name, parsedQuery)) {
-                            SearchResult(
-                                item.id,
-                                item.name,
-                                sc.category.id,
-                                sc.category.name,
-                                sc.contentType,
-                                item.thumbnailUrl,
-                                item.mediaType,
-                            )
-                        } else {
-                            null
-                        }
-                    }
-                }
-            }
-
-            val finalResults = sortResults(results, normalizedQuery, parsedQuery).take(TARGET_RESULTS)
-            val elapsed = System.currentTimeMillis() - startTime
-            android.util.Log.i("SearchViewModel", "Search \"$query\": ${finalResults.size} results in ${elapsed}ms")
             _uiState.value =
-                UiState.Success(
-                    categoryResults = matchingCategories,
-                    allResults = finalResults,
-                    filteredResults = finalResults,
-                    query = query,
-                    excludedCountByType = excludedCountByType,
-                    totalDuration = formatSeconds(elapsed),
-                )
+                if (searched.isEmpty() && failures.isNotEmpty()) {
+                    val e = failures.first().second
+                    UiState.Error(
+                        if (e is SessionExpiredException) {
+                            context.getString(R.string.search_error_session_expired)
+                        } else {
+                            friendlyErrorMessage(e, context, appSettings.isDevMode)
+                        },
+                    )
+                } else {
+                    val finalResults = sortResults(searched.flatMap { it.results }, normalizedQuery, parsedQuery)
+                    val elapsed = System.currentTimeMillis() - startTime
+                    android.util.Log.i("SearchViewModel", "Search \"$query\": ${finalResults.size} results in ${elapsed}ms")
+                    UiState.Success(
+                        categoryResults = searched.flatMap { it.categories },
+                        allResults = finalResults,
+                        filteredResults = finalResults,
+                        query = query,
+                        excludedCountByType =
+                            searched
+                                .flatMap { it.excludedCountByType.entries }
+                                .groupingBy { it.key }
+                                .fold(0) { total, entry -> total + entry.value },
+                        totalDuration = formatSeconds(elapsed),
+                        networkCalls = searched.count { it.searchedOnServer },
+                        sourceErrors =
+                            failures.map { (source, e) ->
+                                "[dev] ${source.name.orEmpty()}: ${e.message ?: e.javaClass.simpleName}"
+                            },
+                    )
+                }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
         }
+    }
+
+    /** [source]'s results for [query]: its matching categories, its titles and its hidden counts. */
+    private suspend fun searchSource(
+        source: SearchSource,
+        query: String,
+        normalizedQuery: String,
+        parsedQuery: ParsedQuery,
+    ): SourceResults {
+        val repo = repoFor(source.providerId)
+
+        if (!repo.isConnected()) {
+            val connectResult = repo.connect()
+            if (connectResult.isFailure) throw SessionExpiredException(connectResult.exceptionOrNull())
+        }
+
+        val targetContentTypes = targetContentTypes(repo)
+
+        // The background prefetch may not have populated the category list yet (a search fired
+        // right after the screen opened). Fall back to loading categories now — they're
+        // DB-cached and cheap — so category matching never silently sees an empty list.
+        val realCategories =
+            prefetchedCategories[source.providerId]?.takeIf { it.isNotEmpty() }
+                ?: targetContentTypes.flatMap { type ->
+                    repo
+                        .getFilteredCategories(type)
+                        .getOrNull()
+                        ?.filter { !it.isVirtual }
+                        ?.map { SearchableCategory(it, type) }
+                        ?: emptyList()
+                }
+        // Build the id→name map from the UNFILTERED category list: a stream can belong to a
+        // category hidden from browse by the provider's script/prefix filter (e.g. names with
+        // non-Latin unicode like "FR| PRIME ᴿᴬᵂ"), and we still want its name shown on results
+        // instead of a blank "Category:" line.
+        val categoryNameById =
+            targetContentTypes
+                .flatMap { type -> repo.getCategories(type).getOrNull().orEmpty() }
+                .associate { it.id to it.name }
+
+        val matchingCategories =
+            realCategories.mapNotNull {
+                if (SearchUtils.matchesQuery(it.category.name, parsedQuery)) {
+                    CategorySearchResult(it.category.id, it.category.name, it.contentType, source.providerId, source.name)
+                } else {
+                    null
+                }
+            }
+
+        val excludedCountByType =
+            targetContentTypes
+                .associateWith { repo.countExcludedSearchMatches(query, it) }
+                .filterValues { it > 0 }
+
+        // Try server-side search first (e.g., Jellyfin)
+        val serverResults = mutableListOf<SearchResult>()
+        var serverSearchSuccess = false
+
+        for (type in targetContentTypes) {
+            val serverResult = repo.search(query, type)
+            if (serverResult != null) {
+                serverResult.fold(
+                    onSuccess = { items ->
+                        serverSearchSuccess = true
+
+                        items.forEach { item ->
+                            serverResults.add(
+                                SearchResult(
+                                    itemId = item.id,
+                                    streamName = item.name,
+                                    categoryId = item.categoryId,
+                                    categoryName = categoryNameById[item.categoryId] ?: "",
+                                    contentType = type,
+                                    thumbnailUrl = item.thumbnailUrl,
+                                    mediaType = item.mediaType,
+                                    providerId = source.providerId,
+                                    sourceName = source.name,
+                                ),
+                            )
+                        }
+                    },
+                    onFailure = { },
+                )
+            }
+        }
+
+        val results =
+            if (serverSearchSuccess) {
+                serverResults
+            } else {
+                // Fall back to client-side search
+                _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_fallback_local))
+                kotlinx.coroutines.delay(50) // Allow UI to render the new loading message
+
+                val scanned = mutableListOf<SearchResult>()
+
+                // Phase 1: Local cache scan
+                for (sc in realCategories) {
+                    currentCoroutineContext().job.ensureActive()
+                    val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
+                    if (!cached.isNullOrEmpty()) {
+                        val categoryMatches = SearchUtils.matchesQuery(sc.category.name, parsedQuery)
+                        cached.mapNotNullTo(scanned) { item ->
+                            if (categoryMatches || SearchUtils.matchesQuery(item.name, parsedQuery)) {
+                                SearchResult(
+                                    item.id,
+                                    item.name,
+                                    sc.category.id,
+                                    sc.category.name,
+                                    sc.contentType,
+                                    item.thumbnailUrl,
+                                    item.mediaType,
+                                    source.providerId,
+                                    source.name,
+                                )
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                }
+                sortResults(scanned, normalizedQuery, parsedQuery).take(TARGET_RESULTS)
+            }
+        return SourceResults(matchingCategories, results, excludedCountByType, serverSearchSuccess)
     }
 
     // O(N) bucketing rather than expensive string matching inside `compareBy`: the string
@@ -448,17 +561,21 @@ class SearchViewModel(
         return sorted
     }
 
+    // Favourite and Mark watched act on the result's own source ([providerId], see SearchResult).
     fun isFavorite(
+        providerId: Long,
         itemId: String,
         contentType: String,
-    ): Boolean = repository?.isFavorite(itemId, contentType) ?: false
+    ): Boolean = repositories[providerId]?.isFavorite(itemId, contentType) ?: false
 
     fun isFavoriteCategory(
+        providerId: Long,
         categoryId: String,
         contentType: String,
-    ): Boolean = repository?.isFavoriteCategory(categoryId, contentType) ?: false
+    ): Boolean = repositories[providerId]?.isFavoriteCategory(categoryId, contentType) ?: false
 
     fun toggleFavorite(
+        providerId: Long,
         itemId: String,
         itemName: String,
         categoryId: String,
@@ -466,7 +583,7 @@ class SearchViewModel(
         isFavorite: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val repo = ensureRepo()
+            val repo = repoFor(providerId)
             if (isFavorite) {
                 repo.removeFavorite(itemId, contentType)
             } else {
@@ -476,13 +593,14 @@ class SearchViewModel(
     }
 
     fun toggleFavoriteCategory(
+        providerId: Long,
         categoryId: String,
         categoryName: String,
         contentType: String,
         isFavorite: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val repo = ensureRepo()
+            val repo = repoFor(providerId)
             if (isFavorite) {
                 repo.removeFavoriteCategory(categoryId, contentType)
             } else {
@@ -499,20 +617,22 @@ class SearchViewModel(
      * server (no such action).
      */
     suspend fun isWatchedSuspend(
+        providerId: Long,
         itemId: String,
         contentType: String,
     ): Boolean? {
-        val repo = ensureRepo()
+        val repo = repoFor(providerId)
         return if (repo.supportsMarkWatched) repo.getPlaybackPositionSuspend(itemId, contentType)?.isCompleted == true else null
     }
 
     fun toggleWatched(
+        providerId: Long,
         itemId: String,
         contentType: String,
         isWatched: Boolean,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            ensureRepo().setWatched(itemId, contentType, !isWatched)
+            repoFor(providerId).setWatched(itemId, contentType, !isWatched)
         }
     }
 
@@ -522,8 +642,11 @@ class SearchViewModel(
      * state on its server (no such action), else whether every episode is watched (true) or not
      * (false, also when the show was never opened here or the read failed).
      */
-    suspend fun showWatchedMarkState(seriesId: String): Boolean? {
-        val repo = ensureRepo()
+    suspend fun showWatchedMarkState(
+        providerId: Long,
+        seriesId: String,
+    ): Boolean? {
+        val repo = repoFor(providerId)
         return if (repo.supportsMarkWatched) {
             suspendRunCatching { repo.episodesWatchState(seriesId, null) }.getOrNull() == true
         } else {
@@ -533,12 +656,13 @@ class SearchViewModel(
 
     /** Marks every episode of [seriesId] watched or unwatched; a failure reaches [onError] in plain words. */
     fun setShowWatched(
+        providerId: Long,
         seriesId: String,
         watched: Boolean,
         onError: (String) -> Unit,
     ) {
         viewModelScope.launchGuarded("SearchViewModel.setShowWatched") {
-            ensureRepo()
+            repoFor(providerId)
                 .setEpisodesWatched(seriesId, null, watched)
                 .onFailure { e ->
                     onError(

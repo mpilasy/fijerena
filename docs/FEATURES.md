@@ -82,7 +82,8 @@ Live TV only, when the source has a guide (the indexed XMLTV guide, or the sourc
 
 Search across Live TV, Movies and TV Shows ("ALL", from Home) or one content type (from its category screen). At least 2 characters. Results are grouped by content type under collapsible headers, categories and items within each group; recent searches show before typing (per profile). A Live TV result opens Live TV on that channel; a movie opens its details, a show its episodes.
 
-- **Xtream:** each word matches as a prefix against the synced catalogue on the device, no network call; up to 200 results per content type. Matches in categories hidden by the content filters are counted ("N hidden" on the group).
+- **Sources searched:** every Xtream source of the profile in use, in parallel, their results merged and ranked together. A title on two sources is two results; with more than one source searched, each result and category carries its source's badge. A result opens, and its Favourite / Mark watched act, on its own source. A source whose search fails is left out (developer mode: a raw `[dev] <source>: <error>` line under the results); only when every source fails does the error show. A Jellyfin or M3U source in use is searched alone, as before.
+- **Xtream:** each word matches as a prefix against the synced catalogue on the device, no network call; up to 200 results per content type. Matches in categories hidden by the content filters are counted ("N hidden" on the group, summed over the sources).
 - **Jellyfin:** the server's search (movies and series).
 - **Local / Remote M3U:** title match against the playlist.
 - **SMB:** filename match against items already loaded.

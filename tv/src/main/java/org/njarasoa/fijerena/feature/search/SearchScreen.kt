@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,6 +87,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
@@ -150,8 +152,8 @@ private fun searchPlaceholder(contentType: String): String =
 @Composable
 fun SearchScreen(
     contentType: String,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, contentType: String) -> Unit,
-    onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, contentType: String, providerId: Long) -> Unit,
+    onCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     initialQuery: String? = null,
 ) {
@@ -182,18 +184,23 @@ fun SearchScreen(
     val returnFocus = rememberNavReturnFocus()
 
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
+
+    // The menu's result's source: its Favourite and Mark watched act there.
+    var favoriteMenuSource by remember { mutableLongStateOf(0L) }
     val longPressScope = rememberCoroutineScope()
 
     // A favourite removed from a result's menu: at once, with an Undo (plan → A) — Menu undoes
     // while the bar shows.
     val undoBar = rememberUndoBarState()
     favoriteMenuTarget?.let { target ->
+        val source = favoriteMenuSource
         FavoriteContextMenuDialog(
             target = target,
             onConfirm = {
                 when (target) {
                     is FavoriteMenuTarget.Category -> {
                         viewModel.toggleFavoriteCategory(
+                            source,
                             target.categoryId,
                             target.categoryName,
                             target.contentType,
@@ -201,13 +208,14 @@ fun SearchScreen(
                         )
                         if (target.isFavorite) {
                             undoBar.show(target.categoryName) {
-                                viewModel.toggleFavoriteCategory(target.categoryId, target.categoryName, target.contentType, false)
+                                viewModel.toggleFavoriteCategory(source, target.categoryId, target.categoryName, target.contentType, false)
                             }
                         }
                     }
 
                     is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavorite(
+                            source,
                             target.itemId,
                             target.itemName,
                             target.categoryId,
@@ -216,7 +224,14 @@ fun SearchScreen(
                         )
                         if (target.isFavorite) {
                             undoBar.show(parseDisplayTitle(target.itemName).title.ifBlank { target.itemName }) {
-                                viewModel.toggleFavorite(target.itemId, target.itemName, target.categoryId, target.contentType, false)
+                                viewModel.toggleFavorite(
+                                    source,
+                                    target.itemId,
+                                    target.itemName,
+                                    target.categoryId,
+                                    target.contentType,
+                                    false,
+                                )
                             }
                         }
                     }
@@ -225,13 +240,13 @@ fun SearchScreen(
             onDismiss = { favoriteMenuTarget = null },
             onToggleWatched =
                 (target as? FavoriteMenuTarget.Stream)?.isWatched?.let { isWatched ->
-                    { viewModel.toggleWatched(target.itemId, target.contentType, isWatched) }
+                    { viewModel.toggleWatched(source, target.itemId, target.contentType, isWatched) }
                 },
             // Null when the result isn't a show or its source keeps watched state on its server.
             onToggleShowWatched =
                 (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
                     {
-                        viewModel.setShowWatched(target.itemId, !isShowWatched) { message ->
+                        viewModel.setShowWatched(source, target.itemId, !isShowWatched) { message ->
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                         }
                     }
@@ -276,6 +291,11 @@ fun SearchScreen(
                         } else {
                             null
                         }
+                    // Sources left out because their search failed: raw, developer mode only.
+                    val sourceErrors =
+                        successState.sourceErrors
+                            .takeIf { appSettings.isDevMode && it.isNotEmpty() }
+                            ?.joinToString("\n")
                     SearchContent(
                         query = successState.query,
                         categoryResults = successState.categoryResults,
@@ -284,6 +304,7 @@ fun SearchScreen(
                         isSearching = successState.isSearching,
                         searchProgress = successState.searchProgress ?: "",
                         devStats = devStats,
+                        sourceErrors = sourceErrors,
                         contentType = contentType,
                         searchHistory = searchHistory,
                         returnFocus = returnFocus,
@@ -299,7 +320,7 @@ fun SearchScreen(
                         onClearHistory = { viewModel.clearSearchHistory() },
                         onClearSearch = { viewModel.clearSearch() },
                         onResultClick = { result ->
-                            onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
+                            onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType, result.providerId)
                         },
                         onResultLongPress = { result ->
                             // Manual watched/unwatched mark (Phase 6,
@@ -312,30 +333,46 @@ fun SearchScreen(
                             val isWatchable =
                                 result.contentType == ContentType.MOVIES || (result.contentType == ContentType.TV_SHOWS && !isShow)
                             longPressScope.launch {
-                                val isWatched = if (isWatchable) viewModel.isWatchedSuspend(result.itemId, result.contentType) else null
-                                val isShowWatched = if (isShow) viewModel.showWatchedMarkState(result.itemId) else null
+                                val isWatched =
+                                    if (isWatchable) {
+                                        viewModel.isWatchedSuspend(
+                                            result.providerId,
+                                            result.itemId,
+                                            result.contentType,
+                                        )
+                                    } else {
+                                        null
+                                    }
+                                val isShowWatched = if (isShow) viewModel.showWatchedMarkState(result.providerId, result.itemId) else null
+                                favoriteMenuSource = result.providerId
                                 favoriteMenuTarget =
                                     FavoriteMenuTarget.Stream(
                                         itemId = result.itemId,
                                         itemName = result.streamName,
                                         categoryId = result.categoryId,
                                         contentType = result.contentType,
-                                        isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
+                                        isFavorite = viewModel.isFavorite(result.providerId, result.itemId, result.contentType),
                                         isWatched = isWatched,
                                         isShowWatched = isShowWatched,
                                     )
                             }
                         },
                         onCategoryClick = { catResult ->
-                            onCategorySelected(catResult.categoryId, catResult.contentType)
+                            onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
                         },
                         onCategoryLongPress = { catResult ->
+                            favoriteMenuSource = catResult.providerId
                             favoriteMenuTarget =
                                 FavoriteMenuTarget.Category(
                                     categoryId = catResult.categoryId,
                                     categoryName = catResult.categoryName,
                                     contentType = catResult.contentType,
-                                    isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType),
+                                    isFavorite =
+                                        viewModel.isFavoriteCategory(
+                                            catResult.providerId,
+                                            catResult.categoryId,
+                                            catResult.contentType,
+                                        ),
                                 )
                         },
                     )
@@ -406,6 +443,7 @@ private fun SearchContent(
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
+    sourceErrors: String?,
     contentType: String,
     searchHistory: List<String>,
     returnFocus: NavReturnFocus,
@@ -502,6 +540,7 @@ private fun SearchContent(
                 isSearching = isSearching,
                 searchProgress = searchProgress,
                 devStats = devStats,
+                sourceErrors = sourceErrors,
                 returnFocus = returnFocus,
                 onResultClick = onResultClick,
                 onResultLongPress = onResultLongPress,
@@ -615,6 +654,7 @@ private fun SearchResultsList(
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
+    sourceErrors: String?,
     returnFocus: NavReturnFocus,
     onResultClick: (SearchResult) -> Unit,
     onResultLongPress: (SearchResult) -> Unit,
@@ -674,9 +714,10 @@ private fun SearchResultsList(
                 style = MaterialTheme.typography.bodyLarge,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
+            sourceErrors?.let { SourceErrorsLine(it, Modifier.align(Alignment.BottomCenter)) }
         }
     } else {
-        Column {
+        Column(modifier = Modifier.fillMaxSize()) {
             Row(
                 modifier =
                     Modifier
@@ -730,7 +771,7 @@ private fun SearchResultsList(
             LazyColumn(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxWidth().weight(1f),
             ) {
                 if (queryContentType == "ALL") {
                     var isFirstItem = true
@@ -751,10 +792,10 @@ private fun SearchResultsList(
                             if (isExpanded) {
                                 itemsIndexed(
                                     typeCats,
-                                    key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
+                                    key = { _, it -> "cat_${it.listKey}" },
                                     contentType = { _, _ -> "category" },
                                 ) { index, catResult ->
-                                    val returnKey = "cat_${catResult.categoryId}_${catResult.contentType}"
+                                    val returnKey = "cat_${catResult.listKey}"
                                     CategoryResultItem(
                                         result = catResult,
                                         rowStyle = rowStyle,
@@ -776,10 +817,10 @@ private fun SearchResultsList(
                                 }
                                 itemsIndexed(
                                     typeStreams,
-                                    key = { _, it -> "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
+                                    key = { _, it -> "stream_${it.listKey}" },
                                     contentType = { _, _ -> "stream" },
                                 ) { index, result ->
-                                    val returnKey = "stream_${result.itemId}_${result.categoryId}_${result.contentType}"
+                                    val returnKey = "stream_${result.listKey}"
                                     SearchResultItem(
                                         result = result,
                                         rowStyle = rowStyle,
@@ -795,7 +836,7 @@ private fun SearchResultsList(
                                             ) {
                                                 firstItemFocusRequester
                                             } else {
-                                                focusRequesters.getOrPut(result.itemId) { FocusRequester() }
+                                                focusRequesters.getOrPut(result.listKey) { FocusRequester() }
                                             },
                                     )
                                     if (isFirstItem && index == 0) isFirstItem = false
@@ -815,10 +856,10 @@ private fun SearchResultsList(
                         }
                         itemsIndexed(
                             categoryResults,
-                            key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
+                            key = { _, it -> "cat_${it.listKey}" },
                             contentType = { _, _ -> "category" },
                         ) { index, catResult ->
-                            val returnKey = "cat_${catResult.categoryId}_${catResult.contentType}"
+                            val returnKey = "cat_${catResult.listKey}"
                             CategoryResultItem(
                                 result = catResult,
                                 rowStyle = rowStyle,
@@ -846,9 +887,9 @@ private fun SearchResultsList(
                             _,
                             it,
                             ->
-                            "${it.itemId}_${it.categoryId}"
+                            it.listKey
                         }, contentType = { _, _ -> "stream" }) { index, result ->
-                            val returnKey = "${result.itemId}_${result.categoryId}"
+                            val returnKey = result.listKey
                             SearchResultItem(
                                 result = result,
                                 rowStyle = rowStyle,
@@ -864,15 +905,32 @@ private fun SearchResultsList(
                                     ) {
                                         firstItemFocusRequester
                                     } else {
-                                        focusRequesters.getOrPut(result.itemId) { FocusRequester() }
+                                        focusRequesters.getOrPut(result.listKey) { FocusRequester() }
                                     },
                             )
                         }
                     }
                 }
             }
+            sourceErrors?.let { SourceErrorsLine(it) }
         }
     }
+}
+
+/** Developer mode: the raw error of each source left out of the results (its search failed). */
+@Composable
+private fun SourceErrorsLine(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = CinemaError,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.fillMaxWidth().padding(top = Spacing.xs),
+    )
 }
 
 /** "12 results" or "12 results · 3 hidden" when the provider's category filters hid matches. */
@@ -1026,8 +1084,10 @@ private fun CategoryResultItem(
                 Modifier
                     .fillMaxSize()
                     .padding(horizontal = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            result.sourceName?.let { SourceBadge(it) }
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.titleMedium,
@@ -1100,14 +1160,21 @@ private fun SearchResultItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                // The category it is in, as a plain secondary line ("kids' movies", not "Category: kids' movies").
-                Text(
-                    text = result.categoryName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // The category it is in, as a plain secondary line ("kids' movies", not "Category: kids' movies"),
+                // after its source's badge when the search covers several sources.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    result.sourceName?.let { SourceBadge(it) }
+                    Text(
+                        text = result.categoryName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

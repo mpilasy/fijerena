@@ -370,7 +370,7 @@ fun MobileNavHost(
             contentType = searchScreen.contentType,
             initialTypeFilter = searchScreen.initialTypeFilter,
             initialQuery = searchScreen.initialQuery,
-            onStreamSelected = { itemId, itemName, categoryId, contentType ->
+            onStreamSelected = { itemId, itemName, categoryId, contentType, providerId ->
                 val screen =
                     when (contentType) {
                         ContentType.TV_SHOWS -> {
@@ -378,6 +378,7 @@ fun MobileNavHost(
                                 seriesId = itemId,
                                 seriesName = itemName,
                                 categoryId = categoryId,
+                                providerId = providerId,
                             )
                         }
 
@@ -386,6 +387,7 @@ fun MobileNavHost(
                                 movieId = itemId,
                                 movieName = itemName,
                                 categoryId = categoryId,
+                                providerId = providerId,
                             )
                         }
 
@@ -395,17 +397,19 @@ fun MobileNavHost(
                                 contentType = contentType,
                                 initialCategoryId = categoryId,
                                 initialStreamId = itemId,
+                                providerId = providerId,
                             )
                         }
                     }
                 openInSectionTab(contentType, screen, openingQuery)
             },
-            onCategorySelected = { categoryId, contentType ->
+            onCategorySelected = { categoryId, contentType, providerId ->
                 openInSectionTab(
                     contentType,
                     Screen.CategoryList(
                         contentType = contentType,
                         initialCategoryId = categoryId,
+                        providerId = providerId,
                     ),
                     openingQuery,
                 )

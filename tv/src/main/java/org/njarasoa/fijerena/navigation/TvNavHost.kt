@@ -667,7 +667,7 @@ fun TvNavHost(
                             val searchScreen = backStackEntry.toRoute<Screen.Search>()
                             SearchScreen(
                                 contentType = searchScreen.contentType,
-                                onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
+                                onStreamSelected = { itemId, streamName, categoryId, streamContentType, providerId ->
                                     when (streamContentType) {
                                         ContentType.TV_SHOWS -> {
                                             navController.navigateOnce(
@@ -675,6 +675,7 @@ fun TvNavHost(
                                                     seriesId = itemId,
                                                     seriesName = streamName,
                                                     categoryId = categoryId,
+                                                    providerId = providerId,
                                                 ),
                                             )
                                         }
@@ -685,6 +686,7 @@ fun TvNavHost(
                                                     movieId = itemId,
                                                     movieName = streamName,
                                                     categoryId = categoryId,
+                                                    providerId = providerId,
                                                 ),
                                             )
                                         }
@@ -698,16 +700,18 @@ fun TvNavHost(
                                                     contentType = streamContentType,
                                                     initialCategoryId = categoryId,
                                                     initialStreamId = itemId,
+                                                    providerId = providerId,
                                                 ),
                                             )
                                         }
                                     }
                                 },
-                                onCategorySelected = { categoryId, contentType ->
+                                onCategorySelected = { categoryId, contentType, providerId ->
                                     navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = contentType,
                                             initialCategoryId = categoryId,
+                                            providerId = providerId,
                                         ),
                                     )
                                 },

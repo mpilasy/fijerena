@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
@@ -92,8 +93,8 @@ private fun searchPlaceholder(contentType: String): String =
 @Composable
 fun MobileSearchScreen(
     contentType: String,
-    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
-    onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
+    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String, providerId: Long) -> Unit,
+    onCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     // Told the query just before a result opens, so a result opened in another tab can bring the
     // search along (MobileNavHost.openInSectionTab) and Back still returns to these results.
     onResultOpening: (query: String) -> Unit = {},
@@ -126,13 +127,18 @@ fun MobileSearchScreen(
     // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
 
+    // The menu's result's source: its Favourite and Mark show watched act there.
+    var favoriteMenuSource by remember { mutableLongStateOf(0L) }
+
     favoriteMenuTarget?.let { target ->
+        val source = favoriteMenuSource
         MobileSearchFavoriteDialog(
             target = target,
             onConfirm = {
                 when (target) {
                     is FavoriteMenuTarget.Category -> {
                         viewModel.toggleFavoriteCategory(
+                            source,
                             target.categoryId,
                             target.categoryName,
                             target.contentType,
@@ -142,6 +148,7 @@ fun MobileSearchScreen(
 
                     is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavorite(
+                            source,
                             target.itemId,
                             target.itemName,
                             target.categoryId,
@@ -156,7 +163,7 @@ fun MobileSearchScreen(
             onToggleShowWatched =
                 (target as? FavoriteMenuTarget.Stream)?.isShowWatched?.let { isShowWatched ->
                     {
-                        viewModel.setShowWatched(target.itemId, !isShowWatched) { message ->
+                        viewModel.setShowWatched(source, target.itemId, !isShowWatched) { message ->
                             android.widget.Toast
                                 .makeText(context, message, android.widget.Toast.LENGTH_LONG)
                                 .show()
@@ -315,6 +322,7 @@ fun MobileSearchScreen(
                             }
                         SearchResults(
                             categoryResults = state.categoryResults,
+                            sourceErrors = state.sourceErrors.takeIf { appSettings.isDevMode }.orEmpty(),
                             results = state.filteredResults,
                             excludedCountByType = state.excludedCountByType,
                             query = state.query,
@@ -340,19 +348,29 @@ fun MobileSearchScreen(
                                     result.streamName,
                                     result.categoryId,
                                     result.contentType,
+                                    result.providerId,
                                 )
                             },
                             onResultLongPress = { result ->
                                 // A show's menu waits for its "Mark show watched / unwatched" wording.
                                 longPressScope.launch {
-                                    val isShowWatched = if (result.isShow) viewModel.showWatchedMarkState(result.itemId) else null
+                                    val isShowWatched =
+                                        if (result.isShow) {
+                                            viewModel.showWatchedMarkState(
+                                                result.providerId,
+                                                result.itemId,
+                                            )
+                                        } else {
+                                            null
+                                        }
+                                    favoriteMenuSource = result.providerId
                                     favoriteMenuTarget =
                                         FavoriteMenuTarget.Stream(
                                             itemId = result.itemId,
                                             itemName = result.streamName,
                                             categoryId = result.categoryId,
                                             contentType = result.contentType,
-                                            isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
+                                            isFavorite = viewModel.isFavorite(result.providerId, result.itemId, result.contentType),
                                             isShowWatched = isShowWatched,
                                         )
                                 }
@@ -360,15 +378,21 @@ fun MobileSearchScreen(
                             onCategoryClick = { catResult ->
                                 onResultOpening(searchQuery)
                                 viewModel.keepTypedSearch()
-                                onCategorySelected(catResult.categoryId, catResult.contentType)
+                                onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
                             },
                             onCategoryLongPress = { catResult ->
+                                favoriteMenuSource = catResult.providerId
                                 favoriteMenuTarget =
                                     FavoriteMenuTarget.Category(
                                         categoryId = catResult.categoryId,
                                         categoryName = catResult.categoryName,
                                         contentType = catResult.contentType,
-                                        isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType),
+                                        isFavorite =
+                                            viewModel.isFavoriteCategory(
+                                                catResult.providerId,
+                                                catResult.categoryId,
+                                                catResult.contentType,
+                                            ),
                                     )
                             },
                         )
@@ -420,6 +444,8 @@ private fun ErrorView(message: String) {
 @Composable
 private fun SearchResults(
     categoryResults: List<SearchViewModel.CategorySearchResult>,
+    // Developer mode: a raw line per source left out because its search failed.
+    sourceErrors: List<String>,
     results: List<SearchViewModel.SearchResult>,
     excludedCountByType: Map<String, Int>,
     query: String,
@@ -489,6 +515,14 @@ private fun SearchResults(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
+            if (sourceErrors.isNotEmpty()) {
+                Text(
+                    text = sourceErrors.joinToString("\n"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
         }
     } else {
         // Filter chips and the results list must be vertical siblings — this whole branch is
@@ -615,7 +649,7 @@ private fun SearchResults(
                             if (isExpanded) {
                                 items(
                                     typeCats,
-                                    key = { "cat_${it.categoryId}_${it.contentType}" },
+                                    key = { "cat_${it.listKey}" },
                                     contentType = { "category" },
                                 ) { catResult ->
                                     CategoryResultCard(
@@ -627,7 +661,7 @@ private fun SearchResults(
                                 }
                                 items(
                                     typeStreams,
-                                    key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
+                                    key = { "stream_${it.listKey}" },
                                     contentType = { "stream" },
                                 ) { result ->
                                     SearchResultCard(
@@ -651,7 +685,7 @@ private fun SearchResults(
                         }
                         items(
                             categoryResults,
-                            key = { "cat_${it.categoryId}_${it.contentType}" },
+                            key = { "cat_${it.listKey}" },
                             contentType = { "category" },
                         ) { catResult ->
                             CategoryResultCard(
@@ -672,7 +706,7 @@ private fun SearchResults(
                         }
                         items(
                             results,
-                            key = { "search_${it.contentType}_${it.categoryId}_${it.itemId}" },
+                            key = { "search_${it.listKey}" },
                             contentType = { "stream" },
                         ) { result ->
                             SearchResultCard(
@@ -682,6 +716,16 @@ private fun SearchResults(
                                 onLongClick = { onResultLongPress(result) },
                             )
                         }
+                    }
+                }
+
+                if (sourceErrors.isNotEmpty()) {
+                    item(key = "source_errors", contentType = "status") {
+                        Text(
+                            text = sourceErrors.joinToString("\n"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
             }
@@ -875,6 +919,7 @@ private fun CategoryResultCard(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
+            result.sourceName?.let { SourceBadge(it) }
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.bodyLarge,
@@ -940,13 +985,20 @@ private fun SearchResultCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    text = result.categoryName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // Its category, after its source's badge when the search covers several sources.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    result.sourceName?.let { SourceBadge(it) }
+                    Text(
+                        text = result.categoryName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
