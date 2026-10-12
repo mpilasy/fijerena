@@ -258,6 +258,44 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_programme WHERE source_id IN (:sourceIds)")
     suspend fun deleteProgrammesBySourceIds(sourceIds: List<Long>)
 
+    /**
+     * [sourceId]'s programmes that run past the next start on their channel end there instead —
+     * guides list a live event until a fixed cut-off on top of the normal schedule (bears: 27 h NFL
+     * games). Programmes sharing a start both end at the next later one. Uses the dedup index.
+     */
+    @Query(
+        """
+        UPDATE epg_programme SET end_epoch = (
+            SELECT MIN(n.start_epoch) FROM epg_programme n
+            WHERE n.channel_id = epg_programme.channel_id AND n.source_id = epg_programme.source_id
+              AND n.start_epoch > epg_programme.start_epoch
+        )
+        WHERE source_id = :sourceId AND end_epoch > (
+            SELECT MIN(n.start_epoch) FROM epg_programme n
+            WHERE n.channel_id = epg_programme.channel_id AND n.source_id = epg_programme.source_id
+              AND n.start_epoch > epg_programme.start_epoch
+        )
+        """,
+    )
+    suspend fun clipOverlaps(sourceId: Long): Int
+
+    /** [clipOverlaps] on the staging table, before the swap. */
+    @Query(
+        """
+        UPDATE epg_programme_staging SET end_epoch = (
+            SELECT MIN(n.start_epoch) FROM epg_programme_staging n
+            WHERE n.channel_id = epg_programme_staging.channel_id AND n.source_id = epg_programme_staging.source_id
+              AND n.start_epoch > epg_programme_staging.start_epoch
+        )
+        WHERE source_id = :sourceId AND end_epoch > (
+            SELECT MIN(n.start_epoch) FROM epg_programme_staging n
+            WHERE n.channel_id = epg_programme_staging.channel_id AND n.source_id = epg_programme_staging.source_id
+              AND n.start_epoch > epg_programme_staging.start_epoch
+        )
+        """,
+    )
+    suspend fun clipOverlapsStaging(sourceId: Long): Int
+
     @Query("SELECT COALESCE(MAX(id), 0) FROM epg_programme")
     suspend fun getMaxProgrammeId(): Long
 

@@ -1593,6 +1593,8 @@ class EpgFileManager private constructor(
                 val removed = indexer.deleteProgrammesNotRewritten(source.id, maxIdBefore)
                 Log.i(TAG, "EPG source $label: removed $removed programmes the new guide no longer lists")
             }
+            val clipped = indexer.clipOverlaps(source.id, useStaging)
+            Log.i(TAG, "EPG source $label: $clipped programmes ended at the next start on their channel")
             Log.i(TAG, "EPG source $label fully ingested, content hash ${contentSha256?.take(12)}")
             val record =
                 IngestRecord(

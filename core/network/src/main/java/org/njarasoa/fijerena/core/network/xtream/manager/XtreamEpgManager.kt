@@ -228,9 +228,12 @@ class XtreamEpgManager(
         }
     }
 
-    /** [epg] as the guide should show it: read as the panel's wall time when this panel labels it as UTC. */
+    /**
+     * [epg] as the guide should show it: read as the panel's wall time when this panel labels it as
+     * UTC, and with overlapping programmes ended at the next start ([withOverlapsClipped]).
+     */
     private fun shown(epg: EpgResponse): EpgResponse =
-        if (labelsLocalAsUtc) PanelGuideTimes.corrected(epg, sessionManager.panelClock.zone) else epg
+        (if (labelsLocalAsUtc) PanelGuideTimes.corrected(epg, sessionManager.panelClock.zone) else epg).withOverlapsClipped()
 
     /**
      * Compare [fresh] answers with the source's own `xmltv.php` and keep the verdict when there is

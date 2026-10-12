@@ -82,6 +82,11 @@ fun filterToStreams(
         if (programs.isEmpty()) null else group.copy(programs = programs)
     }
 
+/**
+ * "18:25 – 19:30", or "18:25 – Mon 15:00" when it ends on another day: guides list overnight blocks
+ * and live events that run into the next day, and the end without its day read as ending before it
+ * started. See docs/plans/20261012_guide-overlaps-plan.md.
+ */
 fun formatAiringTime(
     context: Context,
     startEpoch: Long,
@@ -89,7 +94,32 @@ fun formatAiringTime(
 ): String {
     val startText = TimeFormat.formatTime(context, startEpoch)
     val endText = TimeFormat.formatTime(context, endEpoch)
-    return "$startText – $endText"
+    val endDay = endDayLabel(startEpoch, endEpoch, java.time.ZoneId.systemDefault(), java.util.Locale.getDefault())
+    return if (endDay != null) "$startText – $endDay $endText" else "$startText – $endText"
+}
+
+/** The end's short weekday ("Mon") when [endEpoch] falls on another day than [startEpoch] in [zone], else null. */
+internal fun endDayLabel(
+    startEpoch: Long,
+    endEpoch: Long,
+    zone: java.time.ZoneId,
+    locale: java.util.Locale,
+): String? {
+    val end =
+        java.time.Instant
+            .ofEpochSecond(endEpoch)
+            .atZone(zone)
+    if (java.time.Instant
+            .ofEpochSecond(startEpoch)
+            .atZone(zone)
+            .toLocalDate() == end.toLocalDate()
+    ) {
+        return null
+    }
+    return end.format(
+        java.time.format.DateTimeFormatter
+            .ofPattern("EEE", locale),
+    )
 }
 
 fun formatFileSize(bytes: Long): String =

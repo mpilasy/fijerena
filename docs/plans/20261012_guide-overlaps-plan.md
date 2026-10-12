@@ -1,6 +1,6 @@
 # Overlapping guide listings
 
-**Status:** Phase 1 in progress (2026-10-12).
+**Status:** Phase 1 done (2026-10-12); Phase 2: the SQL checked on bears' real file, device check not done yet (emulators off).
 
 ## Problem
 
@@ -37,5 +37,12 @@ schedules for one evening).
 
 | # | What | Status |
 |---|---|---|
-| 1 | Clip at ingest (`EpgIndexDao`, `EpgIndexer.clipOverlaps`, `EpgFileManager.ingestDownloadedSource`) and in the panel guide (`XtreamEpgManager`); end-day text in `formatAiringTime`; unit tests | In progress |
-| 2 | Check on the phone emulator against bears after a guide refresh (beIN Sports 6, search "nfl"); docs | |
+| 1 | Clip at ingest (`EpgIndexDao`, `EpgIndexer.clipOverlaps`, `EpgFileManager.ingestDownloadedSource`) and in the panel guide (`XtreamEpgManager`); end-day text in `formatAiringTime`; unit tests | Done 2026-10-12 |
+| 2 | Check on the phone emulator against bears after a guide refresh (beIN Sports 6, search "nfl"); docs | Docs done; the clip SQL run on bears' file (below); device check pending |
+
+## Phase 2: the clip on bears' real file (2026-10-12)
+
+The `EpgIndexDao.clipOverlaps` statement, run on bears' `xmltv.php` loaded into SQLite on the host
+(228,146 rows after the dedup index): 42,437 overlapping before, **0 after**, in 0.1 s. Over 12 h:
+119 → 67 (the overnight blocks of pattern 2). beIN Sports 6: Eagles @ Jaguars 16:30–19:30 UTC (was
+to the next day 20:00), 49ers @ Seahawks 23:25–02:30, the next day's replays unchanged.

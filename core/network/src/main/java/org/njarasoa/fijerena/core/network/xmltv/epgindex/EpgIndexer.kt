@@ -727,6 +727,23 @@ class EpgIndexer private constructor(
         }
 
     /**
+     * End [sourceId]'s programmes at the next start on their channel where they run past it
+     * ([EpgIndexDao.clipOverlaps]), in the staging table when [useStaging]. After the ingest, and on
+     * the direct path after [deleteProgrammesNotRewritten], so only the new guide's rows count.
+     * See docs/plans/20261012_guide-overlaps-plan.md.
+     */
+    suspend fun clipOverlaps(
+        sourceId: Long,
+        useStaging: Boolean,
+    ): Int =
+        withContext(Dispatchers.IO) {
+            writeMutex.withLock {
+                val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
+                if (useStaging) dao.clipOverlapsStaging(sourceId) else dao.clipOverlaps(sourceId)
+            }
+        }
+
+    /**
      * Whether the live guide (primary tables, never staging) holds any programme of [sourceId].
      * False on any failure too — the caller treats "unknown" as "empty" and re-ingests.
      */
