@@ -20,6 +20,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpgCacheEntity
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.EPG_CACHE_EXPIRY_MS
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_EPG_PREFIX
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_LEGACY_EPG_PREFS_PURGED
+import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_PANEL_GUIDE_LOCAL_AS_UTC
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 
@@ -29,6 +30,9 @@ class XtreamEpgManager(
     private val providerSettings: ProviderSettings,
     private val epgCacheDao: XtreamEpgCacheDao,
     private val providerId: Long,
+    // The source's own xmltv.php in the guide index, to tell whether this panel's guide labels its
+    // local time as UTC (PanelGuideTimes). Null: never checked, never corrected.
+    private val ownXmltv: OwnXmltvListings? = null,
 ) {
     private val json =
         Json {
@@ -42,6 +46,11 @@ class XtreamEpgManager(
     private val writeScope = AppScopes.create("XtreamEpgManager.write", Dispatchers.IO.limitedParallelism(1))
 
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
+
+    // Whether this panel's guide stamps its wall time as UTC; kept across restarts, re-measured on
+    // every fresh answer ([remeasure]). Applied where listings leave this class, never to the cache.
+    @Volatile
+    private var labelsLocalAsUtc = sharedPreferences.getBoolean(KEY_PANEL_GUIDE_LOCAL_AS_UTC, false)
 
     init {
         purgeLegacyPrefsCache()
@@ -124,18 +133,20 @@ class XtreamEpgManager(
                         try {
                             val fresh = service.getEpgForStream(streamId)
                             cacheEpg(streamId, fresh)
+                            remeasure(listOf(fresh))
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             // Ignore network errors when refreshing
                         }
                     }
-                    return@suspendResultOf cached
+                    return@suspendResultOf shown(cached)
                 }
 
                 val epg = service.getEpgForStream(streamId)
                 cacheEpg(streamId, epg)
-                epg
+                remeasure(listOf(epg))
+                shown(epg)
             }
         }
 
@@ -177,9 +188,10 @@ class XtreamEpgManager(
                     if (fetched.isNotEmpty()) {
                         results.putAll(fetched)
                         cacheEpgBatch(fetched.toMap())
+                        remeasure(fetched.map { it.second })
                     }
                 }
-                results
+                results.mapValues { (_, epg) -> shown(epg) }
             }
         }
 
@@ -207,6 +219,43 @@ class XtreamEpgManager(
         } catch (_: Exception) {
             // Continue on failure - EPG may not be available for all channels
             null
+        }
+    }
+
+    /** [epg] as the guide should show it: read as the panel's wall time when this panel labels it as UTC. */
+    private fun shown(epg: EpgResponse): EpgResponse =
+        if (labelsLocalAsUtc) PanelGuideTimes.corrected(epg, sessionManager.panelClock.zone) else epg
+
+    /**
+     * Compare [fresh] answers with the source's own `xmltv.php` and keep the verdict when there is
+     * one ([PanelGuideTimes.labelsLocalAsUtc]); off the caller's thread. See
+     * docs/plans/20261012_panel-guide-local-time-plan.md.
+     */
+    private fun remeasure(fresh: Collection<EpgResponse>) {
+        val own = ownXmltv ?: return
+        val programs = fresh.flatMap { it.listings }.filter { !it.channelId.isNullOrBlank() && it.startTime > 0 }
+        if (programs.size < PanelGuideTimes.MIN_MATCHES) return
+        val zone = sessionManager.panelClock.zone
+        writeScope.launch {
+            try {
+                val panel = programs.map { PanelGuideTimes.listing(it.channelId!!, it.title, it.startTime) }
+                val index =
+                    own.listings(
+                        programs.mapTo(HashSet()) { it.channelId!! },
+                        panel.minOf { it.startSec } - REMEASURE_MARGIN_SEC,
+                        panel.maxOf { it.startSec } + REMEASURE_MARGIN_SEC,
+                    ) ?: return@launch
+                val verdict = PanelGuideTimes.labelsLocalAsUtc(panel, index, zone) ?: return@launch
+                if (verdict != labelsLocalAsUtc) {
+                    labelsLocalAsUtc = verdict
+                    sharedPreferences.edit { putBoolean(KEY_PANEL_GUIDE_LOCAL_AS_UTC, verdict) }
+                    Log.i(TAG, "Provider $providerId: panel guide labels local time ($zone) as UTC = $verdict")
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Comparing the panel guide with its xmltv.php failed", e)
+            }
         }
     }
 
@@ -299,5 +348,8 @@ class XtreamEpgManager(
 
         /** Requests in flight per chunk — matches the concurrency the old Semaphore allowed. */
         const val CHUNK_SIZE = 10
+
+        /** Index programmes fetched beyond the panel listings' starts: wider than any panel offset. */
+        const val REMEASURE_MARGIN_SEC = 24 * 60 * 60L
     }
 }

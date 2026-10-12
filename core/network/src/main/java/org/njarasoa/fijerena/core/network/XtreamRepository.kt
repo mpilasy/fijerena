@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.network.xtream.manager.OwnXmltvIndex
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamContentManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamMetricsManager
@@ -65,7 +66,8 @@ class XtreamRepository(
             categoryFilters = { filtersStore.get(providerId, appSettings.activeProfileId, providerSettings.categoryFilters) },
         )
 
-    private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings, database.epgCacheDao(), providerId)
+    private val epgManager =
+        XtreamEpgManager(sessionManager, cache, providerSettings, database.epgCacheDao(), providerId, OwnXmltvIndex(context, providerId))
 
     suspend fun login(
         url: String,

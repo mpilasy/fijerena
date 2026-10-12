@@ -1,6 +1,6 @@
 # Panel guide times labelled as UTC
 
-**Status:** Phase 1 in progress (2026-10-12).
+**Status:** Phase 1 done (2026-10-12); Phase 2 in progress.
 
 ## Problem
 
@@ -61,5 +61,5 @@ Not covered, on purpose:
 
 | # | What | Status |
 |---|---|---|
-| 1 | `PanelGuideTimes` (pure: the verdict and the correction) with unit tests; `XtreamEpgManager` applies the stored verdict to what it returns and re-measures after each fresh fetch against the provider's own `xmltv.php` rows in the index | In progress |
-| 2 | Check on the phone emulator against bears: catch-up channels 2–3 days back line up with XMLTV, a replay from a per-channel listing lands on its programme (on-screen clock), jellyxtream unchanged; docs (FEATURES, epg_guide, release notes) | |
+| 1 | `PanelGuideTimes` (pure: the verdict and the correction) with unit tests; `XtreamEpgManager` applies the stored verdict to what it returns and re-measures after each fresh fetch against the provider's own `xmltv.php` rows in the index (`OwnXmltvIndex`) | Done 2026-10-12 |
+| 2 | Check on the phone emulator against bears: catch-up channels 2–3 days back line up with XMLTV, a replay from a per-channel listing lands on its programme (on-screen clock), jellyxtream unchanged; docs (FEATURES, epg_guide, release notes) | In progress |
