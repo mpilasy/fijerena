@@ -24,6 +24,8 @@ class MovieDetailsViewModel(
     private var movieId: String,
     private var categoryId: String,
     private var streamName: String,
+    // The source the film is on; 0 = the active source.
+    private val providerId: Long = 0L,
 ) : ViewModel() {
     sealed class UiState {
         data object Loading : UiState()
@@ -244,7 +246,7 @@ class MovieDetailsViewModel(
         val container =
             org.njarasoa.fijerena.core.ui.di.AppContainer
                 .getInstance(context)
-        return container.getMediaRepository()
+        return container.getMediaRepository(providerId)
     }
 
     fun toggleFavorite(movieName: String) {
@@ -299,10 +301,12 @@ class MovieDetailsViewModelFactory(
     private val movieId: String,
     private val categoryId: String,
     private val movieName: String,
+    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = MovieDetailsViewModel(appContext, movieId, categoryId, movieName) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        MovieDetailsViewModel(appContext, movieId, categoryId, movieName, providerId) as T
 }

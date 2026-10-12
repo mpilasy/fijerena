@@ -96,12 +96,12 @@ internal fun TwoColumnLayout(
     // Read once — avoids SharedPreferences disk I/O on every recomposition
     val isDevMode = remember { appSettings.isDevMode }
 
-    // Load actual provider name from database (AppSettings default is "My Provider")
-    LaunchedEffect(Unit) {
+    // Load the list's source's name from database (AppSettings default is "My Provider")
+    LaunchedEffect(categoryViewModel.providerId) {
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getActiveProvider()?.let { providerName = it.name }
+        repo.getProviderOrActive(categoryViewModel.providerId)?.let { providerName = it.name }
     }
 
     val categoryMap =

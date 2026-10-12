@@ -31,6 +31,8 @@ class CategoryViewModel(
     private val context: Context,
     private val contentType: String,
     private val initialCategoryId: String? = null,
+    // The source whose categories these are; 0 = the active source.
+    val providerId: Long = 0L,
 ) : ViewModel() {
     private val appSettings = AppSettings(context.applicationContext)
 
@@ -240,7 +242,7 @@ class CategoryViewModel(
 
     private fun startRepository(): Job =
         viewModelScope.launchGuarded("CategoryViewModel.init", onError = ::showError) {
-            val repo = AppContainer.getInstance(context).getMediaRepository()
+            val repo = AppContainer.getInstance(context).getMediaRepository(providerId)
             repositorySnapshot = repo
             repositoryDeferred.complete(repo)
             launch { repo.recentItems(contentType).collect { _recentItems.value = it } }

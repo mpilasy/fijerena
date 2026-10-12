@@ -127,14 +127,16 @@ fun MovieDetailsScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
+    // The route's source; 0 = the active source.
+    providerId: Long = 0L,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val viewModel: MovieDetailsViewModel =
         viewModel(
             factory =
-                remember(movieId, categoryId) {
-                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId, movieName)
+                remember(movieId, categoryId, providerId) {
+                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId, movieName, providerId)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -182,6 +184,7 @@ fun MovieDetailsScreen(
                 onBack = onBack,
                 onRelatedTitleSelected = onRelatedTitleSelected,
                 onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                providerId = providerId,
             )
         }
     }
@@ -210,19 +213,20 @@ private fun MovieDetailsContent(
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
+    providerId: Long,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf(appSettings.providerName) }
     // AppSettings.providerName is the legacy single-provider key and is never written once a
     // provider lives in Room — it stays "My Provider" (its hardcoded default) for every provider
-    // added since. Same fix as TwoColumnLayout.kt's category grid: read the actual active
-    // provider's name from the DB and use that instead.
-    LaunchedEffect(Unit) {
+    // added since. Same fix as TwoColumnLayout.kt's category grid: read the route's source's
+    // name from the DB and use that instead.
+    LaunchedEffect(providerId) {
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getActiveProvider()?.let { providerName = it.name }
+        repo.getProviderOrActive(providerId)?.let { providerName = it.name }
     }
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current

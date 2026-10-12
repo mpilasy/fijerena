@@ -191,14 +191,16 @@ fun EpisodeSelectionScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
+    // The route's source; 0 = the active source.
+    providerId: Long = 0L,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val viewModel: SeriesDetailsViewModel =
         viewModel(
             factory =
-                remember(seriesId, categoryId) {
-                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId, seriesName)
+                remember(seriesId, categoryId, providerId) {
+                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId, seriesName, providerId)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -292,13 +294,13 @@ internal fun EpisodeListContent(
     var providerName by remember { mutableStateOf(appSettings.providerName) }
     // AppSettings.providerName is the legacy single-provider key and is never written once a
     // provider lives in Room — it stays "My Provider" (its hardcoded default) for every provider
-    // added since. Same fix as TwoColumnLayout.kt's category grid: read the actual active
-    // provider's name from the DB and use that instead.
-    LaunchedEffect(Unit) {
+    // added since. Same fix as TwoColumnLayout.kt's category grid: read the name of the source
+    // the show is on (its repository's) from the DB and use that instead.
+    LaunchedEffect(mediaRepository) {
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getActiveProvider()?.let { providerName = it.name }
+        repo.getProviderOrActive(mediaRepository.getProviderId())?.let { providerName = it.name }
     }
     val listState = rememberLazyListState()
     val scale = LocalUiScale.current

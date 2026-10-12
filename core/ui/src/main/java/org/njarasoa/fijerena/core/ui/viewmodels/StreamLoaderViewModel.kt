@@ -57,6 +57,8 @@ class StreamLoaderViewModel(
     // like a film (seek, pause, no Recent, no zapping); [programTitle] is the programme.
     private val catchup: CatchupWindow? = null,
     private val programTitle: String? = null,
+    // The source the stream is on; 0 = the active source.
+    private val providerId: Long = 0L,
 ) : ViewModel() {
     // Live TV as it airs; false for catch-up, which plays a live channel's archive like a film.
     private val isLiveTv = contentType == ContentType.LIVE_TV && catchup == null
@@ -170,7 +172,7 @@ class StreamLoaderViewModel(
             val container =
                 org.njarasoa.fijerena.core.ui.di.AppContainer
                     .getInstance(context)
-            val repo = container.getMediaRepository()
+            val repo = container.getMediaRepository(providerId)
             mediaRepository = repo
 
             if (isLiveTv) {
@@ -945,6 +947,7 @@ class StreamLoaderViewModelFactory(
     private val startFromBeginning: Boolean = false,
     private val catchup: CatchupWindow? = null,
     private val programTitle: String? = null,
+    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
@@ -965,6 +968,7 @@ class StreamLoaderViewModelFactory(
                 startFromBeginning,
                 catchup,
                 programTitle,
+                providerId,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

@@ -91,6 +91,8 @@ fun TvCategoryGridScreen(
     onBack: () -> Unit = {},
     /** Leaves for Home — after a remote Stop of the Live TV preview (see LiveTvSplitLayout). */
     onHome: () -> Unit = {},
+    /** The source the list is on; 0 = the active source. */
+    providerId: Long = 0L,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -98,6 +100,7 @@ fun TvCategoryGridScreen(
                     context = LocalContext.current.applicationContext,
                     contentType = contentType,
                     initialCategoryId = initialCategoryId,
+                    providerId = providerId,
                 ),
         ),
 ) {

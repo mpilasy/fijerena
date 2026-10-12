@@ -597,6 +597,7 @@ fun MobileNavHost(
                             CatchupWindow(it, playerScreen.catchupDurationSec, playerScreen.catchupOffsetSec)
                         },
                     programTitle = playerScreen.programTitle,
+                    providerId = playerScreen.providerId,
                     // Catch-up's Watch live: the channel in the docked mini-player in place of the
                     // player, so Back returns where the catch-up was opened from.
                     onWatchLive = {
@@ -605,6 +606,7 @@ fun MobileNavHost(
                                 contentType = ContentType.LIVE_TV,
                                 initialCategoryId = playerScreen.categoryId,
                                 initialStreamId = playerScreen.streamId,
+                                providerId = playerScreen.providerId,
                             ),
                         ) { popUpTo<Screen.Player> { inclusive = true } }
                     },
@@ -784,6 +786,7 @@ fun MobileNavHost(
                     movieId = movieDetailsScreen.movieId,
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
+                    providerId = movieDetailsScreen.providerId,
                     onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
                         navController.navigateOnce(
                             Screen.Player(
@@ -793,6 +796,7 @@ fun MobileNavHost(
                                 contentType = ContentType.MOVIES,
                                 episodeExtension = extension,
                                 startFromBeginning = startFromBeginning,
+                                providerId = movieDetailsScreen.providerId,
                             ),
                         )
                     },
@@ -801,6 +805,7 @@ fun MobileNavHost(
                             Screen.CategoryList(
                                 contentType = ContentType.MOVIES,
                                 initialCategoryId = categoryId,
+                                providerId = movieDetailsScreen.providerId,
                             ),
                         )
                     },
@@ -813,6 +818,7 @@ fun MobileNavHost(
                                 movieId = related.id,
                                 movieName = related.name,
                                 categoryId = related.categoryId,
+                                providerId = movieDetailsScreen.providerId,
                             ),
                         )
                     },
@@ -826,6 +832,7 @@ fun MobileNavHost(
                     seriesName = episodeSelectionScreen.seriesName,
                     categoryId = episodeSelectionScreen.categoryId,
                     initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
+                    providerId = episodeSelectionScreen.providerId,
                     onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
                         navController.navigateOnce(
                             Screen.Player(
@@ -838,6 +845,7 @@ fun MobileNavHost(
                                 seriesId = episodeSelectionScreen.seriesId,
                                 seriesName = episodeSelectionScreen.seriesName,
                                 startFromBeginning = startFromBeginning,
+                                providerId = episodeSelectionScreen.providerId,
                             ),
                         )
                     },
@@ -846,6 +854,7 @@ fun MobileNavHost(
                             Screen.CategoryList(
                                 contentType = ContentType.TV_SHOWS,
                                 initialCategoryId = categoryId,
+                                providerId = episodeSelectionScreen.providerId,
                             ),
                         )
                     },
@@ -858,6 +867,7 @@ fun MobileNavHost(
                                 seriesId = related.id,
                                 seriesName = related.name,
                                 categoryId = related.categoryId,
+                                providerId = episodeSelectionScreen.providerId,
                             ),
                         )
                     },
@@ -878,6 +888,7 @@ fun MobileNavHost(
                     categoryId = epgScreen.categoryId,
                     categoryName = epgScreen.categoryName,
                     focusChannelId = epgScreen.focusChannelId,
+                    providerId = epgScreen.providerId,
                     onProgramSelected = { _, channel ->
                         // Land on the docked mini-player, not full-screen.
                         navController.navigateOnce(
@@ -885,17 +896,21 @@ fun MobileNavHost(
                                 contentType = ContentType.LIVE_TV,
                                 initialCategoryId = channel.categoryId,
                                 initialStreamId = channel.id,
+                                providerId = epgScreen.providerId,
                             ),
                         )
                     },
                     // Catch-up: the programme from the channel's archive, full screen.
-                    onWatchFromStart = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
+                    onWatchFromStart = { program, channel ->
+                        navController.navigateOnce(catchupRoute(program, channel, epgScreen.providerId))
+                    },
                     onChannelSelected = { streamId, _, categoryId ->
                         navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = ContentType.LIVE_TV,
                                 initialCategoryId = categoryId,
                                 initialStreamId = streamId,
+                                providerId = epgScreen.providerId,
                             ),
                         )
                     },
@@ -932,6 +947,7 @@ private fun CategoryListDestination(
         contentType = route.contentType,
         initialCategoryId = route.initialCategoryId,
         initialStreamId = route.initialStreamId,
+        providerId = route.providerId,
         onStreamSelected = { itemId, itemName, categoryId, contentType, target ->
             when (target) {
                 // Continue Watching: the card stands for the show, so open episode
@@ -943,6 +959,7 @@ private fun CategoryListDestination(
                             seriesName = itemName,
                             categoryId = categoryId,
                             initialEpisodeId = target.resumeEpisodeId?.raw,
+                            providerId = route.providerId,
                         ),
                     )
                 }
@@ -960,6 +977,7 @@ private fun CategoryListDestination(
                             episodeExtension = target.extension,
                             seriesId = target.seriesId?.raw,
                             seriesName = target.seriesName,
+                            providerId = route.providerId,
                         ),
                     )
                 }
@@ -970,6 +988,7 @@ private fun CategoryListDestination(
                             movieId = target.movieId,
                             movieName = itemName,
                             categoryId = categoryId,
+                            providerId = route.providerId,
                         ),
                     )
                 }
@@ -980,7 +999,9 @@ private fun CategoryListDestination(
                 // interception). Kept for the "not resolvable from the current list"
                 // case, same as TV.
                 is BrowseTarget.Channel -> {
-                    navController.navigateOnce(Screen.Player(target.streamId, itemName, categoryId, contentType))
+                    navController.navigateOnce(
+                        Screen.Player(target.streamId, itemName, categoryId, contentType, providerId = route.providerId),
+                    )
                 }
 
                 // Browsed into by the list screen itself; it never reaches nav.
@@ -998,11 +1019,12 @@ private fun CategoryListDestination(
                 Screen.EpgGuide(
                     categoryId = categoryId,
                     categoryName = categoryName,
+                    providerId = route.providerId,
                 ),
             )
         },
         // Start over (catch-up): the programme on air from its start, full screen.
-        onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
+        onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel, route.providerId)) },
         onBack = {
             navController.navigateUp()
         },

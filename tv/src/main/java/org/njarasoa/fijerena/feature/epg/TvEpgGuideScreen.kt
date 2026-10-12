@@ -41,12 +41,15 @@ fun TvEpgGuideScreen(
     onSearch: () -> Unit,
     onBack: () -> Unit,
     focusChannelId: String? = null,
+    // The source whose channels the guide shows; 0 = the active source.
+    providerId: Long = 0L,
     viewModel: EpgViewModel =
         viewModel(
             factory =
                 EpgViewModelFactory(
                     context = LocalContext.current.applicationContext,
                     categoryId = categoryId,
+                    providerId = providerId,
                 ),
         ),
 ) {

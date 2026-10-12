@@ -322,6 +322,8 @@ fun TvNavHost(
         initialStreamId: String? = null,
         showPreviewPane: Boolean = true,
         closeSavedLivePreview: Boolean = false,
+        // The list's source (0 = the active one); every route it opens stays on it.
+        providerId: Long = 0L,
     ) {
         TvCategoryGridScreen(
             contentType = contentType,
@@ -329,6 +331,7 @@ fun TvNavHost(
             initialStreamId = initialStreamId,
             showPreviewPane = showPreviewPane,
             closeSavedLivePreview = closeSavedLivePreview,
+            providerId = providerId,
             onStreamSelected = { itemId, streamName, categoryId, target ->
                 when (target) {
                     // Continue Watching: the card represents the show, not the
@@ -341,6 +344,7 @@ fun TvNavHost(
                                 seriesName = streamName,
                                 categoryId = categoryId,
                                 initialEpisodeId = target.resumeEpisodeId?.raw,
+                                providerId = providerId,
                             ),
                         )
                     }
@@ -358,6 +362,7 @@ fun TvNavHost(
                                 episodeExtension = target.extension,
                                 seriesId = target.seriesId?.raw,
                                 seriesName = target.seriesName,
+                                providerId = providerId,
                             ),
                         )
                     }
@@ -368,6 +373,7 @@ fun TvNavHost(
                                 movieId = target.movieId,
                                 movieName = streamName,
                                 categoryId = categoryId,
+                                providerId = providerId,
                             ),
                         )
                     }
@@ -381,6 +387,7 @@ fun TvNavHost(
                                 contentType = contentType,
                                 initialCategoryId = categoryId,
                                 initialStreamId = target.streamId,
+                                providerId = providerId,
                             ),
                         )
                     }
@@ -399,12 +406,13 @@ fun TvNavHost(
                         categoryId = categoryId,
                         categoryName = categoryName,
                         focusChannelId = focusChannelId,
+                        providerId = providerId,
                     ),
                 )
             },
             // Start over (catch-up): the programme on air from its start, full screen. Back returns
             // to the Live TV preview.
-            onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
+            onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel, providerId)) },
             onBack = {
                 // A single pop always lands on whatever pushed this entry — Home under a
                 // section's browse, or the search/EPG screen underneath a
@@ -519,11 +527,17 @@ fun TvNavHost(
                                                 seriesId = item.id,
                                                 seriesName = item.name,
                                                 categoryId = item.categoryId,
+                                                providerId = item.providerId,
                                             ),
                                         )
                                     } else {
                                         navController.navigateOnce(
-                                            Screen.MovieDetails(movieId = item.id, movieName = item.name, categoryId = item.categoryId),
+                                            Screen.MovieDetails(
+                                                movieId = item.id,
+                                                movieName = item.name,
+                                                categoryId = item.categoryId,
+                                                providerId = item.providerId,
+                                            ),
                                         )
                                     }
                                 },
@@ -632,6 +646,7 @@ fun TvNavHost(
                                 initialCategoryId = categoryListScreen.initialCategoryId,
                                 initialStreamId = categoryListScreen.initialStreamId,
                                 showPreviewPane = categoryListScreen.showPreviewPane,
+                                providerId = categoryListScreen.providerId,
                             )
                         }
 
@@ -704,6 +719,7 @@ fun TvNavHost(
                                 movieId = movieDetailsScreen.movieId,
                                 movieName = movieDetailsScreen.movieName,
                                 categoryId = movieDetailsScreen.categoryId,
+                                providerId = movieDetailsScreen.providerId,
                                 onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
                                     navController.navigateOnce(
                                         Screen.Player(
@@ -713,6 +729,7 @@ fun TvNavHost(
                                             contentType = ContentType.MOVIES,
                                             episodeExtension = extension,
                                             startFromBeginning = startFromBeginning,
+                                            providerId = movieDetailsScreen.providerId,
                                         ),
                                     )
                                 },
@@ -721,6 +738,7 @@ fun TvNavHost(
                                         Screen.CategoryList(
                                             contentType = ContentType.MOVIES,
                                             initialCategoryId = categoryId,
+                                            providerId = movieDetailsScreen.providerId,
                                         ),
                                     )
                                 },
@@ -733,6 +751,7 @@ fun TvNavHost(
                                             movieId = related.id,
                                             movieName = related.name,
                                             categoryId = related.categoryId,
+                                            providerId = movieDetailsScreen.providerId,
                                         ),
                                     )
                                 },
@@ -746,6 +765,7 @@ fun TvNavHost(
                                 seriesName = episodeSelectionScreen.seriesName,
                                 categoryId = episodeSelectionScreen.categoryId,
                                 initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
+                                providerId = episodeSelectionScreen.providerId,
                                 onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
                                     navController.navigateOnce(
                                         Screen.Player(
@@ -758,6 +778,7 @@ fun TvNavHost(
                                             seriesId = episodeSelectionScreen.seriesId,
                                             seriesName = episodeSelectionScreen.seriesName,
                                             startFromBeginning = startFromBeginning,
+                                            providerId = episodeSelectionScreen.providerId,
                                         ),
                                     )
                                 },
@@ -766,6 +787,7 @@ fun TvNavHost(
                                         Screen.CategoryList(
                                             contentType = ContentType.TV_SHOWS,
                                             initialCategoryId = categoryId,
+                                            providerId = episodeSelectionScreen.providerId,
                                         ),
                                     )
                                 },
@@ -778,6 +800,7 @@ fun TvNavHost(
                                             seriesId = related.id,
                                             seriesName = related.name,
                                             categoryId = related.categoryId,
+                                            providerId = episodeSelectionScreen.providerId,
                                         ),
                                     )
                                 },
@@ -790,6 +813,7 @@ fun TvNavHost(
                                 categoryId = epgScreen.categoryId,
                                 categoryName = epgScreen.categoryName,
                                 focusChannelId = epgScreen.focusChannelId,
+                                providerId = epgScreen.providerId,
                                 onProgramSelected = { _, channel ->
                                     // Land on the preview pane, not full-screen. Pushing (not popUpTo)
                                     // means Back from the preview pops back to the EPG guide for free.
@@ -798,17 +822,21 @@ fun TvNavHost(
                                             contentType = ContentType.LIVE_TV,
                                             initialCategoryId = channel.categoryId,
                                             initialStreamId = channel.id,
+                                            providerId = epgScreen.providerId,
                                         ),
                                     )
                                 },
                                 // Catch-up: the programme from the channel's archive, full screen.
-                                onWatchFromStart = { program, channel -> navController.navigateOnce(catchupRoute(program, channel)) },
+                                onWatchFromStart = { program, channel ->
+                                    navController.navigateOnce(catchupRoute(program, channel, epgScreen.providerId))
+                                },
                                 onChannelSelected = { streamId, _, categoryId ->
                                     navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = ContentType.LIVE_TV,
                                             initialCategoryId = categoryId,
                                             initialStreamId = streamId,
+                                            providerId = epgScreen.providerId,
                                         ),
                                     )
                                 },
@@ -842,6 +870,7 @@ fun TvNavHost(
                                         CatchupWindow(it, playerScreen.catchupDurationSec, playerScreen.catchupOffsetSec)
                                     },
                                 programTitle = playerScreen.programTitle,
+                                providerId = playerScreen.providerId,
                                 // Catch-up's Watch live: the channel's preview in place of the player,
                                 // so Back returns where the catch-up was opened from.
                                 onWatchLive = {
@@ -850,6 +879,7 @@ fun TvNavHost(
                                             contentType = ContentType.LIVE_TV,
                                             initialCategoryId = playerScreen.categoryId,
                                             initialStreamId = playerScreen.streamId,
+                                            providerId = playerScreen.providerId,
                                         ),
                                     ) { popUpTo<Screen.Player> { inclusive = true } }
                                 },

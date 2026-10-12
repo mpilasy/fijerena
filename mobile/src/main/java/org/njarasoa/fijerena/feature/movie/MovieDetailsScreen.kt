@@ -68,13 +68,15 @@ fun MobileMovieDetailsScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
+    // The route's source; 0 = the active source.
+    providerId: Long = 0L,
 ) {
     val context = LocalContext.current
     val viewModel: MovieDetailsViewModel =
         viewModel(
             factory =
-                remember(movieId, categoryId) {
-                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId, movieName)
+                remember(movieId, categoryId, providerId) {
+                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId, movieName, providerId)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -350,6 +350,7 @@ internal fun LiveTvSplitLayout(
                     initialStreamName = target.name,
                     categoryId = target.categoryId,
                     contentType = contentType,
+                    providerId = categoryViewModel.providerId,
                 ),
         )
     val streamState by loader.state.collectAsStateWithLifecycle()

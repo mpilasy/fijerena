@@ -32,6 +32,8 @@ import java.time.ZoneId
 class EpgViewModel(
     private val context: Context,
     private val categoryId: String,
+    // The source whose channels the guide shows; 0 = the active source.
+    private val providerId: Long = 0L,
 ) : ViewModel() {
     sealed class UiState {
         data object Loading : UiState()
@@ -128,7 +130,7 @@ class EpgViewModel(
     init {
         loadJob =
             viewModelScope.launchGuarded("EpgViewModel.init", onError = ::showError) {
-                repository = AppContainer.getInstance(context).getMediaRepository()
+                repository = AppContainer.getInstance(context).getMediaRepository(providerId)
                 loadEpgDataInternal(currentDate)
             }
     }
@@ -142,7 +144,7 @@ class EpgViewModel(
         loadJob =
             viewModelScope.launchGuarded("EpgViewModel.loadEpgData", onError = ::showError) {
                 if (!::repository.isInitialized) {
-                    repository = AppContainer.getInstance(context).getMediaRepository()
+                    repository = AppContainer.getInstance(context).getMediaRepository(providerId)
                 }
                 loadEpgDataInternal(date)
             }
@@ -310,7 +312,7 @@ class EpgViewModel(
                 _isRefreshing.value = true
                 try {
                     if (!::repository.isInitialized) {
-                        repository = AppContainer.getInstance(context).getMediaRepository()
+                        repository = AppContainer.getInstance(context).getMediaRepository(providerId)
                     }
                     repository.clearEpgCache()
                     repository.clearXmltvCache()

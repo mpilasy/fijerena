@@ -1259,6 +1259,7 @@ class MediaRepository(
                         name = fav.itemName,
                         mediaType = mediaType,
                         categoryId = fav.categoryId,
+                        providerId = providerId,
                     )
                 }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
                 .toList()
@@ -1617,6 +1618,7 @@ class MediaRepository(
             mediaType = mediaType,
             categoryId = categoryId,
             target = recentTarget(seriesCardId),
+            providerId = this@MediaRepository.providerId,
         )
     }
 

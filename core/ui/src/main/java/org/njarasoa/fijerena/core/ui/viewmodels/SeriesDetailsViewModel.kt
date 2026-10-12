@@ -25,6 +25,8 @@ class SeriesDetailsViewModel(
     private var seriesId: String,
     private var categoryId: String,
     private var seriesName: String,
+    // The source the show is on; 0 = the active source.
+    private val providerId: Long = 0L,
 ) : ViewModel() {
     private val appSettings = AppSettings(context)
 
@@ -41,7 +43,7 @@ class SeriesDetailsViewModel(
             val container =
                 org.njarasoa.fijerena.core.ui.di.AppContainer
                     .getInstance(context)
-            repository = container.getMediaRepository()
+            repository = container.getMediaRepository(providerId)
         }
         return repository!!
     }
@@ -337,10 +339,12 @@ class SeriesDetailsViewModelFactory(
     private val seriesId: String,
     private val categoryId: String,
     private val seriesName: String,
+    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = SeriesDetailsViewModel(appContext, seriesId, categoryId, seriesName) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        SeriesDetailsViewModel(appContext, seriesId, categoryId, seriesName, providerId) as T
 }

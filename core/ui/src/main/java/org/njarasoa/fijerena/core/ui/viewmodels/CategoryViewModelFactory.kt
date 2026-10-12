@@ -8,6 +8,7 @@ class CategoryViewModelFactory(
     context: Context,
     private val contentType: String,
     private val initialCategoryId: String? = null,
+    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter: a `val` constructor property
     // would hold whatever Context the caller passed (typically an Activity) for as long as this
@@ -17,7 +18,7 @@ class CategoryViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {
-            return CategoryViewModel(appContext, contentType, initialCategoryId) as T
+            return CategoryViewModel(appContext, contentType, initialCategoryId, providerId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

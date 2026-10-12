@@ -109,14 +109,16 @@ fun MobileEpisodeSelectionScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
+    // The route's source; 0 = the active source.
+    providerId: Long = 0L,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val viewModel: SeriesDetailsViewModel =
         viewModel(
             factory =
-                remember(seriesId, categoryId) {
-                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId, seriesName)
+                remember(seriesId, categoryId, providerId) {
+                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId, seriesName, providerId)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

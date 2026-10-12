@@ -185,6 +185,10 @@ class ProviderRepository(
 
     suspend fun getProviderById(id: Long): ProviderEntity? = dao.getProviderById(id)
 
+    /** The source [providerId] names, or the active one for 0 (a route's source, see `Screen`). */
+    suspend fun getProviderOrActive(providerId: Long): ProviderEntity? =
+        if (providerId > 0L) getProviderById(providerId) else getActiveProvider()
+
     suspend fun getProviderCount(): Int = dao.getProviderCount()
 
     /**

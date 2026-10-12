@@ -72,6 +72,8 @@ fun TvPlayerScreen(
     programTitle: String? = null,
     // Catch-up's Watch live: leaves for the channel live.
     onWatchLive: () -> Unit = {},
+    // The source the stream plays from; 0 = the active source.
+    providerId: Long = 0L,
     playbackViewModel: PlaybackViewModel = viewModel(),
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
@@ -89,6 +91,7 @@ fun TvPlayerScreen(
                     startFromBeginning = startFromBeginning,
                     catchup = catchup,
                     programTitle = programTitle,
+                    providerId = providerId,
                 ),
         ),
 ) {

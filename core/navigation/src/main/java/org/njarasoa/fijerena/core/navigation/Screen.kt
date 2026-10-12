@@ -73,6 +73,8 @@ sealed interface Screen {
      * channel, closed by Back, so Back from the preview lands on browse instead of exiting Live TV
      * outright. Ignored for Movies/TV Shows
      * (always classic layout) and by mobile, whose docked mini-player is the same kind of layer.
+     * @param providerId The source the list is on; 0 = the active source (as on every route
+     *   below that takes one). See docs/plans/20261012_multi-source-search-history-plan.md.
      */
     @Serializable
     data class CategoryList(
@@ -80,6 +82,7 @@ sealed interface Screen {
         val initialCategoryId: String? = null,
         val initialStreamId: String? = null,
         val showPreviewPane: Boolean = true,
+        val providerId: Long = 0L,
     ) : Screen
 
     /**
@@ -112,6 +115,7 @@ sealed interface Screen {
      *
      * @param initialEpisodeId When set (e.g. arriving from Continue Watching), open straight to
      * this episode's detail/resume panel instead of the season/episode list.
+     * @param providerId The source the show is on; 0 = the active source.
      */
     @Serializable
     data class EpisodeSelection(
@@ -119,13 +123,16 @@ sealed interface Screen {
         val seriesName: String,
         val categoryId: String,
         val initialEpisodeId: String? = null,
+        val providerId: Long = 0L,
     ) : Screen
 
+    /** @param providerId The source the film is on; 0 = the active source. */
     @Serializable
     data class MovieDetails(
         val movieId: String,
         val movieName: String,
         val categoryId: String,
+        val providerId: Long = 0L,
     ) : Screen
 
     /**
@@ -151,12 +158,14 @@ sealed interface Screen {
      *   `recent` / `favorites` lists)
      * @param focusChannelId The channel whose row the guide opens on (the one playing when opened
      *   from the player); null opens on the first channel with a programme on now
+     * @param providerId The source whose channels the guide shows; 0 = the active source.
      */
     @Serializable
     data class EpgGuide(
         val categoryId: String,
         val categoryName: String,
         val focusChannelId: String? = null,
+        val providerId: Long = 0L,
     ) : Screen
 
     /**
@@ -214,6 +223,7 @@ sealed interface Screen {
      *   this epoch second for [catchupDurationSec], starting [catchupOffsetSec] in (the programme's
      *   start); [programTitle] is the programme. Null plays [streamId] as it is. See
      *   docs/plans/archive/20261010_catchup-plan.md.
+     * @param providerId The source the stream plays from; 0 = the active source.
      */
     @Serializable
     data class Player(
@@ -230,5 +240,6 @@ sealed interface Screen {
         val catchupDurationSec: Long = 0L,
         val catchupOffsetSec: Long = 0L,
         val programTitle: String? = null,
+        val providerId: Long = 0L,
     ) : Screen
 }

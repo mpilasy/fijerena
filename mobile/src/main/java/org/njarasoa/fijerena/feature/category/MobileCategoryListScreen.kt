@@ -234,6 +234,8 @@ fun MobileCategoryListScreen(
     sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
     /** The source's first catalogue sync is running: an empty list says the library is still loading. */
     libraryLoading: Boolean = false,
+    /** The source the list is on; 0 = the active source. */
+    providerId: Long = 0L,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -241,6 +243,7 @@ fun MobileCategoryListScreen(
                     context = LocalContext.current.applicationContext,
                     contentType = contentType,
                     initialCategoryId = initialCategoryId,
+                    providerId = providerId,
                 ),
         ),
 ) {
@@ -424,6 +427,7 @@ fun MobileCategoryListScreen(
                         initialStreamName = target.name,
                         categoryId = target.categoryId,
                         contentType = contentType,
+                        providerId = viewModel.providerId,
                     ),
             )
         } else {

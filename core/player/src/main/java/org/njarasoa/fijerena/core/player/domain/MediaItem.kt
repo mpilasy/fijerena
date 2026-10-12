@@ -69,6 +69,12 @@ data class MediaItem(
      * [browseTarget][org.njarasoa.fijerena.core.player.domain.browseTarget] rather than directly.
      */
     val target: BrowseTarget? = null,
+    /**
+     * The source this row belongs to, so a card can open its route on it; 0 = the active source.
+     * Set on the rows a `MediaRepository` builds itself (Recent, favourites); catalogue rows leave
+     * it 0. See docs/plans/20261012_multi-source-search-history-plan.md → Phase 1.
+     */
+    val providerId: Long = 0L,
 ) {
     /** The series ID associated with this media item if it represents a series or episode. */
     val seriesId: String?

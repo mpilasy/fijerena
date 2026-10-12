@@ -21,17 +21,23 @@ sealed interface Screen {
     @Serializable data class CategoryList(
         val contentType: String, val initialCategoryId: String? = null,
         val initialStreamId: String? = null, val showPreviewPane: Boolean = true,
+        val providerId: Long = 0L,
     ) : Screen
     @Serializable data class EpisodeSelection(
         val seriesId: String, val seriesName: String, val categoryId: String,
-        val initialEpisodeId: String? = null,
+        val initialEpisodeId: String? = null, val providerId: Long = 0L,
     ) : Screen
-    @Serializable data class MovieDetails(val movieId: String, val movieName: String, val categoryId: String) : Screen
+    @Serializable data class MovieDetails(
+        val movieId: String, val movieName: String, val categoryId: String, val providerId: Long = 0L,
+    ) : Screen
     @Serializable data class Search(
         val contentType: String, val initialQuery: String? = null,
         val initialTypeFilter: String? = null,  // phone: the section chip preselected
     ) : Screen
-    @Serializable data class EpgGuide(val categoryId: String, val categoryName: String, val focusChannelId: String? = null) : Screen  // TV Guide
+    @Serializable data class EpgGuide(
+        val categoryId: String, val categoryName: String, val focusChannelId: String? = null,
+        val providerId: Long = 0L,
+    ) : Screen  // TV Guide
     @Serializable data class EpgBrowser(val categoryId: String? = null, val categoryName: String? = null) : Screen  // "Search the guide"
     @Serializable data class EpgManagement(val providerId: Long) : Screen  // one source's guide sources
     @Serializable data object SyncSettings : Screen  // Live sync
@@ -49,11 +55,14 @@ sealed interface Screen {
         // preview (TV) / dock (phone), so Back returns where the catch-up was opened from.
         val catchupStartSec: Long? = null, val catchupDurationSec: Long = 0L,
         val catchupOffsetSec: Long = 0L, val programTitle: String? = null,
+        val providerId: Long = 0L,
     ) : Screen
 }
 ```
 
 All IDs are `String` so Xtream (numeric), Jellyfin (UUID), SMB and Local (paths) fit the same routes. `showPreviewPane` is read by TV only (see [Live TV preview / dock](#live-tv-preview--dock-back-stack)).
+
+**A route's source.** `CategoryList`, `EpisodeSelection`, `MovieDetails`, `EpgGuide` and `Player` (and `catchupRoute`, which builds a catch-up `Player`) carry the source they open on, `providerId`; `0` means the active source, which is what every entry from Home's sections, Search and the EPG Browser still passes. The screen's view model reads that source's repository (`AppContainer.getMediaRepository(providerId)`), its header names that source, and every route it opens copies the id: details → Player, a related title or the category button, episodes → Player, the TV Guide → a channel's preview or catch-up, catch-up's Watch live, a list's rows, guide and Start over. A Home favourite card passes its row's `MediaItem.providerId`. See `docs/plans/20261012_multi-source-search-history-plan.md` → Phase 1.
 
 ## Navigation Flow
 

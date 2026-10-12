@@ -135,6 +135,8 @@ fun MobilePlayerScreen(
     programTitle: String? = null,
     // Catch-up's Watch live: leaves for the channel live.
     onWatchLive: () -> Unit = {},
+    // The source the stream plays from; 0 = the active source.
+    providerId: Long = 0L,
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -151,6 +153,7 @@ fun MobilePlayerScreen(
                     startFromBeginning = startFromBeginning,
                     catchup = catchup,
                     programTitle = programTitle,
+                    providerId = providerId,
                 ),
         ),
 ) {

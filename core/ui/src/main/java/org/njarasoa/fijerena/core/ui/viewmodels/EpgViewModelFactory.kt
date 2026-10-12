@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 class EpgViewModelFactory(
     context: Context,
     private val categoryId: String,
+    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
@@ -14,7 +15,7 @@ class EpgViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EpgViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EpgViewModel(appContext, categoryId) as T
+            return EpgViewModel(appContext, categoryId, providerId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
