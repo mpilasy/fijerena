@@ -850,6 +850,8 @@
     <string name="live_sync_now_paused">⏸ Paused · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
+    <string name="live_sync_now_progress">%1$s / %2$s</string>
+    <string name="live_sync_now_detail">%1$s · %2$s</string>
     <string name="live_sync_stop">Stop</string>
     <string name="live_sync_stop_title">Stop playback on %1$s?</string>
     <string name="live_sync_stop_message">What is playing there stops and the player closes. It can be started again right away.</string>

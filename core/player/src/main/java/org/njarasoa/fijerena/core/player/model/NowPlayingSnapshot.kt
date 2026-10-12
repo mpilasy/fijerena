@@ -16,9 +16,15 @@ data class NowPlayingSnapshot(
     /** Live TV only: the programme on air, when the guide knows it. */
     val programTitle: String? = null,
     val paused: Boolean = false,
-    /** VOD only, as of the last player state change. */
+    /**
+     * VOD only, as of [positionAtMs] (wall clock): the last player state change, or the player's
+     * 10 s position tick while it plays, so a receiver can run the position on from there.
+     */
     val positionMs: Long? = null,
     val durationMs: Long? = null,
+    val positionAtMs: Long? = null,
+    /** The source the stream plays from. */
+    val sourceName: String? = null,
     /**
      * This playback's id, new on every `playStream` — what a remote Stop names, so a command can
      * only ever stop the playback it was sent for (Phase 4 of the plan).
@@ -26,7 +32,7 @@ data class NowPlayingSnapshot(
     val sessionId: String? = null,
 ) {
     /** Without the position: what another device shows, so what a change worth sending is. */
-    fun shown(): NowPlayingSnapshot = copy(positionMs = null, durationMs = null)
+    fun shown(): NowPlayingSnapshot = copy(positionMs = null, durationMs = null, positionAtMs = null)
 
     private fun sameItem(metadata: PlayerMetadata): Boolean =
         title == metadata.title && showTitle == metadata.showTitle && episodeLabel == metadata.episodeLabel && isLive == metadata.isLive
@@ -42,6 +48,7 @@ data class NowPlayingSnapshot(
             state: PlaybackState,
             previous: NowPlayingSnapshot?,
             sessionId: String? = null,
+            nowMs: Long = System.currentTimeMillis(),
         ): NowPlayingSnapshot? {
             val same = previous?.takeIf { it.sameItem(metadata) }
             val paused =
@@ -51,11 +58,11 @@ data class NowPlayingSnapshot(
                     PlaybackState.Buffering -> same?.paused ?: false
                     else -> null
                 }
-            val progress: Pair<Long?, Long?> =
+            val progress: Triple<Long?, Long?, Long?> =
                 when (state) {
-                    is PlaybackState.Playing -> state.position to state.duration
-                    is PlaybackState.Paused -> state.position to state.duration
-                    else -> same?.positionMs to same?.durationMs
+                    is PlaybackState.Playing -> Triple(state.position, state.duration, nowMs)
+                    is PlaybackState.Paused -> Triple(state.position, state.duration, nowMs)
+                    else -> Triple(same?.positionMs, same?.durationMs, same?.positionAtMs)
                 }
             return if (paused == null || metadata.streamUrl.isEmpty()) {
                 null
@@ -70,6 +77,8 @@ data class NowPlayingSnapshot(
                     paused = paused,
                     positionMs = progress.first.takeIf { !metadata.isLive },
                     durationMs = progress.second.takeIf { !metadata.isLive },
+                    positionAtMs = progress.third.takeIf { !metadata.isLive },
+                    sourceName = metadata.sourceName,
                     sessionId = sessionId,
                 )
             }

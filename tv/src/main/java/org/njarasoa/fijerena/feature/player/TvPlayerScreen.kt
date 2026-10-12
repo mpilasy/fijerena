@@ -439,6 +439,7 @@ private fun StreamLoaderViewModel.StreamState.Success.playerMetadata(): PlayerMe
         logoUrl = logoUrl,
         programTitle = currentEpgProgram?.title,
         catchupLabel = catchupLabel,
+        sourceName = sourceName,
     )
 
 @Composable

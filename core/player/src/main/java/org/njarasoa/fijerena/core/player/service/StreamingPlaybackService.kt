@@ -400,6 +400,16 @@ class StreamingPlaybackService : MediaSessionService() {
                 val player = getPlayer() ?: continue
                 if (player.isPlaying && player.playbackState == Player.STATE_READY) {
                     savePosition(player.currentPosition, player.duration, isPaused = false)
+                    // Live sync's "now playing": the position as of now, not the last state change.
+                    val position = player.currentPosition
+                    val duration = player.duration.coerceAtLeast(0L)
+                    _nowPlaying.update { snapshot ->
+                        if (snapshot == null || snapshot.isLive) {
+                            snapshot
+                        } else {
+                            snapshot.copy(positionMs = position, durationMs = duration, positionAtMs = System.currentTimeMillis())
+                        }
+                    }
                 }
             }
         }

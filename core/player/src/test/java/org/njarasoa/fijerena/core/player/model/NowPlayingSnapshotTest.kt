@@ -61,4 +61,25 @@ class NowPlayingSnapshotTest {
         val b = NowPlayingSnapshot.of(movie, PlaybackState.Playing(2_000, 9_000), null)!!
         assertEquals(a.shown(), b.shown())
     }
+
+    @Test
+    fun `a film carries its position with the time it was read, and its source`() {
+        val snapshot =
+            NowPlayingSnapshot.of(movie.copy(sourceName = "My IPTV"), PlaybackState.Playing(1_000, 9_000), null, nowMs = 50_000)!!
+        assertEquals(1_000L, snapshot.positionMs)
+        assertEquals(9_000L, snapshot.durationMs)
+        assertEquals(50_000L, snapshot.positionAtMs)
+        assertEquals("My IPTV", snapshot.sourceName)
+    }
+
+    @Test
+    fun `a rebuffer keeps the time the position was read`() {
+        val playing = NowPlayingSnapshot.of(movie, PlaybackState.Playing(1_000, 9_000), null, nowMs = 50_000)
+        assertEquals(50_000L, NowPlayingSnapshot.of(movie, PlaybackState.Buffering, playing, nowMs = 60_000)!!.positionAtMs)
+    }
+
+    @Test
+    fun `live has no position time`() {
+        assertNull(NowPlayingSnapshot.of(live, PlaybackState.Playing(5_000, 0), null, nowMs = 50_000)!!.positionAtMs)
+    }
 }

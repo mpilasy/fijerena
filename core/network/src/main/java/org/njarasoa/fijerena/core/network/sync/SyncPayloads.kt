@@ -176,6 +176,10 @@ object SyncPayloads {
         val profileName: String = "",
         val positionMs: Long? = null,
         val durationMs: Long? = null,
+        /** The sender's wall clock at [positionMs]; null from a sender before it was added. */
+        val positionAtMs: Long? = null,
+        /** The source the stream plays from; null from a sender before it was added. */
+        val sourceName: String? = null,
         val sentAt: Long,
         /** The sender's playback id — what a remote Stop names. Null from a sender before Phase 4. */
         val sessionId: String? = null,
@@ -205,6 +209,8 @@ object SyncPayloads {
                         profileName = profileName,
                         positionMs = snapshot.positionMs,
                         durationMs = snapshot.durationMs,
+                        positionAtMs = snapshot.positionAtMs,
+                        sourceName = snapshot.sourceName,
                         sentAt = sentAt,
                         sessionId = snapshot.sessionId,
                     )

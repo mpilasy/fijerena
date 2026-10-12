@@ -814,6 +814,8 @@
     <string name="live_sync_now_paused">⏸ En pause · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
+    <string name="live_sync_now_progress">%1$s / %2$s</string>
+    <string name="live_sync_now_detail">%1$s · %2$s</string>
     <string name="live_sync_stop">Arrêter</string>
     <string name="live_sync_stop_title">Arrêter la lecture sur %1$s ?</string>
     <string name="live_sync_stop_message">Ce qui y est en lecture s\'arrête et le lecteur se ferme. La lecture peut reprendre aussitôt.</string>

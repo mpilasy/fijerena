@@ -59,6 +59,8 @@ data class PlayerMetadata(
     // programme title, "Channel · Yesterday 17:15". Null for everything else. A catch-up stream
     // that can't start fails at once, without retries. See docs/plans/archive/20261010_catchup-plan.md.
     val catchupLabel: String? = null,
+    // The source the stream plays from. Only live sync's "now playing" reads it.
+    val sourceName: String? = null,
 )
 
 data class AudioTrackInfo(

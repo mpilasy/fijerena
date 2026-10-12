@@ -848,4 +848,5 @@ private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
         isLive = s.isLive,
         headers = s.streamHeaders,
         programTitle = s.currentEpgProgram?.title,
+        sourceName = s.sourceName,
     )

@@ -984,6 +984,8 @@
     <string name="live_sync_now_paused">⏸ Miato · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
+    <string name="live_sync_now_progress">%1$s / %2$s</string>
+    <string name="live_sync_now_detail">%1$s · %2$s</string>
     <string name="live_sync_stop">Ajanony</string>
     <string name="live_sync_stop_title">Hajanona ve ny filalaovana amin\'ny %1$s?</string>
     <string name="live_sync_stop_message">Mijanona izay mandeha any ary mikatona ny mpamaky. Azo alefa indray avy hatrany izy.</string>

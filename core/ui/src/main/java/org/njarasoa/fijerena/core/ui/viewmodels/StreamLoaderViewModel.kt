@@ -104,6 +104,8 @@ class StreamLoaderViewModel(
             // Live TV: how many days the channel keeps an archive (0 none) — Start over on the
             // programme on air when it can be replayed. Set with the guide lookup.
             val archiveDays: Int = 0,
+            // The source this stream plays from, for live sync's "now playing".
+            val sourceName: String? = null,
         ) : StreamState()
 
         data class Error(
@@ -121,6 +123,7 @@ class StreamLoaderViewModel(
     val recentItems: StateFlow<List<MediaItem>> = _recentItems.asStateFlow()
 
     private var mediaRepository: MediaRepository? = null
+    private var sourceName: String? = null
     private val appSettings = AppSettings(context)
 
     // Live TV channel list and the position in it, as one snapshot: written from IO coroutines,
@@ -174,6 +177,7 @@ class StreamLoaderViewModel(
                     .getInstance(context)
             val repo = container.getMediaRepository(providerId)
             mediaRepository = repo
+            sourceName = container.providerRepository.getProviderById(repo.getProviderId())?.name
 
             if (isLiveTv) {
                 launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
@@ -298,6 +302,7 @@ class StreamLoaderViewModel(
                             savedSubtitleTrackIndex = savedSubtitleIndex,
                             seriesName = if (contentType == ContentType.TV_SHOWS) seriesName else null,
                             catchupLabel = window?.let { catchupLabel(context, streamName, it.startEpochSec + it.programOffsetSec) },
+                            sourceName = sourceName,
                         )
 
                     // Notify provider that playback started (e.g. for Jellyfin session tracking)

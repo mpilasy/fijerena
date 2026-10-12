@@ -611,6 +611,7 @@ fun MobilePlayerContent(
                         logoUrl = state.logoUrl,
                         programTitle = state.currentEpgProgram?.title,
                         catchupLabel = state.catchupLabel,
+                        sourceName = state.sourceName,
                     )
                 viewModel.playStream(metadata, state.resumePosition)
 

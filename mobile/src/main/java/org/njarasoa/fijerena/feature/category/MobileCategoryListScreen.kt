@@ -502,6 +502,7 @@ fun MobileCategoryListScreen(
                         isLive = s.isLive,
                         headers = s.streamHeaders,
                         programTitle = s.currentEpgProgram?.title,
+                        sourceName = s.sourceName,
                     ),
                     s.resumePosition,
                 )
