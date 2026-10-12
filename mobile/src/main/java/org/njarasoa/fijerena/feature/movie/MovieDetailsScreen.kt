@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -85,6 +86,7 @@ fun MobileMovieDetailsScreen(
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
+    val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
     val isWatched = (uiState as? MovieDetailsViewModel.UiState.Success)?.isWatched ?: false
 
@@ -148,6 +150,7 @@ fun MobileMovieDetailsScreen(
                             relatedTitles = relatedTitles,
                             tmdbTitle = tmdbTitle,
                             alternateStreams = alternateStreams,
+                            sourceNames = sourceNames,
                             movieId = shown.movieDetail.id,
                             movieName = shown.streamName,
                             resumePositionMs = shown.resumePositionMs,
@@ -162,7 +165,14 @@ fun MobileMovieDetailsScreen(
                             onPlayMovie = onPlayMovie,
                             onCategorySelected = { onCategorySelected(shown.categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
-                            onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                            // A copy on another source opens on that source, as a related title does.
+                            onAlternateStreamSelected = {
+                                if (viewModel.otherSourceOf(it) != null) {
+                                    onRelatedTitleSelected(it)
+                                } else {
+                                    viewModel.switchToAlternateStream(it)
+                                }
+                            },
                         )
                     }
                 }
@@ -181,6 +191,7 @@ private fun MovieDetailsContent(
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     movieId: String,
     movieName: String,
     resumePositionMs: Long,
@@ -371,6 +382,7 @@ private fun MovieDetailsContent(
                                 movieDetail = movieDetail,
                                 movieName = movieName,
                                 alternateStreams = alternateStreams,
+                                sourceNames = sourceNames,
                                 onAlternateStreamSelected = onAlternateStreamSelected,
                                 categoryName = categoryName,
                                 onCategorySelected = onCategorySelected,
@@ -431,6 +443,7 @@ private fun MovieDetailsTabContent(
     movieDetail: MovieDetail,
     movieName: String,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     onAlternateStreamSelected: (MediaItem) -> Unit,
     categoryName: String?,
     onCategorySelected: () -> Unit,
@@ -442,7 +455,12 @@ private fun MovieDetailsTabContent(
             movieDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
             // The catalogue's raw name: alternates are listed under it, not under movieDetail.name.
             MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
-                StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
+                StreamNamePicker(
+                    currentName = movieName,
+                    alternates = alternateStreams,
+                    sourceNames = sourceNames,
+                    onSelect = onAlternateStreamSelected,
+                )
             }
 
             movieDetail.videoInfo?.let { video ->
@@ -587,6 +605,7 @@ private fun ErrorScreen(
 private fun StreamNamePicker(
     currentName: String,
     alternates: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     onSelect: (MediaItem) -> Unit,
 ) {
     val textStyle = MaterialTheme.typography.bodySmall
@@ -636,6 +655,8 @@ private fun StreamNamePicker(
             alternates.forEach { alternate ->
                 DropdownMenuItem(
                     text = { Text(alternate.name) },
+                    // With several sources, each copy's own (it opens there).
+                    trailingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                     onClick = {
                         expanded = false
                         onSelect(alternate)

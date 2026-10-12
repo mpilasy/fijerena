@@ -861,7 +861,8 @@ class XtreamMediaProvider(
     ): List<MediaItem> {
         if (tmdbId.isNullOrBlank()) return emptyList()
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return emptyList()
-        val excludeId = itemId.toIntOrNull() ?: return emptyList()
+        // Blank: another source's copies, where the same id is another entry, so none is left out.
+        val excludeId = if (itemId.isBlank()) NO_STREAM_ID else itemId.toIntOrNull() ?: return emptyList()
 
         return try {
             repository.getAlternateStreams(contentType, tmdbId, excludeId).map { it.toDomain(getMediaType(contentType)) }
@@ -1076,6 +1077,9 @@ class XtreamMediaProvider(
 
         // Below this a row reads as an accident rather than a suggestion, so it is not shown.
         private const val MIN_RELATED_TITLES = 3
+
+        // No stream or series has it: an exclusion that leaves every entry in.
+        private const val NO_STREAM_ID = -1
     }
 }
 

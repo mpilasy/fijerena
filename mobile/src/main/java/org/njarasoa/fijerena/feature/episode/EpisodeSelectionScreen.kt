@@ -69,6 +69,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -127,6 +128,7 @@ fun MobileEpisodeSelectionScreen(
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
+    val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a background refresh so the list stays visible with just a pull-spinner
@@ -249,6 +251,7 @@ fun MobileEpisodeSelectionScreen(
                             relatedTitles = relatedTitles,
                             tmdbTitle = tmdbTitle,
                             alternateStreams = alternateStreams,
+                            sourceNames = sourceNames,
                             seriesName = lastSuccess?.streamName ?: seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeState = resumeState,
@@ -266,7 +269,14 @@ fun MobileEpisodeSelectionScreen(
                             },
                             onCategorySelected = { onCategorySelected(lastSuccess?.categoryId ?: categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
-                            onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                            // A copy on another source opens on that source, as a related title does.
+                            onAlternateStreamSelected = {
+                                if (viewModel.otherSourceOf(it) != null) {
+                                    onRelatedTitleSelected(it)
+                                } else {
+                                    viewModel.switchToAlternateStream(it)
+                                }
+                            },
                         )
                     }
                 }
@@ -285,6 +295,7 @@ private fun EpisodeListContent(
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     seriesName: String,
     mediaRepository: MediaRepository,
     resumeState: EpisodeResumeState,
@@ -737,6 +748,7 @@ private fun EpisodeListContent(
                         seriesDetail = seriesDetail,
                         seriesName = seriesName,
                         alternateStreams = alternateStreams,
+                        sourceNames = sourceNames,
                         categoryName = categoryName,
                         onAlternateStreamSelected = onAlternateStreamSelected,
                         onCategorySelected = onCategorySelected,
@@ -854,6 +866,7 @@ private fun SeriesDetailsTabContent(
     seriesDetail: SeriesDetail,
     seriesName: String,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     categoryName: String?,
     onAlternateStreamSelected: (MediaItem) -> Unit,
     onCategorySelected: () -> Unit,
@@ -866,6 +879,7 @@ private fun SeriesDetailsTabContent(
                 StreamNamePicker(
                     currentName = seriesName,
                     alternates = alternateStreams,
+                    sourceNames = sourceNames,
                     onSelect = onAlternateStreamSelected,
                 )
             }
@@ -906,6 +920,7 @@ private fun CastChipsTabContent(cast: String) {
 private fun StreamNamePicker(
     currentName: String,
     alternates: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     onSelect: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -958,6 +973,8 @@ private fun StreamNamePicker(
             alternates.forEach { alternate ->
                 DropdownMenuItem(
                     text = { Text(alternate.name) },
+                    // With several sources, each copy's own (it opens there).
+                    trailingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                     onClick = {
                         expanded = false
                         onSelect(alternate)

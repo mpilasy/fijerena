@@ -132,6 +132,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -209,6 +210,7 @@ fun EpisodeSelectionScreen(
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
+    val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
 
     // Retained across a background refresh so the episode list stays on screen with just a
     // spinning refresh icon, instead of the whole thing dropping to a full-screen loading state
@@ -239,6 +241,7 @@ fun EpisodeSelectionScreen(
                 logoUrl = logoUrl,
                 backdropUrl = backdropUrl,
                 alternateStreams = alternateStreams,
+                sourceNames = sourceNames,
                 seriesName = shown.streamName,
                 categoryId = shown.categoryId,
                 mediaRepository = viewModel.mediaRepository!!,
@@ -252,7 +255,10 @@ fun EpisodeSelectionScreen(
                 onRefresh = { viewModel.refreshSeriesInfo() },
                 onBack = onBack,
                 onRelatedTitleSelected = onRelatedTitleSelected,
-                onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                // A copy on another source opens on that source, as a related title does.
+                onAlternateStreamSelected = {
+                    if (viewModel.otherSourceOf(it) != null) onRelatedTitleSelected(it) else viewModel.switchToAlternateStream(it)
+                },
             )
         }
 
@@ -287,6 +293,7 @@ internal fun EpisodeListContent(
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
+    sourceNames: Map<Long, String> = emptyMap(),
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -1400,6 +1407,7 @@ internal fun EpisodeListContent(
                                         providerName = providerName,
                                         categoryName = categoryName,
                                         alternateStreams = alternateStreams,
+                                        sourceNames = sourceNames,
                                         streamNameFocusRequester = streamNameFocusRequester,
                                         onStreamSelected = {
                                             streamSwitchSignal++
@@ -1496,6 +1504,7 @@ private fun SeriesDetailsTabContent(
     providerName: String,
     categoryName: String?,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     streamNameFocusRequester: FocusRequester,
     onStreamSelected: (MediaItem) -> Unit,
     onStreamFocusedChanged: (Boolean) -> Unit,
@@ -1519,6 +1528,7 @@ private fun SeriesDetailsTabContent(
             StreamNamePicker(
                 currentName = seriesName,
                 alternates = alternateStreams,
+                sourceNames = sourceNames,
                 onSelect = onStreamSelected,
                 focusRequester = streamNameFocusRequester,
                 onFocusedChanged = onStreamFocusedChanged,
@@ -1665,6 +1675,7 @@ private const val NEXT_UP_SHADOW_BLUR = 8f
 private fun StreamNamePicker(
     currentName: String,
     alternates: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     onSelect: (MediaItem) -> Unit,
     focusRequester: FocusRequester,
     onFocusedChanged: (Boolean) -> Unit = {},
@@ -1740,6 +1751,8 @@ private fun StreamNamePicker(
                     alternates.forEach { alternate ->
                         DropdownMenuItem(
                             text = { Text(alternate.name, color = CinemaTextPrimary) },
+                            // With several sources, each copy's own (it opens there).
+                            trailingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                             onClick = {
                                 expanded = false
                                 onSelect(alternate)

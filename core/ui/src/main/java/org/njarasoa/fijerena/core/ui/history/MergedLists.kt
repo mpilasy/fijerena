@@ -129,6 +129,29 @@ class MergedLists(
     /** Clear Recent: every source's list of [contentType]; true when any had one to clear. */
     suspend fun clearRecent(contentType: String): Boolean = each { it.clearRecent(contentType) }.any { it }
 
+    /**
+     * The other copies of the screen's title [itemId] (same [tmdbId]) on every source, the
+     * screen's own first, each with its source: only the item itself is left out — another
+     * source's entry under the same id is another copy. A source whose read fails is left out.
+     */
+    suspend fun alternateStreams(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): List<MediaItem> =
+        coroutineScope {
+            sources
+                .mapIndexed { index, source ->
+                    async {
+                        suspendRunCatching { source.repo.getAlternateStreams(if (index == 0) itemId else "", tmdbId, contentType) }
+                            .onFailure { Log.w(TAG, "Source ${source.providerId} left out of the other copies", it) }
+                            .getOrDefault(emptyList())
+                            .map { it.copy(providerId = source.providerId) }
+                    }
+                }.awaitAll()
+                .flatten()
+        }
+
     // Every source at once, in [sources] order. A source whose read fails leaves its part out
     // rather than the whole list: the screen's own one is the only one allowed to fail it.
     private suspend fun <T> each(read: suspend (MediaRepository) -> T): List<T> =

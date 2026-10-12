@@ -19,6 +19,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.history.MergedLists
 
 class SeriesDetailsViewModel(
     private val context: android.content.Context,
@@ -98,9 +100,16 @@ class SeriesDetailsViewModel(
     private var artworkJob: Job? = null
     private var artworkTmdbId: String? = null
 
-    /** Other local catalogue entries for the same TMDB id — empty when there are none. */
+    /**
+     * Other local catalogue entries for the same TMDB id, on every Xtream source of the profile,
+     * each with its source ([MediaItem.providerId]) — empty when there are none.
+     */
     private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
     val alternateStreams: StateFlow<List<MediaItem>> = _alternateStreams.asStateFlow()
+
+    /** Each source's name by id when the profile merges more than one source (the alternates show it), else empty. */
+    private val _sourceNames = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val sourceNames: StateFlow<Map<Long, String>> = _sourceNames.asStateFlow()
 
     private var alternateStreamsJob: Job? = null
     private var alternateStreamsTmdbId: String? = null
@@ -136,13 +145,23 @@ class SeriesDetailsViewModel(
      * stays on screen until the new stream's detail is ready and swaps in place.
      */
     fun switchToAlternateStream(alternate: MediaItem) {
-        if (alternate.id == seriesId) return
+        if (alternate.id == seriesId || otherSourceOf(alternate) != null) return
         seriesId = alternate.id
         categoryId = alternate.categoryId
         seriesName = alternate.name
         viewModelScope.launch(Dispatchers.IO) {
             loadSeriesDetail(useCache = true, isSwitch = true)
         }
+    }
+
+    /**
+     * The source of [alternate] when it is on another one than this screen's, null on this one: a
+     * copy on another source opens there as its own screen (its route's source), so its episodes,
+     * Play, progress and favourite are that source's — [switchToAlternateStream] leaves it alone.
+     */
+    fun otherSourceOf(alternate: MediaItem): Long? {
+        val own = repository?.getProviderId() ?: providerId
+        return alternate.providerId.takeIf { it != 0L && it != own }
     }
 
     private suspend fun loadSeriesDetail(
@@ -295,10 +314,12 @@ class SeriesDetailsViewModel(
         alternateStreamsTmdbId = tmdbId
         alternateStreamsJob =
             viewModelScope.launch(Dispatchers.IO) {
-                _alternateStreams.value =
-                    suspendRunCatching {
-                        ensureRepo().getAlternateStreams(seriesId, tmdbId, "TV_SHOWS")
-                    }.getOrDefault(emptyList())
+                suspendRunCatching {
+                    val lists = MergedLists.withOthers(AppContainer.getInstance(context), ensureRepo())
+                    val alternates = lists.alternateStreams(seriesId, tmdbId, "TV_SHOWS")
+                    _sourceNames.value = lists.sourceNames
+                    _alternateStreams.value = alternates
+                }
             }
     }
 

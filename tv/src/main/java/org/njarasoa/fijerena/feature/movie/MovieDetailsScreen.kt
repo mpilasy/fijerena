@@ -80,6 +80,7 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -145,6 +146,7 @@ fun MovieDetailsScreen(
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
+    val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
         is MovieDetailsViewModel.UiState.Loading -> {
@@ -169,6 +171,7 @@ fun MovieDetailsScreen(
                 logoUrl = logoUrl,
                 backdropUrl = backdropUrl,
                 alternateStreams = alternateStreams,
+                sourceNames = sourceNames,
                 movieId = state.movieDetail.id,
                 movieName = state.streamName,
                 isFavorite = state.isFavorite,
@@ -183,7 +186,10 @@ fun MovieDetailsScreen(
                 onRefresh = { viewModel.refreshMovieInfo() },
                 onBack = onBack,
                 onRelatedTitleSelected = onRelatedTitleSelected,
-                onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                // A copy on another source opens on that source, as a related title does.
+                onAlternateStreamSelected = {
+                    if (viewModel.otherSourceOf(it) != null) onRelatedTitleSelected(it) else viewModel.switchToAlternateStream(it)
+                },
                 providerId = providerId,
             )
         }
@@ -198,6 +204,7 @@ private fun MovieDetailsContent(
     logoUrl: String?,
     backdropUrl: String?,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     movieId: String,
     movieName: String,
     isFavorite: Boolean,
@@ -626,6 +633,7 @@ private fun MovieDetailsContent(
                                     providerName = providerName,
                                     categoryName = categoryName,
                                     alternateStreams = alternateStreams,
+                                    sourceNames = sourceNames,
                                     streamNameFocusRequester = streamNameFocusRequester,
                                     onStreamSelected = {
                                         streamSwitchSignal++
@@ -770,6 +778,7 @@ private fun DetailsTabContent(
     providerName: String,
     categoryName: String?,
     alternateStreams: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     streamNameFocusRequester: FocusRequester,
     onStreamSelected: (MediaItem) -> Unit,
     onStreamFocusedChanged: (Boolean) -> Unit,
@@ -872,6 +881,7 @@ private fun DetailsTabContent(
                 // under, so use the same source as alternates.
                 currentName = movieName,
                 alternates = alternateStreams,
+                sourceNames = sourceNames,
                 onSelect = onStreamSelected,
                 focusRequester = streamNameFocusRequester,
                 onFocusedChanged = onStreamFocusedChanged,
@@ -908,6 +918,7 @@ private fun DetailsTabContent(
 private fun StreamNamePicker(
     currentName: String,
     alternates: List<MediaItem>,
+    sourceNames: Map<Long, String>,
     onSelect: (MediaItem) -> Unit,
     focusRequester: FocusRequester,
     onFocusedChanged: (Boolean) -> Unit = {},
@@ -982,6 +993,8 @@ private fun StreamNamePicker(
                     alternates.forEach { alternate ->
                         DropdownMenuItem(
                             text = { Text(alternate.name, color = CinemaTextPrimary) },
+                            // With several sources, each copy's own (it opens there).
+                            trailingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                             onClick = {
                                 expanded = false
                                 onSelect(alternate)

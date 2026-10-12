@@ -246,7 +246,35 @@ class MergedListsTest {
         assertFalse(lists(repo(A)).sourceNames.containsKey(A))
     }
 
+    @Test
+    fun `other copies of a title come from every source, each with its source, only the item itself left out`() {
+        val a = repo(A)
+        val b = repo(B)
+        // The screen's own source leaves the item out; another source keeps its copy under the same id.
+        coEvery { a.getAlternateStreams("7", TMDB, ContentType.MOVIES) } returns listOf(row("9", 0L, 0))
+        coEvery { b.getAlternateStreams("", TMDB, ContentType.MOVIES) } returns listOf(row("7", 0L, 0), row("8", 0L, 0))
+
+        val copies = runBlocking { lists(a, b).alternateStreams("7", TMDB, ContentType.MOVIES) }
+
+        assertEquals(listOf(A to "9", B to "7", B to "8"), copies.map { it.providerId to it.id })
+        coVerify(exactly = 0) { a.getAlternateStreams("", any(), any()) }
+        coVerify(exactly = 0) { b.getAlternateStreams("7", any(), any()) }
+    }
+
+    @Test
+    fun `a source whose other copies can't be read is left out`() {
+        val a = repo(A)
+        val b = repo(B)
+        coEvery { a.getAlternateStreams(any(), any(), any()) } throws IllegalStateException("offline")
+        coEvery { b.getAlternateStreams(any(), any(), any()) } returns listOf(row("4", 0L, 0))
+
+        val copies = runBlocking { lists(a, b).alternateStreams("7", TMDB, ContentType.TV_SHOWS) }
+
+        assertEquals(listOf(B to "4"), copies.map { it.providerId to it.id })
+    }
+
     private companion object {
+        const val TMDB = "603"
         const val A = 3L
         const val B = 8L
         const val C = 11L

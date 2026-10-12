@@ -795,7 +795,7 @@ fun MobileNavHost(
                                 movieId = related.id,
                                 movieName = related.name,
                                 categoryId = related.categoryId,
-                                providerId = movieDetailsScreen.providerId,
+                                providerId = related.sourceOr(movieDetailsScreen.providerId),
                             ),
                         )
                     },
@@ -844,7 +844,7 @@ fun MobileNavHost(
                                 seriesId = related.id,
                                 seriesName = related.name,
                                 categoryId = related.categoryId,
-                                providerId = episodeSelectionScreen.providerId,
+                                providerId = related.sourceOr(episodeSelectionScreen.providerId),
                             ),
                         )
                     },
