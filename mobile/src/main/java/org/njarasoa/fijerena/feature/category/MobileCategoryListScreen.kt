@@ -105,6 +105,8 @@ import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -1918,8 +1920,9 @@ private fun selectCategoryText(contentType: String): String =
     }
 
 @OptIn(ExperimentalFoundationApi::class)
+// internal, not private: StreamCardTest (Robolectric) checks the row's one accessibility node.
 @Composable
-private fun StreamCard(
+internal fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     nowPlayingProgram: EpgProgram? = null,
     /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
@@ -1953,19 +1956,66 @@ private fun StreamCard(
                 cinemaCardHairlineBorder()
             },
     ) {
+        val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+        // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
+        // between the dashes) — an empty row reads as broken, not a catalogue gap.
+        val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
+        val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
+        // Films and shows: year · length · rating, from what the row already carries (as on
+        // the TV). The rating is a plain "8.2/10": a star means favourite.
+        val rating =
+            item.metadata.rating
+                ?.trim()
+                ?.takeIf { !isChannel && it.isNotEmpty() && it.toDoubleOrNull() != 0.0 }
+        val ratingText =
+            rating?.let {
+                if (it.toDoubleOrNull() != null) {
+                    stringResource(R.string.details_rating_out_of_ten, formatRating(it))
+                } else {
+                    it
+                }
+            }
+        val metaLine =
+            remember(item.metadata, ratingText, isChannel) {
+                if (isChannel) {
+                    ""
+                } else {
+                    listOfNotNull(
+                        extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
+                        item.metadata.duration
+                            ?.takeIf(::hasMeaningfulDuration)
+                            ?.let(::formatDuration),
+                        ratingText,
+                    ).joinToString(" · ")
+                }
+            }
+        val nowPlayingText = stringResource(R.string.category_now_playing_badge).takeIf { isCurrentlyPlaying }
+        val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // One accessibility node for the row's content, read as its parts were: with an
+        // accessibility service on (a screen reader, a password manager, an automation app),
+        // Compose walks and diffs every semantics node on scroll, and a node per text and badge
+        // made that the biggest cost of a frame on the TV
+        // (docs/plans/20260914_codebase-robustness-plan.md, Phase 4). The card keeps its click
+        // and long-click actions.
+        val description =
+            listOfNotNull(
+                stringResource(R.string.content_watched_badge).takeIf { isWatched },
+                if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
+                parsedTitle.badge,
+                displayTitle,
+                nowPlayingText,
+                metaLine.ifEmpty { null },
+                nowLine,
+            ).joinToString(", ")
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .clearAndSetSemantics { contentDescription = description }
                     .padding(CinemaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
-            val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-            // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
-            // between the dashes) — an empty row reads as broken, not a catalogue gap.
-            val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
-            val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
             // 16:9, with the resume bar on the thumbnail's bottom edge rather than along the whole
             // card (phone UI audit P1, as on the TV).
             val thumbnailRadius = CinemaCornerRadius.medium
@@ -2029,52 +2079,26 @@ private fun StreamCard(
                         modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
                     )
                 }
-                if (isCurrentlyPlaying) {
+                nowPlayingText?.let { text ->
                     Text(
-                        text = stringResource(R.string.category_now_playing_badge),
+                        text = text,
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaAccent,
                         maxLines = 1,
                     )
                 }
-                // Films and shows: year · length · rating, from what the row already carries (as on
-                // the TV). The rating is a plain "8.2/10": a star means favourite.
-                if (!isChannel) {
-                    val rating =
-                        item.metadata.rating
-                            ?.trim()
-                            ?.takeIf { it.isNotEmpty() && it.toDoubleOrNull() != 0.0 }
-                    val ratingText =
-                        rating?.let {
-                            if (it.toDoubleOrNull() != null) {
-                                stringResource(R.string.details_rating_out_of_ten, formatRating(it))
-                            } else {
-                                it
-                            }
-                        }
-                    val metaLine =
-                        remember(item.metadata, ratingText) {
-                            listOfNotNull(
-                                extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
-                                item.metadata.duration
-                                    ?.takeIf(::hasMeaningfulDuration)
-                                    ?.let(::formatDuration),
-                                ratingText,
-                            ).joinToString(" · ")
-                        }
-                    if (metaLine.isNotEmpty()) {
-                        Text(
-                            text = metaLine,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CinemaTextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                nowPlayingProgram?.let { program ->
+                if (metaLine.isNotEmpty()) {
                     Text(
-                        text = stringResource(R.string.epg_now_prefix, program.title),
+                        text = metaLine,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                nowLine?.let { line ->
+                    Text(
+                        text = line,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         maxLines = 1,

@@ -119,6 +119,8 @@ dalvik, input; sched).
   18.5 s → 11.3 s. The screen now holds 112 accessibility nodes, about 80 of them the category
   pane's (3 per row); collapsing those too would save little. The rest of the cost is Compose
   diffing the tree on every change, larger in this debug build than in a release one.
+- **Phone:** the phone's `StreamCard` gets the same one node (not measured; no buttons inside the
+  row, so the card keeps its tap and long-press actions), with `StreamCardTest`.
 
 ### Phase 5: Compose UI Instrumented Testing Expansion (P3) — in progress, as Robolectric JVM tests
 
