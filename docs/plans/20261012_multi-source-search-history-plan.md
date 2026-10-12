@@ -99,13 +99,13 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | Source on routes and screens (no visible change) | In progress (2026-10-12) |
+| 1 | Source on routes and screens (no visible change) | Done (2026-10-12, `0abab248`) |
 | 2 | Per-profile source access | Done (2026-10-12, `e2af80e0`) |
-| 3 | Search across the profile's sources | Not started |
-| 4 | Merged Recent, Continue Watching, favourites and Recent Categories | Not started |
-| 5 | Live TV Recent across sources, zap within source | Not started |
+| 3 | Search across the profile's sources | In progress (2026-10-12) |
+| 4 | Merged Recent, Continue Watching, favourites and Recent Categories | In progress (2026-10-12) |
+| 5 | Live TV Recent across sources, zap within source | In progress (2026-10-12) |
 | 6 | Merged browsing; the current source goes | Not started |
-| 7 | Search the guide across sources, and their guides kept fresh | Not started |
+| 7 | Search the guide across sources, and their guides kept fresh | In progress (2026-10-12) |
 | 8 | Device walks and docs | Not started |
 
 ### Phase 1 — Source on routes and screens (no visible change)
@@ -122,6 +122,12 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 - Header source name on details, episodes and the TV two-column layout: the route's source.
 - Tests: route round-trip with and without the id; a VM built with an explicit id reads that
   source (fake repositories).
+- **Done 2026-10-12 (`0abab248`).** `ProviderRepository.getProviderOrActive(id)`; `MediaItem.providerId`
+  set on rows `MediaRepository` builds itself (Recent, favourites), catalogue rows stay 0. No new
+  `viewModel(key=)`: each nav entry has its own store. Left for Phases 5–6: the Live TV preview
+  and phone dock loaders are created once per screen and must be rebuilt (or keyed) when a zap or
+  list crosses sources. Still on 0 until their phase: search results, guide-search results, TV
+  Home's Live row, Continue Watching and section roots.
 
 ### Phase 2 — Per-profile source access
 
