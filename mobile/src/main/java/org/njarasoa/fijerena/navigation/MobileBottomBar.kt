@@ -1,13 +1,20 @@
 package org.njarasoa.fijerena.navigation
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -111,20 +118,45 @@ fun startTab(
     return candidates.firstOrNull { it.contentType == lastTab } ?: candidates.first()
 }
 
-/** Material's navigation bar: icon with its name under it on every tab, [selected] highlighted. */
+/** Narrowest screen, in dp, whose bottom bar names its tabs; narrower ones show icons only. */
+const val TAB_LABELS_MIN_WIDTH_DP = 380
+
+/** Whether the bottom bar names its tabs on a screen [widthDp] wide (a 360 dp compact phone doesn't). */
+fun showsTabLabels(widthDp: Int): Boolean = widthDp >= TAB_LABELS_MIN_WIDTH_DP
+
+/**
+ * Material's navigation bar, [selected] highlighted: icon with its name under it on every tab, or
+ * icons only on a narrow screen ([showsTabLabels], read live so it follows rotation) — the name
+ * then shows in a tooltip on long-press and is the icon's content description.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileBottomBar(
     tabs: List<MobileTab>,
     selected: MobileTab,
     onSelect: (MobileTab) -> Unit,
 ) {
+    val showLabels = showsTabLabels(LocalConfiguration.current.screenWidthDp)
     NavigationBar {
         tabs.forEach { tab ->
+            val label = tab.label()
             NavigationBarItem(
                 selected = tab == selected,
                 onClick = { onSelect(tab) },
-                icon = { Icon(tab.icon(), contentDescription = null) },
-                label = { Text(tab.label()) },
+                icon = {
+                    if (showLabels) {
+                        Icon(tab.icon(), contentDescription = null)
+                    } else {
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                            tooltip = { PlainTooltip { Text(label) } },
+                            state = rememberTooltipState(),
+                        ) {
+                            Icon(tab.icon(), contentDescription = label)
+                        }
+                    }
+                },
+                label = if (showLabels) ({ Text(label) }) else null,
                 // The theme's accent for the selected tab, not Material's default (the palette's
                 // orange, the same in every theme).
                 colors =

@@ -1,11 +1,21 @@
 package org.njarasoa.fijerena.navigation
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.feature.contentselection.ActiveSource
 
 class MobileBottomBarTest {
+    @Test
+    fun `a compact phone shows icons only, a wider screen names the tabs`() {
+        assertFalse(showsTabLabels(360)) // Xperia XZ2 Compact
+        assertFalse(showsTabLabels(379))
+        assertTrue(showsTabLabels(380))
+        assertTrue(showsTabLabels(411)) // Pixel
+    }
+
     @Test
     fun `every section in bar order whatever order the source lists them in`() {
         assertEquals(
