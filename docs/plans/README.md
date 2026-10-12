@@ -17,7 +17,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
 | 2026-10-11 | [Public release and F-Droid readiness](./20261011_public-release-fdroid-readiness-plan.md) | Audit and plan to make the app releasable to the public and acceptable to F-Droid: license, FOSS dependencies (ML Kit, requery, FFmpeg), separate package IDs, reproducible signed builds, privacy, first-run UX and copy | On hold (2026-10-11): Phases 1, 2, 4 and 6 done; 3, 5, 7 and 8 not started; decisions D1–D11 made; public repo starts from a fresh squashed snapshot as the last step |
-| 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
+| 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5 in progress (2026-10-12): TV Compose allocations and Coil contention (profiled on a Shield first), more Compose UI tests (Robolectric, on the JVM); Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
 
 ## Archive

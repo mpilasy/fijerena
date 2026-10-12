@@ -1,6 +1,6 @@
 # Codebase Robustness & Technical Debt Plan
 
-**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-3 (single-return sweeps) dropped by the user 2026-10-03, the AGENTS.md rule stays for new code; Phases 4-5 not started. Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
+**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-3 (single-return sweeps) dropped by the user 2026-10-03, the AGENTS.md rule stays for new code; Phases 4-5 in progress (started 2026-10-12): Phase 4 measured first with a Perfetto trace on a Shield (mdarcy), changes only where the trace shows a cost; Phase 5 as Robolectric Compose tests on the JVM (user decision: `connectedAndroidTest` uninstalls the app and wipes the device's data). Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
 **Date:** 2026-09-14  
 **Scope:** Full codebase review (`core:player`, `core:network`, `core:ui`, `core:data`, `core:navigation`, `tv`, `mobile`)
 
@@ -81,14 +81,14 @@ graph TD
   2. Refactor while preserving coroutine cancellation propagation (`if (e is CancellationException) throw e`).
   3. Verify with `./gradlew :core:network:testDebugUnitTest`.
 
-### Phase 4: Android TV UI Compose Allocations & Image Contention (P2)
+### Phase 4: Android TV UI Compose Allocations & Image Contention (P2) — in progress
 - **Goal:** Mitigate GC spikes during category browsing on Android TV.
 - **Tasks:**
   1. Hoist allocations out of composables in `tv/.../feature/category/` and `tv/.../feature/livetv/`.
   2. Profile Coil channel logo loading under `Dispatchers.IO` to reduce `DiskLruCache` worker lock contention.
   3. Validate against measured baselines on hardware (NVIDIA Shield / Sony Bravia).
 
-### Phase 5: Compose UI Instrumented Testing Expansion (P3)
+### Phase 5: Compose UI Instrumented Testing Expansion (P3) — in progress, as Robolectric JVM tests
 - **Goal:** Protect fragile UI lifecycle and focus handoffs from regression.
 - **Tasks:**
   1. Expand `tv/src/androidTest` to cover Live TV category selection, focus recovery on back-navigation, and modal dismissals.
