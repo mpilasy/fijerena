@@ -126,8 +126,8 @@ fun showsTabLabels(widthDp: Int): Boolean = widthDp >= TAB_LABELS_MIN_WIDTH_DP
 
 /**
  * Material's navigation bar, [selected] highlighted: icon with its name under it on every tab, or
- * icons only on a narrow screen ([showsTabLabels], read live so it follows rotation) — the name
- * then shows in a tooltip on long-press and is the icon's content description.
+ * icons only on a narrow screen ([showsTabLabels]) — the name then shows in a tooltip on long-press
+ * and is the icon's content description.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
