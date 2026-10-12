@@ -188,6 +188,7 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.RequestOrientation
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -540,11 +541,7 @@ fun MobileCategoryListScreen(
     // dock has a real portrait layout too.
     if (isLiveTv && target != null) {
         val activity = context as? Activity
-        DisposableEffect(activity) {
-            val original = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
-            onDispose { activity?.requestedOrientation = original }
-        }
+        RequestOrientation(activity, ActivityInfo.SCREEN_ORIENTATION_SENSOR)
     }
 
     val isInPip = dockPlayback?.isInPictureInPictureMode?.collectAsStateWithLifecycle()?.value == true

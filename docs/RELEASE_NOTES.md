@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Catch-up stays in landscape
+**Release Date:** 2026-10-11
+
+- **Start over stays full screen in landscape (phone):** Start over from a live channel in full screen used to drop the catch-up to portrait; it now stays landscape. Watch live from a catch-up opened in the guide lets the Live TV dock rotate again, and Home from a catch-up no longer leaves the app rotating.
+
 ## Version: Watched follow-ups
 **Release Date:** 2026-10-11
 

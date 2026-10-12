@@ -95,6 +95,7 @@ import org.njarasoa.fijerena.feature.player.components.MobileUpNextOverlay
 import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
 import org.njarasoa.fijerena.feature.player.components.SlowConnectionBanner
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
+import org.njarasoa.fijerena.ui.components.RequestOrientation
 
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
 
@@ -307,13 +308,7 @@ fun MobilePlayerContent(
     // portrait-locked and even if system auto-rotate is off. SENSOR_LANDSCAPE (not plain
     // LANDSCAPE) still follows the sensor between landscape-left/landscape-right, it just never
     // flips to portrait.
-    DisposableEffect(activity) {
-        val originalOrientation = activity?.requestedOrientation ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose {
-            activity?.requestedOrientation = originalOrientation
-        }
-    }
+    RequestOrientation(activity, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
 
     // Immersive while in the full-screen player: the status and navigation bars are hidden, even
     // while the controls show — a swipe from an edge brings them back for a moment. Leaving the
