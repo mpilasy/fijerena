@@ -116,7 +116,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * in `bodyMedium`.
  */
 @Immutable
-private data class StreamCardStyle(
+internal data class StreamCardStyle(
     val colors: CardColors,
     val border: CardBorder,
     val cardScale: CardScale,
@@ -128,7 +128,7 @@ private data class StreamCardStyle(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun streamCardStyle(): StreamCardStyle =
+internal fun streamCardStyle(): StreamCardStyle =
     StreamCardStyle(
         colors = TvListRowDefaults.colors(),
         border = TvListRowDefaults.border(),
@@ -599,8 +599,9 @@ private fun SeparatorRow(name: String) {
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
+// internal, not private: StreamItemTest (Robolectric) checks the row's one accessibility node.
 @Composable
-private fun StreamItem(
+internal fun StreamItem(
     item: MediaItem,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
