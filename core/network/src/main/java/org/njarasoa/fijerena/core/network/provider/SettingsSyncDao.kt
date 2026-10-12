@@ -199,6 +199,13 @@ interface SettingsSyncDao {
         itemKey: String,
     ): SettingsVersionEntity?
 
+    /** The clock of this device's version of a setting record, if it has one. */
+    @Query("SELECT hlc FROM sync_version WHERE kind = 'setting' AND profileId = :profileId AND itemKey = :itemKey")
+    suspend fun settingVersion(
+        profileId: String,
+        itemKey: String,
+    ): Long?
+
     @Query("SELECT hlc FROM sync_clock WHERE id = ${SyncClockEntity.SINGLE_ROW}")
     suspend fun clock(): Long
 

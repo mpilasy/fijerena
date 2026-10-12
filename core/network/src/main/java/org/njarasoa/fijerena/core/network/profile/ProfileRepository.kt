@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersStore
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import java.util.UUID
 
@@ -51,23 +52,35 @@ class ProfileRepository(
     /**
      * See [AppSettings.copyLegacyDevModeToProfiles],
      * [AppSettings.moveLegacySearchHistoryToDefaultProfile] and
-     * [AppSettings.seedProfileSourcesOnce] and [AppSettings.queueProfileSourceRecordsOnce]; run once
-     * at startup.
+     * [AppSettings.seedProfileSourcesOnce] and [seedProfileSourceRecordsOnce]; run once at startup.
      */
     suspend fun migrateLegacyProfileSettings() {
         val settings = AppSettings(context)
         settings.copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
         settings.moveLegacySearchHistoryToDefaultProfile()
         ProviderRepository(context).seedProfileSourcesOnce()
-        settings.queueProfileSourceRecordsOnce(
-            dao.getAll().map { it.id },
-            SettingsDatabase
-                .getInstance(context)
-                .providerDao()
-                .getAllProvidersList()
-                .map { it.providerKey }
-                .toSet(),
-        )
+        seedProfileSourceRecordsOnce(settings)
+    }
+
+    /**
+     * One-time upgrade: a device linked before a profile's sources synced per source has none of
+     * those records (linking seeds them only once). Seeds one per profile and per source it has on
+     * or knows, as this device has it — at the clock of the whole-list record it replaces, the way
+     * linking seeds each item at its own last-change time, so a newer change made on another
+     * device before this one upgraded still wins. A profile whose list never synced from here has
+     * no such record and waits for linking.
+     */
+    private suspend fun seedProfileSourceRecordsOnce(settings: AppSettings) {
+        if (settings.profileSourceRecordsQueued) return
+        val database = SettingsDatabase.getInstance(context)
+        val sync = database.settingsSyncDao()
+        val providerKeys = database.providerDao().getAllProvidersList().map { it.providerKey }
+        dao.getAll().forEach { profile ->
+            val on = settings.profileSourceKeys(profile.id) ?: return@forEach
+            val at = sync.settingVersion(profile.id, AppSettings.LEGACY_PROFILE_SOURCES_SETTING) ?: return@forEach
+            (on + providerKeys).forEach { sync.seed(SyncKind.SETTING, profile.id, AppSettings.profileSourceSettingKey(it), at) }
+        }
+        settings.profileSourceRecordsQueued = true
     }
 
     /** Why [deleteProfile] refused, or [NONE] when it went ahead. */

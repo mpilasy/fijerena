@@ -108,6 +108,9 @@ class AppSettings(
 
         fun profileSourceSettingKey(providerKey: String) = PROFILE_SOURCE_SETTING_PREFIX + providerKey
 
+        /** The whole-list setting key a build before per-source records synced. */
+        const val LEGACY_PROFILE_SOURCES_SETTING = KEY_PROFILE_SOURCES
+
         private val sourceKeysSerializer = ListSerializer(String.serializer())
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
@@ -251,22 +254,12 @@ class AppSettings(
     }
 
     /**
-     * One-time upgrade: a device linked before a profile's sources synced per source has none of
-     * those records yet (linking seeds them only once). Queues one per profile with stored sources
-     * and per source in [providerKeys] or on for it, each as this device has it now. Not linked, the
-     * queued versions simply wait for the link.
+     * One-time upgrade flag: whether this device has seeded the per-source `profile_source:<key>`
+     * records (see `ProfileRepository.migrateLegacyProfileSettings`).
      */
-    fun queueProfileSourceRecordsOnce(
-        profileIds: List<String>,
-        providerKeys: Set<String>,
-    ) {
-        if (prefs.getBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, false)) return
-        profileIds.forEach { profileId ->
-            val on = profileSourceKeys(profileId) ?: return@forEach
-            (on + providerKeys).forEach { SettingsSyncQueue.setting(context, profileSourceSettingKey(it), profileId) }
-        }
-        prefs.edit { putBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, true) }
-    }
+    var profileSourceRecordsQueued: Boolean
+        get() = prefs.getBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, false)
+        set(value) = prefs.edit { putBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, value) }
 
     /** Drops a deleted profile's sources. */
     fun removeProfileSources(profileId: String) = prefs.edit { remove(profileKey(KEY_PROFILE_SOURCES, profileId)) }
