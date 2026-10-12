@@ -71,6 +71,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+    testOptions {
+        unitTests {
+            // Robolectric Compose tests read the app's resources (strings, themes).
+            isIncludeAndroidResources = true
+        }
+    }
     lint {
         baseline = file("lint-baseline.xml")
         disable.add("UnsafeOptInUsageError")
@@ -143,6 +149,13 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
+    // Compose UI tests on the JVM (Robolectric), no device: connectedAndroidTest uninstalls the
+    // app and wipes the device's data (docs/plans/20260914_codebase-robustness-plan.md, Phase 5).
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

@@ -260,7 +260,7 @@ fun EpisodeSelectionScreen(
     }
 }
 
-// internal, not private: exercised directly by EpisodeSelectionScreenTest (androidTest) with a
+// internal, not private: exercised directly by EpisodeSelectionScreenTest (Robolectric) with a
 // fake SeriesDetail/MediaRepository, bypassing the ViewModel/DI it would otherwise need — see
 // docs/plans/archive/20260908_episode-selection-fragility-plan.md.
 @Composable

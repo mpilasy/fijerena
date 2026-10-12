@@ -29,12 +29,7 @@ jobs:
             profile: pixel_6
             build: ':core:network:assembleDebugAndroidTest :mobile:assembleDebug :mobile:assembleDebugAndroidTest'
             tasks: ':core:network:connectedDebugAndroidTest :mobile:connectedDebugAndroidTest'
-          - name: TV (tv)
-            target: android-tv
-            arch: x86
-            profile: tv_1080p
-            build: ':tv:assembleDebug :tv:assembleDebugAndroidTest'
-            tasks: ':tv:connectedDebugAndroidTest'
+          # No TV job: the TV's Compose UI tests run on the JVM with Robolectric (unit tests).
 
     steps:
       - name: Checkout repository

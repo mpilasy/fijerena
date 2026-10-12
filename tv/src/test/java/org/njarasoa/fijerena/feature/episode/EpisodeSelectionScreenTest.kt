@@ -17,7 +17,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.robolectric.RobolectricTestRunner
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -45,7 +45,7 @@ import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
  * registry on return) without needing real navigation or a player.
  */
 @OptIn(ExperimentalTestApi::class)
-@RunWith(AndroidJUnit4::class)
+@RunWith(RobolectricTestRunner::class)
 class EpisodeSelectionScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()

@@ -95,8 +95,9 @@ CI runs on every push to `main`, or by hand (`workflow_dispatch`), in three work
   (`gradle/gradle-daemon-jvm.properties`).
 - `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
 - `instrumented-tests.yml`, nightly at 06:17 UTC or by hand: `connectedDebugAndroidTest` for
-  `core:network` and `mobile` on a phone emulator and for `tv` on an Android TV emulator (API 34),
-  with the test reports uploaded as artifacts.
+  `core:network` and `mobile` on a phone emulator, with the test reports uploaded as artifacts.
+  The TV's Compose UI tests run on the JVM with Robolectric, among the unit tests
+  (`tv/src/test/resources/robolectric.properties`: a plain `Application`, a 960 × 540 dp TV screen).
 
 `./gradlew connectedAndroidTest` uninstalls the app and wipes its data on every connected device —
 only with real devices disconnected, or one emulator targeted with `ANDROID_SERIAL`.
