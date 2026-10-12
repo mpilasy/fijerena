@@ -138,6 +138,7 @@ import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
 import org.njarasoa.fijerena.core.player.domain.sourceKey
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -183,6 +184,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
+import org.njarasoa.fijerena.core.ui.viewmodels.isSameChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
@@ -346,18 +348,23 @@ fun MobileCategoryListScreen(
 
     // Auto-seed the dock so entry never lands on a bare list — mirrors TV's
     // LiveTvSplitLayout: an explicit initialStreamId (search/EPG deep link) wins, otherwise
-    // fall back to the app-wide last-played channel so a bare "Live TV" tap from the main menu
-    // still lands on something.
+    // fall back to the last channel watched — the newest of the profile's sources' own, on its
+    // source (multi-source plan, Phase 5) — so a bare "Live TV" tap from the main menu still lands
+    // on something.
     if (isLiveTv && !hasSeededDock) {
         val seedState = uiState
         LaunchedEffect(seedState) {
             if (seedState is CategoryViewModel.UiState.Success) {
+                val last = if (initialStreamId == null) viewModel.lastWatchedChannel() else null
                 val seedId = initialStreamId ?: seedState.lastPlayedItemId
                 // Never a provider's separator row: a heading has nothing to play.
-                seedState.streams?.firstOrNull { it.id == seedId && !it.isSeparatorRow }?.let { seed ->
-                    hasSeededDock = true
-                    dockTarget = seed
-                }
+                seedState.streams
+                    ?.firstOrNull { item ->
+                        !item.isSeparatorRow && if (last != null) item.isSameChannel(last, viewModel.sourceId) else item.id == seedId
+                    }?.let { seed ->
+                        hasSeededDock = true
+                        dockTarget = seed
+                    }
             }
         }
     }
@@ -423,9 +430,14 @@ fun MobileCategoryListScreen(
         }
     }
 
+    // The docked channel plays from its own source (multi-source plan, Phase 5): Recent and
+    // Favourites mix the profile's sources, and a channel of another one gets that source's loader.
+    // A swipe in full screen zaps within the loader's own source.
     val dockLoader: StreamLoaderViewModel? =
         if (isLiveTv && target != null) {
+            val dockSource = target.sourceOr(viewModel.sourceId)
             viewModel(
+                key = "dockLoader:$dockSource",
                 factory =
                     StreamLoaderViewModelFactory(
                         context = context,
@@ -433,12 +445,21 @@ fun MobileCategoryListScreen(
                         initialStreamName = target.name,
                         categoryId = target.categoryId,
                         contentType = contentType,
-                        providerId = viewModel.providerId,
+                        providerId = dockSource,
                     ),
             )
         } else {
             null
         }
+    // The loader a channel of another source took over from: nothing of it may land any more (its
+    // delayed Recent write would record a channel no longer playing).
+    var activeDockLoader by remember { mutableStateOf<StreamLoaderViewModel?>(null) }
+    LaunchedEffect(dockLoader) {
+        if (dockLoader != null) {
+            activeDockLoader?.takeIf { it !== dockLoader }?.abandon()
+            activeDockLoader = dockLoader
+        }
+    }
     val dockLoaderState = dockLoader?.state?.collectAsStateWithLifecycle()?.value
     val dockSuccess = dockLoaderState as? StreamLoaderViewModel.StreamState.Success
     // Mirrors TV's previewPlaybackState (LiveTvSplitLayout.kt) — used by the landscape split to
@@ -446,7 +467,7 @@ fun MobileCategoryListScreen(
     val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
 
     if (target != null && dockLoader != null) {
-        LaunchedEffect(target.id) {
+        LaunchedEffect(target.sourceKey) {
             // Skip re-resolving if this is already the loaded stream (e.g. promoting an
             // already-docked channel to full screen) — same call-site guard TV's
             // LiveTvSplitLayout.onStreamPromote uses instead of a VM/service-level dedup guard.
@@ -813,7 +834,7 @@ fun MobileCategoryListScreen(
                                     } else if (listSource == PreviewListSource.FAVORITES) {
                                         favoriteStreams
                                     } else {
-                                        recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
+                                        recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE, viewModel.sourceId)
                                     }
                                 val displayedStreamsLoading =
                                     if (target == null) {

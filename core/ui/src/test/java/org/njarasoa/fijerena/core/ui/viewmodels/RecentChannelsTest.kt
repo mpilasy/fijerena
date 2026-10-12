@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 
 class RecentChannelsTest {
     private fun channel(id: String) =
@@ -98,8 +99,31 @@ class RecentChannelsTest {
     }
 
     @Test
+    fun theSameIdOnTwoSourcesHoldsTwoPlacesInTheOrder() {
+        // Recent mixes the profile's sources (multi-source plan, Phase 5): each row keeps its place.
+        val shown = listOf(channel("bbc").copy(providerId = 1), channel("bbc").copy(providerId = 2), channel("cnn").copy(providerId = 1))
+        val order = shown.stableOrder(emptyList())
+        // Source 2's bbc played again: published first, but it stays where it was on screen.
+        val republished = listOf(shown[1], shown[0], shown[2])
+
+        assertEquals(listOf(1L, 2L, 1L), republished.inStableOrder(republished.stableOrder(order)).map { it.providerId })
+        assertEquals(3, republished.inDisplayOrderOf(shown).size)
+    }
+
+    @Test
+    fun theCurrentChannelIsItsIdOnItsSource() {
+        val list = listOf(channel("bbc").copy(providerId = 1))
+        val otherSource = channel("bbc").copy(providerId = 2)
+
+        assertEquals(listOf(2L, 1L), list.withCurrentChannel(otherSource, CurrentChannelPolicy.INCLUDE).map { it.providerId })
+        assertEquals(list, list.withCurrentChannel(otherSource, CurrentChannelPolicy.EXCLUDE))
+        // A catalogue row (source 0) is on the list's own source.
+        assertEquals(list, list.withCurrentChannel(channel("bbc"), CurrentChannelPolicy.INCLUDE, listSource = 1))
+    }
+
+    @Test
     fun stableOrderPutsNewRowsFirstAndKeepsTheRest() {
-        val order = listOf("bbc", "cnn")
+        val order = listOf(channel("bbc"), channel("cnn")).map { it.sourceKey }
         val republished = listOf(channel("cnn"), channel("tf1"), channel("bbc"))
         assertEquals(listOf("tf1", "bbc", "cnn"), republished.inStableOrder(republished.stableOrder(order)).map { it.id })
     }

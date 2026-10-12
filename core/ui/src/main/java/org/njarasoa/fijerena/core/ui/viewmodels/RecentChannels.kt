@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceKey
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 
 /** How a Recent channel list treats the channel that is currently previewing or playing. */
 enum class CurrentChannelPolicy {
@@ -34,23 +36,25 @@ enum class CurrentChannelPolicy {
  * about to press jumps somewhere else. Freezing the order while the list is displayed keeps it
  * predictable; it is re-sorted the next time the list is opened or explicitly refreshed.
  */
-fun List<MediaItem>.inDisplayOrderOf(displayed: List<MediaItem>): List<MediaItem> = inStableOrder(stableOrder(displayed.map { it.id }))
+fun List<MediaItem>.inDisplayOrderOf(displayed: List<MediaItem>): List<MediaItem> =
+    inStableOrder(stableOrder(displayed.map { it.sourceKey }))
 
 /**
- * The display order [order] (row ids) extended with this list: ids it doesn't know yet go first,
- * in this list's order; known ids keep their places — including ids no longer in the list, so a
- * row removed and then put back by an Undo returns to where it was, not to the top
+ * The display order [order] (row keys, `MediaItem.sourceKey`: Recent mixes the profile's sources,
+ * and the same id on two of them is two rows) extended with this list: keys it doesn't know yet go
+ * first, in this list's order; known keys keep their places — including keys no longer in the
+ * list, so a row removed and then put back by an Undo returns to where it was, not to the top
  * (docs/plans/archive/20261009_tv-recents-favorites-plan.md → B, "The list doesn't move while you use it").
  */
 fun List<MediaItem>.stableOrder(order: List<String>): List<String> {
     val known = order.toHashSet()
-    return mapNotNull { it.id.takeUnless(known::contains) } + order
+    return mapNotNull { it.sourceKey.takeUnless(known::contains) } + order
 }
 
-/** This list sorted by [order] (from [stableOrder]); ids missing from it go first. */
+/** This list sorted by [order] (from [stableOrder]); rows missing from it go first. */
 fun List<MediaItem>.inStableOrder(order: List<String>): List<MediaItem> {
-    val positions = order.withIndex().associate { (index, id) -> id to index }
-    return sortedBy { positions[it.id] ?: -1 }
+    val positions = order.withIndex().associate { (index, key) -> key to index }
+    return sortedBy { positions[it.sourceKey] ?: -1 }
 }
 
 /**
@@ -63,7 +67,7 @@ fun rememberStableRecentOrder(
     items: List<MediaItem>,
     resetKey: Any? = Unit,
 ): List<MediaItem> {
-    var order by remember(resetKey) { mutableStateOf(items.map { it.id }) }
+    var order by remember(resetKey) { mutableStateOf(items.map { it.sourceKey }) }
     var displayed by remember(resetKey) { mutableStateOf(items) }
     LaunchedEffect(items, resetKey) {
         order = items.stableOrder(order)
@@ -72,14 +76,24 @@ fun rememberStableRecentOrder(
     return displayed
 }
 
-/** Applies [policy] to this Recent list. A null [current] leaves the list untouched. */
+/**
+ * Applies [policy] to this Recent list. A null [current] leaves the list untouched. The channel is
+ * the same id on the same source; a row or [current] that leaves its source 0 is on [listSource].
+ */
 fun List<MediaItem>.withCurrentChannel(
     current: MediaItem?,
     policy: CurrentChannelPolicy,
+    listSource: Long = 0L,
 ): List<MediaItem> =
     when {
         current == null -> this
-        policy == CurrentChannelPolicy.EXCLUDE -> filter { it.id != current.id }
-        any { it.id == current.id } -> this
+        policy == CurrentChannelPolicy.EXCLUDE -> filterNot { it.isSameChannel(current, listSource) }
+        any { it.isSameChannel(current, listSource) } -> this
         else -> listOf(current) + this
     }
+
+/** The same channel: its id on its source, a row that leaves its source 0 being on [listSource]. */
+fun MediaItem.isSameChannel(
+    other: MediaItem,
+    listSource: Long = 0L,
+): Boolean = id == other.id && sourceOr(listSource) == other.sourceOr(listSource)

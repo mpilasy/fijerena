@@ -599,6 +599,15 @@ class StreamLoaderViewModel(
             }
     }
 
+    /**
+     * Another loader takes over (the next channel is on another source, multi-source plan Phase 5):
+     * nothing pending here may still land — the load, its guide lookup, the delayed Recent write.
+     */
+    fun abandon() {
+        cancelLoads()
+        historyJob?.cancel()
+    }
+
     fun retryLastLoad() {
         if (lastLoadRequest != null) {
             loadStream(lastLoadRequest!!, lastLoadZapped)

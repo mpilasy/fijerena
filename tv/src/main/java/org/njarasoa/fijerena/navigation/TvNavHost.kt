@@ -45,9 +45,10 @@ import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
-import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
@@ -119,9 +120,9 @@ fun TvNavHost(
     // The navigation rail (docs/plans/archive/20261008_tv-nav-rail-plan.md): drawn over the NavHost, given to
     // every screen as LocalTvNavRail.
     val rail = remember { TvNavRailState() }
-    // A fresh Live TV opens its preview on this channel (see openSection): read once by the
-    // section's first composition. Lost with the process, which only means browse instead.
-    var liveTvOpenOn by remember { mutableStateOf<String?>(null) }
+    // A fresh Live TV opens its preview on this channel (see openSection), on its source: read once
+    // by the section's first composition. Lost with the process, which only means browse instead.
+    var liveTvOpenOn by remember { mutableStateOf<MediaItem?>(null) }
 
     // Settings and its screens on top aren't a section's place: dropped before a pick, not saved.
     fun popSettingsTree() {
@@ -167,7 +168,8 @@ fun TvNavHost(
     fun openSection(section: TvSection) {
         if (section == TvSection.LIVE_TV) {
             coroutineScope.launch {
-                liveTvOpenOn = AppContainer.getInstance(context).getMediaRepository().getLastItemId(ContentType.LIVE_TV)
+                // The newest of the profile's sources' last channels (multi-source plan, Phase 5).
+                liveTvOpenOn = MergedLists.forProfile(context).lastWatchedChannel()
                 showSection(section)
             }
         } else {
@@ -324,11 +326,14 @@ fun TvNavHost(
         closeSavedLivePreview: Boolean = false,
         // The list's source (0 = the active one); every route it opens stays on it.
         providerId: Long = 0L,
+        // initialStreamId's source when it isn't the list's (0 = the list's).
+        initialStreamSource: Long = 0L,
     ) {
         TvCategoryGridScreen(
             contentType = contentType,
             initialCategoryId = initialCategoryId,
             initialStreamId = initialStreamId,
+            initialStreamSource = initialStreamSource,
             showPreviewPane = showPreviewPane,
             closeSavedLivePreview = closeSavedLivePreview,
             providerId = providerId,
@@ -452,7 +457,8 @@ fun TvNavHost(
         }
         CategoryGrid(
             contentType = section.contentType,
-            initialStreamId = openOn,
+            initialStreamId = openOn?.id,
+            initialStreamSource = openOn?.providerId ?: 0L,
             showPreviewPane = false,
             closeSavedLivePreview = closeSavedPreview,
         )

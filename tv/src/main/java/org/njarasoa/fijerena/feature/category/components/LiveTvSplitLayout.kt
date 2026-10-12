@@ -45,6 +45,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.sourceKey
+import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -68,6 +70,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
+import org.njarasoa.fijerena.core.ui.viewmodels.isSameChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -115,8 +118,10 @@ internal fun LiveTvSplitLayout(
     onBack: () -> Unit,
     onHome: () -> Unit,
     initialStreamId: String? = null,
-    /** Called with the channel this screen plays each time that changes, for Back (LT6). */
-    onPlayingChannel: (streamId: String) -> Unit = {},
+    /** [initialStreamId]'s source, when it was picked from a list that mixes sources; 0 = this list's. */
+    initialStreamSource: Long = 0L,
+    /** Called with the channel this screen plays (and its source) each time that changes, for Back (LT6). */
+    onPlayingChannel: (streamId: String, providerId: Long) -> Unit = { _, _ -> },
     /**
      * Opens the TV Guide for a list on a channel's row — the full-screen OSD's Guide button (GD5).
      * Null (the source has no guide) leaves the button out.
@@ -130,6 +135,9 @@ internal fun LiveTvSplitLayout(
 ) {
     val context = LocalContext.current
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
+    // This list's own source; a row that leaves its source 0 is on it. Recent and Favourites mix
+    // the profile's sources, each row on its own (multi-source plan, Phases 4–5).
+    val listSource = categoryViewModel.sourceId
 
     // The channel the preview plays: set by the entry seed below and by OK on a row (P8 of
     // docs/plans/archive/20261003_sources-guide-profiles-plan.md) — focus moves never change it, so moving
@@ -150,15 +158,21 @@ internal fun LiveTvSplitLayout(
     LaunchedEffect(streams) {
         if (hasSeeded || previewTarget != null) return@LaunchedEffect
         val list = streams ?: return@LaunchedEffect
+
+        // The channel on the source it was asked on, else the same id on any source of the list.
+        fun channel(
+            id: String,
+            source: Long,
+        ): MediaItem? = list.firstOrNull { it.id == id && it.sourceOr(listSource) == source } ?: list.firstOrNull { it.id == id }
         // The last channel only when no channel was asked for: a requested one this list doesn't have
         // (its category hidden by the profile, so the list is Recent) must not play the last channel
         // watched instead (docs/plans/archive/20261007_guide-watch-wrong-channel-plan.md, fix 1).
         val seed =
             if (guideReturnStreamId != null || initialStreamId != null) {
-                guideReturnStreamId?.let { id -> list.firstOrNull { it.id == id } }
-                    ?: initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
+                guideReturnStreamId?.let { id -> channel(id, listSource) }
+                    ?: initialStreamId?.let { id -> channel(id, initialStreamSource.takeIf { it != 0L } ?: listSource) }
             } else {
-                lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
+                lastPlayedItemId?.let { id -> channel(id, listSource) }
             }
         // A channel asked for by id and not in this list yet waits for the next one: after process
         // death the list comes back as Recent first, then the category the preview was on.
@@ -253,8 +267,8 @@ internal fun LiveTvSplitLayout(
     // Browse, rebuilt when Back closes this layer, lands on this channel (LT6) — the one tuned
     // now, after any zap or retune, not the one that opened the preview.
     val currentOnPlayingChannel by rememberUpdatedState(onPlayingChannel)
-    LaunchedEffect(target?.id) {
-        target?.id?.let { currentOnPlayingChannel(it) }
+    LaunchedEffect(target?.sourceKey) {
+        target?.let { currentOnPlayingChannel(it.id, it.sourceOr(listSource)) }
     }
     // INCLUDE keeps the current channel reachable even before the delayed history write lands,
     // so there's always a row to OK-press for promote, and a zap neighbour. Not done for
@@ -264,8 +278,8 @@ internal fun LiveTvSplitLayout(
     // re-runs its `remember(streams)` blocks — re-arming the entrance animation for every
     // visible row and, with it, a per-frame invalidateMeasurement loop.
     val recentWithCurrent =
-        remember(recentStreams, target?.id) {
-            ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE))
+        remember(recentStreams, target?.sourceKey) {
+            ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE, listSource))
         }
     val favoriteList = remember(favoriteStreams) { ImmutableMediaList(favoriteStreams) }
 
@@ -341,8 +355,13 @@ internal fun LiveTvSplitLayout(
     val playback: PlaybackViewModel = viewModel()
     val previewPlaybackState by playback.playbackState.collectAsStateWithLifecycle()
 
+    // The channel plays from its own source (multi-source plan, Phase 5): a pick from Recent or
+    // Favourites on another source gets that source's loader, made on the channel. Up/Down never
+    // leaves the playing channel's source (neighborChannel), so a zap keeps the loader.
+    val targetSource = target.sourceOr(listSource)
     val loader: StreamLoaderViewModel =
         viewModel(
+            key = "loader:$targetSource",
             factory =
                 StreamLoaderViewModelFactory(
                     context = context,
@@ -350,9 +369,23 @@ internal fun LiveTvSplitLayout(
                     initialStreamName = target.name,
                     categoryId = target.categoryId,
                     contentType = contentType,
-                    providerId = categoryViewModel.providerId,
+                    providerId = targetSource,
                 ),
         )
+    // The loader a pick on another source left: nothing of it may land any more (its delayed
+    // Recent write would record a channel no longer playing). One of this source used earlier in
+    // the layer is still on its old channel: it loads this one (the effect below skips full screen).
+    var activeLoader by remember { mutableStateOf<StreamLoaderViewModel?>(null) }
+    LaunchedEffect(loader) {
+        val previous = activeLoader
+        activeLoader = loader
+        if (previous != null && previous !== loader) {
+            previous.abandon()
+            if (loader.requestedStreamId != target.id) {
+                if (fullScreen) loader.loadStream(target) else loader.loadStreamLight(target)
+            }
+        }
+    }
     val streamState by loader.state.collectAsStateWithLifecycle()
     val success = streamState as? StreamLoaderViewModel.StreamState.Success
 
@@ -390,7 +423,7 @@ internal fun LiveTvSplitLayout(
     // loads for the same channel on the same loader/loadJob (duplicate DB/EPG work per switch).
     // Also skipped for the channel the loader was constructed with, which it is already
     // resolving — otherwise every entry into the preview resolved the same stream and EPG twice.
-    LaunchedEffect(target.id) {
+    LaunchedEffect(target.sourceKey) {
         if (!fullScreen && loader.requestedStreamId != target.id) {
             loader.loadStreamLight(target)
         }
@@ -560,7 +593,7 @@ internal fun LiveTvSplitLayout(
                     val reopenOn =
                         remember {
                             if (!contextLoading && contextStreams?.isEmpty() == true) {
-                                contextTabs.firstOrNull { tab -> streamsOf(tab)?.any { it.id == target.id } == true }
+                                contextTabs.firstOrNull { tab -> streamsOf(tab)?.any { it.isSameChannel(target, listSource) } == true }
                             } else {
                                 null
                             }
@@ -592,9 +625,10 @@ internal fun LiveTvSplitLayout(
                             onStreamPromote = { newItem ->
                                 // Switching channels while already full-screen is a real "commit to
                                 // watching" — use the full loadStream (with side effects), still on
-                                // the SAME loader/engine.
+                                // the SAME loader/engine. A channel of another source gets its own
+                                // loader, which starts on it.
                                 previewTarget = newItem
-                                loader.loadStream(newItem)
+                                if (newItem.sourceOr(listSource) == targetSource) loader.loadStream(newItem)
                                 close()
                             },
                             onRefresh = refreshContext,
@@ -604,13 +638,13 @@ internal fun LiveTvSplitLayout(
                     }
                 },
                 onNextChannel = {
-                    neighborChannel(contextStreams, target.id, +1)?.let { newItem ->
+                    neighborChannel(contextStreams, target, +1, listSource)?.let { newItem ->
                         previewTarget = newItem
                         loader.loadStream(newItem, zapped = true)
                     }
                 },
                 onPreviousChannel = {
-                    neighborChannel(contextStreams, target.id, -1)?.let { newItem ->
+                    neighborChannel(contextStreams, target, -1, listSource)?.let { newItem ->
                         previewTarget = newItem
                         loader.loadStream(newItem, zapped = true)
                     }
@@ -753,7 +787,7 @@ internal fun LiveTvSplitLayout(
                     // OK on another row plays it here: the target change re-points the SAME
                     // loader/engine (loadStreamLight above) — still only one connection ever.
                     // OK on the row playing goes full screen.
-                    if (item.id != target.id) {
+                    if (!item.isSameChannel(target, listSource)) {
                         previewTarget = item
                     } else {
                         // Upgrade from the dock's light load (empty categoryStreams/
@@ -774,21 +808,26 @@ internal fun LiveTvSplitLayout(
 }
 
 /**
- * Computes the channel next to [currentId] in [streams], wrapping around. Used for full-screen
+ * Computes the channel next to [current] in [streams], wrapping around. Used for full-screen
  * Up/Down channel switching — computed off the currently-displayed list rather than the loader's
  * internal index, which [StreamLoaderViewModel.loadStreamLight] (the preview re-point path) never
  * keeps in sync with what's actually on screen. Separator rows are skipped: a heading is never
- * zapped to (TV UI audit #24).
+ * zapped to (TV UI audit #24). So are channels of other sources than [current]'s (Recent and
+ * Favourites mix the profile's sources): Up/Down stays on the playing channel's source, in the
+ * list's order, wrapping within it (multi-source plan, Q4). A row that leaves its source 0 is on
+ * [listSource].
  */
-private fun neighborChannel(
-    streams: ImmutableMediaList?,
-    currentId: String,
+internal fun neighborChannel(
+    streams: List<MediaItem>?,
+    current: MediaItem,
     direction: Int,
+    listSource: Long = 0L,
 ): MediaItem? {
-    val list = streams?.filterNot { it.isSeparatorRow }?.takeIf { it.isNotEmpty() }
+    val source = current.sourceOr(listSource)
+    val list = streams?.filter { !it.isSeparatorRow && it.sourceOr(listSource) == source }?.takeIf { it.isNotEmpty() }
     val neighbor =
         list?.let {
-            val currentIndex = it.indexOfFirst { item -> item.id == currentId }.takeIf { index -> index != -1 } ?: 0
+            val currentIndex = it.indexOfFirst { item -> item.isSameChannel(current, listSource) }.takeIf { index -> index != -1 } ?: 0
             it[(currentIndex + direction).mod(it.size)]
         }
     return neighbor

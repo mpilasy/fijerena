@@ -1073,6 +1073,12 @@ class CategoryViewModel(
      * toggling between the two without disturbing the selected/browsed category. Every source's.
      */
     suspend fun getFavoritesSnapshot(): List<MediaItem> = awaitMerged().favorites(contentType)
+
+    /**
+     * Live TV's last channel watched: each of the profile's sources has its own, the newest of
+     * them, on its source (multi-source plan, Phase 5). Null off Live TV or with none.
+     */
+    suspend fun lastWatchedChannel(): MediaItem? = if (contentType == ContentType.LIVE_TV) awaitMerged().lastWatchedChannel() else null
 }
 
 /** Splits into (virtual, regular) categories — single pass instead of two filters. */

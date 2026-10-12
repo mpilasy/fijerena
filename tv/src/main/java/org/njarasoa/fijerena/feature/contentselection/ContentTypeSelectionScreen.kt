@@ -1268,13 +1268,14 @@ private suspend fun loadFavorites(
     supportedContentTypes: Set<String>,
 ): List<MediaItem> = if (contentType in supportedContentTypes) merged.favorites(contentType) else emptyList()
 
-/** The Channels row for the active profile: last watched, then Recent. */
+/**
+ * The Channels row for the active profile: last watched — the newest of its sources' last channels
+ * (multi-source plan, Phase 5) — then Recent.
+ */
 private suspend fun loadLiveRow(merged: MergedLists): List<LiveRowEntry> =
-    mergeLiveRow(
-        lastItemId = merged.primary.getLastItemId(ContentType.LIVE_TV),
-        recent = merged.recent(ContentType.LIVE_TV),
-        lastSource = merged.primary.getProviderId(),
-    )
+    merged.lastWatchedChannel().let { last ->
+        mergeLiveRow(lastItemId = last?.id, recent = merged.recent(ContentType.LIVE_TV), lastSource = last?.providerId)
+    }
 
 /** The list a Live card zaps through once opened: Favorites from Favorite channels, Recent from Channels. */
 private fun zapListId(entry: LiveRowEntry): String =

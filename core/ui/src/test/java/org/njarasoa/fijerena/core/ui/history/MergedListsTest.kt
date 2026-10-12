@@ -211,6 +211,35 @@ class MergedListsTest {
     }
 
     @Test
+    fun `the last channel watched is the newest of the sources' own, on its source`() {
+        // Phase 5: each source remembers its own last channel; the one played last wins.
+        val a = repo(A)
+        val b = repo(B)
+        every { a.getLastItemId(ContentType.LIVE_TV) } returns "7"
+        every { b.getLastItemId(ContentType.LIVE_TV) } returns "7"
+        coEvery { a.getRecentItemsSuspend(ContentType.LIVE_TV) } returns listOf(row("7", A, 10), row("9", A, 5))
+        coEvery { b.getRecentItemsSuspend(ContentType.LIVE_TV) } returns listOf(row("7", B, 40))
+
+        val last = runBlocking { lists(a, b).lastWatchedChannel() }
+
+        assertEquals("7", last?.id)
+        assertEquals(B, last?.providerId)
+    }
+
+    @Test
+    fun `a last channel that left its Recent or is a separator doesn't count`() {
+        val separator = row("s", B, 99, name = "#### NEWS ####")
+
+        val last =
+            MergedLists.newestLastWatched(
+                listOf("gone" to listOf(row("1", A, 50)), "s" to listOf(separator), "2" to listOf(row("2", C, 20))),
+            )
+
+        assertEquals(C, last?.providerId)
+        assertNull(MergedLists.newestLastWatched(listOf(null to listOf(row("1", A, 50)))))
+    }
+
+    @Test
     fun `source names are given only when the lists mix sources`() {
         assertEquals(mapOf(A to "S$A", B to "S$B"), lists(repo(A), repo(B)).sourceNames)
         assertTrue(lists(repo(A)).sourceNames.isEmpty())
@@ -220,5 +249,6 @@ class MergedListsTest {
     private companion object {
         const val A = 3L
         const val B = 8L
+        const val C = 11L
     }
 }

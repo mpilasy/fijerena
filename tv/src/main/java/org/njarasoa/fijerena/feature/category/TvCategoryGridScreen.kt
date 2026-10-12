@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -71,6 +72,8 @@ fun TvCategoryGridScreen(
     contentType: String,
     initialCategoryId: String? = null,
     initialStreamId: String? = null,
+    /** [initialStreamId]'s source when it isn't this list's (the last channel watched, on another source); 0 = this list's. */
+    initialStreamSource: Long = 0L,
     /**
      * Live TV only. True: this entry is the preview alone, opened on [initialStreamId] from Search,
      * the TV Guide or the EPG Browser; Back leaves it. False: the Live TV browse entry, with the
@@ -162,6 +165,7 @@ fun TvCategoryGridScreen(
         onHome = onHome,
         contentType = contentType,
         initialStreamId = initialStreamId,
+        initialStreamSource = initialStreamSource,
         showPreviewPane = showPreviewPane,
         closeSavedLivePreview = closeSavedLivePreview,
     )
@@ -186,6 +190,7 @@ private fun CategoryGridContent(
     onHome: () -> Unit,
     contentType: String,
     initialStreamId: String? = null,
+    initialStreamSource: Long = 0L,
     showPreviewPane: Boolean = true,
     closeSavedLivePreview: Boolean = false,
 ) {
@@ -211,11 +216,15 @@ private fun CategoryGridContent(
     val isLiveTv = contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV
     val isLiveBrowse = isLiveTv && !showPreviewPane
     var livePreviewChannelId by rememberSaveable { mutableStateOf(initialStreamId.takeIf { isLiveBrowse }) }
+    // Its source: a channel picked from Recent or Favourites can be on another of the profile's
+    // sources than this list's (multi-source plan, Phase 5); 0 = this list's.
+    var livePreviewSource by rememberSaveable { mutableLongStateOf(initialStreamSource.takeIf { isLiveBrowse } ?: 0L) }
     val showLivePreview = isLiveTv && (showPreviewPane || livePreviewChannelId != null)
     // The channel the preview plays now, after any retune or zap: Back hands it to browse, which
     // lands on it (LT6), and a preview rebuilt after process death comes back on it. Cleared when
     // the preview closes, so the next one starts on the channel it is opened on.
     var livePlayingChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    var livePlayingSource by rememberSaveable { mutableLongStateOf(0L) }
     // Each opening of the layer is keyed by this count, so a layer dropped while saved open
     // (closeSavedLivePreview) leaves its saved state — full screen, the guide's return channel —
     // behind instead of handing it to the next opening.
@@ -244,6 +253,7 @@ private fun CategoryGridContent(
         returnedLiveChannelId = livePlayingChannelId
         livePlayingChannelId = null
         livePreviewChannelId = null
+        livePreviewSource = 0L
         // What resuming the browse entry did on Back from a preview entry, and Recent reloaded as
         // the fresh browse under Home's preview loaded it — after the preview recorded its channels.
         // Live TV's Recent keeps its order for the visit (docs/plans/archive/20261009_tv-recents-favorites-plan.md
@@ -350,7 +360,16 @@ private fun CategoryGridContent(
                                     onBack = if (isLiveBrowse) closeLivePreview else onBack,
                                     onHome = onHome,
                                     initialStreamId = if (isLiveBrowse) livePlayingChannelId ?: livePreviewChannelId else initialStreamId,
-                                    onPlayingChannel = { streamId -> livePlayingChannelId = streamId },
+                                    initialStreamSource =
+                                        when {
+                                            !isLiveBrowse -> initialStreamSource
+                                            livePlayingChannelId != null -> livePlayingSource
+                                            else -> livePreviewSource
+                                        },
+                                    onPlayingChannel = { streamId, source ->
+                                        livePlayingChannelId = streamId
+                                        livePlayingSource = source
+                                    },
                                     // The player's Guide button (GD5), only when the source has a guide.
                                     onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
                                     onStartOver = onStartOver,
@@ -388,6 +407,7 @@ private fun CategoryGridContent(
                                         // is the preview's ChannelContext (LT2).
                                         if (target is BrowseTarget.Channel) {
                                             livePreviewChannelId = target.streamId
+                                            livePreviewSource = providerId
                                         } else {
                                             onStreamSelected(streamId, streamName, categoryId, target, providerId)
                                         }
