@@ -267,10 +267,13 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
   profiles without Xtream get Browse buttons, with no source Add Source. Routes require
   `providerId` except `CategoryList` (0 = a section's merged list). Fixed the part 1 test flake
   (`CategoryViewModelMultiSourceTest` leaked coroutines into `EpgGuidePagingTest`).
-  **Calls made beyond the plan, for the user to confirm:** a profile with no Xtream source searches
+  **Calls made beyond the plan:** a profile with no Xtream source searches
   its Jellyfin/M3U sources; Search the guide also covers M3U and Local sources; catalogue sync still
   covers every Xtream source on the device; Settings' subscription block (expiry, max connections,
   trial) removed. Focus walks home, home-rows, sources and settings edited by hand, not re-recorded.
+  User, 2026-10-12: keep the Search, Search the guide and catalogue-sync calls; bring the
+  subscription block back — done per source on Manage sources (each source's URL, expiry, max
+  connections, trial, under its name with several).
 
 ### Phase 7 — Search the guide across sources, and their guides kept fresh (Q5)
 
