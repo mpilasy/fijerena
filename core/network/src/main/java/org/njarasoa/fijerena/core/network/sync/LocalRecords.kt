@@ -103,6 +103,12 @@ class LocalRecords(
             }
         }
         val settings = AppSettings(context)
+        // Each profile's sources, one record per source it has on or off (see PROFILE_SOURCE_SETTING_PREFIX).
+        val providerKeys = settingsDb.providerDao().getAllProvidersList().map { it.providerKey }
+        for (profile in profiles) {
+            val on = settings.profileSourceKeys(profile) ?: continue
+            (on + providerKeys).forEach { sync.seed(SyncKind.SETTING, profile, AppSettings.profileSourceSettingKey(it), now) }
+        }
         for (key in AppSettings.SYNCED_SETTING_KEYS) {
             if (key in AppSettings.PER_PROFILE_SETTING_KEYS) {
                 profiles.filter { settings.syncedSetting(key, it) != null }.forEach { sync.seed(SyncKind.SETTING, it, key, now) }

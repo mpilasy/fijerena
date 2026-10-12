@@ -209,7 +209,7 @@ Recent and Favourites live in `xtream_v2.db` (`watch_state`, `favorite_state`); 
 
 ## Live Sync
 
-Settings → Live sync. Keeps profiles, sources, each profile's sources, guide sources, favourites, watch progress, content filters and selected settings the same on every device of a group, through a sync server the user runs (Cloudflare Worker or self-hosted Docker image, `server/`). Everything is encrypted on the device; the server sees only keys and ciphertext. Off on a device until it is set up there. While something plays, its watch progress is sent at most once a minute (and at once on pause, stop or finish); every other change goes within a few seconds.
+Settings → Live sync. Keeps profiles, sources, each profile's sources (each source on or off on its own, so turning on different sources on two devices before they sync keeps both, and a source added on a device before it joins a group stays on), guide sources, favourites, watch progress, content filters and selected settings the same on every device of a group, through a sync server the user runs (Cloudflare Worker or self-hosted Docker image, `server/`). Everything is encrypted on the device; the server sees only keys and ciphertext. Off on a device until it is set up there. While something plays, its watch progress is sent at most once a minute (and at once on pause, stop or finish); every other change goes within a few seconds.
 
 - **Start a sync group:** enter the server address (checked first; a setup secret if the server asks for one).
 - **Add a device:** a phone scans the invite QR code a member shows; a TV, which can't scan, shows a code for a phone of the group to scan. Codes work once, for 10 minutes.

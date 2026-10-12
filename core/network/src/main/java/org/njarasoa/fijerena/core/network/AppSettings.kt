@@ -36,6 +36,7 @@ class AppSettings(
         private const val KEY_LAST_PROVIDER = "last_provider"
         private const val KEY_PROFILE_SOURCES = "profile_sources"
         private const val KEY_PROFILE_SOURCES_SEEDED = "profile_sources_seeded_v1"
+        private const val KEY_PROFILE_SOURCE_RECORDS_QUEUED = "profile_source_records_queued_v1"
         private const val KEY_AUTOPLAY_NEXT_EPISODE = "autoplay_next_episode"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
@@ -93,9 +94,19 @@ class AppSettings(
                 KEY_DEV_MODE,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_TMDB_API_KEY,
-                KEY_PROFILE_SOURCES,
             )
-        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_PROFILE_SOURCES)
+        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE)
+
+        /**
+         * A profile's sources sync one record per source — `profile_source:<providerKey>`, true or
+         * false — not as one list: last writer wins per record, so two devices turning on different
+         * sources before they sync both keep them, a source a device added while unlinked survives
+         * it joining a group, and turning one off still beats an older "on". A whole-list
+         * `profile_sources` record from a build before this is ignored.
+         */
+        const val PROFILE_SOURCE_SETTING_PREFIX = "profile_source:"
+
+        fun profileSourceSettingKey(providerKey: String) = PROFILE_SOURCE_SETTING_PREFIX + providerKey
 
         private val sourceKeysSerializer = ListSerializer(String.serializer())
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
@@ -189,9 +200,11 @@ class AppSettings(
         profileId: String,
         keys: Set<String>,
     ) {
-        if (profileSourceKeys(profileId) == keys) return
+        val before = profileSourceKeys(profileId)
+        if (before == keys) return
         prefs.edit { putString(profileKey(KEY_PROFILE_SOURCES, profileId), encodeSourceKeys(keys)) }
-        SettingsSyncQueue.setting(context, KEY_PROFILE_SOURCES, profileId)
+        val changed = if (before == null) keys else (keys - before) + (before - keys)
+        changed.forEach { SettingsSyncQueue.setting(context, profileSourceSettingKey(it), profileId) }
     }
 
     /** Turns [providerKey] on for [profileId], keeping the sources it already has. */
@@ -237,6 +250,24 @@ class AppSettings(
         }
     }
 
+    /**
+     * One-time upgrade: a device linked before a profile's sources synced per source has none of
+     * those records yet (linking seeds them only once). Queues one per profile with stored sources
+     * and per source in [providerKeys] or on for it, each as this device has it now. Not linked, the
+     * queued versions simply wait for the link.
+     */
+    fun queueProfileSourceRecordsOnce(
+        profileIds: List<String>,
+        providerKeys: Set<String>,
+    ) {
+        if (prefs.getBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, false)) return
+        profileIds.forEach { profileId ->
+            val on = profileSourceKeys(profileId) ?: return@forEach
+            (on + providerKeys).forEach { SettingsSyncQueue.setting(context, profileSourceSettingKey(it), profileId) }
+        }
+        prefs.edit { putBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, true) }
+    }
+
     /** Drops a deleted profile's sources. */
     fun removeProfileSources(profileId: String) = prefs.edit { remove(profileKey(KEY_PROFILE_SOURCES, profileId)) }
 
@@ -270,6 +301,16 @@ class AppSettings(
             if (value.isString) TmdbKeyStore(context).applyRemote(value.content)
             return
         }
+        if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
+            val on = value.booleanOrNull ?: return
+            val providerKey = key.removePrefix(PROFILE_SOURCE_SETTING_PREFIX).takeIf { it.isNotEmpty() } ?: return
+            val current = profileSourceKeys(profileId)
+            // Off for a profile with nothing stored changes nothing: an empty list would mean "no sources".
+            if (current == null && !on) return
+            val updated = if (on) current.orEmpty() + providerKey else current.orEmpty() - providerKey
+            prefs.edit { putString(profileKey(KEY_PROFILE_SOURCES, profileId), encodeSourceKeys(updated)) }
+            return
+        }
         prefs.edit {
             when (key) {
                 KEY_DEV_MODE -> {
@@ -278,12 +319,6 @@ class AppSettings(
 
                 KEY_AUTOPLAY_NEXT_EPISODE -> {
                     value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
-                }
-
-                KEY_PROFILE_SOURCES -> {
-                    decodeSourceKeys(value.content.takeIf { value.isString })?.let {
-                        putString(profileKey(key, profileId), encodeSourceKeys(it))
-                    }
                 }
 
                 KEY_THEME_ID -> {
@@ -302,6 +337,10 @@ class AppSettings(
             val store = TmdbKeyStore(context)
             return if (store.hasValue()) kotlinx.serialization.json.JsonPrimitive(store.key) else null
         }
+        if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
+            val keys = profileSourceKeys(profileId) ?: return null
+            return kotlinx.serialization.json.JsonPrimitive(key.removePrefix(PROFILE_SOURCE_SETTING_PREFIX) in keys)
+        }
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
@@ -311,7 +350,7 @@ class AppSettings(
                 )
             }
 
-            KEY_THEME_ID, KEY_PROFILE_SOURCES -> {
+            KEY_THEME_ID -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 

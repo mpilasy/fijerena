@@ -51,13 +51,23 @@ class ProfileRepository(
     /**
      * See [AppSettings.copyLegacyDevModeToProfiles],
      * [AppSettings.moveLegacySearchHistoryToDefaultProfile] and
-     * [AppSettings.seedProfileSourcesOnce]; run once at startup.
+     * [AppSettings.seedProfileSourcesOnce] and [AppSettings.queueProfileSourceRecordsOnce]; run once
+     * at startup.
      */
     suspend fun migrateLegacyProfileSettings() {
         val settings = AppSettings(context)
         settings.copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
         settings.moveLegacySearchHistoryToDefaultProfile()
         ProviderRepository(context).seedProfileSourcesOnce()
+        settings.queueProfileSourceRecordsOnce(
+            dao.getAll().map { it.id },
+            SettingsDatabase
+                .getInstance(context)
+                .providerDao()
+                .getAllProvidersList()
+                .map { it.providerKey }
+                .toSet(),
+        )
     }
 
     /** Why [deleteProfile] refused, or [NONE] when it went ahead. */

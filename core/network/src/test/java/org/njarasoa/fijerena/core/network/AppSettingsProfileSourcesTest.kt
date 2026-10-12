@@ -31,6 +31,8 @@ class AppSettingsProfileSourcesTest {
         return AppSettings(context)
     }
 
+    private fun source(providerKey: String) = AppSettings.profileSourceSettingKey(providerKey)
+
     /** The source [profileId] last picked, as a build from before Phase 6 stored it. */
     private fun legacyLastPick(
         profileId: String,
@@ -62,28 +64,54 @@ class AppSettingsProfileSourcesTest {
     }
 
     @Test
-    fun `it syncs per profile, and what is sent is what another device stores`() {
-        assertTrue("profile_sources" in AppSettings.SYNCED_SETTING_KEYS)
-        assertTrue("profile_sources" in AppSettings.PER_PROFILE_SETTING_KEYS)
+    fun `it syncs one record per source, and what is sent is what another device stores`() {
+        assertTrue("profile_sources" !in AppSettings.SYNCED_SETTING_KEYS)
         settings.setProfileSourceKeys(OTHER, setOf("b", "a"))
 
-        val sent = settings.syncedSetting("profile_sources", OTHER)!!
-        assertTrue(sent.isString)
-        assertNull(settings.syncedSetting("profile_sources", ProfileEntity.DEFAULT_ID))
+        assertEquals(JsonPrimitive(true), settings.syncedSetting(source("a"), OTHER))
+        assertEquals(JsonPrimitive(false), settings.syncedSetting(source("c"), OTHER))
+        assertNull(settings.syncedSetting(source("a"), ProfileEntity.DEFAULT_ID))
 
         val otherDevice = newSettings()
-        otherDevice.applyRemoteSetting("profile_sources", OTHER, sent)
+        listOf("a", "b").forEach { otherDevice.applyRemoteSetting(source(it), OTHER, settings.syncedSetting(source(it), OTHER)!!) }
         assertEquals(setOf("a", "b"), otherDevice.profileSourceKeys(OTHER))
-        assertEquals(sent, otherDevice.syncedSetting("profile_sources", OTHER))
     }
 
     @Test
-    fun `a received value that isn't a list of keys is dropped, keeping the local one`() {
+    fun `sources turned on on two devices before they sync are both kept`() {
+        // This device turned "a" on; another device turned "b" on for the same profile meanwhile.
         settings.setProfileSourceKeys(OTHER, setOf("a"))
 
-        settings.applyRemoteSetting("profile_sources", OTHER, JsonPrimitive(42))
-        settings.applyRemoteSetting("profile_sources", OTHER, JsonPrimitive("not json"))
-        settings.applyRemoteSetting("profile_sources", OTHER, JsonPrimitive("{\"a\":1}"))
+        settings.applyRemoteSetting(source("b"), OTHER, JsonPrimitive(true))
+
+        assertEquals(setOf("a", "b"), settings.profileSourceKeys(OTHER))
+    }
+
+    @Test
+    fun `a source turned off on another device goes, the others stay`() {
+        settings.setProfileSourceKeys(OTHER, setOf("a", "b"))
+
+        settings.applyRemoteSetting(source("a"), OTHER, JsonPrimitive(false))
+
+        assertEquals(setOf("b"), settings.profileSourceKeys(OTHER))
+    }
+
+    @Test
+    fun `off for a profile with nothing stored stores nothing`() {
+        settings.applyRemoteSetting(source("a"), OTHER, JsonPrimitive(false))
+        assertNull(settings.profileSourceKeys(OTHER))
+
+        settings.applyRemoteSetting(source("a"), OTHER, JsonPrimitive(true))
+        assertEquals(setOf("a"), settings.profileSourceKeys(OTHER))
+    }
+
+    @Test
+    fun `a whole-list record from an older build, or a value that isn't on or off, is ignored`() {
+        settings.setProfileSourceKeys(OTHER, setOf("a"))
+
+        settings.applyRemoteSetting("profile_sources", OTHER, JsonPrimitive("[\"b\"]"))
+        settings.applyRemoteSetting(source("b"), OTHER, JsonPrimitive("yes"))
+        settings.applyRemoteSetting(source(""), OTHER, JsonPrimitive(true))
 
         assertEquals(setOf("a"), settings.profileSourceKeys(OTHER))
     }
@@ -131,7 +159,8 @@ class AppSettingsProfileSourcesTest {
 
     @Test
     fun `upgrade keeps sources received from another device before it ran`() {
-        settings.applyRemoteSetting("profile_sources", OTHER, JsonPrimitive("[\"x\",\"y\"]"))
+        settings.applyRemoteSetting(source("x"), OTHER, JsonPrimitive(true))
+        settings.applyRemoteSetting(source("y"), OTHER, JsonPrimitive(true))
         legacyLastPick(OTHER, "a")
 
         settings.seedProfileSourcesOnce(listOf(ProfileEntity.DEFAULT_ID, OTHER), setOf("a"), activeKey = "a")
