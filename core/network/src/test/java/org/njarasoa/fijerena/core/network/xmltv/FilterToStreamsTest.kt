@@ -12,13 +12,23 @@ class FilterToStreamsTest {
     private fun airing(
         channelId: String,
         streamId: Int?,
+        providerId: Long = 0L,
     ) = EpgBrowserAiring(
         channelId = channelId,
         channelName = channelId,
         channelIconUrl = null,
         startEpoch = 0L,
         endEpoch = 60L,
-        matchedStream = streamId?.let { EpgBrowserMatchedStream(streamId = it, streamName = channelId, categoryId = "1") },
+        matchedStream =
+            streamId?.let {
+                EpgBrowserMatchedStream(
+                    streamId = it,
+                    streamName = channelId,
+                    categoryId = "1",
+                    providerId = providerId,
+                )
+            },
+        providerId = providerId,
     )
 
     private fun program(
@@ -87,6 +97,23 @@ class FilterToStreamsTest {
                 .single()
                 .airings
                 .map { it.matchedStream },
+        )
+    }
+
+    @Test
+    fun `keeps only the guide's own source's airings`() {
+        val groups = listOf(group("today", program("news", airing("tf1", 1, providerId = 1L), airing("tf1", 1, providerId = 2L))))
+
+        val filtered = filterToStreams(groups, GuideChannels(setOf("1"), providerId = 1L))
+
+        assertEquals(
+            listOf(1L),
+            filtered
+                .single()
+                .programs
+                .single()
+                .airings
+                .map { it.providerId },
         )
     }
 }

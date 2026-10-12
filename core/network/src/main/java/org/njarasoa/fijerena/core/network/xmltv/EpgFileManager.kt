@@ -91,7 +91,10 @@ class EpgFileManager private constructor(
          * the running task. A refresh covers one provider's sources only, so an unsuffixed id
          * would let a second provider's refresh silently become the first one's run.
          */
-        fun refreshStaleTaskId(providerId: Long): String = "epg_refresh_stale_$providerId"
+        fun refreshStaleTaskId(providerId: Long): String = refreshStaleTaskId(listOf(providerId))
+
+        /** Refresh stale over several providers' sources (Search the guide's, multi-source Phase 7). */
+        fun refreshStaleTaskId(providerIds: List<Long>): String = "epg_refresh_stale_${providerIds.joinToString("_")}"
 
         fun refreshFailedTaskId(providerId: Long): String = "epg_refresh_failed_$providerId"
 
@@ -326,9 +329,12 @@ class EpgFileManager private constructor(
      * [state] directly renders another provider's refresh — its progress, its source labels, its
      * totals — as though it were its own. This reports Idle for a run that is not this provider's.
      */
-    fun stateFor(providerId: Long): Flow<MultiSourceState> =
+    fun stateFor(providerId: Long): Flow<MultiSourceState> = stateFor(setOf(providerId))
+
+    /** [state] as seen by a screen reporting on all of [providerIds] (Search the guide's sources). */
+    fun stateFor(providerIds: Set<Long>): Flow<MultiSourceState> =
         combine(_state, _refreshProviderId) { state, owner ->
-            if (owner == null || owner == providerId) state else MultiSourceState.Idle
+            if (owner == null || owner in providerIds) state else MultiSourceState.Idle
         }
 
     /**
@@ -588,18 +594,34 @@ class EpgFileManager private constructor(
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask(refreshStaleTaskId(providerId), providerId, onComplete, onCellularConfirm) {
+        launchRefreshStale(listOf(providerId), onComplete, onCellularConfirm)
+    }
+
+    /**
+     * Refreshes the stale sources of each of [providerIds] in turn, one run per provider (a run
+     * reports on one provider), in one task: a second launch would cancel the first.
+     */
+    fun launchRefreshStale(
+        providerIds: List<Long>,
+        onComplete: (suspend () -> Unit)? = null,
+        onCellularConfirm: (suspend () -> Boolean)? = null,
+    ) {
+        if (providerIds.isEmpty()) return
+        launchGenericTask(refreshStaleTaskId(providerIds), providerIds.first(), onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val now = System.currentTimeMillis()
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
-            val staleSources =
-                sourceDao.getEnabledSourcesForProvider(providerId).filter { EpgRefreshSchedule.isStale(it, now, unsetHours) }
-            if (staleSources.isNotEmpty()) {
-                processAllSourcesInternal(staleSources)
-            } else {
-                if (_state.value is MultiSourceState.Pending) {
-                    _state.value = MultiSourceState.Idle
+            var refreshed = false
+            for (providerId in providerIds) {
+                val staleSources =
+                    sourceDao.getEnabledSourcesForProvider(providerId).filter { EpgRefreshSchedule.isStale(it, now, unsetHours) }
+                if (staleSources.isNotEmpty()) {
+                    processAllSourcesInternal(staleSources)
+                    refreshed = true
                 }
+            }
+            if (!refreshed && _state.value is MultiSourceState.Pending) {
+                _state.value = MultiSourceState.Idle
             }
         }
     }

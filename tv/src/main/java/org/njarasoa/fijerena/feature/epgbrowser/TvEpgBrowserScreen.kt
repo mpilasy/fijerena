@@ -77,6 +77,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
@@ -92,6 +93,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -149,16 +151,17 @@ private const val RETURN_TV_GUIDE = "header:tvGuide"
 @Composable
 fun TvEpgBrowserScreen(
     onBack: () -> Unit,
-    onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     categoryId: String? = null,
     categoryName: String? = null,
+    providerId: Long = 0L,
     onGuideSources: (providerId: Long) -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
         viewModel(
-            factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId) },
+            factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId, providerId) },
         )
     val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val contextName = categoryName?.takeIf { categoryId != null }
@@ -352,7 +355,7 @@ private fun EpgBrowserContent(
     onRemoveHistoryEntry: (String) -> Unit = {},
     onClearHistory: () -> Unit = {},
     onClearSearch: () -> Unit = {},
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     contextName: String? = null,
     contextChannels: GuideChannels? = null,
     // Back is handing focus to a header button: no first-open focus or keyboard here.
@@ -726,7 +729,7 @@ private fun ResultsContent(
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     matchedOnly: Boolean = true,
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     returnFocus: NavReturnFocus,
     firstItemFocusRequester: FocusRequester? = null,
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
@@ -888,7 +891,7 @@ private fun ProgramCard(
     nowEpoch: Long,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     modifier: Modifier = Modifier,
     // Called with the airing's index just before one of its rows opens a channel; airingModifier
     // decorates each row (the caller marks the one Back returns to).
@@ -982,9 +985,9 @@ private fun ProgramCard(
                     nowEpoch = nowEpoch,
                     isDevMode = isDevMode,
                     sourceLabels = sourceLabels,
-                    onNavigateToPlayer = { streamId, streamName, categoryId ->
+                    onNavigateToPlayer = { matched ->
                         onAiringLeave(airingIndex)
-                        onNavigateToPlayer(streamId, streamName, categoryId)
+                        onNavigateToPlayer(matched)
                     },
                     onRequestConfirmation = { pendingConfirmAiring = it },
                     modifier = airingModifier(airingIndex),
@@ -1016,7 +1019,7 @@ private fun ProgramCard(
                                 if (pendingConfirmAiring != null) {
                                     pendingConfirmAiring = null
                                     onAiringLeave(program.airings.indexOf(pending))
-                                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                                    onNavigateToPlayer(matched)
                                 }
                             }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
 
@@ -1052,7 +1055,7 @@ private fun AiringRow(
     modifier: Modifier = Modifier,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     onRequestConfirmation: (EpgBrowserAiring) -> Unit = {},
 ) {
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
@@ -1091,6 +1094,7 @@ private fun AiringRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).bounceMarquee(),
             )
+            airing.sourceName?.let { SourceBadge(it) }
             if (isDevMode && airing.sourceId > 0) {
                 val sourceName = sourceLabels[airing.sourceId]
                 if (sourceName != null) {
@@ -1156,7 +1160,7 @@ private fun AiringRow(
         onClick = {
             airing.matchedStream?.let { matched ->
                 if (isOnAir) {
-                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                    onNavigateToPlayer(matched)
                 } else {
                     onRequestConfirmation(airing)
                 }

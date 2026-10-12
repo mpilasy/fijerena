@@ -616,6 +616,7 @@ fun TvNavHost(
                             TvEpgBrowserScreen(
                                 categoryId = browserScreen.categoryId,
                                 categoryName = browserScreen.categoryName,
+                                providerId = browserScreen.providerId,
                                 onBack = { navController.navigateUp() },
                                 onGuideSources = { id ->
                                     navController.navigateOnce(Screen.EpgManagement(providerId = id))
@@ -624,15 +625,16 @@ fun TvNavHost(
                                 onTvGuide = { categoryId, categoryName ->
                                     navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
                                 },
-                                onNavigateToPlayer = { streamId, _, categoryId ->
+                                onNavigateToPlayer = { matched ->
                                     // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
                                     // Pushing (not popUpTo) a new CategoryList entry means Back from the
                                     // preview pops back here for free via normal nav-stack semantics.
                                     navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = ContentType.LIVE_TV,
-                                            initialCategoryId = categoryId,
-                                            initialStreamId = streamId,
+                                            initialCategoryId = matched.categoryId,
+                                            initialStreamId = matched.streamId.toString(),
+                                            providerId = matched.providerId,
                                         ),
                                     )
                                 },
@@ -843,7 +845,11 @@ fun TvNavHost(
                                 // One search (G-9): "Search the guide", filtered to this guide's channels.
                                 onSearch = {
                                     navController.navigateOnce(
-                                        Screen.EpgBrowser(categoryId = epgScreen.categoryId, categoryName = epgScreen.categoryName),
+                                        Screen.EpgBrowser(
+                                            categoryId = epgScreen.categoryId,
+                                            categoryName = epgScreen.categoryName,
+                                            providerId = epgScreen.providerId,
+                                        ),
                                     )
                                 },
                                 onBack = {

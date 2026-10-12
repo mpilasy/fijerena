@@ -14,13 +14,15 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.trySetForeground
 
 /**
  * WorkManager worker for background EPG sync (all device types).
  *
- * Refreshes the active provider from its own EPG sources only: those due by their own interval
+ * Refreshes the guide sources of every source of the profile in use that Search the guide reads
+ * ([GuideScope]), each source's in a run of its own: those due by their own interval
  * ([EpgRefreshSchedule.isDue]). It runs at the shortest interval among every provider's guide
  * sources (`EpgFileManager.scheduleAutoRefresh`).
  *
@@ -84,9 +86,9 @@ class EpgSyncWorker(
         val force = inputData.getBoolean("force", false)
 
         val providerRepo = ProviderRepository(applicationContext)
-        val providerId = providerRepo.getActiveProvider()?.id
-        if (providerId == null) {
-            Log.i(TAG, "doWork: no active provider, nothing to sync")
+        val providerIds = GuideScope.searchedProviders(providerRepo.profileSourcesList()).map { it.id }
+        if (providerIds.isEmpty()) {
+            Log.i(TAG, "doWork: no source in use, nothing to sync")
             return Result.success()
         }
 
@@ -94,23 +96,26 @@ class EpgSyncWorker(
             // Routine maintenance: sweep orphaned catalog data left by deleted providers. Never
             // throws, so a full disk can't fail the guide refresh along with it.
             providerRepo.sweepOrphanedCatalogData(onlyIfPending = false)
-            val staleSources =
-                if (force) {
-                    Log.i(TAG, "doWork: force=true, refreshing all sources of provider $providerId")
-                    fileManager.getAllSources(providerId)
-                } else {
-                    fileManager.getStaleSources(providerId)
-                }
-            if (staleSources.isEmpty()) {
+            if (force) Log.i(TAG, "doWork: force=true, refreshing all sources of providers $providerIds")
+            val runs = sourcesToRefresh(providerIds) { if (force) fileManager.getAllSources(it) else fileManager.getStaleSources(it) }
+            if (runs.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
                 Result.success()
             } else {
-                Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
-                fileManager.processAllSources(staleSources)
+                // Inline, one provider after another: a run reports on one provider, and the work
+                // must stay inside doWork() to keep the wake lock (Doze kills local work too).
+                var sourceCount = 0
+                var errorCount = 0
+                for (staleSources in runs) {
+                    Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s) of provider ${staleSources.first().providerId}")
+                    fileManager.processAllSources(staleSources)
+                    sourceCount += staleSources.size
+                    val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed
+                    if (completed != null) errorCount += completed.errors
+                }
 
-                val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed
-                if (completed != null && completed.errors == staleSources.size) {
-                    Log.w(TAG, "doWork: all ${staleSources.size} source(s) failed, will retry")
+                if (errorCount == sourceCount) {
+                    Log.w(TAG, "doWork: all $sourceCount source(s) failed, will retry")
                     if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
                 } else {
                     Log.i(TAG, "doWork: refresh complete")
@@ -136,5 +141,11 @@ class EpgSyncWorker(
 
         /** The periodic guide refresh's unique work name (`EpgFileManager` schedules it). */
         const val WORK_NAME = "epg_sync"
+
+        /** The guide sources to refresh, one list (run) per provider of [providerIds] that has any. */
+        internal suspend fun sourcesToRefresh(
+            providerIds: List<Long>,
+            sourcesOf: suspend (providerId: Long) -> List<EpgSourceEntity>,
+        ): List<List<EpgSourceEntity>> = providerIds.map { sourcesOf(it) }.filter { it.isNotEmpty() }
     }
 }

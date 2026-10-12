@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
@@ -77,6 +78,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -109,16 +111,17 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 @Composable
 fun MobileEpgBrowserScreen(
     onBack: () -> Unit,
-    onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     categoryId: String? = null,
     categoryName: String? = null,
+    providerId: Long = 0L,
     onGuideSources: (providerId: Long) -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
         viewModel(
-            factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId) },
+            factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId, providerId) },
         )
     val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val contextName = categoryName?.takeIf { categoryId != null }
@@ -514,7 +517,7 @@ private fun MobileResultsContent(
     nowEpoch: Long,
     matchedOnly: Boolean = true,
     onMatchedOnlyChange: (Boolean) -> Unit = {},
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
     contextChannels: GuideChannels? = null,
@@ -605,7 +608,7 @@ private fun MobileDateHeader(dateLabel: String) {
 private fun MobileProgramCard(
     program: EpgBrowserProgram,
     nowEpoch: Long,
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
     val showExpander = program.airings.size > 3
@@ -699,7 +702,7 @@ private fun MobileProgramCard(
                                 // A second click before the dialog leaves doesn't open the player twice (R-20).
                                 if (pendingConfirmAiring != null) {
                                     pendingConfirmAiring = null
-                                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                                    onNavigateToPlayer(matched)
                                 }
                             }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
 
@@ -770,7 +773,7 @@ private fun MobileProgramCard(
 private fun MobileAiringRow(
     airing: EpgBrowserAiring,
     nowEpoch: Long,
-    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     onRequestConfirmation: (EpgBrowserAiring) -> Unit = {},
 ) {
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
@@ -785,7 +788,7 @@ private fun MobileAiringRow(
             } else {
                 {
                     if (isOnAir) {
-                        onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                        onNavigateToPlayer(matched)
                     } else {
                         onRequestConfirmation(airing)
                     }
@@ -820,6 +823,7 @@ private fun MobileAiringRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).bounceMarquee(),
         )
+        airing.sourceName?.let { SourceBadge(it) }
         if (isOnAir || isSoon) {
             val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
             val badgeLabel =

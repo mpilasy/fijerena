@@ -20,9 +20,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
@@ -44,7 +45,9 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgIndexBusyException
 import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.GuideAiringMatcher
 import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
+import org.njarasoa.fijerena.core.network.xmltv.GuideScope
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -71,6 +74,8 @@ class EpgBrowserViewModel(
      * whole guide, no such filter.
      */
     private val categoryId: String? = null,
+    /** The source of the TV Guide it was opened from; 0 = the active source. */
+    private val contextProviderId: Long = 0L,
 ) : ViewModel() {
     /**
      * Internal key for grouping programs without allocating new lowercase strings.
@@ -163,17 +168,12 @@ class EpgBrowserViewModel(
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
 
-    @Volatile private var channelMatcher: EpgChannelMatcher? = null
-
-    // Live categories the active profile hides, re-read with each search: an airing matched to a
-    // stream in one is dropped like an excluded stream — it can't be opened, and a filter (a Kid
-    // profile's) must not be bypassed through the guide. Kept out of the matcher, which is cached
-    // across profiles (docs/plans/archive/20261007_guide-watch-wrong-channel-plan.md, fix 3).
-    @Volatile private var hiddenLiveCategoryIds: Set<String> = emptySet()
-
-    private fun isHidden(matched: EpgBrowserMatchedStream): Boolean = matched.excluded || matched.categoryId in hiddenLiveCategoryIds
-
-    @Volatile private var lastMatcherProviderId: Long? = null
+    // Each airing is matched on its own source's channels and hidden live categories, re-read with
+    // each search: an airing matched to a stream in a hidden category is dropped like an excluded
+    // stream — it can't be opened, and a filter (a Kid profile's) must not be bypassed through the
+    // guide. Kept out of EpgChannelMatcher, which is cached across profiles
+    // (docs/plans/archive/20261007_guide-watch-wrong-channel-plan.md, fix 3).
+    @Volatile private var airingMatcher: GuideAiringMatcher? = null
 
     // Cache AppSettings instance to avoid constructing a new object on every property read
     private val appSettings = AppSettings(context)
@@ -194,48 +194,40 @@ class EpgBrowserViewModel(
 
     private val epgFileManager = EpgFileManager.getInstance(context)
 
-    /** The provider this screen browses. Everything below reports on it alone. */
-    private val activeProviderIdFlow: Flow<Long?> =
-        flow {
-            emit(
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        SettingsDatabase
-                            .getInstance(context)
-                            .providerDao()
-                            .getActiveProvider()
-                            ?.id
-                    }.getOrNull()
-                },
-            )
-        }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+    /**
+     * The sources whose guides this screen searches: every source of the profile in use
+     * ([GuideScope]). Everything below reports on them alone.
+     */
+    private val searchedProviderIdsFlow: Flow<Set<Long>> =
+        providerRepository
+            .profileSources(appSettings.activeProfileId)
+            .map { list -> GuideScope.searchedProviders(list).mapTo(HashSet()) { it.id } }
+            .distinctUntilChanged()
+            .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**
      * Another provider's refresh must not drive this screen's progress UI — one pipeline serves
      * every provider, so reading EpgFileManager.state directly showed its sources and totals here.
      */
     val epgProcessingState: StateFlow<EpgFileManager.MultiSourceState> =
-        activeProviderIdFlow
-            .flatMapLatest { providerId ->
-                if (providerId == null) {
+        searchedProviderIdsFlow
+            .flatMapLatest { providerIds ->
+                if (providerIds.isEmpty()) {
                     flowOf(EpgFileManager.MultiSourceState.Idle)
                 } else {
-                    epgFileManager.stateFor(providerId)
+                    epgFileManager.stateFor(providerIds)
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EpgFileManager.MultiSourceState.Idle)
 
     /**
-     * The sources of the provider being browsed, not of every provider configured. This screen is
-     * titled with one provider's name, so a source belonging to another one has no business
-     * reporting on it — reading them all is what let a provider whose EPG had never run make a
-     * freshly-synced one read as "Never refreshed".
+     * The guide sources of the sources searched, not of every provider configured: a source that
+     * isn't searched has no business reporting on this screen — reading them all is what let a
+     * provider whose EPG had never run make a freshly-synced one read as "Never refreshed".
      */
     private val sourcesFlow: Flow<List<org.njarasoa.fijerena.core.network.provider.EpgSourceEntity>> =
-        activeProviderIdFlow
-            .flatMapLatest { providerId ->
-                val dao = SettingsDatabase.getInstance(context).epgSourceDao()
-                if (providerId == null) flowOf(emptyList()) else dao.getSourcesForProvider(providerId)
-            }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+        combine(searchedProviderIdsFlow, SettingsDatabase.getInstance(context).epgSourceDao().getAllSources()) { providerIds, sources ->
+            sources.filter { it.providerId in providerIds }
+        }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**
      * Oldest `lastIngestedAtMs` among enabled sources that have actually run — the data is only as
@@ -287,31 +279,32 @@ class EpgBrowserViewModel(
 
     fun refreshStale() {
         viewModelScope.launch {
-            // A refresh only covers the active provider's own sources, and the task id it queues
-            // under is scoped to that provider too.
-            val providerId =
-                withContext(Dispatchers.IO) { providerRepository.getActiveProvider()?.id }
-                    ?: run {
-                        _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
-                        return@launch
-                    }
-            val taskId = EpgFileManager.refreshStaleTaskId(providerId)
+            // A refresh covers the searched sources' own guide sources, and the task id it queues
+            // under is scoped to those providers too.
+            val providerIds =
+                withContext(Dispatchers.IO) { GuideScope.searchedProviders(providerRepository.profileSourcesList()).map { it.id } }
+            if (providerIds.isEmpty()) {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
+                return@launch
+            }
+            val taskId = EpgFileManager.refreshStaleTaskId(providerIds)
             if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launch
             }
             val now = System.currentTimeMillis()
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val stale =
                 withContext(Dispatchers.IO) {
-                    SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
+                    providerIds.flatMap { sourceDao.getEnabledSourcesForProvider(it) }
                 }.filter { it.lastIngestedAtMs == 0L || isOlderThanInterval(it, now, unsetHours) }
             if (stale.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
             }
             _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refreshing_stale, stale.size))
-            epgFileManager.launchRefreshStale(providerId)
+            epgFileManager.launchRefreshStale(providerIds)
         }
     }
 
@@ -356,7 +349,7 @@ class EpgBrowserViewModel(
         }
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
         loadSourceLabels()
-        viewModelScope.launchGuarded("EpgBrowserViewModel.channelMatcher") { ensureChannelMatcherCurrent() }
+        viewModelScope.launchGuarded("EpgBrowserViewModel.channelMatcher") { ensureChannelMatcherCurrent(loadScope()) }
         loadActiveProviderName()
         categoryId?.let { id ->
             viewModelScope.launchGuarded("EpgBrowserViewModel.contextStreams") { loadContextStreamIds(id) }
@@ -364,7 +357,9 @@ class EpgBrowserViewModel(
     }
 
     private suspend fun loadContextStreamIds(categoryId: String) {
-        val repository = AppContainer.getInstance(context).getMediaRepository()
+        // "In <category> only" stays on the guide's own source.
+        val guideProviderId = withContext(Dispatchers.IO) { providerRepository.getProviderOrActive(contextProviderId)?.id } ?: return
+        val repository = AppContainer.getInstance(context).getMediaRepository(guideProviderId)
         val items =
             CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
                 ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrThrow()
@@ -379,8 +374,10 @@ class EpgBrowserViewModel(
                         .mapNotNull { (itemId, xmltvId) ->
                             val item = itemsById[itemId] ?: return@mapNotNull null
                             val streamId = item.id.toIntOrNull() ?: return@mapNotNull null
-                            xmltvId.lowercase() to EpgBrowserMatchedStream(streamId, item.name, item.categoryId)
+                            xmltvId.lowercase() to
+                                EpgBrowserMatchedStream(streamId, item.name, item.categoryId, providerId = guideProviderId)
                         }.toMap(),
+                providerId = guideProviderId,
             )
     }
 
@@ -404,38 +401,40 @@ class EpgBrowserViewModel(
         }
     }
 
+    /** The guide sources searched, of every source of the profile in use. */
+    private suspend fun loadScope(): GuideScope = withContext(Dispatchers.IO) { GuideScope.load(context) }
+
     /**
-     * Loads (or refreshes) [channelMatcher] for the currently active provider.
-     * Uses the global cache in [EpgChannelMatcher] to avoid redundant DB queries.
+     * Loads (or refreshes) [airingMatcher] for the sources of [scope]: one [EpgChannelMatcher] per
+     * source (its global cache avoids redundant DB queries) and each source's hidden live
+     * categories.
      */
-    private suspend fun ensureChannelMatcherCurrent() {
+    private suspend fun ensureChannelMatcherCurrent(scope: GuideScope) {
         withContext(Dispatchers.IO) {
             try {
-                val provider =
-                    SettingsDatabase
-                        .getInstance(context)
-                        .providerDao()
-                        .getActiveProvider() ?: return@withContext
-
-                hiddenLiveCategoryIds =
-                    XtreamDatabase
-                        .getInstance(context)
-                        .categoryDao()
-                        .getAllCategoriesIncludingExcluded(provider.id, XtreamCategoryEntity.TYPE_LIVE)
-                        .filter { it.excluded }
-                        .mapTo(HashSet()) { it.categoryId }
-                channelMatcher =
-                    EpgChannelMatcher.getOrCreate(provider.id) {
-                        val t0 = System.currentTimeMillis()
-                        val streams =
-                            XtreamDatabase
-                                .getInstance(context)
-                                .streamDao()
-                                .getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE)
-                        val t1 = System.currentTimeMillis()
-                        android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
-                        streams
-                    }
+                val xtreamDb = XtreamDatabase.getInstance(context)
+                val hidden = HashMap<Long, Set<String>>()
+                val matchers = HashMap<Long, EpgChannelMatcher>()
+                for (provider in scope.providers) {
+                    hidden[provider.id] =
+                        xtreamDb
+                            .categoryDao()
+                            .getAllCategoriesIncludingExcluded(provider.id, XtreamCategoryEntity.TYPE_LIVE)
+                            .filter { it.excluded }
+                            .mapTo(HashSet()) { it.categoryId }
+                    matchers[provider.id] =
+                        EpgChannelMatcher.getOrCreate(provider.id) {
+                            val t0 = System.currentTimeMillis()
+                            val streams =
+                                xtreamDb
+                                    .streamDao()
+                                    .getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                            val t1 = System.currentTimeMillis()
+                            android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
+                            streams
+                        }
+                }
+                airingMatcher = GuideAiringMatcher(scope.providerIdBySourceId, matchers, hidden)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -448,12 +447,9 @@ class EpgBrowserViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    val settingsDb = SettingsDatabase.getInstance(context)
-                    val providerId = providerRepository.getActiveProvider()?.id
-                    val sources =
-                        providerId?.let { settingsDb.epgSourceDao().getEnabledSourcesForProvider(it) }
-                            ?: emptyList()
-                    _sourceLabels.value = sources.associate { it.id to it.label }
+                    val scope = GuideScope.load(context)
+                    val sources = SettingsDatabase.getInstance(context).epgSourceDao().getAllSourcesOnce()
+                    _sourceLabels.value = sources.filter { it.id in scope.providerIdBySourceId }.associate { it.id to it.label }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -479,13 +475,8 @@ class EpgBrowserViewModel(
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 
-            // EPG is provider-scoped: with no active provider there are no sources to show.
-            val activeProviderId = providerRepository.getActiveProvider()?.id
-            val settingsDb = SettingsDatabase.getInstance(context)
-            val sourceDao = settingsDb.epgSourceDao()
-            val validSources =
-                activeProviderId?.let { sourceDao.getEnabledSourcesForProvider(it) } ?: emptyList()
-            val sourceIds = validSources.map { it.id }
+            // A channel of any searched source reads that source's guide sources.
+            val sourceIds = loadScope().sourceIds
 
             val nowEpoch = System.currentTimeMillis() / 1000L
             _pagedNowPlaying.value =
@@ -513,8 +504,9 @@ class EpgBrowserViewModel(
                 _epgSearchHistory.value = appSettings.getEpgSearchHistory()
                 try {
                     val startTime = System.currentTimeMillis()
-                    ensureChannelMatcherCurrent()
-                    val result = withContext(Dispatchers.IO) { searchService.search(query) }
+                    val scope = loadScope()
+                    ensureChannelMatcherCurrent(scope)
+                    val result = withContext(Dispatchers.IO) { searchService.search(query, scope.sourceIds) }
                     val elapsed = System.currentTimeMillis() - startTime
 
                     if (result == null) {
@@ -522,9 +514,11 @@ class EpgBrowserViewModel(
                         return@launch
                     }
 
+                    val sourceNames = scope.sourceNames
                     val allAirings =
                         result.programmes.map { prog ->
                             val channel = result.channels[prog.channelId]
+                            val providerId = scope.providerIdBySourceId[prog.sourceId] ?: 0L
                             AiringWithProgramme(
                                 title = prog.title,
                                 description = prog.description,
@@ -537,6 +531,8 @@ class EpgBrowserViewModel(
                                         startEpoch = prog.startEpoch,
                                         endEpoch = prog.endEpoch,
                                         sourceId = prog.sourceId,
+                                        providerId = providerId,
+                                        sourceName = sourceNames[providerId],
                                     ),
                             )
                         }
@@ -628,15 +624,9 @@ class EpgBrowserViewModel(
                 val db = EpgIndexDatabase.getInstance(context)
                 val dao = db.epgIndexDao()
 
-                // EPG is provider-scoped: with no active provider there are no sources to search.
-                val activeProviderId = providerRepository.getActiveProvider()?.id
-                val settingsDb = SettingsDatabase.getInstance(context)
-                val sourceDao = settingsDb.epgSourceDao()
-                val validSources =
-                    activeProviderId?.let { sourceDao.getEnabledSourcesForProvider(it) } ?: emptyList()
-                val sourceIds = validSources.map { it.id }
+                val sourceIds = loadScope().sourceIds
 
-                val matcher = channelMatcher
+                val matcher = airingMatcher
                 _pagedSearchResults.value =
                     Pager(
                         config =
@@ -650,8 +640,8 @@ class EpgBrowserViewModel(
                     }.flow
                         .map { pagingData ->
                             pagingData.filter { row ->
-                                val matched = matcher?.match(row.channelId, row.channelDisplayName)
-                                matched == null || !isHidden(matched)
+                                val matched = matcher?.match(row.sourceId, row.channelId, row.channelDisplayName)
+                                matched == null || matcher?.isHidden(matched) != true
                             }
                         }.cachedIn(viewModelScope)
             }
@@ -670,7 +660,7 @@ class EpgBrowserViewModel(
     )
 
     private fun applyChannelMatching(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDateGroup> {
-        val matcher = channelMatcher
+        val matcher = airingMatcher
         return if (matcher == null) {
             dateGroups
         } else {
@@ -687,10 +677,10 @@ class EpgBrowserViewModel(
                                     val unmatchedList = ArrayList<EpgBrowserAiring>()
 
                                     for (airing in program.airings) {
-                                        val matched = matcher.match(airing.channelId, airing.channelName)
+                                        val matched = matcher.match(airing.sourceId, airing.channelId, airing.channelName)
                                         when {
                                             // excluded channel, or one in a hidden category: drop from search results
-                                            matched != null && isHidden(matched) -> Unit
+                                            matched != null && matcher.isHidden(matched) -> Unit
 
                                             matched != null -> matchedList.add(airing.copy(matchedStream = matched))
 

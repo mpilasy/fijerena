@@ -6,8 +6,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -48,9 +46,14 @@ class XmltvSearchService(
      * no upper limit — however far ahead the guide goes.
      *
      * @param query Case-insensitive substring to match
+     * @param sourceIds The guide sources to search: those of every source of the profile in use
+     *   ([GuideScope]).
      * @return [XmltvSearchResult] or null if no index is available.
      */
-    suspend fun search(query: String): XmltvSearchResult? {
+    suspend fun search(
+        query: String,
+        sourceIds: List<Long>,
+    ): XmltvSearchResult? {
         val indexer = EpgIndexer.getInstance(context)
         val state = indexer.state.value
         if (state is EpgIndexState.NotIndexed) {
@@ -60,7 +63,7 @@ class XmltvSearchService(
         val now = System.currentTimeMillis() / 1000L
 
         return try {
-            searchFromIndex(query, now, Long.MAX_VALUE)
+            searchFromIndex(query, sourceIds, now, Long.MAX_VALUE)
         } catch (e: EpgIndexBusyException) {
             throw e
         } catch (e: CancellationException) {
@@ -73,21 +76,13 @@ class XmltvSearchService(
 
     private suspend fun searchFromIndex(
         query: String,
+        sourceIds: List<Long>,
         windowStart: Long,
         windowEnd: Long,
     ): XmltvSearchResult? {
         val db = EpgIndexDatabase.getInstance(context)
         val dao = db.epgIndexDao()
         val indexer = EpgIndexer.getInstance(context)
-
-        val providerRepo = ProviderRepository(context)
-        // EPG is provider-scoped: with no active provider there are no sources to search.
-        val activeProviderId = providerRepo.getActiveProvider()?.id
-        val settingsDb = SettingsDatabase.getInstance(context)
-        val sourceDao = settingsDb.epgSourceDao()
-        val validSources =
-            activeProviderId?.let { sourceDao.getEnabledSourcesForProvider(it) } ?: emptyList()
-        val sourceIds = validSources.map { it.id }
 
         var result: XmltvSearchResult? = null
 

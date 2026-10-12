@@ -20,6 +20,10 @@ data class EpgBrowserAiring(
     val endEpoch: Long,
     val sourceId: Long = 0,
     val matchedStream: EpgBrowserMatchedStream? = null,
+    /** The source (provider) whose guide source lists this airing. */
+    val providerId: Long = 0L,
+    /** That source's name, for its badge, when Search the guide covers more than one source. */
+    val sourceName: String? = null,
 )
 
 data class EpgBrowserMatchedStream(
@@ -27,6 +31,8 @@ data class EpgBrowserMatchedStream(
     val streamName: String,
     val categoryId: String,
     val excluded: Boolean = false,
+    /** The source the stream is on: opening it opens Live TV there. */
+    val providerId: Long = 0L,
 )
 
 data class EpgBrowserDateGroup(
@@ -56,12 +62,15 @@ fun filterMatchedOnly(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDat
 data class GuideChannels(
     val streamIds: Set<String>,
     val byEpgChannelId: Map<String, EpgBrowserMatchedStream> = emptyMap(),
+    /** The guide's own source: only its airings are kept (multi-source plan, Phase 7). */
+    val providerId: Long = 0L,
 )
 
 /**
- * Keeps only airings on one of [channels] — a TV Guide's channels — dropping programmes and date
- * groups left empty. An airing matched to another stream on the same guide channel is kept and
- * pointed at the guide's stream, so it shows and plays the channel the guide shows.
+ * Keeps only airings on one of [channels] — a TV Guide's channels, on the guide's own source —
+ * dropping programmes and date groups left empty. An airing matched to another stream on the same
+ * guide channel is kept and pointed at the guide's stream, so it shows and plays the channel the
+ * guide shows.
  */
 fun filterToStreams(
     dateGroups: List<EpgBrowserDateGroup>,
@@ -73,6 +82,7 @@ fun filterToStreams(
                 val airings =
                     program.airings.mapNotNull { airing ->
                         when {
+                            airing.providerId != channels.providerId -> null
                             airing.matchedStream?.streamId?.toString() in channels.streamIds -> airing
                             else -> channels.byEpgChannelId[airing.channelId.lowercase()]?.let { airing.copy(matchedStream = it) }
                         }

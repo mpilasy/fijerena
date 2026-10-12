@@ -4,44 +4,35 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Reverse-direction matcher: given all Xtream LIVE streams, builds lookup maps once,
- * then answers match(channelId, channelName) -> EpgBrowserMatchedStream? queries
+ * Reverse-direction matcher: given all Xtream LIVE streams of one source ([providerId]), builds
+ * lookup maps once, then answers match(channelId, channelName) -> EpgBrowserMatchedStream? queries
  * using a 5-level fallback.
  */
 class EpgChannelMatcher(
     streams: List<XtreamStreamEntity>,
+    private val providerId: Long = 0L,
 ) {
     companion object {
-        private var cachedInstance: EpgChannelMatcher? = null
-        private var cachedProviderId: Long? = null
+        // One matcher per source: Search the guide matches each airing on its own source's
+        // channels, so the profile's sources are all in use at once (multi-source plan, Phase 7).
+        private val cache = HashMap<Long, EpgChannelMatcher>()
 
         /**
-         * Returns a cached matcher for the given providerId, or creates a new one
-         * and updates the cache. Thread-safe via synchronized.
+         * Returns the cached matcher for [providerId], or creates one and caches it. Thread-safe
+         * via synchronized.
          */
         @Synchronized
         fun getOrCreate(
             providerId: Long,
             fetchStreams: () -> List<XtreamStreamEntity>,
-        ): EpgChannelMatcher {
-            if (providerId == cachedProviderId) {
-                cachedInstance?.let { return it }
-            }
-
-            val streams = fetchStreams()
-            val matcher = EpgChannelMatcher(streams)
-            cachedProviderId = providerId
-            cachedInstance = matcher
-            return matcher
-        }
+        ): EpgChannelMatcher = cache.getOrPut(providerId) { EpgChannelMatcher(fetchStreams(), providerId) }
 
         /**
          * Explicitly clear the cache (e.g., when a provider's streams are refreshed).
          */
         @Synchronized
         fun clearCache() {
-            cachedInstance = null
-            cachedProviderId = null
+            cache.clear()
         }
 
         /**
@@ -53,9 +44,7 @@ class EpgChannelMatcher(
             providerId: Long,
             streams: List<XtreamStreamEntity>,
         ) {
-            val matcher = EpgChannelMatcher(streams)
-            cachedProviderId = providerId
-            cachedInstance = matcher
+            cache[providerId] = EpgChannelMatcher(streams, providerId)
         }
 
         // Bounds native/JVM heap for very large or noisy XMLTV guides (many distinct channelId/
@@ -183,5 +172,6 @@ class EpgChannelMatcher(
             streamName = name,
             categoryId = categoryId,
             excluded = excluded,
+            providerId = providerId,
         )
 }

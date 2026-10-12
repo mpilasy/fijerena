@@ -174,11 +174,14 @@ sealed interface Screen {
      *
      * @param categoryId When opened from a TV Guide: the guide's channel set, which the browser
      *   offers as an "In <category> only" filter (on by default). Null searches every channel.
+     * @param providerId The source of that TV Guide, whose channels the filter keeps; 0 = the
+     *   active source. The search itself covers every source of the profile.
      */
     @Serializable
     data class EpgBrowser(
         val categoryId: String? = null,
         val categoryName: String? = null,
+        val providerId: Long = 0L,
     ) : Screen
 
     /**
