@@ -105,7 +105,7 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 | 4 | Merged Recent, Continue Watching, favourites and Recent Categories | In progress (2026-10-12) |
 | 5 | Live TV Recent across sources, zap within source | In progress (2026-10-12) |
 | 6 | Merged browsing; the current source goes | Not started |
-| 7 | Search the guide across sources, and their guides kept fresh | In progress (2026-10-12) |
+| 7 | Search the guide across sources, and their guides kept fresh | Done (2026-10-12, `ba78d9a1`) |
 | 8 | Device walks and docs | Not started |
 
 ### Phase 1 — Source on routes and screens (no visible change)
@@ -232,6 +232,14 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
   them.
 - Now-playing on channel cards of any source reads that source's guide.
 - Tests: multi-source source-id list, matcher per provider, airing → (source, channel).
+- **Done 2026-10-12 (`ba78d9a1`).** `GuideScope` (searched providers = the profile's Xtream sources
+  plus the active one whatever its type; guide-source id → provider map), `GuideAiringMatcher`,
+  `EpgChannelMatcher` cached per provider, `Screen.EpgBrowser(providerId)` for "In <category> only",
+  `EpgFileManager.stateFor(Set)` / `launchRefreshStale(List)`, `EpgSyncWorker` one run per provider
+  inline in `doWork()`. Known costs, to watch in Phase 8: each provider's run rebuilds the search
+  index once (several rebuilds per worker run — slow on a Shield; a single rebuild at the end is
+  the fix if it shows); one matcher per searched source kept in memory (30–60 MB each for large
+  sources). Header subtitle and Guide sources still on the active source until Phase 6.
 
 ### Phase 8 — Device walks and docs
 
