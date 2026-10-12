@@ -104,9 +104,9 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 | 3 | Search across the profile's sources | Done (2026-10-12, `4460c434`) |
 | 4 | Merged Recent, Continue Watching, favourites and Recent Categories | Done (2026-10-12, `a31954e4`) |
 | 5 | Live TV Recent across sources, zap within source | Done (2026-10-12, `896e7200`) |
-| 6 | Merged browsing; the current source goes | In progress (2026-10-12) |
+| 6 | Merged browsing; the current source goes | Done (2026-10-12, `7f1ce07a`, `a9bc5339`) |
 | 7 | Search the guide across sources, and their guides kept fresh | Done (2026-10-12, `ba78d9a1`) |
-| 8 | Device walks and docs | Not started |
+| 8 | Device walks and docs | Not started — held until every known problem is fixed |
 
 ### Phase 1 — Source on routes and screens (no visible change)
 
@@ -259,6 +259,18 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
   auto-restore, `MobileNavHost`, `EpgBrowserViewModel`, Settings / Provider / Profiles VMs,
   `CoreInfo`, Movie / Episode screens (`getProviderOrActive`). Known risk: a section fails as a
   whole when the profile's first Xtream source can't connect.
+- **Part 2 done 2026-10-12 (`a9bc5339`), the current source goes.** No migration: `isActive` stays in
+  v17, never written; read once by the O2 upgrade (`ProviderDao.legacyActiveProviderKey()`). Summary
+  line `syncSummary` (running first, then failures, then "Updated" from the least recently updated
+  source) with a "Your sources" sheet; `SourceChoice.of` choosers (content filters, Guide sources,
+  phone Edit Source); a section is built from the sources that load (fixes part 1's regression);
+  profiles without Xtream get Browse buttons, with no source Add Source. Routes require
+  `providerId` except `CategoryList` (0 = a section's merged list). Fixed the part 1 test flake
+  (`CategoryViewModelMultiSourceTest` leaked coroutines into `EpgGuidePagingTest`).
+  **Calls made beyond the plan, for the user to confirm:** a profile with no Xtream source searches
+  its Jellyfin/M3U sources; Search the guide also covers M3U and Local sources; catalogue sync still
+  covers every Xtream source on the device; Settings' subscription block (expiry, max connections,
+  trial) removed. Focus walks home, home-rows, sources and settings edited by hand, not re-recorded.
 
 ### Phase 7 — Search the guide across sources, and their guides kept fresh (Q5)
 
