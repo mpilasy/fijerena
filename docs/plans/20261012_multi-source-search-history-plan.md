@@ -1,8 +1,8 @@
 # Multi-source: no current source
 
-**Status:** Proposed, 2026-10-12. Decisions Q1–Q7 and P1–P5 made 2026-10-12 (P1–P5 widened the
-plan: there is no current source any more, browsing is merged too). Open points O1–O4 below need
-an answer before the phases they block. Nothing has been built.
+**Status:** Ready, 2026-10-12. Decisions Q1–Q7, P1–P5 and O1–O4 made 2026-10-12 (P1–P5 widened the
+plan: there is no current source any more, browsing is merged too). Phase 1 can start. Nothing has
+been built.
 
 ## Today
 
@@ -51,14 +51,14 @@ stays stored separately; only the screens merge it. Every item plays from its ow
 | P4 | Merged Recent size | **Each source's own cap** (`watchHistorySize`); the merged list is all of them, newest first. |
 | P5 | What else merges | Recent Categories, favourites and search history stay stored as today (per source, or per profile), but **every list shows them merged** across the profile's sources. |
 
-## Open points
+## Open points, decided (2026-10-12)
 
-| # | Question | Blocks |
+| # | Question | Decision |
 |---|---|---|
-| O1 | With no current source, how does a profile use a Jellyfin or M3U source? Q6 said Xtream only first, but there is nothing left to pick one with. Options: merge them into browsing in the same phase (Jellyfin categories are server calls), or keep a temporary "browse this Jellyfin/M3U source" entry until they are merged. | Phase 6 |
-| O2 | Upgrade: do existing profiles get every existing source (nothing disappears), or only the one each profile last picked? | Phase 2 |
-| O3 | Header status: today it shows the current source's sync status ("Updated 2 hours ago"). With several, one line for all ("Updating 1 of 3…", "1 failed"), with the per-source detail in a sheet? | Phase 6 |
-| O4 | Content filters and guide sources are edited for "the source in use" (profile page, Search the guide's buttons). They need a source chooser instead. Fine to add one wherever that happens? | Phases 6–7 |
+| O1 | Jellyfin and M3U sources with no current source | **Temporary entry.** A "Browse <source>" entry per Jellyfin or M3U source the profile has opens that source's sections as today. They stay out of merged browsing, search and history until a later plan merges them. |
+| O2 | Upgrade: which sources each existing profile gets | **Only its last-picked source.** A profile that never picked one gets the device's current source at upgrade. Others are off until turned on. |
+| O3 | Header sync status with several sources | **One summary line** ("Updated 2 hours ago", "Updating 1 of 3…", "1 failed"); tap / OK opens a sheet with each source's status and reason. |
+| O4 | Content filters and guide sources edited for "the source in use" | **Source chooser** wherever that happens (profile page, Search the guide's buttons): pick the source, then its filters or guide sources. |
 
 ## What the code already gives us (survey, 2026-10-12)
 
@@ -126,12 +126,13 @@ current source under the hood and only widen what is shown; Phase 6 removes it.
 
 - Per-profile synced setting in `AppSettings`: the `providerKey`s the profile has (P1).
   `PER_PROFILE_SETTING_KEYS`, `SYNCED_SETTING_KEYS`, `applyRemoteSetting` / `syncedSetting`;
-  removed on profile delete; a new profile starts with the adding profile's sources (as filters
-  are copied today) — to confirm in O2's answer.
+  removed on profile delete; a new profile starts with the sources of the profile in use (as
+  filters are copied today).
 - Adding a source turns it on for the profile in use only; deleting one drops it everywhere. A
   source synced in from another device is on for the profile that added it there (its key arrives
   in that profile's setting).
-- Upgrade per O2.
+- Upgrade (O2): each existing profile gets only its last-picked source; one that never picked
+  gets the device's current source.
 - One resolver, `profileSources(profileId)`: the profile's sources that still exist. Re-emits when
   sources or the setting change. Until Phase 6, the current source is kept inside the profile's
   sources (switching to a source the profile lacks is not offered; P2).
@@ -191,10 +192,15 @@ current source under the hood and only widen what is shown; Phase 6 removes it.
   (TV `TvSections`, phone `MobileSourceTopBar`), `LocalActiveProviderId`, and
   `getMediaRepository()`'s `0` default — every caller passes a source. Room migration of
   `providers.db` dropping `isActive`; DATABASE_SCHEMA updated in the same commit.
-- Header: sync status of all the profile's sources (O3).
+- Header: one summary line for all the profile's sources (O3) — "Updated 2 hours ago",
+  "Updating 1 of 3…", "1 failed"; tap / OK opens a sheet with each source's status and reason
+  (raw detail in developer mode).
 - Catalogue sync: runs for every source of the profile in use, not only one (still
   foreground-only).
-- Content filters and guide sources choose their source (O4). Jellyfin and M3U per O1.
+- Content filters and guide sources: a source chooser first (O4) on the profile page and Search
+  the guide's Guide sources button.
+- Jellyfin and M3U (O1): a "Browse <source>" entry per such source the profile has (TV rail, phone
+  tab header) opens that source's sections as today, scoped to it through the Phase 1 route source.
 - Live sync: the "last source" setting is dropped; older builds that still send it are ignored.
 - Tests: merged category list and keys, every former current-source caller given a source,
   migration test.
