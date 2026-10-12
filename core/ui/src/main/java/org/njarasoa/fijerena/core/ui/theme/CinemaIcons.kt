@@ -63,6 +63,7 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.BarChart
@@ -107,6 +108,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.sharp.Add
 import androidx.compose.material.icons.sharp.ArrowDropDown
 import androidx.compose.material.icons.sharp.BarChart
@@ -151,6 +153,7 @@ import androidx.compose.material.icons.sharp.Tune
 import androidx.compose.material.icons.sharp.Tv
 import androidx.compose.material.icons.sharp.Visibility
 import androidx.compose.material.icons.sharp.VisibilityOff
+import androidx.compose.material.icons.sharp.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -356,6 +359,10 @@ object CinemaIcons {
     val Info: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Info, Icons.Outlined.Info, Icons.Sharp.Info)
+
+    val Warning: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Warning, Icons.Outlined.Warning, Icons.Sharp.Warning)
 
     val Folder: ImageVector
         @Composable @ReadOnlyComposable

@@ -36,10 +36,13 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -53,6 +56,8 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * Logins, for an Xtream source being edited (docs/plans/archive/20261005_shared-logins-plan.md, Phase 1):
@@ -76,6 +81,10 @@ fun ProviderLoginsSection(
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    // Today, for the expiry colours: yellow at 15 days or fewer, red at 7 or fewer and once expired.
+    val now = remember { Instant.now() }
+    val zone = remember { ZoneId.systemDefault() }
+    val normalStatusColor = remember { CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh) }
 
     // The last result, shown under the rows (and in the add dialog) until the next action.
     var shownMessage by remember { mutableStateOf<String?>(null) }
@@ -152,6 +161,12 @@ fun ProviderLoginsSection(
             val showMakeMain = !row.isMain && row.hasPassword
             val showRemove = rows.size > 1
             val makeMainRequester = remember { FocusRequester() }
+            val statusColor =
+                when (ExtraLoginsViewModel.expiryLevel(row, now, zone)) {
+                    SubscriptionExpiry.Level.URGENT -> CinemaError
+                    SubscriptionExpiry.Level.SOON -> CinemaWarning
+                    SubscriptionExpiry.Level.NORMAL -> normalStatusColor
+                }
             val loginText: @Composable () -> Unit = {
                 Column {
                     Text(
@@ -163,7 +178,7 @@ fun ProviderLoginsSection(
                     Text(
                         text = ExtraLoginsViewModel.statusText(context, row),
                         style = bodySmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        color = statusColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -185,7 +200,7 @@ fun ProviderLoginsSection(
                         Text(
                             text = ExtraLoginsViewModel.statusText(context, row),
                             style = bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            color = statusColor,
                         )
                     },
                 )

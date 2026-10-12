@@ -1210,4 +1210,14 @@
     <string name="settings_provider_max_connections_label">Max connections</string>
     <string name="settings_provider_trial_account_label">Trial account</string>
     <string name="subscription_unlimited">Unlimited</string>
+    <string name="source_expiry_today">%1$s expires today</string>
+    <string name="source_expiry_tomorrow">%1$s expires tomorrow</string>
+    <plurals name="source_expiry_in_days">
+        <item quantity="one">%1$s expires in %2$d day</item>
+        <item quantity="other">%1$s expires in %2$d days</item>
+    </plurals>
+    <plurals name="source_expiry_expired_days_ago">
+        <item quantity="one">%1$s expired %2$d day ago</item>
+        <item quantity="other">%1$s expired %2$d days ago</item>
+    </plurals>
 </resources>

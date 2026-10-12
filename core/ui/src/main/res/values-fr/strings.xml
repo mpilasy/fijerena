@@ -1212,4 +1212,14 @@
     <string name="settings_provider_max_connections_label">Connexions max.</string>
     <string name="settings_provider_trial_account_label">Compte d\'essai</string>
     <string name="subscription_unlimited">Illimité</string>
+    <string name="source_expiry_today">%1$s expire aujourd\'hui</string>
+    <string name="source_expiry_tomorrow">%1$s expire demain</string>
+    <plurals name="source_expiry_in_days">
+        <item quantity="one">%1$s expire dans %2$d jour</item>
+        <item quantity="other">%1$s expire dans %2$d jours</item>
+    </plurals>
+    <plurals name="source_expiry_expired_days_ago">
+        <item quantity="one">%1$s a expiré il y a %2$d jour</item>
+        <item quantity="other">%1$s a expiré il y a %2$d jours</item>
+    </plurals>
 </resources>

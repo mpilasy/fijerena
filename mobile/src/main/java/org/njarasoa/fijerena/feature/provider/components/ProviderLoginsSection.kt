@@ -43,11 +43,15 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * Logins, for an Xtream source being edited: the main login and the extra ones playback shares,
@@ -68,6 +72,9 @@ fun ColumnScope.ProviderLoginsSection(
     val busy by loginsViewModel.busy.collectAsStateWithLifecycle()
     val message by loginsViewModel.message.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    // Today, for the expiry colours: yellow at 15 days or fewer, red at 7 or fewer and once expired.
+    val now = remember { Instant.now() }
+    val zone = remember { ZoneId.systemDefault() }
 
     var showAddDialog by remember { mutableStateOf(false) }
     // The username being added, while the dialog waits for it to appear in the list.
@@ -133,7 +140,12 @@ fun ColumnScope.ProviderLoginsSection(
                         Text(
                             text = ExtraLoginsViewModel.statusText(context, row),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            color =
+                                when (ExtraLoginsViewModel.expiryLevel(row, now, zone)) {
+                                    SubscriptionExpiry.Level.URGENT -> CinemaError
+                                    SubscriptionExpiry.Level.SOON -> CinemaWarning
+                                    SubscriptionExpiry.Level.NORMAL -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                },
                         )
                     }
                     if (!row.isMain && row.hasPassword) {

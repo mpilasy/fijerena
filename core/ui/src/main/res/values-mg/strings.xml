@@ -1204,4 +1204,14 @@
     <string name="settings_provider_max_connections_label">Fifandraisana fara-fahabetsahany</string>
     <string name="settings_provider_trial_account_label">Kaonty fitsapana</string>
     <string name="subscription_unlimited">Tsy voafetra</string>
+    <string name="source_expiry_today">Ho lany andro anio %1$s</string>
+    <string name="source_expiry_tomorrow">Ho lany andro rahampitso %1$s</string>
+    <plurals name="source_expiry_in_days">
+        <item quantity="one">Ho lany andro afaka %2$d andro %1$s</item>
+        <item quantity="other">Ho lany andro afaka %2$d andro %1$s</item>
+    </plurals>
+    <plurals name="source_expiry_expired_days_ago">
+        <item quantity="one">Lany andro %2$d andro lasa izay %1$s</item>
+        <item quantity="other">Lany andro %2$d andro lasa izay %1$s</item>
+    </plurals>
 </resources>

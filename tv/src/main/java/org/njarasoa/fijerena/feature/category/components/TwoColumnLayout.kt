@@ -275,6 +275,9 @@ internal fun TwoColumnLayout(
                 )
             }
 
+            // A source expiring within a week, or expired: not focusable, the focus order is unchanged.
+            SourceExpiryBanner(modifier = Modifier.padding(bottom = Spacing.sm))
+
             if (contentType == ContentType.LIVE_TV) {
                 val epgErrorMessage =
                     when (epgIndexState) {

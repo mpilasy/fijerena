@@ -17,7 +17,10 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SourceLogins
 import org.njarasoa.fijerena.core.network.xtream.XtreamLoginCheck
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * Edit Source → Logins for an Xtream source: its main login and the extra ones playback shares,
@@ -248,6 +251,13 @@ class ExtraLoginsViewModel(
                 }
             return if (row.isMain) context.getString(R.string.provider_logins_main_format, state) else state
         }
+
+        /** How close [row]'s expiry is, for its status line's colour; normal while unknown or unlimited. */
+        fun expiryLevel(
+            row: LoginRow,
+            now: Instant,
+            zone: ZoneId,
+        ): SubscriptionExpiry.Level = SubscriptionExpiry.level((row.state as? LoginState.Known)?.status?.expiresAtSec, now, zone)
     }
 
     class Factory(

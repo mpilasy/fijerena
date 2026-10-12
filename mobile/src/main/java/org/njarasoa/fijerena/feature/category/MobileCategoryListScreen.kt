@@ -765,6 +765,12 @@ fun MobileCategoryListScreen(
 
                         is CategoryViewModel.UiState.Success -> {
                             Column(modifier = Modifier.fillMaxSize()) {
+                                // A source expiring within a week, or expired; hidden with the chips
+                                // while a preview is docked, so the video stays under the top bar.
+                                if (!(isLiveTv && target != null)) {
+                                    SourceExpiryBanner()
+                                }
+
                                 // EPG error/status banner (Live TV only)
                                 if (contentType == ContentType.LIVE_TV) {
                                     val epgMessage =
