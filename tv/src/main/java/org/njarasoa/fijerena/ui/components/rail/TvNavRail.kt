@@ -70,6 +70,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -111,6 +112,9 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * @param items what the rail offers, top to bottom, sections already filtered to the source's.
  * @param profileInitial the avatar's letter for [RailItem.PROFILE].
  * @param onSelect called with the item picked; the nav host navigates.
+ * @param browse a "Browse <source>" entry for each of the profile's sources outside the merged
+ *   sections (Jellyfin, M3U; docs/plans/20261012_multi-source-search-history-plan.md → O1), drawn
+ *   below the sections, before Search; [onBrowse] is called with the one picked.
  */
 @Composable
 fun TvNavRail(
@@ -119,9 +123,11 @@ fun TvNavRail(
     profileInitial: String,
     onSelect: (RailItem) -> Unit,
     modifier: Modifier = Modifier,
+    browse: List<BrowseSource> = emptyList(),
+    onBrowse: (BrowseSource) -> Unit = {},
 ) {
     if (state.visible) {
-        RailOverlay(state, items, profileInitial, onSelect, modifier)
+        RailOverlay(state, items, profileInitial, onSelect, browse, onBrowse, modifier)
     }
 }
 
@@ -143,6 +149,8 @@ private fun RailOverlay(
     items: List<RailItem>,
     profileInitial: String,
     onSelect: (RailItem) -> Unit,
+    browse: List<BrowseSource>,
+    onBrowse: (BrowseSource) -> Unit,
     modifier: Modifier,
 ) {
     val focusManager = LocalFocusManager.current
@@ -177,6 +185,10 @@ private fun RailOverlay(
     }
     val select = { item: RailItem ->
         onSelect(item)
+        leaveRequests++
+    }
+    val selectBrowse = { source: BrowseSource ->
+        onBrowse(source)
         leaveRequests++
     }
     val back = { if (state.current == RailItem.HOME) returnToContent() else select(RailItem.HOME) }
@@ -243,6 +255,14 @@ private fun RailOverlay(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             items.forEach { item ->
+                // The Browse entries come after the sections, before Search.
+                if (item == RailItem.SEARCH) {
+                    browse.forEach { source ->
+                        key(source.providerId) {
+                            BrowseEntry(source = source, openProgress = openProgress, onClick = { selectBrowse(source) })
+                        }
+                    }
+                }
                 key(item) {
                     if (item == RailItem.SETTINGS) Spacer(modifier = Modifier.weight(1f))
                     RailEntry(
@@ -286,7 +306,6 @@ private fun RailEntry(
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
-    var focused by remember { mutableStateOf(false) }
     val isCurrent = item == state.current
     val profileName = state.profileName ?: profileInitial
     val label =
@@ -300,6 +319,60 @@ private fun RailEntry(
             RailItem.SETTINGS -> stringResource(R.string.settings_title)
         }
     val description = if (item == RailItem.PROFILE) stringResource(R.string.profile_switch_description, profileName) else label
+    RailButton(
+        label = label,
+        description = description,
+        isCurrent = isCurrent,
+        openProgress = openProgress,
+        onClick = onClick,
+        modifier = modifier,
+    ) {
+        if (item == RailItem.PROFILE) {
+            ProfileAvatar(
+                name = profileInitial,
+                colorIndex = state.profileColorIndex,
+                size = TvDimensions.iconMedium,
+                fontSize = MaterialTheme.typography.titleSmall.fontSize,
+            )
+        } else {
+            Icon(
+                imageVector = item.icon(),
+                contentDescription = null,
+                modifier = Modifier.size(TvDimensions.iconSmall),
+            )
+        }
+    }
+}
+
+/** A "Browse <source>" entry (O1): never lit, as what it opens is not one of the rail's places. */
+@Composable
+private fun BrowseEntry(
+    source: BrowseSource,
+    openProgress: State<Float>,
+    onClick: () -> Unit,
+) {
+    val label = stringResource(R.string.browse_source, source.name)
+    RailButton(label = label, description = label, isCurrent = false, openProgress = openProgress, onClick = onClick, modifier = Modifier) {
+        Icon(
+            imageVector = CinemaIcons.Folder,
+            contentDescription = null,
+            modifier = Modifier.size(TvDimensions.iconSmall),
+        )
+    }
+}
+
+/** One rail row: [icon] and [label], the label revealed as the rail slides out. */
+@Composable
+private fun RailButton(
+    label: String,
+    description: String,
+    isCurrent: Boolean,
+    openProgress: State<Float>,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    icon: @Composable () -> Unit,
+) {
+    var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(CornerRadius.small)
     val lit = isCurrent || focused
     Surface(
@@ -351,20 +424,7 @@ private fun RailEntry(
                         },
                 contentAlignment = Alignment.Center,
             ) {
-                if (item == RailItem.PROFILE) {
-                    ProfileAvatar(
-                        name = profileInitial,
-                        colorIndex = state.profileColorIndex,
-                        size = TvDimensions.iconMedium,
-                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                    )
-                } else {
-                    Icon(
-                        imageVector = item.icon(),
-                        contentDescription = null,
-                        modifier = Modifier.size(TvDimensions.iconSmall),
-                    )
-                }
+                icon()
             }
             Text(
                 text = label,

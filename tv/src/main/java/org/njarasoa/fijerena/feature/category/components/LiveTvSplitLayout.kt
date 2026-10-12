@@ -100,6 +100,8 @@ internal fun LiveTvSplitLayout(
     categoryViewModel: CategoryViewModel,
     categories: ImmutableCategoryList,
     selectedCategoryId: String?,
+    /** The selection's key: id and source (multi-source plan, Phase 6). */
+    selectedCategoryKey: String?,
     streams: ImmutableMediaList?,
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
@@ -111,7 +113,7 @@ internal fun LiveTvSplitLayout(
     favoriteCategoryIds: ImmutableStringSet,
     watchProgress: ImmutableWatchProgress,
     watchedIds: ImmutableStringSet,
-    onCategorySelected: (String) -> Unit,
+    onCategorySelected: (categoryId: String, source: Long) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
@@ -126,7 +128,7 @@ internal fun LiveTvSplitLayout(
      * Opens the TV Guide for a list on a channel's row — the full-screen OSD's Guide button (GD5).
      * Null (the source has no guide) leaves the button out.
      */
-    onOpenGuide: ((categoryId: String, categoryName: String, focusChannelId: String?) -> Unit)? = null,
+    onOpenGuide: ((categoryId: String, categoryName: String, focusChannelId: String?, providerId: Long) -> Unit)? = null,
     /**
      * The full-screen OSD's Start over: the programme on air from its start, from the channel's
      * archive (catch-up). Shown only when the archive holds it; null leaves the button out.
@@ -134,7 +136,7 @@ internal fun LiveTvSplitLayout(
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val categoryMap = remember(categories) { categories.associateBy { it.id } }
+    val categoryMap = remember(categories) { categories.associateBy { it.key } }
     // This list's own source; a row that leaves its source 0 is on it. Recent and Favourites mix
     // the profile's sources, each row on its own (multi-source plan, Phases 4–5).
     val listSource = categoryViewModel.sourceId
@@ -225,13 +227,16 @@ internal fun LiveTvSplitLayout(
     // Saveable so the tab choice survives an activity recreate; keyed on the entry's category
     // because the first Success state arrives before it is resolved.
     val pickedCategory =
-        remember(selectedCategoryId, categoryMap) {
+        remember(selectedCategoryKey, categoryMap) {
             selectedCategoryId
                 ?.takeUnless { it in CategoryViewModel.VIRTUAL_CATEGORY_IDS }
-                ?.let { ChannelContext.Category(id = it, name = categoryMap[it]?.name ?: it) }
+                ?.let { id ->
+                    val category = selectedCategoryKey?.let { categoryMap[it] }
+                    ChannelContext.Category(id = id, name = category?.name ?: id, source = category?.providerId ?: 0L)
+                }
         }
     var channelContext by
-        rememberSaveable(selectedCategoryId, stateSaver = ChannelContext.Saver) {
+        rememberSaveable(selectedCategoryKey, stateSaver = ChannelContext.Saver) {
             mutableStateOf(
                 if (selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
                     ChannelContext.Favorites
@@ -544,9 +549,9 @@ internal fun LiveTvSplitLayout(
             PlayerScreen(
                 viewModel = playback,
                 onBack = { fullScreen = false },
-                isFavorite = favoriteIds.contains(target.id),
+                isFavorite = favoriteIds.contains(sourceKey(targetSource, target.id)),
                 onToggleFavorite = {
-                    categoryViewModel.toggleFavoriteStream(target.id, target.name, target.categoryId, contentType, target.providerId)
+                    categoryViewModel.toggleFavoriteStream(target.id, target.name, target.categoryId, contentType, targetSource)
                 },
                 currentEpgProgram = success?.currentEpgProgram,
                 nextEpgProgram = success?.nextEpgProgram,
@@ -559,7 +564,8 @@ internal fun LiveTvSplitLayout(
                         val contextName = channelContext.label()
                         val showGuide: () -> Unit = {
                             guideReturnStreamId = target.id
-                            open(contextId, contextName, target.id)
+                            // On the playing channel's source: its guide, its list.
+                            open(contextId, contextName, target.id, targetSource)
                         }
                         showGuide
                     },

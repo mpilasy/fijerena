@@ -88,8 +88,11 @@ fun TvCategoryGridScreen(
     closeSavedLivePreview: Boolean = false,
     /** [providerId]: the row's source (a merged Recent / Favourites row), 0 for the list's own. */
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
-    /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
-    onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit = { _, _, _ -> },
+    /**
+     * The TV Guide for a list, on [providerId]'s source (the category's, or the playing channel's);
+     * with a channel when opened from the player (its row gets entry focus).
+     */
+    onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?, providerId: Long) -> Unit = { _, _, _, _ -> },
     /** Live TV: the full-screen OSD's Start over, the programme on air from the channel's archive. */
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
     onBack: () -> Unit = {},
@@ -184,7 +187,7 @@ private fun CategoryGridContent(
     configuration: android.content.res.Configuration,
     catViewModel: CategoryViewModel,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
-    onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit,
+    onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?, providerId: Long) -> Unit,
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)?,
     onBack: () -> Unit,
     onHome: () -> Unit,
@@ -275,21 +278,26 @@ private fun CategoryGridContent(
     // The ViewModel's list is the preview's ChannelContext (LT2), and a ViewModel recreated after
     // process death starts on its default list (Recent): the preview would come back on a channel
     // that list doesn't have, with no video. So the list is kept with this screen's saved state and
-    // put back once if the recreated ViewModel lands elsewhere.
+    // put back once if the recreated ViewModel lands elsewhere. With its source: the list holds
+    // every source's categories, the same id on two of them (Phase 6).
     var savedCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var savedCategorySource by rememberSaveable { mutableLongStateOf(0L) }
     var selectionChecked by remember { mutableStateOf(false) }
-    val selectedCategoryId = (uiState as? CategoryViewModel.UiState.Success)?.selectedCategoryId
-    LaunchedEffect(selectedCategoryId) {
+    val selection = uiState as? CategoryViewModel.UiState.Success
+    val selectedCategoryId = selection?.selectedCategoryId
+    val selectedCategorySource = selection?.selectedCategorySource ?: 0L
+    LaunchedEffect(selectedCategoryId, selectedCategorySource) {
         if (!isLiveTv || selectedCategoryId == null) return@LaunchedEffect
         if (!selectionChecked) {
             selectionChecked = true
             val saved = savedCategoryId
-            if (saved != null && saved != selectedCategoryId) {
-                catViewModel.loadStreams(saved)
+            if (saved != null && (saved != selectedCategoryId || savedCategorySource != selectedCategorySource)) {
+                catViewModel.loadStreams(saved, savedCategorySource)
                 return@LaunchedEffect
             }
         }
         savedCategoryId = selectedCategoryId
+        savedCategorySource = selectedCategorySource
     }
 
     // 5% padding for TV overscan safety — applied per-branch rather than around the whole
@@ -342,6 +350,7 @@ private fun CategoryGridContent(
                                     categoryViewModel = catViewModel,
                                     categories = immutableCategories,
                                     selectedCategoryId = state.selectedCategoryId,
+                                    selectedCategoryKey = state.selectedCategoryKey,
                                     streams = immutableStreams,
                                     streamsLoading = state.streamsLoading,
                                     categoriesRefreshing = state.categoriesRefreshing,
@@ -353,7 +362,7 @@ private fun CategoryGridContent(
                                     favoriteCategoryIds = favoriteCategoryIds,
                                     watchProgress = watchProgress,
                                     watchedIds = watchedIds,
-                                    onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
+                                    onCategorySelected = { categoryId, source -> catViewModel.loadStreams(categoryId, source) },
                                     onStreamSelected = onStreamSelected,
                                     onRefreshCategories = { catViewModel.refreshCategories() },
                                     onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
@@ -384,6 +393,7 @@ private fun CategoryGridContent(
                                     categoryViewModel = catViewModel,
                                     categories = immutableCategories,
                                     selectedCategoryId = state.selectedCategoryId,
+                                    selectedCategoryKey = state.selectedCategoryKey,
                                     streams = immutableStreams,
                                     streamsLoading = state.streamsLoading,
                                     categoriesRefreshing = state.categoriesRefreshing,
@@ -397,8 +407,8 @@ private fun CategoryGridContent(
                                     watchedIds = watchedIds,
                                     supportsNativeEpg = supportsNativeEpg,
                                     epgIndexState = epgIndexState,
-                                    onCategorySelected = { categoryId ->
-                                        catViewModel.loadStreams(categoryId)
+                                    onCategorySelected = { categoryId, source ->
+                                        catViewModel.loadStreams(categoryId, source)
                                     },
                                     onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
                                         // OK on a channel opens the preview layer on it (LT7). The
@@ -418,7 +428,7 @@ private fun CategoryGridContent(
                                     onRefreshStreams = { categoryId ->
                                         catViewModel.refreshStreams(categoryId)
                                     },
-                                    onEpgClick = { categoryId, categoryName -> onEpgClick(categoryId, categoryName, null) },
+                                    onEpgClick = { categoryId, categoryName, source -> onEpgClick(categoryId, categoryName, null, source) },
                                     onBack = onBack,
                                 )
                             }

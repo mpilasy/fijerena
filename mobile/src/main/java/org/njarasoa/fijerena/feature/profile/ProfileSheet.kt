@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
@@ -31,7 +32,9 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 /**
  * The profile avatar's sheet on a tab root: the profiles, the one in use marked — tapping another
  * switches to it and then calls [onProfileChosen], for the caller to start over on its last tab —
- * and Settings, where profiles are added and edited.
+ * and Settings, where profiles are added and edited. Under them, a "Browse <source>" row for each
+ * of the profile's sources outside the merged tabs ([browse]: Jellyfin, M3U;
+ * docs/plans/20261012_multi-source-search-history-plan.md → O1); [onBrowse] opens the one tapped.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +42,8 @@ fun ProfileSheet(
     viewModel: ProfilesViewModel,
     onProfileChosen: () -> Unit,
     onDismiss: () -> Unit,
+    browse: List<BrowseSource> = emptyList(),
+    onBrowse: (BrowseSource) -> Unit = {},
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
@@ -89,6 +94,21 @@ fun ProfileSheet(
                             modifier =
                                 Modifier.clickable {
                                     if (profile.isActive) onDismiss() else viewModel.switchTo(profile.id, onProfileChosen)
+                                },
+                        )
+                    }
+                    if (browse.isNotEmpty()) HorizontalDivider()
+                    browse.forEach { source ->
+                        ListItem(
+                            headlineContent = {
+                                Text(stringResource(R.string.browse_source, source.name), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                            leadingContent = { Icon(CinemaIcons.Folder, contentDescription = null) },
+                            colors = rowColors,
+                            modifier =
+                                Modifier.clickable {
+                                    onDismiss()
+                                    onBrowse(source)
                                 },
                         )
                     }

@@ -16,10 +16,14 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 internal sealed interface ChannelContext {
     val id: String
 
-    /** A real category of the source: the one browsed into when the channel was picked. */
+    /**
+     * A real category: the one browsed into when the channel was picked, on [source] (the list
+     * holds every source's categories, multi-source plan Phase 6).
+     */
     data class Category(
         override val id: String,
         val name: String,
+        val source: Long = 0L,
     ) : ChannelContext
 
     data object Recent : ChannelContext {
@@ -31,20 +35,33 @@ internal sealed interface ChannelContext {
     }
 
     companion object {
-        /** For `rememberSaveable`: a `Category` saves its id and name, the two virtual lists their id. */
+        /** For `rememberSaveable`: a `Category` saves its id, name and source, the two virtual lists their id. */
         val Saver: Saver<ChannelContext, Any> =
             listSaver(
                 save = { context ->
                     when (context) {
-                        is Category -> listOf(context.id, context.name)
+                        is Category -> listOf(context.id, context.name, context.source)
                         else -> listOf(context.id)
                     }
                 },
                 restore = { saved ->
                     when (saved[0]) {
-                        CategoryViewModel.RECENT_CATEGORY_ID -> Recent
-                        CategoryViewModel.FAVORITES_CATEGORY_ID -> Favorites
-                        else -> Category(id = saved[0], name = saved.getOrElse(1) { saved[0] })
+                        CategoryViewModel.RECENT_CATEGORY_ID -> {
+                            Recent
+                        }
+
+                        CategoryViewModel.FAVORITES_CATEGORY_ID -> {
+                            Favorites
+                        }
+
+                        else -> {
+                            Category(
+                                id = saved[0] as String,
+                                name = saved.getOrElse(1) { saved[0] } as String,
+                                source =
+                                    saved.getOrNull(2) as? Long ?: 0L,
+                            )
+                        }
                     }
                 },
             )

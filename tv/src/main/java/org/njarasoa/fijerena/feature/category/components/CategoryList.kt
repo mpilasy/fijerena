@@ -40,6 +40,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardBorder
 import androidx.tv.material3.CardColors
@@ -54,6 +55,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
@@ -81,11 +83,17 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 @Composable
 internal fun CategoryList(
     categories: ImmutableCategoryList,
-    selectedCategoryId: String?,
+    /**
+     * The selection as a [MediaCategory.key]: the list holds every source's categories, the same
+     * id on two of them, so rows, focus and the selection go by key (multi-source plan, Phase 6).
+     */
+    selectedCategoryKey: String?,
     contentType: String,
     categoryViewModel: CategoryViewModel,
+    /** Favourite categories by key. */
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
-    onCategorySelected: (String) -> Unit,
+    /** A category picked: its id and source (0 for a virtual list). */
+    onCategorySelected: (categoryId: String, source: Long) -> Unit,
     /** This column's pane; Right leaves it for [itemsPane] (see `Modifier.tvPane`). */
     paneFocus: PaneFocusState,
     itemsPane: PaneFocusState?,
@@ -104,11 +112,13 @@ internal fun CategoryList(
         }
 
     val listState = rememberLazyListState()
+    // Each source's name while the list mixes several: a badge on its categories.
+    val sourceNames by categoryViewModel.sourceNames.collectAsStateWithLifecycle()
     paneFocus.bind(
-        selectedKey = selectedCategoryId,
-        firstKey = virtualCategories.firstOrNull()?.id ?: regularCategories.firstOrNull()?.id,
+        selectedKey = selectedCategoryKey,
+        firstKey = virtualCategories.firstOrNull()?.key ?: regularCategories.firstOrNull()?.key,
         listState = listState,
-        indexOf = { key -> regularCategories.indexOfFirst { it.id == key } },
+        indexOf = { key -> regularCategories.indexOfFirst { it.key == key } },
         // Left from an item lands on the category being browsed, not the one last scrolled past.
         preferSelected = true,
     )
@@ -119,14 +129,15 @@ internal fun CategoryList(
     // flooding logcat) while the list is hidden — see StreamList's identical effect. The pane
     // scrolls only when the row isn't composed, so OK on a visible category no longer jumps it
     // to the top.
-    val selectedIndex = remember(regularCategories, selectedCategoryId) { regularCategories.indexOfFirst { it.id == selectedCategoryId } }
+    val selectedIndex =
+        remember(regularCategories, selectedCategoryKey) { regularCategories.indexOfFirst { it.key == selectedCategoryKey } }
     var skipFirstSelection by remember { mutableStateOf(!focusSelectedOnOpen) }
-    LaunchedEffect(selectedCategoryId, selectedIndex) {
+    LaunchedEffect(selectedCategoryKey, selectedIndex) {
         if (skipFirstSelection) {
             skipFirstSelection = false
             return@LaunchedEffect
         }
-        if (selectedCategoryId != null) paneFocus.focusKey(selectedCategoryId)
+        if (selectedCategoryKey != null) paneFocus.focusKey(selectedCategoryKey)
     }
 
     val cardStyle = categoryCardStyle()
@@ -141,16 +152,17 @@ internal fun CategoryList(
                     categoryId = category.id,
                     categoryName = category.name,
                     contentType = contentType,
-                    isFavorite = category.id in favoriteCategoryIds,
+                    isFavorite = category.key in favoriteCategoryIds,
                 ),
             onConfirm = {
-                val removing = category.id in favoriteCategoryIds
-                categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                // On the category's own source.
+                val removing = category.key in favoriteCategoryIds
+                categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType, category.providerId)
                 // Not confirmed any more: removed at once, with an Undo.
                 if (removing) {
                     undoBar.show(category.name) {
-                        if (!categoryViewModel.isFavoriteCategory(category.id, contentType)) {
-                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                        if (!categoryViewModel.isFavoriteCategory(category.id, contentType, category.providerId)) {
+                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType, category.providerId)
                         }
                     }
                 }
@@ -218,11 +230,11 @@ internal fun CategoryList(
                         virtualCategories.forEach { category ->
                             CategoryItem(
                                 category = category,
-                                isSelected = category.id == selectedCategoryId,
+                                isSelected = category.key == selectedCategoryKey,
                                 cardStyle = cardStyle,
                                 icon = virtualCategoryIcon(category.id),
-                                onClick = { onCategorySelected(category.id) },
-                                cardModifier = Modifier.paneItem(paneFocus, category.id).leftToRail(),
+                                onClick = { onCategorySelected(category.id, category.providerId) },
+                                cardModifier = Modifier.paneItem(paneFocus, category.key).leftToRail(),
                             )
                         }
                     }
@@ -249,21 +261,22 @@ internal fun CategoryList(
                     ) {
                         itemsIndexed(
                             items = regularCategories,
-                            key = { _, category -> category.id },
+                            key = { _, category -> category.key },
                             contentType = { _, _ -> "category" },
                         ) { index, category ->
                             CategoryItem(
                                 category = category,
-                                isSelected = category.id == selectedCategoryId,
+                                isSelected = category.key == selectedCategoryKey,
                                 cardStyle = cardStyle,
-                                isFavorite = category.id in favoriteCategoryIds,
-                                onClick = { onCategorySelected(category.id) },
+                                isFavorite = category.key in favoriteCategoryIds,
+                                sourceName = sourceNames[category.providerId],
+                                onClick = { onCategorySelected(category.id, category.providerId) },
                                 onOpenActions = { actionsCategory = category },
-                                cardModifier = Modifier.paneItem(paneFocus, category.id).leftToRail(),
+                                cardModifier = Modifier.paneItem(paneFocus, category.key).leftToRail(),
                                 modifier =
                                     // See StreamList: remember-scoped so recomposition of a visible row
                                     // doesn't drop the modifier and cancel the animation mid-flight.
-                                    if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
+                                    if (remember(category.key) { enteredCategoryIds.add(category.key) }) {
                                         Modifier.staggeredEntrance(index)
                                     } else {
                                         Modifier
@@ -325,6 +338,8 @@ private fun CategoryItem(
     isSelected: Boolean,
     cardStyle: CategoryCardStyle,
     isFavorite: Boolean = false,
+    /** The category's source, while the list mixes several (a badge); null with one. */
+    sourceName: String? = null,
     /** A virtual category's mark (Recent, Favourites…); null for the source's own categories. */
     icon: ImageVector? = null,
     onClick: () -> Unit,
@@ -394,6 +409,7 @@ private fun CategoryItem(
                 // weight(1f) keeps the hint below at the row's end.
                 modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
             )
+            sourceName?.let { SourceBadge(it) }
             // See StreamItem: a glyph, not a focus stop, on the focused row only.
             if (isFocused && onOpenActions != null) RowActionsHint()
         }

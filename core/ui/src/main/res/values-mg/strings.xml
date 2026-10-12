@@ -1196,4 +1196,5 @@
     <string name="theme_amethyst">Ametista</string>
     <string name="theme_teal">Manga maitso</string>
     <string name="source_badge_description">Loharano: %1$s</string>
+    <string name="browse_source">Jereo %1$s</string>
 </resources>

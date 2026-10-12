@@ -49,6 +49,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.history.MergedLists
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
+import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
@@ -224,6 +226,39 @@ fun TvNavHost(
 
             section != null -> {
                 openSection(section)
+            }
+        }
+    }
+
+    // A Browse entry (O1): a Jellyfin or M3U source's own sections, on it alone — pushed over where
+    // you are, as Search is, so Back returns there. With several sections, picked in a dialog.
+    var browseChoice by remember { mutableStateOf<Pair<BrowseSource, List<String>>?>(null) }
+
+    fun openBrowseSection(
+        source: BrowseSource,
+        contentType: String,
+    ) {
+        popSettingsTree()
+        navController.navigateOnce(
+            Screen.CategoryList(contentType = contentType, showPreviewPane = false, providerId = source.providerId),
+        )
+    }
+
+    fun browseSource(source: BrowseSource) {
+        coroutineScope.launch {
+            when (val opening = ProfileSections.opening(context, source.providerId)) {
+                // As Home's sign-in prompt: plain navigate, the rail is leaving focus.
+                ProfileSections.Opening.SignIn -> {
+                    navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
+                }
+
+                is ProfileSections.Opening.Sections -> {
+                    when (opening.contentTypes.size) {
+                        0 -> Unit
+                        1 -> openBrowseSection(source, opening.contentTypes.first())
+                        else -> browseChoice = source to opening.contentTypes
+                    }
+                }
             }
         }
     }
@@ -413,21 +448,24 @@ fun TvNavHost(
                     }
                 }
             },
-            onEpgClick = { categoryId, categoryName, focusChannelId ->
+            onEpgClick = { categoryId, categoryName, focusChannelId, source ->
                 // The TV Guide for a category (the header button), or for the playing
-                // channel's list from the player's Guide button, on that channel's row.
+                // channel's list from the player's Guide button, on that channel's row — on the
+                // category's (or channel's) own source; 0: the list's.
                 navController.navigateOnce(
                     Screen.EpgGuide(
                         categoryId = categoryId,
                         categoryName = categoryName,
                         focusChannelId = focusChannelId,
-                        providerId = providerId,
+                        providerId = source.takeIf { it != 0L } ?: providerId,
                     ),
                 )
             },
-            // Start over (catch-up): the programme on air from its start, full screen. Back returns
-            // to the Live TV preview.
-            onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel, providerId)) },
+            // Start over (catch-up): the programme on air from its start, full screen, on the
+            // channel's own source. Back returns to the Live TV preview.
+            onStartOver = { program, channel ->
+                navController.navigateOnce(catchupRoute(program, channel, channel.providerId.takeIf { it != 0L } ?: providerId))
+            },
             onBack = {
                 // A single pop always lands on whatever pushed this entry — Home under a
                 // section's browse, or the search/EPG screen underneath a
@@ -494,17 +532,21 @@ fun TvNavHost(
                                 TvSection.of(contentType.name)?.let(::openSection)
                             }
                             ContentTypeSelectionScreen(
-                                onCapabilitiesResolved = { supportedTypes ->
-                                    // Skip the picker tap entirely when the active provider only supports
-                                    // one content type — but only on the very first resolve per NavHost
-                                    // lifetime, so Back-navigation into this screen later still lands on a
-                                    // real, interactive Home (the source switch lives here).
+                                onCapabilitiesResolved = { activeTypes ->
+                                    // Skip the picker tap entirely when the profile has one section — its
+                                    // Xtream sources' merged, or the active source's without one — but
+                                    // only on the very first resolve per NavHost lifetime, so
+                                    // Back-navigation into this screen later still lands on a real,
+                                    // interactive Home (the source switch lives here).
                                     if (!hasAutoSkippedSingleContentType) {
                                         hasAutoSkippedSingleContentType = true
-                                        if (supportedTypes.size == 1) {
-                                            org.njarasoa.fijerena.core.navigation.ContentType
-                                                .fromString(supportedTypes.first())
-                                                ?.let(navigateToContentType)
+                                        coroutineScope.launch {
+                                            val supportedTypes = ProfileSections.load(context).merged ?: activeTypes
+                                            if (supportedTypes.size == 1) {
+                                                org.njarasoa.fijerena.core.navigation.ContentType
+                                                    .fromString(supportedTypes.first())
+                                                    ?.let(navigateToContentType)
+                                            }
                                         }
                                     }
                                 },
@@ -1077,8 +1119,20 @@ fun TvNavHost(
                         rail = rail,
                         navController = navController,
                         onSelect = ::selectRailItem,
+                        onBrowse = ::browseSource,
                         sourceVersion = railSourceVersion,
                     )
+                    browseChoice?.let { (source, contentTypes) ->
+                        BrowseSectionsDialog(
+                            source = source,
+                            contentTypes = contentTypes,
+                            onPick = { contentType ->
+                                browseChoice = null
+                                openBrowseSection(source, contentType)
+                            },
+                            onDismiss = { browseChoice = null },
+                        )
+                    }
                 }
             }
         } else {

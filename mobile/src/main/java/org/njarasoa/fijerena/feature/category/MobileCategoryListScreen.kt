@@ -221,7 +221,8 @@ fun MobileCategoryListScreen(
         providerId: Long,
     ) -> Unit,
     onSearchClick: () -> Unit = {},
-    onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    /** The TV Guide of a category, on its own source ([providerId]). */
+    onEpgClick: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
     /** Live TV full screen: Start over, the programme on air from the channel's archive (catch-up). */
     onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
     onBack: () -> Unit,
@@ -240,7 +241,7 @@ fun MobileCategoryListScreen(
     sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
     /** The source's first catalogue sync is running: an empty list says the library is still loading. */
     libraryLoading: Boolean = false,
-    /** The source the list is on; 0 = the active source. */
+    /** The source the list was opened on; 0 = a section's list (every source's categories either way). */
     providerId: Long = 0L,
     viewModel: CategoryViewModel =
         viewModel(
@@ -656,8 +657,9 @@ fun MobileCategoryListScreen(
                         if (contentType == ContentType.LIVE_TV) {
                             val state = uiState
                             if (state is CategoryViewModel.UiState.Success) {
-                                val selectedCatId = state.selectedCategoryId
-                                val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
+                                val selectedCat = remember(state.categories, state.selectedCategoryKey) { state.selectedCategory }
+                                val selectedCatId = selectedCat?.id
+                                val selectedCatName = selectedCat?.name
                                 if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                     // Names the category it opens (G-M4): the selected chip may
                                     // sit under the dock, out of sight. Long-press shows it.
@@ -669,7 +671,15 @@ fun MobileCategoryListScreen(
                                         state = rememberTooltipState(),
                                     ) {
                                         CinemaIconButton(
-                                            onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
+                                            onClick = {
+                                                stopDockThen {
+                                                    onEpgClick(
+                                                        selectedCatId,
+                                                        selectedCatName,
+                                                        selectedCat.providerId,
+                                                    )
+                                                }
+                                            },
                                             icon = {
                                                 Icon(
                                                     CinemaIcons.DateRange,
@@ -797,22 +807,32 @@ fun MobileCategoryListScreen(
                                 if (!(isLiveTv && target != null)) {
                                     // The Live TV tab's root has no section top bar, so its TV Guide
                                     // sits at the end of the chips; a pushed list keeps it in its bar.
-                                    val guideCategoryId = state.selectedCategoryId
-                                    val guideCategoryName = state.categories.find { it.id == guideCategoryId }?.name
+                                    val guideCategory = remember(state.categories, state.selectedCategoryKey) { state.selectedCategory }
+                                    val guideCategoryId = guideCategory?.id
+                                    val guideCategoryName = guideCategory?.name
                                     CategoryChipRow(
                                         categories = state.categories,
-                                        selectedCategoryId = state.selectedCategoryId,
+                                        selectedCategoryKey = state.selectedCategoryKey,
                                         contentType = contentType,
                                         favoriteCategoryIds = favoriteCategoryIds,
+                                        sourceNames = sourceNames,
                                         categoryViewModel = viewModel,
-                                        onCategorySelected = { categoryId ->
-                                            viewModel.loadStreams(categoryId)
+                                        onCategorySelected = { categoryId, source ->
+                                            viewModel.loadStreams(categoryId, source)
                                         },
                                         onGuideClick =
                                             if (isLiveTv && sourceTopBar != null && hasEpgData &&
                                                 guideCategoryId != null && guideCategoryName != null
                                             ) {
-                                                { stopDockThen { onEpgClick(guideCategoryId, guideCategoryName) } }
+                                                {
+                                                    stopDockThen {
+                                                        onEpgClick(
+                                                            guideCategoryId,
+                                                            guideCategoryName,
+                                                            guideCategory.providerId,
+                                                        )
+                                                    }
+                                                }
                                             } else {
                                                 null
                                             },
@@ -850,6 +870,9 @@ fun MobileCategoryListScreen(
                                         listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
                                         else -> CategoryViewModel.RECENT_CATEGORY_ID
                                     }
+                                // The list's identity across sources: the same category id on two of them
+                                // is two lists (multi-source plan, Phase 6).
+                                val displayedCategoryKey = if (target == null) state.selectedCategoryKey else displayedCategoryId
                                 val streamsList: @Composable () -> Unit = {
                                     Column(modifier = Modifier.fillMaxSize()) {
                                         if (target != null) {
@@ -908,6 +931,7 @@ fun MobileCategoryListScreen(
                                                     streamsLoading = displayedStreamsLoading,
                                                     libraryLoading = libraryLoading,
                                                     selectedCategoryId = displayedCategoryId,
+                                                    selectedCategoryKey = displayedCategoryKey,
                                                     lastPlayedItemId = state.lastPlayedItemId,
                                                     nowPlaying = nowPlaying,
                                                     catchupDays = catchupDays,
@@ -919,10 +943,11 @@ fun MobileCategoryListScreen(
                                                         val selected = item.browseTarget(contentType)
                                                         when {
                                                             // A row from "Recent Categories"/"Favorite Categories" browses, it
-                                                            // doesn't play; one of another source's categories opens there.
+                                                            // doesn't play, on its source; one of a source this list doesn't
+                                                            // hold opens there.
                                                             selected is BrowseTarget.CategoryRef &&
                                                                 !viewModel.isOtherSource(item.providerId) -> {
-                                                                viewModel.loadStreams(selected.categoryId)
+                                                                viewModel.loadStreams(selected.categoryId, item.providerId)
                                                             }
 
                                                             isLiveTv && selected !is BrowseTarget.CategoryRef -> {
@@ -1273,11 +1298,15 @@ private fun SwipeActionButton(
 @Composable
 private fun CategoryChipRow(
     categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
-    selectedCategoryId: String?,
+    /** The selection as a category key: every source's categories are listed, the same id on two (Phase 6). */
+    selectedCategoryKey: String?,
     contentType: String,
+    /** Favourite categories by key. */
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
+    /** Each source's name while the list mixes several: a badge on its chips. */
+    sourceNames: Map<Long, String> = emptyMap(),
     categoryViewModel: CategoryViewModel,
-    onCategorySelected: (String) -> Unit,
+    onCategorySelected: (categoryId: String, source: Long) -> Unit,
     /** Opens the selected category's TV Guide from the row's end; null shows no button. */
     onGuideClick: (() -> Unit)? = null,
 ) {
@@ -1299,9 +1328,9 @@ private fun CategoryChipRow(
     // unbounded for the composable's whole lifetime.
     val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
-    LaunchedEffect(selectedCategoryId) {
-        if (selectedCategoryId != null && selectedCategoryId !in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
-            val index = regularCategories.indexOfFirst { it.id == selectedCategoryId }
+    LaunchedEffect(selectedCategoryKey) {
+        if (selectedCategoryKey != null && selectedCategoryKey !in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
+            val index = regularCategories.indexOfFirst { it.key == selectedCategoryKey }
             if (index >= 0) {
                 listState.animateScrollToItem(index)
             }
@@ -1313,7 +1342,7 @@ private fun CategoryChipRow(
         // they read apart from the category chips below (phone UI audit #1). No tab is marked
         // while a real category is picked.
         if (virtualCategories.isNotEmpty()) {
-            val selectedModeIndex = virtualCategories.indexOfFirst { it.id == selectedCategoryId }
+            val selectedModeIndex = virtualCategories.indexOfFirst { it.key == selectedCategoryKey }
             PrimaryScrollableTabRow(
                 selectedTabIndex = selectedModeIndex.coerceAtLeast(0),
                 containerColor = Color.Transparent,
@@ -1330,8 +1359,8 @@ private fun CategoryChipRow(
             ) {
                 virtualCategories.forEach { category ->
                     LeadingIconTab(
-                        selected = category.id == selectedCategoryId,
-                        onClick = { onCategorySelected(category.id) },
+                        selected = category.key == selectedCategoryKey,
+                        onClick = { onCategorySelected(category.id, category.providerId) },
                         text = { Text(text = virtualCategoryName(category), maxLines = 1) },
                         icon = {
                             Icon(
@@ -1359,22 +1388,24 @@ private fun CategoryChipRow(
             ) {
                 itemsIndexed(
                     regularCategories,
-                    key = { _, category -> category.id },
+                    key = { _, category -> category.key },
                     contentType = { _, _ -> "category" },
                 ) { index, category ->
                     CategoryChip(
                         name = category.name,
-                        selected = category.id == selectedCategoryId,
-                        isFavorite = category.id in favoriteCategoryIds,
-                        onClick = { onCategorySelected(category.id) },
+                        sourceName = sourceNames[category.providerId],
+                        selected = category.key == selectedCategoryKey,
+                        isFavorite = category.key in favoriteCategoryIds,
+                        onClick = { onCategorySelected(category.id, category.providerId) },
                         onToggleFavorite = {
-                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                            // On the category's own source.
+                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType, category.providerId)
                         },
                         colors = chipColors,
                         modifier =
                             // remember-scoped: bare add() returns false on the first recomposition
                             // of an already-visible chip, dropping staggeredEntrance mid-animation.
-                            if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
+                            if (remember(category.key) { enteredCategoryIds.add(category.key) }) {
                                 Modifier.staggeredEntrance(index)
                             } else {
                                 Modifier
@@ -1429,6 +1460,8 @@ private fun virtualCategoryIcon(categoryId: String): ImageVector =
 @Composable
 private fun CategoryChip(
     name: String,
+    /** The category's source while the list mixes several (a badge); null with one. */
+    sourceName: String?,
     selected: Boolean,
     isFavorite: Boolean,
     onClick: () -> Unit,
@@ -1460,15 +1493,21 @@ private fun CategoryChip(
                 if (longPressed) longPressed = false else onClick()
             },
             label = {
-                Text(
-                    text = name,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    // Marquee only on the selected chip. Touch has no focus, so gating on
-                    // selection is the nearest equivalent — otherwise every overflowing chip
-                    // runs its own per-frame invalidateDraw loop for as long as it's visible.
-                    modifier = if (selected) Modifier.bounceMarquee() else Modifier,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                ) {
+                    Text(
+                        text = name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        // Marquee only on the selected chip. Touch has no focus, so gating on
+                        // selection is the nearest equivalent — otherwise every overflowing chip
+                        // runs its own per-frame invalidateDraw loop for as long as it's visible.
+                        modifier = if (selected) Modifier.bounceMarquee() else Modifier,
+                    )
+                    sourceName?.let { SourceBadge(it) }
+                }
             },
             colors = colors,
             interactionSource = interactionSource,
@@ -1508,6 +1547,8 @@ private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
+    /** The list's identity across sources (a category's key); per-list state is keyed on it. */
+    selectedCategoryKey: String? = selectedCategoryId,
     libraryLoading: Boolean = false,
     lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
@@ -1554,11 +1595,11 @@ private fun StreamsList(
 
     // One revealed row at a time (phone UI audit #12): swiping a row closes the one left open.
     // A new list starts with none.
-    var openRowId by remember(selectedCategoryId) { mutableStateOf<String?>(null) }
+    var openRowId by remember(selectedCategoryKey) { mutableStateOf<String?>(null) }
 
     // The row whose long-press menu is open: the swipe's actions (watched follow-ups plan Phase 3).
     // A show's waits for its "Mark show watched / unwatched" wording, as in Search.
-    var rowMenu by remember(selectedCategoryId) { mutableStateOf<RowMenu?>(null) }
+    var rowMenu by remember(selectedCategoryKey) { mutableStateOf<RowMenu?>(null) }
     val openRowMenu: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = { item ->
         val seriesId = item.showSeriesId(contentType)
         if (seriesId != null && showWatchedMark) {
@@ -1654,12 +1695,13 @@ private fun StreamsList(
                             StreamCard(
                                 item = item,
                                 sourceName = sourceNames[item.providerId],
-                                nowPlayingProgram = nowPlaying[item.id],
-                                catchupDays = catchupDays[item.id] ?: 0,
+                                // Per-row state by the row's sourceKey (Phase 6).
+                                nowPlayingProgram = nowPlaying[item.sourceKey],
+                                catchupDays = catchupDays[item.sourceKey] ?: 0,
                                 isCurrentlyPlaying = item.id == currentlyPlayingId,
                                 isCurrent = item.id == (currentlyPlayingId ?: lastPlayedItemId),
-                                isWatched = item.id in watchedIds,
-                                watchProgress = watchProgress[item.id] ?: 0f,
+                                isWatched = item.sourceKey in watchedIds,
+                                watchProgress = watchProgress[item.sourceKey] ?: 0f,
                                 cardColors = streamCardColors,
                                 onClick = {
                                     onItemSelected(item)
@@ -1671,8 +1713,8 @@ private fun StreamsList(
                         }
 
                         val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRemoveFavorite != null)
-                        val isFavorite = item.id in favoriteIds
-                        val isWatchedItem = item.id in watchedIds
+                        val isFavorite = item.sourceKey in favoriteIds
+                        val isWatchedItem = item.sourceKey in watchedIds
                         val showSeriesId = item.showSeriesId(contentType)
                         val hasWatchedAction = showWatchedMark && (showSeriesId != null || isWatchable)
                         val density = LocalDensity.current
@@ -1683,7 +1725,7 @@ private fun StreamsList(
                                 CinemaSpacing.sm * (greenIconCount - 1)
                         val deleteRevealWidth = CinemaSpacing.sm * 2 + MobileDimensions.swipeActionCircleSize
                         val revealState =
-                            remember(canSwipeDismiss, favoriteRevealWidth, deleteRevealWidth, selectedCategoryId) {
+                            remember(canSwipeDismiss, favoriteRevealWidth, deleteRevealWidth, selectedCategoryKey) {
                                 val anchors =
                                     with(density) {
                                         DraggableAnchors {
@@ -1820,7 +1862,7 @@ private fun StreamsList(
                 rowMenu?.let { menu ->
                     val item = menu.item
                     val showSeriesId = item.showSeriesId(contentType)
-                    val isWatchedItem = item.id in watchedIds
+                    val isWatchedItem = item.sourceKey in watchedIds
                     val isShowWatched = menu.isShowWatched == true
                     val actions =
                         rowMenuActions(
@@ -1860,7 +1902,7 @@ private fun StreamsList(
                         }
                     ItemActionsDialog(
                         title = parseDisplayTitle(item.name).title.ifBlank { item.name },
-                        isFavorite = item.id in favoriteIds,
+                        isFavorite = item.sourceKey in favoriteIds,
                         onToggleFavorite = { onToggleFavorite(item) },
                         onDismiss = { rowMenu = null },
                         actions = actions,

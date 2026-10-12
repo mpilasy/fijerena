@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.categoryKey
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -82,7 +83,8 @@ internal fun LiveTvChannelPanel(
     favoriteIds: ImmutableStringSet,
     watchProgress: ImmutableWatchProgress,
     watchedIds: ImmutableStringSet,
-    onCategorySelected: (String) -> Unit,
+    /** A category picked (a Recent / Favorite Categories row): its id and source. */
+    onCategorySelected: (categoryId: String, source: Long) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onStreamPromote: (MediaItem) -> Unit,
     onRefresh: () -> Unit,
@@ -198,6 +200,7 @@ internal fun LiveTvChannelPanel(
                 streams = streams,
                 streamsLoading = streamsLoading,
                 selectedCategoryId = context.id,
+                selectedCategoryKey = (context as? ChannelContext.Category)?.let { categoryKey(it.id, it.source) } ?: context.id,
                 selectedCategoryName = null,
                 lastPlayedItemId = lastPlayedItemId,
                 nowPlaying = nowPlaying,
@@ -209,7 +212,7 @@ internal fun LiveTvChannelPanel(
                 watchedIds = watchedIds,
                 onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
                     if (target is BrowseTarget.CategoryRef && !categoryViewModel.isOtherSource(providerId)) {
-                        onCategorySelected(target.categoryId)
+                        onCategorySelected(target.categoryId, providerId)
                     } else {
                         val item = streams?.firstOrNull { it.id == streamId && it.providerId == providerId }
                         if (item != null && target !is BrowseTarget.CategoryRef) {

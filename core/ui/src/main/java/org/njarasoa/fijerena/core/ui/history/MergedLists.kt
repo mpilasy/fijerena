@@ -28,6 +28,8 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 class MergedLists(
     /** The screen's source first, then the profile's other Xtream sources. */
     val sources: List<Source>,
+    /** [sources] in the profile's order: the merged category lists' order (Phase 6). */
+    val inProfileOrder: List<Source> = sources,
 ) {
     /** One of the profile's sources and its repository. */
     class Source(
@@ -173,8 +175,35 @@ class MergedLists(
                                 .getOrNull()
                         }
                 }
-            return MergedLists(listOf(Source(primaryId, primaryEntity?.name.orEmpty(), primary)) + others)
+            val sources = listOf(Source(primaryId, primaryEntity?.name.orEmpty(), primary)) + others
+            return MergedLists(
+                sources,
+                profileSources
+                    .mapNotNull { entity ->
+                        sources.firstOrNull { it.providerId == entity.id }
+                    }.ifEmpty { sources },
+            )
         }
+
+        /**
+         * The source a list opened on [providerId] is built around: that one when given; for a
+         * section (0) the profile's first Xtream source, so Live TV, Movies and TV Shows list every
+         * Xtream source's categories whichever source is active (Phase 6). 0 (the active source, as
+         * before) when the profile has none.
+         */
+        suspend fun browsingProviderId(
+            container: AppContainer,
+            providerId: Long,
+        ): Long =
+            if (providerId != 0L) {
+                providerId
+            } else {
+                suspendRunCatching { container.providerRepository.profileSourcesList() }
+                    .onFailure { Log.w(TAG, "Profile sources unreadable; the section stays on the active source", it) }
+                    .getOrNull()
+                    ?.firstOrNull { it.type == XTREAM }
+                    ?.id ?: 0L
+            }
 
         /**
          * Recent across sources: each source's own list (its own size), all of them; rows worth

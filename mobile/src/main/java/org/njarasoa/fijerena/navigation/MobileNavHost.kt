@@ -341,6 +341,13 @@ fun MobileNavHost(
                 // Every screen may hold the previous profile's repository: start over on its last
                 // tab, as after the profile page's switch.
                 onProfileChosen = { coroutineScope.launch { startOver() } },
+                // A Browse entry (O1): that source's section, on it alone, pushed in this tab.
+                onBrowseSection = { providerId, contentType ->
+                    leaveTabRoot { navController.navigateOnce(Screen.CategoryList(contentType = contentType, providerId = providerId)) }
+                },
+                onBrowseSignIn = { providerId ->
+                    leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
+                },
             )
         }
 
@@ -1029,17 +1036,20 @@ private fun CategoryListDestination(
             // Everything, with this section's chip selected (one tap widens to All).
             navController.navigateOnce(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL, initialTypeFilter = route.contentType))
         },
-        onEpgClick = { categoryId, categoryName ->
+        // The category's own source (the list holds every source's, multi-source plan Phase 6).
+        onEpgClick = { categoryId, categoryName, source ->
             navController.navigateOnce(
                 Screen.EpgGuide(
                     categoryId = categoryId,
                     categoryName = categoryName,
-                    providerId = route.providerId,
+                    providerId = source.takeIf { it != 0L } ?: route.providerId,
                 ),
             )
         },
-        // Start over (catch-up): the programme on air from its start, full screen.
-        onStartOver = { program, channel -> navController.navigateOnce(catchupRoute(program, channel, route.providerId)) },
+        // Start over (catch-up): the programme on air from its start, full screen, on the channel's source.
+        onStartOver = { program, channel ->
+            navController.navigateOnce(catchupRoute(program, channel, channel.providerId.takeIf { it != 0L } ?: route.providerId))
+        },
         onBack = {
             navController.navigateUp()
         },
@@ -1064,7 +1074,7 @@ private fun TabRoot(
     section: @Composable () -> Unit,
 ) {
     LaunchedEffect(Unit) { onEnter() }
-    if (source?.needsSignIn == true) {
+    if (source?.showsSignIn == true) {
         val context = LocalContext.current
         val prompt = stringResource(R.string.profile_jellyfin_sign_in_prompt, source.name)
         LaunchedEffect(source.id) {

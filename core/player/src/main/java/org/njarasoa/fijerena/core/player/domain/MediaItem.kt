@@ -95,7 +95,13 @@ data class MediaItem(
  * For list keys and dedup; rows of one list all carry a source or all leave it 0.
  */
 val MediaItem.sourceKey: String
-    get() = "$providerId/$id"
+    get() = sourceKey(providerId, id)
+
+/** [MediaItem.sourceKey] of row [id] on [providerId]: the key of per-row state maps (stars, progress). */
+fun sourceKey(
+    providerId: Long,
+    id: String,
+): String = "$providerId/$id"
 
 /** The row's source: [MediaItem.providerId], or [listSource] (the list's own) for a row that leaves it 0. */
 fun MediaItem.sourceOr(listSource: Long): Long = if (providerId != 0L) providerId else listSource

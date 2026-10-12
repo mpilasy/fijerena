@@ -23,6 +23,8 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.initialOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
+import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.RailItem
 import org.njarasoa.fijerena.ui.components.rail.TvNavRail
@@ -51,8 +53,10 @@ internal enum class TvSection(
 }
 
 /**
- * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the active
- * source's content types; none while they are unknown, before a Jellyfin sign-in), Search, Settings.
+ * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the profile's
+ * Xtream sources' content types, merged; with none, the active source's; none while they are
+ * unknown, before a Jellyfin sign-in), Search, Settings. The Browse entries go between the
+ * sections and Search (`TvNavRail`).
  */
 internal fun railItems(sections: Set<String>?): List<RailItem> =
     listOf(RailItem.PROFILE, RailItem.HOME) +
@@ -114,17 +118,25 @@ private fun NavController.isOnBackStack(route: Screen): Boolean =
         false
     }
 
-/** The active source as the rail needs it: [sections] null while unknown (a Jellyfin sign-in pending). */
+/**
+ * What the rail needs of the profile's sources: [sections] the merged sections of its Xtream
+ * sources (multi-source plan, Phase 6) — or, with none, the active source's own, null while unknown
+ * (a Jellyfin sign-in pending) — and a Browse entry for each of its other sources (O1).
+ */
 private data class RailSource(
     val providerId: Long,
     val sections: Set<String>?,
-    /** An Xtream source synced with no live categories: Live TV is left off the rail. */
+    /** The sections are the active Xtream source's, synced with no live categories: Live TV is left off. */
     val noChannels: Boolean = false,
+    val browse: List<BrowseSource> = emptyList(),
+    /** [sections] are the merged ones, not the active source's. */
+    val merged: Boolean = false,
 )
 
 /**
- * The active source, or null with none. Its sections are kept from [known] when it is the same
- * source and they were read, so a re-read is only a database lookup.
+ * The profile's sections and Browse entries, or null with no active source. Without an Xtream
+ * source, the active source's sections are kept from [known] when it is the same source and they
+ * were read, so a re-read is only a database lookup.
  */
 private suspend fun loadRailSource(
     context: Context,
@@ -133,14 +145,20 @@ private suspend fun loadRailSource(
     withContext(Dispatchers.IO) {
         val providerRepo = ProviderRepository(context.applicationContext)
         val provider = providerRepo.getActiveProvider() ?: return@withContext null
+        val profile = ProfileSections.load(context)
         val sections =
             when {
+                // The profile's Xtream sources' sections, merged.
+                profile.merged != null -> {
+                    profile.merged
+                }
+
                 // No repository for a Jellyfin server without a login: it could only fail to authenticate.
                 !providerRepo.hasLogin(provider) -> {
                     null
                 }
 
-                known?.providerId == provider.id && known.sections != null -> {
+                known?.providerId == provider.id && known.sections != null && !known.merged -> {
                     known.sections
                 }
 
@@ -157,7 +175,8 @@ private suspend fun loadRailSource(
         // used to say. Re-read every time (a later sync may bring them), as the phone does: only for
         // Xtream once it has synced, a count of its stored live categories, no network call.
         val noChannels =
-            provider.type == "XTREAM" &&
+            profile.merged == null &&
+                provider.type == "XTREAM" &&
                 provider.lastSyncedAtMs > 0 &&
                 sections?.contains(ContentType.LIVE_TV) == true &&
                 (
@@ -166,11 +185,12 @@ private suspend fun loadRailSource(
                         .getMediaRepository(provider.id)
                         .getProvider() as? XtreamMediaProvider
                 )?.getCategoryTotalCount(ContentType.LIVE_TV) == 0
-        RailSource(provider.id, sections, noChannels)
+        RailSource(provider.id, sections, noChannels, profile.browse, merged = profile.merged != null)
     }
 
 /**
- * The rail over the nav host: its items from the active source, the profile's initial, and the lit
+ * The rail over the nav host: its items from the profile's sources (the merged sections, then a
+ * Browse entry per other source), the profile's initial, and the lit
  * item from the back stack. The source and profile are re-read on every destination change — a
  * source or profile switch, a Jellyfin sign-in or a rename all end on another screen. Hidden while
  * there is no source, and without Home under the screen (Settings, Safe mode or Newer data as the
@@ -182,6 +202,8 @@ internal fun TvSectionRail(
     rail: TvNavRailState,
     navController: NavController,
     onSelect: (RailItem) -> Unit,
+    // A "Browse <source>" entry picked (O1): that source's sections, browsed on it alone.
+    onBrowse: (BrowseSource) -> Unit,
     // Bumped when the source changes without a screen change (Home's source pill): the rail
     // re-reads its sections then too, not only on navigation.
     sourceVersion: Int = 0,
@@ -213,5 +235,7 @@ internal fun TvSectionRail(
         items = railItems(source?.let { if (it.noChannels) it.sections?.minus(ContentType.LIVE_TV) else it.sections }),
         profileInitial = profileInitial,
         onSelect = onSelect,
+        browse = source?.browse.orEmpty(),
+        onBrowse = onBrowse,
     )
 }

@@ -154,6 +154,13 @@ internal fun StreamList(
     contentType: String,
     categoryViewModel: CategoryViewModel,
     isDevMode: Boolean,
+    /**
+     * The list's identity across sources (the category's key): per-list state (the row last opened,
+     * the empty state's focus) is keyed on it, so the same category id on another source is
+     * another list. Defaults to [selectedCategoryId] (a virtual list, or the panel's tabs).
+     */
+    selectedCategoryKey: String? = selectedCategoryId,
+    // Per-row state, keyed by the row's sourceKey (multi-source plan, Phase 6).
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
@@ -247,7 +254,8 @@ internal fun StreamList(
     actionsItem?.let { item ->
         // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
         // the browse list's favoriteIds may not cover) the repository says.
-        val isFavorite = isFavoritesList || item.id in favoriteIds || categoryViewModel.isFavorite(item.id, contentType, item.providerId)
+        val isFavorite =
+            isFavoritesList || item.sourceKey in favoriteIds || categoryViewModel.isFavorite(item.id, contentType, item.providerId)
         // A show row (docs/plans/archive/20261011_season-show-watched-plan.md Phase 3) offers "Mark show
         // watched / unwatched" for all its episodes instead of the one-item toggle, except where
         // the source keeps watched state on its server. The menu opens once its wording is known.
@@ -272,7 +280,7 @@ internal fun StreamList(
                         categoryId = item.categoryId,
                         contentType = contentType,
                         isFavorite = isFavorite,
-                        isWatched = if (canMarkItem) item.id in watchedIds else null,
+                        isWatched = if (canMarkItem) item.sourceKey in watchedIds else null,
                         isInRecent = canRemoveFromRecent,
                         seriesId = item.seriesId,
                         isShowWatched = isShowWatched,
@@ -315,7 +323,7 @@ internal fun StreamList(
     // pane, not keyed: OK on a category keeps focus on the category, and Right enters the list on
     // its remembered row (F-C-5); the Live TV preview panel's tabs switch its list without
     // taking focus off the tab row (LT2).
-    var lastFocusedItemId by remember(if (paneFocus == null) selectedCategoryId else null) { mutableStateOf<String?>(null) }
+    var lastFocusedItemId by remember(if (paneFocus == null) selectedCategoryKey else null) { mutableStateOf<String?>(null) }
 
     // Movie/series row last opened from this list. Opening details doesn't play anything, so
     // lastPlayedItemId never points at it, and on Back the whole destination recomposes from
@@ -324,7 +332,7 @@ internal fun StreamList(
     // entry's saved state); keyed to the category so another list doesn't inherit it. Movies and
     // series only: Live TV keeps following lastPlayedItemId, which tracks channel zapping in the
     // player.
-    var openedItemId by rememberSaveable(selectedCategoryId) { mutableStateOf<String?>(null) }
+    var openedItemId by rememberSaveable(selectedCategoryKey) { mutableStateOf<String?>(null) }
     // A separator is never a focus target, even when it was once played (before #24). The last
     // played item is an id: its row's key is the first row with that id.
     val lastPlayedKey = remember(streams, lastPlayedItemId) { streams?.firstOrNull { it.id == lastPlayedItemId }?.sourceKey }
@@ -353,7 +361,7 @@ internal fun StreamList(
     // Entry focus (F-C-1): a pane's list takes focus once per composition when it first has rows,
     // even with no target — on the remembered row (a Back return), else the first.
     var entryPending by remember { mutableStateOf(paneFocus != null) }
-    LaunchedEffect(selectedCategoryId, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty(), takeEntryFocus) {
+    LaunchedEffect(selectedCategoryKey, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty(), takeEntryFocus) {
         // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
         // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
         // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
@@ -455,7 +463,7 @@ internal fun StreamList(
                     // responding to D-pad input. The empty state's Refresh takes focus — on each
                     // category (keyed) — which both fixes that and gives an actionable retry for
                     // a genuinely empty category.
-                    key(selectedCategoryId) {
+                    key(selectedCategoryKey) {
                         TvEmptyState(
                             message = if (streams == null) selectCategoryText(contentType) else noItemsText(contentType),
                             icon = sectionIcon(contentType),
@@ -485,11 +493,11 @@ internal fun StreamList(
                                     StreamItem(
                                         item = item,
                                         sourceName = sourceNames[item.providerId],
-                                        isFavorite = item.id in favoriteIds,
-                                        watchProgress = watchProgress[item.id] ?: 0f,
-                                        isWatched = item.id in watchedIds,
-                                        nowPlayingProgram = nowPlaying[item.id],
-                                        catchupDays = catchupDays[item.id] ?: 0,
+                                        isFavorite = item.sourceKey in favoriteIds,
+                                        watchProgress = watchProgress[item.sourceKey] ?: 0f,
+                                        isWatched = item.sourceKey in watchedIds,
+                                        nowPlayingProgram = nowPlaying[item.sourceKey],
+                                        catchupDays = catchupDays[item.sourceKey] ?: 0,
                                         isCurrent = item.id == lastPlayedItemId,
                                         editMode = editMode,
                                         onClick = {

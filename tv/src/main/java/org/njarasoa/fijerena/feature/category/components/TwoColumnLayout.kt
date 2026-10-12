@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -69,6 +70,8 @@ internal fun TwoColumnLayout(
     categoryViewModel: CategoryViewModel,
     categories: ImmutableCategoryList,
     selectedCategoryId: String?,
+    /** The selection's [MediaCategory.key][org.njarasoa.fijerena.core.player.domain.MediaCategory.key]: id and source. */
+    selectedCategoryKey: String?,
     streams: ImmutableMediaList?,
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
@@ -83,11 +86,12 @@ internal fun TwoColumnLayout(
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
     supportsNativeEpg: Boolean,
     epgIndexState: EpgIndexState,
-    onCategorySelected: (String) -> Unit,
+    /** A category picked: its id and source (0 for a virtual list). */
+    onCategorySelected: (categoryId: String, source: Long) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
-    onEpgClick: (categoryId: String, categoryName: String) -> Unit,
+    onEpgClick: (categoryId: String, categoryName: String, source: Long) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -97,17 +101,21 @@ internal fun TwoColumnLayout(
     val isDevMode = remember { appSettings.isDevMode }
 
     // Load the list's source's name from database (AppSettings default is "My Provider")
-    LaunchedEffect(categoryViewModel.providerId) {
+    LaunchedEffect(categoryViewModel.sourceId) {
         val repo =
             org.njarasoa.fijerena.core.network.provider
                 .ProviderRepository(context.applicationContext)
-        repo.getProviderOrActive(categoryViewModel.providerId)?.let { providerName = it.name }
+        repo.getProviderOrActive(categoryViewModel.sourceId)?.let { providerName = it.name }
     }
 
+    // By key: the list holds every source's categories, the same id on two of them (Phase 6).
     val categoryMap =
         remember(categories) {
-            categories.associateBy { it.id }
+            categories.associateBy { it.key }
         }
+    val selectedCategory = selectedCategoryKey?.let { categoryMap[it] }
+    // Each source's name while the list mixes several: the selected category's is the header's.
+    val sourceNames by categoryViewModel.sourceNames.collectAsStateWithLifecycle()
     // The source's own categories: Recent, Favourites and the like are modes, not categories.
     val categoryCount = remember(categories) { categories.count { !it.isVirtual } }
 
@@ -156,7 +164,7 @@ internal fun TwoColumnLayout(
     // A removal's Undo (docs/plans/archive/20261009_tv-recents-favorites-plan.md → A): the bar at the
     // screen's foot, Menu undoes while it shows. Gone when another list is picked.
     val undoBar = rememberUndoBarState()
-    LaunchedEffect(selectedCategoryId) { undoBar.dismiss() }
+    LaunchedEffect(selectedCategoryKey) { undoBar.dismiss() }
 
     // Edit mode of the Recent / Favourites list (plan → A): the pencil in the header turns it on
     // and off; Back or another list ends it. Clear Recent, in Recent's, asks once.
@@ -208,20 +216,21 @@ internal fun TwoColumnLayout(
         Column(modifier = Modifier.fillMaxSize()) {
             // TV UI audit X6: the section is the title, the source and its category count the
             // subtitle (the source no longer repeated at the far right), the icon actions at the end.
+            // The source: the selected category's own while the list mixes several (Phase 6).
+            val headerSource = selectedCategory?.let { sourceNames[it.providerId] } ?: providerName
             TvScreenHeader(
                 title = sectionTitle(contentType),
-                subtitle = "$providerName · ${stringResource(R.string.category_count_format, categoryCount)}",
+                subtitle = "$headerSource · ${stringResource(R.string.category_count_format, categoryCount)}",
             ) {
                 val hasEpgData =
                     supportsNativeEpg ||
                         epgIndexState is EpgIndexState.Indexed
                 if (contentType == ContentType.LIVE_TV && selectedCategoryId != null && hasEpgData) {
-                    val selectedCategoryName = categoryMap[selectedCategoryId]?.name
-                    if (selectedCategoryName != null) {
+                    if (selectedCategory != null) {
                         TvIconAction(
                             onClick = {
                                 returnFocus.leaveFrom(RETURN_TV_GUIDE)
-                                onEpgClick(selectedCategoryId, selectedCategoryName)
+                                onEpgClick(selectedCategoryId, selectedCategory.name, selectedCategory.providerId)
                             },
                             icon = CinemaIcons.DateRange,
                             label = stringResource(R.string.common_tv_guide),
@@ -291,7 +300,7 @@ internal fun TwoColumnLayout(
             ) {
                 CategoryList(
                     categories = categories,
-                    selectedCategoryId = selectedCategoryId,
+                    selectedCategoryKey = selectedCategoryKey,
                     contentType = contentType,
                     categoryViewModel = categoryViewModel,
                     favoriteCategoryIds = favoriteCategoryIds,
@@ -313,7 +322,8 @@ internal fun TwoColumnLayout(
                     streams = streams,
                     streamsLoading = streamsLoading,
                     selectedCategoryId = selectedCategoryId,
-                    selectedCategoryName = selectedCategoryId?.let { categoryMap[it]?.name },
+                    selectedCategoryKey = selectedCategoryKey,
+                    selectedCategoryName = selectedCategory?.name,
                     lastPlayedItemId = currentItemId,
                     nowPlaying = nowPlaying,
                     contentType = contentType,
@@ -323,10 +333,11 @@ internal fun TwoColumnLayout(
                     watchProgress = watchProgress,
                     watchedIds = watchedIds,
                     onStreamSelected = { streamId, streamName, categoryId, target, providerId ->
-                        // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play;
-                        // one of another source's categories opens on that source (its own route).
+                        // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play,
+                        // on its own source; one of a source this list doesn't hold opens on that
+                        // source (its own route).
                         if (target is BrowseTarget.CategoryRef && !categoryViewModel.isOtherSource(providerId)) {
-                            onCategorySelected(target.categoryId)
+                            onCategorySelected(target.categoryId, providerId)
                         } else {
                             onStreamSelected(streamId, streamName, categoryId, target, providerId)
                         }

@@ -60,6 +60,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.home.BrowseSource
+import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.sourceSyncStatus
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -91,13 +93,24 @@ data class ActiveSource(
     val supportedTypes: Set<String>?,
     /** The source has Live TV but its last sync found no channels (see [loadActiveSource]). */
     val noChannels: Boolean = false,
+    /**
+     * The profile's Xtream sources' sections, merged (multi-source plan, Phase 6); null when it
+     * has none, where the tabs stay the active source's own.
+     */
+    val merged: Set<String>? = null,
+    /** A "Browse <source>" entry for each of the profile's other sources (O1), in the profile sheet. */
+    val browse: List<BrowseSource> = emptyList(),
 ) {
     /**
-     * The sections the tabs offer: [supportedTypes] without a Live TV that has no channels — as on
-     * TV, where that card is dimmed and skipped.
+     * The sections the tabs offer: the merged ones, else [supportedTypes] without a Live TV that
+     * has no channels — as on TV, where that card is dimmed and skipped.
      */
     val sections: Set<String>?
-        get() = if (noChannels) supportedTypes?.minus(ContentType.LIVE_TV) else supportedTypes
+        get() = merged ?: if (noChannels) supportedTypes?.minus(ContentType.LIVE_TV) else supportedTypes
+
+    /** The tab roots show the sign-in panel: the tabs are the active Jellyfin source's, not signed in to. */
+    val showsSignIn: Boolean
+        get() = needsSignIn && merged == null
 }
 
 /**
@@ -148,7 +161,8 @@ suspend fun loadActiveSource(
                             .getMediaRepository(provider.id)
                             .getProvider() as? XtreamMediaProvider
                     )?.getCategoryTotalCount(ContentType.LIVE_TV) == 0
-            ActiveSource(provider.id, provider.name, provider.type, needsSignIn, supportedTypes, noChannels)
+            val profile = ProfileSections.load(context)
+            ActiveSource(provider.id, provider.name, provider.type, needsSignIn, supportedTypes, noChannels, profile.merged, profile.browse)
         }
     }
 
@@ -157,8 +171,11 @@ suspend fun loadActiveSource(
  * line with the source and its sync status, which switches source when there are two or more. Then
  * Search the guide ([onSearchGuide], Live TV only, once the guide index is ready), the section's
  * Search ([onSearch]; null while signed out of the source) and the profile avatar, whose sheet
- * switches profile ([onProfileChosen] runs after the switch) and opens Settings. [onSourcePicked]
- * runs after another source was made the active one.
+ * switches profile ([onProfileChosen] runs after the switch) and opens Settings, and lists a
+ * "Browse <source>" row per source outside the merged tabs (O1): [onBrowseSection] opens the
+ * section picked (a dialog asks which when it has several), [onBrowseSignIn] the source's sign-in
+ * while this profile has no login for it. [onSourcePicked] runs after another source was made the
+ * active one.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,6 +186,8 @@ fun MobileSourceTopBar(
     onSearch: (() -> Unit)?,
     onSearchGuide: (() -> Unit)?,
     onProfileChosen: () -> Unit,
+    onBrowseSection: (providerId: Long, contentType: String) -> Unit = { _, _ -> },
+    onBrowseSignIn: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -179,6 +198,8 @@ fun MobileSourceTopBar(
     var allProviders by remember { mutableStateOf<List<ProviderEntity>>(emptyList()) }
     var showProviderPicker by remember { mutableStateOf(false) }
     var showProfileSheet by remember { mutableStateOf(false) }
+    // A Browse entry's sections, when it has more than one: picked in a dialog.
+    var browseChoice by remember { mutableStateOf<Pair<BrowseSource, List<String>>?>(null) }
 
     // The status on the source line (phone home overhaul plan, Phase 2): the source's last
     // catalogue sync, re-read when a sync of it ends and on every ON_RESUME.
@@ -288,6 +309,63 @@ fun MobileSourceTopBar(
             viewModel = profilesViewModel,
             onProfileChosen = onProfileChosen,
             onDismiss = { showProfileSheet = false },
+            browse = source?.browse.orEmpty(),
+            onBrowse = { browsed ->
+                coroutineScope.launch {
+                    when (val opening = ProfileSections.opening(context, browsed.providerId)) {
+                        ProfileSections.Opening.SignIn -> {
+                            onBrowseSignIn(browsed.providerId)
+                        }
+
+                        is ProfileSections.Opening.Sections -> {
+                            when (opening.contentTypes.size) {
+                                0 -> Unit
+                                1 -> onBrowseSection(browsed.providerId, opening.contentTypes.first())
+                                else -> browseChoice = browsed to opening.contentTypes
+                            }
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    browseChoice?.let { (browsed, contentTypes) ->
+        CinemaAlertDialog(
+            onDismissRequest = { browseChoice = null },
+            title = { Text(stringResource(R.string.browse_source, browsed.name)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                    contentTypes.forEach { contentType ->
+                        Surface(
+                            onClick = {
+                                browseChoice = null
+                                onBrowseSection(browsed.providerId, contentType)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                        ) {
+                            Text(
+                                text =
+                                    stringResource(
+                                        when (contentType) {
+                                            ContentType.LIVE_TV -> R.string.provider_live_tv_label
+                                            ContentType.MOVIES -> R.string.provider_movies_label
+                                            else -> R.string.provider_tv_shows_label
+                                        },
+                                    ),
+                                modifier = Modifier.padding(CinemaSpacing.md),
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                CinemaDialogTextButton(onClick = { browseChoice = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
         )
     }
 
