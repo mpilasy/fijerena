@@ -13,6 +13,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -242,7 +244,9 @@ class CategoryViewModel(
     // removeFromRecent() — see its own comment on why that race is real) waits instead of being
     // dropped. The handful of synchronous call sites Compose reads directly during composition
     // (which cannot suspend) go through [repositoryOrNull] instead and degrade to defaults.
-    private val repositoryDeferred = CompletableDeferred<MediaRepository>()
+    // Replaced, already completed, when the list is built again on other sources ([followProfileSources]).
+    @Volatile
+    private var repositoryDeferred = CompletableDeferred<MediaRepository>()
 
     // Mirrors repositoryDeferred's result once completed — set in the same init coroutine, right
     // alongside repositoryDeferred.complete(). CompletableDeferred.getCompleted() would do the
@@ -257,7 +261,12 @@ class CategoryViewModel(
 
     // The Recent, Favourites and Recent Categories lists of every source of the profile (Phase 4),
     // built with the repository; this list's own source is its primary.
-    private val mergedDeferred = CompletableDeferred<MergedLists>()
+    @Volatile
+    private var mergedDeferred = CompletableDeferred<MergedLists>()
+
+    // The profile's Xtream sources the list was last built on (null before the first build): a
+    // change to them builds it again ([followProfileSources]).
+    private val builtOn = MutableStateFlow<List<Long>?>(null)
 
     @Volatile
     private var mergedSnapshot: MergedLists? = null
@@ -299,6 +308,7 @@ class CategoryViewModel(
 
     init {
         repositoryJob = startRepository()
+        viewModelScope.launchGuarded("CategoryViewModel.followProfileSources") { followProfileSources() }
         // Refresh pre-computed per-item data only when the actual stream list changes
         viewModelScope.launchGuarded("CategoryViewModel.perItemData") {
             var lastStreams: List<MediaItem>? = null
@@ -317,6 +327,7 @@ class CategoryViewModel(
     private fun startRepository(): Job =
         viewModelScope.launchGuarded("CategoryViewModel.init", onError = ::showError) {
             val container = AppContainer.getInstance(context)
+            builtOn.value = MergedLists.xtreamSourceIds(container)
             // A section's list is built around the profile's first Xtream source; with none there
             // is nothing to list (the sections aren't offered then).
             val ownId = MergedLists.browsingProviderId(container, providerId)
@@ -328,14 +339,11 @@ class CategoryViewModel(
             // so an offline first source doesn't hold the others up.
             val repo = if (providerId == 0L) container.getStoredDataRepository(ownId) else container.getMediaRepository(ownId)
             repositorySnapshot = repo
-            repositoryDeferred.complete(repo)
-            if (!mergedDeferred.isCompleted) {
-                val merged = MergedLists.withOthers(container, repo)
-                mergedSnapshot = merged
-                mergedDeferred.complete(merged)
-                _sourceNames.value = merged.sourceNames
-            }
-            val merged = awaitMerged()
+            repositoryDeferred = repositoryDeferred.completedWith(repo)
+            val merged = MergedLists.withOthers(container, repo)
+            mergedSnapshot = merged
+            mergedDeferred = mergedDeferred.completedWith(merged)
+            _sourceNames.value = merged.sourceNames
             val ownSource = repo.getProviderId()
             launch { merged.recentItems(contentType).collect { _recentItems.value = it?.onSources(ownSource) } }
             loadCategoriesInternal()
@@ -344,6 +352,27 @@ class CategoryViewModel(
             // what was browsed into — without this warm-up it would sit on its spinner forever.
             merged.loadRecentItems(contentType)
         }
+
+    /**
+     * The profile's sources as they change (one turned on or off in its Sources, added or deleted):
+     * the list is built again on them — categories, Recent, Favourites, their badges — keeping the
+     * open list while it is still there. Nothing happens while they stay the same.
+     */
+    private suspend fun followProfileSources() {
+        val container = AppContainer.getInstance(context)
+        MergedLists.xtreamSourceIdChanges(container, appSettings.activeProfileId).collect { ids ->
+            if (ids != builtOn.filterNotNull().first()) {
+                repositoryJob?.cancel()
+                liveRecentOrder = emptyList()
+                repositoryJob = startRepository()
+            }
+        }
+    }
+
+    // [this] completed with [value], or a new deferred completed with it when [this] already was
+    // (the list built again).
+    private fun <T> CompletableDeferred<T>.completedWith(value: T): CompletableDeferred<T> =
+        if (complete(value)) this else CompletableDeferred(value)
 
     private fun showError(e: Throwable) {
         _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
@@ -475,8 +504,12 @@ class CategoryViewModel(
             )
 
         if (categories.isNotEmpty()) {
-            // The requested category on the source the list was opened on (route), else on any.
-            val requested = canonicalCategoryId(initialCategoryId)?.let { findCategory(it, repo.getProviderId()) }
+            // The open list when the list is built again (its sources changed) and it is still
+            // there; else the requested category on the source the list was opened on (route),
+            // else on any.
+            val requested =
+                currentCategoryId?.let { findCategory(it, currentCategorySource) }
+                    ?: canonicalCategoryId(initialCategoryId)?.let { findCategory(it, repo.getProviderId()) }
             // Every content type lands on Recent otherwise: what's in progress first, then the
             // rest of the history — for Live TV that's the last played channels.
             loadStreams(requested?.id ?: RECENT_CATEGORY_ID, requested?.providerId ?: 0L)

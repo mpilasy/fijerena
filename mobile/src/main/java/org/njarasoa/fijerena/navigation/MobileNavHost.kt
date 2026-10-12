@@ -180,12 +180,16 @@ fun MobileNavHost(
         }
     }
 
+    // The profile whose sources the tabs follow (below); a switch starts over on the new one.
+    var sourcesProfileId by remember { mutableStateOf(appSettings.activeProfileId) }
+
     // Back-Stack Rule 4's switches (profile, live sync, Settings' first source): every screen may
     // hold the previous one's repository, so start over on the new profile's last tab, or the first
     // its sources have.
     suspend fun startOver() {
         val sections = ProfileSections.load(context)
         profileSections = sections
+        sourcesProfileId = appSettings.activeProfileId
         restartOn(startTab(appSettings.lastTab, sections.merged))
     }
 
@@ -256,6 +260,15 @@ fun MobileNavHost(
             hasProvider = false
         } else {
             initializeStartup()
+        }
+    }
+
+    // The profile's sources as they change (one turned on or off, added or deleted): the tabs follow
+    // at once, whatever screen is open. Not before startup has read them, nor in safe mode.
+    LaunchedEffect(hasProvider, sourcesProfileId) {
+        if (hasProvider == null || SafeMode.isActive || ProvidersDbGuard.isBlocked) return@LaunchedEffect
+        ProviderRepository(context.applicationContext).profileSourceSet(sourcesProfileId).collect {
+            profileSections = ProfileSections.load(context)
         }
     }
 

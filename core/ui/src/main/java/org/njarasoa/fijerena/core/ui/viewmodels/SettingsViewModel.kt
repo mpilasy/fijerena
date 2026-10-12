@@ -76,7 +76,11 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        refreshProviderInfo()
+        // Read again whenever the profile's sources change (one turned on or off on its page, added
+        // or deleted), so Manage sources and Edit Source follow without reopening Settings.
+        viewModelScope.launchGuarded("SettingsViewModel.followProfileSources") {
+            providerRepo.profileSourceSet(appSettings.activeProfileId).collect { refreshProviderInfo() }
+        }
         // Sync EPG indexer state to ensure status card is accurate
         viewModelScope.launch {
             org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer

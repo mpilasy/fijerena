@@ -10,6 +10,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -170,6 +171,15 @@ class ProviderRepository(
      */
     fun profileSources(profileId: String): Flow<List<ProviderEntity>> =
         combine(dao.getAllProviders(), AppSettings(context).observeProfileSourceKeys(profileId), ::resolveProfileSources)
+
+    /**
+     * [profileSources], re-emitted only when which sources the profile has changes (one turned on or off, added, deleted or renamed), not on every
+     * write to a source's row (a sync's timestamps): what the merged lists reload on.
+     */
+    fun profileSourceSet(profileId: String): Flow<List<ProviderEntity>> =
+        profileSources(profileId).distinctUntilChanged { old, new ->
+            old.map { Triple(it.id, it.type, it.name) } == new.map { Triple(it.id, it.type, it.name) }
+        }
 
     /** [profileSources] once, for the profile this device uses unless told otherwise. */
     suspend fun profileSourcesList(profileId: String = activeProfileId()): List<ProviderEntity> =

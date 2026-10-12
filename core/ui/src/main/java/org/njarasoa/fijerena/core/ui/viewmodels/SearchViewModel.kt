@@ -13,6 +13,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -183,7 +184,30 @@ class SearchViewModel(
                 query = "",
             )
         _searchHistory.value = appSettings.getSearchHistory()
-        // Pre-fetch each source's category list + all missing/stale category items in background.
+        prefetchAll()
+        // The profile's sources changed (one turned on or off, added or deleted): the search covers
+        // them as they now are, and the results on screen are searched again.
+        viewModelScope.launchGuarded("SearchViewModel.followProfileSources") {
+            AppContainer
+                .getInstance(context)
+                .providerRepository
+                .profileSourceSet(appSettings.activeProfileId)
+                .drop(1)
+                .collect {
+                    sources = null
+                    prefetchedCategories.clear()
+                    prefetchAll()
+                    val query = (_uiState.value as? UiState.Success)?.query.orEmpty()
+                    if (query.length >= 2) {
+                        searchJob?.cancel()
+                        searchJob = viewModelScope.launchGuarded("SearchViewModel.searchAgain", Dispatchers.IO) { doSearch(query) }
+                    }
+                }
+        }
+    }
+
+    // Pre-fetch each source's category list + all missing/stale category items in background.
+    private fun prefetchAll() {
         viewModelScope.launchGuarded("SearchViewModel.prefetch", Dispatchers.IO) {
             val searchSources =
                 try {

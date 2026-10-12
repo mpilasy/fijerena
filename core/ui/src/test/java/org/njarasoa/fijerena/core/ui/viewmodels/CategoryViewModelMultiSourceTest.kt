@@ -245,6 +245,54 @@ class CategoryViewModelMultiSourceTest {
         verify(exactly = 0) { repoB.addFavorite(any(), any(), any(), any()) }
     }
 
+    @Test
+    fun `a source turned off for the profile leaves the list, its Recent and its badges`() {
+        val alpha = ProviderEntity(id = A, name = "Alpha", url = "", username = "")
+        val beta = ProviderEntity(id = B, name = "Beta", url = "", username = "")
+        val profileSources = MutableStateFlow(listOf(alpha, beta))
+        coEvery { providers.profileSourcesList(any()) } answers { profileSources.value }
+        every { providers.profileSourceSet(any()) } returns profileSources
+        every { repoA.recentItems(ContentType.MOVIES) } returns MutableStateFlow(listOf(movie("1").copy(providerId = A)))
+        every { repoB.recentItems(ContentType.MOVIES) } returns MutableStateFlow(listOf(movie("2").copy(providerId = B)))
+        coEvery { repoA.refreshRecentItems(ContentType.MOVIES) } returns listOf(movie("1").copy(providerId = A))
+        coEvery { repoB.refreshRecentItems(ContentType.MOVIES) } returns listOf(movie("2").copy(providerId = B))
+        val vm = section()
+        val before = vm.success { it.selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID && !it.streamsLoading }
+        assertEquals(listOf(A, A, B), before.categories.filterNot { it.isVirtual }.map { it.providerId })
+        assertEquals(mapOf(A to "Alpha", B to "Beta"), vm.sourceNames.value)
+
+        // Alpha turned off on the profile's page.
+        profileSources.value = listOf(beta)
+
+        val after =
+            vm.success { state ->
+                state.selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID &&
+                    !state.streamsLoading &&
+                    state.categories.filterNot { it.isVirtual }.map { it.providerId } == listOf(B)
+            }
+        assertEquals(listOf(B), after.streams?.map { it.providerId })
+        assertEquals(emptyMap<Long, String>(), vm.sourceNames.value)
+    }
+
+    @Test
+    fun `Recent and Favourites rows carry their source while the profile has two`() {
+        coEvery { repoA.refreshRecentItems(ContentType.MOVIES) } returns listOf(movie("1").copy(providerId = A, lastPlayedAt = 2))
+        coEvery { repoB.refreshRecentItems(ContentType.MOVIES) } returns listOf(movie("1").copy(providerId = B, lastPlayedAt = 1))
+        coEvery { repoA.getFavoritesForContentTypeSuspend(ContentType.MOVIES) } returns listOf(movie("1").copy(providerId = A))
+        coEvery { repoB.getFavoritesForContentTypeSuspend(ContentType.MOVIES) } returns listOf(movie("3").copy(providerId = B))
+        val vm = section()
+
+        val recent = vm.success { it.selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID && !it.streamsLoading }.streams.orEmpty()
+        vm.loadStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+        val favorites =
+            vm.success { it.selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID && !it.streamsLoading }.streams.orEmpty()
+
+        // Each row's badge is its source's name (the screens show sourceNames[row.providerId]).
+        val names = vm.sourceNames.value
+        assertEquals(listOf("Alpha", "Beta"), recent.map { names[it.providerId] })
+        assertEquals(listOf("Alpha", "Beta"), favorites.map { names[it.providerId] })
+    }
+
     private companion object {
         const val A = 1L
         const val B = 2L

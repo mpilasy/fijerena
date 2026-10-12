@@ -7,6 +7,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentCategory
 import org.njarasoa.fijerena.core.network.RecentRemoval
@@ -209,15 +211,27 @@ class MergedLists(
         suspend fun browsingProviderId(
             container: AppContainer,
             providerId: Long,
-        ): Long? =
-            if (providerId != 0L) {
-                providerId
-            } else {
-                container.providerRepository
-                    .profileSourcesList()
-                    .firstOrNull { it.type == XTREAM }
-                    ?.id
-            }
+        ): Long? = if (providerId != 0L) providerId else xtreamSourceIds(container).firstOrNull()
+
+        /** The profile in use's Xtream sources, in its order: what the merged lists are built on. */
+        suspend fun xtreamSourceIds(container: AppContainer): List<Long> =
+            container.providerRepository
+                .profileSourcesList()
+                .filter { it.type == XTREAM }
+                .map { it.id }
+
+        /**
+         * [profileId]'s Xtream sources ([xtreamSourceIds]) now and each time they change — one
+         * turned on or off, added or deleted — and only then: a list built on them is built again.
+         */
+        fun xtreamSourceIdChanges(
+            container: AppContainer,
+            profileId: String,
+        ): Flow<List<Long>> =
+            container.providerRepository
+                .profileSourceSet(profileId)
+                .map { sources -> sources.filter { it.type == XTREAM }.map { it.id } }
+                .distinctUntilChanged()
 
         /**
          * Recent across sources: each source's own list (its own size), all of them; rows worth

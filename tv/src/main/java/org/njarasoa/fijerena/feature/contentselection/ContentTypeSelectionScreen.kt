@@ -208,11 +208,15 @@ fun ContentTypeSelectionScreen(
     // and 6). Each card acts on, and opens on, its own source. Stored data only: an offline source
     // holds nothing up.
     var mergedLists by remember { mutableStateOf<MergedLists?>(null) }
+    // Read again whenever the profile's sources change (one turned on or off, added or deleted),
+    // and only then: the sections, the Browse entries and every row follow.
     LaunchedEffect(Unit) {
-        val loaded = ProfileSections.load(context.applicationContext)
-        sections = loaded
-        mergedLists = MergedLists.forSections(context.applicationContext)
-        if (loaded.merged.isNotEmpty()) onCapabilitiesResolved(loaded.merged)
+        ProviderRepository(context.applicationContext).profileSourceSet(appSettings.activeProfileId).collect {
+            val loaded = ProfileSections.load(context.applicationContext)
+            sections = loaded
+            mergedLists = MergedLists.forSections(context.applicationContext)
+            if (loaded.merged.isNotEmpty()) onCapabilitiesResolved(loaded.merged)
+        }
     }
     val sourceNames = mergedLists?.sourceNames.orEmpty()
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
@@ -304,8 +308,8 @@ fun ContentTypeSelectionScreen(
         val merged = mergedLists
         val observer =
             LifecycleEventObserver { _, event ->
-                // A source turned on or off, added or deleted meanwhile: the header and the Browse
-                // entries follow (the rows' sources are read again on the next visit).
+                // A source synced meanwhile (Live TV shows once one has channels): the sections are
+                // read again. A change to the profile's sources is followed above.
                 if (event == Lifecycle.Event.ON_RESUME && sections != null) {
                     coroutineScope.launch { sections = ProfileSections.load(context.applicationContext) }
                 }
