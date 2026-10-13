@@ -58,7 +58,7 @@ The Search screen searches either the catalogue or the guide, picked with two ta
 
 | # | Phase | Touches | Status |
 |---|---|---|---|
-| 1 | Shared guide-search pane, TV and phone; Search the guide uses it (no behaviour change) | `TvEpgBrowserScreen`, `MobileEpgBrowserScreen` | Not started |
+| 1 | Shared guide-search pane, TV and phone; Search the guide uses it (no behaviour change) | `TvEpgBrowserScreen`, `MobileEpgBrowserScreen` | In progress |
 | 2 | TV Search: tab row, Guide tab, shared query, result navigation | TV `SearchScreen`, `TvNavHost`, strings | Not started |
 | 3 | Phone Search: the same | phone `SearchScreen`, `MobileNavHost`, strings | Not started |
 | 4 | Tests (Robolectric Compose: tab switch reruns the query, Guide tab hidden per O1), docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator check on jellyxtream + iptv | tests, docs | Not started |
