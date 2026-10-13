@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -231,8 +232,13 @@ class CategoryViewModel(
     /** Each listed category's name by its key ([MediaCategory.key]): the second line of a Recent or Favourites row names it. */
     val categoryNames: StateFlow<Map<String, String>> =
         uiState
-            .map { state -> (state as? UiState.Success)?.categories?.associate { it.key to it.name }.orEmpty() }
-            .distinctUntilChanged()
+            .map { state -> (state as? UiState.Success)?.categories.orEmpty() }
+            // Rebuilt only when the categories themselves change (a new list, not every state
+            // change: a selection, a load, the last played), and off the main thread: thousands
+            // across a profile's sources.
+            .distinctUntilChanged { old, new -> old === new }
+            .map { categories -> categories.associate { it.key to it.name } }
+            .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     /** This list's own source (a section's: the profile's first Xtream source) once the repository is built. */
