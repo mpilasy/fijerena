@@ -126,11 +126,7 @@ fun MobileEpgBrowserScreen(
         viewModel(
             factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId, providerId) },
         )
-    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val contextName = categoryName?.takeIf { categoryId != null }
-    // Opened from a TV Guide: its channels only, until unticked (GD5).
-    var inContextOnly by rememberSaveable { mutableStateOf(true) }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val guideSourceOwners by viewModel.guideSourceOwners.collectAsStateWithLifecycle()
     var choosingGuideSources by remember { mutableStateOf(false) }
@@ -144,28 +140,11 @@ fun MobileEpgBrowserScreen(
             onDismiss = { choosingGuideSources = false },
         )
     }
-    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     val recentLabel = stringResource(R.string.category_recent_label)
 
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val isDevMode = viewModel.isDevMode
-    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
-    val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
-    val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
-    val epgDbStats =
-        when (val idx = indexState) {
-            is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
-            else -> null
-        }
-
-    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
-    // until a later change gives it a home.
-    val matchedOnly = true
-
-    val nowEpoch = rememberNowEpochSeconds()
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
@@ -238,257 +217,306 @@ fun MobileEpgBrowserScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
-        Column(
+        MobileGuideSearchPane(
+            viewModel = viewModel,
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            onNavigateToPlayer = onNavigateToPlayer,
+            contextName = contextName,
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-        ) {
-            // The guide's status, one line; the index counters only in developer mode.
-            val freshnessText =
-                freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
-            val freshnessColor =
-                if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
-                    (oldestIngestedAtMs == null && hasOffSources)
-                ) {
-                    CinemaWarning
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+        )
+    }
+}
+
+/**
+ * The body of "Search the guide" under its top bar: the guide's status, the field, the
+ * "In <category> only" checkbox ([contextName] set), the index progress, recent searches and
+ * results. The host owns the field's text ([query], [onQueryChange]) and the snackbar for the
+ * view model's messages.
+ */
+@Composable
+internal fun MobileGuideSearchPane(
+    viewModel: EpgBrowserViewModel,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit,
+    modifier: Modifier = Modifier,
+    contextName: String? = null,
+) {
+    val context = LocalContext.current
+    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
+    // Opened from a TV Guide: its channels only, until unticked (GD5).
+    var inContextOnly by rememberSaveable { mutableStateOf(true) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
+    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val isDevMode = viewModel.isDevMode
+    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
+    val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
+    val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val epgDbStats =
+        when (val idx = indexState) {
+            is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
+            else -> null
+        }
+
+    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
+    // until a later change gives it a home.
+    val matchedOnly = true
+
+    val nowEpoch = rememberNowEpochSeconds()
+
+    Column(modifier = modifier) {
+        // The guide's status, one line; the index counters only in developer mode.
+        val freshnessText =
+            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
+        val freshnessColor =
+            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
+                (oldestIngestedAtMs == null && hasOffSources)
+            ) {
+                CinemaWarning
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        Text(
+            text = freshnessText,
+            style = MaterialTheme.typography.bodySmall,
+            color = freshnessColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = Spacing.md),
+        )
+        if (isDevMode && epgDbStats != null) {
             Text(
-                text = freshnessText,
+                text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
                 style = MaterialTheme.typography.bodySmall,
-                color = freshnessColor,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = Spacing.md),
             )
-            if (isDevMode && epgDbStats != null) {
+        }
+
+        val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
+        OutlinedTextField(
+            value = query,
+            onValueChange = { onQueryChange(it) },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
+            placeholder = { Text(placeholderText) },
+            leadingIcon = {
+                Icon(
+                    imageVector = CinemaIcons.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(MobileDimensions.iconSmall),
+                )
+            },
+            trailingIcon = {
+                val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
+                if (query.isNotEmpty() || hasResults) {
+                    IconButton(onClick = {
+                        onQueryChange("")
+                        viewModel.clearSearch()
+                    }) {
+                        Icon(
+                            imageVector = CinemaIcons.Close,
+                            contentDescription = stringResource(R.string.provider_clear_button),
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions =
+                KeyboardActions(
+                    onSearch = {
+                        if (query.isNotBlank()) {
+                            viewModel.performSearch(query)
+                            keyboardController?.hide()
+                        }
+                    },
+                ),
+            shape = RoundedCornerShape(CinemaCornerRadius.medium),
+        )
+
+        // "In <category> only" (GD5).
+        if (contextName != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .padding(horizontal = Spacing.md)
+                        .clickable { inContextOnly = !inContextOnly },
+            ) {
+                Checkbox(
+                    checked = inContextOnly,
+                    onCheckedChange = { inContextOnly = it },
+                    modifier = Modifier.size(MobileDimensions.iconLarge),
+                )
                 Text(
-                    text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                    style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
-                    modifier = Modifier.padding(horizontal = Spacing.md),
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        // Indexing progress banner
+        val currentIndexState = indexState
+        if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
+            val idx = currentIndexState
+            val progressText =
+                if (idx is EpgIndexState.Indexing) {
+                    stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
+                } else {
+                    stringResource(
+                        R.string.epg_browser_finalizing_format,
+                        formatCount((idx as EpgIndexState.Optimizing).programmeCount),
+                    )
+                }
+            val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
+
+            Column(
+                modifier =
+                    Modifier.padding(
+                        horizontal = Spacing.md,
+                        vertical = CinemaSpacing.xxs,
+                    ),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text =
+                            if (idx is EpgIndexState.Indexing) {
+                                stringResource(
+                                    R.string.epg_browser_indexing_label,
+                                )
+                            } else {
+                                stringResource(R.string.epg_browser_optimizing_label)
+                            },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = progressText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { progressValue },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(MobileDimensions.strokeWidth)
+                            .padding(top = CinemaSpacing.xxxs),
+                )
+            }
+        }
+
+        when (val state = uiState) {
+            is EpgBrowserViewModel.UiState.Idle -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    if (epgSearchHistory.isNotEmpty()) {
+                        MobileEpgSearchHistorySection(
+                            history = epgSearchHistory,
+                            onItemClick = { term ->
+                                onQueryChange(term)
+                                viewModel.performSearch(term)
+                                keyboardController?.hide()
+                            },
+                            onItemRemove = { viewModel.removeEpgSearchHistoryEntry(it) },
+                            onClearAll = { viewModel.clearEpgSearchHistory() },
+                        )
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val hintText = stringResource(R.string.epg_browser_hint_search_titles)
+                        Text(
+                            text = hintText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.IndexBusy -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = state.message(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.NoEpgFile -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.epg_browser_no_file_message),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.Searching -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MitadyLoading(
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.Results -> {
+                MobileResultsContent(
+                    results = state,
+                    nowEpoch = nowEpoch,
+                    matchedOnly = matchedOnly,
+                    onNavigateToPlayer = onNavigateToPlayer,
+                    contextName = contextName.takeIf { inContextOnly },
+                    contextChannels = contextChannels,
                 )
             }
 
-            val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
-                placeholder = { Text(placeholderText) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = CinemaIcons.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(MobileDimensions.iconSmall),
-                    )
-                },
-                trailingIcon = {
-                    val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
-                    if (searchQuery.isNotEmpty() || hasResults) {
-                        IconButton(onClick = {
-                            searchQuery = ""
-                            viewModel.clearSearch()
-                        }) {
-                            Icon(
-                                imageVector = CinemaIcons.Close,
-                                contentDescription = stringResource(R.string.provider_clear_button),
-                                modifier = Modifier.size(MobileDimensions.iconSmall),
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions =
-                    KeyboardActions(
-                        onSearch = {
-                            if (searchQuery.isNotBlank()) {
-                                viewModel.performSearch(searchQuery)
-                                keyboardController?.hide()
-                            }
-                        },
-                    ),
-                shape = RoundedCornerShape(CinemaCornerRadius.medium),
-            )
-
-            // "In <category> only" (GD5).
-            if (contextName != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .padding(horizontal = Spacing.md)
-                            .clickable { inContextOnly = !inContextOnly },
+            is EpgBrowserViewModel.UiState.Error -> {
+                RetryWhenOnline { viewModel.performSearch(query) }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Checkbox(
-                        checked = inContextOnly,
-                        onCheckedChange = { inContextOnly = it },
-                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                    )
                     Text(
-                        text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        text = state.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
                     )
-                }
-            }
-
-            // Indexing progress banner
-            val currentIndexState = indexState
-            if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
-                val idx = currentIndexState
-                val progressText =
-                    if (idx is EpgIndexState.Indexing) {
-                        stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
-                    } else {
-                        stringResource(
-                            R.string.epg_browser_finalizing_format,
-                            formatCount((idx as EpgIndexState.Optimizing).programmeCount),
-                        )
-                    }
-                val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
-
-                Column(
-                    modifier =
-                        Modifier.padding(
-                            horizontal = Spacing.md,
-                            vertical = CinemaSpacing.xxs,
-                        ),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text =
-                                if (idx is EpgIndexState.Indexing) {
-                                    stringResource(
-                                        R.string.epg_browser_indexing_label,
-                                    )
-                                } else {
-                                    stringResource(R.string.epg_browser_optimizing_label)
-                                },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = progressText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    LinearProgressIndicator(
-                        progress = { progressValue },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(MobileDimensions.strokeWidth)
-                                .padding(top = CinemaSpacing.xxxs),
-                    )
-                }
-            }
-
-            when (val state = uiState) {
-                is EpgBrowserViewModel.UiState.Idle -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        if (epgSearchHistory.isNotEmpty()) {
-                            MobileEpgSearchHistorySection(
-                                history = epgSearchHistory,
-                                onItemClick = { term ->
-                                    searchQuery = term
-                                    viewModel.performSearch(term)
-                                    keyboardController?.hide()
-                                },
-                                onItemRemove = { viewModel.removeEpgSearchHistoryEntry(it) },
-                                onClearAll = { viewModel.clearEpgSearchHistory() },
-                            )
-                        }
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            val hintText = stringResource(R.string.epg_browser_hint_search_titles)
-                            Text(
-                                text = hintText,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                is EpgBrowserViewModel.UiState.IndexBusy -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = state.message(),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-
-                is EpgBrowserViewModel.UiState.NoEpgFile -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.epg_browser_no_file_message),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                is EpgBrowserViewModel.UiState.Searching -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        MitadyLoading(
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-
-                is EpgBrowserViewModel.UiState.Results -> {
-                    MobileResultsContent(
-                        results = state,
-                        nowEpoch = nowEpoch,
-                        matchedOnly = matchedOnly,
-                        onNavigateToPlayer = onNavigateToPlayer,
-                        contextName = contextName.takeIf { inContextOnly },
-                        contextChannels = contextChannels,
-                    )
-                }
-
-                is EpgBrowserViewModel.UiState.Error -> {
-                    RetryWhenOnline { viewModel.performSearch(searchQuery) }
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = state.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
                 }
             }
         }

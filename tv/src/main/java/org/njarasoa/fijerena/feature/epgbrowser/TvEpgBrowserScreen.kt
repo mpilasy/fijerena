@@ -166,9 +166,8 @@ fun TvEpgBrowserScreen(
         viewModel(
             factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId, providerId) },
         )
-    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val contextName = categoryName?.takeIf { categoryId != null }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var query by remember { mutableStateOf("") }
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val guideSourceOwners by viewModel.guideSourceOwners.collectAsStateWithLifecycle()
     // Back from a header button's screen lands on that button (the results' own hand-back is
@@ -181,37 +180,14 @@ fun TvEpgBrowserScreen(
         onGuideSources(providerId)
     }
     val recentLabel = stringResource(R.string.category_recent_label)
-    val isDevMode = viewModel.isDevMode
-    val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
-    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
-    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
-    val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
-    val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
-    val epgDbStats =
-        when (val idx = indexState) {
-            is EpgIndexState.Indexed -> {
-                stringResource(
-                    R.string.epg_browser_dev_stats_counts_format,
-                    formatCount(idx.programmeCount),
-                    formatCount(idx.channelCount),
-                )
-            }
-
-            else -> {
-                null
-            }
-        }
     val isRefreshing =
         processingState is EpgFileManager.MultiSourceState.Pending ||
             processingState is EpgFileManager.MultiSourceState.Processing ||
             processingState is EpgFileManager.MultiSourceState.Finalizing ||
             indexState is EpgIndexState.Indexing ||
             indexState is EpgIndexState.Optimizing
-
-    val nowEpoch = rememberNowEpochSeconds()
-    val scale = LocalUiScale.current
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -281,80 +257,140 @@ fun TvEpgBrowserScreen(
                 )
             }
 
-            val freshnessColor =
-                if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
-                    (oldestIngestedAtMs == null && hasOffSources)
-                ) {
-                    CinemaWarning
-                } else {
-                    CinemaTextSecondary
-                }
-            Text(
-                text = freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources),
-                style = MaterialTheme.typography.bodyMedium,
-                color = freshnessColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            TvGuideSearchPane(
+                viewModel = viewModel,
+                query = query,
+                onQueryChange = { query = it },
+                onNavigateToPlayer = onNavigateToPlayer,
+                contextName = contextName,
+                headerReturnPending = headerReturnFocus.key != null,
             )
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(Spacing.md))
+/**
+ * The body of "Search the guide" under its header: how fresh the guides are, the field, the
+ * "In <category> only" chip ([contextName] set), the index progress, recent searches and results.
+ * The host owns the field's text ([query], [onQueryChange]); [fieldModifier] goes on the field.
+ */
+@Composable
+internal fun TvGuideSearchPane(
+    viewModel: EpgBrowserViewModel,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit,
+    contextName: String? = null,
+    // Back is handing focus to a header button: no first-open focus or keyboard here.
+    headerReturnPending: Boolean = false,
+    fieldModifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
+    val isDevMode = viewModel.isDevMode
+    val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
+    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
+    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
+    val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
+    val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val epgDbStats =
+        when (val idx = indexState) {
+            is EpgIndexState.Indexed -> {
+                stringResource(
+                    R.string.epg_browser_dev_stats_counts_format,
+                    formatCount(idx.programmeCount),
+                    formatCount(idx.channelCount),
+                )
+            }
 
-            when (val state = uiState) {
-                is EpgBrowserViewModel.UiState.NoEpgFile -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.epg_browser_no_file_message),
-                            style =
-                                MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.bodyLarge.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaTextSecondary,
-                        )
-                    }
-                }
+            else -> {
+                null
+            }
+        }
 
-                is EpgBrowserViewModel.UiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = state.message,
-                            style =
-                                MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.bodyLarge.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaError,
-                        )
-                    }
-                }
+    val nowEpoch = rememberNowEpochSeconds()
+    val scale = LocalUiScale.current
 
-                else -> {
-                    EpgBrowserContent(
-                        uiState = state,
-                        nowEpoch = nowEpoch,
-                        indexState = indexState,
-                        isDevMode = isDevMode,
-                        epgDbStats = epgDbStats,
-                        sourceLabels = sourceLabels,
-                        epgSearchHistory = epgSearchHistory,
-                        onSearch = { viewModel.performSearch(it) },
-                        onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
-                        onClearHistory = { viewModel.clearEpgSearchHistory() },
-                        onClearSearch = { viewModel.clearSearch() },
-                        onNavigateToPlayer = onNavigateToPlayer,
-                        contextName = contextName,
-                        contextChannels = contextChannels,
-                        headerReturnPending = headerReturnFocus.key != null,
+    Column(modifier = Modifier.fillMaxSize()) {
+        val freshnessColor =
+            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
+                (oldestIngestedAtMs == null && hasOffSources)
+            ) {
+                CinemaWarning
+            } else {
+                CinemaTextSecondary
+            }
+        Text(
+            text = freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources),
+            style = MaterialTheme.typography.bodyMedium,
+            color = freshnessColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        when (val state = uiState) {
+            is EpgBrowserViewModel.UiState.NoEpgFile -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.epg_browser_no_file_message),
+                        style =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                fontSize =
+                                    MaterialTheme.typography.bodyLarge.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = CinemaTextSecondary,
                     )
                 }
+            }
+
+            is EpgBrowserViewModel.UiState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = state.message,
+                        style =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                fontSize =
+                                    MaterialTheme.typography.bodyLarge.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = CinemaError,
+                    )
+                }
+            }
+
+            else -> {
+                EpgBrowserContent(
+                    uiState = state,
+                    nowEpoch = nowEpoch,
+                    indexState = indexState,
+                    isDevMode = isDevMode,
+                    epgDbStats = epgDbStats,
+                    sourceLabels = sourceLabels,
+                    epgSearchHistory = epgSearchHistory,
+                    onSearch = { viewModel.performSearch(it) },
+                    onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
+                    onClearHistory = { viewModel.clearEpgSearchHistory() },
+                    onClearSearch = { viewModel.clearSearch() },
+                    onNavigateToPlayer = onNavigateToPlayer,
+                    contextName = contextName,
+                    contextChannels = contextChannels,
+                    headerReturnPending = headerReturnPending,
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    fieldModifier = fieldModifier,
+                )
             }
         }
     }
@@ -378,13 +414,15 @@ private fun EpgBrowserContent(
     contextChannels: List<GuideChannels>? = null,
     // Back is handing focus to a header button: no first-open focus or keyboard here.
     headerReturnPending: Boolean = false,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    fieldModifier: Modifier = Modifier,
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
 
     // Down from the field (or the chip under it) should reach the first recent-search chip.
     val historyFocusRequester = remember { FocusRequester() }
-    var localQuery by remember { mutableStateOf("") }
     // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
     // until a later change gives it a home.
     val matchedOnly = true
@@ -424,12 +462,12 @@ private fun EpgBrowserContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TvSearchField(
-            modifier = if (contextName == null) downToHistory else Modifier,
-            query = localQuery,
-            onQueryChange = { localQuery = it },
-            onSearchSubmit = { onSearch(localQuery) },
+            modifier = (if (contextName == null) downToHistory else Modifier).then(fieldModifier),
+            query = query,
+            onQueryChange = onQueryChange,
+            onSearchSubmit = { onSearch(query) },
             onClear = {
-                localQuery = ""
+                onQueryChange("")
                 onClearSearch()
             },
             placeholder = stringResource(R.string.epg_browser_enter_programme_placeholder),
@@ -437,7 +475,7 @@ private fun EpgBrowserContent(
             editing = editing,
             onEditingChange = { editing = it },
             restingFieldModifier = Modifier.leftToRail(),
-            showClearButton = localQuery.isNotEmpty() || hasResults,
+            showClearButton = query.isNotEmpty() || hasResults,
         )
 
         // Opened from a TV Guide: "In <category> only", a chip under the field (TV UI audit #15). A
@@ -545,7 +583,7 @@ private fun EpgBrowserContent(
                         EpgSearchHistorySection(
                             history = epgSearchHistory,
                             onItemClick = { term ->
-                                localQuery = term
+                                onQueryChange(term)
                                 onSearch(term)
                             },
                             onItemRemove = onRemoveHistoryEntry,
