@@ -81,6 +81,8 @@
     <string name="common_retry">Retry</string>
     <string name="common_no_items_available">No items available</string>
     <string name="common_search">Search</string>
+    <string name="search_tab_catalogue">Catalogue</string>
+    <string name="search_tab_guide">Guide</string>
     <string name="common_tv_guide">TV Guide</string>
 
     <string name="common_refresh">Refresh</string>

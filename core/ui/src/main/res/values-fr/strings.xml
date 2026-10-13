@@ -77,6 +77,8 @@
     <string name="common_retry">Réessayer</string>
     <string name="common_no_items_available">Aucun élément disponible</string>
     <string name="common_search">Rechercher</string>
+    <string name="search_tab_catalogue">Catalogue</string>
+    <string name="search_tab_guide">Guide</string>
     <string name="common_tv_guide">Guide TV</string>
 
     <string name="common_refresh">Actualiser</string>

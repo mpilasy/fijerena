@@ -77,6 +77,8 @@
     <string name="common_retry">Andramo indray</string>
     <string name="common_no_items_available">Tsy nahita valiny</string>
     <string name="common_search">Tadiavo</string>
+    <string name="search_tab_catalogue">Katalaogy</string>
+    <string name="search_tab_guide">Fandaharana</string>
     <string name="common_tv_guide">Fandaharana</string>
 
     <string name="common_refresh">Havaozy</string>
