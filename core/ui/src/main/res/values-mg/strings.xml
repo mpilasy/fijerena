@@ -376,7 +376,7 @@
     <!-- Player UI -->
     <string name="player_playback_ended">Vita ny filalaovana</string>
     <string name="player_playback_error_prefix">⚠️ Nisy fahadisoana ny famakiana</string>
-    <string name="player_technical_details">Antsipiriany ara-teknika (Fomba manam-pahaizana):</string>
+    <string name="player_technical_details">Antsipiriany ara-teknika (Manam-pahaizana):</string>
     <string name="player_error_type_label">Karazany: </string>
     <string name="player_error_message_label">Hafatra: </string>
     <string name="player_error_stack_trace_label">Stack Trace:</string>
@@ -474,7 +474,7 @@
     <string name="settings_about_section_title">Momba</string>
     <string name="settings_about_tagline">Fitaovana filalaovana horonantsary avo lenta ho an\'ny Android</string>
     <string name="app_disclaimer_no_content">Tsy manome na mitahiry votoaty i Fijerena. Ny loharano ampidirinao ihany no alefany.</string>
-    <string name="settings_developer_mode_title">Fomba manam-pahaizana</string>
+    <string name="settings_developer_mode_title">Manam-pahaizana</string>
     <string name="settings_developer_mode_desc">Fitiliana, antsipiriany ara-teknika, ary karazana loharano mbola amboarina (SMB, rakitra eo an-toerana)</string>
     <string name="settings_export_import_section_title">Alefa / Ampidiro</string>
     <string name="settings_export_import_desc">Alefaso amin\'ny rakitra ny fandrindrana rehetra na ampidiro avy amin\'ny fitaovana hafa</string>
@@ -1176,9 +1176,9 @@
     <string name="tmdb_attribution_title">Angona momba ny sarimihetsika sy andian-tantara</string>
     <string name="epg_xmltv_url_hint">Ny adiresin\'ny rakitra fandaharana XMLTV (.xml na .xml.gz), avy amin\'ny mpamatsy anao na tranonkala fandaharana.</string>
     <string name="epg_timezone_hint">Raha diso ora ihany ny fandaharana. Matetika 0.</string>
-    <string name="settings_developer_mode_enabled">Mandeha ho an\'ity mombamomba ity ny fomba manam-pahaizana</string>
-    <string name="settings_developer_mode_already_on">Efa mandeha ny fomba manam-pahaizana</string>
-    <string name="settings_developer_mode_taps_left">Fomba manam-pahaizana: %1$d sisa</string>
+    <string name="settings_developer_mode_enabled">Mandeha ho an\'ity mombamomba ity ny Manam-pahaizana</string>
+    <string name="settings_developer_mode_already_on">Efa mandeha ny Manam-pahaizana</string>
+    <string name="settings_developer_mode_taps_left">Manam-pahaizana: %1$d sisa</string>
     <string name="ui_style_standard">Mahazatra</string>
     <string name="ui_style_rounded">Boribory</string>
     <string name="ui_style_sharp">Maranitra</string>
