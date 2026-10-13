@@ -155,7 +155,9 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
   deleting the source in use moves to another of the profile's sources. **Sources ›** shows with 2+
   sources ("N of M"); TV pane, phone dialog. Left for Phase 8: the `sources.txt` focus walk needs the
   profile to have both sources (after the upgrade it has one); the new `settings.txt` step is not
-  re-recorded; settings export/import doesn't carry a profile's sources.
+  re-recorded; settings export/import doesn't carry a profile's sources (done in Phase 8: each
+  exported source has `inProfile` for the active profile; an import applies it to the active
+  profile for added and overwritten sources).
 
 ### Phase 3 — Search across the profile's sources
 

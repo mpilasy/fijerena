@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
  * - EPG sources (URL, label, timezone offset, enabled state), except an Xtream source's own
  *   `xmltv.php` guide, which carries its login: the source's next login adds it again
  * - Favorites per provider (item ID, name, category, content type), active profile only
+ * - Whether each provider is one of the active profile's sources
  *
  * NOT exported (for security/size reasons):
  * - Passwords (stored in EncryptedSharedPreferences)
@@ -86,6 +87,15 @@ class SettingsExportManager(
             url: String,
             owner: ProviderEntity,
         ): Boolean = owner.type == "XTREAM" && AutoXmltvSources.isServerXmltv(url, owner.url)
+
+        /**
+         * The active profile's sources after an import: [current] with each of [changes] (a source's
+         * `providerKey` to whether the file had it in the profile) turned on or off.
+         */
+        internal fun importedProfileSources(
+            current: Set<String>?,
+            changes: Map<String, Boolean>,
+        ): Set<String> = current.orEmpty() - changes.filterValues { !it }.keys + changes.filterValues { it }.keys
     }
 
     @Serializable
@@ -125,6 +135,10 @@ class SettingsExportManager(
         val providerSettings: String = "{}",
         // No `isActive` since there is no device source (multi-source plan, Phase 6): an older
         // file's is ignored (ignoreUnknownKeys).
+        // Whether it is one of the exporting profile's sources. Null (left out) when that profile
+        // had none stored, and in an older file: the import then leaves the profile's sources alone.
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val inProfile: Boolean? = null,
     )
 
     @Serializable
@@ -272,6 +286,7 @@ class SettingsExportManager(
                 )
 
             val allProviders = providerRepo.getAllProvidersList()
+            val profileSources = appSettings.profileSourceKeys(appSettings.activeProfileId)
 
             val providers =
                 allProviders.map { entity ->
@@ -283,6 +298,7 @@ class SettingsExportManager(
                         config = entity.config,
                         // With the active profile's category filters, like favourites and history.
                         providerSettings = json.encodeToString(providerRepo.getProviderSettings(entity.id)),
+                        inProfile = profileSources?.let { entity.providerKey in it },
                     )
                 }
 
@@ -534,6 +550,8 @@ class SettingsExportManager(
                 var providersAdded = 0
                 var providersUpdated = 0
                 var providersSkipped = 0
+                // Added or overwritten sources' ids to whether the file had them in the profile.
+                val profileSourceChanges = mutableMapOf<Long, Boolean>()
 
                 if (options.importProviders) {
                     for (ep in exported.providers) {
@@ -567,17 +585,20 @@ class SettingsExportManager(
                                             android.util.Log.e("SettingsExportManager", "Failed to update provider settings", e)
                                         }
                                     }
+                                    ep.inProfile?.let { profileSourceChanges[existing.id] = it }
                                     providersUpdated++
                                 }
 
                                 ConflictResolution.DUPLICATE -> {
-                                    addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
+                                    val id = addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
+                                    ep.inProfile?.let { profileSourceChanges[id] = it }
                                     providersAdded++
                                 }
                             }
                             continue
                         }
-                        addNewProvider(providerRepo, ep)
+                        val id = addNewProvider(providerRepo, ep)
+                        ep.inProfile?.let { profileSourceChanges[id] = it }
                         providersAdded++
                     }
                 }
@@ -592,6 +613,18 @@ class SettingsExportManager(
                     }
                 val providersByNameUrl = allProvidersForFavorites.associateBy { "${it.name}\u0000${it.url}" }
                 val providersByName = allProvidersForFavorites.associateBy { it.name }
+
+                // Into the active profile, like favourites. Adding a source already turned it on.
+                if (profileSourceChanges.isNotEmpty()) {
+                    val appSettings = AppSettings(context)
+                    val keysById = allProvidersForFavorites.associate { it.id to it.providerKey }
+                    val changes =
+                        profileSourceChanges.entries
+                            .mapNotNull { (id, on) -> keysById[id]?.let { it to on } }
+                            .toMap()
+                    val profile = appSettings.activeProfileId
+                    appSettings.setProfileSourceKeys(profile, importedProfileSources(appSettings.profileSourceKeys(profile), changes))
+                }
 
                 // Import EPG sources (merge: add new, skip existing by URL within the same provider)
                 var sourcesAdded = 0
@@ -783,7 +816,7 @@ class SettingsExportManager(
     private suspend fun addNewProvider(
         providerRepo: ProviderRepository,
         ep: ExportedProvider,
-    ) {
+    ): Long {
         val newId =
             providerRepo.addProvider(
                 name = ep.name,
@@ -803,6 +836,7 @@ class SettingsExportManager(
                 android.util.Log.e("SettingsExportManager", "Failed to update provider settings", e)
             }
         }
+        return newId
     }
 
     data class ImportResult(
