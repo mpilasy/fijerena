@@ -385,6 +385,7 @@ private fun CategoryItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            sourceName?.let { SourceBadge(it) }
             if (icon != null) {
                 Icon(
                     imageVector = icon,
@@ -409,7 +410,6 @@ private fun CategoryItem(
                 // weight(1f) keeps the hint below at the row's end.
                 modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
             )
-            sourceName?.let { SourceBadge(it) }
             // See StreamItem: a glyph, not a focus stop, on the focused row only.
             if (isFocused && onOpenActions != null) RowActionsHint()
         }

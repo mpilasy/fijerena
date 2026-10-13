@@ -11,10 +11,14 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -223,6 +227,13 @@ class CategoryViewModel(
     // it, SourceBadge); empty with one.
     private val _sourceNames = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceNames: StateFlow<Map<Long, String>> = _sourceNames.asStateFlow()
+
+    /** Each listed category's name by its key ([MediaCategory.key]): the second line of a Recent or Favourites row names it. */
+    val categoryNames: StateFlow<Map<String, String>> =
+        uiState
+            .map { state -> (state as? UiState.Success)?.categories?.associate { it.key to it.name }.orEmpty() }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     /** This list's own source (a section's: the profile's first Xtream source) once the repository is built. */
     val sourceId: Long

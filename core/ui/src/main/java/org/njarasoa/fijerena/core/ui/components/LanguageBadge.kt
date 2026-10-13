@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -108,13 +109,15 @@ fun BadgedTitle(
 
 /**
  * The source an item comes from, where a list mixes several (search, Recent, favourites), on the
- * same pill as [LanguageBadge]. Read as "Source: <name>".
+ * same pill as [LanguageBadge]. Read as "Source: <name>". Nothing while the profile's Expert mode is
+ * off ([LocalShowSourceBadges]).
  */
 @Composable
 fun SourceBadge(
     name: String,
     modifier: Modifier = Modifier,
 ) {
+    if (!LocalShowSourceBadges.current) return
     val description = stringResource(R.string.source_badge_description, name)
     CinemaBadge(
         text = name,

@@ -13,6 +13,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.history.ProvideSourceBadges
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.navigation.MobileNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
@@ -64,16 +65,18 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) { contentReady = true }
 
             FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
-                MobileNavHost(
-                    onThemeChanged = { newThemeId ->
-                        appSettings.themeId = newThemeId
-                        themeId = newThemeId
-                    },
-                    onUiStyleChanged = { newStyleId ->
-                        appSettings.uiStyleId = newStyleId
-                        uiStyleId = newStyleId
-                    },
-                )
+                ProvideSourceBadges {
+                    MobileNavHost(
+                        onThemeChanged = { newThemeId ->
+                            appSettings.themeId = newThemeId
+                            themeId = newThemeId
+                        },
+                        onUiStyleChanged = { newStyleId ->
+                            appSettings.uiStyleId = newStyleId
+                            uiStyleId = newStyleId
+                        },
+                    )
+                }
             }
         }
     }

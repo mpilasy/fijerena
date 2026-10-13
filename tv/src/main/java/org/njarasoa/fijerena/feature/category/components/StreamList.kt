@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.categoryKey
 import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.showSeriesId
@@ -84,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -220,6 +222,7 @@ internal fun StreamList(
         }
     // Each source's name while the list mixes several: a badge on its rows.
     val sourceNames by categoryViewModel.sourceNames.collectAsStateWithLifecycle()
+    val categoryNames by categoryViewModel.categoryNames.collectAsStateWithLifecycle()
 
     // Channels whose source keeps an archive get a catch-up badge. Asked per list, so the Live TV
     // panel's Recent and Favourites tabs, which the browse list doesn't cover, get it too.
@@ -498,7 +501,14 @@ internal fun StreamList(
                                 } else {
                                     StreamItem(
                                         item = item,
-                                        sourceName = sourceNames[item.providerId],
+                                        // Only where the list mixes sources: an ordinary category is one source's.
+                                        sourceName =
+                                            sourceNames[item.providerId].takeIf {
+                                                CategoryViewModel.isMergedList(
+                                                    selectedCategoryId,
+                                                )
+                                            },
+                                        categoryName = categoryNames[categoryKey(item.categoryId, item.providerId)],
                                         isFavorite = item.sourceKey in favoriteIds,
                                         watchProgress = watchProgress[item.sourceKey] ?: 0f,
                                         isWatched = item.sourceKey in watchedIds,
@@ -634,8 +644,12 @@ private fun SeparatorRow(name: String) {
 @Composable
 internal fun StreamItem(
     item: MediaItem,
-    /** The row's source, where the list mixes several (Recent, Favourites): a badge. */
+    /**
+     * The row's source, where the list mixes several (Recent, Favourites): a badge opening its
+     * second line, before [categoryName] (films, shows, and a channel without a Now line) or the Now line.
+     */
     sourceName: String? = null,
+    categoryName: String? = null,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
@@ -700,6 +714,14 @@ internal fun StreamItem(
                 ).joinToString(" · ")
             }
         val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // Badges show in Expert mode only (SourceBadge).
+        val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
+        val sourceLineText =
+            when {
+                sourceLine == null -> null
+                item.mediaType == MediaType.LIVE_CHANNEL -> nowLine ?: categoryName
+                else -> listOfNotNull(categoryName, metaLine.ifEmpty { null }).joinToString(" · ").ifEmpty { null }
+            }
         // One accessibility node for the row's content, read as its parts were. With an
         // accessibility service on (Button Mapper on a Shield), Compose walks and diffs every
         // semantics node on scroll; a node per text and badge made that the biggest cost of a
@@ -710,10 +732,10 @@ internal fun StreamItem(
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
                 parsedTitle.badge,
-                sourceName?.let { stringResource(R.string.source_badge_description, it) },
                 displayTitle,
-                metaLine.ifEmpty { null },
-                nowLine,
+                sourceLine?.let { stringResource(R.string.source_badge_description, it) },
+                if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
+                nowLine.takeIf { sourceLine == null },
                 when {
                     isFocused && editMode -> stringResource(R.string.edit_remove_row)
                     isFocused -> stringResource(R.string.row_actions_hint)
@@ -796,8 +818,6 @@ internal fun StreamItem(
 
                     parsedTitle.badge?.let { LanguageBadge(it) }
 
-                    sourceName?.let { SourceBadge(it) }
-
                     Text(
                         // See mobile's StreamCard — provider data occasionally sends a blank
                         // name (e.g. "EN -  (US)" with nothing between the dashes).
@@ -808,7 +828,24 @@ internal fun StreamItem(
                         modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                     )
                 }
-                if (metaLine.isNotEmpty()) {
+                if (sourceLine != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        SourceBadge(sourceLine)
+                        sourceLineText?.let { text ->
+                            Text(
+                                text = text,
+                                style = cardStyle.bodyMedium,
+                                color = if (text == nowLine) CinemaOrangeLight else CinemaTextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = if (isFocused && text == nowLine) Modifier.bounceMarquee() else Modifier,
+                            )
+                        }
+                    }
+                } else if (metaLine.isNotEmpty()) {
                     Text(
                         text = metaLine,
                         style = cardStyle.bodyMedium,
@@ -817,7 +854,7 @@ internal fun StreamItem(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                nowLine?.let { line ->
+                nowLine?.takeIf { sourceLine == null }?.let { line ->
                     Text(
                         text = line,
                         style = cardStyle.bodyMedium,

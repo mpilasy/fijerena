@@ -216,6 +216,18 @@ class AppSettings(
         providerKey: String,
     ) = setProfileSourceKeys(profileId, profileSourceKeys(profileId).orEmpty() + providerKey)
 
+    /**
+     * The active profile and its developer mode ([isDevMode]), now and whenever either changes (a
+     * profile switch, the switch on its page, or a value received from another device).
+     */
+    fun observeDevMode(): Flow<Pair<String, Boolean>> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(activeProfileId to isDevMode) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(activeProfileId to isDevMode)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
     /** [profileSourceKeys], now and on every change (an edit here or a value received from another device). */
     fun observeProfileSourceKeys(profileId: String): Flow<Set<String>?> {
         val stored = profileKey(KEY_PROFILE_SOURCES, profileId)

@@ -134,6 +134,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.categoryKey
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.domain.isLastPlayed
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
@@ -165,6 +166,7 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -269,6 +271,7 @@ fun MobileCategoryListScreen(
     val favoriteCategoryIds = remember(favoriteCategoryIdsSet) { ImmutableStringSet(favoriteCategoryIdsSet) }
     // Each source's name while Recent and Favourites mix several: a badge on their rows.
     val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
+    val categoryNames by viewModel.categoryNames.collectAsStateWithLifecycle()
     val context = LocalContext.current
     // Null-safe instead of a hard `context as ComponentActivity` cast (F-37).
     val activity = LocalActivity.current as? ComponentActivity
@@ -948,6 +951,7 @@ fun MobileCategoryListScreen(
                                                     watchProgress = watchProgress,
                                                     currentlyPlayingId = target?.id,
                                                     sourceNames = sourceNames,
+                                                    categoryNames = categoryNames,
                                                     onItemSelected = { item ->
                                                         val selected = item.browseTarget(contentType)
                                                         when {
@@ -1506,6 +1510,7 @@ private fun CategoryChip(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
+                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = name,
                         maxLines = 1,
@@ -1515,7 +1520,6 @@ private fun CategoryChip(
                         // runs its own per-frame invalidateDraw loop for as long as it's visible.
                         modifier = if (selected) Modifier.bounceMarquee() else Modifier,
                     )
-                    sourceName?.let { SourceBadge(it) }
                 }
             },
             colors = colors,
@@ -1571,6 +1575,8 @@ private fun StreamsList(
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     // Each source's name while the list mixes several (Recent, Favourites): a badge on its rows.
     sourceNames: Map<Long, String> = emptyMap(),
+    // Each category's name by its key: named after the source on a mixed list's rows.
+    categoryNames: Map<String, String> = emptyMap(),
     onItemSelected: (MediaItem) -> Unit,
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
@@ -1705,7 +1711,9 @@ private fun StreamsList(
                         val streamCard = @Composable { modifier: Modifier ->
                             StreamCard(
                                 item = item,
-                                sourceName = sourceNames[item.providerId],
+                                // Only where the list mixes sources: an ordinary category is one source's.
+                                sourceName = sourceNames[item.providerId].takeIf { CategoryViewModel.isMergedList(selectedCategoryId) },
+                                categoryName = categoryNames[categoryKey(item.categoryId, item.providerId)],
                                 // Per-row state by the row's sourceKey (Phase 6).
                                 nowPlayingProgram = nowPlaying[item.sourceKey],
                                 catchupDays = catchupDays[item.sourceKey] ?: 0,
@@ -2035,8 +2043,12 @@ private fun selectCategoryText(contentType: String): String =
 @Composable
 internal fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
-    /** The row's source, where the list mixes several (Recent, Favourites): a badge. */
+    /**
+     * The row's source, where the list mixes several (Recent, Favourites): a badge opening its
+     * second line, before [categoryName] (films, shows, and a channel without a Now line) or the Now line.
+     */
     sourceName: String? = null,
+    categoryName: String? = null,
     nowPlayingProgram: EpgProgram? = null,
     /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
     catchupDays: Int = 0,
@@ -2104,6 +2116,14 @@ internal fun StreamCard(
             }
         val nowPlayingText = stringResource(R.string.category_now_playing_badge).takeIf { isCurrentlyPlaying }
         val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // Badges show in Expert mode only (SourceBadge).
+        val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
+        val sourceLineText =
+            when {
+                sourceLine == null -> null
+                isChannel -> nowLine ?: categoryName
+                else -> listOfNotNull(categoryName, metaLine.ifEmpty { null }).joinToString(" · ").ifEmpty { null }
+            }
         // One accessibility node for the row's content, read as its parts were: with an
         // accessibility service on (a screen reader, a password manager, an automation app),
         // Compose walks and diffs every semantics node on scroll, and a node per text and badge
@@ -2115,11 +2135,11 @@ internal fun StreamCard(
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
                 parsedTitle.badge,
-                sourceName?.let { stringResource(R.string.source_badge_description, it) },
                 displayTitle,
                 nowPlayingText,
-                metaLine.ifEmpty { null },
-                nowLine,
+                sourceLine?.let { stringResource(R.string.source_badge_description, it) },
+                if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
+                nowLine.takeIf { sourceLine == null },
             ).joinToString(", ")
         Row(
             modifier =
@@ -2181,7 +2201,6 @@ internal fun StreamCard(
                     }
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
                     parsedTitle.badge?.let { LanguageBadge(it) }
-                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.bodyLarge,
@@ -2202,7 +2221,24 @@ internal fun StreamCard(
                         maxLines = 1,
                     )
                 }
-                if (metaLine.isNotEmpty()) {
+                if (sourceLine != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                    ) {
+                        SourceBadge(sourceLine)
+                        sourceLineText?.let { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (text == nowLine) MaterialTheme.colorScheme.tertiary else CinemaTextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = if (isCurrentlyPlaying && text == nowLine) Modifier.bounceMarquee() else Modifier,
+                            )
+                        }
+                    }
+                } else if (metaLine.isNotEmpty()) {
                     Text(
                         text = metaLine,
                         style = MaterialTheme.typography.bodySmall,
@@ -2211,7 +2247,7 @@ internal fun StreamCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                nowLine?.let { line ->
+                nowLine?.takeIf { sourceLine == null }?.let { line ->
                     Text(
                         text = line,
                         style = MaterialTheme.typography.bodySmall,

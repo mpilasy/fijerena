@@ -981,7 +981,7 @@ private fun StreamNamePicker(
                 DropdownMenuItem(
                     text = { Text(alternate.name) },
                     // With several sources, each copy's own (it opens there).
-                    trailingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
+                    leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                     onClick = {
                         expanded = false
                         onSelect(alternate)

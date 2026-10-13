@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.Density
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.ui.history.ProvideSourceBadges
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.navigation.TvNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
@@ -72,20 +73,22 @@ class MainActivity : ComponentActivity() {
                 LocalDensity provides scaledDensity,
             ) {
                 FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
-                    TvNavHost(
-                        onThemeChanged = { newThemeId ->
-                            appSettings.themeId = newThemeId
-                            themeId = newThemeId
-                        },
-                        onUiStyleChanged = { newStyleId ->
-                            appSettings.uiStyleId = newStyleId
-                            uiStyleId = newStyleId
-                        },
-                        onUiScaleChanged = { newScale ->
-                            appSettings.uiScale = newScale
-                            uiScale = newScale
-                        },
-                    )
+                    ProvideSourceBadges {
+                        TvNavHost(
+                            onThemeChanged = { newThemeId ->
+                                appSettings.themeId = newThemeId
+                                themeId = newThemeId
+                            },
+                            onUiStyleChanged = { newStyleId ->
+                                appSettings.uiStyleId = newStyleId
+                                uiStyleId = newStyleId
+                            },
+                            onUiScaleChanged = { newScale ->
+                                appSettings.uiScale = newScale
+                                uiScale = newScale
+                            },
+                        )
+                    }
                 }
             }
         }

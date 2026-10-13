@@ -138,7 +138,6 @@ private fun TvFavoriteCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     parsedTitle.badge?.let { LanguageBadge(it) }
-                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = parsedTitle.title.ifBlank { item.name },
                         style = MaterialTheme.typography.titleMedium,
@@ -150,14 +149,21 @@ private fun TvFavoriteCard(
                     // The row-actions hint, as on the focused list row.
                     if (isFocused) RowActionsHint()
                 }
-                Text(
-                    // A line even when empty, so cards in the row line up.
-                    text = listOfNotNull(item.metadata.releaseDate?.take(4), item.metadata.genre).joinToString(" • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // The source opens the second line (Expert mode, SourceBadge).
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    sourceName?.let { SourceBadge(it) }
+                    Text(
+                        // A line even when empty, so cards in the row line up.
+                        text = listOfNotNull(item.metadata.releaseDate?.take(4), item.metadata.genre).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

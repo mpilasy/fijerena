@@ -154,7 +154,6 @@ private fun TvLiveChannelCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = entry.item.name,
                         style = MaterialTheme.typography.titleMedium,
@@ -168,14 +167,21 @@ private fun TvLiveChannelCard(
                 }
                 val lastWatched = if (entry.lastWatched) stringResource(R.string.home_live_last_watched) else null
                 val nowLine = now?.let { stringResource(R.string.epg_now_prefix, it.title) }
-                Text(
-                    // A line even when empty, so cards in the row line up.
-                    text = listOfNotNull(lastWatched, nowLine).joinToString(" • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // The source opens the second line (Expert mode, SourceBadge).
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    sourceName?.let { SourceBadge(it) }
+                    Text(
+                        // A line even when empty, so cards in the row line up.
+                        text = listOfNotNull(lastWatched, nowLine).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

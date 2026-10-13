@@ -904,12 +904,12 @@ private fun CategoryResultCard(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            result.sourceName?.let { SourceBadge(it) }
             Icon(
                 CinemaIcons.Folder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
-            result.sourceName?.let { SourceBadge(it) }
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.bodyLarge,

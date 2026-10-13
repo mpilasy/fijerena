@@ -166,7 +166,6 @@ private fun TvContinueWatchingCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     parsedTitle.badge?.let { LanguageBadge(it) }
-                    sourceName?.let { SourceBadge(it) }
                     Text(
                         text = parsedTitle.title.ifBlank { item.name },
                         style = MaterialTheme.typography.titleMedium,
@@ -198,13 +197,20 @@ private fun TvContinueWatchingCard(
                             stringResource(R.string.series_remaining_format, timeLeft)
                         }
                     }
-                Text(
-                    text = subtitleLine,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // The source opens the second line (Expert mode, SourceBadge).
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    sourceName?.let { SourceBadge(it) }
+                    Text(
+                        text = subtitleLine,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

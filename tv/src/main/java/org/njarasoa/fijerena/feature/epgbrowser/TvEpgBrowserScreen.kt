@@ -1091,6 +1091,7 @@ private fun AiringRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            airing.sourceName?.let { SourceBadge(it) }
             if (isMatched) {
                 Icon(
                     imageVector = CinemaIcons.PlayArrow,
@@ -1112,7 +1113,6 @@ private fun AiringRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).bounceMarquee(),
             )
-            airing.sourceName?.let { SourceBadge(it) }
             if (isDevMode && airing.sourceId > 0) {
                 val sourceName = sourceLabels[airing.sourceId]
                 if (sourceName != null) {

@@ -300,6 +300,11 @@ parallel; then 3, 4–5 and 7 in parallel; then 6; then 8. Phase 7 may land befo
 
 ### Phase 8 — Device walks and docs
 
+- **Source badges reworked 2026-10-12** (user): Expert mode only; none on an ordinary category's
+  rows (one source); in Recent and Favourites, Home cards and search the full name opens the second
+  line (before the category, or a channel's Now line); elsewhere first in the row. An overlay on the
+  picture and three-letter codes were tried and dropped (the overlay hid small channel logos).
+
 - Emulators with two Xtream sources (jellyxtream for VOD, iptv for live) and two profiles with
   different sources: browse, search, open and play from either source, Recent, Continue Watching
   and favourites on TV Home and phone tabs, zap within source, guide search, source access synced

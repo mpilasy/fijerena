@@ -816,6 +816,7 @@ private fun MobileAiringRow(
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        airing.sourceName?.let { SourceBadge(it) }
         if (isMatched) {
             Icon(
                 imageVector = CinemaIcons.PlayArrow,
@@ -832,7 +833,6 @@ private fun MobileAiringRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).bounceMarquee(),
         )
-        airing.sourceName?.let { SourceBadge(it) }
         if (isOnAir || isSoon) {
             val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
             val badgeLabel =

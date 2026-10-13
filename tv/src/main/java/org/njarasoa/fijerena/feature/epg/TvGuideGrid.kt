@@ -123,6 +123,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -1787,16 +1788,16 @@ private fun ChannelCell(
                 contentType = ThumbnailContentType.LIVE_TV,
                 modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
             )
-            // The name on one line over its source's badge when the rows mix sources.
+            // The name on one line under its source's badge when the rows mix sources.
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                sourceName?.let { SourceBadge(it) }
                 Text(
                     text = channel.name,
                     style = cardStyle.channelStyle,
                     color = CinemaTextPrimary,
-                    maxLines = if (sourceName != null) 1 else 2,
+                    maxLines = if (sourceName != null && LocalShowSourceBadges.current) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                sourceName?.let { SourceBadge(it) }
             }
             // The row-actions hint, as on the channel lists' rows; programme cells are too narrow for it.
             if (isFocused) RowActionsHint()
