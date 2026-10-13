@@ -2,6 +2,7 @@
 
 ## Version: Unreleased
 
+- **Search the guide loses its "Matched only" toggle:** results show only programmes on channels you have, as the toggle did by default.
 - **Source names take less room:** with more than one source, the source's name now shows only in Expert mode, and in Recent and Favourites it opens a row's second line (before the category, or a channel's Now line) instead of crowding the title; an ordinary category's rows no longer carry it at all. The Source row on film and show details follows the same rule (TV: Expert mode only now; phone: new).
 - **Rename devices in Live sync:** Rename on a device's row in Settings → Live sync → Manage names it for every device of the group (a phone and two Shields no longer all read "SHIELD Android TV"). The name travels end-to-end encrypted; leave it empty to go back to the model's name.
 - **No More button in the TV player:** More only ever held Stats, so it cost a click. Stats now sits in the row itself, and only in Expert mode (it is a diagnostic).

@@ -493,7 +493,6 @@
     <!-- EPG Browser -->
     <string name="epg_browser_title">Search the guide</string>
     <string name="epg_browser_refresh_stale_description">Refresh stale guide sources</string>
-    <string name="epg_browser_matched_label">Matched</string>
     <string name="epg_browser_search_titles_placeholder">Search titles…</string>
     <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
     <string name="epg_browser_finalizing_format">finalising… (%1$s)</string>
@@ -681,7 +680,6 @@
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">%1$s progs, %2$s channels</string>
     <string name="epg_browser_dev_stats_format">Guide: %1$s</string>
-    <string name="epg_browser_matched_only_label">Matched only</string>
     <string name="epg_browser_enter_programme_placeholder">Enter programme title…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
     <string name="epg_browser_finalizing_programmes_format">finalising… (%1$s programmes)</string>

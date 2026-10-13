@@ -382,13 +382,14 @@ private fun EpgBrowserContent(
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
 
-    // Down from the filter chips should reach the first recent-search chip (see the chip row).
+    // Down from the field (or the chip under it) should reach the first recent-search chip.
     val historyFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
-    // Saveable: Back from a channel must find the same filtered list, or the airing it came from
-    // may have moved or gone.
-    var matchedOnly by rememberSaveable { mutableStateOf(true) }
-    // Opened from a TV Guide: its channels only, until switched off (GD5). Saveable like matchedOnly.
+    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
+    // until a later change gives it a home.
+    val matchedOnly = true
+    // Opened from a TV Guide: its channels only, until switched off (GD5). Saveable: Back from a
+    // channel must find the same filtered list, or the airing it came from may have moved or gone.
     var inContextOnly by rememberSaveable { mutableStateOf(true) }
     // Back from a channel's preview lands on the airing row that opened it — see ResultsContent.
     val returnFocus = rememberNavReturnFocus()
@@ -416,8 +417,14 @@ private fun EpgBrowserContent(
         }
     }
 
+    // Down to the first recent search, not the "Clear all" icon a spatial search would find first;
+    // only wired up while the history is on screen, since aiming `down` at an unattached requester
+    // would stop Down working at all.
+    val downToHistory = if (showsHistory) Modifier.focusProperties { down = historyFocusRequester } else Modifier
+
     Column(modifier = Modifier.fillMaxSize()) {
         TvSearchField(
+            modifier = if (contextName == null) downToHistory else Modifier,
             query = localQuery,
             onQueryChange = { localQuery = it },
             onSearchSubmit = { onSearch(localQuery) },
@@ -433,35 +440,15 @@ private fun EpgBrowserContent(
             showClearButton = localQuery.isNotEmpty() || hasResults,
         )
 
-        // The filters, as a row of chips under the field (TV UI audit #15). Down from them reaches
-        // the first recent search, not the "Clear all" icon a spatial search would find first; only
-        // wired up while the history is on screen, since aiming `down` at an unattached requester
-        // would stop Down working at all.
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            modifier =
-                Modifier
-                    .padding(top = Spacing.xs)
-                    .then(if (showsHistory) Modifier.focusProperties { down = historyFocusRequester } else Modifier),
-        ) {
-            // A bare Material3 Checkbox draws focus through LocalIndication, a ripple —
-            // invisible without a pointer on TV — so the toggles are selectable buttons. The first
-            // of them hands Left to the navigation rail.
-            if (contextName != null) {
-                TvSelectableButton(
-                    selected = inContextOnly,
-                    onSelect = { inContextOnly = !inContextOnly },
-                    text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
-                    modifier = Modifier.leftToRail(),
-                )
-            }
-
+        // Opened from a TV Guide: "In <category> only", a chip under the field (TV UI audit #15). A
+        // bare Material3 Checkbox draws focus through LocalIndication, a ripple — invisible without
+        // a pointer on TV — so it is a selectable button. It hands Left to the navigation rail.
+        if (contextName != null) {
             TvSelectableButton(
-                selected = matchedOnly,
-                onSelect = { matchedOnly = !matchedOnly },
-                text = stringResource(R.string.epg_browser_matched_only_label),
-                modifier = if (contextName == null) Modifier.leftToRail() else Modifier,
+                selected = inContextOnly,
+                onSelect = { inContextOnly = !inContextOnly },
+                text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                modifier = Modifier.padding(top = Spacing.xs).leftToRail().then(downToHistory),
             )
         }
 

@@ -420,7 +420,6 @@
     <!-- EPG Browser -->
     <string name="epg_browser_title">Hikaroka ao amin\'ny fandaharana</string>
     <string name="epg_browser_refresh_stale_description">Havaozina ireo loharanon\'ny fitarihana lany andro</string>
-    <string name="epg_browser_matched_label">Mifanaraka</string>
     <string name="epg_browser_search_titles_placeholder">Karohy ny lohateny…</string>
     <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
     <string name="epg_browser_finalizing_format">mamarana… (%1$s)</string>
@@ -538,7 +537,6 @@
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">fandaharana %1$s, fantsona %2$s</string>
     <string name="epg_browser_dev_stats_format">Fandaharana: %1$s</string>
-    <string name="epg_browser_matched_only_label">Mifanaraka ihany</string>
     <string name="epg_browser_enter_programme_placeholder">Ampidiro ny lohatenin\'ny fandaharana…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (fandaharana %2$s)</string>
     <string name="epg_browser_finalizing_programmes_format">mamarana… (fandaharana %1$s)</string>

@@ -489,7 +489,6 @@
     <!-- EPG Browser -->
     <string name="epg_browser_title">Rechercher dans le guide</string>
     <string name="epg_browser_refresh_stale_description">Actualiser les sources de guide obsolètes</string>
-    <string name="epg_browser_matched_label">Correspondants</string>
     <string name="epg_browser_search_titles_placeholder">Rechercher des titres…</string>
     <string name="epg_indexing_progress_count">%1$d %% (%2$s)</string>
     <string name="epg_browser_finalizing_format">finalisation… (%1$s)</string>
@@ -645,7 +644,6 @@
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">%1$s prog., %2$s chaînes</string>
     <string name="epg_browser_dev_stats_format">Guide : %1$s</string>
-    <string name="epg_browser_matched_only_label">Correspondances uniquement</string>
     <string name="epg_browser_enter_programme_placeholder">Saisir le titre du programme…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
     <string name="epg_browser_finalizing_programmes_format">finalisation… (%1$s programmes)</string>

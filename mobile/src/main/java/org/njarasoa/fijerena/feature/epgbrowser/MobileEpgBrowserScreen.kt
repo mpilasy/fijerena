@@ -161,7 +161,9 @@ fun MobileEpgBrowserScreen(
             else -> null
         }
 
-    var matchedOnly by remember { mutableStateOf(true) }
+    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
+    // until a later change gives it a home.
+    val matchedOnly = true
 
     val nowEpoch = rememberNowEpochSeconds()
 
@@ -316,32 +318,7 @@ fun MobileEpgBrowserScreen(
                 shape = RoundedCornerShape(CinemaCornerRadius.medium),
             )
 
-            // Filters, below the search field: Matched only checkbox
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { matchedOnly = !matchedOnly },
-                ) {
-                    Checkbox(
-                        checked = matchedOnly,
-                        onCheckedChange = { matchedOnly = it },
-                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                    )
-                    Text(
-                        text = stringResource(R.string.epg_browser_matched_label),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
-
-            // "In <category> only" (GD5): its own row — the filters row has no room left on a phone.
+            // "In <category> only" (GD5).
             if (contextName != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -494,7 +471,6 @@ fun MobileEpgBrowserScreen(
                         results = state,
                         nowEpoch = nowEpoch,
                         matchedOnly = matchedOnly,
-                        onMatchedOnlyChange = { matchedOnly = it },
                         onNavigateToPlayer = onNavigateToPlayer,
                         contextName = contextName.takeIf { inContextOnly },
                         contextChannels = contextChannels,
@@ -525,7 +501,6 @@ private fun MobileResultsContent(
     results: EpgBrowserViewModel.UiState.Results,
     nowEpoch: Long,
     matchedOnly: Boolean = true,
-    onMatchedOnlyChange: (Boolean) -> Unit = {},
     onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
