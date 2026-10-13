@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Unreleased
+
+- **Developer mode is now called Expert mode:** the same switch (seven taps on the version row in About, then on the profile's page), renamed in English, French ("Mode expert") and Malagasy ("Fomba manam-pahaizana"). Nothing else changes; a profile that had it on keeps it on.
+
 ## Version: Catch-up landscape, guide overlaps
 **Release Date:** 2026-10-11
 

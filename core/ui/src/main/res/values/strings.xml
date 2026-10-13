@@ -403,7 +403,7 @@
     <!-- Player UI -->
     <string name="player_playback_ended">Playback ended</string>
     <string name="player_playback_error_prefix">⚠️ Playback Error</string>
-    <string name="player_technical_details">Technical details (developer mode):</string>
+    <string name="player_technical_details">Technical details (expert mode):</string>
     <string name="player_error_type_label">Type: </string>
     <string name="player_error_message_label">Message: </string>
     <string name="player_error_stack_trace_label">Stack trace:</string>
@@ -556,7 +556,7 @@
     <string name="settings_about_tagline">Premium native media player for Android</string>
     <!-- The no-content disclaimer: About now, the first-run welcome screen later (plan R4). -->
     <string name="app_disclaimer_no_content">Fijerena does not provide or host any content. It plays the sources you add.</string>
-    <string name="settings_developer_mode_title">Developer mode</string>
+    <string name="settings_developer_mode_title">Expert mode</string>
     <string name="settings_developer_mode_desc">Diagnostics, technical details, and source types still in development (SMB, local files)</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
@@ -1183,9 +1183,9 @@
     <string name="tmdb_attribution_title">Film and series data</string>
     <string name="epg_xmltv_url_hint">The address of an XMLTV guide file (.xml or .xml.gz), from your provider or a guide site.</string>
     <string name="epg_timezone_hint">Only if programmes show at the wrong time. Usually 0.</string>
-    <string name="settings_developer_mode_enabled">Developer mode is on for this profile</string>
-    <string name="settings_developer_mode_already_on">Developer mode is already on</string>
-    <string name="settings_developer_mode_taps_left">Developer mode: %1$d to go</string>
+    <string name="settings_developer_mode_enabled">Expert mode is on for this profile</string>
+    <string name="settings_developer_mode_already_on">Expert mode is already on</string>
+    <string name="settings_developer_mode_taps_left">Expert mode: %1$d to go</string>
     <string name="ui_style_standard">Standard</string>
     <string name="ui_style_rounded">Rounded</string>
     <string name="ui_style_sharp">Sharp</string>

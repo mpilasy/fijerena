@@ -17,7 +17,7 @@ DOWN	About & advanced
 # Down at the end of the rail stays put.
 DOWN	About & advanced
 # About & advanced: the About card (version, build), Device info (everyone), then
-# Diagnostics; no Developer Mode row (it is on each profile's page).
+# Diagnostics; no Expert Mode row (it is on each profile's page).
 RIGHT	Fijerena
 DOWN	Device info / This app and device: versions, memory, storage, screen, media decoders, network and background state / ›
 DOWN	Diagnostics / Crashes and errors recorded on this device
@@ -55,14 +55,14 @@ UP	Profiles
 # Right lands on the first profile row; its text is the profile's name.
 RIGHT	M / main / Using on this device
 # OK opens the profile's page in place of the rows (P9), focus on the name's Edit button; Down
-# walks Colour, Developer mode, Play next episode, Sources (two or more sources; its value is
+# walks Colour, Expert mode, Play next episode, Sources (two or more sources; its value is
 # "<on> of <all>", unasserted), Content filters (Xtream only). The profile in use has no Switch
 # to this profile row. Left leaves the page unsaved, focus back on the profile's row. Nothing
 # below is pressed except the OK that opens a page. Sources added by hand 2026-10-12
 # (multi-source Phase 2), not yet re-recorded.
 CENTER	Edit Name
 DOWN	Colour / ›
-DOWN	Developer mode / Diagnostics, technical details, and source types still in development (SMB, local files)
+DOWN	Expert mode / Diagnostics, technical details, and source types still in development (SMB, local files)
 DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
 DOWN	Sources
 DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
@@ -72,7 +72,7 @@ LEFT	M / main / Using on this device
 DOWN	K / Kid
 CENTER	Edit Name
 DOWN	Colour / ›
-DOWN	Developer mode / Diagnostics, technical details, and source types still in development (SMB, local files)
+DOWN	Expert mode / Diagnostics, technical details, and source types still in development (SMB, local files)
 DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
 DOWN	Sources
 DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')

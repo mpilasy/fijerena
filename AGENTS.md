@@ -6,7 +6,7 @@ This is the single source of truth for AI agents working on this codebase. All L
 
 ## Project Overview
 
-Fijerena is a native Android media player built with Kotlin and Jetpack Compose. It plays content from several kinds of source (Xtream IPTV, Jellyfin, Remote M3U, and in developer mode SMB and Local files) with one app for TV (10-foot UI, D-pad) and one for mobile (touch, portrait-locked outside the player).
+Fijerena is a native Android media player built with Kotlin and Jetpack Compose. It plays content from several kinds of source (Xtream IPTV, Jellyfin, Remote M3U, and in expert mode SMB and Local files) with one app for TV (10-foot UI, D-pad) and one for mobile (touch, portrait-locked outside the player).
 
 **Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android phones/tablets. `minSdk` 30 (Android 11), `targetSdk` 35, `compileSdk` 36.
 
@@ -159,7 +159,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### Features
 
 - **Stats Overlay:** Opened from Stats in the player controls (on TV behind ⋮ More); double-OK or Back dismisses it. Comprehensive diagnostics (codecs, network speed, dropped frames, build info, the provider's raw names). Non-focusable on TV, so the remote keeps controlling playback.
-- **Stream Info:** the resolution/codec line under the title; on TV only in developer mode (`PlayerScreenState.isDeveloperMode`).
+- **Stream Info:** the resolution/codec line under the title; on TV only in expert mode (`PlayerScreenState.isDeveloperMode`).
 - **Auto-resume:** position saved every 10 s while playing; VOD resumes if progress is 2-95%.
 - **Position saves:** `StreamingPlaybackService.positionSaves` (process-wide `SharedFlow<PositionSave>`, no replay) carries every periodic, state-change, track-choice and teardown save; the player screen collects it in a composition-scoped `LaunchedEffect` and calls `loaderViewModel.recordHistory`. Never attach a callback to a service instance: it is destroyed and recreated (TV `onStop`, cold start). `releasePlayerAndSession` runs each teardown stage in its own `releaseStage`; keep new stages inside one and the singleton reset last.
 - **Network deadlines:** a new request/response API call gets its client's overall deadline (Xtream metadata, Jellyfin, sync 60 s; TMDB 30 s); a bulk download opts out (`timeout { requestTimeoutMillis = INFINITE_TIMEOUT_MS }`). The player's streaming clients, EPG downloads and the sync WebSocket never get a call timeout.
@@ -218,7 +218,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content rows and search (the row action menu, `FavoriteContextMenuDialog`), mobile search (`MobileSearchFavoriteDialog`, second action row), TV episode cards (long-press OK toggles it), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one. Every watched mark, single or season/show, is hidden where `MediaRepository.supportsMarkWatched` is false (Jellyfin keeps watched state on its server).
 - **Sync Feedback:** Provider screens show the last sync's catalog delta ("No changes since last sync", or "N added • N updated • N removed"), gated on Xtream and on `lastSyncError` being null. EPG management shows "Unchanged" in place of durations for a source the last run confirmed unchanged. While a catalogue sync runs, Home's status shows its phase and running count ("Loading films… 12 400") from `CatalogSyncProgress` (`core:network`), fed by the stream and series downloads' own tallies through a `ProgressThrottle` — never a count query; `ProviderSyncRunner.firstSyncs` marks a source's first sync, when empty Home sections say "Still loading your library…".
 - **Jellyfin Quick Connect:** Supported for easy auth.
-- **Settings:** profiles, sources and guide sources, the TMDB key, live sync, playback, color theme, look and feel (Standard, Rounded, Sharp, Balanced; ids `material`, `cupertino`, `roku`, `bravia`), language (English, French, Malagasy), UI scale (TV), EPG and cache management, database maintenance ("Shrink Database"), export/import (JSON), developer mode (7 taps on the version row in About; Diagnostics). On TV, Settings is a rail of groups beside the selected group's rows.
+- **Settings:** profiles, sources and guide sources, the TMDB key, live sync, playback, color theme, look and feel (Standard, Rounded, Sharp, Balanced; ids `material`, `cupertino`, `roku`, `bravia`), language (English, French, Malagasy), UI scale (TV), EPG and cache management, database maintenance ("Shrink Database"), export/import (JSON), expert mode (7 taps on the version row in About; Diagnostics). On TV, Settings is a rail of groups beside the selected group's rows.
 - **TMDB is opt-in:** no build carries a key (D4, `docs/plans/20261011_public-release-fdroid-readiness-plan.md`); the user enters theirs in Settings (`TmdbKeyStore`, encrypted, synced as `tmdb_api_key`). Every TMDB call goes through `TmdbApiService`, which reads the key per call and throws before any request when there is none; a 401 marks the key rejected, which then reads as no key. Check `hasApiKey()` before spending TMDB work, and keep every TMDB-only section (logo, related rows, age rating) absent rather than empty when it returns nothing.
 - **Database Maintenance & Compaction:** When providers are deleted, `ProviderRepository.deleteProvider` cascades through all catalog tables in `xtream_v2.db` (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`), clears orphaned SharedPreferences (`provider_creds_*`, `media_cache_*`, `xtream_cache_*`), deleting catalogue rows 1,000 per commit; no automatic `VACUUM` (`auto_vacuum = FULL` already returns space, and a WAL-mode `VACUUM` needs room for the whole database — see `docs/DATABASE_SCHEMA.md` §3). A background sweep (`sweepOrphanedCatalogData`) runs during `EpgSyncWorker`, and at app start only after an interrupted deletion (`orphan_sweep_pending`); it removes downloaded catalogue only, never favourites or watch history, and never throws. The "Shrink Database" button in Settings is the only place a `VACUUM` runs, and the only path that removes orphaned credential files and EPG sources. A circuit breaker prevents deletions if the valid provider list is empty.
 
@@ -231,12 +231,12 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 | **Xtream** | Yes | Yes | Yes | Yes | Client-side (FTS) | No |
 | **Jellyfin** | No | Yes | Yes | No | Server-side | Yes |
 | **Remote M3U** | Yes | Playlist video entries | No | No | Title match | No |
-| **SMB** (dev mode) | No | Yes | No | No | Filename | No |
-| **Local** (dev mode) | M3U only | Yes | No | No | Title match | No |
+| **SMB** (expert mode) | No | Yes | No | No | Filename | No |
+| **Local** (expert mode) | M3U only | Yes | No | No | Title match | No |
 
 There is no device or current source (multi-source plan, Phase 6, `docs/plans/20261012_multi-source-search-history-plan.md`): each profile has its sources (`ProviderRepository.profileSources`), and Live TV, Movies, TV Shows, Search, Recent, Continue Watching, favourites and Search the guide merge its Xtream sources (`MergedLists`, `ProfileSections`); Jellyfin, M3U, SMB and Local get a **Browse <source>** entry. Every route, view model and `AppContainer.getMediaRepository(providerId)` call names a real source (only a section's `CategoryList` uses 0, meaning the merged list); a row carries its source (`MediaItem.providerId`) and opens, plays and acts there. A merged list is built from whichever sources load and fails only when none does. Settings edited per source (a profile's content filters, Search the guide's Guide sources) pick the source first when there are several (`SourceChoice`). `providers.isActive` is unused (kept to avoid a migration): never read it for behaviour.
 
-SMB and Local are offered in Add Source only in developer mode (`addSourceTypes`, `core:ui`; SMB has no playback data source yet, Local has no folder picker); an existing one stays editable. Capabilities per type are in each provider's `ProviderCapabilities`.
+SMB and Local are offered in Add Source only in expert mode (`addSourceTypes`, `core:ui`; SMB has no playback data source yet, Local has no folder picker); an existing one stays editable. Capabilities per type are in each provider's `ProviderCapabilities`.
 
 ---
 

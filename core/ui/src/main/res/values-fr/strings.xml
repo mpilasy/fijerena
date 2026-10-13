@@ -383,7 +383,7 @@
     <!-- Player UI -->
     <string name="player_playback_ended">Lecture terminée</string>
     <string name="player_playback_error_prefix">⚠️ Erreur de lecture</string>
-    <string name="player_technical_details">Détails techniques (Dev Mode) :</string>
+    <string name="player_technical_details">Détails techniques (mode expert) :</string>
     <string name="player_error_type_label">Type : </string>
     <string name="player_error_message_label">Message : </string>
     <string name="player_error_stack_trace_label">Trace de la pile :</string>
@@ -528,7 +528,7 @@
     <string name="settings_about_section_title">À propos</string>
     <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
     <string name="app_disclaimer_no_content">Fijerena ne fournit ni n\'héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
-    <string name="settings_developer_mode_title">Mode développeur</string>
+    <string name="settings_developer_mode_title">Mode expert</string>
     <string name="settings_developer_mode_desc">Diagnostics, détails techniques et types de source encore en développement (SMB, fichiers locaux)</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
@@ -1185,9 +1185,9 @@
     <string name="tmdb_attribution_title">Données des films et séries</string>
     <string name="epg_xmltv_url_hint">L\'adresse d\'un fichier de guide XMLTV (.xml ou .xml.gz), fournie par votre fournisseur ou un site de guides.</string>
     <string name="epg_timezone_hint">Seulement si les programmes s\'affichent à la mauvaise heure. En général 0.</string>
-    <string name="settings_developer_mode_enabled">Mode développeur activé pour ce profil</string>
-    <string name="settings_developer_mode_already_on">Le mode développeur est déjà activé</string>
-    <string name="settings_developer_mode_taps_left">Mode développeur : encore %1$d</string>
+    <string name="settings_developer_mode_enabled">Mode expert activé pour ce profil</string>
+    <string name="settings_developer_mode_already_on">Le mode expert est déjà activé</string>
+    <string name="settings_developer_mode_taps_left">Mode expert : encore %1$d</string>
     <string name="ui_style_standard">Standard</string>
     <string name="ui_style_rounded">Arrondi</string>
     <string name="ui_style_sharp">Net</string>

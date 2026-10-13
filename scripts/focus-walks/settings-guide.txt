@@ -21,7 +21,7 @@ DOWN	Live sync
 DOWN	Backup & storage
 # Backup & storage is a vertical list: Export Settings, Import Settings, then the rest.
 RIGHT	Export settings
-# Developer mode only (the active profile's Developer Mode, on in the emulator); drop this line
+# Expert mode only (the active profile's Expert Mode, on in the emulator); drop this line
 # without it.
 DOWN	Import settings
 DOWN	Quick import from Downloads
