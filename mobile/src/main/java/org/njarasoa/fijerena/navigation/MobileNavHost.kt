@@ -426,6 +426,18 @@ fun MobileNavHost(
                     openingQuery,
                 )
             },
+            // A Guide tab result opens as Search the guide's does: the docked mini-player, over
+            // Search, so Back returns to the Guide tab.
+            onGuideResult = { matched ->
+                navController.navigateOnce(
+                    Screen.CategoryList(
+                        contentType = ContentType.LIVE_TV,
+                        initialCategoryId = matched.categoryId,
+                        initialStreamId = matched.streamId.toString(),
+                        providerId = matched.providerId,
+                    ),
+                )
+            },
             onBack = onBack,
         )
     }

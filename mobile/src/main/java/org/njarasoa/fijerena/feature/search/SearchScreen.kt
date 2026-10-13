@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -37,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
@@ -57,10 +59,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
+import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -89,6 +95,32 @@ private fun searchPlaceholder(contentType: String): String =
         else -> stringResource(R.string.tv_search_placeholder_all)
     }
 
+/** Search's two tabs (search guide tab plan, D1): the catalogue, or programme titles in the guide. */
+internal enum class SearchTab { CATALOGUE, GUIDE }
+
+/** The Guide tab shows when Search covers live channels and a source of the profile has some (O1). */
+internal fun showsGuideTab(
+    contentType: String,
+    hasGuide: Boolean,
+): Boolean = hasGuide && (contentType == SearchViewModel.CONTENT_TYPE_ALL || contentType == ContentType.LIVE_TV)
+
+/**
+ * The query to run on the tab just switched to: the field's text, when that tab last ran another
+ * query ([lastRunQuery], null when none); null when there is nothing to run (D3).
+ */
+internal fun queryToRunOnTabSwitch(
+    text: String,
+    lastRunQuery: String?,
+): String? = text.takeIf { it.isNotBlank() && it.trim() != lastRunQuery?.trim() }
+
+/** The query the guide's view model last ran (or holds until its index is ready), if any. */
+private fun EpgBrowserViewModel.UiState.lastRunQuery(): String? =
+    when (this) {
+        is EpgBrowserViewModel.UiState.Results -> query
+        is EpgBrowserViewModel.UiState.IndexBusy -> query
+        else -> null
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileSearchScreen(
@@ -102,6 +134,8 @@ fun MobileSearchScreen(
     onBack: (() -> Unit)?,
     initialQuery: String? = null,
     initialTypeFilter: String? = null,
+    // A Guide tab result: its channel, as Search the guide opens it.
+    onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -113,7 +147,13 @@ fun MobileSearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
-    var searchQuery by remember { mutableStateOf("") }
+    val hasGuide by viewModel.hasGuide.collectAsStateWithLifecycle()
+    // Shared by both tabs; saveable so Back from a Guide result's channel finds it again.
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedTab by rememberSaveable { mutableStateOf(SearchTab.CATALOGUE) }
+    val showTabs = showsGuideTab(contentType, hasGuide)
+    val guideActive = showTabs && selectedTab == SearchTab.GUIDE
+    val snackbarHostState = remember { SnackbarHostState() }
     // Scope filter selection lives here, not inside SearchResults — performSearch() emits a
     // transitional UiState.Loading on every debounced re-search (not just the first), which
     // unmounts SearchResults entirely. A plain rememberSaveable inside it doesn't survive that
@@ -199,7 +239,9 @@ fun MobileSearchScreen(
     // triggers below (search icon tap, keyboard search action) still work unchanged — performSearch()
     // already cancels any in-flight search job before starting a new one, so an explicit tap
     // landing right after a debounced fire is a harmless redundant call, not a race.
+    // The catalogue only: the Guide tab doesn't run it unseen (D3).
     LaunchedEffect(searchQuery) {
+        if (guideActive) return@LaunchedEffect
         if (searchQuery.length >= 2) {
             delay(CinemaAnimation.searchDebounceMs)
             viewModel.performSearch(searchQuery, asYouType = true)
@@ -230,6 +272,7 @@ fun MobileSearchScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         Column(
             modifier =
@@ -237,6 +280,29 @@ fun MobileSearchScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
+            if (showTabs) {
+                MobileSearchTabs(
+                    selected = selectedTab,
+                    onSelect = { tab ->
+                        selectedTab = tab
+                        // The Guide tab reruns on entry (MobileSearchGuideTab): its view model may not exist yet.
+                        if (tab == SearchTab.CATALOGUE) {
+                            val lastRun = (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query
+                            queryToRunOnTabSwitch(searchQuery, lastRun)?.let { viewModel.performSearch(it) }
+                        }
+                    },
+                )
+            }
+            if (guideActive) {
+                MobileSearchGuideTab(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onGuideResult = onGuideResult,
+                    snackbarHostState = snackbarHostState,
+                )
+                return@Column
+            }
+
             // Search bar — searches as you type; the keyboard's search action runs it at once.
             val keyboardController = LocalSoftwareKeyboardController.current
             OutlinedTextField(
@@ -391,6 +457,65 @@ fun MobileSearchScreen(
             }
         }
     }
+}
+
+/** "Catalogue | Guide", in the look of the category list's mode tabs (phone UI audit #1). */
+@Composable
+internal fun MobileSearchTabs(
+    selected: SearchTab,
+    onSelect: (SearchTab) -> Unit,
+) {
+    PrimaryTabRow(selectedTabIndex = selected.ordinal, containerColor = Color.Transparent) {
+        SearchTab.entries.forEach { tab ->
+            Tab(
+                selected = tab == selected,
+                onClick = { onSelect(tab) },
+                text = {
+                    Text(
+                        stringResource(
+                            when (tab) {
+                                SearchTab.CATALOGUE -> R.string.search_tab_catalogue
+                                SearchTab.GUIDE -> R.string.search_tab_guide
+                            },
+                        ),
+                        maxLines = 1,
+                    )
+                },
+                selectedContentColor = MaterialTheme.colorScheme.primary,
+                unselectedContentColor = CinemaTextSecondary,
+            )
+        }
+    }
+}
+
+/**
+ * The Guide tab: Search the guide's pane over the whole guide, without its top-bar actions (O3).
+ * Its view model is made the first time the tab shows, scoped to Search's back-stack entry.
+ */
+@Composable
+private fun MobileSearchGuideTab(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onGuideResult: (EpgBrowserMatchedStream) -> Unit,
+    snackbarHostState: SnackbarHostState,
+) {
+    val context = LocalContext.current
+    val guideViewModel: EpgBrowserViewModel =
+        viewModel(factory = remember { EpgBrowserViewModelFactory(context.applicationContext, null, 0L) })
+    LaunchedEffect(guideViewModel) {
+        guideViewModel.toastMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+    }
+    // Shown with text it last ran another query for (or none): run it here (D3).
+    LaunchedEffect(guideViewModel) {
+        queryToRunOnTabSwitch(query, guideViewModel.uiState.value.lastRunQuery())?.let { guideViewModel.performSearch(it) }
+    }
+    MobileGuideSearchPane(
+        viewModel = guideViewModel,
+        query = query,
+        onQueryChange = onQueryChange,
+        onNavigateToPlayer = onGuideResult,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
 
 @Composable
