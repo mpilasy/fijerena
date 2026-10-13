@@ -72,6 +72,8 @@ import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.rememberSourceName
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -136,6 +138,7 @@ fun MobileEpisodeSelectionScreen(
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
+    val sourceName = rememberSourceName(providerId)
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a background refresh so the list stays visible with just a pull-spinner
@@ -259,6 +262,7 @@ fun MobileEpisodeSelectionScreen(
                             tmdbTitle = tmdbTitle,
                             alternateStreams = alternateStreams,
                             sourceNames = sourceNames,
+                            sourceName = sourceName,
                             seriesName = lastSuccess?.streamName ?: seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeState = resumeState,
@@ -303,6 +307,8 @@ private fun EpisodeListContent(
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
+    // The source's name, a Source row in Expert mode.
+    sourceName: String?,
     seriesName: String,
     mediaRepository: MediaRepository,
     resumeState: EpisodeResumeState,
@@ -756,6 +762,7 @@ private fun EpisodeListContent(
                         seriesName = seriesName,
                         alternateStreams = alternateStreams,
                         sourceNames = sourceNames,
+                        sourceName = sourceName,
                         categoryName = categoryName,
                         onAlternateStreamSelected = onAlternateStreamSelected,
                         onCategorySelected = onCategorySelected,
@@ -874,6 +881,7 @@ private fun SeriesDetailsTabContent(
     seriesName: String,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
+    sourceName: String?,
     categoryName: String?,
     onAlternateStreamSelected: (MediaItem) -> Unit,
     onCategorySelected: () -> Unit,
@@ -898,6 +906,15 @@ private fun SeriesDetailsTabContent(
                     label = stringResource(R.string.details_label_tmdb),
                     value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
                 )
+            }
+            // Expert mode only, like the source badges.
+            if (LocalShowSourceBadges.current) {
+                sourceName?.let {
+                    MobileDetailRow(
+                        label = stringResource(R.string.details_label_source),
+                        value = it,
+                    )
+                }
             }
             categoryName?.let { MobileCategoryLinkRow(categoryName = it, onClick = onCategorySelected) }
         }
@@ -931,6 +948,7 @@ private fun StreamNamePicker(
     onSelect: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // As the other rows' values (MobileDetailRow): the row already says "Stream name:".
     val textStyle = MaterialTheme.typography.bodyMedium
     val textColor = CinemaTextPrimary
 
@@ -969,6 +987,7 @@ private fun StreamNamePicker(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
                 tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

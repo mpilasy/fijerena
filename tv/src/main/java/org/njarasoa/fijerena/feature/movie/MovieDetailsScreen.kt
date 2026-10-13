@@ -81,6 +81,7 @@ import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -902,7 +903,8 @@ private fun DetailsTabContent(
                 value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
             )
         }
-        TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
+        // Expert mode only, like the source badges.
+        if (LocalShowSourceBadges.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(Spacing.sm))

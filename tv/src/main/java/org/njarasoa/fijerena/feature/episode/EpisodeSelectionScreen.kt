@@ -135,6 +135,7 @@ import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -1558,7 +1559,8 @@ private fun SeriesDetailsTabContent(
             )
         }
         seriesDetail.metadata.director?.let { TvDetailRow(label = stringResource(R.string.details_label_director), value = it) }
-        TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
+        // Expert mode only, like the source badges.
+        if (LocalShowSourceBadges.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -2059,12 +2061,15 @@ private fun EpisodeDetailPanel(
                 }
 
                 // The source last and labelled: alone at the top it read as a heading (TV UI audit, #12).
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = "${stringResource(R.string.details_label_source)} $providerName",
-                    style = typography.bodyMedium,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                )
+                // Expert mode only, like the source badges.
+                if (LocalShowSourceBadges.current) {
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = "${stringResource(R.string.details_label_source)} $providerName",
+                        style = typography.bodyMedium,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
             }
         }
     }

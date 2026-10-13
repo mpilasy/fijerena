@@ -39,6 +39,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.rememberSourceName
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -58,6 +60,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +90,7 @@ fun MobileMovieDetailsScreen(
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
+    val sourceName = rememberSourceName(providerId)
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
     val isWatched = (uiState as? MovieDetailsViewModel.UiState.Success)?.isWatched ?: false
 
@@ -151,6 +155,7 @@ fun MobileMovieDetailsScreen(
                             tmdbTitle = tmdbTitle,
                             alternateStreams = alternateStreams,
                             sourceNames = sourceNames,
+                            sourceName = sourceName,
                             movieId = shown.movieDetail.id,
                             movieName = shown.streamName,
                             resumePositionMs = shown.resumePositionMs,
@@ -199,6 +204,8 @@ private fun MovieDetailsContent(
     tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
+    // The source's name, a Source row in Expert mode.
+    sourceName: String?,
     movieId: String,
     movieName: String,
     resumePositionMs: Long,
@@ -390,6 +397,7 @@ private fun MovieDetailsContent(
                                 movieName = movieName,
                                 alternateStreams = alternateStreams,
                                 sourceNames = sourceNames,
+                                sourceName = sourceName,
                                 onAlternateStreamSelected = onAlternateStreamSelected,
                                 categoryName = categoryName,
                                 onCategorySelected = onCategorySelected,
@@ -451,6 +459,7 @@ private fun MovieDetailsTabContent(
     movieName: String,
     alternateStreams: List<MediaItem>,
     sourceNames: Map<Long, String>,
+    sourceName: String?,
     onAlternateStreamSelected: (MediaItem) -> Unit,
     categoryName: String?,
     onCategorySelected: () -> Unit,
@@ -539,6 +548,15 @@ private fun MovieDetailsTabContent(
                     value = movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
                 )
             }
+            // Expert mode only, like the source badges.
+            if (LocalShowSourceBadges.current) {
+                sourceName?.let {
+                    MobileDetailRow(
+                        label = stringResource(R.string.details_label_source),
+                        value = it,
+                    )
+                }
+            }
             categoryName?.let { MobileCategoryLinkRow(categoryName = it, onClick = onCategorySelected) }
         }
     }
@@ -615,12 +633,13 @@ private fun StreamNamePicker(
     sourceNames: Map<Long, String>,
     onSelect: (MediaItem) -> Unit,
 ) {
-    val textStyle = MaterialTheme.typography.bodySmall
-    val textColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
+    // As the other rows' values (MobileDetailRow): the row already says "Stream name:".
+    val textStyle = MaterialTheme.typography.bodyMedium
+    val textColor = CinemaTextPrimary
 
     if (alternates.isEmpty()) {
         Text(
-            text = stringResource(R.string.details_stream_name_format, currentName),
+            text = currentName,
             style = textStyle,
             color = textColor,
         )
@@ -643,7 +662,7 @@ private fun StreamNamePicker(
                 },
         ) {
             Text(
-                text = stringResource(R.string.details_stream_name_format, currentName),
+                text = currentName,
                 style = textStyle,
                 color = textColor,
             )
@@ -651,6 +670,7 @@ private fun StreamNamePicker(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
                 tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

@@ -348,7 +348,6 @@
     <string name="details_community_rating">Community rating</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">None</string>
-    <string name="details_stream_name_format">Stream name: %1$s</string>
     <string name="details_other_instances">Other instances of this title</string>
     <string name="details_collection_fallback">Collection</string>
     <string name="details_tab_cast">Cast</string>

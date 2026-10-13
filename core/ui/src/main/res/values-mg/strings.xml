@@ -793,7 +793,6 @@
     <string name="details_community_rating">Naoty avy amin\'ny mpijery</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">Tsy misy</string>
-    <string name="details_stream_name_format">Anaran\'ny fantsakana: %1$s</string>
     <string name="details_other_instances">Dika hafa amin\'ity lohateny ity</string>
     <string name="details_collection_fallback">Fitambarana</string>
     <string name="details_tab_cast">Mpilalao</string>
