@@ -1,7 +1,7 @@
 # Search: Catalogue and Guide tabs
 
 **Status:** In progress, 2026-10-13. Decisions D1–D3 and O1–O4 made 2026-10-13. The "Matched only"
-toggle was removed first (95232085; the filter stays on in code). Phase 1 done (b7a2b296); Phases 2 and 3 in progress.
+toggle was removed first (95232085; the filter stays on in code). Phases 1–3 done (b7a2b296, bb1278b9, de274039); Phase 4 tests and docs done, emulator check not done.
 
 ## Today
 
@@ -59,9 +59,9 @@ The Search screen searches either the catalogue or the guide, picked with two ta
 | # | Phase | Touches | Status |
 |---|---|---|---|
 | 1 | Shared guide-search pane, TV and phone; Search the guide uses it (no behaviour change) | `TvEpgBrowserScreen`, `MobileEpgBrowserScreen` | Done, b7a2b296: `TvGuideSearchPane`, `MobileGuideSearchPane` |
-| 2 | TV Search: tab row, Guide tab, shared query, result navigation | TV `SearchScreen`, `TvNavHost`, strings | In progress |
-| 3 | Phone Search: the same | phone `SearchScreen`, `MobileNavHost`, strings | In progress |
-| 4 | Tests (Robolectric Compose: tab switch reruns the query, Guide tab hidden per O1), docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator check on jellyxtream + iptv | tests, docs | Not started |
+| 2 | TV Search: tab row, Guide tab, shared query, result navigation | TV `SearchScreen`, `TvNavHost`, strings | Done, bb1278b9 (strings 781a5e30, `SearchViewModel.hasGuide` a3b62d6d) |
+| 3 | Phone Search: the same | phone `SearchScreen`, `MobileNavHost`, strings | Done, de274039; a guide result opens over Search in the Search tab (not in the Live TV tab, as catalogue live results do), so Back returns to the Guide tab |
+| 4 | Tests (Robolectric Compose: tab switch reruns the query, Guide tab hidden per O1), docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator check on jellyxtream + iptv | tests, docs | Tests and docs done with Phases 2–3 (`SearchTabsTest`, `MobileSearchTabsTest`; focus walk `scripts/focus-walks/search.txt` written, not recorded); emulator check not done |
 
 ## Risks
 
