@@ -15,7 +15,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Search's Catalogue and Guide tabs (docs/plans/20261013_search-guide-tab-plan.md): the Guide tab
+ * Search's Catalogue and Guide tabs (docs/plans/archive/20261013_search-guide-tab-plan.md): the Guide tab
  * shows only over live channels with a guide (O1), and a tab switch runs the field's query on the
  * new tab only when that tab last ran another (D3).
  */
