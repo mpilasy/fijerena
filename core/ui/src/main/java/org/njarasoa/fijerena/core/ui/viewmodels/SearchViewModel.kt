@@ -18,6 +18,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.ParsedQuery
 import org.njarasoa.fijerena.core.network.SearchUtils
@@ -162,6 +163,11 @@ class SearchViewModel(
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
 
+    // A source of the profile has live channels, so it has a guide to search: the Search screen
+    // offers its Guide tab (search guide tab plan, O1).
+    private val _hasGuide = MutableStateFlow(false)
+    val hasGuide: StateFlow<Boolean> = _hasGuide.asStateFlow()
+
     private var searchJob: Job? = null
 
     // History entry added by the current as-you-type session; replaced on the next keystroke.
@@ -186,6 +192,7 @@ class SearchViewModel(
             )
         _searchHistory.value = appSettings.getSearchHistory()
         prefetchAll()
+        loadHasGuide()
         // The profile's sources changed (one turned on or off, added or deleted): the search covers
         // them as they now are, and the results on screen are searched again.
         viewModelScope.launchGuarded("SearchViewModel.followProfileSources") {
@@ -198,12 +205,24 @@ class SearchViewModel(
                     sources = null
                     prefetchedCategories.clear()
                     prefetchAll()
+                    loadHasGuide()
                     val query = (_uiState.value as? UiState.Success)?.query.orEmpty()
                     if (query.length >= 2) {
                         searchJob?.cancel()
                         searchJob = viewModelScope.launchGuarded("SearchViewModel.searchAgain", Dispatchers.IO) { doSearch(query) }
                     }
                 }
+        }
+    }
+
+    private fun loadHasGuide() {
+        viewModelScope.launchGuarded("SearchViewModel.hasGuide", Dispatchers.IO) {
+            _hasGuide.value =
+                AppContainer
+                    .getInstance(context)
+                    .providerRepository
+                    .profileSourcesList()
+                    .any { MediaProviderFactory.hasLiveTv(it) }
         }
     }
 
