@@ -2,6 +2,7 @@
 
 ## Version: Unreleased
 
+- **Search the guide from Search:** Search has two tabs, Catalogue and Guide, when your sources have live channels. The Guide tab searches programme titles in the TV guide, as Search the guide does, with the same text: switch tabs and the search runs there. Search the guide is still where it was.
 - **Search the guide loses its "Matched only" toggle:** results show only programmes on channels you have, as the toggle did by default.
 - **Source names take less room:** with more than one source, the source's name now shows only in Expert mode, and in Recent and Favourites it opens a row's second line (before the category, or a channel's Now line) instead of crowding the title; an ordinary category's rows no longer carry it at all. The Source row on film and show details follows the same rule (TV: Expert mode only now; phone: new).
 - **Rename devices in Live sync:** Rename on a device's row in Settings → Live sync → Manage names it for every device of the group (a phone and two Shields no longer all read "SHIELD Android TV"). The name travels end-to-end encrypted; leave it empty to go back to the model's name.

@@ -20,3 +20,18 @@ CENTER	Search films, shows and channels
 WAIT 1	Search films, shows and channels
 # Back closes the keyboard and leaves focus on the resting field, not on the screen root.
 BACK	Search films, shows and channels
+# Catalogue | Guide tabs (docs/plans/20261013_search-guide-tab-plan.md, Phase 2): shown over "ALL"
+# when a source has live channels. Written 2026-10-13 from the plan, not yet recorded — re-record
+# with -r on the emulator. Up from the field → the selected tab; Down → back to the field.
+UP	Catalogue
+DOWN	Search films, shows and channels
+UP	Catalogue
+# OK on Guide switches tab and keeps focus on the tab; Down → the guide's field, Up → Guide.
+RIGHT	Guide
+CENTER	Guide
+WAIT 1	Guide
+DOWN	Enter programme title…
+UP	Guide
+LEFT	Catalogue
+CENTER	Catalogue
+WAIT 1	Catalogue

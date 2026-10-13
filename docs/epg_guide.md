@@ -285,6 +285,8 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ### Search UI
 
+**Search's Guide tab** (2026-10-13, `docs/plans/20261013_search-guide-tab-plan.md`): the body of both screens is a pane of its own (`TvGuideSearchPane`, `MobileGuideSearchPane`, the field's text hoisted to the host), which Search's Guide tab hosts with no category context and its own `EpgBrowserViewModel` made when the tab is first shown; the tab shows when `SearchViewModel.hasGuide` (a profile source with live channels).
+
 **TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, an "In <category> only" toggle. The header has **TV Guide** (`EpgGuide` for Recent; Back from the grid lands on it), Refresh, then **Guide sources** (when the profile has a source with live channels, `EpgBrowserViewModel.guideSourceOwners`) opening `EpgManagement` for it — with two or more, a source chooser first (`SourceChoice`, multi-source plan O4); Back lands on that button (its own `NavReturnFocus`, which also holds off the search field's first-open focus).
 
 **Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, the same toggles; the top bar's actions are TV Guide, Refresh and Guide sources, as on TV.
