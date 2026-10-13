@@ -1,17 +1,17 @@
 # Phase 7 — Search field (SearchScreen, TvSearchField, P4), TV emulator, source jellyxtream.
 # Start: Home → Search, with at least one recent search and the field empty (run a search once
 # beforehand, then Back out and in again). Focus is on the field, no keyboard (F-S-1).
-# Written 2026-10-03 from the plan, not yet recorded — re-record with -r on the emulator.
-# The recent-search chip shows the term only, so its line is left unchecked until recorded.
+# Written 2026-10-03 from the plan; checked on the TV emulator 2026-10-13. The recent-search chip
+# shows the term only, which differs per device, so its lines are left unchecked.
 @start Search films, shows and channels
 # Left from the field and from the first recent search → the navigation rail (on Search), Right
 # → back (rail Phase 3, not yet recorded).
 LEFT	Search
 RIGHT	Search films, shows and channels
 # Down from the field → the first recent search, not the "Clear all" icon (F-S-2).
-DOWN	the
+DOWN	
 LEFT	Search
-RIGHT	the
+RIGHT	
 UP	Search films, shows and channels
 # No search button beside the field (TV UI audit #14): the field searches on its own, and the
 # clear × only shows with text.
@@ -21,8 +21,8 @@ WAIT 1	Search films, shows and channels
 # Back closes the keyboard and leaves focus on the resting field, not on the screen root.
 BACK	Search films, shows and channels
 # Catalogue | Guide tabs (docs/plans/20261013_search-guide-tab-plan.md, Phase 2): shown over "ALL"
-# when a source has live channels. Written 2026-10-13 from the plan, not yet recorded — re-record
-# with -r on the emulator. Up from the field → the selected tab; Down → back to the field.
+# when a source has live channels. Checked on the TV emulator 2026-10-13. Up from the field → the
+# selected tab; Down → back to the field.
 UP	Catalogue
 DOWN	Search films, shows and channels
 UP	Catalogue

@@ -4,6 +4,7 @@ package org.njarasoa.fijerena.feature.search
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -653,6 +655,7 @@ private fun SearchContent(
                     onItemRemove = onHistoryItemRemove,
                     onClearAll = onClearHistory,
                     firstItemFocusRequester = historyFocusRequester,
+                    fieldFocusRequester = searchFocusRequester,
                 )
             } else {
                 TvEmptyState(message = searchPlaceholder(contentType), icon = CinemaIcons.Search)
@@ -687,6 +690,7 @@ private fun SearchHistorySection(
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier,
     firstItemFocusRequester: FocusRequester? = null,
+    fieldFocusRequester: FocusRequester? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -717,7 +721,19 @@ private fun SearchHistorySection(
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
         // and a D-pad user should not have to scroll a rail to reach the last entry.
         FlowRow(
-            modifier = Modifier.fillMaxWidth(),
+            // Up out of the first line goes to the field. Left to the geometric search, a chip at
+            // the left edge picks the Catalogue tab over the far wider field (closer centres).
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        fieldFocusRequester?.let { field ->
+                            Modifier
+                                .focusProperties {
+                                    onExit = { if (requestedFocusDirection == FocusDirection.Up) field.requestFocus() }
+                                }.focusGroup()
+                        } ?: Modifier,
+                    ),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
