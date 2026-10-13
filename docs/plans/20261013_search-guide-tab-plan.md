@@ -1,7 +1,7 @@
 # Search: Catalogue and Guide tabs
 
 **Status:** In progress, 2026-10-13. Decisions D1–D3 and O1–O4 made 2026-10-13. The "Matched only"
-toggle was removed first (95232085; the filter stays on in code). Phase 1 can start.
+toggle was removed first (95232085; the filter stays on in code). Phase 1 done (b7a2b296); Phases 2 and 3 in progress.
 
 ## Today
 
@@ -58,9 +58,9 @@ The Search screen searches either the catalogue or the guide, picked with two ta
 
 | # | Phase | Touches | Status |
 |---|---|---|---|
-| 1 | Shared guide-search pane, TV and phone; Search the guide uses it (no behaviour change) | `TvEpgBrowserScreen`, `MobileEpgBrowserScreen` | In progress |
-| 2 | TV Search: tab row, Guide tab, shared query, result navigation | TV `SearchScreen`, `TvNavHost`, strings | Not started |
-| 3 | Phone Search: the same | phone `SearchScreen`, `MobileNavHost`, strings | Not started |
+| 1 | Shared guide-search pane, TV and phone; Search the guide uses it (no behaviour change) | `TvEpgBrowserScreen`, `MobileEpgBrowserScreen` | Done, b7a2b296: `TvGuideSearchPane`, `MobileGuideSearchPane` |
+| 2 | TV Search: tab row, Guide tab, shared query, result navigation | TV `SearchScreen`, `TvNavHost`, strings | In progress |
+| 3 | Phone Search: the same | phone `SearchScreen`, `MobileNavHost`, strings | In progress |
 | 4 | Tests (Robolectric Compose: tab switch reruns the query, Guide tab hidden per O1), docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator check on jellyxtream + iptv | tests, docs | Not started |
 
 ## Risks
