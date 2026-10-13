@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -78,6 +79,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     var scanning by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmStop by remember { mutableStateOf<SyncWire.Device?>(null) }
+    var renaming by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
@@ -154,7 +156,12 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         onScan = { scanning = true },
                     )
                     ShareNowPlayingRow(shareNowPlaying, viewModel::setShareNowPlaying)
-                    DevicesPanel(ui.devices, nowPlaying, stopStates, onStop = { confirmStop = it }, onRemove = { confirmRemove = it })
+                    DevicesPanel(ui.devices, nowPlaying, stopStates, onStop = {
+                        confirmStop = it
+                    }, onRename = { renaming = it }, onRemove = {
+                        confirmRemove =
+                            it
+                    })
                     CinemaOutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.live_sync_leave), color = CinemaError)
                     }
@@ -179,6 +186,16 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                 confirmRemove = null
             },
             onDismiss = { confirmRemove = null },
+        )
+    }
+    renaming?.let { device ->
+        RenameDialog(
+            device = device,
+            onSave = { name ->
+                viewModel.rename(device.id, name)
+                renaming = null
+            },
+            onDismiss = { renaming = null },
         )
     }
     confirmStop?.let { device ->
@@ -326,6 +343,7 @@ private fun DevicesPanel(
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
     stopStates: Map<String, SyncSettingsViewModel.StopState>,
     onStop: (SyncWire.Device) -> Unit,
+    onRename: (SyncWire.Device) -> Unit,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val active = devices?.filterNot { it.revoked } ?: return
@@ -384,6 +402,11 @@ private fun DevicesPanel(
                             tint = CinemaError,
                         )
                     }
+                    IconAction(
+                        onClick = { onRename(device) },
+                        icon = CinemaIcons.Edit,
+                        label = stringResource(R.string.live_sync_device_rename),
+                    )
                     if (!device.current) {
                         IconAction(
                             onClick = { onRemove(device) },
@@ -414,6 +437,31 @@ private fun ShareNowPlayingRow(
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
+}
+
+/** Names a device for the whole group; empty goes back to its model's name. */
+@Composable
+private fun RenameDialog(
+    device: SyncWire.Device,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember(device.id) { mutableStateOf(device.name) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.live_sync_device_rename_title, device.name)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(AppSettings.MAX_DEVICE_NAME_LENGTH) },
+                label = { Text(stringResource(R.string.live_sync_device_name_label)) },
+                supportingText = { Text(stringResource(R.string.live_sync_device_name_hint)) },
+                singleLine = true,
+            )
+        },
+        confirmButton = { TextButton(onClick = { onSave(name) }) { Text(stringResource(R.string.provider_save_button)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+    )
 }
 
 @Composable

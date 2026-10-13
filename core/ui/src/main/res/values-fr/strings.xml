@@ -804,6 +804,10 @@
     <string name="live_sync_device_this">Cet appareil</string>
     <string name="live_sync_device_last_seen">Vu %1$s</string>
     <string name="live_sync_device_remove">Retirer</string>
+    <string name="live_sync_device_rename">Renommer</string>
+    <string name="live_sync_device_rename_title">Renommer %1$s</string>
+    <string name="live_sync_device_name_label">Nom</string>
+    <string name="live_sync_device_name_hint">Affiché sur tous les appareils du groupe. Laissez vide pour le modèle de l\'appareil.</string>
     <string name="live_sync_device_remove_title">Retirer %1$s ?</string>
     <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu\'il a déjà reste dessus.</string>
     <string name="live_sync_share_playing">Partager ce qui est en lecture avec mon groupe de synchronisation</string>

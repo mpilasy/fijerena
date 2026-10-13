@@ -71,11 +71,28 @@ class SyncSettingsViewModel(
     /** Dev mode adds the raw sync error under the friendly status. */
     val devMode: Boolean get() = AppSettings(app).isDevMode
 
+    /** The names the group gave its devices (a synced setting each), by device id; the server's name otherwise. */
+    private val deviceNames: StateFlow<Map<String, String>> =
+        AppSettings(app)
+            .observeDeviceNames()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    private fun Ui.named(names: Map<String, String>) = copy(devices = devices?.map { d -> names[d.id]?.let { d.copy(name = it) } ?: d })
+
     val state: StateFlow<Pair<SyncManager.Status, Ui>> =
-        combine(manager.status, ui) { status, ui -> status to ui }
+        combine(manager.status, ui, deviceNames) { status, ui, names -> status to ui.named(names) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), manager.status.value to ui.value)
 
     val currentUi: StateFlow<Ui> = ui.asStateFlow()
+
+    /** Names [deviceId] for the whole group (a synced setting); blank goes back to its server name, its model. */
+    fun rename(
+        deviceId: String,
+        name: String,
+    ) {
+        AppSettings(app).setDeviceName(deviceId, name)
+        manager.requestSync(0)
+    }
 
     /** The device-local "Share what's playing with my sync group" switch. */
     val shareNowPlaying: StateFlow<Boolean> = publisher.isSharing
@@ -169,7 +186,7 @@ class SyncSettingsViewModel(
                 SyncPayloads.RemoteCommand(
                     command = SyncPayloads.RemoteCommand.STOP,
                     sessionId = sessionId,
-                    fromDeviceName = me?.name ?: deviceName,
+                    fromDeviceName = me?.let { deviceNames.value[it.id] ?: it.name } ?: deviceName,
                     issuedBy = me?.id.orEmpty(),
                 )
             VolatileRecords.outbox.put(SyncKey(SyncKind.SHARED, "", SyncKind.REMOTE_COMMAND, deviceId), SyncPayloads.encode(command))

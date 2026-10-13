@@ -108,10 +108,20 @@ class AppSettings(
 
         fun profileSourceSettingKey(providerKey: String) = PROFILE_SOURCE_SETTING_PREFIX + providerKey
 
+        /**
+         * A live sync device's name as the group calls it, one shared record per device —
+         * `device_name:<deviceId>`, the name or "" for the server's (the device's model, set when
+         * it joined). End-to-end encrypted like every record, so the server never sees it.
+         */
+        const val DEVICE_NAME_SETTING_PREFIX = "device_name:"
+
+        fun deviceNameSettingKey(deviceId: String) = DEVICE_NAME_SETTING_PREFIX + deviceId
+
         /** The whole-list setting key a build before per-source records synced. */
         const val LEGACY_PROFILE_SOURCES_SETTING = KEY_PROFILE_SOURCES
 
         private val sourceKeysSerializer = ListSerializer(String.serializer())
+        const val MAX_DEVICE_NAME_LENGTH = 64
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
     }
@@ -273,6 +283,37 @@ class AppSettings(
         get() = prefs.getBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, false)
         set(value) = prefs.edit { putBoolean(KEY_PROFILE_SOURCE_RECORDS_QUEUED, value) }
 
+    /** The name the group gave live sync device [deviceId]; null when it has none (the server's name then). */
+    fun deviceName(deviceId: String): String? = prefs.getString(DEVICE_NAME_SETTING_PREFIX + deviceId, null)?.takeIf { it.isNotBlank() }
+
+    /** Every device's name set here or received, by device id ("" for one put back to the server's). */
+    fun deviceNames(): Map<String, String> =
+        prefs.all.entries
+            .filter { it.key.startsWith(DEVICE_NAME_SETTING_PREFIX) }
+            .associate { it.key.removePrefix(DEVICE_NAME_SETTING_PREFIX) to (it.value as? String).orEmpty() }
+
+    /** Names live sync device [deviceId] for the whole group; blank goes back to the server's name. */
+    fun setDeviceName(
+        deviceId: String,
+        name: String,
+    ) {
+        prefs.edit { putString(DEVICE_NAME_SETTING_PREFIX + deviceId, name.trim().take(MAX_DEVICE_NAME_LENGTH)) }
+        SettingsSyncQueue.setting(context, deviceNameSettingKey(deviceId))
+    }
+
+    /** [deviceNames] with blanks left out, now and on every change (a rename here or from another device). */
+    fun observeDeviceNames(): Flow<Map<String, String>> =
+        callbackFlow {
+            val current = { deviceNames().filterValues { it.isNotBlank() } }
+            val listener =
+                SharedPreferences.OnSharedPreferenceChangeListener { _, changed ->
+                    if (changed?.startsWith(DEVICE_NAME_SETTING_PREFIX) == true) trySend(current())
+                }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(current())
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
     /** Drops a deleted profile's sources. */
     fun removeProfileSources(profileId: String) = prefs.edit { remove(profileKey(KEY_PROFILE_SOURCES, profileId)) }
 
@@ -304,6 +345,10 @@ class AppSettings(
     ) {
         if (key == KEY_TMDB_API_KEY) {
             if (value.isString) TmdbKeyStore(context).applyRemote(value.content)
+            return
+        }
+        if (key.startsWith(DEVICE_NAME_SETTING_PREFIX)) {
+            if (value.isString) prefs.edit { putString(key, value.content.trim().take(MAX_DEVICE_NAME_LENGTH)) }
             return
         }
         if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
@@ -341,6 +386,9 @@ class AppSettings(
         if (key == KEY_TMDB_API_KEY) {
             val store = TmdbKeyStore(context)
             return if (store.hasValue()) kotlinx.serialization.json.JsonPrimitive(store.key) else null
+        }
+        if (key.startsWith(DEVICE_NAME_SETTING_PREFIX)) {
+            return prefs.getString(key, null)?.let { kotlinx.serialization.json.JsonPrimitive(it) }
         }
         if (key.startsWith(PROFILE_SOURCE_SETTING_PREFIX)) {
             val keys = profileSourceKeys(profileId) ?: return null

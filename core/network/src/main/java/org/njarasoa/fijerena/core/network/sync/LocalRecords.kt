@@ -109,6 +109,8 @@ class LocalRecords(
             val on = settings.profileSourceKeys(profile) ?: continue
             (on + providerKeys).forEach { sync.seed(SyncKind.SETTING, profile, AppSettings.profileSourceSettingKey(it), now) }
         }
+        // Each device name given here or received.
+        settings.deviceNames().keys.forEach { sync.seed(SyncKind.SETTING, SyncKind.SHARED, AppSettings.deviceNameSettingKey(it), now) }
         for (key in AppSettings.SYNCED_SETTING_KEYS) {
             if (key in AppSettings.PER_PROFILE_SETTING_KEYS) {
                 profiles.filter { settings.syncedSetting(key, it) != null }.forEach { sync.seed(SyncKind.SETTING, it, key, now) }

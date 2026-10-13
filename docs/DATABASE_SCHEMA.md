@@ -148,7 +148,7 @@ Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just
 written (no shared transaction): provider passwords (`provider`), Jellyfin logins
 (`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
 `theme_id`, `dev_mode` (per profile), `autoplay_next_episode` (per
-profile), and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
+profile), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
 

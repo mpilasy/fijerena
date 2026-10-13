@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
@@ -53,6 +54,8 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -71,9 +74,19 @@ fun SyncSettingsScreen() {
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
+    var renaming by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
+
+    // Entry focus on Sync now (Add a device while a sync runs: Sync now is disabled then), or the
+    // screen opened with nothing focused and the remote did nothing.
+    val syncNowFocus = remember { FocusRequester() }
+    val addDeviceFocus = remember { FocusRequester() }
+    val pairing = ui.handoffQr != null || ui.inviteQr != null
+    LaunchedEffect(status.linked, pairing) {
+        if (status.linked && !pairing) syncNowFocus.requestFocusWithRetry(fallback = addDeviceFocus)
+    }
 
     Column(
         modifier =
@@ -108,12 +121,13 @@ fun SyncSettingsScreen() {
                 status = status,
                 devMode = viewModel.devMode,
                 onSyncNow = viewModel::syncNow,
+                syncNowFocus = syncNowFocus,
             )
             CinemaPrimaryButton(
                 onClick = viewModel::showInvite,
                 text = stringResource(R.string.live_sync_add_device),
                 enabled = !ui.busy,
-                modifier = Modifier.leftToRail(),
+                modifier = Modifier.focusRequester(addDeviceFocus).leftToRail(),
             )
             TvSwitchRow(
                 checked = shareNowPlaying,
@@ -124,9 +138,9 @@ fun SyncSettingsScreen() {
             )
             // Up from Leave goes to the last Remove: it sits at the far right of its row, outside the
             // left-aligned Leave button's beam, so plain focus search skipped it for the share switch.
-            val lastRemoveFocus = remember { FocusRequester() }
-            val hasRemovable = ui.devices.orEmpty().any { !it.revoked && !it.current }
-            DevicesPanel(ui.devices, nowPlaying, lastRemoveFocus, onRemove = { confirmRemove = it })
+            val lastActionFocus = remember { FocusRequester() }
+            val hasDevices = ui.devices.orEmpty().any { !it.revoked }
+            DevicesPanel(ui.devices, nowPlaying, lastActionFocus, onRename = { renaming = it }, onRemove = { confirmRemove = it })
             // Rare and drastic: last, under its own heading, outlined in the error colour.
             Text(
                 stringResource(R.string.provider_section_danger_zone),
@@ -136,7 +150,7 @@ fun SyncSettingsScreen() {
             ProviderDangerButton(
                 onClick = { confirmLeave = true },
                 text = stringResource(R.string.live_sync_leave),
-                modifier = (if (hasRemovable) Modifier.focusProperties { up = lastRemoveFocus } else Modifier).leftToRail(),
+                modifier = (if (hasDevices) Modifier.focusProperties { up = lastActionFocus } else Modifier).leftToRail(),
             )
         } else {
             SetupPanel(ui, viewModel)
@@ -155,6 +169,16 @@ fun SyncSettingsScreen() {
                 confirmRemove = null
             },
             onDismiss = { confirmRemove = null },
+        )
+    }
+    renaming?.let { device ->
+        RenameDialog(
+            device = device,
+            onSave = { name ->
+                viewModel.rename(device.id, name)
+                renaming = null
+            },
+            onDismiss = { renaming = null },
         )
     }
     if (confirmLeave) {
@@ -260,6 +284,7 @@ private fun LinkedPanel(
     status: SyncManager.Status,
     devMode: Boolean,
     onSyncNow: () -> Unit,
+    syncNowFocus: FocusRequester,
 ) {
     val scale = LocalUiScale.current
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
@@ -289,7 +314,7 @@ private fun LinkedPanel(
                 onClick = onSyncNow,
                 text = stringResource(R.string.live_sync_now),
                 enabled = !status.syncing,
-                modifier = Modifier.leftToRail(),
+                modifier = Modifier.focusRequester(syncNowFocus).leftToRail(),
             )
         }
     }
@@ -299,12 +324,14 @@ private fun LinkedPanel(
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
-    lastRemoveFocus: FocusRequester,
+    /** On the last row's last button: Up from Leave below lands there. */
+    lastActionFocus: FocusRequester,
+    onRename: (SyncWire.Device) -> Unit,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val scale = LocalUiScale.current
     val active = devices?.filterNot { it.revoked } ?: return
-    val lastRemovable = active.lastOrNull { !it.current }
+    val last = active.lastOrNull()
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
             Text(stringResource(R.string.live_sync_devices_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccent)
@@ -331,6 +358,13 @@ private fun DevicesPanel(
                             )
                         }
                     }
+                    Spacer(Modifier.width(Spacing.sm.scaled(scale)))
+                    TvIconAction(
+                        onClick = { onRename(device) },
+                        icon = CinemaIcons.Edit,
+                        label = stringResource(R.string.live_sync_device_rename),
+                        modifier = if (device == last && device.current) Modifier.focusRequester(lastActionFocus) else Modifier,
+                    )
                     if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))
                         TvIconAction(
@@ -338,13 +372,48 @@ private fun DevicesPanel(
                             icon = CinemaIcons.Delete,
                             label = stringResource(R.string.live_sync_device_remove),
                             danger = true,
-                            modifier = if (device == lastRemovable) Modifier.focusRequester(lastRemoveFocus) else Modifier,
+                            modifier = if (device == last) Modifier.focusRequester(lastActionFocus) else Modifier,
                         )
                     }
                 }
             }
         }
     }
+}
+
+/** Names a device for the whole group; empty goes back to its model's name. */
+@Composable
+private fun RenameDialog(
+    device: SyncWire.Device,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember(device.id) { mutableStateOf(device.name) }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_rename_title, device.name)) },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.take(AppSettings.MAX_DEVICE_NAME_LENGTH) },
+                label = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_name_label)) },
+                supportingText = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_name_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().tvDpadEscape(),
+                colors =
+                    androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = CinemaTextPrimary,
+                        unfocusedTextColor = CinemaTextPrimary,
+                        cursorColor = CinemaAccent,
+                        focusedBorderColor = CinemaAccent,
+                        focusedLabelColor = CinemaAccent,
+                        unfocusedLabelColor = CinemaTextSecondary,
+                    ),
+            )
+        },
+        confirmButton = { CinemaPrimaryButton(onClick = { onSave(name) }, text = stringResource(R.string.provider_save_button)) },
+        dismissButton = { CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel)) },
+    )
 }
 
 @Composable

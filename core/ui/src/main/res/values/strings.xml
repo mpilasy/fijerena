@@ -840,6 +840,10 @@
     <string name="live_sync_device_this">This device</string>
     <string name="live_sync_device_last_seen">Last seen %1$s</string>
     <string name="live_sync_device_remove">Remove</string>
+    <string name="live_sync_device_rename">Rename</string>
+    <string name="live_sync_device_rename_title">Rename %1$s</string>
+    <string name="live_sync_device_name_label">Name</string>
+    <string name="live_sync_device_name_hint">Shown on every device of the group. Leave it empty for the device\'s model.</string>
     <string name="live_sync_device_remove_title">Remove %1$s?</string>
     <string name="live_sync_device_remove_message">It stops syncing right away. What it already has stays on it.</string>
     <string name="live_sync_share_playing">Share what\'s playing with my sync group</string>

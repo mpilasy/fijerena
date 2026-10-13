@@ -973,6 +973,10 @@
     <string name="live_sync_device_this">Ity fitaovana ity</string>
     <string name="live_sync_device_last_seen">Hita farany %1$s</string>
     <string name="live_sync_device_remove">Esory</string>
+    <string name="live_sync_device_rename">Hanova anarana</string>
+    <string name="live_sync_device_rename_title">Hanova ny anaran\'i %1$s</string>
+    <string name="live_sync_device_name_label">Anarana</string>
+    <string name="live_sync_device_name_hint">Hita amin\'ny fitaovana rehetra ao amin\'ny vondrona. Avelao ho foana raha ny modelin\'ilay fitaovana no tiana.</string>
     <string name="live_sync_device_remove_title">Hesorina ve i %1$s?</string>
     <string name="live_sync_device_remove_message">Mijanona tsy mampifanaraka avy hatrany izy. Mijanona eo aminy izay efa ananany.</string>
     <string name="live_sync_share_playing">Zarao amin\'ny vondrona fampifanarahana izay mandeha</string>
