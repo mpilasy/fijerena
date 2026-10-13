@@ -51,6 +51,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -78,6 +79,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
@@ -98,6 +100,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
@@ -105,6 +109,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
+import org.njarasoa.fijerena.feature.epgbrowser.TvGuideSearchPane
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
@@ -115,6 +120,7 @@ import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -156,6 +162,8 @@ fun SearchScreen(
     onCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     onBack: () -> Unit,
     initialQuery: String? = null,
+    // A Guide tab result: its channel, as on Search the guide.
+    onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SearchViewModel =
@@ -170,6 +178,31 @@ fun SearchScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
+    val hasGuide by viewModel.hasGuide.collectAsStateWithLifecycle()
+
+    // Catalogue | Guide (search guide tab plan, D1/O1). Saveable: Back from a guide result's
+    // channel comes back to the Guide tab.
+    val showsTabs = showsGuideTab(contentType, hasGuide)
+    var selectedTab by rememberSaveable { mutableStateOf(SearchTab.CATALOGUE) }
+    val activeTab = if (showsTabs) selectedTab else SearchTab.CATALOGUE
+    // The field's text, shared by both tabs; each tab's own state holds the query it last ran.
+    var fieldText by rememberSaveable { mutableStateOf("") }
+    // Set by a tab switch: focus stays on the tab, so the tab shown takes no first-open focus,
+    // keyboard or jump to its results until its field is reached.
+    var holdFocus by remember { mutableStateOf(false) }
+    val catalogueTabFocus = remember { FocusRequester() }
+    val guideTabFocus = remember { FocusRequester() }
+    val fieldFocus = remember { FocusRequester() }
+    // Up from the field to the selected tab; the field taking focus ends a tab switch's hold.
+    val fieldModifier =
+        if (showsTabs) {
+            Modifier
+                .focusRequester(fieldFocus)
+                .focusProperties { up = if (activeTab == SearchTab.GUIDE) guideTabFocus else catalogueTabFocus }
+                .onFocusChanged { if (it.hasFocus) holdFocus = false }
+        } else {
+            Modifier
+        }
 
     // Arrived from a "more like this" card: run its title straight away. The text field picks the
     // term up from the ViewModel's state on its own.
@@ -272,90 +305,204 @@ fun SearchScreen(
             ) {
             }
 
-            when (val state = uiState) {
-                is SearchViewModel.UiState.Loading -> {
-                    LoadingView(message = state.message)
-                }
-
-                is SearchViewModel.UiState.Error -> {
-                    ErrorView(state.message)
-                }
-
-                is SearchViewModel.UiState.Success -> {
-                    val successState = state
-                    val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
-                    val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
-                    val devStats =
-                        if (appSettings.isDevMode && successState.searchDataSize != null) {
-                            "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
-                        } else {
-                            null
+            if (showsTabs) {
+                SearchTabRow(
+                    selected = activeTab,
+                    onSelect = { tab ->
+                        if (tab != selectedTab) {
+                            holdFocus = true
+                            selectedTab = tab
                         }
-                    // Sources left out because their search failed: raw, developer mode only.
-                    val sourceErrors =
-                        successState.sourceErrors
-                            .takeIf { appSettings.isDevMode && it.isNotEmpty() }
-                            ?.joinToString("\n")
-                    SearchContent(
-                        query = successState.query,
-                        categoryResults = successState.categoryResults,
-                        results = successState.filteredResults,
-                        excludedCountByType = successState.excludedCountByType,
-                        isSearching = successState.isSearching,
-                        searchProgress = successState.searchProgress ?: "",
-                        devStats = devStats,
-                        sourceErrors = sourceErrors,
-                        contentType = contentType,
-                        searchHistory = searchHistory,
-                        returnFocus = returnFocus,
-                        // A "more like this" arrival is already searching; don't cover it with the keyboard.
-                        mayOpenKeyboard = initialQuery.isNullOrBlank(),
-                        onSearchSubmit = { viewModel.performSearch(it) },
-                        onHistoryItemClick = { term ->
-                            viewModel.performSearch(term)
-                        },
-                        onHistoryItemRemove = { term ->
-                            viewModel.removeSearchHistoryEntry(term)
-                        },
-                        onClearHistory = { viewModel.clearSearchHistory() },
-                        onClearSearch = { viewModel.clearSearch() },
-                        onResultClick = { result ->
-                            onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType, result.providerId)
-                        },
-                        onResultLongPress = { result ->
-                            // Favourite, Mark watched (a film or an episode) or Mark show watched (a
-                            // show), on the result's own source: the menu waits for one watch-state read.
-                            longPressScope.launch {
-                                val target = viewModel.menuTarget(result)
-                                favoriteMenuSource = result.providerId
-                                favoriteMenuTarget = target
+                    },
+                    catalogueFocus = catalogueTabFocus,
+                    guideFocus = guideTabFocus,
+                    fieldFocus = fieldFocus,
+                )
+            }
+
+            if (activeTab == SearchTab.GUIDE) {
+                GuideTab(
+                    query = fieldText,
+                    onQueryChange = { fieldText = it },
+                    onGuideResult = onGuideResult,
+                    holdFocus = holdFocus,
+                    fieldModifier = fieldModifier,
+                )
+            } else {
+                // Shown again with a query it hasn't run: run it here (D3).
+                LaunchedEffect(Unit) {
+                    queryToRerun(fieldText, (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query)
+                        ?.let { viewModel.performSearch(it) }
+                }
+                when (val state = uiState) {
+                    is SearchViewModel.UiState.Loading -> {
+                        LoadingView(message = state.message)
+                    }
+
+                    is SearchViewModel.UiState.Error -> {
+                        ErrorView(state.message)
+                    }
+
+                    is SearchViewModel.UiState.Success -> {
+                        val successState = state
+                        val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
+                        val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
+                        val devStats =
+                            if (appSettings.isDevMode && successState.searchDataSize != null) {
+                                "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
+                            } else {
+                                null
                             }
-                        },
-                        onCategoryClick = { catResult ->
-                            onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
-                        },
-                        onCategoryLongPress = { catResult ->
-                            favoriteMenuSource = catResult.providerId
-                            favoriteMenuTarget =
-                                FavoriteMenuTarget.Category(
-                                    categoryId = catResult.categoryId,
-                                    categoryName = catResult.categoryName,
-                                    contentType = catResult.contentType,
-                                    isFavorite =
-                                        viewModel.isFavoriteCategory(
-                                            catResult.providerId,
-                                            catResult.categoryId,
-                                            catResult.contentType,
-                                        ),
-                                )
-                        },
-                    )
+                        // Sources left out because their search failed: raw, developer mode only.
+                        val sourceErrors =
+                            successState.sourceErrors
+                                .takeIf { appSettings.isDevMode && it.isNotEmpty() }
+                                ?.joinToString("\n")
+                        SearchContent(
+                            query = successState.query,
+                            fieldText = fieldText,
+                            onFieldTextChange = { fieldText = it },
+                            holdFocus = holdFocus,
+                            fieldModifier = fieldModifier,
+                            categoryResults = successState.categoryResults,
+                            results = successState.filteredResults,
+                            excludedCountByType = successState.excludedCountByType,
+                            isSearching = successState.isSearching,
+                            searchProgress = successState.searchProgress ?: "",
+                            devStats = devStats,
+                            sourceErrors = sourceErrors,
+                            contentType = contentType,
+                            searchHistory = searchHistory,
+                            returnFocus = returnFocus,
+                            // A "more like this" arrival is already searching; don't cover it with the keyboard.
+                            mayOpenKeyboard = initialQuery.isNullOrBlank(),
+                            onSearchSubmit = { viewModel.performSearch(it) },
+                            onHistoryItemClick = { term ->
+                                viewModel.performSearch(term)
+                            },
+                            onHistoryItemRemove = { term ->
+                                viewModel.removeSearchHistoryEntry(term)
+                            },
+                            onClearHistory = { viewModel.clearSearchHistory() },
+                            onClearSearch = { viewModel.clearSearch() },
+                            onResultClick = { result ->
+                                onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType, result.providerId)
+                            },
+                            onResultLongPress = { result ->
+                                // Favourite, Mark watched (a film or an episode) or Mark show watched (a
+                                // show), on the result's own source: the menu waits for one watch-state read.
+                                longPressScope.launch {
+                                    val target = viewModel.menuTarget(result)
+                                    favoriteMenuSource = result.providerId
+                                    favoriteMenuTarget = target
+                                }
+                            },
+                            onCategoryClick = { catResult ->
+                                onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
+                            },
+                            onCategoryLongPress = { catResult ->
+                                favoriteMenuSource = catResult.providerId
+                                favoriteMenuTarget =
+                                    FavoriteMenuTarget.Category(
+                                        categoryId = catResult.categoryId,
+                                        categoryName = catResult.categoryName,
+                                        contentType = catResult.contentType,
+                                        isFavorite =
+                                            viewModel.isFavoriteCategory(
+                                                catResult.providerId,
+                                                catResult.categoryId,
+                                                catResult.contentType,
+                                            ),
+                                    )
+                            },
+                        )
+                    }
                 }
             }
         }
         // Over the screen, not inside its padded column: kept off the overscan edge here.
         TvUndoBar(undoBar, Modifier.align(Alignment.BottomCenter).padding(bottom = Spacing.tvSafeMarginVertical))
     }
+}
+
+/** Search's two tabs (search guide tab plan, D1). */
+private enum class SearchTab { CATALOGUE, GUIDE }
+
+/** Search offers its Guide tab when it covers live channels and a source has them (O1). */
+internal fun showsGuideTab(
+    contentType: String,
+    hasGuide: Boolean,
+): Boolean = hasGuide && (contentType == SearchViewModel.CONTENT_TYPE_ALL || contentType == ContentType.LIVE_TV)
+
+/** The field's text to run on a tab just shown, or null when it is blank or that tab last ran it (D3). */
+internal fun queryToRerun(
+    fieldText: String,
+    lastRun: String?,
+): String? = fieldText.takeIf { it.isNotBlank() && it.trim() != lastRun?.trim() }
+
+/** Catalogue | Guide under the header: OK selects, Left from the first opens the rail, Down goes to the field. */
+@Composable
+private fun SearchTabRow(
+    selected: SearchTab,
+    onSelect: (SearchTab) -> Unit,
+    catalogueFocus: FocusRequester,
+    guideFocus: FocusRequester,
+    fieldFocus: FocusRequester,
+) {
+    val toField = Modifier.focusProperties { down = fieldFocus }
+    Row(
+        modifier = Modifier.padding(bottom = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        TvSelectableButton(
+            selected = selected == SearchTab.CATALOGUE,
+            onSelect = { onSelect(SearchTab.CATALOGUE) },
+            text = stringResource(R.string.search_tab_catalogue),
+            modifier = Modifier.focusRequester(catalogueFocus).then(toField).leftToRail(),
+        )
+        TvSelectableButton(
+            selected = selected == SearchTab.GUIDE,
+            onSelect = { onSelect(SearchTab.GUIDE) },
+            text = stringResource(R.string.search_tab_guide),
+            modifier = Modifier.focusRequester(guideFocus).then(toField),
+        )
+    }
+}
+
+/**
+ * The Guide tab: Search the guide's pane without its header actions or category chip (O3). Its
+ * ViewModel is made the first time the tab shows, so a catalogue-only search never loads the guide.
+ */
+@Composable
+private fun GuideTab(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onGuideResult: (EpgBrowserMatchedStream) -> Unit,
+    holdFocus: Boolean,
+    fieldModifier: Modifier,
+) {
+    val context = LocalContext.current
+    val guideViewModel: EpgBrowserViewModel =
+        viewModel(factory = remember { EpgBrowserViewModelFactory(context.applicationContext, null, 0L) })
+    // Shown with a query it hasn't run: run it here (D3).
+    LaunchedEffect(Unit) {
+        val lastRun =
+            when (val state = guideViewModel.uiState.value) {
+                is EpgBrowserViewModel.UiState.Results -> state.query
+                is EpgBrowserViewModel.UiState.IndexBusy -> state.query
+                else -> null
+            }
+        queryToRerun(query, lastRun)?.let { guideViewModel.performSearch(it) }
+    }
+    TvGuideSearchPane(
+        viewModel = guideViewModel,
+        query = query,
+        onQueryChange = onQueryChange,
+        onNavigateToPlayer = onGuideResult,
+        // A tab switch keeps focus on the tab, as a header button's return does.
+        headerReturnPending = holdFocus,
+        fieldModifier = fieldModifier,
+    )
 }
 
 @Composable
@@ -411,6 +558,12 @@ private fun ErrorView(message: String) {
 @Composable
 private fun SearchContent(
     query: String,
+    // The field's text, shared with the Guide tab.
+    fieldText: String,
+    onFieldTextChange: (String) -> Unit,
+    // A tab switch: focus stays on the tab (no first-open focus, keyboard or jump to the results).
+    holdFocus: Boolean,
+    fieldModifier: Modifier,
     categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
     excludedCountByType: Map<String, Int>,
@@ -441,12 +594,10 @@ private fun SearchContent(
     // Down working at all.
     val historyFocusRequester = remember { FocusRequester() }
 
-    var localQuery by remember { mutableStateOf(query) }
-
     // Sync with incoming query only if local is empty (prevents erasing user input)
     LaunchedEffect(query) {
-        if (localQuery.isEmpty() && query.isNotEmpty()) {
-            localQuery = query
+        if (fieldText.isEmpty() && query.isNotEmpty()) {
+            onFieldTextChange(query)
         }
     }
 
@@ -458,10 +609,12 @@ private fun SearchContent(
     // searches, so Down reaches them; straight into the keyboard for a first search. Not on a
     // Back from a result — NavReturnFocusEffect lands on that result instead.
     var editing by remember {
-        mutableStateOf(mayOpenKeyboard && returnFocus.key == null && query.isEmpty() && !hasResults && searchHistory.isEmpty())
+        mutableStateOf(
+            mayOpenKeyboard && !holdFocus && returnFocus.key == null && query.isEmpty() && !hasResults && searchHistory.isEmpty(),
+        )
     }
     LaunchedEffect(Unit) {
-        if (returnFocus.key == null && !editing) searchFocusRequester.requestFocusWithRetry()
+        if (returnFocus.key == null && !holdFocus && !editing) searchFocusRequester.requestFocusWithRetry()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -471,19 +624,19 @@ private fun SearchContent(
                     Modifier.focusProperties { down = historyFocusRequester }
                 } else {
                     Modifier
-                },
-            query = localQuery,
-            onQueryChange = { localQuery = it },
-            onSearchSubmit = { onSearchSubmit(localQuery) },
+                }.then(fieldModifier),
+            query = fieldText,
+            onQueryChange = onFieldTextChange,
+            onSearchSubmit = { onSearchSubmit(fieldText) },
             onClear = {
-                localQuery = ""
+                onFieldTextChange("")
                 onClearSearch()
             },
             placeholder = searchPlaceholder(contentType),
             focusRequester = searchFocusRequester,
             editing = editing,
             onEditingChange = { editing = it },
-            showClearButton = localQuery.isNotEmpty() || results.isNotEmpty() || categoryResults.isNotEmpty(),
+            showClearButton = fieldText.isNotEmpty() || results.isNotEmpty() || categoryResults.isNotEmpty(),
             restingFieldModifier = Modifier.leftToRail(),
         )
 
@@ -494,7 +647,7 @@ private fun SearchContent(
                 SearchHistorySection(
                     history = searchHistory,
                     onItemClick = { term ->
-                        localQuery = term
+                        onFieldTextChange(term)
                         onHistoryItemClick(term)
                     },
                     onItemRemove = onHistoryItemRemove,
@@ -516,6 +669,7 @@ private fun SearchContent(
                 devStats = devStats,
                 sourceErrors = sourceErrors,
                 returnFocus = returnFocus,
+                holdFocus = holdFocus,
                 onResultClick = onResultClick,
                 onResultLongPress = onResultLongPress,
                 onCategoryClick = onCategoryClick,
@@ -630,6 +784,7 @@ private fun SearchResultsList(
     devStats: String?,
     sourceErrors: String?,
     returnFocus: NavReturnFocus,
+    holdFocus: Boolean,
     onResultClick: (SearchResult) -> Unit,
     onResultLongPress: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit,
@@ -654,7 +809,7 @@ private fun SearchResultsList(
     // — not when Back has just rebuilt the list and NavReturnFocusEffect is about to hand focus to
     // the result that was opened.
     LaunchedEffect(categoryResults, results, isSearching) {
-        if (returnFocus.key == null && !isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
+        if (returnFocus.key == null && !holdFocus && !isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
             firstItemFocusRequester.requestFocusWithRetry()
         }
     }

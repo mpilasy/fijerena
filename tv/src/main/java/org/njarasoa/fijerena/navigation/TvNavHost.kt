@@ -738,6 +738,18 @@ fun TvNavHost(
                                         ),
                                     )
                                 },
+                                // As Search the guide: the preview pane on the airing's channel; Back
+                                // pops back to the Guide tab.
+                                onGuideResult = { matched ->
+                                    navController.navigateOnce(
+                                        Screen.CategoryList(
+                                            contentType = ContentType.LIVE_TV,
+                                            initialCategoryId = matched.categoryId,
+                                            initialStreamId = matched.streamId.toString(),
+                                            providerId = matched.providerId,
+                                        ),
+                                    )
+                                },
                                 onBack = { navController.navigateUp() },
                             )
                         }
