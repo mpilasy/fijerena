@@ -129,7 +129,7 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 
 ### TV controls (D-pad)
 
-- **OK** opens the controls (never pauses): one row of icon buttons; the focused one shows its name. Live: Channels, Guide, Favourite, Subtitles, Audio, Quality (each when available), More → Stats. VOD: Play/Pause in the centre and the progress bar, then Chapters, Favourite, Subtitles, Audio, Quality, Next episode, More → Stats. Catch-up (a programme replayed from a channel's archive): the VOD controls under "CATCH-UP · programme · channel · day time", with Watch live first and no Favourite. They hide 15 s after the last key. Focus details: [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md#live-tv-preview--dock-back-stack) (the OSD).
+- **OK** opens the controls (never pauses): one row of icon buttons; the focused one shows its name. Live: Channels, Guide, Favourite, Subtitles, Audio, Quality (each when available), Stats (Expert mode). VOD: Play/Pause in the centre and the progress bar, then Chapters, Favourite, Subtitles, Audio, Quality, Next episode, Stats (Expert mode). Catch-up (a programme replayed from a channel's archive): the VOD controls under "CATCH-UP · programme · channel · day time", with Watch live first and no Favourite. They hide 15 s after the last key. Focus details: [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md#live-tv-preview--dock-back-stack) (the OSD).
 - **Up/Down** (Live TV) zap through the channel panel's list, with the controls up or not.
 - **Left/Right** (Live TV, controls hidden) open the channel panel: the preview's tabs and rows over the video; inside it Left/Right switch tabs (Recent ↔ Favourites in one press), OK on a row tunes it, Back closes it.
 - **Left/Right** (VOD, controls hidden, or on the focused progress bar): a tap jumps 10 s back or forward at once; held, they move a scrub cursor, speeding up to about 1, 3, then 10 min per second, and the seek happens on release (or OK); Back cancels.
@@ -160,7 +160,7 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 
 ### Stats for Nerds
 
-TV: More → Stats; a non-focusable panel in the top-right corner, so the player keeps the keys; double-OK or Back hides it. Mobile: the Stats button; closed with its X. Updated every second.
+TV: the Stats button (Expert mode only); a non-focusable panel in the top-right corner, so the player keeps the keys; double-OK or Back hides it. Mobile: the Stats button; closed with its X. Updated every second.
 
 - **NAME:** the provider's raw name (and the series' raw name for an episode); for a source with extra logins, which one this stream plays on ("Login 2 of 3")
 - **VIDEO:** codec, resolution, frame rate, bitrate

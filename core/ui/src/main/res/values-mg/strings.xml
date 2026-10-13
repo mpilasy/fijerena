@@ -773,7 +773,6 @@
     <string name="catchup_badge_days">%1$d andro</string>
     <!-- LT4 -->
     <string name="player_osd_channels">Fantsona</string>
-    <string name="player_osd_more">Hafa</string>
     <string name="player_osd_next_episode">Fizarana manaraka</string>
     <string name="player_osd_next_format">Manaraka: %1$s (%2$s)</string>
     <!-- LT5 -->

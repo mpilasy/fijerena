@@ -204,24 +204,26 @@ fun TvPlayerControlsOverlay(
     val showsPlayPause = showFullControls && canFocusPlayPause
     // VOD's D-pad column: Play/Pause → (Down) the seek bar → (Down) the first button of the row,
     // Up back the same way. Set explicitly: geometric search from the full-width seek bar picked
-    // the button nearest the screen's centre (More), not the first.
+    // the button nearest the screen's centre, not the first.
     val seekBarFocusRequester = remember { FocusRequester() }
     val hasSeekBar = !isLive && liveDuration > 0
 
     // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
     // implicit first child — whichever button happens to be first for this stream. Live opens on
     // Channels (LT4): a stray second OK opens the channel panel, never favourites the channel.
-    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on More, which
-    // only shows Stats — never on Favourite or a track picker.
+    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats (Expert
+    // mode), else Guide — never on Favourite or a track picker. With none of them it leaves focus
+    // where it is (the player), where OK does no harm.
     val channelsFocusRequester = remember { FocusRequester() }
-    val moreFocusRequester = remember { FocusRequester() }
+    val guideFocusRequester = remember { FocusRequester() }
     val statsFocusRequester = remember { FocusRequester() }
-    val safeIconFocusRequester = if (onShowChannels != null) channelsFocusRequester else moreFocusRequester
-    // ⋮ More: Stats (rarely used) sits behind it, shown in the row after More while open.
-    var moreOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(moreOpen) {
-        if (moreOpen) statsFocusRequester.requestFocusWithRetry()
-    }
+    val safeIconFocusRequester =
+        when {
+            onShowChannels != null -> channelsFocusRequester
+            isDeveloperMode -> statsFocusRequester
+            onShowGuide != null -> guideFocusRequester
+            else -> null
+        }
 
     // When a track picker closes (Back or a choice), focus goes back to the button that opened it,
     // instead of being left on nothing once the picker's rows leave composition.
@@ -234,7 +236,7 @@ fun TvPlayerControlsOverlay(
         val opener = pickerOpener
         if (!pickerOpen && opener != null) {
             pickerOpener = null
-            opener.requestFocusWithRetry(fallback = safeIconFocusRequester)
+            opener.requestFocusWithRetry(fallback = safeIconFocusRequester ?: iconRowFocusRequester)
         }
     }
 
@@ -243,17 +245,14 @@ fun TvPlayerControlsOverlay(
     // user has since navigated.
     var reachedPlayPauseFocus by remember { mutableStateOf(false) }
     LaunchedEffect(showFullControls) {
-        if (showFullControls) {
-            reachedPlayPauseFocus = false
-            moreOpen = false
-        }
+        if (showFullControls) reachedPlayPauseFocus = false
     }
 
     // Live: re-keyed on the stream too — Up/Down zap with the OSD up (LT4), and the new channel's
     // track buttons can come and go under focus, so focus goes back to Channels on each zap.
     LaunchedEffect(showFullControls, isLive, canFocusPlayPause, metadata.streamUrl.takeIf { isLive }) {
         if (showFullControls && !reachedPlayPauseFocus) {
-            val requester = if (isLive || !canFocusPlayPause) safeIconFocusRequester else controlsFocusRequester
+            val requester = (if (isLive || !canFocusPlayPause) safeIconFocusRequester else controlsFocusRequester) ?: return@LaunchedEffect
             // requestFocus() fails (returns false) if its target isn't composed/laid out yet — the
             // play/pause button only composes in this same frame canFocusPlayPause flips true
             // (see its guard below), so on a slower recompose one frame's delay wasn't always
@@ -652,8 +651,8 @@ fun TvPlayerControlsOverlay(
                 }
 
                 // Button row (only when full controls are visible). Icon buttons, each naming itself
-                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, ⋮ More (Stats);
-                // VOD the same without Channels, with Chapters first and Next episode before More.
+                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats (Expert mode);
+                // VOD the same without Channels, with Chapters first and Next episode before Stats.
                 // Left/Right move along it and stop at its ends; Up/Down zap on live
                 // (PlayerKeyHandler); on VOD Up goes back to the seek bar (or Play/Pause).
                 if (showFullControls) {
@@ -707,6 +706,7 @@ fun TvPlayerControlsOverlay(
                                 icon = CinemaIcons.DateRange,
                                 label = stringResource(R.string.player_osd_guide),
                                 onClick = onShowGuide,
+                                modifier = Modifier.focusRequester(guideFocusRequester),
                             )
                         }
 
@@ -788,15 +788,8 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        OsdButton(
-                            icon = CinemaIcons.MoreVert,
-                            label = stringResource(R.string.player_osd_more),
-                            onClick = { moreOpen = !moreOpen },
-                            modifier = Modifier.focusRequester(moreFocusRequester),
-                            iconTint = if (moreOpen) CinemaAccentLight else null,
-                        )
-
-                        if (moreOpen) {
+                        // Stats: a diagnostic, so Expert mode only.
+                        if (isDeveloperMode) {
                             OsdButton(
                                 icon = CinemaIcons.BarChart,
                                 label = stringResource(R.string.player_stats),
@@ -813,7 +806,7 @@ fun TvPlayerControlsOverlay(
 
 /**
  * One OSD button: [TvIconAction], the icon button used on details and across the app — its label
- * shows beside the icon while focused. [iconTint] marks a state (a favourite, More open).
+ * shows beside the icon while focused. [iconTint] marks a state (a favourite).
  */
 @Composable
 private fun OsdButton(
