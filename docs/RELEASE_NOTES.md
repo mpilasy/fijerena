@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Version: Unreleased
+## Version: 0.1.0
 
 - **Filter search results by source:** in Expert mode with two or more sources, Search can show one source's results only: on the phone, the filter icon in the search field; on TV, the row of source names above the results, each with how many results it has.
 - **Search the guide from Search:** Search has two tabs, Catalogue and Guide, when your sources have live channels. The Guide tab searches programme titles in the TV guide, as Search the guide does, with the same text: switch tabs and the search runs there. Search the guide is still where it was.
