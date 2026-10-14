@@ -219,6 +219,50 @@ scripts/deploy-mobile-usb.sh [<device-id>]
 
 ---
 
+## Releasing
+
+Downloadable APKs are published on the repository's GitHub Releases page by
+`.github/workflows/release.yml`, when a tag `v<version>` is pushed. Both apps share one version,
+`fijerena.versionName` / `fijerena.versionCode` in `gradle.properties`; the workflow refuses a tag
+that doesn't match `versionName`. It runs the unit tests, builds `assembleRelease` signed with the
+release key (release plan D7: one key for both apps), and publishes `fijerena-tv-<version>.apk`,
+`fijerena-phone-<version>.apk` and `SHA256SUMS`, with `docs/RELEASE_NOTES.md`'s first section as
+the notes. Release builds are not minified yet (release plan R2).
+
+**One-time setup: the release key.** Every release must be signed with the same key, or it won't
+install over the last one. Lose it and users must uninstall (losing their data) to update, so keep
+an encrypted offline backup.
+
+```bash
+keytool -genkeypair -keystore fijerena-release.jks -alias fijerena -keyalg RSA -keysize 4096 \
+  -validity 10000 -dname "CN=Fijerena"
+gh secret set FIJERENA_KEYSTORE_BASE64 < <(base64 -w0 fijerena-release.jks)
+gh secret set FIJERENA_KEYSTORE_PASSWORD   # prompts
+gh secret set FIJERENA_KEY_ALIAS --body fijerena
+gh secret set FIJERENA_KEY_PASSWORD        # prompts (the store password, unless keytool asked for another)
+```
+
+To sign release builds locally too, add a `keystore.properties` at the repository root (ignored by
+git, as are `*.jks` and `*.keystore`):
+
+```properties
+storeFile=/path/to/fijerena-release.jks
+storePassword=…
+keyAlias=fijerena
+keyPassword=…
+```
+
+Without the key (no `FIJERENA_*` environment variables, no `keystore.properties`), `assembleRelease`
+still builds, unsigned (`*-release-unsigned.apk`).
+
+**A release.**
+
+1. Raise `fijerena.versionCode` (every release, or the APK won't install over the last one) and
+   set `fijerena.versionName` in `gradle.properties`.
+2. Retitle `docs/RELEASE_NOTES.md`'s "Version: Unreleased" heading to the version.
+3. Commit, push `main`, then tag and push the tag:
+   `git tag v<version> && git push origin v<version>`.
+
 ## Logcat & Debugging
 
 Filter logs for app-specific diagnostics:

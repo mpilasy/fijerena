@@ -39,8 +39,8 @@ made yourself.
 
 ## Install
 
-Release builds will be published on F-Droid and on this repository's GitHub Releases page from
-version 1.0. Until then, build it from source (see [Building](#building)).
+Signed APKs are on this repository's [GitHub Releases](https://github.com/mpilasy/fijerena/releases)
+page; F-Droid is planned from version 1.0. Or build it from source (see [Building](#building)).
 
 The TV app and the phone app are separate APKs: install the TV one on a TV and the phone one on a
 phone.

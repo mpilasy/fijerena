@@ -24,3 +24,8 @@ local.properties
 /test_plan.sh
 /guides.json
 /epg_browser.png
+
+# Release signing key and its passwords (release plan D7): never committed.
+/keystore.properties
+*.jks
+*.keystore

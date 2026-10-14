@@ -1,6 +1,7 @@
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,8 +16,9 @@ android {
         applicationId = "org.njarasoa.fijerena"
         minSdk = 30
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.0"
+        // Both apps' version, in gradle.properties: a release tag must match it (release.yml).
+        versionCode = providers.gradleProperty("fijerena.versionCode").get().toInt()
+        versionName = providers.gradleProperty("fijerena.versionName").get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -41,6 +43,29 @@ android {
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
     }
 
+    // Release signing (release plan D7): the key from FIJERENA_* environment variables in CI, or from
+    // keystore.properties (never committed) on a developer's machine. Without either, a release
+    // build is unsigned.
+    signingConfigs {
+        val keystoreProperties =
+            rootProject.file("keystore.properties").takeIf { it.exists() }?.let { file ->
+                Properties().apply { file.inputStream().use { load(it) } }
+            }
+
+        fun signingValue(
+            env: String,
+            key: String,
+        ): String? = providers.environmentVariable(env).orNull ?: keystoreProperties?.getProperty(key)
+        signingValue("FIJERENA_KEYSTORE_FILE", "storeFile")?.let { path ->
+            create("release") {
+                storeFile = rootProject.file(path)
+                storePassword = signingValue("FIJERENA_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingValue("FIJERENA_KEY_ALIAS", "keyAlias")
+                keyPassword = signingValue("FIJERENA_KEY_PASSWORD", "keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Emulators are x86/x86_64; without these the debug build ran its ARM libraries
@@ -50,6 +75,7 @@ android {
             }
         }
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
