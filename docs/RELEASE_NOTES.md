@@ -2,6 +2,7 @@
 
 ## Version: Unreleased
 
+- **Filter search results by source:** with two or more sources, Search shows a row of their names, with how many results each has, above the results; pick one to see only its results, or All sources.
 - **Search the guide from Search:** Search has two tabs, Catalogue and Guide, when your sources have live channels. The Guide tab searches programme titles in the TV guide, as Search the guide does, with the same text: switch tabs and the search runs there. Search the guide is still where it was.
 - **Search the guide loses its "Matched only" toggle:** results show only programmes on channels you have, as the toggle did by default.
 - **Source names take less room:** with more than one source, the source's name now shows only in Expert mode, and in Recent and Favourites it opens a row's second line (before the category, or a channel's Now line) instead of crowding the title; an ordinary category's rows no longer carry it at all. The Source row on film and show details follows the same rule (TV: Expert mode only now; phone: new).

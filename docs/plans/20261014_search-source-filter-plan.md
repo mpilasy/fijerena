@@ -39,6 +39,8 @@ on TV and phone.
   for the recent searches); Left from the first → the rail. Choosing a source keeps focus on it: the
   results' jump to their first item is held while the row has focus.
 - **Known gap.** The "N hidden" lines (matches in excluded categories) count every source.
+- **Open.** Source names elsewhere show only in Expert mode (source badges); this row shows them to
+  everyone in a multi-source profile, since choosing a source needs its name.
 
 ## Phases
 
@@ -46,5 +48,5 @@ on TV and phone.
 |---|---|---|---|
 | 1 | Source counts and the effective selection, with tests | core/ui | Done, 5e70e88c |
 | 2 | Phone: source chip row in the Catalogue tab | phone `SearchScreen`, strings | Done, e6732f57 |
-| 3 | TV: source button row, focus, focus walk | TV `SearchScreen`, `scripts/focus-walks/search-sources.txt` | Done (this commit); walk written, not recorded |
-| 4 | Docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES); emulator check on a two-source profile | docs | |
+| 3 | TV: source button row, focus, focus walk | TV `SearchScreen`, `scripts/focus-walks/search-sources.txt` | Done, afb56c8b; walk written, not recorded |
+| 4 | Docs (FEATURES, RELEASE_NOTES; NAVIGATION_GUIDE unchanged, no new route); emulator check on a two-source profile | docs | Docs done (this commit); emulator check not run |
