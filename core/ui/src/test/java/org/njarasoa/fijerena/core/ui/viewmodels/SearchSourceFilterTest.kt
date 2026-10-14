@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 
-/** Search's source filter (docs/plans/20261014_search-source-filter-plan.md, Phase 1). */
+/** Search's source filter (docs/plans/archive/20261014_search-source-filter-plan.md, Phase 1). */
 class SearchSourceFilterTest {
     @Test
     fun `each source is counted over categories and results, sorted by name`() {

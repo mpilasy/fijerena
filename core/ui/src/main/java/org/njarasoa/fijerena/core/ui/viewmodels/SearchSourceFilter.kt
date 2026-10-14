@@ -3,7 +3,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 
-// Search's source filter on TV and phone (docs/plans/20261014_search-source-filter-plan.md).
+// Search's source filter on TV and phone (docs/plans/archive/20261014_search-source-filter-plan.md).
 
 /** A source among a search's results, and how many of them are from it. */
 data class SearchSourceCount(

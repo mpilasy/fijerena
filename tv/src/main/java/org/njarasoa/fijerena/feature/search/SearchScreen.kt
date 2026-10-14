@@ -487,7 +487,7 @@ private fun SearchTabRow(
 }
 
 /**
- * The results' sources in a multi-source profile (docs/plans/20261014_search-source-filter-plan.md):
+ * The results' sources in a multi-source profile (docs/plans/archive/20261014_search-source-filter-plan.md):
  * OK on one shows only its results, on All sources every source's; focus stays on the row. Up goes to
  * the field (not the Catalogue tab, whose centre is closer to a left-hand button), Left from the
  * first to the rail, Down to the results.

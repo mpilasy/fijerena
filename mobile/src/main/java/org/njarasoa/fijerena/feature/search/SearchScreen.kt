@@ -303,7 +303,7 @@ fun MobileSearchScreen(
                 return@Column
             }
 
-            // The results' sources (docs/plans/20261014_search-source-filter-plan.md): Expert mode
+            // The results' sources (docs/plans/archive/20261014_search-source-filter-plan.md): Expert mode
             // only, as the source badges — without it results don't name their source.
             val successState = uiState as? SearchViewModel.UiState.Success
             val showSources = LocalShowSourceBadges.current
