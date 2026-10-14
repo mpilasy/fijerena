@@ -5,6 +5,7 @@ package org.njarasoa.fijerena.feature.search
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -104,14 +106,18 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchTab
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.effectiveSourceFilter
+import org.njarasoa.fijerena.core.ui.viewmodels.fromSource
 import org.njarasoa.fijerena.core.ui.viewmodels.lastRunQuery
 import org.njarasoa.fijerena.core.ui.viewmodels.queryToRunOnTabSwitch
+import org.njarasoa.fijerena.core.ui.viewmodels.searchSourceCounts
 import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
@@ -193,6 +199,8 @@ fun SearchScreen(
     val activeTab = if (showsTabs) selectedTab else SearchTab.CATALOGUE
     // The field's text, shared by both tabs; each tab's own state holds the query it last ran.
     var fieldText by rememberSaveable { mutableStateOf("") }
+    // The source chosen in a multi-source profile (null: every source); kept until Search closes.
+    var selectedSource by rememberSaveable { mutableStateOf<Long?>(null) }
     // Set by a tab switch: focus stays on the tab, so the tab shown takes no first-open focus,
     // keyboard or jump to its results until its field is reached.
     var holdFocus by remember { mutableStateOf(false) }
@@ -364,14 +372,22 @@ fun SearchScreen(
                             successState.sourceErrors
                                 .takeIf { appSettings.isDevMode && it.isNotEmpty() }
                                 ?.joinToString("\n")
+                        val sources =
+                            remember(successState.categoryResults, successState.filteredResults) {
+                                searchSourceCounts(successState.categoryResults, successState.filteredResults)
+                            }
+                        val source = effectiveSourceFilter(selectedSource, sources)
                         SearchContent(
                             query = successState.query,
                             fieldText = fieldText,
                             onFieldTextChange = { fieldText = it },
                             holdFocus = holdFocus,
                             fieldModifier = fieldModifier,
-                            categoryResults = successState.categoryResults,
-                            results = successState.filteredResults,
+                            categoryResults = successState.categoryResults.fromSource(source),
+                            results = successState.filteredResults.fromSource(source),
+                            sources = sources,
+                            selectedSource = source,
+                            onSourceChange = { selectedSource = it },
                             excludedCountByType = successState.excludedCountByType,
                             isSearching = successState.isSearching,
                             searchProgress = successState.searchProgress ?: "",
@@ -457,6 +473,50 @@ private fun SearchTabRow(
             text = stringResource(R.string.search_tab_guide),
             modifier = Modifier.focusRequester(guideFocus).then(toField),
         )
+    }
+}
+
+/**
+ * The results' sources in a multi-source profile (docs/plans/20261014_search-source-filter-plan.md):
+ * OK on one shows only its results, on All sources every source's; focus stays on the row. Up goes to
+ * the field (not the Catalogue tab, whose centre is closer to a left-hand button), Left from the
+ * first to the rail, Down to the results.
+ */
+@Composable
+private fun SearchSourceRow(
+    sources: List<SearchSourceCount>,
+    selected: Long?,
+    onSelect: (Long?) -> Unit,
+    selectedFocus: FocusRequester,
+    fieldFocus: FocusRequester,
+    onFocusChange: (Boolean) -> Unit,
+) {
+    fun Modifier.focusIfSelected(isSelected: Boolean) = if (isSelected) focusRequester(selectedFocus) else this
+    Row(
+        modifier =
+            Modifier
+                .padding(bottom = Spacing.md)
+                .onFocusChanged { onFocusChange(it.hasFocus) }
+                .focusProperties {
+                    onExit = { if (requestedFocusDirection == FocusDirection.Up) fieldFocus.requestFocus() }
+                }.focusGroup()
+                .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        TvSelectableButton(
+            selected = selected == null,
+            onSelect = { onSelect(null) },
+            text = "${stringResource(R.string.search_all_sources_label)} (${sources.sumOf { it.count }})",
+            modifier = Modifier.focusIfSelected(selected == null).leftToRail(),
+        )
+        for (source in sources) {
+            TvSelectableButton(
+                selected = selected == source.providerId,
+                onSelect = { onSelect(if (selected == source.providerId) null else source.providerId) },
+                text = "${source.name} (${source.count})",
+                modifier = Modifier.focusIfSelected(selected == source.providerId),
+            )
+        }
     }
 }
 
@@ -551,6 +611,10 @@ private fun SearchContent(
     fieldModifier: Modifier,
     categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
+    // The results' sources, empty under two; the chosen one (null: every source).
+    sources: List<SearchSourceCount>,
+    selectedSource: Long?,
+    onSourceChange: (Long?) -> Unit,
     excludedCountByType: Map<String, Int>,
     isSearching: Boolean,
     searchProgress: String?,
@@ -578,6 +642,10 @@ private fun SearchContent(
     // the history is actually on screen, since aiming `down` at an unattached requester would stop
     // Down working at all.
     val historyFocusRequester = remember { FocusRequester() }
+    // The chosen source's button: Down from the field lands there while the source row shows.
+    val sourceFocusRequester = remember { FocusRequester() }
+    // Choosing a source keeps focus on it: the results don't jump to their first item meanwhile.
+    var sourceRowFocused by remember { mutableStateOf(false) }
 
     // Sync with incoming query only if local is empty (prevents erasing user input)
     LaunchedEffect(query) {
@@ -589,6 +657,8 @@ private fun SearchContent(
     // Results or empty state — show results whenever they exist, even if text field is cleared
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
     val showsHistory = !hasResults && query.isEmpty() && searchHistory.isNotEmpty()
+    // Results from two or more sources (never with the recent searches, which show without results).
+    val showsSources = sources.isNotEmpty()
 
     // Entry (Part II Phase 7, F-S-1/F-S-2): the field without the keyboard when there are recent
     // searches, so Down reaches them; straight into the keyboard for a first search. Not on a
@@ -605,10 +675,10 @@ private fun SearchContent(
     Column(modifier = Modifier.fillMaxSize()) {
         TvSearchField(
             modifier =
-                if (showsHistory) {
-                    Modifier.focusProperties { down = historyFocusRequester }
-                } else {
-                    Modifier
+                when {
+                    showsHistory -> Modifier.focusProperties { down = historyFocusRequester }
+                    showsSources -> Modifier.focusProperties { down = sourceFocusRequester }
+                    else -> Modifier
                 }.then(fieldModifier),
             query = fieldText,
             onQueryChange = onFieldTextChange,
@@ -644,6 +714,16 @@ private fun SearchContent(
                 TvEmptyState(message = searchPlaceholder(contentType), icon = CinemaIcons.Search)
             }
         } else {
+            if (showsSources) {
+                SearchSourceRow(
+                    sources = sources,
+                    selected = selectedSource,
+                    onSelect = onSourceChange,
+                    selectedFocus = sourceFocusRequester,
+                    fieldFocus = searchFocusRequester,
+                    onFocusChange = { sourceRowFocused = it },
+                )
+            }
             SearchResultsList(
                 categoryResults = categoryResults,
                 results = results,
@@ -655,7 +735,7 @@ private fun SearchContent(
                 devStats = devStats,
                 sourceErrors = sourceErrors,
                 returnFocus = returnFocus,
-                holdFocus = holdFocus,
+                holdFocus = holdFocus || sourceRowFocused,
                 onResultClick = onResultClick,
                 onResultLongPress = onResultLongPress,
                 onCategoryClick = onCategoryClick,
