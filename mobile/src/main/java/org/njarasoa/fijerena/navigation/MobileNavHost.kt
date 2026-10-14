@@ -144,11 +144,12 @@ fun MobileNavHost(
     // with the same query and the result's section chip — so Back returns to the results, then to
     // the tab's start. The tab left is cut back to its root, so its saved place doesn't keep the
     // search. Same section, or a section the bar doesn't show (a single-section source): opened
-    // where it is, as before.
+    // where it is, as before. A Guide tab result ([guide]) brings the search back on its Guide tab.
     fun openInSectionTab(
         contentType: String,
         screen: Screen,
         query: String,
+        guide: Boolean = false,
     ) {
         val target = MobileTab.entries.firstOrNull { it.contentType == contentType }
         val current = navController.currentTab()
@@ -161,7 +162,12 @@ fun MobileNavHost(
         selectTab(target)
         if (query.isNotBlank()) {
             navController.navigate(
-                Screen.Search(SearchViewModel.CONTENT_TYPE_ALL, initialQuery = query, initialTypeFilter = contentType),
+                Screen.Search(
+                    SearchViewModel.CONTENT_TYPE_ALL,
+                    initialQuery = query,
+                    initialTypeFilter = contentType,
+                    initialGuideTab = guide,
+                ),
             )
         }
         navController.navigate(screen)
@@ -382,6 +388,7 @@ fun MobileNavHost(
             contentType = searchScreen.contentType,
             initialTypeFilter = searchScreen.initialTypeFilter,
             initialQuery = searchScreen.initialQuery,
+            initialGuideTab = searchScreen.initialGuideTab,
             onStreamSelected = { itemId, itemName, categoryId, contentType, providerId ->
                 val screen =
                     when (contentType) {
@@ -426,16 +433,19 @@ fun MobileNavHost(
                     openingQuery,
                 )
             },
-            // A Guide tab result opens as Search the guide's does: the docked mini-player, over
-            // Search, so Back returns to the Guide tab.
+            // A Guide tab result opens as Search the guide's does, the docked mini-player, in the
+            // Live TV tab like a channel result; Back returns to the Guide tab.
             onGuideResult = { matched ->
-                navController.navigateOnce(
+                openInSectionTab(
+                    ContentType.LIVE_TV,
                     Screen.CategoryList(
                         contentType = ContentType.LIVE_TV,
                         initialCategoryId = matched.categoryId,
                         initialStreamId = matched.streamId.toString(),
                         providerId = matched.providerId,
                     ),
+                    openingQuery,
+                    guide = true,
                 )
             },
             onBack = onBack,

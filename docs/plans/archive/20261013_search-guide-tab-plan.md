@@ -68,3 +68,21 @@ The Search screen searches either the catalogue or the guide, picked with two ta
 - **Focus on TV.** A new row between the header and the field changes Up/Down from the field and
   the first-open focus (the field, or the history chips). Check both tabs with and without history.
 - **Two ViewModels on one screen.** Each keeps its own state; nothing is shared but the query text.
+
+## Review follow-up (2026-10-14)
+
+A review of the merged work found five points, all fixed in one commit:
+
+- **Phone: a guide result from Search inside Movies or TV Shows** opened Live TV content with that
+  tab still highlighted. It now opens in the Live TV tab like a channel result
+  (`openInSectionTab(…, guide = true)`), the search brought along on its Guide tab
+  (`Screen.Search.initialGuideTab`), so Back still returns to the Guide tab. This replaces Phase 3's
+  "opens over Search in the Search tab".
+- **The Guide tab missed a local source's playlist added later**: `hasGuide` followed only changes to
+  which sources the profile has. It now follows every write to them (`profileSources`), which also
+  drops its separate source-list read.
+- **Phone: a catalogue search could fire after switching to the Guide tab** within the 300 ms
+  as-you-type wait. The tab is checked again after the wait.
+- **The tab rules were written twice** (TV and phone). `SearchTab`, `showsGuideTab`,
+  `queryToRunOnTabSwitch` and the guide's last query are shared from core/ui (`SearchTabs.kt`,
+  tested by core/ui `SearchTabsTest`).

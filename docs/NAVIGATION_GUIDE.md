@@ -109,7 +109,7 @@ Search(contentType | "ALL") | SearchTab (phone: Search over "ALL" as a tab root)
 ├─→ CategoryList(LIVE_TV, category, channel)   live result: opens on that channel
 ├─→ MovieDetails | EpisodeSelection
 ├─→ CategoryList(contentType, category)        category result
-└─→ CategoryList(LIVE_TV, category, channel)   Guide tab result (the Catalogue | Guide tabs show over ALL / Live TV with a live source); phone: pushed in the Search tab, Back returns to the Guide tab
+└─→ CategoryList(LIVE_TV, category, channel)   Guide tab result (the Catalogue | Guide tabs show over ALL / Live TV with a live source); phone: opened in the Live TV tab with the search brought along on its Guide tab (`openInSectionTab`), Back returns to it
 
 EpgGuide ──→ CategoryList(LIVE_TV, category, channel)   channel cell, or Watch channel in a programme's details
 EpgGuide ──→ Player(channel, catchup window)               Watch from start in a programme's details (catch-up)

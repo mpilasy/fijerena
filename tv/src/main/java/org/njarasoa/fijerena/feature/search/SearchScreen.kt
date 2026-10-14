@@ -104,11 +104,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchTab
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.lastRunQuery
+import org.njarasoa.fijerena.core.ui.viewmodels.queryToRunOnTabSwitch
+import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.epgbrowser.TvGuideSearchPane
@@ -333,7 +337,7 @@ fun SearchScreen(
             } else {
                 // Shown again with a query it hasn't run: run it here (D3).
                 LaunchedEffect(Unit) {
-                    queryToRerun(fieldText, (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query)
+                    queryToRunOnTabSwitch(fieldText, (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query)
                         ?.let { viewModel.performSearch(it) }
                 }
                 when (val state = uiState) {
@@ -427,21 +431,6 @@ fun SearchScreen(
     }
 }
 
-/** Search's two tabs (search guide tab plan, D1). */
-private enum class SearchTab { CATALOGUE, GUIDE }
-
-/** Search offers its Guide tab when it covers live channels and a source has them (O1). */
-internal fun showsGuideTab(
-    contentType: String,
-    hasGuide: Boolean,
-): Boolean = hasGuide && (contentType == SearchViewModel.CONTENT_TYPE_ALL || contentType == ContentType.LIVE_TV)
-
-/** The field's text to run on a tab just shown, or null when it is blank or that tab last ran it (D3). */
-internal fun queryToRerun(
-    fieldText: String,
-    lastRun: String?,
-): String? = fieldText.takeIf { it.isNotBlank() && it.trim() != lastRun?.trim() }
-
 /** Catalogue | Guide under the header: OK selects, Left from the first opens the rail, Down goes to the field. */
 @Composable
 private fun SearchTabRow(
@@ -488,13 +477,7 @@ private fun GuideTab(
         viewModel(factory = remember { EpgBrowserViewModelFactory(context.applicationContext, null, 0L) })
     // Shown with a query it hasn't run: run it here (D3).
     LaunchedEffect(Unit) {
-        val lastRun =
-            when (val state = guideViewModel.uiState.value) {
-                is EpgBrowserViewModel.UiState.Results -> state.query
-                is EpgBrowserViewModel.UiState.IndexBusy -> state.query
-                else -> null
-            }
-        queryToRerun(query, lastRun)?.let { guideViewModel.performSearch(it) }
+        queryToRunOnTabSwitch(query, guideViewModel.uiState.value.lastRunQuery())?.let { guideViewModel.performSearch(it) }
     }
     TvGuideSearchPane(
         viewModel = guideViewModel,

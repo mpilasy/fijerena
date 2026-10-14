@@ -10,6 +10,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -74,6 +76,19 @@ class SearchViewModelMultiSourceTest {
         assertEquals("Alpha", state.categoryResults.single().sourceName)
         assertEquals(mapOf(ContentType.MOVIES to 3), state.excludedCountByType)
         assertTrue(state.sourceErrors.isEmpty())
+    }
+
+    @Test
+    fun `the Guide tab shows once a local source gets a playlist`() {
+        val rows = MutableStateFlow(listOf(local(A, config = "")))
+        every { providers.profileSources(any()) } returns rows
+        val viewModel = SearchViewModel(context, ContentType.MOVIES)
+        assertFalse(viewModel.hasGuide.value)
+
+        // Only the row's config changes: the same source, still the profile's only one.
+        rows.value = listOf(local(A, config = """{"m3uPath":"/sdcard/tv.m3u"}"""))
+
+        assertTrue(viewModel.hasGuide.value)
     }
 
     @Test
@@ -196,6 +211,11 @@ class SearchViewModelMultiSourceTest {
         id: Long,
         name: String,
     ) = ProviderEntity(id = id, name = name, url = "", username = "", type = "XTREAM")
+
+    private fun local(
+        id: Long,
+        config: String,
+    ) = ProviderEntity(id = id, name = "Local", url = "", username = "", type = "LOCAL", config = config)
 
     private fun movie(
         id: String,

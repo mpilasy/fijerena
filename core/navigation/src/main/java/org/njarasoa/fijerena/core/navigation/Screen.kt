@@ -150,6 +150,8 @@ sealed interface Screen {
         val initialQuery: String? = null,
         // Phone: a section's Search opens "ALL" with this section's filter chip selected.
         val initialTypeFilter: String? = null,
+        // Phone: opened on its Guide tab, [initialQuery] run there (a Guide result's search, brought along).
+        val initialGuideTab: Boolean = false,
     ) : Screen
 
     /**

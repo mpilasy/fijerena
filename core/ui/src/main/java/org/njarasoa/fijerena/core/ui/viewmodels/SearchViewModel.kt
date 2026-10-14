@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -192,7 +193,7 @@ class SearchViewModel(
             )
         _searchHistory.value = appSettings.getSearchHistory()
         prefetchAll()
-        loadHasGuide()
+        followHasGuide()
         // The profile's sources changed (one turned on or off, added or deleted): the search covers
         // them as they now are, and the results on screen are searched again.
         viewModelScope.launchGuarded("SearchViewModel.followProfileSources") {
@@ -205,7 +206,6 @@ class SearchViewModel(
                     sources = null
                     prefetchedCategories.clear()
                     prefetchAll()
-                    loadHasGuide()
                     val query = (_uiState.value as? UiState.Success)?.query.orEmpty()
                     if (query.length >= 2) {
                         searchJob?.cancel()
@@ -215,14 +215,16 @@ class SearchViewModel(
         }
     }
 
-    private fun loadHasGuide() {
-        viewModelScope.launchGuarded("SearchViewModel.hasGuide", Dispatchers.IO) {
-            _hasGuide.value =
-                AppContainer
-                    .getInstance(context)
-                    .providerRepository
-                    .profileSourcesList()
-                    .any { MediaProviderFactory.hasLiveTv(it) }
+    // Follows every write to the profile's sources, not just a change of which they are: a local
+    // source's playlist added in Settings gives it live channels without changing the set.
+    private fun followHasGuide() {
+        viewModelScope.launchGuarded("SearchViewModel.hasGuide") {
+            AppContainer
+                .getInstance(context)
+                .providerRepository
+                .profileSources(appSettings.activeProfileId)
+                .map { sources -> sources.any { MediaProviderFactory.hasLiveTv(it) } }
+                .collect { _hasGuide.value = it }
         }
     }
 
