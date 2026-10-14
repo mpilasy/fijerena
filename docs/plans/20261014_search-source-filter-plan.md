@@ -31,7 +31,7 @@ on TV and phone.
   name so the row doesn't reorder as results stream in; the selected source while it still has
   results, else every source (a new query without it shows them all, as the type chips do).
 - **One at a time.** "All sources" or one source; tapping the selected source again goes back to all.
-- **Shown** whenever the results span two or more sources, any section's Search (not only "ALL").
+- **Shown** in Expert mode whenever the results span two or more sources, any section's Search (not only "ALL").
 - **Type and source together.** The type chips (phone) and the type groups (TV) are built from the
   filtered results, so their counts follow the source.
 - **TV focus.** The row sits between the field and the results. Down from the field → the selected
@@ -39,8 +39,8 @@ on TV and phone.
   for the recent searches); Left from the first → the rail. Choosing a source keeps focus on it: the
   results' jump to their first item is held while the row has focus.
 - **Known gap.** The "N hidden" lines (matches in excluded categories) count every source.
-- **Open.** Source names elsewhere show only in Expert mode (source badges); this row shows them to
-  everyone in a multi-source profile, since choosing a source needs its name.
+- **D5 — Expert mode only** (2026-10-14), as the source badges: without them results don't name their
+  source, so the row would make no sense. Off, no row and no filtering.
 
 ## Phases
 

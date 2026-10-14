@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -386,9 +387,11 @@ fun MobileSearchScreen(
                             } else {
                                 null
                             }
+                        // Expert mode only, as the source badges: without it results don't name their source.
+                        val showSources = LocalShowSourceBadges.current
                         val sources =
-                            remember(state.categoryResults, state.filteredResults) {
-                                searchSourceCounts(state.categoryResults, state.filteredResults)
+                            remember(state.categoryResults, state.filteredResults, showSources) {
+                                if (showSources) searchSourceCounts(state.categoryResults, state.filteredResults) else emptyList()
                             }
                         val source = effectiveSourceFilter(selectedSource, sources)
                         SearchResults(

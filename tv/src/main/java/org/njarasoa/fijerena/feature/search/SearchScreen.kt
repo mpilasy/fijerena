@@ -95,6 +95,7 @@ import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -372,9 +373,18 @@ fun SearchScreen(
                             successState.sourceErrors
                                 .takeIf { appSettings.isDevMode && it.isNotEmpty() }
                                 ?.joinToString("\n")
+                        // Expert mode only, as the source badges: without it results don't name their source.
+                        val showSources = LocalShowSourceBadges.current
                         val sources =
-                            remember(successState.categoryResults, successState.filteredResults) {
-                                searchSourceCounts(successState.categoryResults, successState.filteredResults)
+                            remember(successState.categoryResults, successState.filteredResults, showSources) {
+                                if (showSources) {
+                                    searchSourceCounts(
+                                        successState.categoryResults,
+                                        successState.filteredResults,
+                                    )
+                                } else {
+                                    emptyList()
+                                }
                             }
                         val source = effectiveSourceFilter(selectedSource, sources)
                         SearchContent(
