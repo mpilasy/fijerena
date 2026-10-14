@@ -36,11 +36,15 @@ fun effectiveSourceFilter(
     sources: List<SearchSourceCount>,
 ): Long? = selected?.takeIf { id -> sources.any { it.providerId == id } }
 
-/** The categories from [providerId], or all of them when null. */
+/**
+ * The categories from [providerId], or all of them when null. Narrowed to one source they lose
+ * their source badge: all one source's, it tells them apart from nothing (the chosen source shows
+ * above them).
+ */
 fun List<CategorySearchResult>.fromSource(providerId: Long?): List<CategorySearchResult> =
-    if (providerId == null) this else filter { it.providerId == providerId }
+    if (providerId == null) this else filter { it.providerId == providerId }.map { it.copy(sourceName = null) }
 
-/** The results from [providerId], or all of them when null. */
+/** The results from [providerId], or all of them when null; narrowed, without their source badge. */
 @JvmName("resultsFromSource")
 fun List<SearchResult>.fromSource(providerId: Long?): List<SearchResult> =
-    if (providerId == null) this else filter { it.providerId == providerId }
+    if (providerId == null) this else filter { it.providerId == providerId }.map { it.copy(sourceName = null) }

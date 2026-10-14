@@ -48,6 +48,16 @@ class SearchSourceFilterTest {
         assertEquals(results, results.fromSource(null))
     }
 
+    @Test
+    fun `results narrowed to one source lose their source badge, all of them keep it`() {
+        val results = listOf(result("1", A, "Alpha"), result("2", B, "Beta"))
+        val categories = listOf(category(A, "Alpha"), category(B, "Beta"))
+
+        assertEquals(listOf<String?>(null), results.fromSource(B).map { it.sourceName })
+        assertEquals(listOf<String?>(null), categories.fromSource(A).map { it.sourceName })
+        assertEquals(listOf("Alpha", "Beta"), results.fromSource(null).map { it.sourceName })
+    }
+
     private fun result(
         id: String,
         providerId: Long,

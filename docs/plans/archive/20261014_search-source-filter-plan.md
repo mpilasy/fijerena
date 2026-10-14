@@ -42,6 +42,8 @@ on TV and phone.
   search (`Screen.Search.initialSource`, as the type chip), so Back finds it still chosen.
 - **TV Up from the results** is sent to the chosen source (`onExit` on the results); the geometric
   search went over the row to the field.
+- **No badges when narrowed** (2026-10-14): results of the chosen source drop their source badge,
+  as an ordinary category's rows carry none; "All sources" keeps them.
 - **Known gap.** The "N hidden" lines (matches in excluded categories) count every source.
 - **D6 — Phone: an icon in the field** (2026-10-14, after the emulator check: the chip row took too
   much room). A filter icon beside the clear button opens a menu of the sources with counts; while one
