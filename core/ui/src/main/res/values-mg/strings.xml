@@ -79,6 +79,8 @@
     <string name="common_search">Tadiavo</string>
     <string name="search_tab_catalogue">Katalaogy</string>
     <string name="search_tab_guide">Fandaharana</string>
+    <!-- Search source filter: the choice that shows every source's results -->
+    <string name="search_all_sources_label">Ny loharano rehetra</string>
     <string name="common_tv_guide">Fandaharana</string>
 
     <string name="common_refresh">Havaozy</string>

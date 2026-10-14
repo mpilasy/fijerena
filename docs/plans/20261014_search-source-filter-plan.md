@@ -44,7 +44,7 @@ on TV and phone.
 
 | # | Work | Where | Status |
 |---|---|---|---|
-| 1 | Source counts and the effective selection, with tests | core/ui | Done (this commit) |
-| 2 | Phone: source chip row in the Catalogue tab | phone `SearchScreen`, strings | |
+| 1 | Source counts and the effective selection, with tests | core/ui | Done, 5e70e88c |
+| 2 | Phone: source chip row in the Catalogue tab | phone `SearchScreen`, strings | Done (this commit) |
 | 3 | TV: source button row, focus, focus walk lines | TV `SearchScreen`, `scripts/focus-walks/search.txt` | |
 | 4 | Docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES); emulator check on a two-source profile | docs | |

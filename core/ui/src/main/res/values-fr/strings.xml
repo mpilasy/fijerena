@@ -79,6 +79,8 @@
     <string name="common_search">Rechercher</string>
     <string name="search_tab_catalogue">Catalogue</string>
     <string name="search_tab_guide">Guide</string>
+    <!-- Search source filter: the choice that shows every source's results -->
+    <string name="search_all_sources_label">Toutes les sources</string>
     <string name="common_tv_guide">Guide TV</string>
 
     <string name="common_refresh">Actualiser</string>

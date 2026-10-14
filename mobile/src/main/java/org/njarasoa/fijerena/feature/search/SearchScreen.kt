@@ -62,12 +62,16 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchTab
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.effectiveSourceFilter
+import org.njarasoa.fijerena.core.ui.viewmodels.fromSource
 import org.njarasoa.fijerena.core.ui.viewmodels.lastRunQuery
 import org.njarasoa.fijerena.core.ui.viewmodels.queryToRunOnTabSwitch
+import org.njarasoa.fijerena.core.ui.viewmodels.searchSourceCounts
 import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
@@ -144,6 +148,8 @@ fun MobileSearchScreen(
     // filter would silently reset to "All" every time the user kept typing.
     // A section's Search arrives with its own section selected; All is one tap away.
     var selectedTypeFilter by rememberSaveable { mutableStateOf(initialTypeFilter) }
+    // The source chip chosen in a multi-source profile (null: every source), kept the same way.
+    var selectedSource by rememberSaveable { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
@@ -380,10 +386,18 @@ fun MobileSearchScreen(
                             } else {
                                 null
                             }
+                        val sources =
+                            remember(state.categoryResults, state.filteredResults) {
+                                searchSourceCounts(state.categoryResults, state.filteredResults)
+                            }
+                        val source = effectiveSourceFilter(selectedSource, sources)
                         SearchResults(
-                            categoryResults = state.categoryResults,
+                            categoryResults = state.categoryResults.fromSource(source),
                             sourceErrors = state.sourceErrors.takeIf { appSettings.isDevMode }.orEmpty(),
-                            results = state.filteredResults,
+                            results = state.filteredResults.fromSource(source),
+                            sources = sources,
+                            selectedSource = source,
+                            onSourceChange = { selectedSource = it },
                             excludedCountByType = state.excludedCountByType,
                             query = state.query,
                             queryContentType = contentType,
@@ -551,6 +565,10 @@ private fun SearchResults(
     // Developer mode: a raw line per source left out because its search failed.
     sourceErrors: List<String>,
     results: List<SearchViewModel.SearchResult>,
+    // The results' sources, empty under two; the chosen one (null: every source).
+    sources: List<SearchSourceCount>,
+    selectedSource: Long?,
+    onSourceChange: (Long?) -> Unit,
     excludedCountByType: Map<String, Int>,
     query: String,
     queryContentType: String,
@@ -646,6 +664,33 @@ private fun SearchResults(
                 selectedTypeFilter?.takeIf { filter ->
                     groupedByType.any { (type, cats, streams) -> type == filter && (cats.isNotEmpty() || streams.isNotEmpty()) }
                 }
+
+            // Source chips: in a multi-source profile, the results of one source
+            // (docs/plans/20261014_search-source-filter-plan.md). The type chips below count what
+            // they leave.
+            if (sources.isNotEmpty()) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    CinemaFilterChip(
+                        selected = selectedSource == null,
+                        onClick = { onSourceChange(null) },
+                        label = { Text("${stringResource(R.string.search_all_sources_label)} (${sources.sumOf { it.count }})") },
+                    )
+                    for (source in sources) {
+                        CinemaFilterChip(
+                            selected = selectedSource == source.providerId,
+                            onClick = { onSourceChange(if (selectedSource == source.providerId) null else source.providerId) },
+                            label = { Text("${source.name} (${source.count})") },
+                        )
+                    }
+                }
+            }
 
             // Scope filter chips — only meaningful for Global Search, where results already span
             // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
