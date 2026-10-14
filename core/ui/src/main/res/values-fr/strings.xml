@@ -81,6 +81,10 @@
     <string name="search_tab_guide">Guide</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Toutes les sources</string>
+    <!-- Phone Search: the filter icon in the field that opens the source menu -->
+    <string name="search_source_filter_label">Filtrer par source</string>
+    <!-- Phone Search: under the field while one source is chosen; %1$s is its name -->
+    <string name="search_source_only_format">%1$s uniquement</string>
     <string name="common_tv_guide">Guide TV</string>
 
     <string name="common_refresh">Actualiser</string>

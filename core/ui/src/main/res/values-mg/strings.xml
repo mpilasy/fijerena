@@ -81,6 +81,10 @@
     <string name="search_tab_guide">Fandaharana</string>
     <!-- Search source filter: the choice that shows every source's results -->
     <string name="search_all_sources_label">Ny loharano rehetra</string>
+    <!-- Phone Search: the filter icon in the field that opens the source menu -->
+    <string name="search_source_filter_label">Sivano araka ny loharano</string>
+    <!-- Phone Search: under the field while one source is chosen; %1$s is its name -->
+    <string name="search_source_only_format">%1$s ihany</string>
     <string name="common_tv_guide">Fandaharana</string>
 
     <string name="common_refresh">Havaozy</string>

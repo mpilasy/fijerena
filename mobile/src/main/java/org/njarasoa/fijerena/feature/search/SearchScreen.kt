@@ -78,6 +78,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
@@ -112,7 +113,7 @@ fun MobileSearchScreen(
     onCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     // Told the query just before a result opens, so a result opened in another tab can bring the
     // search along (MobileNavHost.openInSectionTab) and Back still returns to these results.
-    onResultOpening: (query: String) -> Unit = {},
+    onResultOpening: (query: String, source: Long?) -> Unit = { _, _ -> },
     // Null on the Search tab's root: no Back arrow.
     onBack: (() -> Unit)?,
     initialQuery: String? = null,
@@ -120,6 +121,8 @@ fun MobileSearchScreen(
     // Opened on the Guide tab, its [initialQuery] run there: a Guide result's search, brought along
     // to the Live TV tab (MobileNavHost.openInSectionTab).
     initialGuideTab: Boolean = false,
+    // The source chosen in the search brought along (MobileNavHost.openInSectionTab).
+    initialSource: Long? = null,
     // A Guide tab result: its channel, as Search the guide opens it.
     onGuideResult: (EpgBrowserMatchedStream) -> Unit = {},
     viewModel: SearchViewModel =
@@ -150,7 +153,7 @@ fun MobileSearchScreen(
     // A section's Search arrives with its own section selected; All is one tap away.
     var selectedTypeFilter by rememberSaveable { mutableStateOf(initialTypeFilter) }
     // The source chip chosen in a multi-source profile (null: every source), kept the same way.
-    var selectedSource by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedSource by rememberSaveable { mutableStateOf(initialSource) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
@@ -291,13 +294,28 @@ fun MobileSearchScreen(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     onGuideResult = {
-                        onResultOpening(searchQuery)
+                        // The guide's results aren't filtered by source (plan D1).
+                        onResultOpening(searchQuery, null)
                         onGuideResult(it)
                     },
                     snackbarHostState = snackbarHostState,
                 )
                 return@Column
             }
+
+            // The results' sources (docs/plans/20261014_search-source-filter-plan.md): Expert mode
+            // only, as the source badges — without it results don't name their source.
+            val successState = uiState as? SearchViewModel.UiState.Success
+            val showSources = LocalShowSourceBadges.current
+            val sources =
+                remember(successState?.categoryResults, successState?.filteredResults, showSources) {
+                    if (showSources && successState != null) {
+                        searchSourceCounts(successState.categoryResults, successState.filteredResults)
+                    } else {
+                        emptyList()
+                    }
+                }
+            val source = effectiveSourceFilter(selectedSource, sources)
 
             // Search bar — searches as you type; the keyboard's search action runs it at once.
             val keyboardController = LocalSoftwareKeyboardController.current
@@ -324,17 +342,26 @@ fun MobileSearchScreen(
                             color = CinemaTextPrimary,
                         )
                     } else if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
-                        IconButton(
-                            onClick = {
-                                searchQuery = ""
-                                viewModel.clearSearch()
-                            },
-                        ) {
-                            Icon(
-                                imageVector = CinemaIcons.Close,
-                                contentDescription = stringResource(R.string.provider_clear_button),
-                                tint = CinemaTextPrimary,
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (sources.isNotEmpty()) {
+                                SourceFilterAction(
+                                    sources = sources,
+                                    selected = source,
+                                    onSelect = { selectedSource = it },
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    viewModel.clearSearch()
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = CinemaIcons.Close,
+                                    contentDescription = stringResource(R.string.provider_clear_button),
+                                    tint = CinemaTextPrimary,
+                                )
+                            }
                         }
                     }
                 },
@@ -361,6 +388,14 @@ fun MobileSearchScreen(
                         unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.2f),
                     ),
             )
+            sources.firstOrNull { it.providerId == source }?.let { chosen ->
+                Text(
+                    text = stringResource(R.string.search_source_only_format, chosen.name),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = Spacing.lg, bottom = Spacing.xs),
+                )
+            }
 
             Box(
                 modifier =
@@ -387,20 +422,10 @@ fun MobileSearchScreen(
                             } else {
                                 null
                             }
-                        // Expert mode only, as the source badges: without it results don't name their source.
-                        val showSources = LocalShowSourceBadges.current
-                        val sources =
-                            remember(state.categoryResults, state.filteredResults, showSources) {
-                                if (showSources) searchSourceCounts(state.categoryResults, state.filteredResults) else emptyList()
-                            }
-                        val source = effectiveSourceFilter(selectedSource, sources)
                         SearchResults(
                             categoryResults = state.categoryResults.fromSource(source),
                             sourceErrors = state.sourceErrors.takeIf { appSettings.isDevMode }.orEmpty(),
                             results = state.filteredResults.fromSource(source),
-                            sources = sources,
-                            selectedSource = source,
-                            onSourceChange = { selectedSource = it },
                             excludedCountByType = state.excludedCountByType,
                             query = state.query,
                             queryContentType = contentType,
@@ -418,7 +443,7 @@ fun MobileSearchScreen(
                             onHistoryItemRemove = { viewModel.removeSearchHistoryEntry(it) },
                             onClearHistory = { viewModel.clearSearchHistory() },
                             onResultClick = { result ->
-                                onResultOpening(searchQuery)
+                                onResultOpening(searchQuery, source)
                                 viewModel.keepTypedSearch()
                                 onStreamSelected(
                                     result.itemId,
@@ -438,7 +463,7 @@ fun MobileSearchScreen(
                                 }
                             },
                             onCategoryClick = { catResult ->
-                                onResultOpening(searchQuery)
+                                onResultOpening(searchQuery, source)
                                 viewModel.keepTypedSearch()
                                 onCategorySelected(catResult.categoryId, catResult.contentType, catResult.providerId)
                             },
@@ -490,6 +515,47 @@ internal fun MobileSearchTabs(
                 selectedContentColor = MaterialTheme.colorScheme.primary,
                 unselectedContentColor = CinemaTextSecondary,
             )
+        }
+    }
+}
+
+/**
+ * The filter icon in the field: a menu of the results' sources with their counts, the chosen one
+ * marked; the icon takes the accent colour while one source is chosen.
+ */
+@Composable
+private fun SourceFilterAction(
+    sources: List<SearchSourceCount>,
+    selected: Long?,
+    onSelect: (Long?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconAction(
+            onClick = { expanded = true },
+            icon = CinemaIcons.Tune,
+            label = stringResource(R.string.search_source_filter_label),
+            tint = if (selected != null) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            val choices =
+                listOf(null to "${stringResource(R.string.search_all_sources_label)} (${sources.sumOf { it.count }})") +
+                    sources.map { it.providerId to "${it.name} (${it.count})" }
+            for ((providerId, label) in choices) {
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelect(providerId)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (providerId == selected) CinemaIcons.RadioButtonChecked else CinemaIcons.RadioButtonUnchecked,
+                            contentDescription = null,
+                        )
+                    },
+                )
+            }
         }
     }
 }
@@ -568,10 +634,6 @@ private fun SearchResults(
     // Developer mode: a raw line per source left out because its search failed.
     sourceErrors: List<String>,
     results: List<SearchViewModel.SearchResult>,
-    // The results' sources, empty under two; the chosen one (null: every source).
-    sources: List<SearchSourceCount>,
-    selectedSource: Long?,
-    onSourceChange: (Long?) -> Unit,
     excludedCountByType: Map<String, Int>,
     query: String,
     queryContentType: String,
@@ -667,33 +729,6 @@ private fun SearchResults(
                 selectedTypeFilter?.takeIf { filter ->
                     groupedByType.any { (type, cats, streams) -> type == filter && (cats.isNotEmpty() || streams.isNotEmpty()) }
                 }
-
-            // Source chips: in a multi-source profile, the results of one source
-            // (docs/plans/20261014_search-source-filter-plan.md). The type chips below count what
-            // they leave.
-            if (sources.isNotEmpty()) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                ) {
-                    CinemaFilterChip(
-                        selected = selectedSource == null,
-                        onClick = { onSourceChange(null) },
-                        label = { Text("${stringResource(R.string.search_all_sources_label)} (${sources.sumOf { it.count }})") },
-                    )
-                    for (source in sources) {
-                        CinemaFilterChip(
-                            selected = selectedSource == source.providerId,
-                            onClick = { onSourceChange(if (selectedSource == source.providerId) null else source.providerId) },
-                            label = { Text("${source.name} (${source.count})") },
-                        )
-                    }
-                }
-            }
 
             // Scope filter chips — only meaningful for Global Search, where results already span
             // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")

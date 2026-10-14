@@ -1,9 +1,9 @@
 # Search source filter (docs/plans/20261014_search-source-filter-plan.md, Phase 3), TV emulator.
-# Start: a profile with two sources; Home → Search, run a query with results from both, then move
-# focus to the field. The source row sits under it with All sources chosen.
-# Written 2026-10-14, not recorded yet. A source's button shows its name, which differs per device,
-# so those lines are left unchecked.
-@start Search films, shows and channels
+# Start: a profile with two sources and Expert mode on; Home → Search, run a query with results
+# from both ("news" here: the field shows the query), then move focus to the field. The source row sits under it with All sources chosen.
+# Checked on the TV emulator 2026-10-14 (profile Kid: bears and xstream4k, "news"). A source's
+# button shows its name, which differs per device, so those lines are left unchecked.
+@start news
 # Down from the field → the chosen source.
 DOWN	All sources
 # Left from the first button → the rail; Right → back.
@@ -12,15 +12,14 @@ RIGHT	All sources
 # OK on a source chooses it and keeps focus on it.
 RIGHT	
 CENTER	
-WAIT 1	
-# Up from the row → the field, not the Catalogue tab.
-UP	Search films, shows and channels
-# Down → the chosen source; OK on it again goes back to every source.
-DOWN	
-CENTER	
-WAIT 1	
-UP	Search films, shows and channels
-DOWN	All sources
-# Down from the row → the results; Up → back to the row.
-DOWN	
+WAIT 2	
+# Down → the results; Up from their top → the chosen source, not the field.
+DOWN	results
 UP	
+# OK on the chosen source again goes back to every source; Up from the row → the field.
+CENTER	
+WAIT 2	
+UP	news
+DOWN	All sources
+DOWN	results
+UP	All sources

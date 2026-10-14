@@ -501,15 +501,14 @@ private fun SearchSourceRow(
     fieldFocus: FocusRequester,
     onFocusChange: (Boolean) -> Unit,
 ) {
-    fun Modifier.focusIfSelected(isSelected: Boolean) = if (isSelected) focusRequester(selectedFocus) else this
+    // Up from any button goes to the field.
+    fun Modifier.focusIfSelected(isSelected: Boolean) =
+        focusProperties { up = fieldFocus }.then(if (isSelected) Modifier.focusRequester(selectedFocus) else Modifier)
     Row(
         modifier =
             Modifier
                 .padding(bottom = Spacing.md)
                 .onFocusChanged { onFocusChange(it.hasFocus) }
-                .focusProperties {
-                    onExit = { if (requestedFocusDirection == FocusDirection.Up) fieldFocus.requestFocus() }
-                }.focusGroup()
                 .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -734,23 +733,37 @@ private fun SearchContent(
                     onFocusChange = { sourceRowFocused = it },
                 )
             }
-            SearchResultsList(
-                categoryResults = categoryResults,
-                results = results,
-                excludedCountByType = excludedCountByType,
-                query = query,
-                queryContentType = contentType,
-                isSearching = isSearching,
-                searchProgress = searchProgress,
-                devStats = devStats,
-                sourceErrors = sourceErrors,
-                returnFocus = returnFocus,
-                holdFocus = holdFocus || sourceRowFocused,
-                onResultClick = onResultClick,
-                onResultLongPress = onResultLongPress,
-                onCategoryClick = onCategoryClick,
-                onCategoryLongPress = onCategoryLongPress,
-            )
+            // Up out of the results' top goes to the chosen source; left to the geometric search, it
+            // reached the field over the row.
+            Box(
+                modifier =
+                    if (showsSources) {
+                        Modifier
+                            .focusProperties {
+                                onExit = { if (requestedFocusDirection == FocusDirection.Up) sourceFocusRequester.requestFocus() }
+                            }.focusGroup()
+                    } else {
+                        Modifier
+                    },
+            ) {
+                SearchResultsList(
+                    categoryResults = categoryResults,
+                    results = results,
+                    excludedCountByType = excludedCountByType,
+                    query = query,
+                    queryContentType = contentType,
+                    isSearching = isSearching,
+                    searchProgress = searchProgress,
+                    devStats = devStats,
+                    sourceErrors = sourceErrors,
+                    returnFocus = returnFocus,
+                    holdFocus = holdFocus || sourceRowFocused,
+                    onResultClick = onResultClick,
+                    onResultLongPress = onResultLongPress,
+                    onCategoryClick = onCategoryClick,
+                    onCategoryLongPress = onCategoryLongPress,
+                )
+            }
         }
     }
 }

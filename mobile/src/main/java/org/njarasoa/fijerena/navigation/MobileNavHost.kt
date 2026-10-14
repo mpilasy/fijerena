@@ -150,6 +150,7 @@ fun MobileNavHost(
         screen: Screen,
         query: String,
         guide: Boolean = false,
+        source: Long? = null,
     ) {
         val target = MobileTab.entries.firstOrNull { it.contentType == contentType }
         val current = navController.currentTab()
@@ -167,6 +168,7 @@ fun MobileNavHost(
                     initialQuery = query,
                     initialTypeFilter = contentType,
                     initialGuideTab = guide,
+                    initialSource = source,
                 ),
             )
         }
@@ -383,12 +385,17 @@ fun MobileNavHost(
     // section's tab.
     val search: @Composable (Screen.Search, (() -> Unit)?) -> Unit = { searchScreen, onBack ->
         var openingQuery by remember { mutableStateOf("") }
+        var openingSource by remember { mutableStateOf<Long?>(null) }
         MobileSearchScreen(
-            onResultOpening = { openingQuery = it },
+            onResultOpening = { query, source ->
+                openingQuery = query
+                openingSource = source
+            },
             contentType = searchScreen.contentType,
             initialTypeFilter = searchScreen.initialTypeFilter,
             initialQuery = searchScreen.initialQuery,
             initialGuideTab = searchScreen.initialGuideTab,
+            initialSource = searchScreen.initialSource,
             onStreamSelected = { itemId, itemName, categoryId, contentType, providerId ->
                 val screen =
                     when (contentType) {
@@ -420,7 +427,7 @@ fun MobileNavHost(
                             )
                         }
                     }
-                openInSectionTab(contentType, screen, openingQuery)
+                openInSectionTab(contentType, screen, openingQuery, source = openingSource)
             },
             onCategorySelected = { categoryId, contentType, providerId ->
                 openInSectionTab(
@@ -431,6 +438,7 @@ fun MobileNavHost(
                         providerId = providerId,
                     ),
                     openingQuery,
+                    source = openingSource,
                 )
             },
             // A Guide tab result opens as Search the guide's does, the docked mini-player, in the

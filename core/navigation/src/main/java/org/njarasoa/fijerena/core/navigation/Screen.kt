@@ -152,6 +152,8 @@ sealed interface Screen {
         val initialTypeFilter: String? = null,
         // Phone: opened on its Guide tab, [initialQuery] run there (a Guide result's search, brought along).
         val initialGuideTab: Boolean = false,
+        // Phone: the source chosen in the search brought along (a source's providerId), null for every source.
+        val initialSource: Long? = null,
     ) : Screen
 
     /**
