@@ -69,7 +69,7 @@ fijerena-web  (one container)
 |---|---|
 | `core:network` | Reused. Android bits go behind interfaces (Phase 0): `Context` (90 imports), `SharedPreferences` (30 files), `Log` (46), WorkManager, `ConnectivityManager`, encrypted prefs. `java.*`, OkHttp, smbj, Room's blocking DAOs (with the bundled SQLite driver) and the XML parser (kxml2) all work on the JVM. |
 | `core:player` | Domain models only (`domain/`, `model/`). Media3, `StreamingPlaybackService` and the FFmpeg decoder stay Android. |
-| `core:ui` | ViewModels are not reused as code; their logic moves to server services or is ported to Svelte stores. Design tokens are exported as CSS custom properties. |
+| `core:ui` | Its non-UI logic (`history/MergedLists`, `home/ProfileSections`, search tabs and source filter, recent channels, the rules inside ViewModels) moves into a shared multiplatform module that both the Android ViewModels and the server call, so it is never written twice (Phase 3). ViewModels stay on Android, thinner; Svelte stores hold UI state only. Design tokens are exported as CSS custom properties. |
 | `core:navigation`, `mobile`, `tv` | Not used. The SPA's routes mirror `Screen`. |
 | `server/` (sync) | Unchanged; the web server is a client of it. |
 
