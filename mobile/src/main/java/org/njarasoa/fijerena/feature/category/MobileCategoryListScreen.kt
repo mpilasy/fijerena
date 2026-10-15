@@ -1712,7 +1712,7 @@ private fun StreamsList(
                             StreamCard(
                                 item = item,
                                 // Only where the list mixes sources: an ordinary category is one source's.
-                                sourceName = sourceNames[item.providerId].takeIf { CategoryViewModel.isMergedList(selectedCategoryId) },
+                                sourceName = sourceNames[item.providerId].takeIf { CategoryViewModel.mixesSources(selectedCategoryId) },
                                 categoryName = categoryNames[categoryKey(item.categoryId, item.providerId)],
                                 // Per-row state by the row's sourceKey (Phase 6).
                                 nowPlayingProgram = nowPlaying[item.sourceKey],

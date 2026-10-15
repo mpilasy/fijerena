@@ -278,6 +278,7 @@ fun MobileEpgGuideScreen(
                                     onRowsVisible = viewModel::onRowsVisible,
                                     isRowLoaded = state::isRowLoaded,
                                     catchupDays = state.catchupDays,
+                                    sourceNames = state.sourceNames,
                                 )
                             }
                         }

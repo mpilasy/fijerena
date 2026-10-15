@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Source names in Favourite and Recent categories:** with more than one source (Expert mode), each row of Favourite categories and Recent categories now carries its source's name, as Recent and Favourites do; so does each channel in the phone's TV guide of Recent or Favourites.
+
 ## Version: 0.1.0
 
 - **Filter search results by source:** in Expert mode with two or more sources, Search can show one source's results only: on the phone, the filter icon in the search field; on TV, the row of source names above the results, each with how many results it has.

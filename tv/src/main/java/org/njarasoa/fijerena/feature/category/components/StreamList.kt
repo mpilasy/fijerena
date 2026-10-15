@@ -504,7 +504,7 @@ internal fun StreamList(
                                         // Only where the list mixes sources: an ordinary category is one source's.
                                         sourceName =
                                             sourceNames[item.providerId].takeIf {
-                                                CategoryViewModel.isMergedList(
+                                                CategoryViewModel.mixesSources(
                                                     selectedCategoryId,
                                                 )
                                             },

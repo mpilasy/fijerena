@@ -59,6 +59,7 @@ import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
@@ -111,6 +112,8 @@ fun MobileGuideGrid(
     isRowLoaded: (index: Int) -> Boolean = { true },
     /** Archive days per row (`sourceKey`): past programmes the archive holds get a replay mark (catch-up). */
     catchupDays: Map<String, Int> = emptyMap(),
+    /** Each source's name by id when the rows mix sources (Recent, Favourites): a badge on each channel. */
+    sourceNames: Map<Long, String> = emptyMap(),
 ) {
     val density = LocalDensity.current
     val zone = remember { ZoneId.systemDefault() }
@@ -209,6 +212,7 @@ fun MobileGuideGrid(
                     channelColumnWidth = channelColumnWidth,
                     noListings = row.programs.isEmpty() && isRowLoaded(index),
                     archiveDays = catchupDays[row.channel.sourceKey] ?: 0,
+                    sourceName = sourceNames[row.channel.providerId],
                     onChannelClick = { onChannelClick(row.channel) },
                     onProgramClick = { program -> onProgramClick(program, row.channel) },
                 )
@@ -273,6 +277,7 @@ private fun GuideRow(
     channelColumnWidth: Dp,
     noListings: Boolean,
     archiveDays: Int,
+    sourceName: String?,
     onChannelClick: () -> Unit,
     onProgramClick: (EpgProgram) -> Unit,
 ) {
@@ -282,6 +287,7 @@ private fun GuideRow(
     Row(modifier = Modifier.fillMaxWidth().height(MobileDimensions.epgProgramHeight)) {
         ChannelCell(
             channel = row.channel,
+            sourceName = sourceName,
             onClick = onChannelClick,
             modifier = Modifier.width(channelColumnWidth).fillMaxHeight(),
         )
@@ -343,10 +349,14 @@ private fun GuideRow(
     }
 }
 
-/** The channel's logo with its name beneath, or the name alone when it has no logo. Tap = tune. */
+/**
+ * The channel's logo with its name beneath, or the name alone when it has no logo; above them its
+ * source's badge when the rows mix sources. Tap = tune.
+ */
 @Composable
 private fun ChannelCell(
     channel: MediaItem,
+    sourceName: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -359,6 +369,7 @@ private fun ChannelCell(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        sourceName?.let { SourceBadge(it) }
         if (hasLogo) {
             CinemaThumbnail(
                 url = channel.thumbnailUrl,

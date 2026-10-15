@@ -104,6 +104,13 @@ class CategoryViewModel(
         fun isMergedList(categoryId: String?): Boolean = categoryId == RECENT_CATEGORY_ID || categoryId == FAVORITES_CATEGORY_ID
 
         /**
+         * Whether [categoryId]'s rows come from every source of the profile, so each carries its
+         * source's badge: Recent, Favourites, Favourite Categories and Recent Categories.
+         */
+        fun mixesSources(categoryId: String?): Boolean =
+            isMergedList(categoryId) || categoryId == FAVORITE_CATEGORIES_ID || categoryId == RECENTLY_VIEWED_CATEGORIES_ID
+
+        /**
          * The lists a TV Guide of [categoryId] reads around [repo], the route's source: for Recent
          * or Favourites every Xtream source of the profile's, as the lists show them; a category
          * stays on [repo]'s own source.
