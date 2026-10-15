@@ -365,12 +365,13 @@ private fun MovieDetailsContent(
                     val tabs =
                         remember(hasCast, hasMoreLikeThis) {
                             buildList {
-                                if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
-                                if (hasCast) add(MovieDetailTab.CAST)
                                 add(MovieDetailTab.DETAILS)
+                                if (hasCast) add(MovieDetailTab.CAST)
+                                // Last: it loads late, so it shifts no other tab when it appears.
+                                if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
                             }
                         }
-                    // Kept by tab, not index: More Like This loads late and shifts the tabs after it.
+                    // Kept by tab, not index: a tab appearing or going never moves the selection.
                     var pickedTab by rememberSaveable { mutableStateOf<MovieDetailTab?>(null) }
                     val selectedTab = pickedTab?.takeIf { it in tabs } ?: tabs.first()
 
@@ -442,7 +443,7 @@ private fun MovieDetailsContent(
 }
 
 /** Section tabs, in display order. */
-private enum class MovieDetailTab { MORE_LIKE_THIS, CAST, DETAILS }
+private enum class MovieDetailTab { DETAILS, CAST, MORE_LIKE_THIS }
 
 @Composable
 private fun movieDetailTabLabel(tab: MovieDetailTab): String =

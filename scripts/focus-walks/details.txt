@@ -4,7 +4,7 @@
 # Walk 2 start: during the WAIT, open a TV show with several seasons and a continue-watching
 # episode past the first few (Home → TV Shows → the show → OK). Focus is on that episode.
 # Written 2026-10-03 from the plan. Walk 1 checked 2026-10-08 (jellyxtream, 2001: A Space Odyssey):
-# 9 steps, 0 mismatches. Walk 2 not yet run: jellyxtream has no show with a continue-watching
+# 9 steps, 0 mismatches (tab lines changed 2026-10-15: Details first; not rechecked). Walk 2 not yet run: jellyxtream has no show with a continue-watching
 # episode past the first few.
 # Lines marked (-r) depend on the title's data (which tabs it has, the episode's place in the
 # list) and are left unchecked or checked loosely until recorded.
@@ -20,15 +20,15 @@ RIGHT	Watched
 # Refresh info is no longer in the row: More is the last button (a trailer icon would sit before it).
 RIGHT	More
 LEFT	Watched
-# Down from any action → the selected tab: the first one, More Like This when the movie has
-# related titles (its collection or similar ones), else Cast or Details (-r).
-DOWN	More like this
+# Down from any action → the selected tab: the first one, Details (tabs: Details, Cast when the
+# film lists its cast, More Like This last when it has related titles).
+DOWN	Details
 LEFT	Movies
-RIGHT	More like this
+RIGHT	Details
 # Up from a tab → Play, not the button above the tab.
 UP	▶ Play Movie
-DOWN	More like this
-# The next tab, then Up again → Play (-r for the tab name: Cast or Details).
+DOWN	Details
+# The next tab, then Up again → Play (-r for the tab name: Cast, or More like this without a cast).
 RIGHT	Cast
 UP	▶ Play Movie
 # Leave the movie for walk 2.

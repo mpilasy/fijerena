@@ -300,9 +300,10 @@ private fun MovieDetailsContent(
     val tabs =
         remember(hasCast, hasMoreLikeThis) {
             buildList {
-                if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
-                if (hasCast) add(MovieDetailTab.CAST)
                 add(MovieDetailTab.DETAILS)
+                if (hasCast) add(MovieDetailTab.CAST)
+                // Last: it loads late, so it shifts no other tab when it appears.
+                if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
             }
         }
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
@@ -750,7 +751,7 @@ private fun LoadingScreen() {
 
 /** Section tabs built from what a movie actually has (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md
  * Phase 4) — [DETAILS] is the only one always present. */
-private enum class MovieDetailTab { MORE_LIKE_THIS, CAST, DETAILS }
+private enum class MovieDetailTab { DETAILS, CAST, MORE_LIKE_THIS }
 
 @Composable
 private fun movieDetailTabLabel(tab: MovieDetailTab): String =

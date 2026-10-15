@@ -459,9 +459,10 @@ internal fun EpisodeListContent(
         remember(hasCast, hasMoreLikeThis) {
             buildList {
                 add(SeriesDetailTab.EPISODES)
-                if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
-                if (hasCast) add(SeriesDetailTab.CAST)
                 add(SeriesDetailTab.DETAILS)
+                if (hasCast) add(SeriesDetailTab.CAST)
+                // Last: it loads late, so it shifts no other tab when it appears.
+                if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
             }
         }
     // Episodes, not the first tab: the episode list is this screen's primary content, so it
@@ -1482,7 +1483,7 @@ internal fun EpisodeListContent(
 private enum class EpisodeStep { PREVIOUS, NEXT }
 
 /** Phase 5 tab shell (docs/plans/archive/20260902_tv-detail-hero-ui-plan.md) — mirrors MovieDetailTab. */
-private enum class SeriesDetailTab { EPISODES, MORE_LIKE_THIS, CAST, DETAILS }
+private enum class SeriesDetailTab { EPISODES, DETAILS, CAST, MORE_LIKE_THIS }
 
 @Composable
 private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Details tabs in a new order:** on film and show pages (TV and phone), Details comes first (after Episodes on a show), then Cast, then More like this last. More like this loads after the rest, so it no longer pushes the other tabs along when it appears.
 - **Source names in Favourite and Recent categories:** with more than one source (Expert mode), each row of Favourite categories and Recent categories now carries its source's name, as Recent and Favourites do; so does each channel in the phone's TV guide of Recent or Favourites.
 
 ## Version: 0.1.0

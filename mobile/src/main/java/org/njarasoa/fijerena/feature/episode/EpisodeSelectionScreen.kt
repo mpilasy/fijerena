@@ -546,12 +546,13 @@ private fun EpisodeListContent(
         remember(hasCast, hasMoreLikeThis) {
             buildList {
                 add(SeriesDetailTab.EPISODES)
-                if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
-                if (hasCast) add(SeriesDetailTab.CAST)
                 add(SeriesDetailTab.DETAILS)
+                if (hasCast) add(SeriesDetailTab.CAST)
+                // Last: it loads late, so it shifts no other tab when it appears.
+                if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
             }
         }
-    // Kept by tab, not index: More Like This loads late and shifts the tabs after it.
+    // Kept by tab, not index: a tab appearing or going never moves the selection.
     var pickedTab by rememberSaveable { mutableStateOf(SeriesDetailTab.EPISODES) }
     val selectedTab = pickedTab.takeIf { it in tabs } ?: SeriesDetailTab.EPISODES
 
@@ -859,7 +860,7 @@ private fun EpisodeListContent(
 }
 
 /** Section tabs, in display order. */
-private enum class SeriesDetailTab { EPISODES, MORE_LIKE_THIS, CAST, DETAILS }
+private enum class SeriesDetailTab { EPISODES, DETAILS, CAST, MORE_LIKE_THIS }
 
 @Composable
 private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
