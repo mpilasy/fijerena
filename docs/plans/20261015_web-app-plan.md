@@ -87,6 +87,10 @@ The server holds provider credentials and is on the public internet, so it is cl
 - **Stream URLs:** `<video>` and the player libraries cannot send headers, so every stream and
   segment URL carries a short-lived HMAC token bound to the session and the stream; the gateway
   rejects anything else. Provider URLs and credentials never reach the browser.
+- **Images too:** channel logos, posters and backdrops (often hosted on the provider's panel) go
+  through a server image proxy with a disk cache, never loaded by the browser from their origin.
+  So the providers, TMDB and logo hosts only ever see the home IP, never the IP of wherever the
+  browser is.
 - **Brute force:** per-IP and per-account login rate limits; failures logged with the client IP in
   a fixed format (fail2ban-friendly). The client IP comes from `X-Forwarded-For` only when the
   request arrives from NPM's container network, never trusted otherwise.
