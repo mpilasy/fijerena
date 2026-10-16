@@ -705,21 +705,35 @@ class XtreamMediaProvider(
         return cached?.map { it.toDomain(mediaType) }
     }
 
-    /** Builds the FTS MATCH expression for [query], or null when nothing searchable remains. */
+    /**
+     * Builds the FTS MATCH expression for [query], or null when nothing searchable remains. A word
+     * matches as a prefix ("har pot" finds Harry Potter); words in double or single quotes match whole
+     * and in that order ("\"la\" land" or "'la' land" doesn't find TV LAND, which "la" would as a
+     * prefix of "land"). A single quote inside a word is an apostrophe ("don't", "ocean's").
+     */
     private fun buildFtsQuery(query: String): String? {
-        val words =
-            query
-                .trim()
-                .split("\\s+".toRegex())
-                .filter { it.isNotBlank() && !it.startsWith("-") }
-        if (words.isEmpty()) return null
         // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
-        val ftsQuery =
-            words
-                .map { it.replace(Regex("[*\"'()\\^]"), "") }
-                .filter { it.isNotBlank() }
-                .joinToString(" ") { "$it*" }
-        return ftsQuery.ifBlank { null }
+        fun clean(word: String) = word.replace(FTS_SPECIAL, "")
+        val terms =
+            QUERY_TERM.findAll(query.trim()).mapNotNull { term ->
+                val quoted = term.groups[1]?.value ?: term.groups[2]?.value
+                if (quoted != null) {
+                    quoted
+                        .split(WHITESPACE)
+                        .map(::clean)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                        .ifBlank { null }
+                        ?.let { "\"$it\"" }
+                } else {
+                    term.value
+                        .takeUnless { it.startsWith("-") }
+                        ?.let(::clean)
+                        ?.ifBlank { null }
+                        ?.let { "$it*" }
+                }
+            }
+        return terms.joinToString(" ").ifBlank { null }
     }
 
     override suspend fun search(
@@ -1095,3 +1109,9 @@ internal fun resolveSeriesTmdbId(
     infoTmdb: String?,
     storedTmdb: String?,
 ): Int? = infoTmdb.normalizeTmdbId()?.toIntOrNull() ?: storedTmdb.normalizeTmdbId()?.toIntOrNull()
+
+// A group in double quotes ("la la"), one in single quotes that open and close at a word's edge
+// ('la la', not the apostrophes of "don't"), or a word; an unclosed quote reads as words.
+private val QUERY_TERM = Regex(""""([^"]*)"|(?<!\S)'([^']*)'(?!\S)|[^\s"]+""")
+private val WHITESPACE = Regex("\\s+")
+private val FTS_SPECIAL = Regex("""[*"'()^]""")
