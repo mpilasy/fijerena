@@ -48,8 +48,19 @@ class AdaptiveLoadControl(
     // this reference, so a swap takes effect on the very next call. Rebuilding just constructs
     // a fresh value object — it doesn't touch the player, the allocator, or buffered data — so
     // this is safe to do immediately rather than deferring to the next prepare()/recycle.
+    // The current delegate's durations, set by buildDelegate — declared first so the delegate's
+    // initialiser below can set it.
+    @Volatile
+    private var durations: BufferDurations? = null
+
     @Volatile
     private var delegate: DefaultLoadControl = buildDelegate(networkType, contentType)
+
+    /**
+     * Video, ms, the player holds before it plays: at a start or after a seek, or after a stall
+     * ([rebuffering]). For the Expert-mode buffering line; the size cap can start playback sooner.
+     */
+    fun startThresholdMs(rebuffering: Boolean): Int? = durations?.let { if (rebuffering) it.rebufferMs else it.playbackMs }
 
     fun updateForNetwork(networkType: NetworkType) {
         this.networkType = networkType
@@ -143,6 +154,7 @@ class AdaptiveLoadControl(
                     }
                 }
             }
+        this.durations = durations
 
         val targetBufferBytes =
             when (contentType) {

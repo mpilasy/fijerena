@@ -29,6 +29,19 @@
 
     <!-- Loading Indicators -->
     <string name="loading_buffering">Chargement</string>
+    <!-- Expert mode, under "Buffering…" (BufferingDetails): held / needed seconds · seconds waited -->
+    <string name="buffering_detail_progress">%1$s / %2$s s · %3$s s</string>
+    <string name="buffering_detail_receiving">↓ %1$s</string>
+    <string name="buffering_detail_stream_needs">le flux demande %1$s</string>
+    <string name="buffering_detail_received">%1$s reçus</string>
+    <string name="buffering_mbps">%1$s Mbit/s</string>
+    <string name="buffering_kbps">%1$s kbit/s</string>
+    <string name="buffering_mb">%1$s Mo</string>
+    <string name="buffering_kb">%1$s ko</string>
+    <plurals name="buffering_detail_errors">
+        <item quantity="one">%1$d erreur</item>
+        <item quantity="other">%1$d erreurs</item>
+    </plurals>
     <string name="loading_searching">Recherche</string>
     <string name="search_fallback_local">Basculement vers la recherche locale…</string>
     <string name="search_loading_categories">Chargement des catégories…</string>

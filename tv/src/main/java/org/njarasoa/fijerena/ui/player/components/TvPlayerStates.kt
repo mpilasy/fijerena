@@ -37,6 +37,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BufferingDetails
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -53,10 +54,18 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun BufferingContent() {
-    MitohanaLoading(
-        style = MaterialTheme.typography.headlineSmall,
-        color = CinemaAccent,
-    )
+    val context = LocalContext.current
+    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
+    Column(horizontalAlignment = CenterHorizontally) {
+        MitohanaLoading(
+            style = MaterialTheme.typography.headlineSmall,
+            color = CinemaAccent,
+        )
+        if (isDevMode) {
+            Spacer(modifier = Modifier.height(Spacing.md))
+            BufferingDetails()
+        }
+    }
 }
 
 @Composable

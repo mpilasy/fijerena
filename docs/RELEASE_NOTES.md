@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **What buffering is waiting for (Expert mode):** under "Buffering…", a bar fills as video arrives, with how much is held of what playback needs and for how long it has waited; then the download speed against what the stream needs (amber when too slow) and the server; and, once something fails, how many loads failed, why (HTTP 503, timeout, DNS) and how much arrived. TV and phone.
 - **Switching to another copy of a film or show keeps the remote working (TV):** picking another copy in Stream name could leave nothing selected until Back, when the new copy took more than a moment to load (as on a Shield). Focus now stays on Stream name, and its menu no longer disappears while the copy loads (phone too).
 - **Stream name shows the copy's own name:** opened from Home or More like this, it (and the top of its menu) showed the official title instead of the stream's name, e.g. "Dune (2021)" for "EN - Dune (2021)"; it now always names the copy on screen. TV and phone.
 - **Search by TMDB id:** type a film's or show's TMDB id (the number in its themoviedb.org address) in Search and it comes up first, with every copy your sources have; titles containing the number still follow.

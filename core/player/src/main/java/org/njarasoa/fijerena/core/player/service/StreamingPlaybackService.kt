@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.content.Context
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -15,6 +16,9 @@ import androidx.media3.common.Tracks
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -43,20 +47,24 @@ import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.player.model.BufferingInfo
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.PositionSave
 import org.njarasoa.fijerena.core.player.model.SlowConnection
+import org.njarasoa.fijerena.core.player.network.BufferingTracker
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.network.SlowConnectionDetector
 import org.njarasoa.fijerena.core.player.network.StallWatchdog
 import org.njarasoa.fijerena.core.player.network.ThroughputMeter
+import org.njarasoa.fijerena.core.player.network.loadErrorLabel
 import org.njarasoa.fijerena.core.player.source.AccountBusy
 import org.njarasoa.fijerena.core.player.source.AccountBusyWait
 import org.njarasoa.fijerena.core.player.source.AlternateLogin
 import org.njarasoa.fijerena.core.player.source.LoginSwitch
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
+import java.io.IOException
 import java.util.UUID
 
 /**
@@ -123,6 +131,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private val slowConnectionDetector = SlowConnectionDetector()
     private val stallWatchdog = StallWatchdog()
     private val throughputMeter = ThroughputMeter()
+    private val bufferingTracker = BufferingTracker()
 
     private val _totalRebufferTimeMs = MutableStateFlow(0L)
     val totalRebufferTimeMs: StateFlow<Long> = _totalRebufferTimeMs.asStateFlow()
@@ -357,6 +366,16 @@ class StreamingPlaybackService : MediaSessionService() {
         val scope = AppScopes.create("StreamingPlaybackService", Dispatchers.Main)
         serviceScope = scope
         scope.launch {
+            _playbackState.collect { state ->
+                bufferingTracker.onStateChanged(
+                    buffering = state is PlaybackState.Buffering,
+                    playing = state is PlaybackState.Playing,
+                    nowMs = SystemClock.elapsedRealtime(),
+                    afterSeek = isWithinSeekGrace(),
+                )
+            }
+        }
+        scope.launch {
             healthMonitor?.state?.collect {
                 _streamHealthState.value = it
             }
@@ -480,6 +499,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 val now = SystemClock.elapsedRealtime()
                 stallWatchdog.onData(now)
                 throughputMeter.onBytes(now, bytes)
+                bufferingTracker.onBytes(bytes)
             }
 
         val playerBuilder =
@@ -615,6 +635,21 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
             )
         player.addAnalyticsListener(analyticsListener!!)
+        // The Expert-mode buffering line's error count: ExoPlayer retries a failed load itself, so
+        // these are the tries a wait went through, fatal or not.
+        player.addAnalyticsListener(
+            object : AnalyticsListener {
+                override fun onLoadError(
+                    eventTime: AnalyticsListener.EventTime,
+                    loadEventInfo: LoadEventInfo,
+                    mediaLoadData: MediaLoadData,
+                    error: IOException,
+                    wasCanceled: Boolean,
+                ) {
+                    if (!wasCanceled) bufferingTracker.onLoadError(loadErrorLabel(error))
+                }
+            },
+        )
         // Debug builds log every track's codecs string, format support and chosen decoder
         // (logcat tag "EventLogger") — how codec fallback, e.g. Dolby Vision → HEVC, is diagnosed.
         if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
@@ -1025,7 +1060,32 @@ class StreamingPlaybackService : MediaSessionService() {
         handleFinalError(getString(R.string.player_error_connection_lost))
     }
 
+    /**
+     * The wait in progress, for the Expert-mode lines under "Buffering…"; null with no player.
+     * Main thread (it reads the player).
+     */
+    fun bufferingInfo(): BufferingInfo? {
+        val player = getPlayer() as? androidx.media3.exoplayer.ExoPlayer ?: return null
+        val now = SystemClock.elapsedRealtime()
+        return BufferingInfo(
+            bufferedMs = player.totalBufferedDuration,
+            neededMs = adaptiveLoadControl?.startThresholdMs(bufferingTracker.isRebuffering)?.toLong() ?: 0L,
+            waitingMs = bufferingTracker.waitingMs(now),
+            receivingBps = throughputMeter.bitsPerSecond(now),
+            streamBps =
+                player.videoFormat
+                    ?.bitrate
+                    ?.takeIf { it > 0 }
+                    ?.toLong(),
+            host = Uri.parse(_currentMetadata.value.streamUrl).host,
+            errors = bufferingTracker.errorsThisWait(),
+            lastError = bufferingTracker.lastErrorThisWait(),
+            bytesReceived = bufferingTracker.bytesThisWait(),
+        )
+    }
+
     private fun resetNetworkWatch() {
+        bufferingTracker.onNewStream()
         stallWatchdog.reset()
         throughputMeter.reset()
         slowConnectionDetector.reset()

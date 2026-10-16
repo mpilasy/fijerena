@@ -14,7 +14,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -64,6 +68,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BufferingDetails
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
@@ -889,10 +894,17 @@ fun MobilePlayerContent(
                     when (currentPs) {
                         PlaybackState.Buffering -> {
                             if (!hasStartedPlaying || showRecoverySpinner) {
-                                org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
-                                    style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
-                                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
+                                        style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+                                        color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                                    )
+                                    // Expert mode: what the wait is made of (as on TV).
+                                    if (appSettings.isDevMode && !isInPipMode) {
+                                        Spacer(Modifier.height(12.dp))
+                                        BufferingDetails()
+                                    }
+                                }
                             }
                         }
 
