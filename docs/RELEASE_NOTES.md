@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Switching to another copy of a film or show keeps the remote working (TV):** picking another copy in Stream name could leave nothing selected until Back, when the new copy took more than a moment to load (as on a Shield). Focus now stays on Stream name, and its menu no longer disappears while the copy loads (phone too).
+- **Stream name shows the copy's own name:** opened from Home or More like this, it (and the top of its menu) showed the official title instead of the stream's name, e.g. "Dune (2021)" for "EN - Dune (2021)"; it now always names the copy on screen. TV and phone.
 - **Search by TMDB id:** type a film's or show's TMDB id (the number in its themoviedb.org address) in Search and it comes up first, with every copy your sources have; titles containing the number still follow.
 - **Details tabs in a new order:** on film and show pages (TV and phone), Details comes first (after Episodes on a show), then Cast, then More like this last. More like this loads after the rest, so it no longer pushes the other tabs along when it appears.
 - **Source names in Favourite and Recent categories:** with more than one source (Expert mode), each row of Favourite categories and Recent categories now carries its source's name, as Recent and Favourites do; so does each channel in the phone's TV guide of Recent or Favourites.

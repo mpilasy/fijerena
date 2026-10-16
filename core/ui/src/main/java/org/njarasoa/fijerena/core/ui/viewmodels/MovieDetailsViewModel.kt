@@ -109,6 +109,7 @@ class MovieDetailsViewModel(
     fun loadMovieInfo() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading
+            _alternateStreams.value = emptyList()
             loadMovieDetail()
         }
     }
@@ -128,6 +129,8 @@ class MovieDetailsViewModel(
         movieId = alternate.id
         categoryId = alternate.categoryId
         streamName = alternate.name
+        // The copies stay listed until the new ones load: the picker row is focused across the
+        // switch, and with no copies it is plain text that cannot hold focus (TV focus went dead).
         viewModelScope.launch(Dispatchers.IO) { loadMovieDetail() }
     }
 
@@ -148,7 +151,6 @@ class MovieDetailsViewModel(
         _tmdbTitle.value = null
         _logoUrl.value = null
         _backdropUrl.value = null
-        _alternateStreams.value = emptyList()
         try {
             val repo = getRepository()
             mediaRepository = repo
@@ -233,10 +235,20 @@ class MovieDetailsViewModel(
     private fun loadAlternateStreams(detail: MovieDetail) {
         viewModelScope.launch(Dispatchers.IO) {
             suspendRunCatching {
+                val id = movieId
                 val lists = MergedLists.withOthers(AppContainer.getInstance(context), getRepository())
-                val alternates = lists.alternateStreams(movieId, detail.metadata.tmdbId, "MOVIES")
+                // Blank id: the film itself comes back too, for its catalogue name below.
+                val copies = lists.alternateStreams("", detail.metadata.tmdbId, "MOVIES")
+                if (id != movieId) return@suspendRunCatching
+                val own = copies.firstOrNull { it.id == id && otherSourceOf(it) == null }
+                // The Stream name row names this copy as the catalogue does, wherever the screen was
+                // opened from: Home and More like this pass the official or a cleaned-up title.
+                own?.let { copy ->
+                    streamName = copy.name
+                    (_uiState.value as? UiState.Success)?.let { _uiState.value = it.copy(streamName = copy.name) }
+                }
                 _sourceNames.value = lists.sourceNames
-                _alternateStreams.value = alternates
+                _alternateStreams.value = copies.filterNot { it === own }
             }
         }
     }

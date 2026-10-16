@@ -185,7 +185,9 @@ class SeriesDetailsViewModel(
         _backdropUrl.value = null
         alternateStreamsJob?.cancel()
         alternateStreamsJob = null
-        _alternateStreams.value = emptyList()
+        // Kept across a switch until the new copies load: the focused picker row is plain text,
+        // unable to hold focus, while the list is empty (TV focus went dead).
+        if (!isSwitch) _alternateStreams.value = emptyList()
         try {
             val repo = ensureRepo()
 
@@ -319,10 +321,19 @@ class SeriesDetailsViewModel(
         alternateStreamsJob =
             viewModelScope.launch(Dispatchers.IO) {
                 suspendRunCatching {
+                    val id = seriesId
                     val lists = MergedLists.withOthers(AppContainer.getInstance(context), ensureRepo())
-                    val alternates = lists.alternateStreams(seriesId, tmdbId, "TV_SHOWS")
+                    // Blank id: the show itself comes back too, for its catalogue name below.
+                    val copies = lists.alternateStreams("", tmdbId, "TV_SHOWS")
+                    if (id != seriesId) return@suspendRunCatching
+                    val own = copies.firstOrNull { it.id == id && otherSourceOf(it) == null }
+                    // As on the film page: the Stream name row names this copy as the catalogue does.
+                    own?.let { copy ->
+                        seriesName = copy.name
+                        (_uiState.value as? UiState.Success)?.let { _uiState.value = it.copy(streamName = copy.name) }
+                    }
                     _sourceNames.value = lists.sourceNames
-                    _alternateStreams.value = alternates
+                    _alternateStreams.value = copies.filterNot { it === own }
                 }
             }
     }

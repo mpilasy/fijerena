@@ -346,6 +346,8 @@ private fun MovieDetailsContent(
             withFrameNanos { }
             attempts++
         }
+        // Never leave focus on the window root, where the D-pad moves nothing.
+        if (!streamRowFocused) playButtonFocusRequester.requestFocusWithRetry()
     }
 
     val refreshScope = rememberCoroutineScope()

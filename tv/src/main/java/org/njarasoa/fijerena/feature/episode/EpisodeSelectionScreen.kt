@@ -906,6 +906,8 @@ internal fun EpisodeListContent(
             withFrameNanos { }
             attempts++
         }
+        // Never leave focus on the window root, where the D-pad moves nothing.
+        if (!streamRowFocused) playButtonFocusRequester.requestFocusWithRetry()
     }
 
     // After the episode panel closes, put focus back on the row that was open. The list was out of
