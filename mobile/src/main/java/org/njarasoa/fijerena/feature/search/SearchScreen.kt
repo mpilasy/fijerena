@@ -1158,13 +1158,16 @@ private fun SearchResultCard(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
-                val parsedTitle = remember(result.streamName) { parseDisplayTitle(result.streamName) }
+                val parsedTitle =
+                    remember(result.streamName, result.categoryName) {
+                        parseDisplayTitle(result.streamName).withoutCodeOf(result.categoryName)
+                    }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = parsedTitle.title.ifBlank { result.streamName },
+                        text = parsedTitle.titleWithoutYear.ifBlank { result.streamName },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -1179,7 +1182,8 @@ private fun SearchResultCard(
                     result.sourceName?.let { SourceBadge(it) }
                     TitleBadges(parsedTitle)
                     Text(
-                        text = result.categoryName,
+                        // The year the title gave, before the category, so a long category can't push it off.
+                        text = listOfNotNull(parsedTitle.year?.toString(), result.categoryName).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         maxLines = 1,

@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -42,7 +43,8 @@ fun ChannelToast(
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = channelName,
+                // The clean name: "CP24 ◉", not "CA - CP24 HD ◉".
+                text = parseDisplayTitle(channelName).title.ifBlank { channelName },
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaTextPrimary,
                 textAlign = TextAlign.Center,

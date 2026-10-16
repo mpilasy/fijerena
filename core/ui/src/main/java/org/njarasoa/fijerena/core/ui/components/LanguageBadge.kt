@@ -79,16 +79,22 @@ fun LanguageBadge(
 }
 
 /**
- * What [parseDisplayTitle] took out of a title, on the [LanguageBadge] pill: the code, the formats
- * and the provider's audio, subtitle or timeshift words, then "Events" for an events-only channel.
- * Emits one pill each, so it goes in a Row.
+ * What [parseDisplayTitle] took out of a title, in one [LanguageBadge] pill: the code, the formats
+ * and the provider's audio, subtitle or timeshift words, then "Events" for an events-only channel,
+ * joined by dots ("DE · 4K · Events"). Nothing when there is none.
  */
 @Composable
 fun TitleBadges(parsed: ParsedTitle) {
-    parsed.badge?.let { LanguageBadge(it) }
-    parsed.tags.forEach { LanguageBadge(it) }
-    if (parsed.eventsOnly) LanguageBadge(stringResource(R.string.title_badge_events))
+    val events = stringResource(R.string.title_badge_events)
+    if (!parsed.hasBadges) return
+    val text =
+        remember(parsed, events) {
+            (listOfNotNull(parsed.badge) + parsed.tags + listOfNotNull(events.takeIf { parsed.eventsOnly })).joinToString(BADGE_SEPARATOR)
+        }
+    LanguageBadge(text)
 }
+
+private const val BADGE_SEPARATOR = " · "
 
 /** [TitleBadges] read aloud, for a row that sets one description for all its content. */
 @Composable

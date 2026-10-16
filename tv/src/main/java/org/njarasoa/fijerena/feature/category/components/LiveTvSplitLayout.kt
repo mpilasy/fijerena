@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
@@ -708,12 +709,11 @@ internal fun LiveTvSplitLayout(
                 // explains what is above it, not floating at the bottom of the screen.
                 val resolved = success?.takeIf { it.streamId == target.id }
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text(
-                        text = resolved?.streamName ?: target.name,
+                    // The clean name with its badges, as in the player.
+                    BadgedTitle(
+                        raw = resolved?.streamName ?: target.name,
                         style = MaterialTheme.typography.headlineSmall,
                         color = CinemaTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                     val categoryName =
                         target.categoryId

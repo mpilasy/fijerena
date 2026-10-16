@@ -698,14 +698,16 @@ internal fun StreamItem(
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
     ) {
-        val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-        val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
+        // Its code is left out when the category already opens with it.
+        val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
+        // The year goes to the line under it, with the length and rating.
+        val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
         // Films and shows: what the row already carries — year · length · rating (TV UI
         // audit #11). The rating is a plain number: a star here means favourite (X9).
         val metaLine =
-            remember(item.metadata) {
+            remember(item.metadata, parsedTitle.year) {
                 listOfNotNull(
-                    extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
+                    (extractYear(item.metadata.year, item.metadata.releaseDate, null) ?: parsedTitle.year)?.toString(),
                     item.metadata.duration
                         ?.takeIf(::hasMeaningfulDuration)
                         ?.let(::formatDuration),
@@ -720,8 +722,11 @@ internal fun StreamItem(
         val sourceLineText =
             when {
                 sourceLine == null -> null
+
                 item.mediaType == MediaType.LIVE_CHANNEL -> nowLine ?: categoryName
-                else -> listOfNotNull(categoryName, metaLine.ifEmpty { null }).joinToString(" · ").ifEmpty { null }
+
+                // The year first, so a long category can't push it off the line.
+                else -> listOfNotNull(metaLine.ifEmpty { null }, categoryName).joinToString(" · ").ifEmpty { null }
             }
         // One accessibility node for the row's content, read as its parts were. With an
         // accessibility service on (Button Mapper on a Shield), Compose walks and diffs every

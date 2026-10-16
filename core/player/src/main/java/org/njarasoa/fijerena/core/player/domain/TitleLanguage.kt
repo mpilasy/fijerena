@@ -20,10 +20,35 @@ data class ParsedTitle(
     val tags: List<String> = emptyList(),
     /** The channel only carries live events ("[LIVE-EVENT]", "(SOLO EVENTOS)"); the screen names it. */
     val eventsOnly: Boolean = false,
+    /** The release year the name gives in brackets ("Dune: Part Two (2024)"); it stays in [title]. */
+    val year: Int? = null,
 ) {
     /** Anything for the badges: a code, a tag or the events mark. */
     val hasBadges: Boolean get() = badge != null || tags.isNotEmpty() || eventsOnly
+
+    /**
+     * [title] without its "(2024)", for rows that show [year] in their year · length · rating line.
+     * Screens with no such line (the player, posters, TV Home cards) keep [title].
+     */
+    val titleWithoutYear: String
+        get() =
+            year?.let {
+                title
+                    .replace("($it)", "")
+                    .replace(SPACES, " ")
+                    .trim()
+                    .ifEmpty { null }
+            } ?: title
+
+    /**
+     * Without [badge] when [categoryName] opens with the same code: every film of "BG - БЪЛГАРИЯ ФИЛМ"
+     * would repeat "BG", which the category already says.
+     */
+    fun withoutCodeOf(categoryName: String?): ParsedTitle =
+        if (badge != null && categoryName != null && parseDisplayTitle(categoryName).badge == badge) copy(badge = null) else this
 }
+
+private val SPACES = Regex("\\s{2,}")
 
 // Requires the code to be all-uppercase letters so ordinary title casing ("A-Team") never
 // matches — real prefixes/suffixes from provider feeds are consistently shouted like "EN", "FR".
@@ -70,9 +95,18 @@ private val NOTE_BRACKET =
     )
 private const val NOTE_MAX_LENGTH = 30
 
-// The same as a last word: "VOSTFR", Polish "POLSKI" / "DUBBING" / "NAPISY" (subtitles), and a
+// The same as a last word: "VOSTFR", Polish "POLSKI" / "DUBBING" / "NAPISY" (subtitles), Croatian
+// "sinhronizirano" (dubbed), the audio "BG-AUDIO" / "BG.AUDIO" / "GR-Audio" / "Multi.Audio", and a
 // live timeshift "+6H".
-private val NOTE_WORDS = setOf("VOSTFR", "POLSKI", "DUBBING", "NAPISY")
+private val NOTE_WORDS = setOf("VOSTFR", "POLSKI", "DUBBING", "NAPISY", "SINHRONIZIRANO")
+private val AUDIO_WORD = Regex("[A-Z]{2,5}[.-]AUDIO", RegexOption.IGNORE_CASE)
+private val END_TOKEN = Regex("""(^|\s)(\S+)$""")
+
+// The release year in brackets, wherever it is: "Dune: Part Two (2024)", "Le Retour du roi (2003)
+// VERSION LONGUE". Spans ("(2018-2023)") and bare years ("Blade Runner 2049") are not taken. A note
+// right after it is still a tag: "Cocorico 2 (2026) (FRENCH ENG-SUB) CHRISTIAN CLAVIER".
+private val YEAR = Regex("""\(((?:19|20)\d\d)\)""")
+private val NEXT_BRACKET = Regex("""^\s*\(([^()]*)\)""")
 private val TIMESHIFT = Regex("\\+\\d{1,2}H?", RegexOption.IGNORE_CASE)
 
 // Channels that only carry live events: "[LIVE-EVENT]", "[LIVEEVENT]", "[EVENT]", "(EVENT ONLY)",
@@ -195,6 +229,16 @@ private fun stripEnding(text: String): Ending {
             rest = before
             continue
         }
+        // A whole word first: "BG-AUDIO" would read as "AUDIO" after a dash.
+        END_TOKEN.find(rest)?.let { token ->
+            val whole = token.groupValues[2]
+            val before = rest.substring(0, token.range.first).trimEnd()
+            if (before.isNotBlank() && (whole.uppercase() in NOTE_WORDS || AUDIO_WORD.matches(whole))) {
+                notes += whole
+                rest = before
+                continue
+            }
+        }
         val word = END_WORD.find(rest) ?: break
         val last = word.groupValues[2]
         val before = rest.substring(0, word.range.first).trimEnd(' ', '-', '/')
@@ -202,7 +246,7 @@ private fun stripEnding(text: String): Ending {
         when {
             before.isBlank() -> break
             found != null -> formats += found
-            last.uppercase() in NOTE_WORDS || TIMESHIFT.matches(last) -> notes += last
+            TIMESHIFT.matches(last) -> notes += last
             isMark(last) -> kept = "$last $kept"
             else -> break
         }
@@ -247,12 +291,42 @@ fun parseDisplayTitle(raw: String): ParsedTitle {
         if (badge == null) badge = match.groupValues[1].uppercase()
         text = text.removeRange(match.range)
     }
+    val yearMatch = YEAR.find(text)
+    val notesAfterYear = mutableListOf<String>()
+    if (yearMatch != null) {
+        var year: MatchResult = yearMatch
+        // A format right before the year: "Jackie Brown 4K (1997) TARANTINO, DE NIRO".
+        while (true) {
+            val before = text.substring(0, year.range.first).trimEnd()
+            val word = END_WORD.find(before) ?: break
+            val found = format(word.groupValues[2]) ?: break
+            val keep = before.substring(0, word.range.first).trimEnd(' ', '-', '/')
+            if (keep.isBlank()) break
+            formats += found
+            text = "$keep " + text.substring(year.range.first)
+            year = YEAR.find(text) ?: break
+        }
+        // Notes in brackets right after the year, before the words that follow it.
+        var after = year.range.last + 1
+        while (true) {
+            val next = NEXT_BRACKET.find(text.substring(after)) ?: break
+            val content = next.groupValues[1].trim()
+            val found = formatsOf(content)
+            when {
+                found != null -> formats += found
+                content.length <= NOTE_MAX_LENGTH && NOTE_BRACKET.containsMatchIn(content) -> notesAfterYear += content
+                else -> break
+            }
+            text = text.removeRange(after, after + next.range.last + 1)
+        }
+    }
 
     return ParsedTitle(
-        title = text.trim(),
+        title = text.replace(SPACES, " ").trim(),
         badge = badge,
-        tags = labels(formats) + ending.notes,
+        tags = labels(formats) + notesAfterYear + ending.notes,
         eventsOnly = ending.eventsOnly,
+        year = yearMatch?.groupValues?.get(1)?.toInt(),
     )
 }
 

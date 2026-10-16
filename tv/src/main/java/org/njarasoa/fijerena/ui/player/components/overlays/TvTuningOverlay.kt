@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -65,7 +66,8 @@ fun TvTuningOverlay(
                 strokeWidth = TvDimensions.borderFocused,
             )
             Text(
-                text = stringResource(R.string.live_tuning_format, channelName),
+                // The clean name: "CP24 ◉", not "CA - CP24 HD ◉".
+                text = stringResource(R.string.live_tuning_format, parseDisplayTitle(channelName).title.ifBlank { channelName }),
                 style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                 color = CinemaTextPrimary,
                 maxLines = 1,

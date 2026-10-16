@@ -32,24 +32,33 @@ class TitleLanguageTest {
 
     @Test
     fun `4K catalogue tags split into the code and the formats`() {
-        assertEquals(ParsedTitle("The Perfect Lie (2026)", "NF", listOf("4K")), parseDisplayTitle("4K-NF - The Perfect Lie (2026) (NL)"))
-        assertEquals(ParsedTitle("Silo (2023)", "A+", listOf("4K")), parseDisplayTitle("4K-A+ - Silo (2023) (US)"))
+        assertEquals(
+            ParsedTitle("The Perfect Lie (2026)", "NF", listOf("4K"), year = 2026),
+            parseDisplayTitle("4K-NF - The Perfect Lie (2026) (NL)"),
+        )
+        assertEquals(ParsedTitle("Silo (2023)", "A+", listOf("4K"), year = 2023), parseDisplayTitle("4K-A+ - Silo (2023) (US)"))
         assertEquals(ParsedTitle("Loki", "D+", listOf("4K")), parseDisplayTitle("4K-D+ - Loki"))
-        assertEquals(ParsedTitle("Neagley (2026)", "AMZ", listOf("4K")), parseDisplayTitle("4K-AMZ - Neagley (2026) (US)"))
+        assertEquals(ParsedTitle("Neagley (2026)", "AMZ", listOf("4K"), year = 2026), parseDisplayTitle("4K-AMZ - Neagley (2026) (US)"))
         assertEquals(ParsedTitle("Dune", "FR", listOf("4K", "HDR")), parseDisplayTitle("4K-FR-HDR - Dune"))
         assertEquals(ParsedTitle("Dune", "OSN+", listOf("4K")), parseDisplayTitle("4K-OSN+ - Dune"))
         assertEquals(ParsedTitle("Dune", "FR", listOf("4K")), parseDisplayTitle("4k-FR - Dune"))
         assertEquals(ParsedTitle("Dune", "DE", listOf("4K")), parseDisplayTitle("4K-DE  - Dune"))
-        assertEquals(ParsedTitle("Skyscraper (2018)", "DE", listOf("4K", "DV")), parseDisplayTitle("4K-DE-DV - Skyscraper (2018)"))
         assertEquals(
-            ParsedTitle("The Last of Us (2023)", "DE-BLURAY", listOf("4K", "DV")),
+            ParsedTitle("Skyscraper (2018)", "DE", listOf("4K", "DV"), year = 2018),
+            parseDisplayTitle("4K-DE-DV - Skyscraper (2018)"),
+        )
+        assertEquals(
+            ParsedTitle("The Last of Us (2023)", "DE-BLURAY", listOf("4K", "DV"), year = 2023),
             parseDisplayTitle("DE-4K-BLURAY-DV - The Last of Us (2023) (US)"),
         )
         assertEquals(
-            ParsedTitle("4 Blocks Zero (2026)", "DE", listOf("4K", "DV")),
+            ParsedTitle("4 Blocks Zero (2026)", "DE", listOf("4K", "DV"), year = 2026),
             parseDisplayTitle("DE- [4K-DV-HDR] - 4 Blocks Zero (2026) (DE)"),
         )
-        assertEquals(ParsedTitle("Heart Of The Beast (2026)", "CAM", listOf("SD")), parseDisplayTitle("SD/CAM - Heart Of The Beast (2026)"))
+        assertEquals(
+            ParsedTitle("Heart Of The Beast (2026)", "CAM", listOf("SD"), year = 2026),
+            parseDisplayTitle("SD/CAM - Heart Of The Beast (2026)"),
+        )
     }
 
     @Test
@@ -64,7 +73,7 @@ class TitleLanguageTest {
         assertEquals(ParsedTitle("COCINA", null, listOf("4K")), parseDisplayTitle("4K| COCINA UHD"))
         assertEquals(ParsedTitle("TF1", null, listOf("4K", "HDR")), parseDisplayTitle("|4K| TF1 HDR/UHD/4K"))
         assertEquals(
-            ParsedTitle("A Knight of the Seven Kingdoms (2026)", "US", listOf("4K")),
+            ParsedTitle("A Knight of the Seven Kingdoms (2026)", "US", listOf("4K"), year = 2026),
             parseDisplayTitle("4K - A Knight of the Seven Kingdoms (2026) (US)"),
         )
     }
@@ -83,22 +92,25 @@ class TitleLanguageTest {
         assertEquals(ParsedTitle("BBC NEWS", "UK", listOf("FHD", "HEVC")), parseDisplayTitle("UK| BBC NEWS HEVC FHD"))
         assertEquals(ParsedTitle("WATCHBOX MAX", "AR", listOf("HEVC")), parseDisplayTitle("AR| WATCHBOX MAX H265"))
         assertEquals(ParsedTitle("NPO 1", "NL", listOf("LQ")), parseDisplayTitle("NL| NPO 1 LQ"))
-        assertEquals(ParsedTitle("Titanic (1997)", "NL", listOf("HEVC")), parseDisplayTitle("NL - Titanic (1997) HEVC"))
-        assertEquals(ParsedTitle("Scream 7 (2026)", "FR", listOf("LQ")), parseDisplayTitle("FR - Scream 7 (2026) LQ"))
+        assertEquals(ParsedTitle("Titanic (1997)", "NL", listOf("HEVC"), year = 1997), parseDisplayTitle("NL - Titanic (1997) HEVC"))
+        assertEquals(ParsedTitle("Scream 7 (2026)", "FR", listOf("LQ"), year = 2026), parseDisplayTitle("FR - Scream 7 (2026) LQ"))
     }
 
     @Test
     fun `formats before the year or in brackets become tags`() {
-        assertEquals(ParsedTitle("Joker (2019)", "DE", listOf("4K")), parseDisplayTitle("DE - Joker 4K (2019) (4K)"))
-        assertEquals(ParsedTitle("355 (2022)", "FR", listOf("4K")), parseDisplayTitle("FR - 355 4K (2022)"))
-        assertEquals(ParsedTitle("Zeta (2026)", "ES", listOf("4K")), parseDisplayTitle("ES - Zeta [UHD] (2026)"))
-        assertEquals(ParsedTitle("Un hijo (2026)", "ES", listOf("LQ")), parseDisplayTitle("ES - Un hijo (LQ) (2026)"))
-        assertEquals(ParsedTitle("Suits (2011)", "EN", listOf("FHD")), parseDisplayTitle("EN - Suits (FHD) (2011) (US)"))
+        assertEquals(ParsedTitle("Joker (2019)", "DE", listOf("4K"), year = 2019), parseDisplayTitle("DE - Joker 4K (2019) (4K)"))
+        assertEquals(ParsedTitle("355 (2022)", "FR", listOf("4K"), year = 2022), parseDisplayTitle("FR - 355 4K (2022)"))
+        assertEquals(ParsedTitle("Zeta (2026)", "ES", listOf("4K"), year = 2026), parseDisplayTitle("ES - Zeta [UHD] (2026)"))
+        assertEquals(ParsedTitle("Un hijo (2026)", "ES", listOf("LQ"), year = 2026), parseDisplayTitle("ES - Un hijo (LQ) (2026)"))
+        assertEquals(ParsedTitle("Suits (2011)", "EN", listOf("FHD"), year = 2011), parseDisplayTitle("EN - Suits (FHD) (2011) (US)"))
         assertEquals(
-            ParsedTitle("White Collar (2009)", "EN", listOf("FHD", "HEVC")),
+            ParsedTitle("White Collar (2009)", "EN", listOf("FHD", "HEVC"), year = 2009),
             parseDisplayTitle("EN - White Collar (2009) (FHD HEVC)"),
         )
-        assertEquals(ParsedTitle("Dune: Parte dos (2024)", "ES", listOf("HD")), parseDisplayTitle("ES - Dune: Parte dos [720p] (2024)"))
+        assertEquals(
+            ParsedTitle("Dune: Parte dos (2024)", "ES", listOf("HD"), year = 2024),
+            parseDisplayTitle("ES - Dune: Parte dos [720p] (2024)"),
+        )
         assertEquals(ParsedTitle("Better Call Saul", "NF", listOf("4K")), parseDisplayTitle("NF - Better Call Saul (4K)"))
     }
 
@@ -112,7 +124,7 @@ class TitleLanguageTest {
 
     @Test
     fun `a code and a format joined by a space`() {
-        assertEquals(ParsedTitle("Oppenheimer (2023)", "PL", listOf("4K")), parseDisplayTitle("PL 4K - Oppenheimer (2023)"))
+        assertEquals(ParsedTitle("Oppenheimer (2023)", "PL", listOf("4K"), year = 2023), parseDisplayTitle("PL 4K - Oppenheimer (2023)"))
     }
 
     @Test
@@ -134,15 +146,15 @@ class TitleLanguageTest {
 
     @Test
     fun `two words for one code`() {
-        assertEquals(ParsedTitle("Nur für Dich (1994)", "BLURAY-DE"), parseDisplayTitle("BLURAY-DE - Nur für Dich (1994)"))
-        assertEquals(ParsedTitle("Paris Cafe (2026)", "IN-TA"), parseDisplayTitle("IN-TA - Paris Cafe (2026)"))
-        assertEquals(ParsedTitle("01. Pulp Fiction (1994)", "DE-TOP"), parseDisplayTitle("DE-TOP - 01. Pulp Fiction (1994)"))
+        assertEquals(ParsedTitle("Nur für Dich (1994)", "BLURAY-DE", year = 1994), parseDisplayTitle("BLURAY-DE - Nur für Dich (1994)"))
+        assertEquals(ParsedTitle("Paris Cafe (2026)", "IN-TA", year = 2026), parseDisplayTitle("IN-TA - Paris Cafe (2026)"))
+        assertEquals(ParsedTitle("01. Pulp Fiction (1994)", "DE-TOP", year = 1994), parseDisplayTitle("DE-TOP - 01. Pulp Fiction (1994)"))
     }
 
     @Test
     fun `the code twice is badged once`() {
         assertEquals(
-            ParsedTitle("Jaula, The Chalk Line (2022)", "EN", listOf("SPANISH ENG-SUB")),
+            ParsedTitle("Jaula, The Chalk Line (2022)", "EN", listOf("SPANISH ENG-SUB"), year = 2022),
             parseDisplayTitle("EN - EN - Jaula, The Chalk Line (2022) (SPANISH ENG-SUB)"),
         )
     }
@@ -150,13 +162,16 @@ class TitleLanguageTest {
     @Test
     fun `audio and subtitles keep the provider's words`() {
         assertEquals(
-            ParsedTitle("Head In The Stars (2023)", "EN", listOf("4K", "FRENCH ENG-SUB")),
+            ParsedTitle("Head In The Stars (2023)", "EN", listOf("4K", "FRENCH ENG-SUB"), year = 2023),
             parseDisplayTitle("EN - Head In The Stars 4K (2023) (FRENCH ENG-SUB)"),
         )
-        assertEquals(ParsedTitle("Beerus (2026)", "DE", listOf("Ger Sub")), parseDisplayTitle("DE - Beerus (2026) (JP) (Ger Sub)"))
+        assertEquals(
+            ParsedTitle("Beerus (2026)", "DE", listOf("Ger Sub"), year = 2026),
+            parseDisplayTitle("DE - Beerus (2026) (JP) (Ger Sub)"),
+        )
         assertEquals(ParsedTitle("Onihei", "FR", listOf("VOSTFR")), parseDisplayTitle("FR - Onihei (VOSTFR)"))
         assertEquals(
-            ParsedTitle("La mission de Miss Hong (2026)", "FR", listOf("VOSTFR")),
+            ParsedTitle("La mission de Miss Hong (2026)", "FR", listOf("VOSTFR"), year = 2026),
             parseDisplayTitle("FR - La mission de Miss Hong (2026) (KR) VOSTFR"),
         )
         assertEquals(ParsedTitle("Yes Day", "SE", listOf("Svensk Tal")), parseDisplayTitle("SE - Yes Day (Svensk Tal)"))
@@ -164,15 +179,15 @@ class TitleLanguageTest {
         assertEquals(ParsedTitle("CARTOON NETWORK", "DK", listOf("MULTI-AUDIO")), parseDisplayTitle("DK| CARTOON NETWORK  [MULTI-AUDIO]"))
         assertEquals(ParsedTitle("Tut", "BG", listOf("BG-AUDIO")), parseDisplayTitle("BG - Tut (BG-AUDIO)"))
         assertEquals(
-            ParsedTitle("Quelque Chose A Changé (2017)", "EN", listOf("SD", "FRENCH ONLY")),
+            ParsedTitle("Quelque Chose A Changé (2017)", "EN", listOf("SD", "FRENCH ONLY"), year = 2017),
             parseDisplayTitle("EN - Quelque Chose A Changé (2017) (FRENCH ONLY) (SD)"),
         )
         assertEquals(
-            ParsedTitle("DZIEWCZYNY Z DUBAJU (2021)", "PL", listOf("FHD", "POLSKI")),
+            ParsedTitle("DZIEWCZYNY Z DUBAJU (2021)", "PL", listOf("FHD", "POLSKI"), year = 2021),
             parseDisplayTitle("PL - DZIEWCZYNY Z DUBAJU (2021) POLSKI 1080P"),
         )
         assertEquals(
-            ParsedTitle("Zakręcony piątek 2 (2025)", "PL", listOf("4K", "DUBBING")),
+            ParsedTitle("Zakręcony piątek 2 (2025)", "PL", listOf("4K", "DUBBING"), year = 2025),
             parseDisplayTitle("PL 4K - Zakręcony piątek 2 (2025) DUBBING"),
         )
         assertEquals(ParsedTitle("A Girl Walks Home (FESTIVAL MOVIE)", "IR"), parseDisplayTitle("IR - A Girl Walks Home (FESTIVAL MOVIE)"))
@@ -204,17 +219,81 @@ class TitleLanguageTest {
     }
 
     @Test
+    fun `the year in brackets is read, wherever it is`() {
+        val dune = parseDisplayTitle("AL - Dune: Part Two (2024)")
+        assertEquals(2024, dune.year)
+        assertEquals("Dune: Part Two (2024)", dune.title)
+        assertEquals("Dune: Part Two", dune.titleWithoutYear)
+        val longue = parseDisplayTitle("FR - Le Retour du roi (2003) VERSION LONGUE")
+        assertEquals(2003, longue.year)
+        assertEquals("Le Retour du roi VERSION LONGUE", longue.titleWithoutYear)
+        assertEquals(
+            "Jackie Brown TARANTINO, DE NIRO",
+            parseDisplayTitle("EN - Jackie Brown 4K (1997) TARANTINO, DE NIRO").titleWithoutYear,
+        )
+        assertEquals(null, parseDisplayTitle("NF - The Order (2018-2020)").year)
+        assertEquals(null, parseDisplayTitle("EN - Blade Runner 2049").year)
+        assertEquals("(2019)", parseDisplayTitle("(2019)").titleWithoutYear)
+    }
+
+    @Test
+    fun `a note right after the year is a tag, the words after it stay`() {
+        assertEquals(
+            ParsedTitle("Cocorico 2 (2026) CHRISTIAN CLAVIER, DIDIER BOURDON", "EN", listOf("FRENCH ENG-SUB"), year = 2026),
+            parseDisplayTitle("EN - Cocorico 2 (2026) (FRENCH ENG-SUB) CHRISTIAN CLAVIER, DIDIER BOURDON"),
+        )
+        assertEquals(
+            ParsedTitle("Along Came Auntie (1926) (B&W) LAUREL & HARDY", "EN", year = 1926),
+            parseDisplayTitle("EN - Along Came Auntie (1926) (B&W) LAUREL & HARDY"),
+        )
+    }
+
+    @Test
+    fun `audio words and sinhronizirano are tags`() {
+        assertEquals(
+            ParsedTitle("The Shepherd (2023)", "BG", listOf("BG-AUDIO"), year = 2023),
+            parseDisplayTitle("BG - The Shepherd (2023) BG-AUDIO"),
+        )
+        assertEquals(
+            ParsedTitle("The Secret Sauce (2021)", "BG", listOf("BG.AUDIO"), year = 2021),
+            parseDisplayTitle("BG - The Secret Sauce (2021) BG.AUDIO"),
+        )
+        assertEquals(
+            ParsedTitle("Hoppers (2026)", "GR", listOf("GR-Audio"), year = 2026),
+            parseDisplayTitle("GR - Hoppers (2026) GR-Audio"),
+        )
+        assertEquals(
+            ParsedTitle("Ramba Oorvasi Menaka (2026)", "IN-TA", listOf("Multi.Audio"), year = 2026),
+            parseDisplayTitle("IN-TA - Ramba Oorvasi Menaka (2026) Multi.Audio"),
+        )
+        assertEquals(
+            ParsedTitle("Toy Story 5 (2026)", "EX", listOf("sinhronizirano"), year = 2026),
+            parseDisplayTitle("EX - Toy Story 5 (2026) sinhronizirano"),
+        )
+    }
+
+    @Test
+    fun `a code the category already opens with is left out`() {
+        val parsed = parseDisplayTitle("BG - Turbo (2013)")
+        assertEquals(null, parsed.withoutCodeOf("BG - БЪЛГАРИЯ ДЕЦА").badge)
+        assertEquals(null, parseDisplayTitle("DE| SKY SPORT 8 HD").withoutCodeOf("|DE| SPORT").badge)
+        assertEquals("BG", parsed.withoutCodeOf("VOD - ALBANIA [AL]").badge)
+        assertEquals("BG", parsed.withoutCodeOf(null).badge)
+        assertEquals(listOf("HD"), parseDisplayTitle("DE| SKY SPORT 8 HD").withoutCodeOf("|DE| SPORT").tags)
+    }
+
+    @Test
     fun `words that are part of the title stay`() {
-        assertEquals(ParsedTitle("Saw 3D (2010)", "NL"), parseDisplayTitle("NL - Saw 3D (2010)"))
-        assertEquals(ParsedTitle("WWE Raw (2023)", "EN"), parseDisplayTitle("EN - WWE Raw (2023)"))
+        assertEquals(ParsedTitle("Saw 3D (2010)", "NL", year = 2010), parseDisplayTitle("NL - Saw 3D (2010)"))
+        assertEquals(ParsedTitle("WWE Raw (2023)", "EN", year = 2023), parseDisplayTitle("EN - WWE Raw (2023)"))
         assertEquals(ParsedTitle("TVN RAW", "PL"), parseDisplayTitle("PL| TVN RAW"))
-        assertEquals(ParsedTitle("The Alps (2007) IMAX", "EN"), parseDisplayTitle("EN - The Alps (2007) IMAX"))
+        assertEquals(ParsedTitle("The Alps (2007) IMAX", "EN", year = 2007), parseDisplayTitle("EN - The Alps (2007) IMAX"))
         assertEquals(ParsedTitle("HD, AD HD اچ دی", "IR"), parseDisplayTitle("IR - HD, AD HD اچ دی"))
         assertEquals(ParsedTitle("NTSF:SD:SUV::", "EN"), parseDisplayTitle("EN - NTSF:SD:SUV:: (US)"))
         assertEquals(ParsedTitle("HD", null), parseDisplayTitle("HD"))
-        assertEquals(ParsedTitle("TRON: Legacy (2010)", null), parseDisplayTitle("TRON: Legacy (2010)"))
-        assertEquals(ParsedTitle("DOA: Dead or Alive (2006)", null), parseDisplayTitle("DOA: Dead or Alive (2006)"))
-        assertEquals(ParsedTitle("HIT: The 2nd Case (2022)", null), parseDisplayTitle("HIT: The 2nd Case (2022)"))
+        assertEquals(ParsedTitle("TRON: Legacy (2010)", null, year = 2010), parseDisplayTitle("TRON: Legacy (2010)"))
+        assertEquals(ParsedTitle("DOA: Dead or Alive (2006)", null, year = 2006), parseDisplayTitle("DOA: Dead or Alive (2006)"))
+        assertEquals(ParsedTitle("HIT: The 2nd Case (2022)", null, year = 2022), parseDisplayTitle("HIT: The 2nd Case (2022)"))
     }
 
     @Test

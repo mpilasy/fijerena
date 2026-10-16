@@ -152,6 +152,7 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -1092,11 +1093,11 @@ fun MobileCategoryListScreen(
                                                 }
                                             }
                                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                            Text(
-                                                text = dockSuccess?.streamName ?: target.name,
+                                            // The clean name with its badges, as in the player.
+                                            BadgedTitle(
+                                                raw = dockSuccess?.streamName ?: target.name,
                                                 style = MaterialTheme.typography.titleLarge,
                                                 color = CinemaTextPrimary,
-                                                maxLines = 1,
                                             )
                                             val nowProg = dockSuccess?.currentEpgProgram
                                             if (nowProg != null) {
@@ -1185,11 +1186,11 @@ fun MobileCategoryListScreen(
                                                             .background(scrimBrush)
                                                             .padding(CinemaSpacing.sm),
                                                 ) {
-                                                    Text(
-                                                        text = dockSuccess?.streamName ?: target.name,
+                                                    // The clean name with its badges, as in the player.
+                                                    BadgedTitle(
+                                                        raw = dockSuccess?.streamName ?: target.name,
                                                         style = MaterialTheme.typography.titleLarge,
                                                         color = CinemaTextPrimary,
-                                                        maxLines = 1,
                                                     )
                                                     val nowProg = dockSuccess?.currentEpgProgram
                                                     if (nowProg != null) {
@@ -2082,10 +2083,12 @@ internal fun StreamCard(
                 cinemaCardHairlineBorder()
             },
     ) {
-        val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+        // Its code is left out when the category already opens with it.
+        val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
         // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
         // between the dashes) — an empty row reads as broken, not a catalogue gap.
-        val displayTitle = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) }
+        // The year goes to the line under it, with the length and rating.
+        val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
         val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
         // Films and shows: year · length · rating, from what the row already carries (as on
         // the TV). The rating is a plain "8.2/10": a star means favourite.
@@ -2102,12 +2105,12 @@ internal fun StreamCard(
                 }
             }
         val metaLine =
-            remember(item.metadata, ratingText, isChannel) {
+            remember(item.metadata, parsedTitle.year, ratingText, isChannel) {
                 if (isChannel) {
                     ""
                 } else {
                     listOfNotNull(
-                        extractYear(item.metadata.year, item.metadata.releaseDate, null)?.toString(),
+                        (extractYear(item.metadata.year, item.metadata.releaseDate, null) ?: parsedTitle.year)?.toString(),
                         item.metadata.duration
                             ?.takeIf(::hasMeaningfulDuration)
                             ?.let(::formatDuration),
@@ -2122,8 +2125,11 @@ internal fun StreamCard(
         val sourceLineText =
             when {
                 sourceLine == null -> null
+
                 isChannel -> nowLine ?: categoryName
-                else -> listOfNotNull(categoryName, metaLine.ifEmpty { null }).joinToString(" · ").ifEmpty { null }
+
+                // The year first, so a long category can't push it off the line.
+                else -> listOfNotNull(metaLine.ifEmpty { null }, categoryName).joinToString(" · ").ifEmpty { null }
             }
         // One accessibility node for the row's content, read as its parts were: with an
         // accessibility service on (a screen reader, a password manager, an automation app),
