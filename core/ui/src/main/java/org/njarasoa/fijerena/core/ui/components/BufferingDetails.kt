@@ -11,10 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +25,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.BufferingInfo
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.deviceinfo.currentConnectionLabel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
@@ -30,12 +33,13 @@ import java.util.Locale
 
 /**
  * Expert mode, under "Buffering…": how much video is held of what playback waits for, for how
- * long, the speed against what the stream needs and the server, and — only once a load failed —
- * the errors of this wait and what it received. Read from the playback service twice a second.
+ * long, the connection, the speed against what the stream needs and the server, and — only once
+ * a load failed — the errors of this wait and what it received. Read from the playback service twice a second.
  */
 @Composable
 fun BufferingDetails(modifier: Modifier = Modifier) {
     var info by remember { mutableStateOf<BufferingInfo?>(null) }
+    val connection = rememberConnectionLabel()
     LaunchedEffect(Unit) {
         while (true) {
             info = StreamingPlaybackService.getInstance()?.bufferingInfo()
@@ -67,6 +71,7 @@ fun BufferingDetails(modifier: Modifier = Modifier) {
         )
         val speed =
             buildList {
+                connection?.let { add(stringResource(it)) }
                 add(stringResource(R.string.buffering_detail_receiving, speedText(current.receivingBps)))
                 current.streamBps?.let { add(stringResource(R.string.buffering_detail_stream_needs, speedText(it))) }
                 current.host?.let { add(it) }
@@ -87,6 +92,19 @@ fun BufferingDetails(modifier: Modifier = Modifier) {
             Text(text = trouble, style = style, color = CinemaWarning, textAlign = TextAlign.Center)
         }
     }
+}
+
+/** The connection in use ("Ethernet", "Wi-Fi"…), read again every few seconds; null until known. */
+@Composable
+fun rememberConnectionLabel(): Int? {
+    val context = LocalContext.current.applicationContext
+    val label by produceState<Int?>(null) {
+        while (true) {
+            value = currentConnectionLabel(context)
+            delay(CONNECTION_POLL_MS)
+        }
+    }
+    return label
 }
 
 @Composable
@@ -113,5 +131,6 @@ internal object BufferingFormat {
 }
 
 private const val POLL_MS = 500L
+private const val CONNECTION_POLL_MS = 2_000L
 private const val SEPARATOR = " · "
 private val BAR_WIDTH = 240.dp

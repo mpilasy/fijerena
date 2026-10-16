@@ -205,6 +205,18 @@ internal fun networkRows(facts: NetworkFacts): List<DeviceInfoRow> {
     ) + wifiRows + infoRow(R.string.device_info_downstream, bandwidthValue(facts.downstreamKbps))
 }
 
+/**
+ * The connection in use now, for the player's stats and Expert-mode buffering lines: "Ethernet",
+ * "Wi-Fi", "Mobile data"…, "Not connected"; null when the system refuses to say.
+ */
+@StringRes
+fun currentConnectionLabel(context: Context): Int? {
+    val cm = orNull { context.getSystemService(ConnectivityManager::class.java) } ?: return null
+    val active = orNull { cm.activeNetwork } ?: return R.string.device_info_not_connected
+    val caps = orNull { cm.getNetworkCapabilities(active) } ?: return null
+    return transportLabel(TRANSPORTS.filter { caps.hasTransport(it) }.toSet())
+}
+
 /** The one transport that names the connection: wired first, then Wi-Fi, then mobile data. */
 @StringRes
 internal fun transportLabel(transports: Set<Int>): Int =

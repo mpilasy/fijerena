@@ -151,7 +151,7 @@ diagnostics/                   CrashLog, ProcessExits, LaunchCounter, SafeMode, 
 | Wi-Fi Live TV | 15 s | 30 s | 0.5 s | 1 s |
 | Wi-Fi VOD | 30 s | 60 s | 2.5 s | 10 s |
 | Cellular Live TV | 50 s | 50 s | 2.5 s | 5 s |
-| Cellular VOD | 40 s | 100 s | 8 s | 10 s |
+| Cellular VOD | 40 s | 100 s | 2.5 s | 5 s |
 
 No back buffer (a seek back re-downloads). Byte caps bound memory: live 32 MB; VOD a quarter of the large-heap memory class, between 64 and 160 MB (`vodTargetBufferBytes`). Cellular buffers are used as they are: the old multiplier keys (`cellular_live_multiplier`, `cellular_vod_multiplier`) are only carried through settings export / import, never applied.
 

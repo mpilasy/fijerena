@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.rememberConnectionLabel
 import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -68,6 +69,7 @@ fun MobileStatsOverlay(
     }
 
     val naText = stringResource(R.string.player_stats_na)
+    val connection = rememberConnectionLabel()
     val unknownText = stringResource(R.string.player_error_unknown)
     val monoText = stringResource(R.string.audio_channel_mono)
     val stereoText = stringResource(R.string.audio_channel_stereo)
@@ -388,6 +390,7 @@ fun MobileStatsOverlay(
                 StatRow(stringResource(R.string.player_stats_bitrate), audioBitrate)
 
                 SectionHeader(stringResource(R.string.player_stats_network))
+                StatRow(stringResource(R.string.device_info_connection), connection?.let { stringResource(it) } ?: naText)
                 StatRow(stringResource(R.string.player_stats_speed), networkSpeed)
                 val bwEstimate = serviceBandwidth
                 StatRow(stringResource(R.string.player_stats_bandwidth), if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else naText)

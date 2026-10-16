@@ -40,8 +40,11 @@ object NetworkBufferProfile {
     // ── Cellular VOD ────────────────────────────────────────────────
     const val CELLULAR_VOD_MIN_BUFFER_MS = 40_000
     const val CELLULAR_VOD_MAX_BUFFER_MS = 100_000
-    const val CELLULAR_VOD_PLAYBACK_MS = 8_000
-    const val CELLULAR_VOD_REBUFFER_MS = 10_000
+
+    // Starts like Wi-Fi VOD and ExoPlayer's defaults: the 8 s / 10 s this began with was never
+    // measured, and made every start and seek on mobile data wait for 8 s of video.
+    const val CELLULAR_VOD_PLAYBACK_MS = 2_500
+    const val CELLULAR_VOD_REBUFFER_MS = 5_000
     const val CELLULAR_VOD_BACK_BUFFER_MS = 0 // see WIFI_VOD_BACK_BUFFER_MS
 
     // ── Retry policy ────────────────────────────────────────────────

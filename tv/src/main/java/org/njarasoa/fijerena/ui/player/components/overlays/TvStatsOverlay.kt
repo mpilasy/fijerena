@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.player.model.formatBitrate
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.rememberConnectionLabel
 import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -91,6 +92,7 @@ fun TvStatsOverlay(
     }
 
     val naText = stringResource(R.string.player_stats_na)
+    val connection = rememberConnectionLabel()
     val unknownText = stringResource(R.string.player_error_unknown)
     val vodTypeText = stringResource(R.string.player_stream_type_vod)
     val healthyText = stringResource(R.string.player_stats_health_healthy)
@@ -415,6 +417,10 @@ fun TvStatsOverlay(
                             CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.audioBitrate)
 
                             SectionHeader(stringResource(R.string.player_stats_network))
+                            CompactStatRow(
+                                stringResource(R.string.device_info_connection),
+                                connection?.let { stringResource(it) } ?: naText,
+                            )
                             CompactStatRow(stringResource(R.string.player_stats_speed), stats.networkSpeed)
                             val bwEstimate = serviceBandwidth
                             CompactStatRow(

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Films and episodes start sooner on mobile data:** playback now starts once 2.5 s of video has arrived (it waited for 8 s), at the start and after every seek, and resumes after a stall at 5 s instead of 10. Phone.
+- **Buffering details while a channel tunes (Expert mode, TV):** zapping in Live TV full screen now shows the buffering bar and lines under "Tuning · channel", as "Buffering…" does.
+- **Connection type in Stats for Nerds and the buffering details (Expert mode):** Ethernet, Wi-Fi, Mobile data or VPN, so a slow start can be read against the connection. TV and phone.
 - **Shorter source badges (Expert mode):** a source's badge now shows a short name — "XST" for xstream4k — set in Edit Source → Short name (up to 5 characters), or worked out from the source's name until you set one. In lists and search results it sits at the end of the title line, so the line under the title keeps its room for the language, year and category. TV and phone.
 - **Exact words in search:** put a word in double or single quotes to match it whole — `"la" land` finds La La Land without every name containing "land" (unquoted words still match the start of a word, so "har pot" finds Harry Potter). Several quoted words match in that order: `"la la" land`. An apostrophe ("don't") is not a quote.
 - **The year moves under the title:** in lists and search results, a film's or show's "(2024)" now shows in the line under the title, with the length and rating, so most films (whose source sends no year) show it there for the first time. "BG-AUDIO", "Multi.Audio", "sinhronizirano" and subtitles written right after the year ("(2026) (FRENCH ENG-SUB) CHRISTIAN CLAVIER") are badges too. TV and phone.
