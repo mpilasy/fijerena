@@ -159,13 +159,14 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -2134,7 +2135,7 @@ internal fun StreamCard(
             listOfNotNull(
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
-                parsedTitle.badge,
+                titleBadgesDescription(parsedTitle),
                 displayTitle,
                 nowPlayingText,
                 sourceLine?.let { stringResource(R.string.source_badge_description, it) },
@@ -2200,7 +2201,7 @@ internal fun StreamCard(
                         )
                     }
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
-                    parsedTitle.badge?.let { LanguageBadge(it) }
+                    TitleBadges(parsedTitle)
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.bodyLarge,

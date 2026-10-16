@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import org.njarasoa.fijerena.core.player.domain.ParsedTitle
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
@@ -78,8 +79,29 @@ fun LanguageBadge(
 }
 
 /**
- * A provider's raw title shown clean: its "EN - " / "4K-NF - " / "4K:" tag as a [LanguageBadge],
- * then the title without it ([parseDisplayTitle]). One line; [textModifier] goes on the title text.
+ * What [parseDisplayTitle] took out of a title, on the [LanguageBadge] pill: the code, the formats
+ * and the provider's audio, subtitle or timeshift words, then "Events" for an events-only channel.
+ * Emits one pill each, so it goes in a Row.
+ */
+@Composable
+fun TitleBadges(parsed: ParsedTitle) {
+    parsed.badge?.let { LanguageBadge(it) }
+    parsed.tags.forEach { LanguageBadge(it) }
+    if (parsed.eventsOnly) LanguageBadge(stringResource(R.string.title_badge_events))
+}
+
+/** [TitleBadges] read aloud, for a row that sets one description for all its content. */
+@Composable
+fun titleBadgesDescription(parsed: ParsedTitle): String? =
+    (
+        listOfNotNull(parsed.badge) + parsed.tags +
+            listOfNotNull(stringResource(R.string.title_badge_events).takeIf { parsed.eventsOnly })
+    ).joinToString(", ").ifEmpty { null }
+
+/**
+ * A provider's raw title shown clean: its "EN - " / "4K-NF - " / "4K:" tag and the rest as
+ * [TitleBadges], then the title without them ([parseDisplayTitle]). One line; [textModifier] goes on
+ * the title text.
  */
 @Composable
 fun BadgedTitle(
@@ -95,7 +117,7 @@ fun BadgedTitle(
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        parsed.badge?.let { LanguageBadge(it) }
+        TitleBadges(parsed)
         Text(
             text = parsed.title.ifBlank { raw },
             style = style,

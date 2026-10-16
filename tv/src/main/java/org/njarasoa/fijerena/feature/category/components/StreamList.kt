@@ -79,12 +79,13 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -731,7 +732,7 @@ internal fun StreamItem(
                 "★".takeIf { isFavorite },
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
-                parsedTitle.badge,
+                titleBadgesDescription(parsedTitle),
                 displayTitle,
                 sourceLine?.let { stringResource(R.string.source_badge_description, it) },
                 if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
@@ -816,7 +817,7 @@ internal fun StreamItem(
 
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
 
-                    parsedTitle.badge?.let { LanguageBadge(it) }
+                    TitleBadges(parsedTitle)
 
                     Text(
                         // See mobile's StreamCard — provider data occasionally sends a blank

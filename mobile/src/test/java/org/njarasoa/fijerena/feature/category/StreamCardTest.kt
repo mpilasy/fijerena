@@ -58,7 +58,7 @@ class StreamCardTest {
     fun `the row reads its parts in order and keeps tap and long-press`() {
         setRow()
         composeTestRule
-            .onNodeWithContentDescription("Catch-up: 3 days, PT, RTP 1 HD, Now: Jornal da Tarde")
+            .onNodeWithContentDescription("Catch-up: 3 days, PT, HD, RTP 1, Now: Jornal da Tarde")
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
     }

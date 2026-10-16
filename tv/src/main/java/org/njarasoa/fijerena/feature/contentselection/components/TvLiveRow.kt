@@ -33,6 +33,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
@@ -40,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -150,12 +152,15 @@ private fun TvLiveChannelCard(
                 )
             }
             Column(modifier = Modifier.padding(Spacing.sm)) {
+                // The provider's "CA - " / "HD" tags as badges, as in the lists.
+                val parsedTitle = remember(entry.item.name) { parseDisplayTitle(entry.item.name) }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    TitleBadges(parsedTitle)
                     Text(
-                        text = entry.item.name,
+                        text = parsedTitle.title.ifBlank { entry.item.name },
                         style = MaterialTheme.typography.titleMedium,
                         color = CinemaTextPrimary,
                         maxLines = 1,

@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,8 +24,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -80,11 +81,11 @@ private fun RelatedTitleCard(
                 overlayGradient = true,
                 modifier = Modifier.size(width = CARD_WIDTH, height = POSTER_HEIGHT),
             )
-            parsedTitle.badge?.let {
-                LanguageBadge(
-                    code = it,
-                    modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xxs),
-                )
+            Row(
+                modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xxs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+            ) {
+                TitleBadges(parsedTitle)
             }
         }
         Text(

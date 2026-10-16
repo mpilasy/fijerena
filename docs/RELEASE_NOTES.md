@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Tidier titles:** the picture format, audio and subtitles a provider writes into a name now show as small badges beside the clean title, as the language already did: "DE| RTL 4K FHD" reads RTL with DE and 4K, "Titanic (1997) HEVC" Titanic (1997) with HEVC, "(FRENCH ENG-SUB)", "(Ger Sub)", "VOSTFR" and "+6H" become badges, and channels that only carry live events say "Events". Live channel codes written "DE|" or "UK-NOWTV|" are now badged too. TV and phone.
 - **What buffering is waiting for (Expert mode):** under "Buffering…", a bar fills as video arrives, with how much is held of what playback needs and for how long it has waited; then the download speed against what the stream needs (amber when too slow) and the server; and, once something fails, how many loads failed, why (HTTP 503, timeout, DNS) and how much arrived. TV and phone.
 - **Switching to another copy of a film or show keeps the remote working (TV):** picking another copy in Stream name could leave nothing selected until Back, when the new copy took more than a moment to load (as on a Shield). Focus now stays on Stream name, and its menu no longer disappears while the copy loads (phone too).
 - **Stream name shows the copy's own name:** opened from Home or More like this, it (and the top of its menu) showed the official title instead of the stream's name, e.g. "Dune (2021)" for "EN - Dune (2021)"; it now always names the copy on screen. TV and phone.

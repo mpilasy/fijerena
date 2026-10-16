@@ -1218,6 +1218,8 @@
     <string name="theme_amethyst">Améthyste</string>
     <string name="theme_teal">Bleu canard</string>
     <string name="source_badge_description">Source : %1$s</string>
+    <!-- Badge on a live channel that only carries live events ("[LIVE-EVENT]") -->
+    <string name="title_badge_events">Événements</string>
     <string name="browse_source">Parcourir %1$s</string>
     <string name="source_chooser_title">Choisir une source</string>
     <string name="home_sync_updating_count">Mise à jour de %1$d sur %2$d…</string>
