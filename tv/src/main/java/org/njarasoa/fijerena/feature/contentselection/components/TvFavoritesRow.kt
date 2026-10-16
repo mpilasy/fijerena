@@ -32,9 +32,9 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -131,13 +131,12 @@ private fun TvFavoriteCard(
                         .aspectRatio(16f / 9f),
             )
             Column(modifier = Modifier.padding(Spacing.sm)) {
-                // The provider's "EN - " / "4K-A+ - " tag as a badge, as in the lists.
+                // The provider's "EN - " tag as a badge on the second line, as in the lists.
                 val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TitleBadges(parsedTitle)
                     Text(
                         text = parsedTitle.title.ifBlank { item.name },
                         style = MaterialTheme.typography.titleMedium,
@@ -149,12 +148,14 @@ private fun TvFavoriteCard(
                     // The row-actions hint, as on the focused list row.
                     if (isFocused) RowActionsHint()
                 }
-                // The source opens the second line (Expert mode, SourceBadge).
+                // The source opens the second line (Expert mode, SourceBadge), then the title's badges.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     sourceName?.let { SourceBadge(it) }
+                    // A card is narrow: the language only, not the formats.
+                    parsedTitle.badge?.let { LanguageBadge(it) }
                     Text(
                         // A line even when empty, so cards in the row line up.
                         text = listOfNotNull(item.metadata.releaseDate?.take(4), item.metadata.genre).joinToString(" • "),

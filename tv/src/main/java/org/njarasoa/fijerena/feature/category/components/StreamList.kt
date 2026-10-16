@@ -732,9 +732,9 @@ internal fun StreamItem(
                 "★".takeIf { isFavorite },
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
-                titleBadgesDescription(parsedTitle),
                 displayTitle,
                 sourceLine?.let { stringResource(R.string.source_badge_description, it) },
+                titleBadgesDescription(parsedTitle),
                 if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
                 nowLine.takeIf { sourceLine == null },
                 when {
@@ -817,8 +817,6 @@ internal fun StreamItem(
 
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
 
-                    TitleBadges(parsedTitle)
-
                     Text(
                         // See mobile's StreamCard — provider data occasionally sends a blank
                         // name (e.g. "EN -  (US)" with nothing between the dashes).
@@ -829,13 +827,17 @@ internal fun StreamItem(
                         modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                     )
                 }
-                if (sourceLine != null) {
+                // The second line: the source (Expert mode), the title's badges, then the category,
+                // year · length · rating or the Now line.
+                val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
+                if (sourceLine != null || lineText != null || parsedTitle.hasBadges) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        SourceBadge(sourceLine)
-                        sourceLineText?.let { text ->
+                        sourceLine?.let { SourceBadge(it) }
+                        TitleBadges(parsedTitle)
+                        lineText?.let { text ->
                             Text(
                                 text = text,
                                 style = cardStyle.bodyMedium,
@@ -846,21 +848,15 @@ internal fun StreamItem(
                             )
                         }
                     }
-                } else if (metaLine.isNotEmpty()) {
-                    Text(
-                        text = metaLine,
-                        style = cardStyle.bodyMedium,
-                        color = CinemaTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
-                nowLine?.takeIf { sourceLine == null }?.let { line ->
+                // A film's year line keeps a Now line, if it has one, under it.
+                nowLine?.takeIf { sourceLine == null && metaLine.isNotEmpty() }?.let { line ->
                     Text(
                         text = line,
                         style = cardStyle.bodyMedium,
                         color = CinemaOrangeLight,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                     )
                 }

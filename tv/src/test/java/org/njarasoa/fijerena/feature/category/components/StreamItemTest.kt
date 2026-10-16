@@ -56,7 +56,7 @@ class StreamItemTest {
     fun `the row reads its parts in order, as one description`() {
         setRow()
         composeTestRule
-            .onNodeWithContentDescription("★, Catch-up: 3 days, PT, HD, RTP 1, Now: Jornal da Tarde")
+            .onNodeWithContentDescription("★, Catch-up: 3 days, RTP 1, PT, HD, Now: Jornal da Tarde")
             .assertExists()
     }
 

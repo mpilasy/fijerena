@@ -20,7 +20,10 @@ data class ParsedTitle(
     val tags: List<String> = emptyList(),
     /** The channel only carries live events ("[LIVE-EVENT]", "(SOLO EVENTOS)"); the screen names it. */
     val eventsOnly: Boolean = false,
-)
+) {
+    /** Anything for the badges: a code, a tag or the events mark. */
+    val hasBadges: Boolean get() = badge != null || tags.isNotEmpty() || eventsOnly
+}
 
 // Requires the code to be all-uppercase letters so ordinary title casing ("A-Team") never
 // matches — real prefixes/suffixes from provider feeds are consistently shouted like "EN", "FR".

@@ -1157,13 +1157,12 @@ private fun SearchResultCard(
             Column(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tag as a badge.
+                // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
                 val parsedTitle = remember(result.streamName) { parseDisplayTitle(result.streamName) }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TitleBadges(parsedTitle)
                     Text(
                         text = parsedTitle.title.ifBlank { result.streamName },
                         style = MaterialTheme.typography.bodyLarge,
@@ -1172,12 +1171,13 @@ private fun SearchResultCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                // Its category, after its source's badge when the search covers several sources.
+                // Its category, after its source's badge when the search covers several sources and the title's badges.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     result.sourceName?.let { SourceBadge(it) }
+                    TitleBadges(parsedTitle)
                     Text(
                         text = result.categoryName,
                         style = MaterialTheme.typography.bodySmall,
