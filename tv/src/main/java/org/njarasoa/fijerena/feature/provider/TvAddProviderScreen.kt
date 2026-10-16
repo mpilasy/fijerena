@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -89,6 +90,7 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderTypeDropdown
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 import org.njarasoa.fijerena.feature.provider.components.RemoteM3uForm
+import org.njarasoa.fijerena.feature.provider.components.ShortNameField
 import org.njarasoa.fijerena.feature.provider.components.SmbForm
 import org.njarasoa.fijerena.feature.provider.components.XtreamForm
 import org.njarasoa.fijerena.feature.provider.components.rowNeighbours
@@ -202,6 +204,9 @@ fun TvAddProviderScreen(
     var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
 
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
+    // The badge short names, the automatic one shown while this source has none of its own.
+    val shortNames by remember { providerRepo.sourceShortNames() }.collectAsState(initial = emptyMap())
+    var shortNameTaken by remember { mutableStateOf<String?>(null) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
 
@@ -672,6 +677,21 @@ fun TvAddProviderScreen(
                                 onOpenPicker = { settingsPicker = it },
                                 pickerRowFocus = { pickerRowFocus.getValue(it) },
                                 pane = settingsPane,
+                                shortName =
+                                    ShortNameField(
+                                        automatic = shortNames[editId].orEmpty(),
+                                        error = shortNameTaken?.let { stringResource(R.string.provider_short_name_taken, it) },
+                                        onChange = { wanted ->
+                                            coroutineScope.launch {
+                                                if (providerRepo.setShortName(editId, wanted)) {
+                                                    shortNameTaken = null
+                                                    providerSettings = providerSettings.copy(shortName = wanted)
+                                                } else {
+                                                    shortNameTaken = wanted
+                                                }
+                                            }
+                                        },
+                                    ),
                             )
 
                             if (editedType == ProviderType.XTREAM) {

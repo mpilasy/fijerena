@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +33,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -282,7 +287,79 @@ fun ColumnScope.ProviderSettingsSection(
                         )
                     }
                 }
+
+                // The source badge's short name: the viewer's, else the one worked out from the name.
+                val shortNames by remember { providerRepo.sourceShortNames() }.collectAsState(initial = emptyMap())
+                var editingShortName by remember { mutableStateOf(false) }
+                val automatic = shortNames[editId].orEmpty()
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                ProviderChoiceRow(
+                    title = stringResource(R.string.provider_short_name_label),
+                    description = stringResource(R.string.provider_short_name_desc),
+                    value = providerSettings.shortName.ifBlank { stringResource(R.string.provider_short_name_automatic, automatic) },
+                    onClick = { editingShortName = true },
+                )
+                if (editingShortName) {
+                    ShortNameDialog(
+                        initial = providerSettings.shortName,
+                        automatic = automatic,
+                        onSave = { wanted, onTaken ->
+                            coroutineScope.launch {
+                                if (providerRepo.setShortName(editId, wanted)) {
+                                    onProviderSettingsChange(providerSettings.copy(shortName = wanted))
+                                    editingShortName = false
+                                } else {
+                                    onTaken()
+                                }
+                            }
+                        },
+                        onDismiss = { editingShortName = false },
+                    )
+                }
             }
         }
     }
+}
+
+/** Types the short name ([SourceShortNames.MAX_LENGTH] characters at most); empty means automatic. */
+@Composable
+private fun ShortNameDialog(
+    initial: String,
+    automatic: String,
+    onSave: (String, onTaken: () -> Unit) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember { mutableStateOf(initial) }
+    var taken by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.provider_short_name_label)) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {
+                    value = it.take(SourceShortNames.MAX_LENGTH)
+                    taken = null
+                },
+                placeholder = { Text(automatic) },
+                singleLine = true,
+                isError = taken != null,
+                supportingText = {
+                    Text(
+                        taken?.let { stringResource(R.string.provider_short_name_taken, it) }
+                            ?: stringResource(R.string.provider_short_name_desc),
+                    )
+                },
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val wanted = value.trim()
+                onSave(wanted) { taken = wanted }
+            }) { Text(stringResource(R.string.common_ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+        },
+    )
 }

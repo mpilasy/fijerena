@@ -196,6 +196,11 @@
     <string name="provider_add_title">Hampiditra loharano</string>
     <string name="provider_edit_title">Hanova loharano</string>
     <string name="provider_name_label">Anaran\'ny loharano</string>
+    <!-- Edit Source: the source badge's short name ("X4P") -->
+    <string name="provider_short_name_label">Anarana fohy</string>
+    <string name="provider_short_name_desc">Izay asehon\'ny marika ho solon\'ny anaran\'ny loharano, litera 5 farafahabetsany. Avelao ho foana raha tiana halaina avy amin\'ny anarana.</string>
+    <string name="provider_short_name_automatic">%1$s (ho azy)</string>
+    <string name="provider_short_name_taken">Loharano hafa no efa mampiasa %1$s</string>
     <string name="provider_type_label">Karazana loharano</string>
     <string name="provider_url_label">URL-n\'ny mpizara</string>
     <string name="provider_username_label">Anaran\'ny mpampiasa</string>

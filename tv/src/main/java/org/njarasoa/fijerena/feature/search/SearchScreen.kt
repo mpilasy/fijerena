@@ -1318,7 +1318,7 @@ private fun CategoryResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            result.sourceName?.let { SourceBadge(it) }
+            result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.titleMedium,
@@ -1382,6 +1382,7 @@ private fun SearchResultItem(
                         parseDisplayTitle(result.streamName).withoutCodeOf(result.categoryName)
                     }
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1391,15 +1392,17 @@ private fun SearchResultItem(
                         color = CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
+                    // Its source (when the search covers several) ends the line, in the same place on every row.
+                    result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
                 }
                 // The category it is in, as a plain secondary line ("kids' movies", not "Category: kids' movies"),
-                // after its source's badge when the search covers several sources and the title's badges.
+                // after the title's badges.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    result.sourceName?.let { SourceBadge(it) }
                     TitleBadges(parsedTitle)
                     Text(
                         // The year the title gave, before the category, so a long category can't push it off.

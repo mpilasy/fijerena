@@ -200,6 +200,11 @@
     <string name="provider_add_title">Add Source</string>
     <string name="provider_edit_title">Edit Source</string>
     <string name="provider_name_label">Source name</string>
+    <!-- Edit Source: the source badge's short name ("X4P") -->
+    <string name="provider_short_name_label">Short name</string>
+    <string name="provider_short_name_desc">What the source badge shows instead of the name, up to 5 characters. Leave empty to work it out from the name.</string>
+    <string name="provider_short_name_automatic">%1$s (automatic)</string>
+    <string name="provider_short_name_taken">Another source already uses %1$s</string>
     <string name="provider_type_label">Source type</string>
     <string name="provider_url_label">Server URL</string>
     <string name="provider_username_label">Username</string>

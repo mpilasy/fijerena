@@ -2216,8 +2216,10 @@ internal fun StreamCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         // Only the row that's actually playing scrolls its title.
-                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
+                        modifier = Modifier.weight(1f).then(if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier),
                     )
+                    // The source (Expert mode) ends the first line, in the same place on every row.
+                    sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
                 nowPlayingText?.let { text ->
                     Text(
@@ -2227,7 +2229,7 @@ internal fun StreamCard(
                         maxLines = 1,
                     )
                 }
-                // The second line: the source (Expert mode), the title's badges, then the category,
+                // The second line: the title's badges, then the category,
                 // year · length · rating or the Now line.
                 val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
                 if (sourceLine != null || lineText != null || parsedTitle.hasBadges) {
@@ -2235,7 +2237,6 @@ internal fun StreamCard(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        sourceLine?.let { SourceBadge(it) }
                         TitleBadges(parsedTitle)
                         lineText?.let { text ->
                             Text(

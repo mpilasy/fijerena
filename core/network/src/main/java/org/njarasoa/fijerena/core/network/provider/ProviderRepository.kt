@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -158,6 +160,30 @@ class ProviderRepository(
     private val filtersStore = CategoryFiltersStore(context)
 
     fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
+
+    /** Every source's badge short name by source id ([SourceShortNames]), following every change. */
+    fun sourceShortNames(): Flow<Map<Long, String>> = dao.getAllProviders().map { SourceShortNames.of(shortNameSources(it)) }
+
+    private fun shortNameSources(providers: List<ProviderEntity>) =
+        providers.map { SourceShortNames.Source(it.id, it.name, parseProviderSettings(it.providerSettings).shortName) }
+
+    /**
+     * Saves [shortName] as [providerId]'s badge short name (blank: automatic), and nothing else, so
+     * no category filter is worked out again. False, and nothing saved, when another source has it
+     * or it is too long.
+     */
+    suspend fun setShortName(
+        providerId: Long,
+        shortName: String,
+    ): Boolean {
+        val entity = dao.getProviderById(providerId) ?: return false
+        val all = dao.getAllProviders().first()
+        if (!SourceShortNames.isFree(shortName, providerId, shortNameSources(all))) return false
+        val stored = parseProviderSettings(entity.providerSettings)
+        dao.updateProvider(entity.copy(providerSettings = json.encodeToString(stored.copy(shortName = shortName.trim()))))
+        settingsCache.keys.removeAll { it.first == providerId }
+        return true
+    }
 
     suspend fun getAllProvidersList(): List<ProviderEntity> = dao.getAllProvidersList()
 
@@ -836,10 +862,12 @@ class ProviderRepository(
         // Leave whatever filters the JSON still holds: until migrateCategoryFiltersToProfiles has
         // run they are the other profiles' fallback. The extra logins change only through
         // saveSourceLogins: a screen holding settings read before a login was added (here or by
-        // live sync) must not drop it.
+        // live sync) must not drop it. The short name likewise changes only through setShortName.
         val stored = parseProviderSettings(entity.providerSettings)
         val settingsJson =
-            json.encodeToString(settings.copy(categoryFilters = stored.categoryFilters, extraLogins = stored.extraLogins))
+            json.encodeToString(
+                settings.copy(categoryFilters = stored.categoryFilters, extraLogins = stored.extraLogins, shortName = stored.shortName),
+            )
         dao.updateProvider(entity.copy(providerSettings = settingsJson))
         filtersStore.set(providerId, profileId, settings.categoryFilters)
         settingsCache.keys.removeAll { it.first == providerId }

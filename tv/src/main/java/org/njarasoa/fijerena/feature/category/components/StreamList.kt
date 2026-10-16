@@ -829,10 +829,12 @@ internal fun StreamItem(
                         style = cardStyle.titleMedium,
                         color = TvListRowDefaults.titleColor(isCurrent = isCurrent, isFocused = isFocused),
                         maxLines = 1,
-                        modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                        modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
                     )
+                    // The source (Expert mode) ends the first line, in the same place on every row.
+                    sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
-                // The second line: the source (Expert mode), the title's badges, then the category,
+                // The second line: the title's badges, then the category,
                 // year · length · rating or the Now line.
                 val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
                 if (sourceLine != null || lineText != null || parsedTitle.hasBadges) {
@@ -840,7 +842,6 @@ internal fun StreamItem(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        sourceLine?.let { SourceBadge(it) }
                         TitleBadges(parsedTitle)
                         lineText?.let { text ->
                             Text(

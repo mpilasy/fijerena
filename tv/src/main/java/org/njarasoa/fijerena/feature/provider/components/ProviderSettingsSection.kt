@@ -17,14 +17,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
+import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.paneItem
@@ -115,6 +118,7 @@ fun ProviderSettingsSection(
     onOpenPicker: (EditSourcePicker) -> Unit,
     pickerRowFocus: (EditSourcePicker) -> FocusRequester,
     pane: PaneFocusState,
+    shortName: ShortNameField? = null,
 ) {
     val scale = LocalUiScale.current
 
@@ -179,7 +183,37 @@ fun ProviderSettingsSection(
             modifier = Modifier.paneItem(pane, "caching"),
         )
     }
+
+    shortName?.let { field ->
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        ReadOnlyFieldWithEdit(
+            value = providerSettings.shortName,
+            onValueChange = { field.onChange(it.trim().take(SourceShortNames.MAX_LENGTH)) },
+            label = stringResource(R.string.provider_short_name_label),
+            placeholder = field.automatic,
+            displayText =
+                providerSettings.shortName.ifBlank {
+                    stringResource(R.string.provider_short_name_automatic, field.automatic)
+                },
+            modifier = Modifier.paneItem(pane, "short_name"),
+        )
+        Text(
+            text = field.error ?: stringResource(R.string.provider_short_name_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (field.error != null) CinemaError else CinemaTextSecondary,
+        )
+    }
 }
+
+/**
+ * The source badge's short name row: [automatic] is the one worked out from the name (shown while
+ * the viewer has none), [error] why the last one typed wasn't saved.
+ */
+class ShortNameField(
+    val automatic: String,
+    val error: String?,
+    val onChange: (String) -> Unit,
+)
 
 /**
  * The open [EditSourcePicker], drawn in place of the settings column: Settings' picker (radio

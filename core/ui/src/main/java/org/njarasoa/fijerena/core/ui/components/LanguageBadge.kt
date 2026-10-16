@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.history.LocalSourceShortNames
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -137,18 +138,21 @@ fun BadgedTitle(
 
 /**
  * The source an item comes from, where a list mixes several (search, Recent, favourites), on the
- * same pill as [LanguageBadge]. Read as "Source: <name>". Nothing while the profile's Expert mode is
- * off ([LocalShowSourceBadges]).
+ * same pill as [LanguageBadge]: its short name ("X4P", [LocalSourceShortNames]), by [providerId]
+ * when the caller has it, else by [name]. Read as "Source: <name>", the whole name. Nothing while
+ * the profile's Expert mode is off ([LocalShowSourceBadges]).
  */
 @Composable
 fun SourceBadge(
     name: String,
     modifier: Modifier = Modifier,
+    providerId: Long? = null,
 ) {
     if (!LocalShowSourceBadges.current) return
+    val shortNames = LocalSourceShortNames.current
     val description = stringResource(R.string.source_badge_description, name)
     CinemaBadge(
-        text = name,
+        text = providerId?.let { shortNames.byId[it] } ?: shortNames.byName[name] ?: name,
         modifier = modifier.clearAndSetSemantics { contentDescription = description },
     )
 }

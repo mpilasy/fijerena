@@ -201,7 +201,7 @@ private fun TvContinueWatchingCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    sourceName?.let { SourceBadge(it) }
+                    sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // A card is narrow: the language only, not the formats.
                     parsedTitle.badge?.let { LanguageBadge(it) }
                     Text(

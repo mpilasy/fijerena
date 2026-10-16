@@ -46,6 +46,11 @@ data class ProviderSettings(
      * docs/plans/archive/20261005_shared-logins-plan.md.
      */
     val extraLogins: List<String> = emptyList(),
+    /**
+     * What this source's badge says instead of its name ("X4P"), at most
+     * [SourceShortNames.MAX_LENGTH] characters. Blank: worked out from the name ([SourceShortNames]).
+     */
+    val shortName: String = "",
 ) {
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000
 
