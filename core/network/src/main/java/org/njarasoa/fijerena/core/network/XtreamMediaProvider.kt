@@ -730,8 +730,11 @@ class XtreamMediaProvider(
         val ftsQuery = buildFtsQuery(query) ?: return null
         val mediaType = getMediaType(contentType)
         return try {
-            val results = repository.searchByFts(contentType, ftsQuery, includeExcluded)
-            kotlin.Result.success(results.map { it.toDomain(mediaType) })
+            // A number is also a TMDB id: its titles lead, then the name matches ("1917" stays findable).
+            val tmdbId = query.trim().takeIf { it.all(Char::isDigit) }.normalizeTmdbId()
+            val byTmdbId = tmdbId?.let { repository.getAlternateStreams(contentType, it, excludeId = -1) }.orEmpty()
+            val results = (byTmdbId + repository.searchByFts(contentType, ftsQuery, includeExcluded)).map { it.toDomain(mediaType) }
+            kotlin.Result.success(results.distinctBy { it.id })
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
