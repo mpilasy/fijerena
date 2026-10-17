@@ -34,9 +34,11 @@ class ProfileRepository(
     ): String {
         val id = UUID.randomUUID().toString()
         dao.insert(ProfileEntity(id = id, name = name.trim(), createdAt = System.currentTimeMillis(), colorIndex = colorIndex))
-        // Starts with the creator's category filters and sources; dev mode starts off (no flag stored).
+        // Starts with the creator's category filters, sources, colour theme and Look and Feel; dev
+        // mode starts off (no flag stored).
         val settings = AppSettings(context)
         CategoryFiltersStore(context).copyProfile(settings.activeProfileId, id)
+        settings.copyLook(settings.activeProfileId, id)
         settings.profileSourceKeys(settings.activeProfileId)?.let { settings.setProfileSourceKeys(id, it) }
         return id
     }
@@ -50,13 +52,15 @@ class ProfileRepository(
     }
 
     /**
-     * See [AppSettings.copyLegacyDevModeToProfiles],
+     * See [AppSettings.copyLegacyDevModeToProfiles], [AppSettings.copyLegacyLookToProfiles],
      * [AppSettings.moveLegacySearchHistoryToDefaultProfile] and
      * [AppSettings.seedProfileSourcesOnce] and [seedProfileSourceRecordsOnce]; run once at startup.
      */
     suspend fun migrateLegacyProfileSettings() {
         val settings = AppSettings(context)
-        settings.copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
+        val profileIds = dao.getAll().map { it.id }
+        settings.copyLegacyDevModeToProfiles(profileIds)
+        settings.copyLegacyLookToProfiles(profileIds)
         settings.moveLegacySearchHistoryToDefaultProfile()
         ProviderRepository(context).seedProfileSourcesOnce()
         seedProfileSourceRecordsOnce(settings)
@@ -88,7 +92,7 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider, and its developer-mode flag, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
+     * logins on every provider, and its developer-mode flag, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -121,6 +125,7 @@ class ProfileRepository(
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
                     AppSettings(context).removeAutoplayNextEpisode(id)
+                    AppSettings(context).removeLook(id)
                     AppSettings(context).removeProfileSearchHistory(id)
                     AppSettings(context).removeLastTab(id)
                     AppSettings(context).removeProfileSources(id)

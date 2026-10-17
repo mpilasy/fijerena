@@ -519,7 +519,7 @@ fun SettingsScreen(
 
                                         SettingsGroup.DISPLAY -> {
                                             item {
-                                                SettingsSection(description = stringResource(R.string.settings_scope_device_section)) {
+                                                SettingsSection(description = stringResource(R.string.settings_display_scope_tv)) {
                                                     ThemeSettingsRows(
                                                         selectedThemeId = uiState.themeId,
                                                         onOpenThemePicker = { openPicker(SettingPicker.THEME) },
