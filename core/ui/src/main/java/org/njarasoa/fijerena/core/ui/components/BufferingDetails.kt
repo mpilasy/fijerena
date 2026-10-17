@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.components
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -21,6 +22,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.BufferingInfo
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -38,6 +40,7 @@ import java.util.Locale
  * long, the connection, the speed against what the stream needs and the server, and — only once
  * a load failed — the errors of this wait and what it received. Read from the playback service twice a second.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun BufferingDetails(modifier: Modifier = Modifier) {
     var info by remember { mutableStateOf<BufferingInfo?>(null) }
