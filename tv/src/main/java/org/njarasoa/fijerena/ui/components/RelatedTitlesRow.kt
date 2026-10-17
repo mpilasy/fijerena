@@ -38,12 +38,17 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -80,11 +85,7 @@ fun RelatedTitlesRow(
 
     Column(modifier = modifier) {
         if (title != null) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-            )
+            CinemaText(text = title, role = TextRole.Heading)
             Spacer(modifier = Modifier.height(Spacing.sm))
         }
         LazyRow(
@@ -137,7 +138,7 @@ private fun relatedTitleCardStyle(): RelatedCardStyle {
         // the border and the lift are what actually read from the sofa.
         colors =
             CardDefaults.colors(
-                containerColor = CinemaSurface,
+                containerColor = CinemaTheme.colors.surface,
                 focusedContainerColor = TvFocusTokens.focusedContainer,
             ),
         cardScale =
@@ -150,7 +151,7 @@ private fun relatedTitleCardStyle(): RelatedCardStyle {
             CardDefaults.border(
                 focusedBorder =
                     Border(
-                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
+                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTheme.colors.accentSoft),
                         shape = shape,
                     ),
             ),
@@ -167,6 +168,7 @@ private fun RelatedTitleCard(
     modifier: Modifier = Modifier,
 ) {
     val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+    // look-ok: TV Material's focusable Card, every look from cardStyle (TvFocusTokens)
     Card(
         onClick = onClick,
         modifier = modifier.width(TvDimensions.posterWidth),
@@ -206,15 +208,13 @@ private fun RelatedTitleCard(
                 TitleBadges(parsedTitle)
             }
         }
-        val titleStyle = MaterialTheme.typography.bodyMedium
+        val titleStyle = textStyleOf(TextRole.Body)
         // Room for two lines on every card, so a one-line title doesn't make its card shorter
         // than the rest and a long one isn't cut after a word ("Avengers: Age …", TV UI audit X4).
         val twoLines = with(LocalDensity.current) { (titleStyle.lineHeight * 2).toDp() }
-        Text(
+        CinemaText(
             // See mobile's StreamCard — provider data occasionally sends a blank name.
             text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-            style = titleStyle,
-            color = CinemaTextPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier =

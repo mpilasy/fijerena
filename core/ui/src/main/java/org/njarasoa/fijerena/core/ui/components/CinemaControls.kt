@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,7 +10,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
@@ -48,6 +51,7 @@ fun CinemaTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val c = CinemaTheme.colors
+    // look-ok: the component that wraps Material's OutlinedTextField
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -106,6 +110,7 @@ fun CinemaCheckbox(
     enabled: Boolean = true,
 ) {
     val c = CinemaTheme.colors
+    // look-ok: the component that wraps Material's Checkbox
     Checkbox(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -131,6 +136,7 @@ fun CinemaSwitch(
     enabled: Boolean = true,
 ) {
     val c = CinemaTheme.colors
+    // look-ok: the component that wraps Material's Switch
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -157,6 +163,7 @@ fun CinemaRadioButton(
     enabled: Boolean = true,
 ) {
     val c = CinemaTheme.colors
+    // look-ok: the component that wraps Material's RadioButton
     RadioButton(
         selected = selected,
         onClick = onClick,
@@ -175,6 +182,7 @@ fun CinemaRadioButton(
 /** A divider line in the theme's divider colour, the hairline width. */
 @Composable
 fun CinemaDivider(modifier: Modifier = Modifier) {
+    // look-ok: the component that wraps Material's HorizontalDivider
     HorizontalDivider(modifier = modifier, thickness = CinemaTheme.borders.hairline, color = CinemaTheme.colors.divider)
 }
 
@@ -198,8 +206,34 @@ fun CinemaPanel(
             .Column(Modifier.padding(ControlStyle.panelPadding), content = content)
     }
     if (onClick != null) {
+        // look-ok: the component that wraps Material's Card
         Card(onClick = onClick, modifier = modifier, shape = CinemaTheme.shapes.card, colors = colors, border = border, content = inner)
     } else {
+        // look-ok: the component that wraps Material's Card
         Card(modifier = modifier, shape = CinemaTheme.shapes.card, colors = colors, border = border, content = inner)
     }
+}
+
+/** A progress bar: the accent over a faint track, [ControlStyle.progressThickness] thick. */
+@Composable
+fun CinemaProgressBar(
+    progress: () -> Float,
+    modifier: Modifier = Modifier,
+) {
+    val c = CinemaTheme.colors
+    // look-ok: the component that wraps Material's LinearProgressIndicator
+    LinearProgressIndicator(
+        progress = progress,
+        modifier = modifier.height(ControlStyle.progressThickness),
+        color = c.accent,
+        trackColor = c.textSecondary.copy(alpha = ControlStyle.PROGRESS_TRACK_ALPHA),
+        drawStopIndicator = {},
+    )
+}
+
+/** A spinner in the accent. */
+@Composable
+fun CinemaSpinner(modifier: Modifier = Modifier) {
+    // look-ok: the component that wraps Material's CircularProgressIndicator
+    CircularProgressIndicator(modifier = modifier, color = CinemaTheme.colors.accent)
 }

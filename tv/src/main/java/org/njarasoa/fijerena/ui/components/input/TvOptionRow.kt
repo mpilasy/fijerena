@@ -8,9 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
@@ -40,9 +44,9 @@ fun TvOptionRow(
             if (selected) {
                 {
                     if (activeLabel != null) {
-                        Text(text = activeLabel, style = MaterialTheme.typography.bodySmall, color = CinemaAccent)
+                        CinemaText(text = activeLabel, role = TextRole.BodySmall, tone = TextTone.Accent)
                     } else {
-                        Icon(imageVector = CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaAccent)
+                        Icon(imageVector = CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent)
                     }
                 }
             } else {
@@ -50,13 +54,9 @@ fun TvOptionRow(
             },
         supportingContent =
             subtitle?.let {
-                { Text(text = it, style = MaterialTheme.typography.bodySmall, color = CinemaTextTertiary) }
+                { CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Tertiary) }
             },
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (selected) TvFocusTokens.emphasisWeight else TvFocusTokens.regularWeight,
-        )
+        CinemaText(text = title, emphasis = selected)
     }
 }

@@ -37,7 +37,7 @@ fun ScoreChip(
                 .background(Color.Black.copy(alpha = CinemaAlpha.detailScoreChipBackground))
                 .padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
     ) {
-        Text(text = value, style = MaterialTheme.typography.titleMedium, color = CinemaTextPrimary)
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = CinemaTextSecondary)
+        CinemaText(text = value, role = TextRole.Heading)
+        CinemaText(text = label, role = TextRole.Caption, tone = TextTone.Secondary)
     }
 }

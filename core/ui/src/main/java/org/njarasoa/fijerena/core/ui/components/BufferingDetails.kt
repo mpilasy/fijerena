@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.deviceinfo.currentConnectionLabel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import java.util.Locale
@@ -47,18 +48,15 @@ fun BufferingDetails(modifier: Modifier = Modifier) {
         }
     }
     val current = info ?: return
-    val style = MaterialTheme.typography.bodySmall
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         if (current.neededMs > 0) {
-            LinearProgressIndicator(
+            CinemaProgressBar(
                 progress = { (current.bufferedMs.toFloat() / current.neededMs).coerceIn(0f, 1f) },
-                modifier = Modifier.width(BAR_WIDTH).height(3.dp),
-                color = CinemaAccent,
-                trackColor = CinemaTextSecondary.copy(alpha = 0.25f),
+                modifier = Modifier.width(BAR_WIDTH),
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(CinemaSpacing.xs))
         }
-        Text(
+        CinemaText(
             text =
                 stringResource(
                     R.string.buffering_detail_progress,
@@ -66,8 +64,8 @@ fun BufferingDetails(modifier: Modifier = Modifier) {
                     BufferingFormat.seconds(current.neededMs),
                     (current.waitingMs / 1000).toString(),
                 ),
-            style = style,
-            color = CinemaTextSecondary,
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
         )
         val speed =
             buildList {
@@ -76,10 +74,10 @@ fun BufferingDetails(modifier: Modifier = Modifier) {
                 current.streamBps?.let { add(stringResource(R.string.buffering_detail_stream_needs, speedText(it))) }
                 current.host?.let { add(it) }
             }.joinToString(SEPARATOR)
-        Text(
+        CinemaText(
             text = speed,
-            style = style,
-            color = if (current.tooSlow) CinemaWarning else CinemaTextSecondary,
+            role = TextRole.BodySmall,
+            tone = if (current.tooSlow) TextTone.Warning else TextTone.Secondary,
             textAlign = TextAlign.Center,
         )
         if (current.hasTrouble) {
@@ -89,7 +87,7 @@ fun BufferingDetails(modifier: Modifier = Modifier) {
                     current.lastError?.let { add(it) }
                     add(stringResource(R.string.buffering_detail_received, sizeText(current.bytesReceived)))
                 }.joinToString(SEPARATOR)
-            Text(text = trouble, style = style, color = CinemaWarning, textAlign = TextAlign.Center)
+            CinemaText(text = trouble, role = TextRole.BodySmall, tone = TextTone.Warning, textAlign = TextAlign.Center)
         }
     }
 }

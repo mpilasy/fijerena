@@ -25,6 +25,7 @@ import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.ListItemShape
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -60,15 +61,15 @@ object TvInputDefaults {
     fun colors(): ListItemColors =
         ListItemDefaults.colors(
             containerColor = TvFocusTokens.restingContainer,
-            contentColor = CinemaTextPrimary,
+            contentColor = CinemaTheme.colors.textPrimary,
             focusedContainerColor = TvFocusTokens.focusedContainer,
-            focusedContentColor = CinemaTextPrimary,
+            focusedContentColor = CinemaTheme.colors.textPrimary,
             selectedContainerColor = TvFocusTokens.restingContainer,
             selectedContentColor = TvFocusTokens.currentText,
             focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
-            focusedSelectedContentColor = CinemaTextPrimary,
+            focusedSelectedContentColor = CinemaTheme.colors.textPrimary,
             disabledContainerColor = TvFocusTokens.restingContainer.copy(alpha = CinemaAlpha.scrim),
-            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+            disabledContentColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textFaint),
         )
 
     @ReadOnlyComposable

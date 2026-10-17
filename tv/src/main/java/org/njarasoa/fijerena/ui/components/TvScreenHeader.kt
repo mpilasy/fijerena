@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -70,18 +73,12 @@ fun TvScreenHeader(
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.displaySmall,
-                color = CinemaTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            CinemaText(text = title, role = TextRole.Display, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle != null) {
-                Text(
+                CinemaText(
                     text = subtitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    role = TextRole.Heading,
+                    tone = TextTone.Secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

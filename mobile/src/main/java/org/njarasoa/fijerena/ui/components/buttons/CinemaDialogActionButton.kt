@@ -21,6 +21,7 @@ fun CinemaDialogActionButton(
     kind: ButtonKind = ButtonKind.Main,
     content: @Composable RowScope.() -> Unit,
 ) {
+    // look-ok: the component that wraps Material's Button
     Button(
         onClick = onClick,
         modifier = modifier.defaultMinSize(minHeight = PhoneButtonStyle.minHeight),

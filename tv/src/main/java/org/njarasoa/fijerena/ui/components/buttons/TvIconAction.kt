@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,12 +36,16 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -93,7 +98,7 @@ fun TvIconAction(
                 focusedScale = TvFocusTokens.focusedScale,
                 pressedScale = TvFocusTokens.pressedScale,
             ),
-        shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+        shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.control),
         border =
             ClickableSurfaceDefaults.border(
                 border =
@@ -128,12 +133,18 @@ fun TvIconAction(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // CinemaText's Inherit tone reads Material 3's content colour: hand it the focus colour.
+                    CompositionLocalProvider(
+                        androidx.compose.material3.LocalContentColor provides androidx.tv.material3.LocalContentColor.current,
+                    ) {
+                        CinemaText(
+                            text = label,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                 }
             }

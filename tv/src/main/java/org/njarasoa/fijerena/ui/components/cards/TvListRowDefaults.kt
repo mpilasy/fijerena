@@ -13,8 +13,12 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -55,12 +59,12 @@ object TvListRowDefaults {
     @Composable
     fun colors(): CardColors =
         CardDefaults.colors(
-            containerColor = CinemaSurface,
-            contentColor = CinemaTextPrimary,
+            containerColor = CinemaTheme.colors.surface,
+            contentColor = CinemaTheme.colors.textPrimary,
             focusedContainerColor = TvFocusTokens.focusedContainer,
-            focusedContentColor = CinemaTextPrimary,
+            focusedContentColor = CinemaTheme.colors.textPrimary,
             pressedContainerColor = TvFocusTokens.focusedContainer,
-            pressedContentColor = CinemaTextPrimary,
+            pressedContentColor = CinemaTheme.colors.textPrimary,
         )
 
     @ReadOnlyComposable
@@ -94,5 +98,11 @@ object TvListRowDefaults {
     fun titleColor(
         isCurrent: Boolean,
         isFocused: Boolean,
-    ): Color = if (isCurrent && !isFocused) TvFocusTokens.currentText else CinemaTextPrimary
+    ): Color = if (isCurrent && !isFocused) TvFocusTokens.currentText else CinemaTheme.colors.textPrimary
+
+    /** [titleColor] as a text tone, for [CinemaText] titles. */
+    fun titleTone(
+        isCurrent: Boolean,
+        isFocused: Boolean,
+    ): TextTone = if (isCurrent && !isFocused) TextTone.AccentSoft else TextTone.Primary
 }

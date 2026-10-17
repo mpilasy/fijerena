@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * "Watched" marker for content laid over artwork.
@@ -34,8 +35,8 @@ fun WatchedBadge(
         modifier =
             modifier
                 .size(size)
-                .background(CinemaSuccess, CircleShape)
-                .border(RING_WIDTH, Color.Black.copy(alpha = RING_ALPHA), CircleShape),
+                .background(CinemaTheme.colors.success, CinemaTheme.shapes.control)
+                .border(RING_WIDTH, CinemaTheme.colors.mediaScrim.copy(alpha = RING_ALPHA), CinemaTheme.shapes.control),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

@@ -37,10 +37,14 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -157,28 +161,17 @@ fun TvDetailHero(
                 val meta = remember(metaLine) { metaLine.filter { it.isNotBlank() }.joinToString(" · ") }
                 if (meta.isNotBlank()) {
                     Spacer(Modifier.height(Spacing.sm))
-                    Text(text = meta, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+                    CinemaText(text = meta, tone = TextTone.Secondary)
                 }
 
                 if (!tagline.isNullOrBlank()) {
                     Spacer(Modifier.height(Spacing.md))
-                    Text(
-                        text = tagline,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontStyle = FontStyle.Italic,
-                        color = CinemaTextSecondary,
-                    )
+                    CinemaText(text = tagline, tone = TextTone.Secondary, italic = true)
                 }
 
                 if (!plot.isNullOrBlank()) {
                     Spacer(Modifier.height(Spacing.xs))
-                    Text(
-                        text = plot,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    CinemaText(text = plot, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
 
                 Spacer(Modifier.height(Spacing.lg))
@@ -273,12 +266,7 @@ fun TvDetailRow(
     value: @Composable () -> Unit,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.Top) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary,
-            modifier = Modifier.width(DETAIL_LABEL_WIDTH),
-        )
+        CinemaText(text = label, tone = TextTone.Secondary, modifier = Modifier.width(DETAIL_LABEL_WIDTH))
         Spacer(Modifier.width(Spacing.md))
         value()
     }
@@ -291,7 +279,7 @@ fun TvDetailRow(
     value: String,
 ) {
     TvDetailRow(label = label) {
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+        CinemaText(text = value)
     }
 }
 

@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
@@ -182,12 +183,13 @@ fun TypographyFallback(
         contentAlignment = Alignment.Center,
     ) {
         if (letter != null) {
+            val uiStyle = LocalUiStyle.current
             val textStyle =
-                remember(palette) {
+                remember(palette, uiStyle) {
                     androidx.compose.ui.text.TextStyle(
                         color = palette.textPrimary,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 28.sp, // look-ok: the placeholder letter is sized to the poster
+                        fontWeight = FontWeight(uiStyle.type.weightEmphasis), // look-ok: same letter
                         textAlign = TextAlign.Center,
                     )
                 }

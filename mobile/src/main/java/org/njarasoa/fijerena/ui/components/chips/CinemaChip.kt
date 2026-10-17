@@ -33,6 +33,7 @@ fun CinemaFilterChip(
     border: BorderStroke? = FilterChipDefaults.filterChipBorder(enabled, selected),
     interactionSource: MutableInteractionSource? = null,
 ) {
+    // look-ok: the component that wraps Material's FilterChip
     FilterChip(
         selected = selected,
         onClick = onClick,

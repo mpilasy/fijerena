@@ -22,7 +22,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -65,16 +68,8 @@ fun TvErrorState(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             modifier = Modifier.padding(Spacing.xl),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.displayMedium,
-                color = CinemaError,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary,
-            )
+            CinemaText(text = title, role = TextRole.Display, tone = TextTone.Danger)
+            CinemaText(text = message, tone = TextTone.Secondary)
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 CinemaPrimaryButton(
                     onClick = onRetry,

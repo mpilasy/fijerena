@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -41,11 +43,7 @@ fun ItemActionsDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-            )
+            CinemaText(text = title, role = TextRole.Heading, maxLines = 2)
         },
         text =
             actions.takeIf { it.isNotEmpty() }?.let {
@@ -61,7 +59,7 @@ fun ItemActionsDialog(
                             ) {
                                 Icon(imageVector = action.icon, contentDescription = null)
                                 Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                                Text(action.label)
+                                CinemaText(action.label)
                             }
                         }
                     }
@@ -75,12 +73,12 @@ fun ItemActionsDialog(
                 },
                 kind = ButtonKind.Main,
             ) {
-                Text(stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add))
+                CinemaText(stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add))
             }
         },
         dismissButton = {
             CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                Text(stringResource(R.string.common_cancel))
+                CinemaText(stringResource(R.string.common_cancel))
             }
         },
     )

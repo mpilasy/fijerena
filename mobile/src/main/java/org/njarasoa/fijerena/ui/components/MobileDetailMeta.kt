@@ -28,12 +28,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -43,7 +47,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  */
 @Composable
 fun MetaText(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleMedium)
+    CinemaText(text = text, role = TextRole.Heading)
 }
 
 /**
@@ -52,15 +56,15 @@ fun MetaText(text: String) {
  */
 @Composable
 fun MetaBadge(text: String) {
-    Text(
+    CinemaText(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+        role = TextRole.Label,
+        tone = TextTone.Secondary,
         modifier =
             Modifier
                 .border(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    color = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
                     shape = cornerShape(CinemaCornerRadius.small),
                 ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xxs),
     )
@@ -97,11 +101,7 @@ fun MetaLine(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (index > 0) {
-                    Text(
-                        text = "•",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    )
+                    CinemaText(text = "•", role = TextRole.Heading, tone = TextTone.Secondary)
                 }
                 segment()
             }
@@ -121,12 +121,7 @@ fun MobileDetailRow(
     value: @Composable () -> Unit,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.Top) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary,
-            modifier = Modifier.width(DETAIL_LABEL_WIDTH),
-        )
+        CinemaText(text = label, tone = TextTone.Secondary, modifier = Modifier.width(DETAIL_LABEL_WIDTH))
         Spacer(Modifier.width(CinemaSpacing.sm))
         value()
     }
@@ -139,7 +134,7 @@ fun MobileDetailRow(
     value: String,
 ) {
     MobileDetailRow(label = label) {
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+        CinemaText(text = value)
     }
 }
 
@@ -162,15 +157,11 @@ fun MobileCategoryLinkRow(
                 .padding(vertical = CinemaSpacing.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = categoryName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            CinemaText(text = categoryName, tone = TextTone.Accent)
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = CinemaTheme.colors.accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
@@ -189,9 +180,8 @@ fun ExpandablePlot(
 ) {
     var expanded by rememberSaveable(plot) { mutableStateOf(false) }
     var overflows by remember(plot) { mutableStateOf(false) }
-    Text(
+    CinemaText(
         text = plot,
-        style = MaterialTheme.typography.bodyLarge,
         maxLines = if (expanded) Int.MAX_VALUE else collapsedLines,
         overflow = TextOverflow.Ellipsis,
         onTextLayout = { result ->

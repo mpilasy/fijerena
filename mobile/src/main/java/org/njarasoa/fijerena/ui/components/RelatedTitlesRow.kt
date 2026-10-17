@@ -23,7 +23,9 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -45,10 +47,7 @@ fun RelatedTitlesRow(
     if (items.isEmpty()) return
 
     Column(modifier = modifier) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-        )
+        CinemaText(text = title, role = TextRole.Heading)
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             items(items, key = { it.id }) { item ->
@@ -88,9 +87,9 @@ private fun RelatedTitleCard(
                 TitleBadges(parsedTitle)
             }
         }
-        Text(
+        CinemaText(
             text = parsedTitle.title,
-            style = MaterialTheme.typography.bodySmall,
+            role = TextRole.BodySmall,
             maxLines = 2,
             minLines = 2,
             overflow = TextOverflow.Ellipsis,

@@ -33,6 +33,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * Startup splash replacement displayed until provider configuration is resolved.
@@ -87,12 +88,13 @@ fun AppLoadingScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .background(Color.Black), // look-ok: matches the system splash window's black
         contentAlignment = Alignment.Center,
     ) {
         Box(contentAlignment = Alignment.Center) {
             val ringSize = logoSize * 1.28f
             val ringStroke = logoSize * 0.017f
+            val accent = CinemaTheme.colors.accent
 
             Canvas(modifier = Modifier.size(ringSize).graphicsLayer { this.alpha = alpha }) {
                 val stroke = ringStroke.toPx()
@@ -101,7 +103,7 @@ fun AppLoadingScreen(
 
                 // Faint full ring, so the sweeping head has a track to travel along.
                 drawArc(
-                    color = CinemaAccent.copy(alpha = CinemaAlpha.divider),
+                    color = accent.copy(alpha = CinemaAlpha.divider),
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -112,7 +114,7 @@ fun AppLoadingScreen(
                     style = Stroke(width = stroke, cap = StrokeCap.Round),
                 )
                 drawArc(
-                    color = CinemaAccent,
+                    color = accent,
                     startAngle = sweep,
                     sweepAngle = 80f,
                     useCenter = false,

@@ -20,12 +20,16 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -50,12 +54,7 @@ internal fun DetailsMoreMenu(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 2,
-            )
+            CinemaText(text = title, role = TextRole.Heading, maxLines = 2)
         },
         text = {
             Column(
@@ -74,11 +73,11 @@ internal fun DetailsMoreMenu(
                             imageVector = CinemaIcons.Refresh,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaAccent,
+                            tint = CinemaTheme.colors.accent,
                         )
                     },
                     headlineContent = {
-                        Text(text = refreshLabel, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                        CinemaText(text = refreshLabel)
                     },
                 )
                 TvInputListItem(
@@ -90,23 +89,19 @@ internal fun DetailsMoreMenu(
                             imageVector = CinemaIcons.Close,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTextSecondary,
+                            tint = CinemaTheme.colors.textSecondary,
                         )
                     },
                     headlineContent = {
-                        Text(
-                            text = stringResource(R.string.common_cancel),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextSecondary,
-                        )
+                        CinemaText(text = stringResource(R.string.common_cancel), tone = TextTone.Secondary)
                     },
                 )
             }
         },
         initialFocus = firstItemFocusRequester,
         confirmButton = {},
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
+        containerColor = CinemaTheme.colors.surface,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }

@@ -68,7 +68,10 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -76,6 +79,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.FOCUS_RETRY_MAX_FRAMES
@@ -196,9 +200,12 @@ private fun RailOverlay(
     // the rail's onPreviewKeyEvent below takes Back (NAVIGATION_GUIDE → "TV Back on Detail Screens").
     BackHandler(enabled = state.expanded) { back() }
 
-    val scrim = CinemaBackground.copy(alpha = CinemaAlpha.scrim)
-    val edgeShade = Brush.horizontalGradient(listOf(CinemaBackground.copy(alpha = CinemaAlpha.imageOverlay), Color.Transparent))
-    val panel = CinemaSurface.copy(alpha = CinemaAlpha.overlayHeavy)
+    val scrim = CinemaTheme.colors.background.copy(alpha = CinemaAlpha.scrim)
+    val edgeShade =
+        Brush.horizontalGradient(
+            listOf(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.imageOverlay), CinemaTheme.colors.clear),
+        )
+    val panel = CinemaTheme.colors.surface.copy(alpha = CinemaAlpha.overlayHeavy)
     val entryItem = railEntryItem(state.current, items)
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -282,10 +289,8 @@ private fun RailOverlay(
             enter = fadeIn(tween(TvNavRailDefaults.animationMs)),
             exit = fadeOut(tween(TvNavRailDefaults.animationMs)),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.tv_nav_rail_hint),
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextPrimary,
                 maxLines = 1,
                 modifier =
                     Modifier
@@ -385,12 +390,12 @@ private fun RailButton(
                 .semantics { contentDescription = description },
         colors =
             ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
-                contentColor = CinemaTextPrimary,
+                containerColor = CinemaTheme.colors.clear,
+                contentColor = CinemaTheme.colors.textPrimary,
                 focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaTextPrimary,
+                focusedContentColor = CinemaTheme.colors.textPrimary,
                 pressedContainerColor = TvFocusTokens.focusedContainer,
-                pressedContentColor = CinemaTextPrimary,
+                pressedContentColor = CinemaTheme.colors.textPrimary,
             ),
         scale =
             ClickableSurfaceDefaults.scale(
@@ -426,10 +431,10 @@ private fun RailButton(
             ) {
                 icon()
             }
-            Text(
+            CinemaText(
                 text = label,
-                style = MaterialTheme.typography.titleSmall,
-                color = TvListRowDefaults.titleColor(isCurrent, focused),
+                role = TextRole.Heading,
+                tone = TvListRowDefaults.titleTone(isCurrent, focused),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier =

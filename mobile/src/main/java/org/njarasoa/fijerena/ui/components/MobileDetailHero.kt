@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
 /**
@@ -53,14 +54,14 @@ fun MobileDetailHero(
         // background (same source TV's GradientOverlay/TvDetailHero scrims use), not a raw
         // black — a scrim tinted to the active theme reads as part of the surface it sits on
         // instead of a fixed color pasted over every theme alike.
-        val palette = CinemaThemeHolder.current
+        val c = CinemaTheme.colors
         val scrimBrush =
-            remember(palette.background) {
+            remember(c) {
                 Brush.verticalGradient(
-                    0f to palette.background.copy(alpha = CinemaAlpha.imageOverlayLight),
-                    0.25f to Color.Transparent,
-                    0.6f to Color.Transparent,
-                    1f to palette.background.copy(alpha = CinemaAlpha.imageOverlay),
+                    0f to c.background.copy(alpha = CinemaAlpha.imageOverlayLight),
+                    0.25f to c.clear,
+                    0.6f to c.clear,
+                    1f to c.background.copy(alpha = CinemaAlpha.imageOverlay),
                 )
             }
         Box(modifier = Modifier.matchParentSize().background(scrimBrush))

@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -38,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
@@ -86,7 +90,7 @@ fun CinemaIconButton(
         onClick = onClick,
         modifier = modifier.size(PhoneButtonStyle.iconButtonSize),
         enabled = enabled,
-        shape = CircleShape,
+        shape = CinemaTheme.shapes.control,
         colors =
             IconButtonDefaults.filledIconButtonColors(
                 containerColor = PhoneButtonStyle.iconContainer,
@@ -115,7 +119,7 @@ fun DetailIconAction(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = CinemaTextPrimary,
+    tint: Color = CinemaTheme.colors.textPrimary,
 ) {
     // A capped width and a two-line, centred label: at a large system font size the one-line
     // labels of a row of actions ran into each other ("Add to FavoritesMark as watched…").
@@ -126,10 +130,10 @@ fun DetailIconAction(
         CinemaIconButton(onClick = onClick, icon = {
             Icon(imageVector = icon, contentDescription = label, tint = tint)
         })
-        Text(
+        CinemaText(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+            role = TextRole.Caption,
+            tone = TextTone.Secondary,
             maxLines = 2,
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
@@ -149,7 +153,7 @@ fun CinemaDangerIconButton(
         onClick = onClick,
         modifier = modifier.size(PhoneButtonStyle.iconButtonSize),
         enabled = enabled,
-        shape = CircleShape,
+        shape = CinemaTheme.shapes.control,
         colors =
             IconButtonDefaults.filledIconButtonColors(
                 containerColor = PhoneButtonStyle.dangerIconContainer,

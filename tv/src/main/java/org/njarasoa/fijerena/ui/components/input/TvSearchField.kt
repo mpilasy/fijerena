@@ -44,11 +44,16 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -137,15 +142,15 @@ fun TvSearchField(
                 imageVector = CinemaIcons.Search,
                 contentDescription = null,
                 modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                tint = CinemaTextPrimary,
+                tint = CinemaTheme.colors.textPrimary,
             )
         }
 
         if (editing) {
-            OutlinedTextField(
+            CinemaTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = { Text(placeholder, color = CinemaTextPrimary.copy(alpha = 0.6f)) },
+                placeholder = placeholder,
                 singleLine = true,
                 modifier =
                     Modifier
@@ -171,17 +176,6 @@ fun TvSearchField(
                             if (isOk && event.type == KeyEventType.KeyUp) keyboard?.show()
                             isOk
                         }.tvDpadEscape(),
-                shape = CircleShape,
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedContainerColor = CinemaSurfaceVariant,
-                        unfocusedContainerColor = CinemaSurfaceLight,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.4f),
-                    ),
                 leadingIcon = searchIcon,
                 keyboardOptions =
                     KeyboardOptions(
@@ -203,21 +197,29 @@ fun TvSearchField(
                         .heightIn(min = OutlinedTextFieldDefaults.MinHeight)
                         .focusRequester(focusRequester)
                         .then(restingFieldModifier),
-                shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+                shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.field),
                 colors =
                     ClickableSurfaceDefaults.colors(
-                        containerColor = CinemaSurfaceLight,
-                        contentColor = CinemaTextPrimary,
-                        focusedContainerColor = CinemaSurfaceVariant,
-                        focusedContentColor = CinemaTextPrimary,
-                        pressedContainerColor = CinemaSurfaceVariant,
-                        pressedContentColor = CinemaTextPrimary,
+                        containerColor = CinemaTheme.colors.surfaceHigh,
+                        contentColor = CinemaTheme.colors.textPrimary,
+                        focusedContainerColor = CinemaTheme.colors.surfaceRaised,
+                        focusedContentColor = CinemaTheme.colors.textPrimary,
+                        pressedContainerColor = CinemaTheme.colors.surfaceRaised,
+                        pressedContentColor = CinemaTheme.colors.textPrimary,
                     ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
                 border =
                     ClickableSurfaceDefaults.border(
-                        border = Border(BorderStroke(TvFocusTokens.borderDefault, CinemaTextPrimary.copy(alpha = 0.4f))),
-                        focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccent)),
+                        border =
+                            Border(
+                                BorderStroke(CinemaTheme.borders.outline, CinemaTheme.colors.outline),
+                                shape = CinemaTheme.shapes.field,
+                            ),
+                        focusedBorder =
+                            Border(
+                                BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTheme.colors.accent),
+                                shape = CinemaTheme.shapes.field,
+                            ),
                     ),
             ) {
                 Row(
@@ -229,9 +231,9 @@ fun TvSearchField(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 ) {
                     searchIcon()
-                    Text(
+                    CinemaText(
                         text = query.ifEmpty { placeholder },
-                        color = if (query.isEmpty()) CinemaTextPrimary.copy(alpha = 0.6f) else CinemaTextPrimary,
+                        tone = if (query.isEmpty()) TextTone.Tertiary else TextTone.Primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -251,7 +253,7 @@ fun TvSearchField(
                         imageVector = CinemaIcons.Close,
                         contentDescription = stringResource(R.string.provider_clear_button),
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        tint = CinemaTextPrimary,
+                        tint = CinemaTheme.colors.textPrimary,
                     )
                 },
             )

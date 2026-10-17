@@ -13,11 +13,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -39,10 +41,10 @@ fun TvSourceChooserDialog(
         initialFocus = firstRow,
         onDismissRequest = onDismiss,
         // The darkest surface behind the rows, as the other TV pickers (TV UI audit #3).
-        containerColor = CinemaBackground,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
-        title = { androidx.compose.material3.Text(stringResource(R.string.source_chooser_title)) },
+        containerColor = CinemaTheme.colors.background,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
+        title = { CinemaText(stringResource(R.string.source_chooser_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -62,7 +64,7 @@ fun TvSourceChooserDialog(
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { androidx.compose.material3.Text(stringResource(R.string.common_cancel), color = CinemaTextPrimary) }
+            ) { CinemaText(stringResource(R.string.common_cancel)) }
         },
     )
 }

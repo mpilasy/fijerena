@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -106,12 +107,14 @@ fun CinemaText(
     overflow: TextOverflow = TextOverflow.Clip,
     softWrap: Boolean = true,
     strikethrough: Boolean = false,
+    italic: Boolean = false,
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
 ) {
+    // look-ok: the component that wraps Material's Text
     Text(
         text = text,
         modifier = modifier,
-        style = resolvedStyle(role, emphasis, strikethrough),
+        style = resolvedStyle(role, emphasis, strikethrough, italic),
         color = colorOf(tone),
         textAlign = textAlign,
         maxLines = maxLines,
@@ -137,10 +140,11 @@ fun CinemaText(
     softWrap: Boolean = true,
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
 ) {
+    // look-ok: the component that wraps Material's Text
     Text(
         text = text,
         modifier = modifier,
-        style = resolvedStyle(role, emphasis, false),
+        style = resolvedStyle(role, emphasis, false, false),
         color = colorOf(tone),
         textAlign = textAlign,
         maxLines = maxLines,
@@ -162,18 +166,13 @@ private fun resolvedStyle(
     role: TextRole,
     emphasis: Boolean,
     strikethrough: Boolean,
+    italic: Boolean,
 ): TextStyle {
     val base = textStyleOf(role)
-    return when {
-        !emphasis && !strikethrough -> {
-            base
-        }
-
-        else -> {
-            base.copy(
-                fontWeight = if (emphasis) emphasisWeight else base.fontWeight,
-                textDecoration = if (strikethrough) TextDecoration.LineThrough else base.textDecoration,
-            )
-        }
-    }
+    if (!emphasis && !strikethrough && !italic) return base
+    return base.copy(
+        fontWeight = if (emphasis) emphasisWeight else base.fontWeight,
+        textDecoration = if (strikethrough) TextDecoration.LineThrough else base.textDecoration,
+        fontStyle = if (italic) FontStyle.Italic else base.fontStyle,
+    )
 }

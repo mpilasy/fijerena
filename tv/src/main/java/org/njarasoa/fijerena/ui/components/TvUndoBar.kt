@@ -27,11 +27,13 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -161,8 +163,8 @@ fun TvUndoBar(
         modifier =
             modifier
                 .padding(bottom = Spacing.md)
-                .background(CinemaSurface, shape)
-                .border(TvDimensions.borderDefault, CinemaGlassBorder, shape)
+                .background(CinemaTheme.colors.surface, shape)
+                .border(TvDimensions.borderDefault, CinemaTheme.colors.glassBorder, shape)
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -170,15 +172,13 @@ fun TvUndoBar(
         Icon(
             imageVector = CinemaIcons.Delete,
             contentDescription = null,
-            tint = CinemaTextPrimary,
+            tint = CinemaTheme.colors.textPrimary,
             modifier = Modifier.size(TvDimensions.iconSmall),
         )
-        Text(
-            text = stringResource(R.string.undo_removed_format, entry.name),
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextPrimary,
-            maxLines = 2, // the panels are narrow: "Hold OK or press Menu to undo" must not be cut off
+        CinemaText( // the panels are narrow: "Hold OK or press Menu to undo" must not be cut off
             overflow = TextOverflow.Ellipsis,
+            text = stringResource(R.string.undo_removed_format, entry.name),
+            maxLines = 2,
         )
     }
 }

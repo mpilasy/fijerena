@@ -14,9 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -54,26 +58,16 @@ fun MobileEmptyState(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = CinemaTextSecondary,
+                    tint = CinemaTheme.colors.textSecondary,
                     modifier = Modifier.size(MobileDimensions.iconXLarge),
                 )
             }
-            Text(
-                text = message,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                textAlign = TextAlign.Center,
-            )
+            CinemaText(text = message, role = TextRole.Heading, textAlign = TextAlign.Center)
             if (secondary != null) {
-                Text(
-                    text = secondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary,
-                    textAlign = TextAlign.Center,
-                )
+                CinemaText(text = secondary, tone = TextTone.Secondary, textAlign = TextAlign.Center)
             }
             if (actionLabel != null && onAction != null) {
-                CinemaButton(onClick = onAction) { Text(actionLabel) }
+                CinemaButton(onClick = onAction) { CinemaText(actionLabel) }
             }
         }
     }

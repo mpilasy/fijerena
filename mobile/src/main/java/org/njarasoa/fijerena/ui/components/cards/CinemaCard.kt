@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -30,7 +31,7 @@ private fun defaultCardElevation(): CardElevation = CardDefaults.cardElevation(d
  */
 @Composable
 fun cinemaCardHairlineBorder(): BorderStroke =
-    BorderStroke(MobileDimensions.dividerThin, CinemaSurfaceLight.copy(alpha = CinemaAlpha.cardHairline))
+    BorderStroke(MobileDimensions.dividerThin, CinemaTheme.colors.surfaceHigh.copy(alpha = CinemaAlpha.cardHairline))
 
 /**
  * Themed replacement for [Card] — M3's default card shape ignores the app's
@@ -44,6 +45,7 @@ fun CinemaCard(
     border: BorderStroke? = cinemaCardHairlineBorder(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // look-ok: the component that wraps Material's Card
     Card(
         modifier = modifier,
         shape = cornerShape(CinemaCornerRadius.medium),
@@ -65,6 +67,7 @@ fun CinemaCard(
     border: BorderStroke? = cinemaCardHairlineBorder(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // look-ok: the component that wraps Material's Card
     Card(
         onClick = onClick,
         modifier = modifier,

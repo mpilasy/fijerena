@@ -14,9 +14,13 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import androidx.tv.material3.ToggleableSurfaceDefaults
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -58,15 +62,15 @@ fun TvSelectableButton(
         colors =
             ToggleableSurfaceDefaults.colors(
                 containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTextPrimary,
+                contentColor = CinemaTheme.colors.textPrimary,
                 focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaTextPrimary,
+                focusedContentColor = CinemaTheme.colors.textPrimary,
                 selectedContainerColor = TvFocusTokens.restingContainer,
                 selectedContentColor = TvFocusTokens.currentText,
                 focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
                 focusedSelectedContentColor = TvFocusTokens.currentText,
                 disabledContainerColor = TvFocusTokens.restingContainer.copy(alpha = CinemaAlpha.scrim),
-                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+                disabledContentColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textFaint),
             ),
         scale =
             ToggleableSurfaceDefaults.scale(
@@ -80,7 +84,7 @@ fun TvSelectableButton(
                 border = Border.None,
                 focusedBorder =
                     Border(
-                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
+                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTheme.colors.accentSoft),
                         shape = cornerShape(CornerRadius.small),
                     ),
             ),
@@ -94,11 +98,7 @@ fun TvSelectableButton(
                     .align(Alignment.Center)
                     .padding(PaddingValues(horizontal = Spacing.md, vertical = Spacing.sm)),
         ) {
-            Text(
-                text = text,
-                textAlign = TextAlign.Center,
-                fontWeight = if (selected) TvFocusTokens.emphasisWeight else TvFocusTokens.regularWeight,
-            )
+            CinemaText(text = text, role = TextRole.Label, emphasis = selected, textAlign = TextAlign.Center)
         }
     }
 }

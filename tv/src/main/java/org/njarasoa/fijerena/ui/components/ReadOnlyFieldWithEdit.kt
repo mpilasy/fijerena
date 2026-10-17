@@ -38,12 +38,17 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -82,16 +87,11 @@ fun ReadOnlyFieldWithEdit(
     val returnFocusRequester = rememberFocusReturn(active = isEditing)
 
     if (isEditing) {
-        OutlinedTextField(
+        CinemaTextField(
             value = editValue,
             onValueChange = { editValue = it },
-            label = { Text(label) },
-            placeholder =
-                if (placeholder.isNotEmpty()) {
-                    { Text(placeholder) }
-                } else {
-                    null
-                },
+            label = label,
+            placeholder = placeholder.ifEmpty { null },
             singleLine = singleLine,
             visualTransformation = visualTransformation,
             keyboardOptions =
@@ -133,19 +133,6 @@ fun ReadOnlyFieldWithEdit(
                             false
                         }
                     },
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = CinemaTextPrimary,
-                    unfocusedTextColor = CinemaTextPrimary,
-                    cursorColor = CinemaAccent,
-                    focusedBorderColor = CinemaAccent,
-                    unfocusedBorderColor = CinemaTextSecondary,
-                    focusedLabelColor = CinemaAccent,
-                    unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    focusedContainerColor = CinemaSurfaceVariant,
-                    focusedPlaceholderColor = CinemaTextSecondary,
-                    unfocusedPlaceholderColor = CinemaTextSecondary,
-                ),
         )
 
         LaunchedEffect(Unit) {
@@ -169,10 +156,10 @@ fun ReadOnlyFieldWithEdit(
                     .semantics { contentDescription = editDescription },
             trailingContent = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
+                    CinemaText(
                         text = displayText.ifEmpty { placeholder },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (displayText.isNotEmpty()) CinemaTextPrimary else CinemaTextSecondary,
+                        role = TextRole.Body,
+                        tone = if (displayText.isNotEmpty()) TextTone.Primary else TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.widthIn(max = TvDimensions.settingsInputWidth),
@@ -186,7 +173,7 @@ fun ReadOnlyFieldWithEdit(
                 }
             },
         ) {
-            Text(text = label, style = MaterialTheme.typography.titleSmall)
+            CinemaText(text = label, role = TextRole.Heading)
         }
     }
 }

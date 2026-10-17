@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /** A profile's avatar: its colour as a circle, with the first letter of its name. */
 @Composable
@@ -28,13 +29,14 @@ fun ProfileAvatar(
         modifier =
             modifier
                 .size(size)
-                .clip(CircleShape)
+                .clip(CinemaTheme.shapes.identity)
                 .background(CinemaProfileColors.forIndex(colorIndex)),
         contentAlignment = Alignment.Center,
     ) {
+        // look-ok: the initial is sized to the avatar, not a text role
         Text(
             text = initialOf(name),
-            style = TextStyle(fontSize = fontSize, fontWeight = FontWeight.Bold),
+            style = TextStyle(fontSize = fontSize, fontWeight = emphasisWeight),
             color = CinemaProfileColors.onAvatar,
         )
     }

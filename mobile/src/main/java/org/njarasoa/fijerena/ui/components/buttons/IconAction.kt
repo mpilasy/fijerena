@@ -14,6 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 
 /**
  * An action as an icon: [label] is its content description and shows in a tooltip on long-press.
@@ -31,7 +34,7 @@ fun IconAction(
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-        tooltip = { PlainTooltip { Text(label) } },
+        tooltip = { PlainTooltip { CinemaText(label, role = TextRole.BodySmall, tone = TextTone.Inherit) } },
         state = rememberTooltipState(),
         modifier = modifier,
     ) {

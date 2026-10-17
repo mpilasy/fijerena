@@ -19,4 +19,8 @@ object ControlStyle {
     /** A field's outline when it is not focused, and focused. */
     val fieldOutline: Dp = 1.dp
     val fieldOutlineFocused: Dp = 2.dp
+
+    /** A progress bar's thickness, and how strongly its track shows. */
+    val progressThickness: Dp = 3.dp
+    const val PROGRESS_TRACK_ALPHA = 0.25f
 }

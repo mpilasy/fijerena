@@ -24,6 +24,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
@@ -37,7 +38,7 @@ import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
 fun Modifier.tvFocusable(
     focusScale: Float = TvFocusTokens.focusedScale,
     borderWidth: Dp = TvFocusTokens.focusBorderWidth,
-    borderColor: Color = CinemaAccentLight,
+    borderColor: Color = CinemaTheme.colors.accentSoft,
     cornerRadius: Dp = CornerRadius.medium,
 ): Modifier =
     // The focus-event node must sit *before* focusable(): onFocusEvent reports the focus state of
@@ -53,7 +54,7 @@ fun Modifier.tvFocusable(
  */
 @Composable
 fun Modifier.tvFocusableNoScale(
-    borderColor: Color = CinemaAccentLight,
+    borderColor: Color = CinemaTheme.colors.accentSoft,
     cornerRadius: Dp = CornerRadius.medium,
 ): Modifier =
     tvFocusable(
@@ -71,7 +72,7 @@ fun Modifier.tvFocusableContent(cornerRadius: Dp = CornerRadius.medium): Modifie
     tvFocusable(
         focusScale = TvFocusTokens.focusedScaleContent,
         borderWidth = TvFocusTokens.focusBorderWidth,
-        borderColor = CinemaAccentLight,
+        borderColor = CinemaTheme.colors.accentSoft,
         cornerRadius = cornerRadius,
     )
 

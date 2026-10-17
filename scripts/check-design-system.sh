@@ -17,9 +17,9 @@
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
 # lowered, so the list only shrinks; it is empty when the plan is done.
 #
-# Not counted: theme files (/theme/), the component library (core/ui/.../core/ui/components,
-# tv/.../ui/components, mobile/.../ui/components), style classes
-# (*Style.kt), comment lines, and lines marked `// look-ok: <reason>` (or the line above).
+# Not counted: theme files (/theme/) and style classes — the only places raw values live. The
+# component library is counted like feature code: components read the theme too. Also not counted:
+# comment lines, and lines marked `// look-ok: <reason>` (or the line above).
 #
 # Run locally: scripts/check-design-system.sh   (--counts prints every file's count)
 set -euo pipefail
@@ -47,10 +47,7 @@ count_file() {
 
 files() {
     find tv/src/main/java mobile/src/main/java core/ui/src/main/java -name '*.kt' \
-        -not -path '*/theme/*' -not -name '*Style.kt' \
-        -not -path 'core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/*' \
-        -not -path 'tv/src/main/java/org/njarasoa/fijerena/ui/components/*' \
-        -not -path 'mobile/src/main/java/org/njarasoa/fijerena/ui/components/*' | sort
+        -not -path '*/theme/*' -not -name '*Style.kt' | sort
 }
 
 if [ "${1:-}" = "--counts" ]; then

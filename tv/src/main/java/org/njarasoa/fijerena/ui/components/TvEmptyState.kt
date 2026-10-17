@@ -23,8 +23,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -85,23 +89,13 @@ fun TvEmptyState(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = CinemaTextSecondary,
+                    tint = CinemaTheme.colors.textSecondary,
                     modifier = Modifier.size(TvDimensions.iconLarge),
                 )
             }
-            Text(
-                text = message,
-                style = MaterialTheme.typography.headlineSmall,
-                color = CinemaTextPrimary,
-                textAlign = TextAlign.Center,
-            )
+            CinemaText(text = message, role = TextRole.Title, textAlign = TextAlign.Center)
             if (secondary != null) {
-                Text(
-                    text = secondary,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary,
-                    textAlign = TextAlign.Center,
-                )
+                CinemaText(text = secondary, tone = TextTone.Secondary, textAlign = TextAlign.Center)
             }
             if (hasAction) {
                 CinemaPrimaryButton(

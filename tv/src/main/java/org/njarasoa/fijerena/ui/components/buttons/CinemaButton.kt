@@ -29,6 +29,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.ProvideTextStyle
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
@@ -43,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -167,7 +171,7 @@ fun CinemaTextLabelButton(
     enabled: Boolean = true,
 ) {
     CinemaButton(onClick = onClick, modifier = modifier, kind = kind, enabled = enabled) {
-        Text(text = text, textAlign = TextAlign.Center)
+        CinemaText(text = text, role = TextRole.Label, tone = TextTone.Inherit, textAlign = TextAlign.Center)
     }
 }
 
@@ -238,7 +242,7 @@ fun CinemaIconButton(
             ),
         shape =
             androidx.tv.material3.ClickableSurfaceDefaults
-                .shape(shape = androidx.compose.foundation.shape.CircleShape),
+                .shape(shape = CinemaTheme.shapes.control),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
                 border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), TvButtonStyle.iconOutline)),
@@ -289,7 +293,7 @@ fun CinemaDangerIconButton(
             ),
         shape =
             androidx.tv.material3.ClickableSurfaceDefaults
-                .shape(shape = androidx.compose.foundation.shape.CircleShape),
+                .shape(shape = CinemaTheme.shapes.control),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
                 border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), TvButtonStyle.dangerIconOutline)),

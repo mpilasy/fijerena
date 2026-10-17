@@ -14,11 +14,18 @@ import androidx.tv.material3.RadioButtonDefaults
 import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * D-pad toggle rows.
@@ -48,17 +55,7 @@ fun TvCheckRow(
         description = description,
         enabled = enabled,
         leading = {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = null,
-                enabled = enabled,
-                colors =
-                    CheckboxDefaults.colors(
-                        checkedColor = CinemaAccent,
-                        uncheckedColor = CinemaTextSecondary,
-                        checkmarkColor = CinemaTextPrimary,
-                    ),
-            )
+            CinemaCheckbox(checked = checked, onCheckedChange = null, enabled = enabled)
         },
     )
 }
@@ -80,16 +77,7 @@ fun TvRadioRow(
         description = description,
         enabled = enabled,
         leading = {
-            RadioButton(
-                selected = selected,
-                onClick = null,
-                enabled = enabled,
-                colors =
-                    RadioButtonDefaults.colors(
-                        selectedColor = CinemaAccent,
-                        unselectedColor = CinemaTextSecondary,
-                    ),
-            )
+            CinemaRadioButton(selected = selected, onClick = null, enabled = enabled)
         },
     )
 }
@@ -113,18 +101,7 @@ fun TvSwitchRow(
         description = description,
         enabled = enabled,
         trailing = {
-            Switch(
-                checked = checked,
-                onCheckedChange = null,
-                enabled = enabled,
-                colors =
-                    SwitchDefaults.colors(
-                        checkedThumbColor = CinemaAccent,
-                        checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                        uncheckedThumbColor = CinemaTextSecondary,
-                        uncheckedTrackColor = CinemaSurfaceVariant,
-                    ),
-            )
+            CinemaSwitch(checked = checked, onCheckedChange = null, enabled = enabled)
         },
     )
 }
@@ -154,14 +131,10 @@ private fun TvStateRow(
         supportingContent =
             description?.let {
                 {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
+                    CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Secondary)
                 }
             },
     ) {
-        Text(text = label, style = MaterialTheme.typography.titleSmall)
+        CinemaText(text = label, role = TextRole.Heading)
     }
 }

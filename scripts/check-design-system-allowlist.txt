@@ -107,3 +107,6 @@ tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvTuningOve
 tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvUpNextOverlay.kt 6
 tv/src/main/java/org/njarasoa/fijerena/ui/player/components/TvPlayerStates.kt 14
 tv/src/main/java/org/njarasoa/fijerena/ui/player/PlayerScreen.kt 3
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/LanguageBadge.kt 12
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/MitadyLoading.kt 1
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/MitohanaLoading.kt 1

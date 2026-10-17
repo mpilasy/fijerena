@@ -30,10 +30,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.colorOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
@@ -150,14 +155,15 @@ private fun SectionTab(
 
     // P5: the selected tab keeps the resting look and is marked by a bottom accent bar plus
     // accent text; only focus lifts the container.
-    val containerColor = if (isFocused) TvFocusTokens.focusedContainer else Color.Transparent
+    val containerColor = if (isFocused) TvFocusTokens.focusedContainer else CinemaTheme.colors.clear
 
-    val textColor =
+    val textTone =
         when {
-            isSelected -> TvFocusTokens.currentText
-            isFocused -> CinemaTextPrimary
-            else -> CinemaTextSecondary
+            isSelected -> TextTone.AccentSoft
+            isFocused -> TextTone.Primary
+            else -> TextTone.Secondary
         }
+    val textColor = colorOf(textTone)
 
     Box(
         modifier =
@@ -181,7 +187,7 @@ private fun SectionTab(
                     if (isFocused) {
                         Modifier.border(
                             width = TvFocusTokens.focusBorderWidth,
-                            color = CinemaAccentLight,
+                            color = CinemaTheme.colors.accentSoft,
                             shape = cornerShape(CornerRadius.medium),
                         )
                     } else {
@@ -195,15 +201,10 @@ private fun SectionTab(
         contentAlignment = Alignment.Center,
     ) {
         val text: @Composable () -> Unit = {
-            Text(
+            CinemaText(
                 text = label,
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = textColor,
+                role = TextRole.Heading,
+                tone = textTone,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
