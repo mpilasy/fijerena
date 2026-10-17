@@ -41,18 +41,22 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.ProfileAddDialog
+import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -70,6 +74,8 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
+    // A profile with a PIN asks for it before the switch (docs/plans/20261017_profile-pin-plan.md).
+    var unlocking by remember { mutableStateOf<ProfileUi?>(null) }
     val activeFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
 
@@ -119,7 +125,9 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 items(profiles, key = { it.id }) { profile ->
                     PickerCard(
                         label = profile.name,
-                        onClick = { viewModel.switchTo(profile.id, onProfileChosen) },
+                        onClick = {
+                            if (viewModel.needsPin(profile.id)) unlocking = profile else viewModel.switchTo(profile.id, onProfileChosen)
+                        },
                         modifier = if (profile.isActive) Modifier.focusRequester(activeFocusRequester) else Modifier,
                     ) {
                         ProfileAvatar(
@@ -150,6 +158,23 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 }
             }
         }
+    }
+
+    unlocking?.let { profile ->
+        TvPinDialog(
+            state =
+                rememberPinPromptState(
+                    viewModel.pins,
+                    PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
+                ) {
+                    unlocking = null
+                    viewModel.switchTo(profile.id, onProfileChosen)
+                },
+            onCancel = {
+                unlocking = null
+                activeFocusRequester.requestFocus()
+            },
+        )
     }
 
     if (adding) {

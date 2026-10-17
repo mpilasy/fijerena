@@ -57,6 +57,9 @@ class FijerenaApplication :
         // First, so anything that goes wrong from here on — startup included — is recorded.
         // Settings → Diagnostics (developer mode) shows it.
         CrashLog.install(this)
+        // Locks PIN-protected profiles again after a while in the background.
+        org.njarasoa.fijerena.core.ui.components.PinSession
+            .install(this)
         // Before anything can start the playback service, which builds its error messages in the
         // app's language only through this.
         PlaybackServiceLocale.wrap = LocaleManager::wrap

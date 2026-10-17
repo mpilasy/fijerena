@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -19,7 +20,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -46,14 +49,21 @@ import org.njarasoa.fijerena.core.player.domain.CatchupWindow
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.sourceOr
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.catchup.guideChannelRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.components.PinRequest
+import org.njarasoa.fijerena.core.ui.components.PinSession
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.TvEpgGuideScreen
@@ -69,6 +79,7 @@ import org.njarasoa.fijerena.feature.safemode.NewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
+import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.RailItem
@@ -1080,6 +1091,40 @@ fun TvNavHost(
             // Provider lookup / credential migration / session restore — used to be a blank
             // window for however long that took.
             AppLoadingScreen()
+        }
+    }
+
+    // The profile in use is locked by its PIN until typed in this session — at launch, after a
+    // while in the background, after a switch live sync made (docs/plans/20261017_profile-pin-plan.md).
+    // Not over the picker, which asks itself, nor the safe-mode / newer-data screens. Cancel opens the picker.
+    if (startDestination != null) {
+        val gateProfiles: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
+        val inUse by gateProfiles.activeProfile.collectAsStateWithLifecycle()
+        val destination = navController.currentBackStackEntryAsState().value?.destination
+        val exempt =
+            destination == null ||
+                destination.hasRoute<Screen.ProfilePicker>() ||
+                destination.hasRoute<Screen.SafeMode>() ||
+                destination.hasRoute<Screen.NewerData>()
+        inUse?.let { profile ->
+            LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
+            if (!exempt && gateProfiles.needsPin(profile.id)) {
+                // Nothing of the locked profile shows behind the prompt.
+                Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
+                TvPinDialog(
+                    state =
+                        rememberPinPromptState(
+                            gateProfiles.pins,
+                            PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
+                        ) {},
+                    onCancel = {
+                        clearSectionStacks()
+                        navController.navigate(Screen.ProfilePicker) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
+                )
+            }
         }
     }
 }

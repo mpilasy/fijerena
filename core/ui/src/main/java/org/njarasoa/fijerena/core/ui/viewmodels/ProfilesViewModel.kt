@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.PinSession
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
@@ -115,6 +116,9 @@ class ProfilesViewModel(
 
     /** The profiles' optional PINs (docs/plans/20261017_profile-pin-plan.md). */
     val pins = ProfilePins(appSettings)
+
+    /** [id] has a PIN not typed in this session: picking it asks for it first. */
+    fun needsPin(id: String): Boolean = pins.hasPin(id) && !PinSession.isUnlocked(id)
 
     fun addProfile(
         name: String,

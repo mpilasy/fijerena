@@ -81,7 +81,10 @@ class PinPromptState internal constructor(
                 val check = pins.check(request.profileId, pin)
                 message = check.message(context)
                 messageIsError = message != null
-                if (check == ProfilePins.Check.Right) onDone()
+                if (check == ProfilePins.Check.Right) {
+                    PinSession.unlock(request.profileId)
+                    onDone()
+                }
             }
 
             is PinRequest.Choose -> {
@@ -95,6 +98,8 @@ class PinPromptState internal constructor(
 
                     chosen == pin -> {
                         pins.set(request.profileId, pin)
+                        // Whoever just chose it knows it.
+                        PinSession.unlock(request.profileId)
                         onDone()
                     }
 

@@ -58,6 +58,9 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.catchup.catchupRoute
 import org.njarasoa.fijerena.core.ui.catchup.guideChannelRoute
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.components.PinRequest
+import org.njarasoa.fijerena.core.ui.components.PinSession
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
@@ -85,6 +88,7 @@ import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
@@ -972,6 +976,27 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 onSelect = { tab -> if (tab == MobileTab.SETTINGS) showProfileMenu = true else selectTab(tab) },
                 modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { barHeightPx = it.height },
                 profile = activeProfile,
+            )
+        }
+    }
+    // The profile in use is locked by its PIN until typed in this session — at launch, after a
+    // while in the background, after a switch live sync made (docs/plans/20261017_profile-pin-plan.md).
+    // Cancel opens the profile menu, which then insists on a choice.
+    activeProfile?.let { profile ->
+        LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
+        if (!showProfileMenu && profilesViewModel.needsPin(profile.id)) {
+            // Nothing of the locked profile shows behind the prompt.
+            Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
+            PinDialog(
+                state =
+                    rememberPinPromptState(
+                        profilesViewModel.pins,
+                        PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
+                    ) {},
+                onCancel = {
+                    mustChooseProfile = true
+                    showProfileMenu = true
+                },
             )
         }
     }

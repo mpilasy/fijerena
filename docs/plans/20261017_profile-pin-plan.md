@@ -66,7 +66,7 @@ no PIN anywhere it stays as today.
 |---|---|---|
 | 1 | `ProfilePins` (hash, verify, throttle) + `AppSettings` keys, sync, deletion cleanup; tests | Done (Phase 1 commit) |
 | 2 | PIN entry component (TV pad, phone keyboard) and the profile page's PIN row | Done (Phase 2 commit; walked on both emulators) |
-| 3 | Locked profiles: picker, phone profile menu, launch | Not started |
+| 3 | Locked profiles: picker, phone profile menu, launch | Done (Phase 3 commit; walked on both emulators) |
 | 4 | Admin gate: session unlock, admin-only screens, the 7 taps | Not started |
 | 5 | Docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator walks on both apps | Not started |
 

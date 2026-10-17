@@ -16,6 +16,9 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,15 +27,19 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -60,6 +67,20 @@ fun ProfileSheet(
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     val rowColors = ListItemDefaults.colors(containerColor = CinemaTheme.colors.clear)
+    var unlocking by remember { mutableStateOf<ProfileUi?>(null) }
+    unlocking?.let { profile ->
+        PinDialog(
+            state =
+                rememberPinPromptState(
+                    viewModel.pins,
+                    PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
+                ) {
+                    unlocking = null
+                    if (profile.isActive) onDismiss() else viewModel.switchTo(profile.id, onProfileChosen)
+                },
+            onCancel = { unlocking = null },
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = { if (!mustChoose) onDismiss() },
@@ -106,7 +127,12 @@ fun ProfileSheet(
                             colors = rowColors,
                             modifier =
                                 Modifier.clickable {
-                                    if (profile.isActive) onDismiss() else viewModel.switchTo(profile.id, onProfileChosen)
+                                    // A profile with a PIN asks for it first (docs/plans/20261017_profile-pin-plan.md).
+                                    when {
+                                        viewModel.needsPin(profile.id) -> unlocking = profile
+                                        profile.isActive -> onDismiss()
+                                        else -> viewModel.switchTo(profile.id, onProfileChosen)
+                                    }
                                 },
                         )
                     }
