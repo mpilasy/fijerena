@@ -147,7 +147,8 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just after they are
 written (no shared transaction): provider passwords (`provider`), Jellyfin logins
 (`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
-`theme_id`, `dev_mode` (per profile), `autoplay_next_episode` (per
+`theme_id` and `ui_style_id` (per profile; a device-wide `theme_id` record from an older build,
+profile `shared`, is ignored), `dev_mode` (per profile), `autoplay_next_episode` (per
 profile), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
@@ -575,8 +576,8 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `profile_source_records_queued_v1` | BOOLEAN | One-time flag, per install (never synced): `ProfileRepository.seedProfileSourceRecordsOnce` has seeded the per-source `profile_source:<providerKey>` records for every profile with stored sources — for a device linked before they existed, which linking would never seed again — at the clock of the whole-list `profile_sources` record it replaces, so a newer change made on another device first still wins. Run at startup, after `profile_sources_seeded_v1` |
 | `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | LONG | Stats of the last orphan prune (`pruneOrphanedCatalogData`, manual "Shrink Database" or the automatic sweep), shown in dev mode. Per device |
 | `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/archive/20261001_live-sync-now-playing-plan.md` |
-| `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
-| `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
+| `theme_id_<profileId>` | TEXT | That profile's colour theme (absent = `deep_night`). Synced per profile; a new profile copies the profile in use's; removed with the profile. Replaced the device-wide `theme_id`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
+| `ui_style_id_<profileId>` | TEXT | That profile's Look and Feel, independent of colour (absent = `material`). Synced, copied, removed and upgraded from the device-wide `ui_style_id` like `theme_id_<profileId>` |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |
 | `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
 | `epg_refresh_interval_copied_v1` | BOOLEAN | One-time flag, per install (never synced): `EpgRefreshSchedule.copyLegacyIntervalOnce` has written the retired device-wide interval (`epg_auto_refresh` off or `epg_refresh_interval` -1 → -1, else the interval) into every `epg_source` row whose `refresh_interval_hours` is null. Set only after it succeeds |

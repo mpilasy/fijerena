@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -49,11 +50,14 @@ class MainActivity : ComponentActivity() {
         }
 
         val appSettings = AppSettings(applicationContext)
-        var themeId by mutableStateOf(appSettings.themeId)
-        var uiStyleId by mutableStateOf(appSettings.uiStyleId)
+        // The active profile's colour theme and Look and Feel: follows a profile switch, a change in
+        // Settings and one received from another device. Before a profile is picked, the last one used.
+        val look = appSettings.observeLook()
+        val initialLook = appSettings.themeId to appSettings.uiStyleId
         var uiScale by mutableStateOf(appSettings.uiScale)
 
         setContent {
+            val (themeId, uiStyleId) = look.collectAsState(initial = initialLook).value
             val currentDensity = LocalDensity.current
             // Create a scaled density based on the user's preference.
             // This ensures that all dp and sp values are automatically scaled.
@@ -75,14 +79,8 @@ class MainActivity : ComponentActivity() {
                 FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                     ProvideSourceBadges {
                         TvNavHost(
-                            onThemeChanged = { newThemeId ->
-                                appSettings.themeId = newThemeId
-                                themeId = newThemeId
-                            },
-                            onUiStyleChanged = { newStyleId ->
-                                appSettings.uiStyleId = newStyleId
-                                uiStyleId = newStyleId
-                            },
+                            onThemeChanged = { appSettings.themeId = it },
+                            onUiStyleChanged = { appSettings.uiStyleId = it },
                             onUiScaleChanged = { newScale ->
                                 appSettings.uiScale = newScale
                                 uiScale = newScale

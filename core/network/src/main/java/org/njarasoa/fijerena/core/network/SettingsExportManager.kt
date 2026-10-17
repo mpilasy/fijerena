@@ -114,6 +114,10 @@ class SettingsExportManager(
     @Serializable
     data class GlobalSettings(
         val themeId: String = "deep_night",
+        // The exporting profile's Look and Feel; null in a file from before it was exported, and
+        // the import then leaves it alone.
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val uiStyleId: String? = null,
         val uiScale: Float = 1.0f,
         val isDevMode: Boolean = false,
         // The retired device-wide guide auto-refresh switch: read from an older file only (see
@@ -279,6 +283,7 @@ class SettingsExportManager(
             val global =
                 GlobalSettings(
                     themeId = appSettings.themeId,
+                    uiStyleId = appSettings.uiStyleId,
                     uiScale = appSettings.uiScale,
                     isDevMode = appSettings.isDevMode,
                     cellularLiveMultiplier = appSettings.cellularLiveMultiplier,
@@ -538,6 +543,7 @@ class SettingsExportManager(
                 if (options.importGlobalSettings) {
                     val appSettings = AppSettings(context)
                     appSettings.themeId = exported.global.themeId
+                    exported.global.uiStyleId?.let { appSettings.uiStyleId = it }
                     appSettings.uiScale = exported.global.uiScale
                     appSettings.isDevMode = exported.global.isDevMode
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier

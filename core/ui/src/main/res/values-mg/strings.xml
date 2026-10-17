@@ -1161,6 +1161,8 @@
     <string name="tv_search_placeholder_shows">Tadiavo andian-tantara</string>
     <!-- TV polish: settings and sources -->
     <string name="settings_scope_device_section">Mihatra amin\'ity fitaovana ity ihany</string>
+    <string name="settings_display_scope_tv">Mihatra amin\'ity mombamomba ity ny endrika sy ny endrika sy fahatsapana; amin\'ity fitaovana ity ihany ny haben\'ny soratra sy ny fiteny</string>
+    <string name="settings_display_scope_phone">Mihatra amin\'ity mombamomba ity ny endrika sy ny endrika sy fahatsapana; amin\'ity fitaovana ity ihany ny fiteny</string>
     <string name="epg_management_screen_title">Loharanon\'ny fitarihana</string>
     <!-- phone polish: search, settings, sources -->
     <string name="settings_diagnostics_clear_confirm_title">Hofafana ve ny tatitra?</string>

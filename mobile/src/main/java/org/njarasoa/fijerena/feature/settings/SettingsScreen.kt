@@ -364,7 +364,7 @@ fun MobileSettingsScreen(
             item {
                 SettingsGroupHeader(
                     title = stringResource(R.string.settings_group_display),
-                    description = stringResource(R.string.settings_scope_device_section),
+                    description = stringResource(R.string.settings_display_scope_phone),
                 )
                 SettingsListRow(
                     title = stringResource(R.string.settings_theme_section_title),

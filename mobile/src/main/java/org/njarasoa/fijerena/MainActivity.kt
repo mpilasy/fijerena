@@ -6,9 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -56,10 +54,13 @@ class MainActivity : ComponentActivity() {
         }
 
         val appSettings = AppSettings(applicationContext)
-        var themeId by mutableStateOf(appSettings.themeId)
-        var uiStyleId by mutableStateOf(appSettings.uiStyleId)
+        // The active profile's colour theme and Look and Feel: follows a profile switch, a change in
+        // Settings and one received from another device. Before a profile is picked, the last one used.
+        val look = appSettings.observeLook()
+        val initialLook = appSettings.themeId to appSettings.uiStyleId
 
         setContent {
+            val (themeId, uiStyleId) = look.collectAsState(initial = initialLook).value
             // First composition is close enough to first draw here: the nav host renders
             // AppLoadingScreen immediately, so the splash never lifts onto an empty window.
             LaunchedEffect(Unit) { contentReady = true }
@@ -67,14 +68,8 @@ class MainActivity : ComponentActivity() {
             FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                 ProvideSourceBadges {
                     MobileNavHost(
-                        onThemeChanged = { newThemeId ->
-                            appSettings.themeId = newThemeId
-                            themeId = newThemeId
-                        },
-                        onUiStyleChanged = { newStyleId ->
-                            appSettings.uiStyleId = newStyleId
-                            uiStyleId = newStyleId
-                        },
+                        onThemeChanged = { appSettings.themeId = it },
+                        onUiStyleChanged = { appSettings.uiStyleId = it },
                     )
                 }
             }

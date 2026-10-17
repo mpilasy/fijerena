@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyStore
 
 class AppSettings(
@@ -80,6 +81,8 @@ class AppSettings(
         const val DEFAULT_EPG_REFRESH_INTERVAL = 24
         const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
+        const val DEFAULT_THEME_ID = "deep_night"
+        const val DEFAULT_UI_STYLE_ID = "material"
 
         /**
          * The user's TMDB key: synced like a setting, but stored in [TmdbKeyStore]'s encrypted file,
@@ -91,11 +94,12 @@ class AppSettings(
         val SYNCED_SETTING_KEYS =
             listOf(
                 KEY_THEME_ID,
+                KEY_UI_STYLE_ID,
                 KEY_DEV_MODE,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_TMDB_API_KEY,
             )
-        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE)
+        val PER_PROFILE_SETTING_KEYS = setOf(KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE)
 
         /**
          * A profile's sources sync one record per source — `profile_source:<providerKey>`, true or
@@ -371,8 +375,11 @@ class AppSettings(
                     value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 }
 
-                KEY_THEME_ID -> {
-                    if (value.isString && value.content.isNotBlank()) putString(key, value.content)
+                // A device-wide theme an older build sends (profile id SHARED) has no profile to go to: dropped.
+                KEY_THEME_ID, KEY_UI_STYLE_ID -> {
+                    if (profileId != SyncKind.SHARED && value.isString && value.content.isNotBlank()) {
+                        putString(profileKey(key, profileId), value.content)
+                    }
                 }
             }
         }
@@ -403,7 +410,7 @@ class AppSettings(
                 )
             }
 
-            KEY_THEME_ID -> {
+            KEY_THEME_ID, KEY_UI_STYLE_ID -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 
@@ -469,17 +476,89 @@ class AppSettings(
             prefs.edit { putFloat(KEY_UI_SCALE, clampedValue) }
         }
 
+    /**
+     * The active profile's colour theme. Per profile and synced, like [isDevMode]; falls back to the
+     * device-wide theme this replaced until [copyLegacyLookToProfiles] has run.
+     */
     var themeId: String
-        get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
-        set(value) {
-            prefs.edit { putString(KEY_THEME_ID, value) }
-            SettingsSyncQueue.setting(context, KEY_THEME_ID)
-        }
+        get() = themeId(activeProfileId)
+        set(value) = setThemeId(activeProfileId, value)
 
-    /** Platform-inspired look-and-feel preset (shape/type/icon/grid/dialog character), independent of [themeId]'s color. */
+    fun themeId(profileId: String): String =
+        prefs.getString(profileKey(KEY_THEME_ID, profileId), null)
+            ?: prefs.getString(KEY_THEME_ID, null)
+            ?: DEFAULT_THEME_ID
+
+    fun setThemeId(
+        profileId: String,
+        value: String,
+    ) {
+        prefs.edit { putString(profileKey(KEY_THEME_ID, profileId), value) }
+        SettingsSyncQueue.setting(context, KEY_THEME_ID, profileId)
+    }
+
+    /**
+     * The active profile's Look and Feel (shape/type/icon/grid/dialog character), independent of
+     * [themeId]'s colour. Per profile and synced, like [themeId].
+     */
     var uiStyleId: String
-        get() = prefs.getString(KEY_UI_STYLE_ID, "material") ?: "material"
-        set(value) = prefs.edit { putString(KEY_UI_STYLE_ID, value) }
+        get() = uiStyleId(activeProfileId)
+        set(value) = setUiStyleId(activeProfileId, value)
+
+    fun uiStyleId(profileId: String): String =
+        prefs.getString(profileKey(KEY_UI_STYLE_ID, profileId), null)
+            ?: prefs.getString(KEY_UI_STYLE_ID, null)
+            ?: DEFAULT_UI_STYLE_ID
+
+    fun setUiStyleId(
+        profileId: String,
+        value: String,
+    ) {
+        prefs.edit { putString(profileKey(KEY_UI_STYLE_ID, profileId), value) }
+        SettingsSyncQueue.setting(context, KEY_UI_STYLE_ID, profileId)
+    }
+
+    /** A new profile starts with [fromProfileId]'s colour theme and Look and Feel (the profile that made it). */
+    fun copyLook(
+        fromProfileId: String,
+        toProfileId: String,
+    ) {
+        setThemeId(toProfileId, themeId(fromProfileId))
+        setUiStyleId(toProfileId, uiStyleId(fromProfileId))
+    }
+
+    /**
+     * One-time upgrade: gives every profile in [profileIds] the device-wide colour theme and Look
+     * and Feel (unless it already has its own), then drops them. Not sent: each device gives its
+     * profiles its own look, which is what they saw there before; a later change syncs.
+     */
+    fun copyLegacyLookToProfiles(profileIds: List<String>) {
+        val keys = listOf(KEY_THEME_ID, KEY_UI_STYLE_ID).filter { prefs.contains(it) }
+        if (keys.isEmpty()) return
+        prefs.edit {
+            keys.forEach { key ->
+                val legacy = prefs.getString(key, null)
+                profileIds.filterNot { prefs.contains(profileKey(key, it)) }.forEach { putString(profileKey(key, it), legacy) }
+                remove(key)
+            }
+        }
+    }
+
+    /** The active profile's colour theme and Look and Feel, now and whenever either changes (a profile switch included). */
+    fun observeLook(): Flow<Pair<String, String>> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(themeId to uiStyleId) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(themeId to uiStyleId)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    /** Drops a deleted profile's colour theme and Look and Feel. */
+    fun removeLook(profileId: String) =
+        prefs.edit {
+            remove(profileKey(KEY_THEME_ID, profileId))
+            remove(profileKey(KEY_UI_STYLE_ID, profileId))
+        }
 
     /**
      * Get or set application language (ISO 639-1 code).

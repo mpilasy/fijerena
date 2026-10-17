@@ -81,6 +81,12 @@ class SettingsViewModel(
         viewModelScope.launchGuarded("SettingsViewModel.followProfileSources") {
             providerRepo.profileSourceSet(appSettings.activeProfileId).collect { refreshProviderInfo() }
         }
+        // The profile's colour theme and Look and Feel, also when another device changes them.
+        viewModelScope.launchGuarded("SettingsViewModel.followLook") {
+            appSettings.observeLook().collect { (themeId, uiStyleId) ->
+                _uiState.value = _uiState.value.copy(themeId = themeId, uiStyleId = uiStyleId)
+            }
+        }
         // Sync EPG indexer state to ensure status card is accurate
         viewModelScope.launch {
             org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer

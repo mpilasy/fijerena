@@ -11,6 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersSerializer
@@ -200,13 +201,16 @@ class SyncApplierTest {
     @Test
     fun settingsAndCategoryFiltersArrive() =
         runBlocking {
-            val profile = newProfile()
+            // Inserted directly: addProfile queues the new profile's theme, which could land after
+            // the received one and leave it pending.
+            val profile = UUID.randomUUID().toString()
+            settingsDb.profileDao().insert(ProfileEntity(id = profile, name = "P-$profile", createdAt = 0L, colorIndex = 1))
             val (providerId, providerKey) = newProvider()
             val adult = CategoryFilters(rules = listOf(CategoryMatcher("Adult")))
             applier.apply(
                 listOf(
                     SyncRecord(
-                        SyncKey(SyncKind.SHARED, "", SyncKind.SETTING, "theme_id"),
+                        SyncKey(profile, "", SyncKind.SETTING, "theme_id"),
                         FAR_FUTURE,
                         payload = SyncPayloads.encode(SyncPayloads.Setting(JsonPrimitive("midnight_test"))),
                     ),
@@ -217,9 +221,9 @@ class SyncApplierTest {
                     ),
                 ),
             )
-            assertEquals("midnight_test", AppSettings(context).themeId)
+            assertEquals("midnight_test", AppSettings(context).themeId(profile))
             assertEquals(adult, CategoryFiltersStore(context).get(providerId, profile))
-            assertReceived(SyncKind.SETTING, SyncKind.SHARED, "theme_id", FAR_FUTURE)
+            assertReceived(SyncKind.SETTING, profile, "theme_id", FAR_FUTURE)
             assertReceived(SyncKind.CATEGORY_FILTERS, profile, providerKey, FAR_FUTURE)
         }
 
