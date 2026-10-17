@@ -67,14 +67,8 @@ import java.util.zip.GZIPInputStream
 import androidx.work.NetworkType as WorkNetworkType
 
 /**
- * Singleton managing multi-source EPG download-ingest pipeline.
- *
- * Dual-mode architecture based on device type:
- * - **TV/fixed devices:** Stream directly from network to database (zero disk I/O)
- * - **Mobile:** Download to cache first, then ingest from file
- *
- * Both modes use Room withTransaction in EpgIndexer for atomic ingestion.
- * Uses Ktor HttpClient(OkHttp) for HTTP requests.
+ * Singleton running the multi-source EPG pipeline: sources are downloaded to cache files and
+ * ingested by [EpgIndexer], each in one Room transaction.
  */
 class EpgFileManager private constructor(
     private val context: Context,
@@ -138,9 +132,7 @@ class EpgFileManager private constructor(
 
         /**
          * Whether a matching content hash is trustworthy enough to skip re-ingesting. A real ingest
-         * is still forced once a day, so a skip never outlives a day. (It used to be needed: ingest
-         * dropped programmes ended over 12 h ago, so re-ingesting an identical file cleared them.
-         * Ingest keeps everything now, and the forced run only rewrites the same rows.) And a skip
+         * is still forced once a day, so a skip never outlives a day. And a skip
          * only makes sense while the live index actually holds the source's rows ([indexHasRows]) —
          * see [buildDownloadRequest].
          */
@@ -211,9 +203,6 @@ class EpgFileManager private constructor(
             }
     }
 
-    /**
-     * Per-source stats collected during processing.
-     */
     data class SourceStats(
         val sourceId: Long,
         val label: String,
@@ -484,10 +473,8 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Start processing all enabled sources. Shows confirmation dialog on cellular.
-     * The job runs on the file manager's own scope so it survives ViewModel
-     * clearing and auto-refresh rescheduling.
-     * Only one processing job runs at a time — a new request cancels the old one.
+     * Runs [dbQueryAndProcess] as the one processing job, on the file manager's own scope so it
+     * survives ViewModel clearing and auto-refresh rescheduling. A new request cancels the old one.
      *
      * @param onComplete Callback invoked after processing completes (on WiFi or after confirmation).
      * @param onCellularConfirm Callback invoked if user must confirm on cellular.
@@ -660,20 +647,13 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Process all enabled sources: ingest using 2 parallel workers.
-     * Append-only: database stays searchable throughout.
-     *
-     * Must be called via [launchProcessAllSources] to ensure proper job tracking.
-     * The [processAllSources] suspend overload is kept for [autoRefreshIfStale]
-     * which already runs inside a tracked [processJob].
+     * Ingests [sources] with parallel workers. Append-only: the database stays searchable throughout.
+     * [EpgSyncWorker] calls this directly, outside [processJob].
      */
     suspend fun processAllSources(sources: List<EpgSourceEntity>) {
         processAllSourcesInternal(sources)
     }
 
-    /**
-     * Holds a downloaded file ready for ingestion.
-     */
     private data class DownloadedSource(
         val source: EpgSourceEntity,
         val label: String,
@@ -1248,11 +1228,9 @@ class EpgFileManager private constructor(
         scope.launch {
             try {
                 RefreshQueue.cancelAll()
-                // ingestMutex.withLock (not a fixed delay) actually waits for a still-running
-                // processAllSourcesInternal/processSingleSourceInternal to reach its next
-                // suspension point and release the lock after cancellation — a fixed delay was a
-                // guess that could lose the race against a large in-flight batch write, letting
-                // clearAll() run concurrently with it.
+                // Waits for a still-running processAllSourcesInternal/processSingleSourceInternal to
+                // reach its next suspension point and release the lock after cancellation, so
+                // clearAll() never runs concurrently with an in-flight batch write.
                 ingestMutex.withLock {
                     EpgIndexer.getInstance(context).clearAll()
                     // The sources' stats and validators describe rows that no longer exist; left in
@@ -1386,10 +1364,10 @@ class EpgFileManager private constructor(
 
                             // input.read() returning -1 just means the connection closed — on its
                             // own that's indistinguishable from a clean end of body. A connection
-                            // cut short by a flaky CDN reads as "success" here and previously
-                            // wasn't caught until the XML parser choked on it, expensively, well
-                            // into ingestion. Content-Length (when the server sends one) gives an
-                            // exact expected size to check the read against.
+                            // cut short by a flaky CDN reads as "success" here and would only be caught
+                            // when the XML parser choked on it, expensively, well into ingestion.
+                            // Content-Length (when the server sends one) gives an exact expected size
+                            // to check the read against.
                             if (contentLength > 0 && totalRead != contentLength) {
                                 lastError = "truncated download: got $totalRead of $contentLength bytes"
                                 lastException = java.io.IOException(lastError)

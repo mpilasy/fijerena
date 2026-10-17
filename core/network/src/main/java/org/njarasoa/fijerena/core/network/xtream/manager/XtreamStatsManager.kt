@@ -24,9 +24,7 @@ class XtreamStatsManager(
     private val seriesDao = database.seriesDao()
 
     /**
-     * Get total cache size (estimated from DB record count)
-     * Returning 0 for now as exact byte size calculation from DB is expensive
-     * and SharedPreferences size is negligible.
+     * Always 0: exact byte size from the DB is expensive and SharedPreferences size is negligible.
      */
     fun getCacheSize(): Long = 0L
 
@@ -69,9 +67,6 @@ class XtreamStatsManager(
             database.episodeDao().deleteAll(providerId)
         }
 
-    /**
-     * Clear cache for specific content type (clears DB tables)
-     */
     suspend fun clearCacheForContentType(contentType: String) =
         withContext(Dispatchers.IO) {
             sharedPreferences.edit {

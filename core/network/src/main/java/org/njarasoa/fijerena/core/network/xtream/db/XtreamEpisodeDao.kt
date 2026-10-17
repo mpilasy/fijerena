@@ -75,16 +75,12 @@ interface XtreamEpisodeDao {
     >
 
     /**
-     * Phase 5 dedup (docs/plans/archive/20260828_watch-state-durable-storage-plan.md), corrected 2026-08-27 after an
-     * on-device check showed the original episode-`tmdbId`-based join was structurally incapable
-     * of matching anything: unlike movies, where five language variants are five rows in one flat
-     * catalogue, five language variants of a show are five separate `xtream_series` rows, each
-     * with its own complete, separately-numbered episode list (confirmed: 25 distinct `seriesId`
-     * sharing one series-level `tmdbId` for a single show on one provider). The real correlation
-     * key is `(season, episodeNum)` under a sibling series sharing *this* series' `tmdbId` — not
-     * `XtreamEpisodeEntity.tmdbId`, which was NULL for effectively every episode checked (543/543
-     * and 95/95 on one show; 39/40 and the lone non-null value the *series'* own id leaked onto
-     * one episode — the guard's failure mode, occurring naturally). Two-level join: `xtream_series`
+     * Phase 5 dedup (docs/plans/archive/20260828_watch-state-durable-storage-plan.md). Unlike movies,
+     * where five language variants are five rows in one flat catalogue, five language variants of a
+     * show are five separate `xtream_series` rows, each with its own complete, separately-numbered
+     * episode list. The correlation key is therefore `(season, episodeNum)` under a sibling series
+     * sharing *this* series' `tmdbId` — not `XtreamEpisodeEntity.tmdbId`, which panels leave NULL or
+     * fill with the series' own id. Two-level join: `xtream_series`
      * finds sibling series by shared `tmdbId`, then `xtream_episodes` finds each sibling's matching
      * `(season, episodeNum)` row. The sibling-series subquery includes [seriesId] itself (a
      * series' own `tmdbId` always matches itself), so a directly-completed episode satisfies this
@@ -121,7 +117,7 @@ interface XtreamEpisodeDao {
      * [getSiblingCompletedEpisodeIds], for every cached series at once rather than one series at a
      * time. Without it the bar counts only episodes completed under *this* `seriesId`, so a show
      * watched through a different language variant reads 0% on the row while its own episode list
-     * correctly shows those episodes checked. That disagreement is the bug this fixes.
+     * correctly shows those episodes checked.
      *
      * Shaped as a CTE rather than the `EXISTS` form [getSiblingCompletedEpisodeIds] uses, because
      * this one is not scoped to a single series: driving from `watch_state` (a handful of completed

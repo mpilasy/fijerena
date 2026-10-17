@@ -110,8 +110,8 @@ class SyncEngine(
             val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
             waiting = batch.filter { it.key in deferredKeys }.takeLast(MAX_DEFERRED)
             // Together, every page: saving only the cursor here (and the waiting records after
-            // the loop) lost the records this page deferred whenever a later page failed — the
-            // cursor had already moved past them, so nothing ever fetched them again. See
+            // the loop) would lose the records this page deferred whenever a later page failed — the
+            // cursor would already have moved past them, so nothing would ever fetch them again. See
             // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-09.
             store.savePullProgress(
                 cursor = page.records.lastOrNull()?.seq ?: store.cursor,
@@ -139,9 +139,9 @@ class SyncEngine(
             volatile = emptyList()
             if (outgoing.isEmpty()) break
             val encoded = outgoing.map { it to SyncCodec.encode(it.record, crypto) }
-            // The server refuses payloads over its limit. Sending one anyway used to fail the whole
+            // The server refuses payloads over its limit. Sending one anyway would fail the whole
             // batch, and since the oldest pending records always go first, nothing from this
-            // device was ever pushed again. It can't succeed later either: drop it, loudly. See
+            // device would ever be pushed again. It can't succeed later either: drop it, loudly. See
             // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-22.
             val (sendable, oversized) = encoded.partition { (_, wire) -> wire.payload.length <= MAX_PAYLOAD_CHARS }
             oversized.forEach { (pending, wire) ->

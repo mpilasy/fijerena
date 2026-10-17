@@ -232,7 +232,7 @@ abstract class XtreamDatabase : RoomDatabase() {
 
         /**
          * Migration 18→19: `episodesFetchedAt` on `xtream_series` — the persisted freshness stamp
-         * behind the 24h episode-list cache (see [XtreamSeriesEntity.episodesFetchedAt]).
+         * behind the persisted episode-list cache (see [XtreamSeriesEntity.episodesFetchedAt]).
          */
         private val MIGRATION_18_19 =
             object : Migration(18, 19) {
@@ -248,9 +248,8 @@ abstract class XtreamDatabase : RoomDatabase() {
          * rename. Indices are recreated with `profileId` after `providerId`.
          * See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
          *
-         * Neither table is re-fetchable from any server, and this database falls back to
-         * destructive migration — a schema mismatch here wipes them. Every CREATE statement below
-         * must match Room's generated schema for the entities exactly.
+         * Neither table is re-fetchable from any server, so a wrong CREATE here loses them. Every
+         * CREATE statement below must match Room's generated schema for the entities exactly.
          */
         // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
         internal val MIGRATION_19_20 =
@@ -399,8 +398,8 @@ abstract class XtreamDatabase : RoomDatabase() {
 
         /**
          * A file written by a newer build (an older APK installed over a newer one) has no
-         * migration path down. Room would either crash on open every launch or, with the blanket
-         * destructive fallback this used to have, silently drop every table — watch history and
+         * migration path down. Room would either crash on open every launch or, with a blanket
+         * destructive fallback, silently drop every table — watch history and
          * favourites included. Set the newer file aside instead (only the latest one is kept) and
          * start fresh; installing the newer build again and restoring the `.bak` set recovers it.
          * See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-20.

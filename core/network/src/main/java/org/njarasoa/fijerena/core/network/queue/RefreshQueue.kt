@@ -52,7 +52,7 @@ object RefreshQueue {
 
     // Tasks already polled off `queue` and currently executing (or about to). Guarded by the
     // same queueMutex as `queue` so a task can never be in neither place at once — that gap
-    // is exactly what previously let submit() enqueue a concurrent duplicate of a running task.
+    // is exactly what would let submit() enqueue a concurrent duplicate of a running task.
     private val activeTasks = mutableMapOf<String, ActiveTask>()
 
     init {
@@ -95,11 +95,10 @@ object RefreshQueue {
         var hasMore = true
         while (hasMore) {
             // Dequeue, launch, and register the real Job in activeTasks all inside one lock
-            // acquisition. A prior version registered a disconnected placeholder Job() here and
-            // swapped in the real one after launching — a cancelAll() landing in that window
-            // cancelled the placeholder (a no-op) and cleared activeTasks, then the real job got
-            // re-inserted afterward, uncancelled and untouched by the cancellation it should have
-            // seen.
+            // acquisition. Registering a disconnected placeholder Job() first would let a
+            // cancelAll() landing before the swap cancel the placeholder (a no-op) and clear
+            // activeTasks, leaving the real job uncancelled and untouched by the cancellation it
+            // should have seen.
             hasMore =
                 queueMutex.withLock {
                     val queuedTask = queue.poll()
@@ -120,8 +119,7 @@ object RefreshQueue {
         try {
             semaphore.withPermit {
                 // All _activeTaskIds/_isProcessing transitions go through queueMutex so concurrent
-                // completions can't race a read-modify-write on the StateFlow and strand an ID (see
-                // RefreshQueue finding in the concurrency audit).
+                // completions can't race a read-modify-write on the StateFlow and strand an ID.
                 queueMutex.withLock {
                     // cancelAll() unregisters this task; a cancelled coroutine can still win the
                     // lock on its fast path, so check registration rather than rely on cancellation.
@@ -148,7 +146,7 @@ object RefreshQueue {
             // cancelling here (the catch block above rethrows), and queueMutex.withLock is a
             // suspending call — without this, acquiring a contended lock while cancelling
             // would throw immediately and skip the cleanup below, leaving the ID stranded in
-            // activeTaskIds and _isProcessing stuck true, the exact bug this is fixing.
+            // activeTaskIds and _isProcessing stuck true.
             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
                 queueMutex.withLock {
                     // Only clean up our own registration: after cancelAll() the id may already
@@ -163,9 +161,6 @@ object RefreshQueue {
         }
     }
 
-    /**
-     * Clear all pending tasks.
-     */
     suspend fun clear() {
         queueMutex.withLock {
             queue.forEach { it.deferred.cancel() }

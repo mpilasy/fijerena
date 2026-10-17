@@ -23,9 +23,6 @@ object SearchUtils {
         return ParsedQuery(positive, negative)
     }
 
-    /**
-     * Check if text matches all query words using a raw string query.
-     */
     fun matchesQuery(
         text: String,
         query: String,

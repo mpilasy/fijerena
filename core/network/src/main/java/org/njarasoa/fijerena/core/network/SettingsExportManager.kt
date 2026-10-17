@@ -417,10 +417,6 @@ class SettingsExportManager(
             json.encodeToString(exported)
         }
 
-    /**
-     * Export settings to a URI (file) via the Storage Access Framework.
-     * @return true if export succeeded
-     */
     suspend fun exportToUri(uri: Uri): Boolean =
         withContext(Dispatchers.IO) {
             try {
@@ -437,9 +433,6 @@ class SettingsExportManager(
             }
         }
 
-    /**
-     * Parse an import file from a direct file path and detect provider conflicts.
-     */
     suspend fun parseImportPath(path: String): kotlin.Result<ParsedImport> =
         withContext(Dispatchers.IO) {
             try {

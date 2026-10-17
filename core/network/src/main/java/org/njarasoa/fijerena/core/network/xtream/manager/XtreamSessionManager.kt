@@ -300,9 +300,6 @@ class XtreamSessionManager(
         return result
     }
 
-    /**
-     * Reinitialize the API service with new credentials (for provider switching).
-     */
     suspend fun reinitialize(
         url: String,
         username: String,

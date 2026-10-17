@@ -137,8 +137,7 @@ class ProviderCopyManager(
 
     /**
      * Clones [sourceId] into a brand new provider row named [newName]: same connection/credentials
-     * and [ProviderSettings], plus its favorites/watch history. The new provider is created
-     * inactive so duplicating doesn't switch the user away from whatever is currently active.
+     * and [ProviderSettings], plus its favorites/watch history.
      * Returns the new provider's id, or null if [sourceId] doesn't exist.
      */
     suspend fun duplicateProvider(

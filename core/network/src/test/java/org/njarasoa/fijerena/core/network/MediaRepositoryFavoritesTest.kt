@@ -77,8 +77,8 @@ class MediaRepositoryFavoritesTest {
         }
 
     // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-15: a profile or provider
-    // switch closes every cached repository; close() used to cancel the write queue, dropping
-    // whatever was still in it, and every later write from a screen still holding the repository.
+    // switch closes every cached repository; close() must not cancel the write queue, which would
+    // drop whatever was still in it, and every later write from a screen still holding the repository.
     @Test
     fun `writes queued before close, and made after it, still land`() =
         runBlocking {

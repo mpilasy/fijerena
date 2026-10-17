@@ -591,8 +591,6 @@ class AppSettings(
         }
     }
 
-    /** The active profile's colour theme and Look and Feel, now and whenever either changes (a profile switch included). */
-
     /** [activeProfileId], and again whenever it changes — here or by a switch live sync makes. */
     fun observeActiveProfileId(): Flow<String> =
         callbackFlow {
@@ -627,8 +625,8 @@ class AppSettings(
         set(value) = prefs.edit { putString(KEY_LANGUAGE, value) }
 
     /**
-     * Get or set the external XMLTV EPG URL (global setting, applies to all providers).
-     * Empty string means no external EPG is configured.
+     * The retired device-wide external XMLTV EPG URL, read only by the one-time migration to guide
+     * sources. Empty string means none.
      */
     var epgUrl: String
         get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL

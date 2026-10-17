@@ -428,9 +428,8 @@ class EpgIndexer private constructor(
                     // opportunistically and never blocks another connection.
                     sdb.execPragma("PRAGMA wal_checkpoint(PASSIVE)")
 
-                    // Optimize rebuild speed. cache_size capped at 16MB (not the 64MB this used to
-                    // request) — XMLTV files with millions of programmes were pushing native RSS
-                    // over 150MB during rebuild, risking the Low Memory Killer on 1-2GB Android TV
+                    // Optimize rebuild speed. cache_size capped at 16MB: XMLTV files with millions of
+                    // programmes pushed native RSS over 150MB during rebuild at 64MB, risking the Low Memory Killer on 1-2GB Android TV
                     // devices. synchronous stays NORMAL, never OFF: a power cut mid-write (TV boxes
                     // get unplugged) could corrupt epg_index.db with OFF; NORMAL under WAL only
                     // syncs at checkpoints, and no measurement showed OFF to be faster here.
@@ -478,7 +477,7 @@ class EpgIndexer private constructor(
                 }
                 Log.i(TAG, "rebuildFtsAndUpdateState: FTS complete in ${System.currentTimeMillis() - startMs}ms")
             } catch (e: CancellationException) {
-                // Stopped mid-rebuild: show Failed, as before, rather than leaving the state on
+                // Stopped mid-rebuild: show Failed rather than leaving the state on
                 // Optimizing. The FTS stays marked stale, so the next start rebuilds it.
                 _state.value = EpgIndexState.Failed(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
                 throw e
@@ -681,14 +680,12 @@ class EpgIndexer private constructor(
 
     /**
      * Clear all EPG data from the database and reset state to NotIndexed.
-     * User-configured sources are now stored in SettingsDatabase and are preserved.
+     * User-configured sources live in SettingsDatabase and are preserved.
      */
     suspend fun clearAll() =
         withContext(Dispatchers.IO) {
             try {
                 writeMutex.withLock {
-                    // SettingsDatabase handles sources persistently.
-                    // We only need to destroy and recreate the indexing database.
                     EpgIndexDatabase.destroy(context)
 
                     // Reopen: Room recreates all tables from schema

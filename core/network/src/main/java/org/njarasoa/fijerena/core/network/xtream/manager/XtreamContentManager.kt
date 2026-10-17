@@ -48,9 +48,6 @@ internal fun guardSeriesLevelEpisodeTmdbIds(episodes: List<XtreamEpisodeEntity>)
     }
 }
 
-/**
- * Manages Xtream content (categories, streams, series) including database caching and sync logic.
- */
 class XtreamContentManager(
     private val sessionManager: XtreamSessionManager,
     private val database: XtreamDatabase,
@@ -1068,9 +1065,9 @@ class XtreamContentManager(
      * The series as it was last stored — series row plus every episode row — with no network call.
      *
      * Both halves are already written on every [getSeriesInfo]: the series row picks up the plot,
-     * cast and genre, and every episode is inserted. Nothing read this back as a whole, so opening
-     * a show after a restart waited on a fresh get_series_info before it could draw anything, which
-     * on a series the size of Law & Order is a several-hundred-episode response.
+     * cast and genre, and every episode is inserted. Reading them back as a whole lets opening a
+     * show after a restart draw at once instead of waiting on a fresh get_series_info, which on a
+     * series the size of Law & Order is a several-hundred-episode response.
      *
      * See [buildCachedSeriesDetail] for what a stored row does and doesn't carry.
      */

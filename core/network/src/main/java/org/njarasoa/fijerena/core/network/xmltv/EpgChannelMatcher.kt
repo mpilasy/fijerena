@@ -17,10 +17,6 @@ class EpgChannelMatcher(
         // channels, so the profile's sources are all in use at once (multi-source plan, Phase 7).
         private val cache = HashMap<Long, EpgChannelMatcher>()
 
-        /**
-         * Returns the cached matcher for [providerId], or creates one and caches it. Thread-safe
-         * via synchronized.
-         */
         @Synchronized
         fun getOrCreate(
             providerId: Long,
@@ -54,16 +50,12 @@ class EpgChannelMatcher(
         private const val MAX_MEMOIZED_MATCHES = 5_000
     }
 
-    // Level 1: exact epgChannelId -> stream
     private val byEpgId = mutableMapOf<String, XtreamStreamEntity>()
 
-    // Level 2: lowercase epgChannelId -> stream
     private val byEpgIdLower = mutableMapOf<String, XtreamStreamEntity>()
 
-    // Level 3: exact stream name -> stream
     private val byName = mutableMapOf<String, XtreamStreamEntity>()
 
-    // Level 4: normalized stream name -> stream
     private val byNormalized = mutableMapOf<String, XtreamStreamEntity>()
 
     // Level 5: Arrays instead of lists to avoid overhead

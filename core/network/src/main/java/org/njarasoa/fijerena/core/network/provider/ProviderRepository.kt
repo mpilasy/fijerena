@@ -25,7 +25,6 @@ import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
-/** Result of [ProviderRepository.pruneOrphanedCatalogData]. */
 data class OrphanedDataPruneResult(
     val rowsRemoved: Long,
     val bytesReclaimed: Long,
@@ -56,7 +55,7 @@ class ProviderRepository(
          * again by itself. Never `favorite_state` or `watch_state`: the sweep decides what is
          * orphaned by comparing against `providers.db`, and whenever the two databases disagree
          * (providers.db reset or restored, a provider synced in between the sweep's read and its
-         * delete) that inference is wrong — it used to delete every favourite and every history
+         * delete) that inference is wrong and would delete every favourite and every history
          * row. Those go only with [deleteProvider]. See
          * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-02.
          */
@@ -326,7 +325,6 @@ class ProviderRepository(
                     .remove(KEY_JELLYFIN_USER_ID)
             }
         }
-        // Clear cached provider instance since credentials may have changed
         MediaProviderFactory.providerChanged(id)
     }
 
@@ -363,11 +361,7 @@ class ProviderRepository(
      * `xtream_v2.db`'s catalog rows (streams, series, episodes, categories, favorites, the
      * per-stream EPG payload cache) are keyed by `providerId` but live in the same app-wide
      * database file as every other provider's rows, so no SQL cascade reaches them from
-     * `providers.db` — same reasoning as [clearProviderWatchState], delete by hand. Before this,
-     * [clearProviderCache] only ever cleared a small SharedPreferences blob, never these Room
-     * tables — hundreds of thousands of orphaned rows could accumulate indefinitely across
-     * provider deletions, and SQLite does not shrink `xtream_v2.db` back down on its own even once
-     * the rows are gone (hence the `VACUUM` below).
+     * `providers.db` — same reasoning as [clearProviderWatchState], delete by hand.
      */
     private suspend fun clearProviderCatalog(providerId: Long) {
         // Off the caller's dispatcher: ProviderViewModel.deleteProvider calls in from a bare
@@ -384,7 +378,7 @@ class ProviderRepository(
      * commit. `xtream_v2.db` runs `auto_vacuum = FULL`, so each commit moves and frees its pages
      * there and then: one unbounded `DELETE` of a whole provider's catalogue piles all of that page
      * movement into one transaction's WAL. Bounded commits keep the WAL small, and the file shrinks
-     * as it goes — which is also why no `VACUUM` follows any more (see
+     * as it goes — which is also why no `VACUUM` follows (see
      * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-35). [where] is built from
      * provider ids only, never from user input.
      */
@@ -872,7 +866,6 @@ class ProviderRepository(
         filtersStore.set(providerId, profileId, settings.categoryFilters)
         settingsCache.keys.removeAll { it.first == providerId }
         settingsCache[providerId to profileId] = settings
-        // Clear cached provider so it picks up new settings
         MediaProviderFactory.providerChanged(providerId)
 
         // Recompute category-filter exclusion flags immediately, purely locally (no network) —
@@ -915,8 +908,7 @@ class ProviderRepository(
         filtersStore.set(providerId, profileId, filters)
         settingsCache.keys.removeAll { it.first == providerId }
         if (profileId != activeProfileId()) return
-        // Same as a filter edit in Edit Source used to do: drop the cached provider and repository,
-        // and recompute the hidden-category flags locally.
+        // Drop the cached provider and repository, and recompute the hidden-category flags locally.
         MediaProviderFactory.providerChanged(providerId)
         if (entity.type == "XTREAM") {
             withContext(Dispatchers.IO) {
@@ -948,9 +940,6 @@ class ProviderRepository(
         }
     }
 
-    /**
-     * Returns default settings if parsing fails.
-     */
     private fun parseProviderSettings(settingsJson: String): ProviderSettings {
         if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
         return try {
@@ -1100,8 +1089,7 @@ class ProviderRepository(
      * in `SettingsDatabase`, so no SQL cascade reaches it — delete by hand. Not Xtream-specific:
      * `MediaRepository` backs SMB, Local and Remote M3U too, and all of them write rows keyed by
      * this `providerId`. `media_cache_$providerId` (favorites, favorite categories) is cleared in
-     * the same pass — `deleteProvider` never touched it before, leaking that prefs file on every
-     * deletion; bounded while history was capped at 25 rows, no longer bounded once storage is.
+     * the same pass, or that prefs file would leak on every deletion.
      * See docs/plans/archive/20260828_watch-state-durable-storage-plan.md.
      *
      * Every profile's rows and prefs go with the provider: `watch_state` across all profiles, and

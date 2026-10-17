@@ -336,10 +336,9 @@ class MediaRepository(
     // so reads stay consistent regardless of when the background commit actually lands.
     //
     // watch_state is the one exception: savePlaybackPosition/saveLastPlayedItem have no
-    // synchronous in-memory mirror of their own (Phase 4 removed the blob they used to update
-    // synchronously alongside the table), so a read immediately following a write on another
+    // synchronous in-memory mirror of their own, so a read immediately following a write on another
     // thread can race the upsert. Neither writer is debounced, so the window is however long one
-    // Room upsert takes, not the blob's old 500 ms — narrow, but real. Named as its own property
+    // Room upsert takes — narrow, but real. Named as its own property
     // (rather than inlined into writeScope's constructor) so [awaitPendingWrites] can queue onto
     // the exact same serialized dispatcher without going through writeScope's Job.
     private val writeDispatcher = Dispatchers.IO.limitedParallelism(1)
@@ -919,10 +918,6 @@ class MediaRepository(
             emptyMap()
         }
 
-    /**
-     * Lightweight now-playing query from the EPG index.
-     * Returns map of itemId → currently-airing EpgProgram.
-     */
     suspend fun getNowPlayingFromIndex(items: List<MediaItem>): Map<String, EpgProgram> =
         try {
             xmltvEpgService.getNowPlayingForItems(items)
@@ -1084,7 +1079,7 @@ class MediaRepository(
      * entry" any more — the table's own `COALESCE` upserts do that now — and nothing writes the
      * blob either (Phase 4). What's left: [backfillAndPurgeWatchState] copies whatever a
      * pre-Phase-4 install already wrote here into `watch_state` before purging it, and
-     * [clearWatchHistory]/[clearPlaybackPosition] can still touch the same keys directly.
+     * [clearWatchHistory] can still touch the same keys directly.
      * `internal` rather than `private` only so tests can assert against the blob directly, now
      * that [getWatchHistory] no longer does; callers outside a `synchronized(watchHistoryLock)`
      * block (as every production caller already is) get an unsynchronized read.
@@ -1148,8 +1143,7 @@ class MediaRepository(
      * Wipes this provider's watch progress: the `watch_state` rows, the retired blob keys a
      * pre-Phase-4 install may still carry, and the in-memory views of both.
      *
-     * Suspending because the rows are the real storage now — before Phase 4 this only removed the
-     * blob keys, which after Phase 4 meant "Clear Progress" cleared nothing a user could see.
+     * Suspending because the rows are the real storage.
      * Published Recent lists are emptied too, or every surface showing one keeps rendering entries
      * whose rows are gone.
      */
@@ -1182,9 +1176,8 @@ class MediaRepository(
             val alreadyFavorite = favorites.any { it.itemId == itemId && it.contentType == contentType }
             if (!alreadyFavorite) {
                 val item = FavoriteItem(itemId, itemName, categoryId, contentType)
-                // No take(favoritesMaxSize) here any more: the cap is what silently evicted the oldest
-                // favourite once the list filled up. Rows are unbounded — see
-                // docs/plans/archive/20260828_favorites-durable-storage-plan.md.
+                // No cap: it would silently evict the oldest favourite once the list filled up. Rows
+                // are unbounded — see docs/plans/archive/20260828_favorites-durable-storage-plan.md.
                 favorites.add(0, item)
                 cachedFavorites = favorites
                 favoriteIdSet = null
@@ -1219,9 +1212,9 @@ class MediaRepository(
      * coroutine to suspend in at either call site.
      *
      * The `runBlocking(Dispatchers.IO)` is load-bearing, not decoration. Room asserts against
-     * blocking queries on the main thread and throws `IllegalStateException`, which is exactly what
-     * happened the first time this shipped without it: [setProvider] only invalidated the snapshot,
-     * so the first read after a backfill ran cold on Main and killed the app on launch. Warming in
+     * blocking queries on the main thread and throws `IllegalStateException`: [setProvider] only
+     * invalidates the snapshot, so the first read after a backfill would run cold on Main and kill the
+     * app on launch. Warming in
      * [setProvider] (below, on IO) makes that the rare path; this makes it survivable when it is
      * hit anyway. The stall it can cost is one indexed read of a small table — the blob it replaced
      * did a prefs read plus a JSON parse on the same thread.
@@ -1398,8 +1391,8 @@ class MediaRepository(
      *
      * The episode/series fields matter because this is the write that *creates* the row for a
      * short session: [saveLastPlayedItem] only runs once a couple of percent has been watched, so
-     * sampling an episode and leaving used to mint a history row carrying a position and nothing
-     * that says which episode of which show it was. Recent then had only the id to go on and read
+     * sampling an episode and leaving would mint a history row carrying a position and nothing
+     * that says which episode of which show it was, and Recent would have only the id to go on and read
      * an episode as a series. Callers that know the metadata must pass it; what they omit falls
      * back to whatever the existing row already had.
      */
@@ -1588,8 +1581,8 @@ class MediaRepository(
      * LIVE_TV degenerates to plain recency — [savePlaybackPosition] never records a position for
      * live streams, so no live entry can fall in the resumable band.
      *
-     * The cap is per content type, not shared like the old blob's was: an in-progress movie can
-     * no longer be pushed out of its own Recent row by heavy channel surfing on Live TV.
+     * The cap is per content type: an in-progress movie can
+     * not be pushed out of its own Recent row by heavy channel surfing on Live TV.
      */
     internal suspend fun getRecentItemsFromWatchState(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
@@ -1612,7 +1605,7 @@ class MediaRepository(
      * A history entry as a Recent row card. A TV Shows entry that knows its series becomes a card
      * for the show, carrying the episode to resume; one that does not stays a card for the episode
      * itself, which plays. Both say so in [MediaItem.target] rather than leaving the nav hosts to
-     * infer it — inferring it is what once sent an episode id to the series screen.
+     * infer it, which would send an episode id to the series screen.
      */
     private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
         val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
@@ -2058,9 +2051,8 @@ class MediaRepository(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md), replacing
-     * `clearPlaybackPosition` — which only ever cleared the blob and had no UI caller anywhere in
-     * `tv/` or `mobile/`. Not routed through [savePlaybackPosition]: that method early-returns on
+     * Manual watched/unwatched mark (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md).
+     * Not routed through [savePlaybackPosition]: that method early-returns on
      * `position <= 0 && duration <= 0`, exactly what a manual mark looks like, so it needs its own
      * path rather than being mistaken for an empty session.
      *

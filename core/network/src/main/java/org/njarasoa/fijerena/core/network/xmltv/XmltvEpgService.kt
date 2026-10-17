@@ -57,10 +57,10 @@ class XmltvEpgService(
     // Cached channel match maps — avoids full DB scan + 5 map builds on every getNowPlayingForItems call
     private var cachedChannelMaps: ChannelMatchMaps? = null
 
-    // A miss is cached too, briefly. Only the success path used to write cachedChannelMaps, so
-    // whenever the maps came out empty — no enabled source for this provider, or no indexed channel
-    // belonging to one — every single call redid the query, and getNowPlayingForItems runs on every
-    // channel-list render and channel switch. Bounded rather than permanent: the index can finish
+    // A miss is cached too, briefly: whenever the maps come out empty — no enabled source for this
+    // provider, or no indexed channel belonging to one — every call would redo the query, and
+    // getNowPlayingForItems runs on every channel-list render and channel switch. Bounded rather
+    // than permanent: the index can finish
     // building after a miss, and the clearCache() that would reset it is called on a different
     // XmltvEpgService instance than the one MediaRepository holds, so a permanent negative would
     // strand EPG until process death.
@@ -206,7 +206,7 @@ class XmltvEpgService(
 
                 val uniqueXmltvIds = matchedIds.values.distinct()
 
-                // Replaced chunked().flatMap() and .groupBy() with explicit loops to avoid
+                // Explicit loops rather than chunked().flatMap() and .groupBy(): they avoid
                 // intermediate list and Map.Entry allocations.
                 // A channel id can be indexed from several EPG sources, which yields the same
                 // programme once per source. Keep one row per start time: listing ids are
@@ -356,7 +356,7 @@ class XmltvEpgService(
 
                 val uniqueXmltvIds = matchedIds.values.distinct()
 
-                // Replaced chunked().flatMap() and .associateBy() with explicit loops to avoid
+                // Explicit loops rather than chunked().flatMap() and .associateBy(): they avoid
                 // intermediate list and Map.Entry allocations.
                 val nowPlayingByChannel = mutableMapOf<String, EpgSearchResultRow>()
                 for (chunk in uniqueXmltvIds.chunked(500)) {
@@ -463,26 +463,21 @@ class XmltvEpgService(
     ): String? {
         val epgChannelId = item.providerData["epgChannelId"]?.takeIf { it.isNotBlank() }
 
-        // 1. Exact epgChannelId
         if (epgChannelId != null) {
             byId[epgChannelId]?.let { return it }
         }
 
-        // 2. Case-insensitive epgChannelId
         if (epgChannelId != null) {
             byIdLower[epgChannelId.lowercase()]?.let { return it }
         }
 
-        // 3. Exact display name
         byName[item.name]?.let { return it }
 
         val normalizedItemName = normalizeName(item.name)
         if (normalizedItemName.isEmpty()) return null
 
-        // 4. Normalized name equality
         byNormalized[normalizedItemName]?.let { return it }
 
-        // 5. Normalized epgChannelId against normalized display names
         if (epgChannelId != null) {
             val normalizedEpgId = normalizeName(epgChannelId)
             if (normalizedEpgId.isNotEmpty()) {

@@ -27,10 +27,8 @@ class SmbClient(
     private val TAG = "SmbClient"
 
     // Separate monitor from `this`, held only for brief field reads/writes/swaps — never across
-    // blocking socket I/O. See connect()/disconnect() for why: the old code ran the entire
-    // 30-60s connect handshake inside `synchronized(this)`, so a Main-thread disconnect() call
-    // (e.g. leaving the SMB screen while it's still connecting) blocked on that same monitor for
-    // the full timeout — an ANR.
+    // blocking socket I/O. A Main-thread disconnect() (e.g. leaving the SMB screen while it's still
+    // connecting) would otherwise block on the 30-60s connect handshake for its full timeout — an ANR.
     private val lock = Any()
 
     @Volatile private var generation = 0L

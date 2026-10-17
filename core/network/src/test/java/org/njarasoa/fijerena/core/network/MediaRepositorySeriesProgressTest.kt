@@ -98,7 +98,7 @@ class MediaRepositorySeriesProgressTest {
     fun `sibling completion reaches a series with no watch_state rows of its own`() =
         runBlocking {
             // Watched under series 6548; 9279 is a language variant sharing its tmdbId and has no
-            // rows of its own. Before dedup it reported nothing at all.
+            // rows of its own. Without dedup it reports nothing at all.
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "343994"))
             coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 1, 9279 to 1)
             withEpisodeCounts(mapOf("6548" to 40, "9279" to 40))

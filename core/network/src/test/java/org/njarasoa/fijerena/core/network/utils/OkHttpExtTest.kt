@@ -28,8 +28,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * A cancelled [await] used to resume with the response anyway, which nobody read or closed, so its
- * pooled connection leaked. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+ * A cancelled [await] must not resume with the response: nobody would read or close it, so its
+ * pooled connection would leak. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-14.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OkHttpExtTest {

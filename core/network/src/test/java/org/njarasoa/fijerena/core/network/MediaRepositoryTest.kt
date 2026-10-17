@@ -200,8 +200,7 @@ class MediaRepositoryTest {
         }
 
     /**
-     * The blob keys are no longer where progress lives, so clearing only those left "Clear
-     * Progress" wiping nothing a user could see. Rows are the storage now.
+     * Rows are where progress lives: "Clear Progress" must clear them, not only the retired blob keys.
      */
     @Test
     fun clearWatchHistory_deletesWatchStateRows() =

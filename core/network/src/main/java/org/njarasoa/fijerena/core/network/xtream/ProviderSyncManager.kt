@@ -77,9 +77,6 @@ class ProviderSyncManager private constructor(
         val nextRunAtMs: Long?,
     )
 
-    /**
-     * Initialize sync management. Call on app startup.
-     */
     fun initialize() {
         scheduleAutoRefresh()
     }
@@ -89,9 +86,6 @@ class ProviderSyncManager private constructor(
         return type != DeviceType.GENERIC_MOBILE
     }
 
-    /**
-     * Internal scheduling for both background (WorkManager) and foreground (Coroutine).
-     */
     private fun scheduleAutoRefresh() {
         autoRefreshJob?.cancel()
         val appSettings = AppSettings(context)
@@ -126,9 +120,6 @@ class ProviderSyncManager private constructor(
             }
     }
 
-    /**
-     * Triggers a full sync for all Xtream providers.
-     */
     private suspend fun performFullSync() {
         Log.i(TAG, "Starting periodic content sync for all providers")
         val providerRepo = ProviderRepository(context)

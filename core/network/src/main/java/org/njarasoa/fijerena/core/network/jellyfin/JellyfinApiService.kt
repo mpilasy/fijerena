@@ -130,7 +130,6 @@ class JellyfinApiService(
             accessToken = response.accessToken
             userId = response.user.id
             serverId = response.serverId
-            // Register client capabilities so Jellyfin knows what we can play
             postCapabilities()
             Result.success(response)
         } catch (e: io.ktor.client.plugins.ClientRequestException) {

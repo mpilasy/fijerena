@@ -157,26 +157,24 @@ class JellyfinMediaProvider(
     override suspend fun getAllItems(contentType: String): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        // 1. Fetch categories (Libraries) to know the valid roots
+        // Fetch categories (Libraries) to know the valid roots
         val categoriesResult = getCategories(contentType)
         if (categoriesResult.isFailure) return Result.failure(categoriesResult.exceptionOrNull()!!)
         val categories = categoriesResult.getOrThrow()
         val categoryIds = categories.map { it.id }.toSet()
 
-        // 2. Fetch all items recursively from root, including Folders/BoxSets for tree traversal
+        // Fetch all items recursively from root, including Folders/BoxSets for tree traversal
         val baseType = contentTypeToJellyfinType(contentType)
         val includeTypes = baseType?.let { "$it,Folder,BoxSet" }
 
         return withAutoReconnect {
             api.getItems(parentId = null, includeItemTypes = includeTypes).map { items ->
-                // 3. Build parent map: ItemId -> ParentId
                 val parentMap = items.associate { it.id to it.parentId }
 
-                // 4. Filter for actual content items (Movie, Series)
                 val targetType = contentTypeToJellyfinType(contentType) ?: ""
                 val contentItems = items.filter { it.type == targetType }
 
-                // 5. Map items to their Library ID
+                // Map items to their Library ID
                 val resultItems = mutableListOf<MediaItem>()
 
                 for (item in contentItems) {

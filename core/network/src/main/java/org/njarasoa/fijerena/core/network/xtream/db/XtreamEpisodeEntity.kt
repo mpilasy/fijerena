@@ -23,7 +23,6 @@ data class XtreamEpisodeEntity(
     val episodeNum: Int,
     val title: String,
     val containerExtension: String,
-    // Info from EpisodeInfo
     val overview: String? = null,
     val plot: String? = null,
     val airDate: String? = null,

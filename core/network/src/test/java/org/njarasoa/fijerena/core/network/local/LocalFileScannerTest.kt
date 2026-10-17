@@ -56,7 +56,6 @@ class LocalFileScannerTest {
         File(catDir2, "video4.mkv").createNewFile()
         File(catDir2, "notavideo.txt").createNewFile()
 
-        // Mock ContentResolver to return the _data path
         val cursor = mockk<Cursor>()
         every { cursor.moveToFirst() } returns true
         every { cursor.getString(0) } returns tempDir.absolutePath

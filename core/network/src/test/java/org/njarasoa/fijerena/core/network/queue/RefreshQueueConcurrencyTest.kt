@@ -118,8 +118,7 @@ class RefreshQueueConcurrencyTest {
             val tasks = List(8) { GatedTask("cancel-$it") }
             val deferreds = tasks.map { RefreshQueue.submit(it) }
             awaitPermitsTaken(tasks)
-            // Every task is off the queue (running or parked on the semaphore) before cancelling;
-            // a task still queued can start between cancelAll()'s two critical sections.
+            // Every task is off the queue (running or parked on the semaphore) before cancelling.
             withTimeout(TIMEOUT_MS) { while (RefreshQueue.queuedTaskIds.value.isNotEmpty()) delay(5) }
 
             RefreshQueue.cancelAll()
@@ -157,9 +156,9 @@ class RefreshQueueConcurrencyTest {
         }
 
     /**
-     * Stress test (no seam to hold the poller between dequeue and start): the old cancelAll()
-     * emptied the queue in a second critical section, letting a still-queued task start on a
-     * permit freed by the cancellation. Any task starting after cancelAll() returned is a slip.
+     * Stress test (no seam to hold the poller between dequeue and start): cancelAll() must empty
+     * the queue in the same critical section, or a still-queued task can start on a permit freed by
+     * the cancellation. Any task starting after cancelAll() returned is a slip.
      */
     @Test
     fun noQueuedTaskStartsAfterCancelAllReturns() =
@@ -194,9 +193,8 @@ class RefreshQueueConcurrencyTest {
                     cancel.await()
                     release.await()
                 }
-                // cancelAll() empties the pending queue in a second critical section, so a
-                // still-queued task can legitimately start in between and run to completion; wait
-                // for that to drain before checking the invariant.
+                // Wait for any task that started before the cancellation took effect to drain
+                // before checking the invariant.
                 awaitStableIdle()
                 assertTrue(RefreshQueue.activeTaskIds.value.isEmpty())
                 assertFalse(RefreshQueue.isProcessing.value)

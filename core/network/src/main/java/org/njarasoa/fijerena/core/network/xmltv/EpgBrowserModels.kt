@@ -161,8 +161,8 @@ fun formatCount(count: Int): String =
  * How current the EPG is, in one line.
  *
  * [oldestIngestedAtMs] is the stalest source that has actually run; a source that has never run
- * is not a freshness figure but a count, and arrives in [neverRunSourceCount]. Collapsing the two
- * meant one never-run source read as "Never refreshed" while everything else was minutes old.
+ * is not a freshness figure but a count, and arrives in [neverRunSourceCount]; folding the two
+ * together would read one never-run source as "Never refreshed" while everything else was minutes old.
  * [hasOffSources]: with no source on ([oldestIngestedAtMs] null), whether there are guide sources
  * that are switched off, which is not the same as having none.
  */

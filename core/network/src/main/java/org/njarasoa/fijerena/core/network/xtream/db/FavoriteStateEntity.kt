@@ -23,7 +23,7 @@ object FavoriteKind {
  * category id and [parentCategoryId] is null; for [FavoriteKind.STREAM], [itemId] is the stream id
  * and [parentCategoryId] is the category it was favourited from.
  *
- * [createdAt] carries the blob's ordering — newest first — which the favourites list relies on.
+ * [createdAt] orders the favourites list, newest first.
  *
  * [profileId] scopes the row to one person — see `docs/plans/archive/20260929_live-sync-plan.md` → User
  * profiles.

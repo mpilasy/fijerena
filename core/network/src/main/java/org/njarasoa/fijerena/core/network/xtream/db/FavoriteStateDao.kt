@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
  */
 @Dao
 interface FavoriteStateDao {
-    /** Whole-provider read for one profile's snapshot. Newest first, matching the blob's ordering. */
+    /** Whole-provider read for one profile's snapshot. Newest first. */
     @Query("SELECT * FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId ORDER BY createdAt DESC")
     fun getAll(
         providerId: Long,
@@ -31,8 +31,7 @@ interface FavoriteStateDao {
 
     /**
      * Insert-or-replace. Re-favouriting something already favourited refreshes `createdAt`, which
-     * moves it to the front of the list — the blob behaved the same way, since `addFavorite`
-     * prepended.
+     * moves it to the front of the list.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun upsert(entity: FavoriteStateEntity)

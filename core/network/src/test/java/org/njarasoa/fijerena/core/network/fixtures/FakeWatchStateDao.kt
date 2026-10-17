@@ -60,7 +60,7 @@ class FakeWatchStateDao : WatchStateDao {
                 categoryId = categoryId ?: existing?.categoryId ?: "",
                 positionMs = positionMs,
                 durationMs = durationMs,
-                // Sticky since Phase 6: can only raise isCompleted, never lower it.
+                // Sticky: can only raise isCompleted, never lower it.
                 isCompleted = isCompleted || existing?.isCompleted == true,
                 updatedAt = now,
                 lastPlayedAt = now,

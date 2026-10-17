@@ -14,9 +14,9 @@ import kotlinx.serialization.json.put
  */
 @Serializable
 data class ProviderSettings(
-    /** Maximum number of items in watch history for this provider (1-100) */
+    /** Maximum number of Recent items shown for this provider (the display cap, not retention) */
     val watchHistorySize: Int = 25,
-    /** Maximum number of favorites for this provider (10-500) */
+    /** Retired: favourites are no longer capped. Kept so stored settings keep decoding. */
     val favoritesMaxSize: Int = 100,
     val autoResumeEnabled: Boolean = true,
     /** Cache expiry time in hours (1-168, i.e., 1 hour to 1 week) */

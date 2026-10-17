@@ -6,7 +6,6 @@ import java.util.concurrent.ConcurrentHashMap
 class XtreamMetricsManager(
     private val appSettings: AppSettings,
 ) {
-    // Fetch time tracking (in milliseconds)
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
     fun trackFetchTime(

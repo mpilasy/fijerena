@@ -20,9 +20,9 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * F-08: one record that throws while being applied — a payload shape from another app version, a
- * provider deleted here mid-apply — used to abort the whole pull before the page's cursor was
- * saved, so every later pass refetched it and failed again: sync stuck for good, no error shown.
- * Now such a record is deferred (retried every pass, so a newer app version can still apply it)
+ * provider deleted here mid-apply — must not abort the whole pull before the page's cursor is
+ * saved: every later pass would refetch it and fail again, sync stuck for good, no error shown.
+ * Such a record is deferred (retried every pass, so a newer app version can still apply it)
  * and the rest of the batch goes on. See
  * docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-08.
  */

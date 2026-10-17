@@ -46,15 +46,10 @@ object LocalFileScanner {
         // Try optimized ContentResolver scan for Tree URIs (SAF)
         try {
             if (DocumentsContract.isDocumentUri(context, rootUri)) {
-                // If it is a document URI, it might be a tree URI.
-                // However, isDocumentUri returns true for single documents too.
-                // We assume it's a tree root if passed here.
+                // isDocumentUri is also true for a single document; a tree root is assumed here.
                 return scanContentDirectory(context, rootUri)
             }
-            // If checking isDocumentUri fails or returns false (e.g. some providers),
-            // we might still want to try scanContentDirectory if it looks like a tree URI,
-            // or fall back to DocumentFile.
-            // Let's rely on try-catch around scanContentDirectory.
+            // Not a document URI (some providers): still try the tree scan; any failure falls back below.
             return scanContentDirectory(context, rootUri)
         } catch (e: Exception) {
             // Check if we can resolve the content URI to a direct file path

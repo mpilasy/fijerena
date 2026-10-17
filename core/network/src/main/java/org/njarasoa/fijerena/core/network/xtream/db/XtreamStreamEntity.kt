@@ -32,7 +32,6 @@ data class XtreamStreamEntity(
     val tvArchiveDuration: Int = 0,
     val contentHash: Int = 0,
     val description: String? = null,
-    // VOD metadata
     val cast: String? = null,
     val director: String? = null,
     val genre: String? = null,

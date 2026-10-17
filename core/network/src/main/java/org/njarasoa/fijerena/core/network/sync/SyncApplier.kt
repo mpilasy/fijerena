@@ -188,8 +188,8 @@ class SyncApplier(
     /**
      * [applyOne], but a record that throws — a payload shape from another app version, or a
      * provider deleted locally mid-apply — waits with the deferred ones instead of failing the
-     * pass. Before, the exception aborted the whole pull before the page's cursor was saved, so
-     * every later pass refetched the same record and failed on it again: sync stuck for good on
+     * pass. An exception would abort the whole pull before the page's cursor was saved, so
+     * every later pass would refetch the same record and fail on it again: sync stuck for good on
      * that device, with no error shown. Deferred rather than skipped so a newer app version can
      * still apply it. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-08.
      */

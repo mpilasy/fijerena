@@ -15,7 +15,7 @@ abstract class BaseM3uMediaProvider : MediaProvider {
 
     // Custom setter keeps itemsByCategory in sync automatically, so subclasses (which just
     // assign `items = its` after parsing/scanning) don't need to know this index exists.
-    // getItems() used to linear-scan the full list on every category open — a no-op for a
+    // Without the index getItems() would linear-scan the full list on every category open — cheap for a
     // typical playlist, but a real per-navigation cost on a 50k-100k entry IPTV catalog.
     protected var items = emptyList<MediaItem>()
         set(value) {

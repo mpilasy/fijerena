@@ -24,8 +24,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * [SyncEngine.syncNow] against a fake server ([SyncApi] mock), a fake applier and an in-memory
  * [SyncAccountStore].
  *
- * F-09: the cursor was saved per page but the deferred records only after the loop, so a later
- * page failing lost what earlier pages deferred — the cursor had already moved past them.
+ * F-09: the cursor and the deferred records are saved together on every page, so a later page
+ * failing doesn't lose what earlier pages deferred.
  * F-08 (engine side): a record this device can't read must not hold the cursor back.
  * F-22 (client side): a record sealed over the server's limit is dropped, not sent with the rest.
  * See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md.

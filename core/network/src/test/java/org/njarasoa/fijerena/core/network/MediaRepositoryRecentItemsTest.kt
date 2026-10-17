@@ -33,13 +33,11 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 /**
  * Ordering, filtering and dedup rules of the merged "Recent" list — the single row that
- * replaced the separate Continue Watching and Last Watched categories.
+ * shows what was watched, resumable items first.
  *
- * Reads `watch_state` (via [FakeWatchStateDao]) rather than the blob since Phase 3 of
- * docs/plans/archive/20260828_watch-state-durable-storage-plan.md. [repositoryWith] seeds rows with decreasing
- * `lastPlayedAt` in argument order, standing in for the blob's old "index 0 is newest" convention
- * that the real writers no longer produce directly — recency now comes from a clock, not a list
- * position — so relative order across fixture calls is explicit rather than incidental.
+ * Reads `watch_state` (via [FakeWatchStateDao]). [repositoryWith] seeds rows with decreasing
+ * `lastPlayedAt` in argument order, so relative order across fixture calls is explicit rather than
+ * incidental — recency comes from a clock, not a list position.
  */
 class MediaRepositoryRecentItemsTest {
     private lateinit var context: Context

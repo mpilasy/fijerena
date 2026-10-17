@@ -130,7 +130,6 @@ class RemoteM3uMediaProvider(
                         }
                     }
 
-                    // Validate #EXTM3U header
                     val header =
                         tmpFile.bufferedReader().use { reader ->
                             val buf = CharArray(256)

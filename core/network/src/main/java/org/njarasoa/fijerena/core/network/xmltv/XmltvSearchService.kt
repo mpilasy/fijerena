@@ -35,9 +35,9 @@ class XmltvSearchService(
         private val WHITESPACE_REGEX = Regex("\\s+")
 
         // FTS4's actual reserved boolean operators, as whole words — not "any capital letter",
-        // which matched an ordinary capitalized query (a channel name like "CNN" or "HBO", or
-        // just "Movie") and mistook it for hand-written FTS syntax, silently dropping the prefix
-        // wildcard below and returning only exact-term matches.
+        // which would mistake an ordinary capitalized query (a channel name like "CNN" or "HBO",
+        // or just "Movie") for hand-written FTS syntax, dropping the prefix wildcard below and
+        // returning only exact-term matches.
         private val FTS_OPERATOR_REGEX = Regex("\\b(AND|OR|NOT|NEAR)\\b")
     }
 

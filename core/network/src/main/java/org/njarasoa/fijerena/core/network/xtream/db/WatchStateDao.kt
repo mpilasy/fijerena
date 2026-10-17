@@ -17,10 +17,8 @@ interface WatchStateDao {
      * Playback progress upsert. Owns position, duration, completion and `lastPlayedAt`; leaves
      * metadata columns alone when this call doesn't carry them via `COALESCE`.
      *
-     * `isCompleted` is sticky since Phase 6: `MAX` can only raise it, never lower it, so playing
-     * two minutes of a film already marked watched can't silently clear the check — only
-     * `setWatched(false)` does that. Safe because Phase 6 also adds the manual escape hatch; before
-     * it existed a title that crossed 95% by accident could never be un-marked.
+     * `isCompleted` is sticky: `MAX` can only raise it, never lower it, so playing two minutes of a
+     * film already marked watched can't silently clear the check — only `setWatched(false)` does that.
      */
     @Query(
         "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
@@ -326,7 +324,6 @@ interface WatchStateDao {
         contentType: String,
     ): List<SeriesCompletedCount>
 
-    /** Single-item lookup, replacing the blob's O(1) `(itemId, contentType)` map hit. */
     @Query(
         "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType",
     )

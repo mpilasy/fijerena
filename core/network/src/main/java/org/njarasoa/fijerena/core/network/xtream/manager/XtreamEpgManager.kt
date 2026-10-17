@@ -75,8 +75,7 @@ class XtreamEpgManager(
      * file in a single transaction. Runs once per process — the sweep is not provider-scoped, so a
      * second manager would only re-scan a table it just swept — and off the caller's thread.
      *
-     * Failures are logged, not swallowed. An earlier attempt wrapped this in a bare `runCatching`
-     * and the reason it never committed was lost.
+     * Failures are logged, not swallowed.
      */
     private fun evictStaleCache() {
         if (!staleEvictionDone.compareAndSet(false, true)) return
@@ -123,9 +122,6 @@ class XtreamEpgManager(
         }
     }
 
-    /**
-     * Fetches EPG data for a specific stream with caching
-     */
     suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
@@ -356,7 +352,7 @@ class XtreamEpgManager(
         /** Cache ceiling for one channel's listings; see [cacheEpgBatch]. */
         const val MAX_CACHED_PAYLOAD_CHARS = 64 * 1024
 
-        /** Requests in flight per chunk — matches the concurrency the old Semaphore allowed. */
+        /** Requests in flight per chunk. */
         const val CHUNK_SIZE = 10
 
         /** Index programmes fetched beyond the panel listings' starts: wider than any panel offset. */

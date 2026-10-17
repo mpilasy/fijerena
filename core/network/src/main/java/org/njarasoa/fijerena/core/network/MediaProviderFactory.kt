@@ -53,10 +53,10 @@ object MediaProviderFactory {
         password: String,
     ): MediaProvider =
         // computeIfAbsent is atomic per key on ConcurrentHashMap: only one caller's block ever
-        // runs for a given provider id, even under concurrent access. The previous check-then-act
-        // (get, build, putIfAbsent) left a window where two racing callers could each build a
-        // full provider — including a real authenticated session — before only one got cached and
-        // the other silently discarded.
+        // runs for a given provider id, even under concurrent access. A check-then-act (get,
+        // build, putIfAbsent) would let two racing callers each build a full provider — including
+        // a real authenticated session — before only one got cached and the other silently
+        // discarded.
         providerCache.computeIfAbsent(entity.id) {
             when (entity.type) {
                 "XTREAM" -> createXtream(entity, context, password)
@@ -89,9 +89,6 @@ object MediaProviderFactory {
             else -> true // unknown types fall back to Xtream in create()
         }
 
-    /**
-     * Clear cached provider for a specific ID (e.g., when credentials change).
-     */
     fun clearCache(providerId: Long) {
         val removed = providerCache.remove(providerId)
         EpgChannelMatcher.clearCache()
@@ -110,7 +107,7 @@ object MediaProviderFactory {
     /**
      * Told the id of each provider whose settings or login changed in the app ([providerChanged]).
      * `AppContainer` sets it to drop its cached `MediaRepository` along with the provider, which
-     * otherwise kept the old, disconnected instance and reconnected it with the old login. See
+     * would otherwise keep the old, disconnected instance and reconnect it with the old login. See
      * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
      */
     @Volatile
@@ -144,9 +141,6 @@ object MediaProviderFactory {
         }
     }
 
-    /**
-     * Clear all cached providers (e.g., on logout or provider switch).
-     */
     fun clearAllCaches() {
         val removed = providerCache.values.toList()
         providerCache.clear()
@@ -171,7 +165,7 @@ object MediaProviderFactory {
      * pressure — see [org.njarasoa.fijerena.core.ui.FijerenaApplication.onTrimMemory].
      *
      * Also drops EpgChannelMatcher's cached lookup maps (30-60MB for large providers) — it has
-     * no other eviction hook and previously stayed pinned for the life of the process.
+     * no other eviction hook, so it would stay pinned for the life of the process.
      */
     fun trimMemory() {
         providerCache.values.forEach { it.trimMemory() }
@@ -333,9 +327,6 @@ object MediaProviderFactory {
         }
     }
 
-    /**
-     * Returns default settings if parsing fails.
-     */
     private fun parseProviderSettings(settingsJson: String): ProviderSettings {
         if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
         return try {

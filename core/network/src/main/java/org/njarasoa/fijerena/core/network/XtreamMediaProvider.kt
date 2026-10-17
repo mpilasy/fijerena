@@ -251,14 +251,11 @@ class XtreamMediaProvider(
                 Exception("Invalid series ID: $rawSeriesId"),
             )
 
-        // Persisted episode-list freshness (see EPISODE_LIST_CACHE_TTL_MS): every open used to
-        // re-hit Xtream for the whole episode list unconditionally, on the reasoning that ongoing
-        // shows add episodes and a longer-lived cache would hide that. In practice this meant
-        // hitting the API on every single visit, including several times a minute while browsing
-        // seasons back and forth. A show the size of Law & Order returns several hundred episodes
-        // on every one of those calls — [getCachedSeriesDetail] already rebuilds a full
-        // SeriesDetail from disk with no network call, this just decides when that's trustworthy
-        // enough to use instead of asking Xtream again.
+        // Persisted episode-list freshness (see EPISODE_LIST_CACHE_TTL_MS): re-hitting Xtream for the
+        // whole episode list on every open meant calls several times a minute while browsing seasons
+        // back and forth, and a show the size of Law & Order returns several hundred episodes each time.
+        // [getCachedSeriesDetail] already rebuilds a full SeriesDetail from disk with no network call;
+        // this just decides when that's trustworthy enough to use instead of asking Xtream again.
         //
         // New episodes are noticed through the catalogue sync instead: a series whose catalogue
         // entry changed (panel-a bumps `last_modified` when episodes are added) gets its
@@ -372,7 +369,7 @@ class XtreamMediaProvider(
     /**
      * The synopsis of [episode], or null when TMDB has none (or can't be asked). Playback calls this
      * for an episode that has no plot yet — one the series screen never enriched, because its
-     * season list came from the 24 h cache or its info carried no TMDB id. It is the same season
+     * season list came from the cache or its info carried no TMDB id. It is the same season
      * lookup [getSeriesDetail] runs, narrowed to the episode's season, and the result is persisted
      * the same way so the next visit has it.
      */
@@ -1052,9 +1049,8 @@ class XtreamMediaProvider(
     }
 
     /**
-     * Triggers a full sync of categories and streams/series.
-     * Used by background worker. Returns how many rows actually changed, summed across all six
-     * sync tasks — all-zero means the provider's catalog didn't change since the last sync.
+     * Triggers a full sync of categories and streams/series. Returns how many rows actually changed,
+     * summed across all six sync tasks — all-zero means the provider's catalog didn't change since the last sync.
      *
      * Throws [CatalogSyncException] if any task failed. The tasks that succeeded have committed
      * their rows by then; the delta is dropped, since Settings shows the error instead of it.
@@ -1102,8 +1098,8 @@ class XtreamMediaProvider(
 
 /**
  * The TMDB id to enrich a series with: the one `get_series_info` carries, else the one the series
- * listing stored. Some panels leave it out of the info block while the listing has it, which used to
- * skip the whole TMDB enrichment — no episode synopses, certification or details — for that series.
+ * listing stored. Some panels leave it out of the info block while the listing has it; without the
+ * fallback the whole TMDB enrichment — no episode synopses, certification or details — is skipped.
  */
 internal fun resolveSeriesTmdbId(
     infoTmdb: String?,
