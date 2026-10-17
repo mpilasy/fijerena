@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyCheck
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -97,6 +98,7 @@ fun TmdbKeyPane(
                 viewModel.clearCheck()
             },
             label = stringResource(R.string.tmdb_key_label),
+            keyboardOptions = FieldKeyboards.Password,
             visualTransformation = PasswordVisualTransformation(),
             displayText = maskedKey(draft),
             editButtonFocusRequester = fieldFocus,

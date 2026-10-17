@@ -5,9 +5,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -47,7 +47,7 @@ fun XtreamForm(
         },
         label = stringResource(R.string.login_server_url_label),
         placeholder = stringResource(R.string.provider_url_placeholder_xtream),
-        keyboardType = KeyboardType.Uri,
+        keyboardOptions = FieldKeyboards.Url,
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -59,6 +59,7 @@ fun XtreamForm(
             onErrorChange(null)
         },
         label = stringResource(R.string.login_username_label),
+        keyboardOptions = FieldKeyboards.Username,
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -71,7 +72,7 @@ fun XtreamForm(
         },
         label = stringResource(R.string.login_password_label),
         visualTransformation = PasswordVisualTransformation(),
-        keyboardType = KeyboardType.Password,
+        keyboardOptions = FieldKeyboards.Password,
         displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else "",
     )
 }

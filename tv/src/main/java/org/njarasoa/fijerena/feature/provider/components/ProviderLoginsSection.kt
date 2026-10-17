@@ -25,7 +25,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +33,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -347,6 +347,7 @@ private fun AddLoginDialog(
                     value = username,
                     onValueChange = { username = it },
                     label = stringResource(R.string.provider_username_label),
+                    keyboardOptions = FieldKeyboards.Username,
                     editButtonFocusRequester = usernameRequester,
                 )
                 Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -355,7 +356,7 @@ private fun AddLoginDialog(
                     onValueChange = { password = it },
                     label = stringResource(R.string.provider_password_label),
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardType = KeyboardType.Password,
+                    keyboardOptions = FieldKeyboards.Password,
                     displayText = if (password.isNotEmpty()) "•".repeat(password.length) else "",
                 )
                 val status = if (busy) stringResource(R.string.provider_logins_checking_add) else message

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
@@ -30,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -248,7 +247,7 @@ private fun SetupPanel(
                 label = stringResource(R.string.live_sync_server_label),
                 placeholder = stringResource(R.string.live_sync_server_hint),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                keyboardOptions = FieldKeyboards.Url,
                 modifier = Modifier.fillMaxWidth(),
             )
             if (!ui.serverChecked) {
@@ -264,7 +263,7 @@ private fun SetupPanel(
                         label = stringResource(R.string.live_sync_setup_secret_label),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        keyboardOptions = FieldKeyboards.Password,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -449,6 +448,7 @@ private fun RenameDialog(
                 value = name,
                 onValueChange = { name = it.take(AppSettings.MAX_DEVICE_NAME_LENGTH) },
                 label = stringResource(R.string.live_sync_device_name_label),
+                keyboardOptions = FieldKeyboards.Name,
                 supportingText = stringResource(R.string.live_sync_device_name_hint),
                 singleLine = true,
             )

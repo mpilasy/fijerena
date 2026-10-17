@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -187,6 +188,7 @@ fun ProviderSettingsSection(
             value = providerSettings.shortName,
             onValueChange = { field.onChange(it.trim().take(SourceShortNames.MAX_LENGTH)) },
             label = stringResource(R.string.provider_short_name_label),
+            keyboardOptions = FieldKeyboards.Code,
             placeholder = field.automatic,
             displayText =
                 providerSettings.shortName.ifBlank {

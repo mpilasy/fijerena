@@ -31,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Icon
@@ -70,7 +69,7 @@ fun ReadOnlyFieldWithEdit(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = true,
-    keyboardType: KeyboardType = KeyboardType.Text,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     displayText: String = value,
     // Lets a dialog land its initial focus on the edit button; see CinemaAlertDialog.initialFocus.
@@ -94,11 +93,7 @@ fun ReadOnlyFieldWithEdit(
             placeholder = placeholder.ifEmpty { null },
             singleLine = singleLine,
             visualTransformation = visualTransformation,
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType = keyboardType,
-                    imeAction = ImeAction.Done,
-                ),
+            keyboardOptions = keyboardOptions.copy(imeAction = ImeAction.Done),
             keyboardActions =
                 KeyboardActions(
                     onDone = {

@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -415,6 +416,7 @@ fun TvAddProviderScreen(
                 error = null
             },
             label = stringResource(R.string.provider_name_label),
+            keyboardOptions = FieldKeyboards.Name,
             placeholder = stringResource(R.string.provider_name_placeholder_xtream),
             modifier = nameModifier,
             editButtonFocusRequester = if (isEditMode) nameFocusRequester else null,

@@ -33,6 +33,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -325,6 +326,7 @@ private fun ShortNameDialog(
                     taken = null
                 },
                 placeholder = automatic,
+                keyboardOptions = FieldKeyboards.Code,
                 singleLine = true,
                 isError = taken != null,
                 supportingText =

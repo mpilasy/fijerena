@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
@@ -371,6 +372,7 @@ fun ProfileEditPane(
                         showNameError = false
                     },
                     label = stringResource(R.string.profile_name_label),
+                    keyboardOptions = FieldKeyboards.Name,
                     modifier = entryModifier,
                     editButtonFocusRequester = nameFocus,
                 )
@@ -683,6 +685,7 @@ internal fun ProfileAddDialog(
                         showNameError = false
                     },
                     label = stringResource(R.string.profile_name_label),
+                    keyboardOptions = FieldKeyboards.Name,
                     editButtonFocusRequester = nameFocusRequester,
                 )
                 if (showNameError) {

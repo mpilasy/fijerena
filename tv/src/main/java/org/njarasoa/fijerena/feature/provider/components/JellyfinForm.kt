@@ -10,12 +10,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -60,7 +60,7 @@ fun JellyfinForm(
         },
         label = stringResource(R.string.login_server_url_label),
         placeholder = stringResource(R.string.provider_url_placeholder_jellyfin),
-        keyboardType = KeyboardType.Uri,
+        keyboardOptions = FieldKeyboards.Url,
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -72,6 +72,7 @@ fun JellyfinForm(
             onErrorChange(null)
         },
         label = stringResource(R.string.login_username_label),
+        keyboardOptions = FieldKeyboards.Username,
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -84,7 +85,7 @@ fun JellyfinForm(
         },
         label = stringResource(R.string.login_password_label),
         visualTransformation = PasswordVisualTransformation(),
-        keyboardType = KeyboardType.Password,
+        keyboardOptions = FieldKeyboards.Password,
         displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else "",
     )
 

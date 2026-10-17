@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -216,7 +217,7 @@ private fun SetupPanel(
                 value = ui.serverUrl,
                 onValueChange = viewModel::onServerUrlChanged,
                 label = stringResource(R.string.live_sync_server_label),
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
+                keyboardOptions = FieldKeyboards.Url,
                 modifier = Modifier.leftToRail(),
             )
             if (!ui.serverChecked) {
@@ -233,7 +234,7 @@ private fun SetupPanel(
                         value = setupSecret,
                         onValueChange = { setupSecret = it },
                         label = stringResource(R.string.live_sync_setup_secret_label),
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                        keyboardOptions = FieldKeyboards.Password,
                         visualTransformation =
                             androidx.compose.ui.text.input
                                 .PasswordVisualTransformation(),
@@ -399,6 +400,7 @@ private fun RenameDialog(
                 value = name,
                 onValueChange = { name = it.take(AppSettings.MAX_DEVICE_NAME_LENGTH) },
                 label = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_name_label)) },
+                keyboardOptions = FieldKeyboards.Name,
                 supportingText = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().tvDpadEscape(),

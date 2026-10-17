@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -49,6 +50,7 @@ fun DuplicateProviderDialog(
                 value = name,
                 onValueChange = { name = it },
                 label = stringResource(R.string.provider_duplicate_name_label),
+                keyboardOptions = FieldKeyboards.Name,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -652,6 +653,7 @@ private fun EpgSourceEditDialog(
                     value = url,
                     onValueChange = { url = it },
                     label = stringResource(R.string.epg_xmltv_url_label),
+                    keyboardOptions = FieldKeyboards.Url,
                     supportingText = stringResource(R.string.epg_xmltv_url_hint),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -660,6 +662,7 @@ private fun EpgSourceEditDialog(
                     value = label,
                     onValueChange = { label = it },
                     label = stringResource(R.string.epg_label_optional),
+                    keyboardOptions = FieldKeyboards.Name,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -667,6 +670,7 @@ private fun EpgSourceEditDialog(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = stringResource(R.string.epg_timezone_label),
+                    keyboardOptions = FieldKeyboards.SignedNumber,
                     supportingText = stringResource(R.string.epg_timezone_hint),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,

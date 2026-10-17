@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -163,6 +164,7 @@ internal fun ProfileNameField(
         value = name,
         onValueChange = onNameChange,
         label = stringResource(R.string.profile_name_label),
+        keyboardOptions = FieldKeyboards.Name,
         isError = showError,
         supportingText = if (showError) stringResource(R.string.profile_error_name_required) else null,
         singleLine = true,
