@@ -1169,8 +1169,8 @@
     <string name="tv_search_placeholder_shows">Rechercher des séries</string>
     <!-- TV polish: settings and sources -->
     <string name="settings_scope_device_section">S\'applique à cet appareil uniquement</string>
-    <string name="settings_display_scope_tv">Le thème et l\'apparence s\'appliquent à ce profil ; la taille du texte et la langue à cet appareil uniquement</string>
-    <string name="settings_display_scope_phone">Le thème et l\'apparence s\'appliquent à ce profil ; la langue à cet appareil uniquement</string>
+    <string name="settings_theme_and_look_title">Thème et apparence</string>
+    <string name="settings_theme_and_look_desc">Se règle sur la page de votre profil</string>
     <string name="epg_management_screen_title">Sources de guide</string>
     <!-- phone polish: search, settings, sources -->
     <string name="settings_diagnostics_clear_confirm_title">Effacer le journal ?</string>

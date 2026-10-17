@@ -203,6 +203,15 @@ fun ProfileEditPane(
     var showNameError by remember { mutableStateOf(false) }
     var choosingColour by rememberSaveable { mutableStateOf(false) }
     var returnToColour by remember { mutableStateOf(false) }
+    // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
+    var themeId by remember(profile.id) { mutableStateOf(viewModel.themeOf(profile.id)) }
+    var uiStyleId by remember(profile.id) { mutableStateOf(viewModel.uiStyleOf(profile.id)) }
+    var choosingTheme by rememberSaveable { mutableStateOf(false) }
+    var choosingLook by rememberSaveable { mutableStateOf(false) }
+    var returnToTheme by remember { mutableStateOf(false) }
+    var returnToLook by remember { mutableStateOf(false) }
+    val themeFocus = remember { FocusRequester() }
+    val lookFocus = remember { FocusRequester() }
     var choosingSources by rememberSaveable { mutableStateOf(false) }
     var returnToSources by remember { mutableStateOf(false) }
     var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
@@ -241,6 +250,30 @@ fun ProfileEditPane(
                 choosingColour = false
             },
         )
+    } else if (choosingTheme) {
+        ThemePickerPane(
+            selectedThemeId = themeId,
+            onPick = {
+                themeId = it
+                viewModel.setTheme(profile.id, it)
+            },
+            onBack = {
+                returnToTheme = true
+                choosingTheme = false
+            },
+        )
+    } else if (choosingLook) {
+        UiStylePickerPane(
+            selectedUiStyleId = uiStyleId,
+            onPick = {
+                uiStyleId = it
+                viewModel.setUiStyle(profile.id, it)
+            },
+            onBack = {
+                returnToLook = true
+                choosingLook = false
+            },
+        )
     } else if (choosingSources) {
         ProfileSourcesPane(
             sources = sources,
@@ -255,6 +288,8 @@ fun ProfileEditPane(
             val target =
                 when {
                     returnToColour -> colourFocus
+                    returnToTheme -> themeFocus
+                    returnToLook -> lookFocus
                     returnToSources -> sourcesFocus
                     focusOnOpen -> nameFocus
                     else -> null
@@ -334,6 +369,14 @@ fun ProfileEditPane(
                     onClick = { choosingColour = true },
                     focusRequester = colourFocus,
                     leading = { ColourDot(colorIndex, scale) },
+                )
+                ThemeSettingsRows(
+                    selectedThemeId = themeId,
+                    onOpenThemePicker = { choosingTheme = true },
+                    selectedUiStyleId = uiStyleId,
+                    onOpenUiStylePicker = { choosingLook = true },
+                    themeRowFocusRequester = themeFocus,
+                    uiStyleRowFocusRequester = lookFocus,
                 )
                 // Only while it is on, to turn it off: it is turned on by tapping the version in
                 // About 7 times (DeveloperModeTaps).

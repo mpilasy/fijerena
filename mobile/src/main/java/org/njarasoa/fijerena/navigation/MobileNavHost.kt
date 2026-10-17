@@ -86,11 +86,7 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @Composable
-fun MobileNavHost(
-    navController: NavHostController = rememberNavController(),
-    onThemeChanged: (String) -> Unit = {},
-    onUiStyleChanged: (String) -> Unit = {},
-) {
+fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
@@ -725,8 +721,6 @@ fun MobileNavHost(
                 composable<Screen.Settings> {
                     MobileSettingsScreen(
                         onBack = null,
-                        onThemeChanged = onThemeChanged,
-                        onUiStyleChanged = onUiStyleChanged,
                         onManageProviders = {
                             navController.navigateOnce(Screen.ProviderSelection)
                         },

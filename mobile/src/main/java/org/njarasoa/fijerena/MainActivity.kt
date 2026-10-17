@@ -67,10 +67,7 @@ class MainActivity : ComponentActivity() {
 
             FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                 ProvideSourceBadges {
-                    MobileNavHost(
-                        onThemeChanged = { appSettings.themeId = it },
-                        onUiStyleChanged = { appSettings.uiStyleId = it },
-                    )
+                    MobileNavHost()
                 }
             }
         }

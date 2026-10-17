@@ -123,16 +123,6 @@ class SettingsViewModel(
         }
     }
 
-    fun updateTheme(themeId: String) {
-        appSettings.themeId = themeId
-        _uiState.value = _uiState.value.copy(themeId = themeId)
-    }
-
-    fun updateUiStyle(uiStyleId: String) {
-        appSettings.uiStyleId = uiStyleId
-        _uiState.value = _uiState.value.copy(uiStyleId = uiStyleId)
-    }
-
     /** Re-reads the active profile's developer mode, which its profile page may have changed. */
     fun refreshDevMode() {
         _uiState.value = _uiState.value.copy(isDevMode = appSettings.isDevMode)

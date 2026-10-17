@@ -75,8 +75,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 fun MobileSettingsScreen(
     // Null when Settings is a tab root (no back arrow).
     onBack: (() -> Unit)?,
-    onThemeChanged: (String) -> Unit = {},
-    onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onDeviceInfo: () -> Unit = {},
@@ -212,8 +210,6 @@ fun MobileSettingsScreen(
     }
 
     // Value-row pickers
-    var showThemePicker by remember { mutableStateOf(false) }
-    var showUiStylePicker by remember { mutableStateOf(false) }
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showWatchDelayPicker by remember { mutableStateOf(false) }
     var showTmdbKeyDialog by remember { mutableStateOf(false) }
@@ -222,32 +218,6 @@ fun MobileSettingsScreen(
         TmdbKeyDialog(viewModel = tmdbKeyViewModel, onDismiss = { showTmdbKeyDialog = false })
     }
 
-    if (showThemePicker) {
-        SettingsPickerDialog(
-            title = stringResource(R.string.settings_theme_section_title),
-            options = AllPalettes.map { stringResource(it.nameRes) to it.id },
-            selected = uiState.themeId,
-            onSelect = { id ->
-                viewModel.updateTheme(id)
-                onThemeChanged(id)
-                showThemePicker = false
-            },
-            onDismiss = { showThemePicker = false },
-        )
-    }
-    if (showUiStylePicker) {
-        SettingsPickerDialog(
-            title = stringResource(R.string.settings_ui_style_section_title),
-            options = AllUiStyles.map { stringResource(it.nameRes) to it.id },
-            selected = uiState.uiStyleId,
-            onSelect = { id ->
-                viewModel.updateUiStyle(id)
-                onUiStyleChanged(id)
-                showUiStylePicker = false
-            },
-            onDismiss = { showUiStylePicker = false },
-        )
-    }
     if (showLanguagePicker) {
         SettingsPickerDialog(
             title = stringResource(R.string.settings_language),
@@ -364,18 +334,17 @@ fun MobileSettingsScreen(
             item {
                 SettingsGroupHeader(
                     title = stringResource(R.string.settings_group_display),
-                    description = stringResource(R.string.settings_display_scope_phone),
+                    description = stringResource(R.string.settings_scope_device_section),
                 )
+                // The theme and Look and Feel are the profile's: set on its page, which this row opens.
                 SettingsListRow(
-                    title = stringResource(R.string.settings_theme_section_title),
-                    summary = AllPalettes.firstOrNull { it.id == uiState.themeId }?.let { stringResource(it.nameRes) } ?: uiState.themeId,
-                    onClick = { showThemePicker = true },
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_ui_style_section_title),
+                    title = stringResource(R.string.settings_theme_and_look_title),
                     summary =
-                        AllUiStyles.firstOrNull { it.id == uiState.uiStyleId }?.let { stringResource(it.nameRes) } ?: uiState.uiStyleId,
-                    onClick = { showUiStylePicker = true },
+                        listOf(
+                            AllPalettes.firstOrNull { it.id == uiState.themeId }?.let { stringResource(it.nameRes) } ?: uiState.themeId,
+                            AllUiStyles.firstOrNull { it.id == uiState.uiStyleId }?.let { stringResource(it.nameRes) } ?: uiState.uiStyleId,
+                        ).joinToString(" · "),
+                    onClick = { profiles.firstOrNull { it.isActive }?.let { onEditProfile(it.id) } },
                 )
                 SettingsListRow(
                     title = stringResource(R.string.settings_language),

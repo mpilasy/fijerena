@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Theme and Look and Feel are on your profile's page:** they belong to each profile now, so they sit with its other settings (Settings → Profiles → your profile). Settings → Display keeps a "Theme and Look and Feel" row that takes you there. TV and phone.
 - **Each profile has its own theme and Look and Feel:** Settings → Display now sets the colour theme and Look and Feel of the profile in use, and the app switches to a profile's look as soon as you pick it. A new profile starts with the look of the profile that made it, and existing profiles keep the look the device had. With live sync a profile's look follows it to every device. Text size and language stay per device. TV and phone.
 - **The whole app follows your theme and Look and Feel:** every screen — text, buttons, fields, rows, cards, badges, dialogs, progress bars, the tab bar — now takes its colours, fonts and corners from Settings → Display, so nothing stays dark-only or square when you change them. New colour themes **Forest** (dark green) and **Daylight** (the first light theme, with dark system-bar icons on the phone), and a new Look and Feel **Serif** (serif text and cut corners). TV and phone.
 - **A floating tab bar on the phone:** the bar at the bottom now floats above the screen, with rounded corners that follow Settings → Display → Look and Feel; the tab you're on sits in a lighter pill in the theme's colour, and lists scroll behind the bar. Phone.

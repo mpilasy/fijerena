@@ -187,6 +187,21 @@ class ProfilesViewModel(
     /** [id]'s own settings — not necessarily the profile this device uses. */
     fun settingsOf(id: String): ProfileSettings = ProfileSettings(appSettings.devMode(id), appSettings.autoplayNextEpisode(id))
 
+    /** [id]'s colour theme and Look and Feel; set at once, like its sources (the profile in use repaints). */
+    fun themeOf(id: String): String = appSettings.themeId(id)
+
+    fun uiStyleOf(id: String): String = appSettings.uiStyleId(id)
+
+    fun setTheme(
+        id: String,
+        themeId: String,
+    ) = appSettings.setThemeId(id, themeId)
+
+    fun setUiStyle(
+        id: String,
+        styleId: String,
+    ) = appSettings.setUiStyleId(id, styleId)
+
     fun deleteProfile(id: String) {
         viewModelScope.launch {
             _message.value =

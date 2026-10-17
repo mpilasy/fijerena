@@ -80,8 +80,6 @@ import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 @Composable
 fun TvNavHost(
     navController: NavHostController = rememberNavController(),
-    onThemeChanged: (String) -> Unit = {},
-    onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -987,8 +985,6 @@ fun TvNavHost(
                                 onBack = {
                                     navController.navigateUp()
                                 },
-                                onThemeChanged = onThemeChanged,
-                                onUiStyleChanged = onUiStyleChanged,
                                 onUiScaleChanged = onUiScaleChanged,
                                 onManageProviders = {
                                     navController.navigateOnce(Screen.ProviderSelection)

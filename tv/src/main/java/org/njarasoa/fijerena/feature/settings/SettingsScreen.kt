@@ -40,6 +40,8 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.theme.AllPalettes
+import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
@@ -51,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
+import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
@@ -69,8 +72,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onThemeChanged: (String) -> Unit = {},
-    onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onLiveSync: () -> Unit = {},
@@ -352,28 +353,6 @@ fun SettingsScreen(
                 ) {
                     Box(modifier = Modifier.fillMaxSize().padding(Spacing.md)) {
                         when (picker ?: SettingPicker.PROFILE.takeIf { ownProfilePage }) {
-                            SettingPicker.THEME -> {
-                                ThemePickerPane(
-                                    selectedThemeId = uiState.themeId,
-                                    onPick = { newThemeId ->
-                                        viewModel.updateTheme(newThemeId)
-                                        onThemeChanged(newThemeId)
-                                    },
-                                    onBack = closePicker,
-                                )
-                            }
-
-                            SettingPicker.LOOK -> {
-                                UiStylePickerPane(
-                                    selectedUiStyleId = uiState.uiStyleId,
-                                    onPick = { newStyleId ->
-                                        viewModel.updateUiStyle(newStyleId)
-                                        onUiStyleChanged(newStyleId)
-                                    },
-                                    onBack = closePicker,
-                                )
-                            }
-
                             SettingPicker.TEXT_SIZE -> {
                                 UiScalePickerPane(
                                     uiScale = uiState.uiScale,
@@ -519,15 +498,22 @@ fun SettingsScreen(
 
                                         SettingsGroup.DISPLAY -> {
                                             item {
-                                                SettingsSection(description = stringResource(R.string.settings_display_scope_tv)) {
-                                                    ThemeSettingsRows(
-                                                        selectedThemeId = uiState.themeId,
-                                                        onOpenThemePicker = { openPicker(SettingPicker.THEME) },
-                                                        selectedUiStyleId = uiState.uiStyleId,
-                                                        onOpenUiStylePicker = { openPicker(SettingPicker.LOOK) },
-                                                        themeRowFocusRequester = returnFocus.requesterFor(SettingPicker.THEME.returnKey),
-                                                        uiStyleRowFocusRequester = returnFocus.requesterFor(SettingPicker.LOOK.returnKey),
-                                                        themeRowModifier = entryModifier,
+                                                SettingsSection(description = stringResource(R.string.settings_scope_device_section)) {
+                                                    // The theme and Look and Feel are the profile's: they are set on its
+                                                    // page, and this row opens the page of the profile in use.
+                                                    SettingsRow(
+                                                        title = stringResource(R.string.settings_theme_and_look_title),
+                                                        description = stringResource(R.string.settings_theme_and_look_desc),
+                                                        value = themeAndLookValue(uiState.themeId, uiState.uiStyleId),
+                                                        onClick = {
+                                                            profiles.firstOrNull { it.isActive }?.let { active ->
+                                                                returnFocus.leaveFrom(THEME_AND_LOOK_RETURN_KEY, listState)
+                                                                editingProfileId = active.id
+                                                                picker = SettingPicker.PROFILE
+                                                            }
+                                                        },
+                                                        focusRequester = returnFocus.requesterFor(THEME_AND_LOOK_RETURN_KEY),
+                                                        modifier = entryModifier,
                                                     )
                                                     UiScaleSettingsRow(
                                                         uiScale = uiState.uiScale,
@@ -722,8 +708,6 @@ enum class SettingsGroup(
 enum class SettingPicker(
     val returnKey: String,
 ) {
-    THEME("picker:theme"),
-    LOOK("picker:look"),
     TEXT_SIZE("picker:textSize"),
     WATCH_DELAY("picker:watchDelay"),
     LANGUAGE("picker:language"),
@@ -732,4 +716,18 @@ enum class SettingPicker(
 
     /** A profile's page; its rows return focus by `profileReturnKey`, not by this key. */
     PROFILE("picker:profile"),
+}
+
+/** Display's "Theme and Look and Feel" row, which opens the profile in use's page (P9). */
+private const val THEME_AND_LOOK_RETURN_KEY = "settings:themeAndLook"
+
+/** "Daylight · Serif": the profile's colour theme and Look and Feel, for Display's shortcut row. */
+@Composable
+private fun themeAndLookValue(
+    themeId: String,
+    uiStyleId: String,
+): String {
+    val theme = AllPalettes.firstOrNull { it.id == themeId }?.let { stringResource(it.nameRes) } ?: themeId
+    val look = AllUiStyles.firstOrNull { it.id == uiStyleId }?.let { stringResource(it.nameRes) } ?: uiStyleId
+    return "$theme · $look"
 }

@@ -79,8 +79,6 @@ class MainActivity : ComponentActivity() {
                 FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                     ProvideSourceBadges {
                         TvNavHost(
-                            onThemeChanged = { appSettings.themeId = it },
-                            onUiStyleChanged = { appSettings.uiStyleId = it },
                             onUiScaleChanged = { newScale ->
                                 appSettings.uiScale = newScale
                                 uiScale = newScale

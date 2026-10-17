@@ -31,6 +31,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
+import org.njarasoa.fijerena.core.ui.theme.AllPalettes
+import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -42,6 +44,7 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileColourPicker
 import org.njarasoa.fijerena.feature.settings.components.ProfileNameField
 import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.feature.settings.components.SettingsScope
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -100,6 +103,37 @@ fun MobileProfileEditScreen(
                 viewModel.loadCategoryFilters(source.id, profileId) { editingFilters = source to it }
             }
             var confirmDelete by remember { mutableStateOf(false) }
+            // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
+            var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
+            var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
+            var choosingTheme by rememberSaveable { mutableStateOf(false) }
+            var choosingLook by rememberSaveable { mutableStateOf(false) }
+            if (choosingTheme) {
+                SettingsPickerDialog(
+                    title = stringResource(R.string.settings_theme_section_title),
+                    options = AllPalettes.map { stringResource(it.nameRes) to it.id },
+                    selected = themeId,
+                    onSelect = { id ->
+                        themeId = id
+                        viewModel.setTheme(profileId, id)
+                        choosingTheme = false
+                    },
+                    onDismiss = { choosingTheme = false },
+                )
+            }
+            if (choosingLook) {
+                SettingsPickerDialog(
+                    title = stringResource(R.string.settings_ui_style_section_title),
+                    options = AllUiStyles.map { stringResource(it.nameRes) to it.id },
+                    selected = uiStyleId,
+                    onSelect = { id ->
+                        uiStyleId = id
+                        viewModel.setUiStyle(profileId, id)
+                        choosingLook = false
+                    },
+                    onDismiss = { choosingLook = false },
+                )
+            }
             var editingSources by rememberSaveable { mutableStateOf(false) }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
@@ -122,6 +156,16 @@ fun MobileProfileEditScreen(
                     showError = showNameError,
                 )
                 ProfileColourPicker(colorIndex = colorIndex, onPick = { colorIndex = it })
+                SettingsListRow(
+                    title = stringResource(R.string.settings_theme_section_title),
+                    summary = AllPalettes.firstOrNull { it.id == themeId }?.let { stringResource(it.nameRes) } ?: themeId,
+                    onClick = { choosingTheme = true },
+                )
+                SettingsListRow(
+                    title = stringResource(R.string.settings_ui_style_section_title),
+                    summary = AllUiStyles.firstOrNull { it.id == uiStyleId }?.let { stringResource(it.nameRes) } ?: uiStyleId,
+                    onClick = { choosingLook = true },
+                )
                 // Only while it is on, to turn it off: it is turned on by tapping the version in
                 // About 7 times (DeveloperModeTaps).
                 if (stored.devMode) {

@@ -1167,8 +1167,8 @@
     <string name="tv_search_placeholder_shows">Search shows</string>
     <!-- TV polish: settings and sources -->
     <string name="settings_scope_device_section">Applies to this device only</string>
-    <string name="settings_display_scope_tv">Theme and Look and Feel apply to this profile; text size and language to this device only</string>
-    <string name="settings_display_scope_phone">Theme and Look and Feel apply to this profile; language to this device only</string>
+    <string name="settings_theme_and_look_title">Theme and Look and Feel</string>
+    <string name="settings_theme_and_look_desc">Set on your profile’s page</string>
     <string name="epg_management_screen_title">Guide sources</string>
     <!-- phone polish: search, settings, sources -->
     <string name="settings_diagnostics_clear_confirm_title">Clear the log?</string>
