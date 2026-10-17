@@ -120,6 +120,20 @@ class ProfilePinsTest {
     }
 
     @Test
+    fun `any Expert's PIN will do, and wrong tries count against the first one's`() {
+        pins.set("atr", "1111")
+        pins.set(KID, "2222")
+        val experts = listOf("atr", KID)
+
+        assertEquals(Check.Right, pins.checkAny(experts, "2222"))
+        repeat(4) { pins.checkAny(experts, "0000") }
+        assertEquals(Check.Wrong(triesLeft = 0, waitUntil = clock + 30_000L), pins.checkAny(experts, "0000"))
+        assertEquals(Check.Waiting(clock + 30_000L), pins.checkAny(experts, "1111"))
+        assertEquals(0, settings.pinFailures(KID))
+        assertEquals(Check.Right, pins.checkAny(emptyList(), "0000"))
+    }
+
+    @Test
     fun `deleting the profile drops its PIN`() {
         pins.set(KID, "1234")
         settings.removePin(KID)

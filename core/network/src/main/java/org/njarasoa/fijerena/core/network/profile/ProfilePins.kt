@@ -69,6 +69,28 @@ class ProfilePins(
         return Check.Wrong(triesLeft = (FREE_TRIES - failures).coerceAtLeast(0), waitUntil = next)
     }
 
+    /**
+     * Whether [pin] is the PIN of any of [profileIds] — the Expert profiles', where any admin's PIN
+     * will do. Wrong tries count against the first one's (the oldest Expert's), so the wait can't
+     * be dodged by spreading guesses. Right for an empty list.
+     */
+    fun checkAny(
+        profileIds: List<String>,
+        pin: String,
+    ): Check {
+        val first = profileIds.firstOrNull() ?: return Check.Right
+        val waitUntil = settings.pinWaitUntil(first)
+        if (now() < waitUntil) return Check.Waiting(waitUntil)
+        if (profileIds.any { id -> settings.pinHash(id)?.let { matches(pin, it) } == true }) {
+            settings.setPinThrottle(first, failures = 0, waitUntil = 0L)
+            return Check.Right
+        }
+        val failures = settings.pinFailures(first) + 1
+        val next = if (failures >= FREE_TRIES) now() + waitAfter(failures) else 0L
+        settings.setPinThrottle(first, failures, next)
+        return Check.Wrong(triesLeft = (FREE_TRIES - failures).coerceAtLeast(0), waitUntil = next)
+    }
+
     /** When [profileId]'s PIN may be tried again, epoch ms, or null when it may now. */
     fun waitingUntil(profileId: String): Long? = settings.pinWaitUntil(profileId).takeIf { it > now() }
 

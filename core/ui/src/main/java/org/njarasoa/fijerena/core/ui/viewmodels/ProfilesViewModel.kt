@@ -117,6 +117,12 @@ class ProfilesViewModel(
     /** The profiles' optional PINs (docs/plans/20261017_profile-pin-plan.md). */
     val pins = ProfilePins(appSettings)
 
+    /**
+     * The Expert profiles (admin, for now) with a PIN, oldest first: while there is one, becoming
+     * Expert (the 7 taps) or adding a profile from TV's picker asks for one of their PINs.
+     */
+    fun adminPinHolders(): List<String> = profiles.value.map { it.id }.filter { appSettings.devMode(it) && pins.hasPin(it) }
+
     /** [id] has a PIN not typed in this session: picking it asks for it first. */
     fun needsPin(id: String): Boolean = pins.hasPin(id) && !PinSession.isUnlocked(id)
 

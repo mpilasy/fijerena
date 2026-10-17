@@ -48,6 +48,17 @@ class PinPromptStateTest {
     }
 
     @Test
+    fun `any Expert's PIN finishes an admin prompt`() {
+        every { pins.checkAny(listOf("atr", "kid"), "2222") } returns ProfilePins.Check.Right
+        val state = prompt(PinRequest.AnyOf(listOf("atr", "kid"), "Enter an Expert's PIN"))
+
+        state.replace("2222")
+
+        assertEquals(1, done)
+        assertEquals("Enter an Expert's PIN", state.title)
+    }
+
+    @Test
     fun `erase drops the last digit and anything but digits is ignored`() {
         val state = prompt(PinRequest.Check("kid", "t"))
         state.type('1')

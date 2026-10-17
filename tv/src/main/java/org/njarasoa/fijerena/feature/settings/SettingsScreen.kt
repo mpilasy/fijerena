@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -39,7 +43,9 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -55,6 +61,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.TvContentText
+import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -86,6 +93,36 @@ fun SettingsScreen(
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
+    // Becoming Expert (the 7 taps on the version) asks an Expert's PIN while one has a PIN
+    // (docs/plans/20261017_profile-pin-plan.md, Phase 4).
+    var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
+    val enableExpert = {
+        val holders = profilesViewModel.adminPinHolders()
+        if (holders.isEmpty()) {
+            viewModel.enableDevMode()
+            true
+        } else {
+            askingAdminPin = holders
+            false
+        }
+    }
+    askingAdminPin?.let { holders ->
+        val enabledText = stringResource(R.string.settings_developer_mode_enabled)
+        TvPinDialog(
+            state =
+                rememberPinPromptState(
+                    profilesViewModel.pins,
+                    PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin)),
+                ) {
+                    askingAdminPin = null
+                    viewModel.enableDevMode()
+                    android.widget.Toast
+                        .makeText(context, enabledText, android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                },
+            onCancel = { askingAdminPin = null },
+        )
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9, T6).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
@@ -186,7 +223,7 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
-    val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, viewModel::enableDevMode)
+    val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, enableExpert)
 
     // Two panes (plan Part I, B): a rail of the seven groups on the left, the selected group's
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the

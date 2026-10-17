@@ -76,6 +76,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     var adding by remember { mutableStateOf(false) }
     // A profile with a PIN asks for it before the switch (docs/plans/20261017_profile-pin-plan.md).
     var unlocking by remember { mutableStateOf<ProfileUi?>(null) }
+    var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
     val activeFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
 
@@ -141,7 +142,11 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 item(key = ADD_PROFILE_KEY) {
                     PickerCard(
                         label = stringResource(R.string.settings_profiles_add),
-                        onClick = { adding = true },
+                        // Adding a profile is the admin's: an Expert's PIN first while one has a PIN.
+                        onClick = {
+                            val holders = viewModel.adminPinHolders()
+                            if (holders.isEmpty()) adding = true else askingAdminPin = holders
+                        },
                     ) {
                         Box(
                             modifier = Modifier.size(TvDimensions.profilePickerAvatarSize),
@@ -174,6 +179,17 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 unlocking = null
                 activeFocusRequester.requestFocus()
             },
+        )
+    }
+
+    askingAdminPin?.let { holders ->
+        TvPinDialog(
+            state =
+                rememberPinPromptState(viewModel.pins, PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin))) {
+                    askingAdminPin = null
+                    adding = true
+                },
+            onCancel = { askingAdminPin = null },
         )
     }
 

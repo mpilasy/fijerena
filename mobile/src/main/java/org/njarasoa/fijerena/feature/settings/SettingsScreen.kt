@@ -11,6 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -34,8 +38,10 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
@@ -62,6 +68,7 @@ import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -89,6 +96,36 @@ fun MobileSettingsScreen(
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
+    // Becoming Expert (the 7 taps on the version) asks an Expert's PIN while one has a PIN
+    // (docs/plans/20261017_profile-pin-plan.md, Phase 4).
+    var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
+    val enableExpert = {
+        val holders = profilesViewModel.adminPinHolders()
+        if (holders.isEmpty()) {
+            viewModel.enableDevMode()
+            true
+        } else {
+            askingAdminPin = holders
+            false
+        }
+    }
+    askingAdminPin?.let { holders ->
+        val enabledText = stringResource(R.string.settings_developer_mode_enabled)
+        PinDialog(
+            state =
+                rememberPinPromptState(
+                    profilesViewModel.pins,
+                    PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin)),
+                ) {
+                    askingAdminPin = null
+                    viewModel.enableDevMode()
+                    android.widget.Toast
+                        .makeText(context, enabledText, android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                },
+            onCancel = { askingAdminPin = null },
+        )
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
@@ -463,7 +500,7 @@ fun MobileSettingsScreen(
                     ),
                 )
                 // Tapping the version 7 times turns developer mode on (DeveloperModeTaps).
-                val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, viewModel::enableDevMode)
+                val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, enableExpert)
                 Column(
                     modifier =
                         Modifier

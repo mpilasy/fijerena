@@ -22,6 +22,17 @@ sealed interface PinRequest {
         val title: String,
     ) : PinRequest
 
+    /**
+     * Any of [profileIds]' PINs — the Expert profiles' (admin, for now): the 7 taps on the version
+     * and Add profile on TV's picker while an Expert has a PIN. [profileId] is the first of them.
+     */
+    data class AnyOf(
+        val profileIds: List<String>,
+        val title: String,
+    ) : PinRequest {
+        override val profileId: String get() = profileIds.first()
+    }
+
     /** A new PIN for [profileId], typed twice; [warning] shows under the dots (the last Expert's). */
     data class Choose(
         override val profileId: String,
@@ -55,6 +66,7 @@ class PinPromptState internal constructor(
         get() =
             when (request) {
                 is PinRequest.Check -> request.title
+                is PinRequest.AnyOf -> request.title
                 is PinRequest.Choose -> context.getString(if (first == null) R.string.pin_choose else R.string.pin_repeat)
             }
 
@@ -85,6 +97,13 @@ class PinPromptState internal constructor(
                     PinSession.unlock(request.profileId)
                     onDone()
                 }
+            }
+
+            is PinRequest.AnyOf -> {
+                val check = pins.checkAny(request.profileIds, pin)
+                message = check.message(context)
+                messageIsError = message != null
+                if (check == ProfilePins.Check.Right) onDone()
             }
 
             is PinRequest.Choose -> {

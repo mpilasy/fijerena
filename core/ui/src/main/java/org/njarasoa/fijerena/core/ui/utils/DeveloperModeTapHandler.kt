@@ -12,12 +12,13 @@ import org.njarasoa.fijerena.core.ui.R
 
 /**
  * The version row's click on TV and phone: counts taps toward developer mode
- * ([DeveloperModeTaps]) and says where they stand in a short toast.
+ * ([DeveloperModeTaps]) and says where they stand in a short toast. [onEnable] returns whether it
+ * is on now — false while it first asks an Expert's PIN, which says nothing yet.
  */
 @Composable
 fun rememberDeveloperModeTapHandler(
     isDevMode: Boolean,
-    onEnable: () -> Unit,
+    onEnable: () -> Boolean,
 ): () -> Unit {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -35,8 +36,7 @@ fun rememberDeveloperModeTapHandler(
                 }
 
                 DeveloperModeTaps.Outcome.Enable -> {
-                    onEnable()
-                    resources.getString(R.string.settings_developer_mode_enabled)
+                    if (onEnable()) resources.getString(R.string.settings_developer_mode_enabled) else null
                 }
 
                 DeveloperModeTaps.Outcome.AlreadyOn -> {
