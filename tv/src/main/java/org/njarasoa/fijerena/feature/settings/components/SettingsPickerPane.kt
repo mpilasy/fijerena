@@ -29,8 +29,14 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.RadioButton
 import androidx.tv.material3.RadioButtonDefaults
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -88,11 +94,11 @@ fun <T> SettingsPickerPane(
                 }
             },
     ) {
-        Text(
-            text = "‹ $title",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        CinemaText(
+            "‹ $title",
             modifier = Modifier.padding(horizontal = Spacing.xs),
+            role = TextRole.Title,
+            tone = TextTone.Primary,
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyColumn(
@@ -135,18 +141,10 @@ private fun PickerPreviewRow(
         onClick = onClick,
         modifier = modifier,
         leadingContent = {
-            RadioButton(
-                selected = selected,
-                onClick = null,
-                colors =
-                    RadioButtonDefaults.colors(
-                        selectedColor = CinemaAccent,
-                        unselectedColor = CinemaTextSecondary,
-                    ),
-            )
+            CinemaRadioButton(selected = selected, onClick = null)
         },
         trailingContent = preview,
     ) {
-        Text(text = label, style = MaterialTheme.typography.titleSmall)
+        TvContentText(label, role = TextRole.Heading)
     }
 }

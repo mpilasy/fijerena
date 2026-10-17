@@ -19,11 +19,16 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -46,8 +51,8 @@ fun ProviderTypeDropdown(
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = label, style = MaterialTheme.typography.titleSmall, color = CinemaTextSecondary, modifier = Modifier.weight(1f))
-            Text(text = selectedType.displayName, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+            CinemaText(label, modifier = Modifier.weight(1f), role = TextRole.Heading, tone = TextTone.Secondary)
+            CinemaText(selectedType.displayName, role = TextRole.Body, tone = TextTone.Primary)
         }
         return
     }
@@ -59,15 +64,15 @@ fun ProviderTypeDropdown(
             onClick = { typeDropdownExpanded = true },
             modifier = Modifier.fillMaxWidth(),
             trailingContent = {
-                Text(text = "${selectedType.displayName} ›", style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                TvContentText(text = "${selectedType.displayName} ›", maxLines = 1)
             },
         ) {
-            Text(text = label, style = MaterialTheme.typography.titleSmall)
+            TvContentText(label, role = TextRole.Heading)
         }
         DropdownMenu(
             expanded = typeDropdownExpanded,
             onDismissRequest = { typeDropdownExpanded = false },
-            containerColor = CinemaSurface,
+            containerColor = CinemaTheme.colors.surface,
         ) {
             // The menu is a Popup, so it gets its own window and loses the scaled density.
             ProvideUiScaledDensity {
@@ -75,9 +80,9 @@ fun ProviderTypeDropdown(
                     types.forEach { type ->
                         DropdownMenuItem(
                             text = {
-                                Text(
+                                CinemaText(
                                     text = type.displayName,
-                                    color = if (type == selectedType) CinemaAccent else CinemaTextPrimary,
+                                    tone = if (type == selectedType) TextTone.Accent else TextTone.Primary,
                                 )
                             },
                             onClick = {

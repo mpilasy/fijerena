@@ -51,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -331,7 +332,7 @@ fun SettingsScreen(
                                         if (isLeft) focusManager.moveFocus(FocusDirection.Left)
                                         isLeft
                                     }.leftToRail(),
-                            headlineContent = { Text(stringResource(group.titleRes)) },
+                            headlineContent = { TvContentText(stringResource(group.titleRes)) },
                         )
                     }
                 }

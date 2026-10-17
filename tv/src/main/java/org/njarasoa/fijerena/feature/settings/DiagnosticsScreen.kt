@@ -25,11 +25,18 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.colorOf
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
@@ -75,19 +82,19 @@ fun DiagnosticsScreen() {
             }
         }
         item {
-            Text(
+            CinemaText(
                 stringResource(R.string.settings_diagnostics_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
         }
         val loaded = entries
         if (loaded != null && loaded.isEmpty()) {
             item {
-                Text(
+                CinemaText(
                     stringResource(R.string.settings_diagnostics_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             }
         }
@@ -97,7 +104,7 @@ fun DiagnosticsScreen() {
             Surface(
                 onClick = {},
                 modifier = Modifier.fillMaxWidth().leftToRail(),
-                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(CornerRadius.large)),
+                shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.large)),
                 colors =
                     ClickableSurfaceDefaults.colors(
                         containerColor = TvFocusTokens.restingContainer,
@@ -111,11 +118,12 @@ fun DiagnosticsScreen() {
                     ),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    Text(entry.title, style = MaterialTheme.typography.titleMedium, color = CinemaAccent)
+                    CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Accent)
+                    // look-ok: the detail is raw log text (stack traces), set in monospace; size and colour are the Body role's
                     Text(
                         text = entry.detail,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                        color = CinemaTextPrimary,
+                        style = textStyleOf(TextRole.Body).copy(fontFamily = FontFamily.Monospace),
+                        color = colorOf(TextTone.Primary),
                         maxLines = DETAIL_MAX_LINES,
                         overflow = TextOverflow.Ellipsis,
                     )

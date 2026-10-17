@@ -14,9 +14,14 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
@@ -70,19 +75,14 @@ fun ProviderGuideSection(
         onClick = onGuideSourcesClick,
         modifier = guideSourcesModifier.paneItem(pane, "guide_sources"),
         supportingContent = {
-            Text(
+            CinemaText(
                 text = guideSourcesValue(sources.size, sources.maxOfOrNull { it.lastIngestedAtMs } ?: 0L),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         },
-        trailingContent = { Text(text = "›", style = MaterialTheme.typography.bodyMedium) },
-        headlineContent = { Text(stringResource(R.string.epg_sources_header)) },
+        trailingContent = { TvContentText(text = "›") },
+        headlineContent = { TvContentText(stringResource(R.string.epg_sources_header)) },
     )
 }
 

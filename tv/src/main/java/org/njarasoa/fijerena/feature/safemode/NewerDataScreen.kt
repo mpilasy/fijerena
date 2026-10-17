@@ -25,6 +25,9 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.restartProcess
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
@@ -67,25 +70,24 @@ fun NewerDataScreen() {
             modifier = Modifier.widthIn(max = TvDimensions.dialogWidthLarge.scaled(scale)),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         ) {
-            Text(
-                text = stringResource(R.string.newer_data_title),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
+            CinemaText(
+                stringResource(R.string.newer_data_title),
+                role = TextRole.Display,
+                tone = TextTone.Primary,
             )
-            Text(
-                text =
-                    stringResource(
-                        R.string.newer_data_message,
-                        ProvidersDbGuard.newerFileVersion,
-                        ProvidersDbGuard.supportedVersion,
-                    ),
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextPrimary,
+            CinemaText(
+                stringResource(
+                    R.string.newer_data_message,
+                    ProvidersDbGuard.newerFileVersion,
+                    ProvidersDbGuard.supportedVersion,
+                ),
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
-            Text(
-                text = stringResource(R.string.newer_data_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
+            CinemaText(
+                stringResource(R.string.newer_data_hint),
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
             Row(
                 modifier = Modifier.padding(top = Spacing.md.scaled(scale)),

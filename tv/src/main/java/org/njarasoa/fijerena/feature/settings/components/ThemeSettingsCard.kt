@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -80,7 +81,7 @@ fun UiStylePickerPane(
 private fun PaletteSwatches(palette: CinemaThemePalette) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
         listOf(palette.accent, palette.accentLight, palette.orange, palette.surfaceLight).forEach { color ->
-            Box(modifier = Modifier.size(Spacing.md).background(color, CircleShape))
+            Box(modifier = Modifier.size(Spacing.md).background(color, CinemaTheme.shapes.identity))
         }
     }
 }

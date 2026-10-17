@@ -9,6 +9,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 
@@ -37,20 +40,20 @@ fun AboutSettingsCard(
             chevron = false,
             supporting = {
                 Column {
-                    Text(
-                        text = stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    CinemaText(
+                        stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
-                    Text(
-                        text = stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    CinemaText(
+                        stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
-                    Text(
-                        text = stringResource(R.string.app_disclaimer_no_content),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    CinemaText(
+                        stringResource(R.string.app_disclaimer_no_content),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 }
             },

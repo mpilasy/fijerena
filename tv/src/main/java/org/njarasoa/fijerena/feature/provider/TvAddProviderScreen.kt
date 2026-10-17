@@ -61,7 +61,11 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.model.addSourceTypes
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -71,6 +75,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -385,15 +390,6 @@ fun TvAddProviderScreen(
         }
 
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val scaledDisplaySmall =
-        remember(scale, typography) {
-            typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-        }
-    val scaledBodyMedium =
-        remember(scale, typography) {
-            typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-        }
 
     // Type, name and the type's own fields: the same in both modes. In edit mode the type is
     // read-only and skipped by focus, the name field takes [nameModifier] and the type's
@@ -494,11 +490,7 @@ fun TvAddProviderScreen(
     val errorText: @Composable () -> Unit = {
         error?.let { errorMsg ->
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = errorMsg,
-                style = scaledBodyMedium,
-                color = CinemaError,
-            )
+            CinemaText(text = errorMsg, role = TextRole.Body, tone = TextTone.Danger)
         }
     }
 
@@ -788,10 +780,10 @@ fun TvAddProviderScreen(
                                 .padding(Spacing.lg.scaled(scale)),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.provider_add_title),
-                            style = scaledDisplaySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            role = TextRole.Display,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
@@ -830,8 +822,20 @@ fun TvAddProviderScreen(
                     showDiscardDialog = false
                     discardThen = null
                 },
-                title = { Text(stringResource(R.string.provider_discard_changes_title), color = CinemaTextPrimary) },
-                text = { Text(stringResource(R.string.provider_discard_changes_message), color = CinemaTextSecondary) },
+                title = {
+                    CinemaText(
+                        stringResource(R.string.provider_discard_changes_title),
+                        role = TextRole.Title,
+                        tone = TextTone.Primary,
+                    )
+                },
+                text = {
+                    CinemaText(
+                        stringResource(R.string.provider_discard_changes_message),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
+                    )
+                },
                 confirmButton = {
                     CinemaButton(
                         onClick = {
@@ -841,7 +845,13 @@ fun TvAddProviderScreen(
                             if (then != null) then() else onBack()
                         },
                         kind = ButtonKind.Danger,
-                    ) { Text(stringResource(R.string.provider_discard_button)) }
+                    ) {
+                        CinemaText(
+                            stringResource(R.string.provider_discard_button),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    }
                 },
                 dismissButton = {
                     CinemaButton(
@@ -850,9 +860,15 @@ fun TvAddProviderScreen(
                             discardThen = null
                         },
                         kind = ButtonKind.Other,
-                    ) { Text(stringResource(R.string.provider_keep_editing_button)) }
+                    ) {
+                        CinemaText(
+                            stringResource(R.string.provider_keep_editing_button),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    }
                 },
-                containerColor = CinemaSurface,
+                containerColor = CinemaTheme.colors.surface,
             )
         }
 
@@ -869,15 +885,17 @@ fun TvAddProviderScreen(
             CinemaAlertDialog(
                 onDismissRequest = { viewModel.resetSaveState() },
                 title = {
-                    Text(
+                    CinemaText(
                         stringResource(R.string.provider_connection_failed),
-                        color = CinemaTextPrimary,
+                        role = TextRole.Title,
+                        tone = TextTone.Primary,
                     )
                 },
                 text = {
-                    Text(
+                    CinemaText(
                         failedState.errorMessage,
-                        color = CinemaTextSecondary,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 },
                 // Going back to fix the login is the main action; saving a source that failed its
@@ -910,7 +928,7 @@ fun TvAddProviderScreen(
                         text = stringResource(R.string.provider_go_back),
                     )
                 },
-                containerColor = CinemaSurface,
+                containerColor = CinemaTheme.colors.surface,
             )
         }
 
@@ -1039,6 +1057,6 @@ fun TvAddProviderScreen(
 private fun SectionDivider() {
     val scale = LocalUiScale.current
     Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-    HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
+    CinemaDivider()
     Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 }

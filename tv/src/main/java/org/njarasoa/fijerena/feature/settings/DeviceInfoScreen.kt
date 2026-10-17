@@ -24,12 +24,16 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -67,15 +71,19 @@ fun DeviceInfoScreen() {
             }
         }
         item {
-            Text(
+            CinemaText(
                 stringResource(R.string.device_info_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
         }
         if (failed) {
             item {
-                Text(stringResource(R.string.device_info_load_failed), style = MaterialTheme.typography.bodyMedium, color = CinemaError)
+                CinemaText(
+                    stringResource(R.string.device_info_load_failed),
+                    role = TextRole.Body,
+                    tone = TextTone.Danger,
+                )
             }
         }
         items(sections.orEmpty()) { section ->
@@ -84,7 +92,7 @@ fun DeviceInfoScreen() {
             Surface(
                 onClick = {},
                 modifier = Modifier.fillMaxWidth().leftToRail(),
-                shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(CornerRadius.large)),
+                shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.large)),
                 colors =
                     ClickableSurfaceDefaults.colors(
                         containerColor = TvFocusTokens.restingContainer,
@@ -98,20 +106,20 @@ fun DeviceInfoScreen() {
                     ),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    Text(stringResource(section.title), style = MaterialTheme.typography.titleMedium, color = CinemaAccent)
+                    CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Accent)
                     section.rows.forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
-                            Text(
-                                text = row.label.asString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextSecondary,
+                            CinemaText(
+                                row.label.asString(),
                                 modifier = Modifier.weight(LABEL_WEIGHT),
+                                role = TextRole.Body,
+                                tone = TextTone.Secondary,
                             )
-                            Text(
-                                text = row.value.asString(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary,
+                            CinemaText(
+                                row.value.asString(),
                                 modifier = Modifier.weight(VALUE_WEIGHT),
+                                role = TextRole.Body,
+                                tone = TextTone.Primary,
                             )
                         }
                     }

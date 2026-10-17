@@ -23,6 +23,9 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyCheck
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyState
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
@@ -81,10 +84,10 @@ fun TmdbKeyPane(
         SettingsNote(stringResource(R.string.tmdb_settings_desc))
         // The banner is about the saved key: gone once another key is typed or tested.
         if (uiState.state == TmdbKeyState.Rejected && draft == uiState.savedKey) {
-            Text(
-                text = stringResource(R.string.tmdb_rejected_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaError,
+            CinemaText(
+                stringResource(R.string.tmdb_rejected_message),
+                role = TextRole.Body,
+                tone = TextTone.Danger,
             )
         }
         ReadOnlyFieldWithEdit(

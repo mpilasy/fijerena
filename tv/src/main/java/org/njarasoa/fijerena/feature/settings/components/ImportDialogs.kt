@@ -40,6 +40,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -48,8 +52,11 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -85,7 +92,7 @@ fun ImportOptionsDialog(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
+                        .background(CinemaTheme.colors.background.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
                 contentAlignment = Alignment.Center,
             ) {
                 Surface(
@@ -94,16 +101,16 @@ fun ImportOptionsDialog(
                             .width(TvDimensions.dialogWidth)
                             .height(TvDimensions.dialogWidth)
                             .padding(Spacing.xxl),
-                    color = CinemaSurface,
-                    shape = RoundedCornerShape(CornerRadius.large),
+                    color = CinemaTheme.colors.surface,
+                    shape = cornerShape(CornerRadius.large),
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.xxl),
                     ) {
-                        Text(
-                            text = stringResource(R.string.settings_import_select_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaAccent,
+                        CinemaText(
+                            stringResource(R.string.settings_import_select_title),
+                            role = TextRole.Title,
+                            tone = TextTone.Accent,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md))
@@ -201,21 +208,21 @@ private fun OptionRow(
             modifier
                 .fillMaxWidth()
                 .onFocusChanged { isFocused = it.isFocused },
-        shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(CornerRadius.small)),
+        shape = ClickableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.small)),
         colors =
             ClickableSurfaceDefaults.colors(
-                containerColor = Color.Transparent,
-                focusedContainerColor = CinemaSurfaceVariant,
-                contentColor = CinemaTextPrimary,
-                focusedContentColor = CinemaTextPrimary,
+                containerColor = CinemaTheme.colors.clear,
+                focusedContainerColor = CinemaTheme.colors.surfaceRaised,
+                contentColor = CinemaTheme.colors.textPrimary,
+                focusedContentColor = CinemaTheme.colors.textPrimary,
             ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
         border =
             ClickableSurfaceDefaults.border(
                 focusedBorder =
                     androidx.tv.material3.Border(
-                        border = androidx.compose.foundation.BorderStroke(TvDimensions.borderFocused, CinemaAccentLight),
-                        shape = RoundedCornerShape(CornerRadius.small),
+                        border = androidx.compose.foundation.BorderStroke(TvDimensions.borderFocused, CinemaTheme.colors.accentSoft),
+                        shape = cornerShape(CornerRadius.small),
                     ),
             ),
     ) {
@@ -223,21 +230,10 @@ private fun OptionRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(Spacing.sm),
         ) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = null,
-                colors =
-                    CheckboxDefaults.colors(
-                        checkedColor = CinemaAccent,
-                        uncheckedColor = CinemaTextSecondary,
-                        checkmarkColor = CinemaTextPrimary,
-                        disabledCheckedColor = CinemaAccent,
-                        disabledUncheckedColor = CinemaTextSecondary,
-                    ),
-                enabled = false,
-            )
+            // Not a control of its own: the row toggles it (onCheckedChange = null).
+            CinemaCheckbox(checked = checked, onCheckedChange = null)
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+            TvContentText(label)
         }
     }
 }
@@ -263,7 +259,7 @@ fun ConflictResolutionDialog(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
+                        .background(CinemaTheme.colors.background.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
                 contentAlignment = Alignment.Center,
             ) {
                 Surface(
@@ -272,8 +268,8 @@ fun ConflictResolutionDialog(
                             .width(TvDimensions.dialogWidth)
                             .height(TvDimensions.dialogWidth)
                             .padding(Spacing.xxl),
-                    color = CinemaSurface,
-                    shape = RoundedCornerShape(CornerRadius.large),
+                    color = CinemaTheme.colors.surface,
+                    shape = cornerShape(CornerRadius.large),
                 ) {
                     Column(
                         modifier =
@@ -282,18 +278,18 @@ fun ConflictResolutionDialog(
                                 .focusRestorer(conflictDialogFocusRequester)
                                 .focusProperties { onExit = { FocusRequester.Cancel } },
                     ) {
-                        Text(
-                            text = stringResource(R.string.settings_import_provider_conflict_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaAccent,
+                        CinemaText(
+                            stringResource(R.string.settings_import_provider_conflict_title),
+                            role = TextRole.Title,
+                            tone = TextTone.Accent,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.sm))
 
-                        Text(
-                            text = stringResource(R.string.settings_import_conflict_intro),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextPrimary,
+                        CinemaText(
+                            stringResource(R.string.settings_import_conflict_intro),
+                            role = TextRole.Body,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md))
@@ -306,21 +302,21 @@ fun ConflictResolutionDialog(
                             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
                             conflicts.forEach { name ->
-                                Text(
-                                    text = "\u2022 $name",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = CinemaTextSecondary,
+                                CinemaText(
+                                    "\u2022 $name",
                                     modifier = Modifier.padding(start = Spacing.sm),
+                                    role = TextRole.Body,
+                                    tone = TextTone.Secondary,
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(Spacing.md))
 
-                        Text(
-                            text = stringResource(R.string.settings_import_choose_action),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextPrimary,
+                        CinemaText(
+                            stringResource(R.string.settings_import_choose_action),
+                            role = TextRole.Body,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md))

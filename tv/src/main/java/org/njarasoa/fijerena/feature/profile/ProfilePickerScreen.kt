@@ -40,10 +40,14 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -86,21 +90,21 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.profile_picker_title),
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+            CinemaText(
+                stringResource(R.string.profile_picker_title),
+                role = TextRole.Display,
+                tone = TextTone.Primary,
             )
             Spacer(modifier = Modifier.height(Spacing.xxl))
             switchingTo?.let { name ->
                 // A switch can take a while (it re-applies the profile's category filters): say so,
                 // instead of a list that looks like it ignored the pick.
-                androidx.compose.material3.CircularProgressIndicator(color = CinemaAccentLight)
+                androidx.compose.material3.CircularProgressIndicator(color = CinemaTheme.colors.accentSoft)
                 Spacer(modifier = Modifier.height(Spacing.md))
-                Text(
-                    text = stringResource(R.string.profile_switching, name),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = CinemaTextPrimary,
+                CinemaText(
+                    stringResource(R.string.profile_switching, name),
+                    role = TextRole.Title,
+                    tone = TextTone.Primary,
                 )
                 return@Column
             }
@@ -137,7 +141,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                             Icon(
                                 imageVector = CinemaIcons.Add,
                                 contentDescription = null,
-                                tint = CinemaTextPrimary,
+                                tint = CinemaTheme.colors.textPrimary,
                                 modifier = Modifier.size(TvDimensions.iconXLarge),
                             )
                         }
@@ -172,7 +176,7 @@ private fun PickerCard(
         Surface(
             onClick = onClick,
             modifier = modifier,
-            shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+            shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.identity),
             colors =
                 ClickableSurfaceDefaults.colors(
                     containerColor = TvFocusTokens.restingContainer,
@@ -194,18 +198,18 @@ private fun PickerCard(
                         Border(
                             border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth, TvFocusTokens.focusedRowOutline),
                             inset = TvFocusTokens.avatarFocusBorderWidth / 2,
-                            shape = CircleShape,
+                            shape = CinemaTheme.shapes.identity,
                         ),
                 ),
         ) { avatar() }
         Spacer(modifier = Modifier.height(Spacing.md))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.headlineSmall,
-            color = CinemaTextPrimary,
+        CinemaText(
+            label,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            role = TextRole.Title,
+            tone = TextTone.Primary,
         )
     }
 }

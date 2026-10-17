@@ -17,9 +17,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -43,13 +48,13 @@ fun SettingsSection(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, color = CinemaAccent)
+            CinemaText(title, role = TextRole.Heading, tone = TextTone.Accent)
         }
         if (description != null) {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            CinemaText(
+                description,
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
         }
         if (title != null || description != null) Spacer(modifier = Modifier.height(Spacing.sm))
@@ -57,18 +62,21 @@ fun SettingsSection(
     }
 }
 
-/** Secondary text under a section's rows (a result, a last-run line): the rows' description style. */
+/**
+ * Secondary text under a section's rows (a result, a last-run line): the rows' description style.
+ * An [alpha] below [CinemaAlpha.textHigh] asks for a dimmer note: the theme's tertiary text.
+ */
 @Composable
 fun SettingsNote(
     text: String,
     modifier: Modifier = Modifier,
     alpha: Float = CinemaAlpha.textHigh,
 ) {
-    Text(
+    CinemaText(
         text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = CinemaTextSecondary.copy(alpha = alpha),
         modifier = modifier,
+        role = TextRole.Body,
+        tone = if (alpha < CinemaAlpha.textHigh) TextTone.Tertiary else TextTone.Secondary,
     )
 }
 
@@ -103,22 +111,22 @@ fun SettingsRow(
             if (trailing.isEmpty()) {
                 null
             } else {
-                { Text(text = trailing, style = MaterialTheme.typography.bodyMedium, maxLines = 1) }
+                { TvContentText(text = trailing, maxLines = 1) }
             },
         supportingContent =
             supporting ?: description?.let {
                 {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    CinemaText(
+                        it,
                         maxLines = DESCRIPTION_MAX_LINES,
                         overflow = TextOverflow.Ellipsis,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 }
             },
     ) {
-        Text(text = title, style = MaterialTheme.typography.titleSmall)
+        TvContentText(title, role = TextRole.Heading)
     }
 }
 
