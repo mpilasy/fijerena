@@ -37,7 +37,7 @@ class SyncEngine(
         /** Another device deleted the profile this one is using: switch away, then sync again. */
         fun onActiveProfileDeleted() {}
 
-        /** Another device deleted a provider this one had: no screen may stay on it. */
+        /** Another device deleted a provider the profile in use had: no screen may stay on it. */
         fun onProviderDeleted() {}
     }
 

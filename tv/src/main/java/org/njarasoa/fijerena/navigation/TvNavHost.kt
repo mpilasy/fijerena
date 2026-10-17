@@ -25,6 +25,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -89,20 +90,42 @@ fun TvNavHost(
 
     fun clearSectionStacks() = TvSection.entries.forEach { navController.clearBackStack(it.route) }
 
-    // Live sync moved this device off a profile or a provider another device deleted: every screen
-    // may hold the old one's repository, so start over from home — what the profile picker does.
+    // Live sync moved this device off a profile, or deleted a source of the profile in use on
+    // another device: every screen may hold the old one's repository, so start over from home —
+    // what the profile picker does.
+    fun startOverFromHome() {
+        // Before the graph exists (very first frames) there is nothing to rebuild.
+        if (navController.currentBackStackEntry == null) return
+        clearSectionStacks()
+        navController.navigate(Screen.ContentTypeSelection) {
+            popUpTo(navController.graph.id) { inclusive = true }
+        }
+    }
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
             .externalSwitches
-            .collect {
-                // Before the graph exists (very first frames) there is nothing to rebuild.
-                if (navController.currentBackStackEntry == null) return@collect
-                clearSectionStacks()
-                navController.navigate(Screen.ContentTypeSelection) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                }
-            }
+            .collect { startOverFromHome() }
+    }
+    // A deleted source waits for the player to close: what plays keeps playing.
+    var sourceDeleted by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        org.njarasoa.fijerena.core.ui.di.AppContainer
+            .getInstance(context)
+            .sourceDeletions
+            .collect { sourceDeleted = true }
+    }
+    val playing =
+        navController
+            .currentBackStackEntryAsState()
+            .value
+            ?.destination
+            ?.hasRoute<Screen.Player>() == true
+    LaunchedEffect(sourceDeleted, playing) {
+        if (sourceDeleted && !playing) {
+            sourceDeleted = false
+            startOverFromHome()
+        }
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }

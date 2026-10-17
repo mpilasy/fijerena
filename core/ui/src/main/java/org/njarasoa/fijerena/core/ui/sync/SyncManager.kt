@@ -112,8 +112,8 @@ class SyncManager internal constructor(
             }
 
             override fun onProviderDeleted() {
-                // A source deleted on another device: drop what screens hold of it and send them
-                // home, as a profile switch does.
+                // A source of the profile in use deleted on another device: send the screens home,
+                // as a profile switch does (once nothing plays).
                 scope.launch { AppContainer.getInstance(app).providerDeletedExternally() }
             }
 

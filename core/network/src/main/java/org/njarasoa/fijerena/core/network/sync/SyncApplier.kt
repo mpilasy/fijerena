@@ -86,8 +86,9 @@ class SyncApplier(
          */
         val activeProfileDeleted: Boolean,
         /**
-         * Another device deleted a provider this device had: no screen may stay on it, so the UI
-         * starts over on the profile's remaining sources.
+         * Another device deleted a provider the profile in use here had: no screen may stay on it,
+         * so the UI starts over on the profile's remaining sources. One the profile didn't have
+         * changes nothing on screen (its cached repository goes with [providerChangedIds]).
          */
         val providerDeleted: Boolean = false,
     )
@@ -173,7 +174,7 @@ class SyncApplier(
         /** A provider's record, login or category filters: see [Result.providerChangedIds]. */
         data class AppliedProvider(
             val providerId: Long,
-            /** It was deleted. */
+            /** It was deleted, and the profile in use had it. */
             val deleted: Boolean = false,
         ) : Outcome
 
@@ -445,9 +446,12 @@ class SyncApplier(
 
             Resolution.Delete -> {
                 val existing = sync.providerByKey(providerKey)
+                // Read before the deletion takes it out of the profile's sources.
+                val settings = AppSettings(context)
+                val inUse = settings.profileSourceKeys(settings.activeProfileId)?.contains(providerKey) == true
                 existing?.let { providers.deleteProvider(it.id, fromRemote = true) }
                 recordReceivedDeletion(SyncKind.PROVIDER, providerKey, record.hlc)
-                if (existing != null) Outcome.AppliedProvider(existing.id, deleted = true) else Outcome.Applied
+                if (existing != null) Outcome.AppliedProvider(existing.id, deleted = inUse) else Outcome.Applied
             }
 
             else -> {

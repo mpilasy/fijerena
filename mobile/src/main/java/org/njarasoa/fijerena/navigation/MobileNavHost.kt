@@ -229,8 +229,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
 
-    // Live sync moved this device off a profile, or deleted a source on another device: every
-    // screen may hold the old one's repository, so start over — what the profile picker does.
+    // Live sync moved this device off a profile: every screen may hold the old one's repository,
+    // so start over — what the profile picker does.
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
@@ -240,6 +240,28 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 if (navController.currentBackStackEntry == null) return@collect
                 startOver()
             }
+    }
+    // Another device deleted a source of the profile in use: the same, once nothing plays — the
+    // player and the docked live channel keep playing until closed.
+    var sourceDeleted by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        org.njarasoa.fijerena.core.ui.di.AppContainer
+            .getInstance(context)
+            .sourceDeletions
+            .collect { sourceDeleted = true }
+    }
+    val onPlayer =
+        navController
+            .currentBackStackEntryAsState()
+            .value
+            ?.destination
+            ?.hasRoute<Screen.Player>() == true
+    val playing = onPlayer || liveDocks.values.any { (stop, _) -> stop != null }
+    LaunchedEffect(sourceDeleted, playing) {
+        if (sourceDeleted && !playing && navController.currentBackStackEntry != null) {
+            sourceDeleted = false
+            startOver()
+        }
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
 

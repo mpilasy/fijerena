@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import io.mockk.coEvery
@@ -18,6 +19,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfileDao
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -65,7 +68,13 @@ class SyncApplierProviderChangesTest {
         unmockkAll()
     }
 
-    private fun applier() = SyncApplier(mockk<Context>(relaxed = true), thisDeviceId = { "this-device" }, playingSessionId = { null })
+    private val prefsFiles = mutableMapOf<String, SharedPreferences>()
+    private val context =
+        mockk<Context>(relaxed = true).also { context ->
+            every { context.getSharedPreferences(any(), any()) } answers { prefsFiles.getOrPut(firstArg()) { FakeSharedPreferences() } }
+        }
+
+    private fun applier() = SyncApplier(context, thisDeviceId = { "this-device" }, playingSessionId = { null })
 
     private val providerRecord =
         SyncRecord(
@@ -101,15 +110,29 @@ class SyncApplierProviderChangesTest {
     private val providerDeletion = SyncRecord(SyncKey(SyncKind.SHARED, "prov-1", SyncKind.PROVIDER), hlc = 14, deleted = true)
 
     @Test
-    fun `deleting a provider this device has is reported, so no screen stays on it`() =
+    fun `deleting a provider of the profile in use is reported, so no screen stays on it`() =
         runBlocking {
             coEvery { sync.providerByKey("prov-1") } returns provider
+            AppSettings(context).setProfileSourceKeys(ProfileEntity.DEFAULT_ID, setOf("prov-1", "other"))
 
             val result = applier().apply(listOf(providerDeletion))
 
             coVerify { anyConstructed<ProviderRepository>().deleteProvider(provider.id, fromRemote = true) }
             assertEquals(setOf(provider.id), result.providerChangedIds)
             assertTrue(result.providerDeleted)
+        }
+
+    @Test
+    fun `deleting a provider the profile in use doesn't have changes nothing on screen`() =
+        runBlocking {
+            coEvery { sync.providerByKey("prov-1") } returns provider
+            AppSettings(context).setProfileSourceKeys(ProfileEntity.DEFAULT_ID, setOf("other"))
+
+            val result = applier().apply(listOf(providerDeletion))
+
+            // Its cached repository still goes; the screens (and what plays) stay.
+            assertEquals(setOf(provider.id), result.providerChangedIds)
+            assertFalse(result.providerDeleted)
         }
 
     @Test

@@ -176,11 +176,20 @@ class AppContainer(
     private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
-     * The profile or its sources changed without the user picking — live sync moving this device
-     * off a profile, or a source another device deleted. The nav hosts rebuild the back stack from
-     * home on each, as the profile picker does after [switchProfile].
+     * The profile changed without the user picking — live sync moving this device off a profile.
+     * The nav hosts rebuild the back stack from home on each, as the profile picker does after
+     * [switchProfile].
      */
     val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
+
+    private val _sourceDeletions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * Another device deleted a source the profile in use had: the nav hosts rebuild the back stack
+     * from home as for [externalSwitches], but only once nothing plays — a stream doesn't need its
+     * source's settings, so what is on screen keeps playing.
+     */
+    val sourceDeletions: SharedFlow<Unit> = _sourceDeletions.asSharedFlow()
 
     /** [switchProfile], for a switch the UI didn't ask for: announces it on [externalSwitches]. */
     suspend fun switchProfileExternally(profileId: String) {
@@ -189,13 +198,13 @@ class AppContainer(
     }
 
     /**
-     * Another device deleted a source this one had: every cached repository is dropped, and it is
-     * announced on [externalSwitches] so no screen stays on the deleted source. See
+     * Another device deleted a source the profile in use had: announced on [sourceDeletions] so no
+     * screen stays on it. Its cached repository is
+     * already dropped ([onProvidersChanged]); the other sources' stay. See
      * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
      */
     suspend fun providerDeletedExternally() {
-        clearAllCaches()
-        _externalSwitches.emit(Unit)
+        _sourceDeletions.emit(Unit)
     }
 
     /**
