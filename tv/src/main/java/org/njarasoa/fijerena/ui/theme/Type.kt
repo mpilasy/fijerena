@@ -27,7 +27,7 @@ private val CinemaDisplayFontFamily =
     )
 
 /**
- * Full 13-style typography scale optimized for 10-foot TV viewing.
+ * Full 15-style typography scale optimised for 10-foot TV viewing.
  * All body text 18sp minimum, headers 32sp+.
  * Font: Manrope for display/headline styles, Roboto (system default) for title/body/label.
  */
