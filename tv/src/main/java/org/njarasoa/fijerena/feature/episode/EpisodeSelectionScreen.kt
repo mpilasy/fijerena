@@ -136,6 +136,7 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -2340,7 +2341,7 @@ private fun MarkWatchedErrorDialog(
         confirmButton = {
             CinemaButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.colors(containerColor = CinemaAccent, contentColor = CinemaTextPrimary),
+                kind = ButtonKind.Main,
             ) {
                 Text(stringResource(R.string.common_ok))
             }

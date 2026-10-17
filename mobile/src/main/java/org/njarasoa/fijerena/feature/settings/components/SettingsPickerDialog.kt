@@ -19,7 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -61,7 +62,7 @@ fun <T> SettingsPickerDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) {
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
                 Text(stringResource(R.string.player_back))
             }
         },

@@ -56,14 +56,13 @@ import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.home.rememberProfileSyncStates
 import org.njarasoa.fijerena.core.ui.home.syncSummary
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -72,6 +71,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
 import org.njarasoa.fijerena.feature.profile.ProfileSheet
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -216,7 +216,7 @@ fun MobileSourceTopBar(
                 }
             },
             confirmButton = {
-                CinemaDialogTextButton(onClick = { browseChoice = null }) {
+                CinemaDialogActionButton(onClick = { browseChoice = null }, kind = ButtonKind.Other) {
                     Text(stringResource(R.string.common_cancel))
                 }
             },
@@ -250,7 +250,7 @@ fun MobileSourcesPanel(
         )
         actions.forEachIndexed { index, (label, onClick) ->
             Spacer(modifier = Modifier.height(if (index == 0) CinemaSpacing.lg else CinemaSpacing.sm))
-            Button(onClick = onClick) { Text(label) }
+            CinemaDialogActionButton(onClick = onClick, kind = if (index == 0) ButtonKind.Main else ButtonKind.Other) { Text(label) }
         }
     }
 }

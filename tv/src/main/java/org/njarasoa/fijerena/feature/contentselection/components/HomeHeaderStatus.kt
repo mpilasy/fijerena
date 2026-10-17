@@ -41,13 +41,13 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
 import org.njarasoa.fijerena.core.ui.home.rememberMinuteTick
 import org.njarasoa.fijerena.core.ui.home.sourceStatusText
 import org.njarasoa.fijerena.core.ui.home.syncSummaryText
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -160,9 +161,9 @@ internal fun SourcesStatusSheet(
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary),
+                kind = ButtonKind.Other,
             ) { androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
         },
     )

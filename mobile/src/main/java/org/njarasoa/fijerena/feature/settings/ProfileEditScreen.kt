@@ -28,8 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsScope
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -185,8 +186,8 @@ fun MobileProfileEditScreen(
                     ) { Text(stringResource(R.string.profile_save_button)) }
                 }
                 if (canDelete) {
-                    CinemaOutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.profile_delete_button), color = CinemaError)
+                    CinemaButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
+                        Text(stringResource(R.string.profile_delete_button))
                     }
                 }
             }
@@ -235,7 +236,10 @@ fun MobileProfileEditScreen(
                         }
                     },
                     confirmButton = {
-                        CinemaDialogTextButton(onClick = { editingSources = false }) { Text(stringResource(R.string.common_close)) }
+                        CinemaDialogActionButton(
+                            onClick = { editingSources = false },
+                            kind = ButtonKind.Other,
+                        ) { Text(stringResource(R.string.common_close)) }
                     },
                 )
             }
@@ -246,14 +250,20 @@ fun MobileProfileEditScreen(
                     title = { Text(stringResource(R.string.profile_delete_confirm_title, profile.name)) },
                     text = { Text(stringResource(R.string.profile_delete_confirm_text)) },
                     confirmButton = {
-                        CinemaDialogTextButton(onClick = {
-                            confirmDelete = false
-                            viewModel.deleteProfile(profileId)
-                            onBack()
-                        }) { Text(stringResource(R.string.profile_delete_button), color = CinemaError) }
+                        CinemaDialogActionButton(
+                            onClick = {
+                                confirmDelete = false
+                                viewModel.deleteProfile(profileId)
+                                onBack()
+                            },
+                            kind = ButtonKind.Danger,
+                        ) { Text(stringResource(R.string.profile_delete_button)) }
                     },
                     dismissButton = {
-                        CinemaDialogTextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaDialogActionButton(
+                            onClick = { confirmDelete = false },
+                            kind = ButtonKind.Other,
+                        ) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }

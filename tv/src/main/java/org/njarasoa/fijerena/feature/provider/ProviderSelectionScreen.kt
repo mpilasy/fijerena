@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
@@ -215,11 +216,7 @@ fun TvProviderSelectionScreen(
                         viewModel.deleteProvider(provider.id)
                         deleteConfirmProvider = null
                     },
-                    colors =
-                        androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = CinemaError,
-                            contentColor = CinemaTextPrimary,
-                        ),
+                    kind = ButtonKind.Danger,
                 ) {
                     Text(stringResource(R.string.provider_delete_button))
                 }
@@ -227,11 +224,7 @@ fun TvProviderSelectionScreen(
             dismissButton = {
                 CinemaButton(
                     onClick = { deleteConfirmProvider = null },
-                    colors =
-                        androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = CinemaSurfaceVariant,
-                            contentColor = CinemaTextPrimary,
-                        ),
+                    kind = ButtonKind.Other,
                 ) {
                     Text(stringResource(R.string.common_cancel))
                 }
@@ -295,11 +288,7 @@ fun TvProviderSelectionScreen(
             confirmButton = {
                 CinemaButton(
                     onClick = { viewModel.clearCopyResultMessage() },
-                    colors =
-                        androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = CinemaAccent,
-                            contentColor = CinemaTextPrimary,
-                        ),
+                    kind = ButtonKind.Main,
                 ) {
                     Text(stringResource(R.string.common_ok))
                 }

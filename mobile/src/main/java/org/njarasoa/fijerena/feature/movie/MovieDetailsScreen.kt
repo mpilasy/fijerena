@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -615,7 +616,7 @@ private fun ErrorScreen(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            CinemaButton(onClick = onBack) {
+            CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
                 Text(stringResource(R.string.common_back))
             }
         }

@@ -13,9 +13,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /** One action in [ItemActionsDialog] besides the favourite one. */
 @Immutable
@@ -52,11 +52,12 @@ fun ItemActionsDialog(
                 {
                     Column {
                         actions.forEach { action ->
-                            CinemaDialogTextButton(
+                            CinemaDialogActionButton(
                                 onClick = {
                                     action.onClick()
                                     onDismiss()
                                 },
+                                kind = ButtonKind.Other,
                             ) {
                                 Icon(imageVector = action.icon, contentDescription = null)
                                 Spacer(modifier = Modifier.width(CinemaSpacing.xs))
@@ -72,12 +73,13 @@ fun ItemActionsDialog(
                     onToggleFavorite()
                     onDismiss()
                 },
+                kind = ButtonKind.Main,
             ) {
                 Text(stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add))
             }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) {
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
                 Text(stringResource(R.string.common_cancel))
             }
         },

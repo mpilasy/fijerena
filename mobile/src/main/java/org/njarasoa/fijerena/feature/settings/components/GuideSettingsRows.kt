@@ -25,14 +25,15 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.feature.epg.localizedEpgPhase
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -94,9 +95,9 @@ private fun GuideMaintenanceDialog(
                         Text(stringResource(R.string.epg_purge_btn))
                     }
                 }
-                CinemaTextButton(
+                CinemaButton(
                     onClick = { showClearConfirm = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    kind = ButtonKind.Danger,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(CinemaIcons.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
@@ -106,7 +107,7 @@ private fun GuideMaintenanceDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
         },
     )
 
@@ -119,11 +120,14 @@ private fun GuideMaintenanceDialog(
                         viewModel.clearDatabase()
                         showClearConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                    kind = ButtonKind.Danger,
                 ) { Text(stringResource(R.string.epg_clear_everything_btn)) }
             },
             dismissButton = {
-                CinemaDialogTextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                CinemaDialogActionButton(
+                    onClick = { showClearConfirm = false },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.common_cancel)) }
             },
             title = { Text(stringResource(R.string.epg_clear_db_confirm_title)) },
             text = { Text(stringResource(R.string.epg_clear_db_confirm_message)) },

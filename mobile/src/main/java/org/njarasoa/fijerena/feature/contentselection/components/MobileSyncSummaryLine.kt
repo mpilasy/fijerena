@@ -34,15 +34,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
 import org.njarasoa.fijerena.core.ui.home.rememberMinuteTick
 import org.njarasoa.fijerena.core.ui.home.sourceStatusText
 import org.njarasoa.fijerena.core.ui.home.syncSummaryText
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
@@ -140,7 +141,7 @@ fun MobileSourcesStatusSheet(
         },
         // The sole action: the app's dialog button, as other one-button dialogs (OK), not a text link.
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Main) { Text(stringResource(R.string.common_close)) }
         },
     )
 }

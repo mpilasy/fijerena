@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -59,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.settings.components.QrScanner
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
@@ -162,8 +164,8 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         confirmRemove =
                             it
                     })
-                    CinemaOutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.live_sync_leave), color = CinemaError)
+                    CinemaButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
+                        Text(stringResource(R.string.live_sync_leave))
                     }
                 }
 
@@ -459,8 +461,13 @@ private fun RenameDialog(
                 singleLine = true,
             )
         },
-        confirmButton = { TextButton(onClick = { onSave(name) }) { Text(stringResource(R.string.provider_save_button)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+        confirmButton = { CinemaDialogActionButton(onClick = { onSave(name) }) { Text(stringResource(R.string.provider_save_button)) } },
+        dismissButton = {
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                kind = ButtonKind.Other,
+            ) { Text(stringResource(R.string.common_cancel)) }
+        },
     )
 }
 
@@ -476,8 +483,13 @@ private fun ConfirmDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(message) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirm, color = CinemaError) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+        confirmButton = { CinemaDialogActionButton(onClick = onConfirm, kind = ButtonKind.Danger) { Text(confirm) } },
+        dismissButton = {
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                kind = ButtonKind.Other,
+            ) { Text(stringResource(R.string.common_cancel)) }
+        },
     )
 }
 

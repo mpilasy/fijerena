@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
@@ -40,105 +41,36 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
- * Themed replacement for [Button] — M3's default button shape ignores the app's
- * [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens (hardcoded stadium corner).
- * Thin passthrough otherwise, so migrating a call site is a rename.
+ * A filled text button: [ButtonKind.Main] unless [kind] says otherwise. Every phone text button
+ * goes through [CinemaDialogActionButton], so they all look as
+ * [org.njarasoa.fijerena.core.ui.theme.ButtonStyle] says.
  */
 @Composable
 fun CinemaButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.buttonColors(),
-    elevation: ButtonElevation? = ButtonDefaults.buttonElevation(),
-    border: BorderStroke? = null,
-    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
-    interactionSource: MutableInteractionSource? = null,
+    kind: ButtonKind = ButtonKind.Main,
     content: @Composable RowScope.() -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        shape = RoundedCornerShape(LocalUiStyle.current.shapes.button),
-        colors = colors,
-        elevation = elevation,
-        border = border,
-        contentPadding = contentPadding,
-        interactionSource = interactionSource,
-        content = content,
-    )
-}
+) = CinemaDialogActionButton(onClick = onClick, modifier = modifier, enabled = enabled, kind = kind, content = content)
 
-/**
- * Themed replacement for [OutlinedButton], see [CinemaButton].
- *
- * Overrides M3's default outline/content colors — the theme's `colorScheme.outline` token
- * ([CinemaSurfaceLight]) is a dark gray meant for hairline dividers, not button borders, so at
- * its default 100% opacity it still sits too close to the surrounding card background to read
- * as a tappable control. A faint tinted fill (matching [CinemaIconButton]'s 0.15f convention)
- * plus a brighter border give it the same "this is a button" affordance filled buttons get from
- * their solid color, without the visual weight of a primary action.
- */
+/** Any other action than the screen's main one ([ButtonKind.Other]). */
 @Composable
 fun CinemaOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors =
-        ButtonDefaults.outlinedButtonColors(
-            contentColor = CinemaTextPrimary,
-            containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
-            disabledContentColor = CinemaTextDisabled,
-            disabledContainerColor = Color.Transparent,
-        ),
-    elevation: ButtonElevation? = null,
-    border: BorderStroke? =
-        BorderStroke(1.dp, CinemaTextPrimary.copy(alpha = if (enabled) CinemaAlpha.textFaint else CinemaAlpha.divider)),
-    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
-    interactionSource: MutableInteractionSource? = null,
     content: @Composable RowScope.() -> Unit,
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        shape = RoundedCornerShape(LocalUiStyle.current.shapes.button),
-        colors = colors,
-        elevation = elevation,
-        border = border,
-        contentPadding = contentPadding,
-        interactionSource = interactionSource,
-        content = content,
-    )
-}
+) = CinemaDialogActionButton(onClick = onClick, modifier = modifier, enabled = enabled, kind = ButtonKind.Other, content = content)
 
-/** Themed replacement for [TextButton], see [CinemaButton]. */
+/** As [CinemaOutlinedButton]: a text-only button no longer looks different. */
 @Composable
 fun CinemaTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.textButtonColors(),
-    elevation: ButtonElevation? = null,
-    border: BorderStroke? = null,
-    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
-    interactionSource: MutableInteractionSource? = null,
     content: @Composable RowScope.() -> Unit,
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        shape = RoundedCornerShape(LocalUiStyle.current.shapes.button),
-        colors = colors,
-        elevation = elevation,
-        border = border,
-        contentPadding = contentPadding,
-        interactionSource = interactionSource,
-        content = content,
-    )
-}
+) = CinemaDialogActionButton(onClick = onClick, modifier = modifier, enabled = enabled, kind = ButtonKind.Other, content = content)
 
 /**
  * Circular button with icon, uses primary color scheme, identical to TV's aesthetic.
@@ -152,19 +84,20 @@ fun CinemaIconButton(
 ) {
     FilledIconButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.size(PhoneButtonStyle.iconButtonSize),
         enabled = enabled,
         shape = CircleShape,
         colors =
             IconButtonDefaults.filledIconButtonColors(
-                containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
-                contentColor = CinemaTextPrimary,
-                disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+                containerColor = PhoneButtonStyle.iconContainer,
+                contentColor = PhoneButtonStyle.iconContent,
+                disabledContainerColor = PhoneButtonStyle.disabledContainer,
+                disabledContentColor = PhoneButtonStyle.disabledContent,
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled,
+            androidx.compose.material3.LocalContentColor provides
+                if (enabled) PhoneButtonStyle.iconContent else PhoneButtonStyle.disabledContent,
         ) {
             icon()
         }
@@ -214,19 +147,19 @@ fun CinemaDangerIconButton(
 ) {
     FilledIconButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.size(PhoneButtonStyle.iconButtonSize),
         enabled = enabled,
         shape = CircleShape,
         colors =
             IconButtonDefaults.filledIconButtonColors(
-                containerColor = CinemaOrange.copy(alpha = 0.4f),
-                contentColor = CinemaTextPrimary,
-                disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-                disabledContentColor = CinemaOrange.copy(alpha = CinemaAlpha.textFaint),
+                containerColor = PhoneButtonStyle.dangerIconContainer,
+                contentColor = PhoneButtonStyle.iconContent,
+                disabledContainerColor = PhoneButtonStyle.disabledContainer,
+                disabledContentColor = PhoneButtonStyle.disabledContent,
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides CinemaTextPrimary,
+            androidx.compose.material3.LocalContentColor provides PhoneButtonStyle.iconContent,
         ) {
             icon()
         }

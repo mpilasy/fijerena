@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
@@ -26,6 +27,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -97,27 +100,26 @@ fun TmdbKeyPane(
         )
         SettingsNote(stringResource(R.string.tmdb_key_hint))
         tmdbCheckText(uiState.testing, uiState.lastCheck)?.let { SettingsNote(it) }
-        CinemaSecondaryButton(
-            onClick = { viewModel.test(draft) },
-            text = stringResource(R.string.tmdb_test_button),
-            enabled = draft.isNotBlank() && !uiState.testing,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        CinemaPrimaryButton(
-            onClick = {
-                viewModel.save(draft)
-                onBack()
-            },
-            text = stringResource(R.string.provider_save_button),
-            enabled = draft.isNotBlank() && draft != uiState.savedKey,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (uiState.savedKey.isNotBlank()) {
+        CinemaButtonArea(modifier = Modifier.align(Alignment.End)) {
             CinemaSecondaryButton(
-                onClick = { confirmRemove = true },
-                text = stringResource(R.string.tmdb_remove_button),
-                modifier = Modifier.fillMaxWidth(),
+                onClick = { viewModel.test(draft) },
+                text = stringResource(R.string.tmdb_test_button),
+                enabled = draft.isNotBlank() && !uiState.testing,
             )
+            CinemaPrimaryButton(
+                onClick = {
+                    viewModel.save(draft)
+                    onBack()
+                },
+                text = stringResource(R.string.provider_save_button),
+                enabled = draft.isNotBlank() && draft != uiState.savedKey,
+            )
+            if (uiState.savedKey.isNotBlank()) {
+                CinemaDangerButton(
+                    onClick = { confirmRemove = true },
+                    text = stringResource(R.string.tmdb_remove_button),
+                )
+            }
         }
     }
 

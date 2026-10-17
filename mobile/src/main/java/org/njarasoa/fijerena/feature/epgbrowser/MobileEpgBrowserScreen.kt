@@ -75,13 +75,13 @@ import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -95,6 +95,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -710,31 +711,39 @@ private fun MobileProgramCard(
                     },
                     confirmButton = {
                         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                            CinemaDialogTextButton(onClick = {
-                                // A second click before the dialog leaves doesn't open the player twice (R-20).
-                                if (pendingConfirmAiring != null) {
-                                    pendingConfirmAiring = null
-                                    onNavigateToPlayer(matched)
-                                }
-                            }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+                            CinemaDialogActionButton(
+                                onClick = {
+                                    // A second click before the dialog leaves doesn't open the player twice (R-20).
+                                    if (pendingConfirmAiring != null) {
+                                        pendingConfirmAiring = null
+                                        onNavigateToPlayer(matched)
+                                    }
+                                },
+                                kind = ButtonKind.Other,
+                            ) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
 
                             if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
-                                CinemaDialogTextButton(onClick = {
-                                    pendingConfirmAiring = null
-                                    openAddToCalendarEvent(
-                                        context = airingContext,
-                                        title = program.title,
-                                        description = program.description,
-                                        location = pending.channelName,
-                                        startEpochSeconds = pending.startEpoch,
-                                        endEpochSeconds = pending.endEpoch,
-                                    )
-                                }) { Text(stringResource(R.string.epg_browser_add_calendar_btn)) }
+                                CinemaDialogActionButton(
+                                    onClick = {
+                                        pendingConfirmAiring = null
+                                        openAddToCalendarEvent(
+                                            context = airingContext,
+                                            title = program.title,
+                                            description = program.description,
+                                            location = pending.channelName,
+                                            startEpochSeconds = pending.startEpoch,
+                                            endEpochSeconds = pending.endEpoch,
+                                        )
+                                    },
+                                    kind = ButtonKind.Other,
+                                ) { Text(stringResource(R.string.epg_browser_add_calendar_btn)) }
                             }
                         }
                     },
                     dismissButton = {
-                        CinemaDialogTextButton(onClick = { pendingConfirmAiring = null }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaDialogActionButton(onClick = {
+                            pendingConfirmAiring = null
+                        }, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }

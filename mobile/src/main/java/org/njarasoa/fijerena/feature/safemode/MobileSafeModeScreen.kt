@@ -13,7 +13,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,12 +26,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SafeModeViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 /**
@@ -95,13 +96,16 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
             title = { Text(stringResource(R.string.safe_mode_clear_confirm_title)) },
             text = { Text(stringResource(R.string.safe_mode_clear_confirm_message)) },
             confirmButton = {
-                TextButton(onClick = {
+                CinemaDialogActionButton(onClick = {
                     confirmingClear = false
                     viewModel.clearCaches()
-                }) { Text(stringResource(R.string.safe_mode_clear_confirm), color = CinemaError) }
+                }, kind = ButtonKind.Danger) { Text(stringResource(R.string.safe_mode_clear_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingClear = false }) { Text(stringResource(R.string.common_cancel)) }
+                CinemaDialogActionButton(
+                    onClick = { confirmingClear = false },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }

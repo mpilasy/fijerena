@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -93,6 +94,7 @@ import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.MobileDetailRow
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
@@ -453,7 +455,7 @@ private fun EpisodeListContent(
             title = { Text(stringResource(R.string.watched_mark_many_failed)) },
             text = { Text(message) },
             confirmButton = {
-                TextButton(onClick = { markManyError = null }) { Text(stringResource(R.string.common_ok)) }
+                CinemaDialogActionButton(onClick = { markManyError = null }) { Text(stringResource(R.string.common_ok)) }
             },
         )
     }
@@ -1510,7 +1512,7 @@ private fun ErrorScreen(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            CinemaButton(onClick = onBack) {
+            CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
                 Text(stringResource(R.string.common_back))
             }
         }

@@ -65,11 +65,10 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.model.addSourceTypes
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -87,6 +86,7 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.*
 
@@ -586,15 +586,16 @@ fun MobileAddProviderScreen(
                                 discardThen = null
                                 if (then != null) then() else onBack()
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.provider_discard_button)) }
                     },
                     dismissButton = {
-                        CinemaDialogTextButton(
+                        CinemaDialogActionButton(
                             onClick = {
                                 showDiscardDialog = false
                                 discardThen = null
                             },
+                            kind = ButtonKind.Other,
                         ) { Text(stringResource(R.string.provider_keep_editing_button)) }
                     },
                 )
@@ -620,7 +621,7 @@ fun MobileAddProviderScreen(
                     text = { Text(failedState.errorMessage) },
                     // Going back to fix the login is the main action; saving anyway stays secondary.
                     confirmButton = {
-                        CinemaDialogTextButton(
+                        CinemaDialogActionButton(
                             onClick = {
                                 viewModel.forceSave(
                                     id = if (isEditMode) editId else null,
@@ -638,6 +639,7 @@ fun MobileAddProviderScreen(
                                         ),
                                 )
                             },
+                            kind = ButtonKind.Other,
                         ) {
                             Text(stringResource(R.string.provider_save_anyway))
                         }
@@ -645,6 +647,7 @@ fun MobileAddProviderScreen(
                     dismissButton = {
                         CinemaDialogActionButton(
                             onClick = { viewModel.resetSaveState() },
+                            kind = ButtonKind.Main,
                         ) {
                             Text(stringResource(R.string.provider_go_back))
                         }
@@ -669,7 +672,7 @@ fun MobileAddProviderScreen(
                                     showClearCacheDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.provider_clear_all_button)) }
                     },
                     dismissButton = {
@@ -692,7 +695,7 @@ fun MobileAddProviderScreen(
                                     showClearLiveTvCacheDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
@@ -717,7 +720,7 @@ fun MobileAddProviderScreen(
                                     showClearMoviesCacheDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
@@ -742,7 +745,7 @@ fun MobileAddProviderScreen(
                                     showClearTvShowsCacheDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
@@ -770,7 +773,7 @@ fun MobileAddProviderScreen(
                                 }
                                 showClearFavoritesDialog = false
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {
@@ -796,7 +799,7 @@ fun MobileAddProviderScreen(
                                 }
                                 showClearProgressDialog = false
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                            kind = ButtonKind.Danger,
                         ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {

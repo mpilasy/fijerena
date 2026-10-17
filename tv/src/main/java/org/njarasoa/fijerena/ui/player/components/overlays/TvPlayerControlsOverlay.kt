@@ -89,6 +89,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.TvButtonStyle
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -328,7 +329,8 @@ fun TvPlayerControlsOverlay(
         // The rest of this panel (title, description, audio/subtitle/quality selectors) stays
         // visible regardless — only this button collides with another state's centered content.
         if (showsPlayPause) {
-            CinemaButton(
+            // An icon control, not a text button: transparent, white when focused.
+            androidx.tv.material3.Button(
                 onClick = {
                     if (isPaused) viewModel.resume() else viewModel.pause()
                 },
@@ -339,6 +341,8 @@ fun TvPlayerControlsOverlay(
                         focusedContainerColor = CinemaTextPrimary,
                         focusedContentColor = CinemaBackground,
                     ),
+                scale = ButtonDefaults.scale(focusedScale = TvFocusTokens.focusedScale, pressedScale = TvFocusTokens.pressedScale),
+                shape = ButtonDefaults.shape(shape = TvButtonStyle.shape),
                 modifier =
                     Modifier
                         .align(Center)

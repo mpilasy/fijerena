@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **One look for every button:** buttons across the app now share one style — blue for the main action, outlined for the others, red for anything that deletes — in the shape chosen in Settings → Display, with the label centred. A dialog's Cancel is a real button, not a coloured word. On TV the focused button keeps its look and gains a white ring, and a stack of buttons (a profile's page, the TMDB key) sits centred in the right half, each as wide as the longest label. TV and phone.
 - **Says when the provider's server is down:** a film or channel whose server can't be reached (HTTP 502–504, or Cloudflare's 520–527) used to show only "Buffering…" for about 3 minutes before an error; after the first 45 s the player now says the provider's server isn't responding and that it keeps trying, and starts playing by itself when the server is back. TV and phone.
 - **Films and episodes start sooner on mobile data:** playback now starts once 2.5 s of video has arrived (it waited for 8 s), at the start and after every seek, and resumes after a stall at 5 s instead of 10. Phone.
 - **Buffering details while a channel tunes (Expert mode, TV):** zapping in Live TV full screen now shows the buffering bar and lines under "Tuning · channel", as "Buffering…" does.

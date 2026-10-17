@@ -39,12 +39,12 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -395,23 +396,17 @@ private fun ClearRecentDialog(
             )
         },
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onConfirm,
-                colors =
-                    androidx.compose.material3.ButtonDefaults
-                        .buttonColors(containerColor = CinemaError),
+                kind = ButtonKind.Danger,
             ) {
                 Text(text = stringResource(R.string.recent_clear))
             }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) {
                 Text(text = stringResource(R.string.common_cancel))
             }

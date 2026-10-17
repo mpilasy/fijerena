@@ -3,21 +3,33 @@
 package org.njarasoa.fijerena.ui.components.buttons
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Border
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonColors
-import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.ProvideTextStyle
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -35,119 +47,156 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+import kotlin.math.roundToInt
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
 /**
- * Primary Button - Main CTAs
- * Bright cyan background with dark text for maximum visibility.
- * Use for primary actions like "Play", "Start", "Continue", etc.
+ * A text button, looking as [TvButtonStyle] says every TV button does: [kind]'s fill (and outline),
+ * the Display style's shape, the label centred at any width. Focus adds the ring and the style's
+ * focus scale and keeps the rest of the look, so the focused button stands out from the others
+ * on the screen. Built on a clickable [Surface] rather than TV Material's `Button`, whose label
+ * stays at the left of a wide button.
  */
+@Composable
+fun CinemaButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    kind: ButtonKind = ButtonKind.Other,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val scale = LocalUiScale.current
+    val shape = TvButtonStyle.shape
+    val container = TvButtonStyle.container(kind)
+    val contentColor = TvButtonStyle.content(kind)
+    val focusRing = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), TvButtonStyle.focusRing), shape = shape)
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier =
+            modifier
+                .semantics { role = Role.Button }
+                .defaultMinSize(minHeight = TvButtonStyle.minHeight.scaled(scale)),
+        shape = ClickableSurfaceDefaults.shape(shape = shape),
+        colors =
+            ClickableSurfaceDefaults.colors(
+                containerColor = container,
+                contentColor = contentColor,
+                focusedContainerColor = container,
+                focusedContentColor = contentColor,
+                pressedContainerColor = container,
+                pressedContentColor = contentColor,
+                disabledContainerColor = TvButtonStyle.disabledContainer,
+                disabledContentColor = TvButtonStyle.disabledContent,
+            ),
+        scale =
+            ClickableSurfaceDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
+                disabledScale = TvFocusTokens.defaultScale,
+            ),
+        border =
+            ClickableSurfaceDefaults.border(
+                border = TvButtonStyle.outline(kind)?.let { Border(it, shape = shape) } ?: Border.None,
+                focusedBorder = focusRing,
+                pressedBorder = focusRing,
+                disabledBorder = Border.None,
+                focusedDisabledBorder = focusRing,
+            ),
+    ) {
+        // Dialog content is often phone Material's Text, which reads its own locals: the same
+        // colour and label style as TV Material's.
+        CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides LocalContentColor.current,
+            androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.labelLarge,
+        ) {
+            ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                Row(
+                    modifier =
+                        Modifier
+                            .align(Alignment.Center)
+                            .padding(
+                                horizontal = TvButtonStyle.horizontalPadding.scaled(scale),
+                                vertical = TvButtonStyle.verticalPadding.scaled(scale),
+                            ),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale), Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A stack of buttons, as [TvButtonStyle] lays it out: an invisible area
+ * [TvButtonStyle.AREA_WIDTH_FRACTION] of the page wide, the buttons one under the other, centred in
+ * it, all as wide as the widest label. Place it where the stack goes ([modifier]); the buttons
+ * inside need no width of their own.
+ */
+@Composable
+fun CinemaButtonArea(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val gap = Spacing.sm.scaled(LocalUiScale.current)
+    Layout(content = content, modifier = modifier.fillMaxWidth(TvButtonStyle.AREA_WIDTH_FRACTION)) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val buttonWidth = (measurables.maxOfOrNull { it.maxIntrinsicWidth(constraints.maxHeight) } ?: 0).coerceAtMost(width)
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = buttonWidth, maxWidth = buttonWidth, minHeight = 0)) }
+        val gapPx = gap.roundToPx()
+        val height = placeables.sumOf { it.height } + gapPx * (placeables.size - 1).coerceAtLeast(0)
+        layout(width, height) {
+            var y = 0
+            placeables.forEach {
+                it.place((width - buttonWidth) / 2, y)
+                y += it.height + gapPx
+            }
+        }
+    }
+}
+
+/** A [CinemaButton] of [kind] with a text label. */
+@Composable
+fun CinemaTextLabelButton(
+    onClick: () -> Unit,
+    text: String,
+    kind: ButtonKind,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    CinemaButton(onClick = onClick, modifier = modifier, kind = kind, enabled = enabled) {
+        Text(text = text, textAlign = TextAlign.Center)
+    }
+}
+
+/** The screen's main action ([ButtonKind.Main]): Save, Add, Play. */
 @Composable
 fun CinemaPrimaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-) {
-    val scale = LocalUiScale.current
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.colors(
-                // Focus must read stronger than rest (TV UI audit, #12): the old focused fill,
-                // AccentLight, was paler than the resting Accent behind the same white text.
-                containerColor = CinemaAccentDark,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent,
-                focusedContentColor = CinemaTextPrimary,
-                pressedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                disabledContainerColor = CinemaSurfaceVariant,
-                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
-            ),
-        scale =
-            ButtonDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-                disabledScale = TvFocusTokens.defaultScale,
-            ),
-        border =
-            ButtonDefaults.border(
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary),
-                    ),
-            ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding =
-            PaddingValues(
-                horizontal = Spacing.md.scaled(scale),
-                vertical = Spacing.sm.scaled(scale),
-            ),
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
+) = CinemaTextLabelButton(onClick, text, ButtonKind.Main, modifier, enabled)
 
-/**
- * Secondary Button - Less emphasis
- * Dark gray background with white text.
- * Use for secondary actions like "Cancel", "Back", "Settings", etc.
- */
+/** Any other action ([ButtonKind.Other]): Cancel, Back, Retry. */
 @Composable
 fun CinemaSecondaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-) {
-    val scale = LocalUiScale.current
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaAccentLight,
-                pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
-                disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
-            ),
-        scale =
-            ButtonDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-                disabledScale = TvFocusTokens.defaultScale,
-            ),
-        border =
-            ButtonDefaults.border(
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
-                    ),
-            ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding =
-            PaddingValues(
-                horizontal = Spacing.md.scaled(scale),
-                vertical = Spacing.sm.scaled(scale),
-            ),
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
+) = CinemaTextLabelButton(onClick, text, ButtonKind.Other, modifier, enabled)
+
+/** Deletes or wipes something ([ButtonKind.Danger]). */
+@Composable
+fun CinemaDangerButton(
+    onClick: () -> Unit,
+    text: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) = CinemaTextLabelButton(onClick, text, ButtonKind.Danger, modifier, enabled)
 
 /**
  * Icon Button - For icon-only actions
@@ -165,7 +214,7 @@ fun CinemaIconButton(
     icon: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    size: androidx.compose.ui.unit.Dp = Spacing.xxl,
+    size: androidx.compose.ui.unit.Dp = TvButtonStyle.iconButtonSize,
 ) {
     val scale = LocalUiScale.current
     androidx.tv.material3.Surface(
@@ -174,12 +223,12 @@ fun CinemaIconButton(
         modifier = modifier.size(size.scaled(scale)),
         colors =
             androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaTextPrimary,
-                pressedContainerColor = TvFocusTokens.focusedContainer,
-                pressedContentColor = CinemaTextPrimary,
+                containerColor = TvButtonStyle.iconContainer,
+                contentColor = TvButtonStyle.iconContent,
+                focusedContainerColor = TvButtonStyle.iconFocusedContainer,
+                focusedContentColor = TvButtonStyle.iconContent,
+                pressedContainerColor = TvButtonStyle.iconFocusedContainer,
+                pressedContentColor = TvButtonStyle.iconContent,
             ),
         scale =
             androidx.tv.material3.ClickableSurfaceDefaults.scale(
@@ -192,12 +241,12 @@ fun CinemaIconButton(
                 .shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
-                border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), CinemaTextPrimary.copy(alpha = 0.3f))),
-                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
+                border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), TvButtonStyle.iconOutline)),
+                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), TvButtonStyle.iconFocusRing)),
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.tv.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled,
+            androidx.tv.material3.LocalContentColor provides if (enabled) TvButtonStyle.iconContent else TvButtonStyle.disabledContent,
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -218,7 +267,7 @@ fun CinemaDangerIconButton(
     icon: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    size: androidx.compose.ui.unit.Dp = Spacing.xxl,
+    size: androidx.compose.ui.unit.Dp = TvButtonStyle.iconButtonSize,
 ) {
     val scale = LocalUiScale.current
     androidx.tv.material3.Surface(
@@ -227,26 +276,28 @@ fun CinemaDangerIconButton(
         modifier = modifier.size(size.scaled(scale)),
         colors =
             androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                containerColor = CinemaOrange.copy(alpha = 0.4f),
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaOrange,
-                focusedContentColor = CinemaBackground,
+                containerColor = TvButtonStyle.dangerIconContainer,
+                contentColor = TvButtonStyle.iconContent,
+                focusedContainerColor = TvButtonStyle.dangerIconFocusedContainer,
+                focusedContentColor = TvButtonStyle.iconContent,
             ),
         scale =
             androidx.tv.material3.ClickableSurfaceDefaults.scale(
-                focusedScale = 1.1f,
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
             ),
         shape =
             androidx.tv.material3.ClickableSurfaceDefaults
                 .shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
-                border = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaOrange.copy(alpha = 0.6f))),
-                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTextPrimary)),
+                border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), TvButtonStyle.dangerIconOutline)),
+                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), TvButtonStyle.focusRing)),
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.tv.material3.LocalContentColor provides CinemaTextPrimary,
+            androidx.tv.material3.LocalContentColor provides TvButtonStyle.iconContent,
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -255,102 +306,5 @@ fun CinemaDangerIconButton(
                 icon()
             }
         }
-    }
-}
-
-/**
- * Generic Button - shape-themed passthrough for raw call sites with custom colors that don't
- * fit the semantic Primary/Secondary/Tertiary/Danger variants above. M3's default TV button
- * shape ignores the app's [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens.
- *
- * Callers own [colors], so the focus outline and scale are supplied here rather than left to
- * M3's defaults — otherwise a call site that passes only a `containerColor` ends up with a button
- * whose focused and resting states are told apart by container colour alone.
- */
-@Composable
-fun CinemaButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.colors(),
-    content: @Composable RowScope.() -> Unit,
-) {
-    val scale = LocalUiScale.current
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        colors = colors,
-        scale =
-            ButtonDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-                disabledScale = TvFocusTokens.defaultScale,
-            ),
-        border =
-            ButtonDefaults.border(
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
-                    ),
-            ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        content = content,
-    )
-}
-
-/**
- * Danger Button - Destructive actions
- * Vivid Orange background with white text for destructive actions.
- * Use for dangerous operations like "Delete", "Logout", "Clear All", etc.
- */
-@Composable
-fun CinemaDangerButton(
-    onClick: () -> Unit,
-    text: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val scale = LocalUiScale.current
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.colors(
-                containerColor = CinemaOrange,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaOrangeLight,
-                focusedContentColor = CinemaBackground,
-                pressedContainerColor = CinemaOrange.copy(alpha = CinemaAlpha.textMedium),
-                disabledContainerColor = CinemaSurfaceVariant,
-                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
-            ),
-        scale =
-            ButtonDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-                disabledScale = TvFocusTokens.defaultScale,
-            ),
-        border =
-            ButtonDefaults.border(
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary),
-                    ),
-            ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding =
-            PaddingValues(
-                horizontal = Spacing.md.scaled(scale),
-                vertical = Spacing.sm.scaled(scale),
-            ),
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-        )
     }
 }

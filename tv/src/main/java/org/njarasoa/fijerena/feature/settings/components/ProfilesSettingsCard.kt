@@ -52,10 +52,10 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -72,6 +72,9 @@ import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -352,11 +355,7 @@ fun ProfileEditPane(
                         focusRequester = filtersFocus,
                     )
                 }
-                // The actions: half the page wide, against its right edge.
-                Column(
-                    modifier = Modifier.fillMaxWidth(ACTIONS_WIDTH_FRACTION).align(Alignment.End),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
+                CinemaButtonArea(modifier = Modifier.align(Alignment.End)) {
                     // Switching to the profile already in use would do nothing.
                     if (!profile.isActive) {
                         CinemaSecondaryButton(
@@ -390,7 +389,7 @@ fun ProfileEditPane(
                     // The profile in use and the last one left can't be deleted (ProfileRepository refuses
                     // both); not offering the button beats offering it and then explaining why not.
                     if (canDelete) {
-                        CinemaSecondaryButton(
+                        CinemaDangerButton(
                             onClick = { confirmDelete = true },
                             text = stringResource(R.string.profile_delete_button),
                             modifier = Modifier.fillMaxWidth().focusRequester(deleteFocus),
@@ -563,7 +562,7 @@ internal fun ProfileAddDialog(
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = {
                     if (name.isBlank()) {
                         showNameError = true
@@ -571,17 +570,14 @@ internal fun ProfileAddDialog(
                         onSave(name, colorIndex)
                     }
                 },
+                kind = ButtonKind.Main,
             ) { androidx.compose.material3.Text(stringResource(R.string.profile_save_button)) }
         },
         dismissButton = {
             // Cancel is secondary: resting container, accent label. Save keeps the fill.
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = TvFocusTokens.restingContainer,
-                        contentColor = CinemaAccent,
-                    ),
+                kind = ButtonKind.Other,
             ) {
                 androidx.compose.material3.Text(stringResource(R.string.common_cancel))
             }
@@ -651,5 +647,3 @@ private fun ColorSwatch(
             ),
     ) {}
 }
-
-private const val ACTIONS_WIDTH_FRACTION = 0.5f

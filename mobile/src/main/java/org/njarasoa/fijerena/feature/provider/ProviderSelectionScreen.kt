@@ -23,8 +23,8 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -34,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.*
@@ -150,7 +151,7 @@ fun MobileProviderSelectionScreen(
                         viewModel.deleteProvider(provider.id)
                         deleteConfirmProvider = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                    kind = ButtonKind.Danger,
                 ) {
                     Text(stringResource(R.string.provider_delete_button))
                 }
@@ -199,7 +200,7 @@ fun MobileProviderSelectionScreen(
             title = { Text(stringResource(R.string.provider_copy_to_title)) },
             text = { Text(message) },
             confirmButton = {
-                CinemaDialogActionButton(onClick = { viewModel.clearCopyResultMessage() }) {
+                CinemaDialogActionButton(onClick = { viewModel.clearCopyResultMessage() }, kind = ButtonKind.Main) {
                     Text(stringResource(R.string.common_ok))
                 }
             },

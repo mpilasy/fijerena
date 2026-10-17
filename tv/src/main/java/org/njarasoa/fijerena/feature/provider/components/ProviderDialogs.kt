@@ -54,7 +54,7 @@ import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -93,23 +93,15 @@ fun ConfirmActionDialog(
         title = { Text(title, color = CinemaTextPrimary) },
         text = { Text(text, color = CinemaTextSecondary) },
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onConfirm,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = if (isDanger) CinemaError else CinemaAccent,
-                        contentColor = if (isDanger) Color.White else CinemaTextPrimary,
-                    ),
+                kind = if (isDanger) ButtonKind.Danger else ButtonKind.Main,
             ) { Text(confirmText) }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
@@ -256,15 +248,11 @@ fun CategoryFilterDialog(
                                         }
                                         editingIndex = null
                                     },
-                                    colors =
-                                        androidx.tv.material3.ButtonDefaults
-                                            .colors(containerColor = CinemaAccent),
+                                    kind = ButtonKind.Main,
                                 ) { Text(stringResource(R.string.provider_save_button)) }
                                 CinemaButton(
                                     onClick = { editingIndex = null },
-                                    colors =
-                                        androidx.tv.material3.ButtonDefaults
-                                            .colors(containerColor = CinemaSurfaceVariant),
+                                    kind = ButtonKind.Other,
                                 ) { Text(stringResource(R.string.common_cancel)) }
                             }
                         }
@@ -337,9 +325,7 @@ fun CategoryFilterDialog(
                         }
                     },
                     enabled = addRulesText.isNotBlank(),
-                    colors =
-                        androidx.tv.material3.ButtonDefaults
-                            .colors(containerColor = CinemaSurfaceVariant),
+                    kind = ButtonKind.Other,
                 ) { Text(stringResource(R.string.common_add)) }
 
                 pendingAddValues?.let { values ->
@@ -357,15 +343,11 @@ fun CategoryFilterDialog(
                                     addRulesText = ""
                                     pendingAddValues = null
                                 },
-                                colors =
-                                    androidx.tv.material3.ButtonDefaults
-                                        .colors(containerColor = CinemaAccent),
+                                kind = ButtonKind.Main,
                             ) { Text(stringResource(R.string.common_ok)) }
                             CinemaButton(
                                 onClick = { pendingAddValues = null },
-                                colors =
-                                    androidx.tv.material3.ButtonDefaults
-                                        .colors(containerColor = CinemaSurfaceVariant),
+                                kind = ButtonKind.Other,
                             ) { Text(stringResource(R.string.common_cancel)) }
                         }
                     }
@@ -392,26 +374,18 @@ fun CategoryFilterDialog(
         },
         initialFocus = firstControlFocusRequester,
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = {
                     val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                     onSave(newFilters)
                 },
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaAccent,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_save_button)) }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
@@ -543,13 +517,9 @@ fun QuickConnectDialog(
         },
         confirmButton = {},
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
@@ -577,23 +547,15 @@ fun DuplicateProviderDialog(
             )
         },
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = { onConfirm(name.trim().ifBlank { defaultName }) },
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaAccent,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_duplicate_button)) }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
@@ -788,9 +750,9 @@ fun CopyProviderDialog(
         },
         initialFocus = firstFocus,
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = {
-                    val resolvedTargetId = targetId ?: return@CinemaDialogActionButton
+                    val resolvedTargetId = targetId ?: return@CinemaButton
                     onConfirm(
                         resolvedTargetId,
                         ProviderCopyManager.CopyOptions(
@@ -801,21 +763,13 @@ fun CopyProviderDialog(
                         ),
                     )
                 },
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaAccent,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_copy_to_button)) }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,

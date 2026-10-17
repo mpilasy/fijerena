@@ -15,9 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
  * Picks one of [sources] (id to name) before a setting edited per source opens — content filters,
@@ -51,7 +52,7 @@ fun MobileSourceChooserDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -71,7 +72,7 @@ fun ErrorScreen(
                 CinemaButton(onClick = onRetry) {
                     Text(stringResource(R.string.player_retry))
                 }
-                CinemaButton(onClick = onBack) {
+                CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
                     Text(stringResource(R.string.player_back))
                 }
             }
@@ -121,7 +122,7 @@ fun ErrorOverlay(
                 CinemaButton(onClick = onRetry) {
                     Text(stringResource(R.string.player_retry))
                 }
-                CinemaButton(onClick = onBack) {
+                CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
                     Text(stringResource(R.string.player_back))
                 }
             }

@@ -77,6 +77,7 @@ Every color, dimension, spacing, and animation duration **must** come from desig
 - **Mobile Tokens:** `MobileDimensions`.
 - **Platform re-exports:** TV `CinemaColors.kt`/`Spacing.kt`, mobile `Color.kt`/`Spacing.kt`.
 - **Colors:** Prefer `MaterialTheme.colorScheme.*` or platform re-exports.
+- **Buttons:** every button looks as its app's style says: `ButtonStyle` (core/ui, shared look) with `TvButtonStyle` (tv) and `PhoneButtonStyle` (mobile). Use the components — TV `CinemaPrimaryButton` / `CinemaSecondaryButton` / `CinemaDangerButton` / `CinemaButton(kind)`, a stack in `CinemaButtonArea`, `CinemaIconButton`, `TvIconAction`; phone `CinemaDialogActionButton(kind)` and the `CinemaButton` family — and pick a `ButtonKind` (Main, Other, Danger). Never pass colours, shapes or borders to a button, and never use a raw Material button: a change to how buttons look goes in the style.
 
 ### 2. D-Pad & Focus (TV)
 

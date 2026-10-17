@@ -33,7 +33,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
@@ -363,24 +364,16 @@ private fun AddLoginDialog(
         },
         initialFocus = usernameRequester,
         confirmButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = { onAdd(username, password.trim()) },
                 enabled = !busy && username.isNotBlank() && password.isNotBlank(),
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaAccent,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.common_add)) }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,

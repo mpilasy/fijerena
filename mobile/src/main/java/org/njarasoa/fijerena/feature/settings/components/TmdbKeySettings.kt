@@ -28,10 +28,10 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyCheck
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -108,16 +108,18 @@ fun TmdbKeyDialog(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    CinemaDialogTextButton(
+                    CinemaDialogActionButton(
                         onClick = { viewModel.test(draft) },
                         enabled = draft.isNotBlank() && !uiState.testing,
+                        kind = ButtonKind.Other,
                     ) { Text(stringResource(R.string.tmdb_test_button)) }
                     if (uiState.savedKey.isNotBlank()) {
-                        CinemaDialogTextButton(
+                        CinemaDialogActionButton(
                             onClick = {
                                 viewModel.save("")
                                 onDismiss()
                             },
+                            kind = ButtonKind.Other,
                         ) { Text(stringResource(R.string.tmdb_remove_button)) }
                     }
                 }
@@ -130,10 +132,11 @@ fun TmdbKeyDialog(
                     onDismiss()
                 },
                 enabled = draft.isNotBlank() && draft != uiState.savedKey,
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_save_button)) }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

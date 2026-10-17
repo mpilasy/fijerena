@@ -116,7 +116,6 @@ import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -125,6 +124,7 @@ import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -1653,35 +1653,23 @@ private fun ProgramDetailsDialog(
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 if (onWatchFromStart != null) {
-                    CinemaDialogActionButton(
+                    CinemaButton(
                         onClick = onWatchFromStart,
                         modifier = Modifier.focusRequester(fromStartRequester),
-                        colors =
-                            androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = CinemaAccent,
-                                contentColor = CinemaTextPrimary,
-                            ),
+                        kind = ButtonKind.Main,
                     ) { Text(stringResource(R.string.epg_details_watch_from_start), color = CinemaTextPrimary) }
                 }
-                CinemaDialogActionButton(
+                CinemaButton(
                     onClick = onWatchChannel,
                     modifier = Modifier.focusRequester(watchRequester),
-                    colors =
-                        androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = if (onWatchFromStart != null) CinemaSurfaceVariant else CinemaAccent,
-                            contentColor = CinemaTextPrimary,
-                        ),
+                    kind = if (onWatchFromStart != null) ButtonKind.Other else ButtonKind.Main,
                 ) { Text(stringResource(R.string.epg_details_watch_channel), color = CinemaTextPrimary) }
             }
         },
         dismissButton = {
-            CinemaDialogActionButton(
+            CinemaButton(
                 onClick = onDismiss,
-                colors =
-                    androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                    ),
+                kind = ButtonKind.Other,
             ) { Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
         },
         containerColor = CinemaSurface,

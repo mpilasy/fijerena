@@ -37,14 +37,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -218,11 +218,14 @@ fun ColumnScope.ProviderLoginsSection(
                         loginsViewModel.remove(username)
                         removeUsername = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                    kind = ButtonKind.Danger,
                 ) { Text(stringResource(R.string.provider_logins_remove)) }
             },
             dismissButton = {
-                CinemaDialogTextButton(onClick = { removeUsername = null }) { Text(stringResource(R.string.common_cancel)) }
+                CinemaDialogActionButton(
+                    onClick = { removeUsername = null },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -297,10 +300,15 @@ private fun AddLoginDialog(
             CinemaDialogActionButton(
                 onClick = { onAdd(username, password) },
                 enabled = !busy,
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_logins_add)) }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                enabled = !busy,
+                kind = ButtonKind.Other,
+            ) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

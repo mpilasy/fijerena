@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -306,22 +307,12 @@ private fun DangerRow(
     }
 }
 
-/** Outlined button with error-coloured text and border: destructive, but not the loudest thing on screen. */
+/** Wipes this source's data ([ButtonKind.Danger]). */
 @Composable
 private fun DangerButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    val error = MaterialTheme.colorScheme.error
-    CinemaOutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
-        colors =
-            ButtonDefaults.outlinedButtonColors(
-                contentColor = error,
-                containerColor = error.copy(alpha = CinemaAlpha.ghost),
-            ),
-        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(error.copy(alpha = CinemaAlpha.textFaint))),
-    ) { Text(text) }
+    CinemaButton(onClick = onClick, modifier = modifier, kind = ButtonKind.Danger) { Text(text) }
 }

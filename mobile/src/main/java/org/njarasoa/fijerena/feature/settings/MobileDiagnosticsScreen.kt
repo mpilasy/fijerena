@@ -30,13 +30,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
@@ -58,13 +59,19 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
             onDismissRequest = { showClearConfirm = false },
             title = { Text(stringResource(R.string.settings_diagnostics_clear_confirm_title)) },
             confirmButton = {
-                CinemaDialogTextButton(onClick = {
-                    viewModel.clear()
-                    showClearConfirm = false
-                }) { Text(stringResource(R.string.settings_diagnostics_clear)) }
+                CinemaDialogActionButton(
+                    onClick = {
+                        viewModel.clear()
+                        showClearConfirm = false
+                    },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.settings_diagnostics_clear)) }
             },
             dismissButton = {
-                CinemaDialogTextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                CinemaDialogActionButton(
+                    onClick = { showClearConfirm = false },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }

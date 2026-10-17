@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.paneItem
@@ -313,55 +314,10 @@ fun ProviderDangerZoneSection(
     }
 }
 
-/**
- * Outlined button with error-coloured text and border: destructive, but not the loudest thing
- * on screen. Focus fills it with the error colour, matching the confirm dialog's button.
- */
+/** Wipes something of the source ([CinemaDangerButton]). */
 @Composable
 internal fun ProviderDangerButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
-) {
-    val scale = LocalUiScale.current
-    val error = CinemaError
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        colors =
-            ButtonDefaults.colors(
-                containerColor = Color.Transparent,
-                contentColor = error,
-                focusedContainerColor = error,
-                focusedContentColor = CinemaTextPrimary,
-                pressedContainerColor = error.copy(alpha = CinemaAlpha.textMedium),
-                pressedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            ButtonDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-                disabledScale = TvFocusTokens.defaultScale,
-            ),
-        border =
-            ButtonDefaults.border(
-                border = Border(border = BorderStroke(width = TvFocusTokens.borderDefault.scaled(scale), color = error)),
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary),
-                    ),
-            ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding =
-            PaddingValues(
-                horizontal = Spacing.md.scaled(scale),
-                vertical = Spacing.sm.scaled(scale),
-            ),
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
+) = CinemaDangerButton(onClick = onClick, text = text, modifier = modifier)

@@ -20,9 +20,9 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
@@ -77,16 +77,19 @@ fun ImportOptionsDialog(
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = {
-                val options =
-                    SettingsExportManager.ImportOptions(
-                        importProviders = optProviders,
-                        importEpgSources = optEpg,
-                        importGlobalSettings = optGlobal,
-                        importFavorites = optFavorites,
-                    )
-                onConfirm(options)
-            }) { Text(stringResource(R.string.common_import)) }
+            CinemaDialogActionButton(
+                onClick = {
+                    val options =
+                        SettingsExportManager.ImportOptions(
+                            importProviders = optProviders,
+                            importEpgSources = optEpg,
+                            importGlobalSettings = optGlobal,
+                            importFavorites = optFavorites,
+                        )
+                    onConfirm(options)
+                },
+                kind = ButtonKind.Main,
+            ) { Text(stringResource(R.string.common_import)) }
         },
         dismissButton = {
             CinemaOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
@@ -125,20 +128,23 @@ fun ImportConflictDialog(
                     CinemaDialogActionButton(
                         onClick = onOverwrite,
                         modifier = Modifier.weight(1f),
+                        kind = ButtonKind.Main,
                     ) { Text(stringResource(R.string.common_overwrite), maxLines = 1) }
                     CinemaDialogActionButton(
                         onClick = onDuplicate,
                         modifier = Modifier.weight(1f),
+                        kind = ButtonKind.Main,
                     ) { Text(stringResource(R.string.common_duplicate), maxLines = 1) }
                 }
                 CinemaDialogActionButton(
                     onClick = onSkip,
                     modifier = Modifier.fillMaxWidth(),
+                    kind = ButtonKind.Main,
                 ) { Text(stringResource(R.string.settings_import_skip_duplicates_button)) }
             }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

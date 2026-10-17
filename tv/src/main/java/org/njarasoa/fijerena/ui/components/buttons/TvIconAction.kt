@@ -67,8 +67,8 @@ fun TvIconAction(
 ) {
     val scale = LocalUiScale.current
     var focused by remember { mutableStateOf(false) }
-    val accent = if (danger) CinemaError else CinemaTextPrimary
-    val size = Spacing.xxl.scaled(scale)
+    val accent = if (danger) TvButtonStyle.dangerIconOutline else TvButtonStyle.iconContent
+    val size = TvButtonStyle.iconButtonSize.scaled(scale)
     Surface(
         onClick = onClick,
         enabled = enabled,
@@ -80,12 +80,12 @@ fun TvIconAction(
                 .semantics { contentDescription = label },
         colors =
             ClickableSurfaceDefaults.colors(
-                containerColor = if (danger) Color.Transparent else TvFocusTokens.restingContainer,
+                containerColor = if (danger) Color.Transparent else TvButtonStyle.iconContainer,
                 contentColor = accent,
-                focusedContainerColor = if (danger) CinemaError else TvFocusTokens.focusedContainer,
-                focusedContentColor = if (danger) CinemaTextPrimary else CinemaAccentLight,
-                pressedContainerColor = TvFocusTokens.focusedContainer,
-                pressedContentColor = CinemaTextPrimary,
+                focusedContainerColor = if (danger) TvButtonStyle.dangerIconFocusedContainer else TvButtonStyle.iconFocusedContainer,
+                focusedContentColor = if (danger) TvButtonStyle.iconContent else TvButtonStyle.iconFocusedContent,
+                pressedContainerColor = TvButtonStyle.iconFocusedContainer,
+                pressedContentColor = TvButtonStyle.iconContent,
             ),
         scale =
             ClickableSurfaceDefaults.scale(
@@ -100,10 +100,10 @@ fun TvIconAction(
                     Border(
                         BorderStroke(
                             TvFocusTokens.borderDefault.scaled(scale),
-                            if (danger) CinemaError else CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                            if (danger) TvButtonStyle.dangerIconOutline else TvButtonStyle.iconOutline,
                         ),
                     ),
-                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
+                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), TvButtonStyle.iconFocusRing)),
             ),
     ) {
         // Full height, or the row sits at the top of the circle and CenterVertically only centres
@@ -118,7 +118,7 @@ fun TvIconAction(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (!enabled) CinemaTextDisabled else iconTint ?: androidx.tv.material3.LocalContentColor.current,
+                tint = if (!enabled) TvButtonStyle.disabledContent else iconTint ?: androidx.tv.material3.LocalContentColor.current,
                 modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)).then(iconModifier),
             )
             AnimatedVisibility(

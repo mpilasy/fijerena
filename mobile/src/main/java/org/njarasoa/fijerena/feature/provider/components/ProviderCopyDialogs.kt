@@ -25,9 +25,10 @@ import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 /** Name-edit dialog for [ProviderCopyManager.duplicateProvider]. */
@@ -53,7 +54,7 @@ fun DuplicateProviderDialog(
             )
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = { onConfirm(name.trim().ifBlank { defaultName }) }) {
+            CinemaDialogActionButton(onClick = { onConfirm(name.trim().ifBlank { defaultName }) }, kind = ButtonKind.Main) {
                 Text(stringResource(R.string.provider_duplicate_button))
             }
         },
@@ -138,6 +139,7 @@ fun CopyProviderDialog(
                         ),
                     )
                 },
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_copy_to_button)) }
         },
         dismissButton = {

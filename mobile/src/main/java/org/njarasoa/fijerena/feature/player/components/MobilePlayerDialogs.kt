@@ -22,8 +22,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
@@ -93,7 +94,7 @@ fun AudioTrackSelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
         },
     )
 }
@@ -200,7 +201,7 @@ fun SubtitleSelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
         },
     )
 }
@@ -317,7 +318,7 @@ fun QualitySelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
         },
     )
 }

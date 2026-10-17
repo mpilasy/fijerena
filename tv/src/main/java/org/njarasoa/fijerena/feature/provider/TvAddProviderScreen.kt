@@ -61,10 +61,10 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.model.addSourceTypes
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -96,6 +96,7 @@ import org.njarasoa.fijerena.feature.provider.components.XtreamForm
 import org.njarasoa.fijerena.feature.provider.components.rowNeighbours
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
@@ -832,31 +833,23 @@ fun TvAddProviderScreen(
                 title = { Text(stringResource(R.string.provider_discard_changes_title), color = CinemaTextPrimary) },
                 text = { Text(stringResource(R.string.provider_discard_changes_message), color = CinemaTextSecondary) },
                 confirmButton = {
-                    CinemaDialogActionButton(
+                    CinemaButton(
                         onClick = {
                             val then = discardThen
                             showDiscardDialog = false
                             discardThen = null
                             if (then != null) then() else onBack()
                         },
-                        colors =
-                            androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = CinemaError,
-                                contentColor = CinemaTextPrimary,
-                            ),
+                        kind = ButtonKind.Danger,
                     ) { Text(stringResource(R.string.provider_discard_button)) }
                 },
                 dismissButton = {
-                    CinemaDialogActionButton(
+                    CinemaButton(
                         onClick = {
                             showDiscardDialog = false
                             discardThen = null
                         },
-                        colors =
-                            androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = CinemaSurfaceVariant,
-                                contentColor = CinemaTextPrimary,
-                            ),
+                        kind = ButtonKind.Other,
                     ) { Text(stringResource(R.string.provider_keep_editing_button)) }
                 },
                 containerColor = CinemaSurface,

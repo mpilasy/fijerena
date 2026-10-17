@@ -29,8 +29,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -132,16 +133,19 @@ internal fun ProfileAddDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = {
-                if (name.isBlank()) {
-                    showNameError = true
-                } else {
-                    onSave(name, colorIndex)
-                }
-            }) { Text(stringResource(R.string.profile_save_button)) }
+            CinemaDialogActionButton(
+                onClick = {
+                    if (name.isBlank()) {
+                        showNameError = true
+                    } else {
+                        onSave(name, colorIndex)
+                    }
+                },
+                kind = ButtonKind.Other,
+            ) { Text(stringResource(R.string.profile_save_button)) }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

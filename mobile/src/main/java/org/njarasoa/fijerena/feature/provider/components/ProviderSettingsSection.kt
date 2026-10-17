@@ -17,7 +17,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,10 +36,12 @@ import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /** Title (and optional dimmed subtitle) of one Edit Source section. */
 @Composable
@@ -353,13 +354,13 @@ private fun ShortNameDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = {
+            CinemaDialogActionButton(onClick = {
                 val wanted = value.trim()
                 onSave(wanted) { taken = wanted }
             }) { Text(stringResource(R.string.common_ok)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

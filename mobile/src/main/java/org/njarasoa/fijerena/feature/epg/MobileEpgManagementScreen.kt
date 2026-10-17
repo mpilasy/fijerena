@@ -26,11 +26,10 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.*
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -38,6 +37,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
@@ -468,11 +468,14 @@ private fun EpgSourceCard(
                         onDelete()
                         showDeleteConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                    kind = ButtonKind.Danger,
                 ) { Text(stringResource(R.string.provider_delete_button)) }
             },
             dismissButton = {
-                CinemaDialogTextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                CinemaDialogActionButton(
+                    onClick = { showDeleteConfirm = false },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.common_cancel)) }
             },
             title = { Text(stringResource(R.string.epg_delete_source_title)) },
             text = { Text(stringResource(R.string.epg_delete_source_confirm_message, source.label)) },
@@ -577,10 +580,11 @@ private fun EpgSourceEditDialog(
                     )
                 },
                 enabled = url.isNotBlank(),
+                kind = ButtonKind.Main,
             ) { Text(stringResource(R.string.provider_save_button)) }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {

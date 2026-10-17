@@ -13,7 +13,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,10 +25,12 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.restartProcess
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 /**
@@ -87,14 +88,17 @@ fun MobileNewerDataScreen() {
             title = { Text(stringResource(R.string.newer_data_reset_confirm_title)) },
             text = { Text(stringResource(R.string.newer_data_reset_confirm_message)) },
             confirmButton = {
-                TextButton(onClick = {
+                CinemaDialogActionButton(onClick = {
                     confirmingReset = false
                     ProvidersDbGuard.setAside(context)
                     activity?.let { restartProcess(it) }
-                }) { Text(stringResource(R.string.newer_data_reset_confirm), color = CinemaError) }
+                }, kind = ButtonKind.Danger) { Text(stringResource(R.string.newer_data_reset_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingReset = false }) { Text(stringResource(R.string.common_cancel)) }
+                CinemaDialogActionButton(
+                    onClick = { confirmingReset = false },
+                    kind = ButtonKind.Other,
+                ) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
