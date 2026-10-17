@@ -17,10 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.utils.expiringSources
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -39,7 +43,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             modifier =
                 modifier
                     .fillMaxWidth()
-                    .background(CinemaError)
+                    .background(CinemaTheme.colors.danger)
                     .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
@@ -47,15 +51,15 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             Icon(
                 imageVector = CinemaIcons.Warning,
                 contentDescription = null,
-                tint = CinemaTextPrimary,
+                tint = CinemaTheme.colors.textPrimary,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
             Column {
                 expiring.forEach { source ->
-                    Text(
+                    CinemaText(
                         text = SubscriptionExpiry.bannerText(context.resources, source),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextPrimary,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Primary,
                     )
                 }
             }

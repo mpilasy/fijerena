@@ -13,9 +13,13 @@ import androidx.compose.ui.text.style.TextAlign
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 
 @Composable
@@ -37,24 +41,23 @@ fun ChannelToast(
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.player_now_playing),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                role = TextRole.Caption,
+                tone = TextTone.Accent,
             )
-            Text(
+            CinemaText(
                 // The clean name: "CP24 ◉", not "CA - CP24 HD ◉".
                 text = parseDisplayTitle(channelName).title.ifBlank { channelName },
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
+                role = TextRole.Heading,
                 textAlign = TextAlign.Center,
             )
             if (currentEpgProgram != null) {
-                Text(
+                CinemaText(
                     text = currentEpgProgram.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     textAlign = TextAlign.Center,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
             }
         }

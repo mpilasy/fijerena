@@ -43,13 +43,17 @@ import org.njarasoa.fijerena.core.player.model.formatBitrate
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberConnectionLabel
 import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
@@ -318,9 +322,9 @@ fun MobileStatsOverlay(
     val dropRate = if (totalFrames > 0) (droppedFrames.toFloat() / totalFrames * 100) else 0f
     val dropColor =
         when {
-            dropRate < 0.5f -> CinemaSuccess
-            dropRate < 2.0f -> CinemaWarning
-            else -> CinemaError
+            dropRate < 0.5f -> TextTone.Success
+            dropRate < 2.0f -> TextTone.Warning
+            else -> TextTone.Danger
         }
 
     Box(
@@ -350,10 +354,10 @@ fun MobileStatsOverlay(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.player_stats_title),
-                        style = typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        role = TextRole.Heading,
+                        tone = TextTone.Accent,
                     )
                     IconButton(
                         onClick = onClose,
@@ -362,7 +366,7 @@ fun MobileStatsOverlay(
                         Icon(
                             CinemaIcons.Close,
                             contentDescription = stringResource(R.string.common_close),
-                            tint = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textMedium),
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
@@ -400,9 +404,9 @@ fun MobileStatsOverlay(
                 val rebufferTimeMs = serviceRebufferTimeMs
                 val rebufferColor =
                     when {
-                        rebuffers == 0 -> CinemaSuccess
-                        rebuffers <= 3 -> CinemaWarning
-                        else -> CinemaError
+                        rebuffers == 0 -> TextTone.Success
+                        rebuffers <= 3 -> TextTone.Warning
+                        else -> TextTone.Danger
                     }
                 StatRowColored(stringResource(R.string.player_stats_rebuffers), "$rebuffers", rebufferColor)
                 if (rebufferTimeMs > 0) {
@@ -436,9 +440,9 @@ fun MobileStatsOverlay(
                 val recentDropRate = serviceRecentDropRate
                 val recentDropColor =
                     when {
-                        recentDropRate < 0.5f -> CinemaSuccess
-                        recentDropRate < 2.0f -> CinemaWarning
-                        else -> CinemaError
+                        recentDropRate < 0.5f -> TextTone.Success
+                        recentDropRate < 2.0f -> TextTone.Warning
+                        else -> TextTone.Danger
                     }
                 StatRowColored(
                     stringResource(R.string.player_stats_drop_rate_recent),
@@ -450,9 +454,9 @@ fun MobileStatsOverlay(
                 if (currentDropFps > 0f) {
                     val currentDropColor =
                         when {
-                            currentDropFps < 1.0f -> CinemaSuccess
-                            currentDropFps < 10.0f -> CinemaWarning
-                            else -> CinemaError
+                            currentDropFps < 1.0f -> TextTone.Success
+                            currentDropFps < 10.0f -> TextTone.Warning
+                            else -> TextTone.Danger
                         }
                     StatRowColored(
                         stringResource(R.string.player_stats_drop_rate_per_sec),
@@ -464,9 +468,9 @@ fun MobileStatsOverlay(
                 SectionHeader(stringResource(R.string.player_stats_app))
                 val heapColor =
                     when {
-                        heap.usedPercent < 60 -> CinemaSuccess
-                        heap.usedPercent < 85 -> CinemaWarning
-                        else -> CinemaError
+                        heap.usedPercent < 60 -> TextTone.Success
+                        heap.usedPercent < 85 -> TextTone.Warning
+                        else -> TextTone.Danger
                     }
                 StatRowColored(
                     stringResource(R.string.player_stats_heap),
@@ -480,7 +484,7 @@ fun MobileStatsOverlay(
                 StatRowColored(
                     stringResource(R.string.player_stats_ui_skipped),
                     "$uiFramesSkipped",
-                    if (uiFramesSkipped == 0L) CinemaSuccess else CinemaWarning,
+                    if (uiFramesSkipped == 0L) TextTone.Success else TextTone.Warning,
                 )
 
                 SectionHeader(stringResource(R.string.player_stats_stream))
@@ -497,9 +501,9 @@ fun MobileStatsOverlay(
                         }
                     val healthColor =
                         when {
-                            health.isDegraded -> CinemaError
-                            !health.isHealthy -> CinemaWarning
-                            else -> CinemaSuccess
+                            health.isDegraded -> TextTone.Danger
+                            !health.isHealthy -> TextTone.Warning
+                            else -> TextTone.Success
                         }
                     StatRowColored(stringResource(R.string.player_stats_stream_health), healthText, healthColor)
                 }
@@ -516,22 +520,22 @@ fun MobileStatsOverlay(
                         org.njarasoa.fijerena.core.player.device.DeviceDetector
                             .detect()
                     }
-                Text(
+                CinemaText(
                     text =
                         stringResource(
                             R.string.player_stats_build_format,
                             org.njarasoa.fijerena.BuildConfig.BUILD_TIME,
                             org.njarasoa.fijerena.BuildConfig.GIT_HASH,
                         ),
-                    style = typography.labelSmall,
-                    color = CinemaTextPrimary.copy(alpha = 0.3f),
                     modifier = Modifier.padding(top = Spacing.sm),
+                    role = TextRole.Caption,
+                    tone = TextTone.Disabled,
                 )
 
-                Text(
+                CinemaText(
                     text = stringResource(R.string.player_error_type_label) + caps.deviceType,
-                    style = typography.labelSmall,
-                    color = CinemaTextPrimary.copy(alpha = 0.3f),
+                    role = TextRole.Caption,
+                    tone = TextTone.Disabled,
                 )
             }
         }
@@ -540,11 +544,11 @@ fun MobileStatsOverlay(
 
 @Composable
 private fun SectionHeader(title: String) {
-    Text(
+    CinemaText(
         text = title,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs),
+        role = TextRole.Caption,
+        tone = TextTone.Accent,
     )
 }
 
@@ -559,15 +563,19 @@ private fun StatNameRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
-        Text(text = label, style = typography.bodySmall, color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium))
-        Text(
+        CinemaText(
+            text = label,
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
+        )
+        CinemaText(
             text = value,
-            style = typography.bodySmall,
-            color = CinemaTextPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f),
+            role = TextRole.BodySmall,
+            tone = TextTone.Primary,
         )
     }
 }
@@ -582,15 +590,15 @@ private fun StatRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(
+        CinemaText(
             text = label,
-            style = typography.bodySmall,
-            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
         )
-        Text(
+        CinemaText(
             text = value,
-            style = typography.bodySmall,
-            color = CinemaTextPrimary,
+            role = TextRole.BodySmall,
+            tone = TextTone.Primary,
         )
     }
 }
@@ -599,22 +607,21 @@ private fun StatRow(
 private fun StatRowColored(
     label: String,
     value: String,
-    valueColor: Color,
+    valueTone: TextTone,
 ) {
-    val typography = MaterialTheme.typography
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(
+        CinemaText(
             text = label,
-            style = typography.bodySmall,
-            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
         )
-        Text(
+        CinemaText(
             text = value,
-            style = typography.bodySmall,
-            color = valueColor,
+            role = TextRole.BodySmall,
+            tone = valueTone,
         )
     }
 }

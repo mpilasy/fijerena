@@ -4,25 +4,6 @@
 # down: move a site to a component or a CinemaTheme role and lower the count in the same change; a
 # file at 0 leaves the list. A file not listed may have none.
 # See docs/plans/20261016_design-system-plan.md.
-mobile/src/main/java/org/njarasoa/fijerena/feature/category/MobileCategoryListScreen.kt 70
-mobile/src/main/java/org/njarasoa/fijerena/feature/category/SourceExpiryBanner.kt 4
-mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/MobileSourceChooserDialog.kt 5
-mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/MobileSyncSummaryLine.kt 12
-mobile/src/main/java/org/njarasoa/fijerena/feature/contentselection/MobileSourceTopBar.kt 8
-mobile/src/main/java/org/njarasoa/fijerena/feature/epgbrowser/MobileEpgBrowserScreen.kt 65
-mobile/src/main/java/org/njarasoa/fijerena/feature/epg/MobileEpgGuideScreen.kt 33
-mobile/src/main/java/org/njarasoa/fijerena/feature/epg/MobileEpgManagementScreen.kt 45
-mobile/src/main/java/org/njarasoa/fijerena/feature/epg/MobileGuideGrid.kt 21
-mobile/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt 75
-mobile/src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt 25
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobileChannelListSheet.kt 10
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobileChannelToast.kt 6
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobileControlsOverlay.kt 57
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobilePlayerDialogs.kt 55
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobilePlayerStates.kt 19
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobileStatsOverlay.kt 40
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/components/MobileUpNextOverlay.kt 9
-mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt 5
 mobile/src/main/java/org/njarasoa/fijerena/feature/profile/ProfileSheet.kt 5
 mobile/src/main/java/org/njarasoa/fijerena/feature/provider/components/DataManagementSection.kt 32
 mobile/src/main/java/org/njarasoa/fijerena/feature/provider/components/MobileCategoryFilterDialog.kt 35
@@ -36,7 +17,6 @@ mobile/src/main/java/org/njarasoa/fijerena/feature/provider/MobileAddProviderScr
 mobile/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt 21
 mobile/src/main/java/org/njarasoa/fijerena/feature/safemode/MobileNewerDataScreen.kt 11
 mobile/src/main/java/org/njarasoa/fijerena/feature/safemode/MobileSafeModeScreen.kt 13
-mobile/src/main/java/org/njarasoa/fijerena/feature/search/SearchScreen.kt 73
 mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/GuideSettingsRows.kt 15
 mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/ImportDialogs.kt 17
 mobile/src/main/java/org/njarasoa/fijerena/feature/settings/components/ProfilesSettingsRows.kt 18
@@ -49,8 +29,6 @@ mobile/src/main/java/org/njarasoa/fijerena/feature/settings/MobileDiagnosticsScr
 mobile/src/main/java/org/njarasoa/fijerena/feature/settings/MobileSyncSettingsScreen.kt 58
 mobile/src/main/java/org/njarasoa/fijerena/feature/settings/ProfileEditScreen.kt 12
 mobile/src/main/java/org/njarasoa/fijerena/feature/settings/SettingsScreen.kt 16
-mobile/src/main/java/org/njarasoa/fijerena/navigation/MobileBottomBar.kt 2
-mobile/src/main/java/org/njarasoa/fijerena/navigation/MobileNavHost.kt 1
 tv/src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryList.kt 11
 tv/src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryStates.kt 2
 tv/src/main/java/org/njarasoa/fijerena/feature/category/components/FavoriteMenuDialog.kt 22

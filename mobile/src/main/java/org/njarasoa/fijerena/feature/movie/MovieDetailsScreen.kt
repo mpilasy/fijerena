@@ -37,8 +37,11 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
@@ -47,10 +50,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
@@ -109,17 +114,19 @@ fun MobileMovieDetailsScreen(
                 // The film's own title, as the episodes screen shows the show's (phone UI audit,
                 // #2): TMDB's clean title once it resolves, the provider's name until then.
                 title = {
-                    Text(
+                    CinemaText(
                         text = tmdbTitle ?: lastSuccess?.movieDetail?.name?.ifEmpty { null } ?: movieName,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        role = TextRole.Title,
+                        tone = TextTone.Inherit,
                     )
                 },
                 navigationIcon = {
                     CinemaIconButton(
                         onClick = onBack,
                         icon = {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTheme.colors.textPrimary)
                         },
                     )
                 },
@@ -227,7 +234,7 @@ private fun MovieDetailsContent(
 ) {
     val extension = movieDetail.extension ?: "mp4"
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
         // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the related
         // rows below paid their full layout cost while sitting off-screen — on the TV copy of this
         // screen that was 200ms of a 215ms measure pass, and this screen's player exit shows the same
@@ -262,10 +269,10 @@ private fun MovieDetailsContent(
 
                     // Movie metadata - genre on its own line
                     movieDetail.metadata.genre?.let { genre ->
-                        Text(
+                        CinemaText(
                             text = genre,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            role = TextRole.Heading,
+                            tone = TextTone.Accent,
                         )
                     }
 
@@ -310,7 +317,11 @@ private fun MovieDetailsContent(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
+                            CinemaText(
+                                stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
                         }
                     } else {
                         CinemaButton(
@@ -319,7 +330,11 @@ private fun MovieDetailsContent(
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(stringResource(R.string.movie_play_action))
+                            CinemaText(
+                                stringResource(R.string.movie_play_action),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
                         }
                     }
 
@@ -334,7 +349,7 @@ private fun MovieDetailsContent(
                             icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                             label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                             onClick = onToggleFavorite,
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            tint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                         )
                         // None where the source keeps watched state on its server (Jellyfin).
                         if (onToggleWatched != null) {
@@ -342,7 +357,7 @@ private fun MovieDetailsContent(
                                 icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
                                 label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
                                 onClick = onToggleWatched,
-                                tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                                tint = if (isWatched) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                             )
                         }
                         if (hasResume) {
@@ -390,15 +405,11 @@ private fun MovieDetailsContent(
                     // only Details) has nothing to switch between — skip the strip entirely rather than
                     // render dead chrome for a tab the user can't leave.
                     if (tabs.size > 1) {
-                        PrimaryTabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
-                            tabs.forEach { tab ->
-                                Tab(
-                                    selected = tab == selectedTab,
-                                    onClick = { pickedTab = tab },
-                                    text = { Text(movieDetailTabLabel(tab)) },
-                                )
-                            }
-                        }
+                        CinemaTabRow(
+                            selectedIndex = tabs.indexOf(selectedTab),
+                            labels = tabs.map { movieDetailTabLabel(it) },
+                            onSelect = { pickedTab = tabs[it] },
+                        )
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     }
                     when (selectedTab) {
@@ -597,7 +608,11 @@ private fun LoadingScreen() {
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             CircularProgressIndicator()
-            Text(stringResource(R.string.movie_loading_details))
+            CinemaText(
+                stringResource(R.string.movie_loading_details),
+                role = TextRole.Body,
+                tone = TextTone.Inherit,
+            )
         }
     }
 }
@@ -616,17 +631,22 @@ private fun ErrorScreen(
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             modifier = Modifier.padding(CinemaSpacing.xl),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.movie_error_loading),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error,
+                role = TextRole.Display,
+                tone = TextTone.Danger,
             )
-            Text(
+            CinemaText(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge,
+                role = TextRole.Body,
+                tone = TextTone.Inherit,
             )
             CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
-                Text(stringResource(R.string.common_back))
+                CinemaText(
+                    stringResource(R.string.common_back),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
         }
     }
@@ -645,14 +665,12 @@ private fun StreamNamePicker(
     onSelect: (MediaItem) -> Unit,
 ) {
     // As the other rows' values (MobileDetailRow): the row already says "Stream name:".
-    val textStyle = MaterialTheme.typography.bodyMedium
-    val textColor = CinemaTextPrimary
 
     if (alternates.isEmpty()) {
-        Text(
+        CinemaText(
             text = currentName,
-            style = textStyle,
-            color = textColor,
+            role = TextRole.Body,
+            tone = TextTone.Primary,
         )
         return
     }
@@ -672,27 +690,39 @@ private fun StreamNamePicker(
                     expanded = true
                 },
         ) {
-            Text(
+            CinemaText(
                 text = currentName,
-                style = textStyle,
-                color = textColor,
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
             Icon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = CinemaTheme.colors.accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text(currentName, color = MaterialTheme.colorScheme.primary) },
-                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                text = {
+                    CinemaText(
+                        currentName,
+                        role = TextRole.Body,
+                        tone = TextTone.Accent,
+                    )
+                },
+                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) },
                 onClick = { expanded = false },
             )
             alternates.forEach { alternate ->
                 DropdownMenuItem(
-                    text = { Text(alternate.name) },
+                    text = {
+                        CinemaText(
+                            alternate.name,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                     // With several sources, each copy's own (it opens there).
                     leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                     onClick = {

@@ -54,10 +54,14 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
@@ -161,18 +165,20 @@ fun MobileEpgGuideScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.epg_guide_header_title_format, categoryName),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            role = TextRole.Title,
+                            tone = TextTone.Inherit,
                         )
                         if (state is EpgViewModel.UiState.Ready) {
-                            Text(
+                            CinemaText(
                                 text = statusLine(state),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }
@@ -210,10 +216,10 @@ fun MobileEpgGuideScreen(
                     .padding(paddingValues),
         ) {
             if (state is EpgViewModel.UiState.Ready && appSettings.isDevMode) {
-                Text(
+                CinemaText(
                     text = state.devStats,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    role = TextRole.Caption,
+                    tone = TextTone.Tertiary,
                     modifier = Modifier.padding(horizontal = CinemaSpacing.md),
                 )
             }
@@ -240,10 +246,10 @@ fun MobileEpgGuideScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator()
                                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                                Text(
+                                CinemaText(
                                     text = stringResource(R.string.epg_loading_guide),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    role = TextRole.Body,
+                                    tone = TextTone.Secondary,
                                 )
                             }
                         }
@@ -314,24 +320,28 @@ fun MobileEpgGuideScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(CinemaSpacing.xl),
                             ) {
-                                Text(
+                                CinemaText(
                                     text = stringResource(R.string.epg_error_loading),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.error,
+                                    role = TextRole.Display,
+                                    tone = TextTone.Danger,
                                 )
                                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                Text(
+                                CinemaText(
                                     text =
                                         (state as? EpgViewModel.UiState.Error)?.message
                                             ?: stringResource(R.string.epg_error_no_channels_in_category),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    role = TextRole.Body,
+                                    tone = TextTone.Secondary,
                                 )
                                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
                                 CinemaButton(
                                     onClick = { viewModel.loadEpgData() },
                                 ) {
-                                    Text(stringResource(R.string.common_retry))
+                                    CinemaText(
+                                        stringResource(R.string.common_retry),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
                                 }
                             }
                         }
@@ -415,13 +425,13 @@ private fun ListingsEndNote(state: EpgViewModel.UiState.Ready) {
                 .toEpochSecond()
         }
     if (!guideListingsEnded(lastEnd, nowEpochSeconds, dayStart, dayEnd)) return
-    Text(
+    CinemaText(
         text = stringResource(R.string.epg_guide_listings_end_format, TimeFormat.formatTime(lastEnd)),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.primary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xxs),
+        role = TextRole.BodySmall,
+        tone = TextTone.Accent,
     )
 }
 
@@ -459,14 +469,26 @@ private fun DateTabs(
                 CinemaFilterChip(
                     selected = day == selectedDate,
                     onClick = { onSelectDate(day) },
-                    label = { Text(dayLabel(day, today, formatter)) },
+                    label = {
+                        CinemaText(
+                            dayLabel(day, today, formatter),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                 )
             }
         }
         CinemaFilterChip(
             selected = false,
             onClick = onNow,
-            label = { Text(stringResource(R.string.epg_jump_to_now)) },
+            label = {
+                CinemaText(
+                    stringResource(R.string.epg_jump_to_now),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            },
             modifier = Modifier.padding(end = CinemaSpacing.sm),
         )
     }
@@ -527,29 +549,30 @@ private fun ProgramDetailsSheet(
                         .padding(bottom = CinemaSpacing.md),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             ) {
-                Text(
+                CinemaText(
                     text = program.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    role = TextRole.Title,
+                    tone = TextTone.Inherit,
+                    emphasis = true,
                 )
-                Text(
+                CinemaText(
                     text = selection.channel.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    role = TextRole.Body,
+                    tone = TextTone.Accent,
                 )
-                Text(
+                CinemaText(
                     text =
                         dayLabel(startDay, today, formatter) + " · " +
                             TimeFormat.formatTimeRange(program.startTime, program.endTime),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
                 if (description != null) {
-                    Text(
+                    CinemaText(
                         text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                        role = TextRole.Body,
+                        tone = TextTone.Primary,
                     )
                 }
                 Row(
@@ -561,18 +584,34 @@ private fun ProgramDetailsSheet(
                             scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
                         },
                     ) {
-                        Text(stringResource(R.string.common_close))
+                        CinemaText(
+                            stringResource(R.string.common_close),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
                     }
                     if (onWatchFromStart != null) {
                         CinemaTextButton(onClick = onWatchChannel) {
-                            Text(stringResource(R.string.epg_details_watch_channel))
+                            CinemaText(
+                                stringResource(R.string.epg_details_watch_channel),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
                         }
                         CinemaButton(onClick = onWatchFromStart) {
-                            Text(stringResource(R.string.epg_details_watch_from_start))
+                            CinemaText(
+                                stringResource(R.string.epg_details_watch_from_start),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
                         }
                     } else {
                         CinemaButton(onClick = onWatchChannel) {
-                            Text(stringResource(R.string.epg_details_watch_channel))
+                            CinemaText(
+                                stringResource(R.string.epg_details_watch_channel),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
                         }
                     }
                 }
@@ -596,20 +635,24 @@ private fun CentredMessage(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(CinemaSpacing.xl),
         ) {
-            Text(
+            CinemaText(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                role = TextRole.Display,
+                tone = TextTone.Primary,
             )
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            Text(
+            CinemaText(
                 text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
             Spacer(modifier = Modifier.height(CinemaSpacing.md))
             CinemaButton(onClick = onAction) {
-                Text(actionLabel)
+                CinemaText(
+                    actionLabel,
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
         }
     }

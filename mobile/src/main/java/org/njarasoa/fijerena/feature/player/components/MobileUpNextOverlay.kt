@@ -25,7 +25,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.upNextCode
 import org.njarasoa.fijerena.core.ui.components.upNextPlot
 import org.njarasoa.fijerena.core.ui.components.upNextTitle
@@ -79,25 +82,26 @@ fun MobileUpNextOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.player_up_next_compact_format, upNextCode(episode), secondsLeft),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
+                        role = TextRole.Caption,
+                        tone = TextTone.Primary,
                     )
                     CinemaTextButton(onClick = onPlayNow) {
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.player_up_next_play_now),
-                            style = MaterialTheme.typography.labelMedium,
+                            role = TextRole.Caption,
+                            tone = TextTone.Inherit,
                         )
                     }
                     CinemaTextButton(onClick = onCancel) {
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.common_cancel),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            role = TextRole.Caption,
+                            tone = TextTone.Secondary,
                         )
                     }
                 }
@@ -112,21 +116,21 @@ fun MobileUpNextOverlay(
                         verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                     ) {
                         title?.let {
-                            Text(
+                            CinemaText(
                                 text = it,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = CinemaTextPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                role = TextRole.Label,
+                                tone = TextTone.Primary,
                             )
                         }
                         plot?.let {
-                            Text(
+                            CinemaText(
                                 text = it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextSecondary,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }

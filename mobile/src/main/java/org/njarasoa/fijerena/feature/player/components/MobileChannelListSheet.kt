@@ -32,12 +32,16 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -65,7 +69,7 @@ fun MobileChannelListSheet(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
+                .background(CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.tint))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -94,21 +98,25 @@ fun MobileChannelListSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
+                    CinemaText(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary,
+                        role = TextRole.Heading,
+                        tone = TextTone.Primary,
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(CinemaIcons.Close, contentDescription = stringResource(R.string.common_close), tint = CinemaTextPrimary)
+                        Icon(
+                            CinemaIcons.Close,
+                            contentDescription = stringResource(R.string.common_close),
+                            tint = CinemaTheme.colors.textPrimary,
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 if (streams.isEmpty()) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.player_no_channels),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 } else {
                     LazyColumn(
@@ -123,9 +131,9 @@ fun MobileChannelListSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 color =
                                     if (isCurrentStream) {
-                                        MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.glass)
+                                        CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.glass)
                                     } else {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.glass)
+                                        CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.glass)
                                     },
                                 shape = MaterialTheme.shapes.small,
                             ) {
@@ -139,11 +147,11 @@ fun MobileChannelListSheet(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     catchupDays[stream.id]?.let { CatchupBadge(it, iconSize = MobileDimensions.iconSmall) }
-                                    Text(
+                                    CinemaText(
                                         text = stream.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = CinemaTextPrimary,
                                         maxLines = 1,
+                                        role = TextRole.Body,
+                                        tone = TextTone.Primary,
                                     )
                                 }
                             }

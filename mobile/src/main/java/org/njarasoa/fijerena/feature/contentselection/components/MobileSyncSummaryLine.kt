@@ -34,6 +34,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
@@ -43,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.home.syncSummaryText
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
@@ -84,19 +88,19 @@ private fun StatusText(
         StatusDot(
             color =
                 when (status) {
-                    SourceSyncStatus.UPDATING -> CinemaWarning
-                    SourceSyncStatus.FAILED -> CinemaError
-                    else -> CinemaSuccess
+                    SourceSyncStatus.UPDATING -> CinemaTheme.colors.warning
+                    SourceSyncStatus.FAILED -> CinemaTheme.colors.danger
+                    else -> CinemaTheme.colors.success
                 },
             pulsing = status == SourceSyncStatus.UPDATING,
         )
         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-        Text(
+        CinemaText(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            role = TextRole.Body,
+            tone = TextTone.Secondary,
         )
     }
 }
@@ -115,7 +119,13 @@ fun MobileSourcesStatusSheet(
     val now = rememberMinuteTick()
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.home_sources_status_title)) },
+        title = {
+            CinemaText(
+                stringResource(R.string.home_sources_status_title),
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -123,16 +133,18 @@ fun MobileSourcesStatusSheet(
             ) {
                 states.forEach { state ->
                     Column {
-                        Text(
+                        CinemaText(
                             text = if (isDevMode) "${state.name} (${state.type})" else state.name,
-                            fontWeight = FontWeight.Bold,
+                            role = TextRole.Body,
+                            tone = TextTone.Inherit,
+                            emphasis = true,
                         )
                         sourceStatusText(state, now)?.let { StatusText(state.status, it) }
                         state.lastSyncError?.takeIf { state.status == SourceSyncStatus.FAILED }?.let { error ->
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.home_source_update_failed_detail, error),
-                                color = CinemaError,
-                                style = MaterialTheme.typography.bodyMedium,
+                                role = TextRole.Body,
+                                tone = TextTone.Danger,
                             )
                         }
                     }
@@ -141,7 +153,13 @@ fun MobileSourcesStatusSheet(
         },
         // The sole action: the app's dialog button, as other one-button dialogs (OK), not a text link.
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Main) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Main) {
+                CinemaText(
+                    stringResource(R.string.common_close),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
     )
 }
@@ -170,6 +188,6 @@ private fun StatusDot(
             Modifier
                 .size(MobileDimensions.liveDotSize)
                 .graphicsLayer { this.alpha = alpha?.value ?: 1f }
-                .background(color, CircleShape),
+                .background(color, CinemaTheme.shapes.identity),
     )
 }

@@ -29,7 +29,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -63,6 +62,8 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
@@ -473,8 +474,8 @@ fun MobileNavHost(
     val dockCovers = entry != null && liveDocks[entry.id]?.second == true
     val showBar = currentTab != null && tabs.isNotEmpty() && !dockCovers && !hidesBottomBar(entry?.destination)
     var barHeightPx by remember { mutableIntStateOf(0) }
-    val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else 0.dp
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+    val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else CinemaSpacing.none
+    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.surface)) {
         CompositionLocalProvider(LocalDockInset provides dockInset) {
             NavHost(
                 navController = navController,
@@ -1073,7 +1074,7 @@ private fun TabRoot(
         Box(modifier = Modifier.fillMaxSize()) {
             AmbientBackdrop(modifier = Modifier.fillMaxSize())
             Scaffold(
-                containerColor = Color.Transparent,
+                containerColor = CinemaTheme.colors.clear,
                 topBar = { topBar(null) },
             ) { paddingValues ->
                 MobileSourcesPanel(
