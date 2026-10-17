@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -25,6 +29,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.history.SourcedFavoriteCategory
+import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -40,6 +45,8 @@ fun TvFavoriteCategoriesRow(
     title: String,
     categories: List<SourcedFavoriteCategory>,
     onCategorySelected: (SourcedFavoriteCategory) -> Unit,
+    /** Long-press OK or the Menu key on a card: its actions menu. */
+    onOpenActions: (SourcedFavoriteCategory) -> Unit,
     firstItemFocus: FocusRequester,
     listState: LazyListState,
     modifier: Modifier = Modifier,
@@ -59,6 +66,7 @@ fun TvFavoriteCategoriesRow(
             category = category,
             sourceName = sourceNames[category.providerId],
             onClick = { onCategorySelected(category) },
+            onOpenActions = { onOpenActions(category) },
             modifier = itemModifier(category).then(rowModifier),
         )
     }
@@ -69,14 +77,21 @@ private fun TvFavoriteCategoryCard(
     category: SourcedFavoriteCategory,
     sourceName: String?,
     onClick: () -> Unit,
+    onOpenActions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     val contentType = category.category.contentType
     // The provider's "EN - " tags off, as in the lists.
     val name = remember(category.category.categoryName) { parseDisplayTitle(category.category.categoryName).title }
     TvCard(
         onClick = onClick,
-        modifier = modifier.width(TvDimensions.continueWatchingCardWidth),
+        onLongClick = onOpenActions,
+        modifier =
+            modifier
+                .width(TvDimensions.continueWatchingCardWidth)
+                .onFocusChanged { isFocused = it.isFocused }
+                .openActionsOnMenuKey(onOpenActions),
         look = TvCardLooks.shelf(),
     ) {
         Column {
@@ -95,12 +110,20 @@ private fun TvFavoriteCategoryCard(
                         .aspectRatio(16f / 9f),
             )
             Column(modifier = Modifier.padding(Spacing.sm)) {
-                CinemaText(
-                    text = name.ifBlank { category.category.categoryName },
-                    role = TextRole.Heading,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CinemaText(
+                        text = name.ifBlank { category.category.categoryName },
+                        role = TextRole.Heading,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    // The row-actions hint, as on the other Home cards.
+                    if (isFocused) RowActionsHint()
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,

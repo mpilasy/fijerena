@@ -453,6 +453,8 @@ fun ContentTypeSelectionScreen(
     // to the card that took its place (cardAfterChange), with the Undo bar; Menu while it shows
     // puts the card back, focus on it.
     var cardMenu by remember { mutableStateOf<HomeCardMenu?>(null) }
+    // A Favourite categories card's menu: Remove from favourite categories, with its Undo.
+    var categoryMenu by remember { mutableStateOf<SourcedFavoriteCategory?>(null) }
     // One requester per card, attached for good: attaching one only while a request was pending,
     // then taking it off, changed the focused card's modifiers and focus fell back to the row's
     // first card (the removal's neighbour got focus, then lost it).
@@ -465,6 +467,7 @@ fun ContentTypeSelectionScreen(
             HomeShelf.FAVORITE_CHANNELS -> favoriteChannelEntries.map { it.item.sourceKey }
             HomeShelf.FAVORITE_MOVIES -> favoriteMovies.map { it.sourceKey }
             HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.sourceKey }
+            HomeShelf.FAVORITE_CATEGORIES -> favoriteCategories.map { it.key }
         }
     }
     val listStateOf: (HomeShelf) -> LazyListState = { shelf ->
@@ -474,6 +477,7 @@ fun ContentTypeSelectionScreen(
             HomeShelf.FAVORITE_CHANNELS -> favoriteChannelsListState
             HomeShelf.FAVORITE_MOVIES -> favoriteMoviesListState
             HomeShelf.FAVORITE_SHOWS -> favoriteShowsListState
+            HomeShelf.FAVORITE_CATEGORIES -> favoriteCategoriesListState
         }
     }
     val focusAfterChange: (HomeShelf, List<String>, String) -> Unit = { shelf, oldKeys, key ->
@@ -485,7 +489,7 @@ fun ContentTypeSelectionScreen(
         val request = cardFocusRequest ?: return@LaunchedEffect
         // After the card menu has closed: its window hands focus back to Home as it goes, and a
         // request made while it was still up landed, then fell back to the row's first card.
-        snapshotFlow { cardMenu == null }.first { it }
+        snapshotFlow { cardMenu == null && categoryMenu == null }.first { it }
         repeat(2) { withFrameNanos { } }
         val card = request.card
         if (card == null) {
@@ -549,6 +553,10 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.FAVORITE_SHOWS -> {
                 takeOut(favoriteShows, key, { it.sourceKey }, { favoriteShows }) { favoriteShows = it }
+            }
+
+            HomeShelf.FAVORITE_CATEGORIES -> {
+                takeOut(favoriteCategories, key, { it.key }, { favoriteCategories }) { favoriteCategories = it }
             }
         }
 
@@ -643,6 +651,32 @@ fun ContentTypeSelectionScreen(
                     )
             }
         }
+    }
+    categoryMenu?.let { favorite ->
+        val repo = mergedLists?.repoFor(favorite.providerId)
+        val category = favorite.category
+        FavoriteContextMenuDialog(
+            target =
+                FavoriteMenuTarget.Category(
+                    categoryId = category.categoryId,
+                    categoryName = category.categoryName,
+                    contentType = category.contentType,
+                    isFavorite = true,
+                ),
+            onConfirm = {
+                if (repo != null) {
+                    removeCard(HomeShelf.FAVORITE_CATEGORIES, favorite.key, category.categoryName) {
+                        withContext(Dispatchers.IO) { repo.removeFavoriteCategory(category.categoryId, category.contentType) }
+                        suspend {
+                            withContext(Dispatchers.IO) {
+                                repo.addFavoriteCategory(category.categoryId, category.categoryName, category.contentType)
+                            }
+                        }
+                    }
+                }
+            },
+            onDismiss = { categoryMenu = null },
+        )
     }
     cardMenu?.let { menu ->
         val merged = mergedLists
@@ -1048,10 +1082,13 @@ fun ContentTypeSelectionScreen(
                                             )
                                         }
                                     },
+                                    onOpenActions = { category -> categoryMenu = category },
                                     firstItemFocus = favoriteCategoriesFirstFocus,
                                     listState = favoriteCategoriesListState,
                                     itemModifier = { category ->
-                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CATEGORIES_PREFIX + category.key)
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CATEGORIES_PREFIX + category.key)
+                                            .then(cardFocusTarget(HomeShelf.FAVORITE_CATEGORIES, category.key))
                                     },
                                     sourceNames = sourceNames,
                                     modifier =

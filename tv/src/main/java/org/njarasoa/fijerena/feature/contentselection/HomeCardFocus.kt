@@ -9,6 +9,7 @@ internal enum class HomeShelf {
     FAVORITE_CHANNELS,
     FAVORITE_MOVIES,
     FAVORITE_SHOWS,
+    FAVORITE_CATEGORIES,
 }
 
 /** A favourites row: its menu opens on Remove from Favorites; the others are Recent rows. */
