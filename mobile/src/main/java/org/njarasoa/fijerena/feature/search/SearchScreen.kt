@@ -1161,11 +1161,17 @@ private fun SearchResultCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
+            // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
+            val parsedTitle =
+                remember(result.streamName, result.categoryName) {
+                    parseDisplayTitle(result.streamName).withoutCodeOf(result.categoryName)
+                }
+            val shownTitle = parsedTitle.titleWithoutYear.ifBlank { result.streamName }
             // 16:9 at the card's full inner height; a channel's logo drawn whole.
             val isChannel = result.contentType == ContentType.LIVE_TV
             CinemaThumbnail(
                 url = result.thumbnailUrl,
-                fallbackLetter = result.streamName.firstOrNull(),
+                fallbackLetter = shownTitle.firstOrNull(Char::isLetterOrDigit),
                 contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
                 overlayGradient = !isChannel,
                 modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
@@ -1173,18 +1179,13 @@ private fun SearchResultCard(
             Column(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
-                val parsedTitle =
-                    remember(result.streamName, result.categoryName) {
-                        parseDisplayTitle(result.streamName).withoutCodeOf(result.categoryName)
-                    }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CinemaText(
-                        text = parsedTitle.titleWithoutYear.ifBlank { result.streamName },
+                        text = shownTitle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),

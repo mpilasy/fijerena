@@ -704,9 +704,18 @@ enum class SettingsGroup(
     ABOUT_ADVANCED(R.string.settings_group_about_advanced),
     ;
 
-    /** The group's name: About & advanced is plain About without Expert mode, which has nothing advanced. */
+    /**
+     * The group's name. Without Expert mode Profiles is the viewer's own page, "Your profile", and
+     * About & advanced is plain About, having nothing advanced.
+     */
     @StringRes
-    fun titleFor(admin: Boolean): Int = if (this == ABOUT_ADVANCED && !admin) R.string.settings_about_section_title else titleRes
+    fun titleFor(admin: Boolean): Int =
+        when {
+            admin -> titleRes
+            this == PROFILES -> R.string.profile_own_page_title
+            this == ABOUT_ADVANCED -> R.string.settings_about_section_title
+            else -> titleRes
+        }
 
     /** The pane key of this group's first focusable row — where Right from the rail lands. */
     val entryKey: String get() = "$name:first"

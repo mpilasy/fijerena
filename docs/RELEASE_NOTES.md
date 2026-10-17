@@ -2,8 +2,9 @@
 
 ## Unreleased
 
+- **Channels without a logo in search show their initial:** a channel whose logo is missing or never loads shows the first letter of its name (tags like "|ALB|" skipped) instead of an endless loading shimmer. TV and phone.
 - **Daylight is for the admin:** the light colour theme is offered only with Expert mode; everyone else picks among the dark ones. TV and phone.
-- **A simpler Settings for everyone but the admin:** without Expert mode, Settings shows only your own profile (name, colour, theme, Look and Feel, play next episode automatically), Count as watched, Display and About; sources, Live sync, backups, diagnostics, and a profile's sources and content filters are for the admin (Expert mode, for now). TV and phone.
+- **A simpler Settings for everyone but the admin:** without Expert mode, Settings shows only Your profile (name, colour, theme, Look and Feel, play next episode automatically), Count as watched, Display and About; sources, Live sync, backups, diagnostics, and a profile's sources and content filters are for the admin (Expert mode, for now). TV and phone.
 - **Source badges stay short, and sit at the right on category results:** an automatic short name is at most five letters — sources whose names share a long start keep three letters and the first that differs ("XSTB", "XSTP" instead of "XSTREAM4KB") — and search's category rows end with the badge like title rows. TV and phone.
 - **Theme and Look and Feel are on your profile's page:** they belong to each profile now, so they sit with its other settings (Settings → Profiles → your profile). Settings → Display keeps a "Theme and Look and Feel" row that takes you there. TV and phone.
 - **Each profile has its own theme and Look and Feel:** Settings → Display now sets the colour theme and Look and Feel of the profile in use, and the app switches to a profile's look as soon as you pick it. A new profile starts with the look of the profile that made it, and existing profiles keep the look the device had. With live sync a profile's look follows it to every device. Text size and language stay per device. TV and phone.

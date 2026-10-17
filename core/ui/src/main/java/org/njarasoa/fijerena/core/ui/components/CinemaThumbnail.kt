@@ -114,11 +114,12 @@ fun CinemaThumbnail(
                 )
             }
 
-            if (showShimmer && !showFallback) {
+            if (showShimmer && !showFallback && !isLogo) {
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
             }
 
-            if (showFallback) {
+            // A channel's logo host often never answers: its letter shows until the logo arrives.
+            if (showFallback || (isLogo && showShimmer)) {
                 TypographyFallback(
                     letter = fallbackLetter,
                     contentType = contentType,

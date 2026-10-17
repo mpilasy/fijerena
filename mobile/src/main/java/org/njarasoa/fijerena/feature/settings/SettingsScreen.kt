@@ -280,7 +280,9 @@ fun MobileSettingsScreen(
         ) {
             // === 1. Profiles === first, since it decides whose favourites and history the rest is about.
             item {
-                SettingsGroupHeader(stringResource(R.string.settings_profiles_title))
+                SettingsGroupHeader(
+                    stringResource(if (uiState.isDevMode) R.string.settings_profiles_title else R.string.profile_own_page_title),
+                )
                 ProfilesSettingsRows(
                     profiles = profiles,
                     message = profilesMessage,

@@ -1283,9 +1283,15 @@ private fun SearchResultItem(
             // A channel's logo is drawn whole (see StreamList). 16:9 at the row's height, not a
             // poster-width strip squashed into it (TV UI audit #14).
             val isChannel = result.contentType == ContentType.LIVE_TV
+            // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
+            val parsedTitle =
+                remember(result.streamName, result.categoryName) {
+                    parseDisplayTitle(result.streamName).withoutCodeOf(result.categoryName)
+                }
+            val shownTitle = parsedTitle.titleWithoutYear.ifBlank { result.streamName }
             CinemaThumbnail(
                 url = result.thumbnailUrl,
-                fallbackLetter = result.streamName.firstOrNull(),
+                fallbackLetter = shownTitle.firstOrNull(Char::isLetterOrDigit),
                 contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
                 overlayGradient = !isChannel,
                 modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
@@ -1293,21 +1299,13 @@ private fun SearchResultItem(
             Column(
                 verticalArrangement = Arrangement.Center,
             ) {
-                // Same title as the browse lists: the provider's "EN - " / "4K-NF - " tags as badges, on the second line.
-                val parsedTitle =
-                    remember(result.streamName, result.categoryName) {
-                        parseDisplayTitle(result.streamName).withoutCodeOf(result.categoryName)
-                    }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CinemaText(
-                        text =
-                            parsedTitle.titleWithoutYear.ifBlank {
-                                result.streamName
-                            },
+                        text = shownTitle,
                         role = TextRole.Heading,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
