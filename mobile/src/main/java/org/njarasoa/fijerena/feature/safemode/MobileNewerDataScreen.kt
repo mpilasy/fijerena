@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,9 +22,11 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.restartProcess
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -46,7 +45,7 @@ fun MobileNewerDataScreen() {
     var confirmingReset by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.newer_data_title)) }) },
+        topBar = { TopAppBar(title = { CinemaText(stringResource(R.string.newer_data_title), role = TextRole.Title) }) },
     ) { paddingValues ->
         Column(
             modifier =
@@ -57,48 +56,44 @@ fun MobileNewerDataScreen() {
                     .padding(CinemaSpacing.md),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
-            Text(
-                text =
-                    stringResource(
-                        R.string.newer_data_message,
-                        ProvidersDbGuard.newerFileVersion,
-                        ProvidersDbGuard.supportedVersion,
-                    ),
-                style = MaterialTheme.typography.bodyLarge,
+            CinemaText(
+                stringResource(
+                    R.string.newer_data_message,
+                    ProvidersDbGuard.newerFileVersion,
+                    ProvidersDbGuard.supportedVersion,
+                ),
             )
-            Text(
-                text = stringResource(R.string.newer_data_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-            )
+            CinemaText(stringResource(R.string.newer_data_hint), tone = TextTone.Secondary)
             CinemaButton(
                 onClick = { activity?.finish() },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.common_close)) }
+            ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
             CinemaOutlinedButton(
                 onClick = { confirmingReset = true },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.newer_data_reset)) }
+            ) { CinemaText(stringResource(R.string.newer_data_reset), role = TextRole.Label, tone = TextTone.Inherit) }
         }
     }
 
     if (confirmingReset) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { confirmingReset = false },
-            title = { Text(stringResource(R.string.newer_data_reset_confirm_title)) },
-            text = { Text(stringResource(R.string.newer_data_reset_confirm_message)) },
+            title = { CinemaText(stringResource(R.string.newer_data_reset_confirm_title), role = TextRole.Title) },
+            text = { CinemaText(stringResource(R.string.newer_data_reset_confirm_message), tone = TextTone.Secondary) },
             confirmButton = {
                 CinemaDialogActionButton(onClick = {
                     confirmingReset = false
                     ProvidersDbGuard.setAside(context)
                     activity?.let { restartProcess(it) }
-                }, kind = ButtonKind.Danger) { Text(stringResource(R.string.newer_data_reset_confirm)) }
+                }, kind = ButtonKind.Danger) {
+                    CinemaText(stringResource(R.string.newer_data_reset_confirm), role = TextRole.Label, tone = TextTone.Inherit)
+                }
             },
             dismissButton = {
                 CinemaDialogActionButton(
                     onClick = { confirmingReset = false },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_cancel)) }
+                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
             },
         )
     }

@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,9 +23,10 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -75,24 +74,20 @@ private fun GuideMaintenanceDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_guide_maintenance_title)) },
+        title = { CinemaText(stringResource(R.string.settings_guide_maintenance_title), role = TextRole.Title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 GuideStatusLines(processingState, indexState, queuedTaskIds, lastPipelineStats)
-                Text(
-                    stringResource(R.string.epg_maintenance_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                )
+                CinemaText(stringResource(R.string.epg_maintenance_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     CinemaOutlinedButton(onClick = { viewModel.cleanupFiles() }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.epg_cleanup_btn))
+                        CinemaText(stringResource(R.string.epg_cleanup_btn), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                     CinemaOutlinedButton(onClick = { viewModel.purgeOldProgrammes() }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.epg_purge_btn))
+                        CinemaText(stringResource(R.string.epg_purge_btn), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                 }
                 CinemaButton(
@@ -102,12 +97,14 @@ private fun GuideMaintenanceDialog(
                 ) {
                     Icon(CinemaIcons.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(stringResource(R.string.epg_clear_all_data_btn))
+                    CinemaText(stringResource(R.string.epg_clear_all_data_btn), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 
@@ -121,16 +118,16 @@ private fun GuideMaintenanceDialog(
                         showClearConfirm = false
                     },
                     kind = ButtonKind.Danger,
-                ) { Text(stringResource(R.string.epg_clear_everything_btn)) }
+                ) { CinemaText(stringResource(R.string.epg_clear_everything_btn), role = TextRole.Label, tone = TextTone.Inherit) }
             },
             dismissButton = {
                 CinemaDialogActionButton(
                     onClick = { showClearConfirm = false },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_cancel)) }
+                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
             },
-            title = { Text(stringResource(R.string.epg_clear_db_confirm_title)) },
-            text = { Text(stringResource(R.string.epg_clear_db_confirm_message)) },
+            title = { CinemaText(stringResource(R.string.epg_clear_db_confirm_title), role = TextRole.Title) },
+            text = { CinemaText(stringResource(R.string.epg_clear_db_confirm_message), tone = TextTone.Secondary) },
         )
     }
 }
@@ -171,7 +168,7 @@ private fun GuideStatusLines(
     lastRun: EpgPipelineStatsEntity?,
 ) {
     Column {
-        Text(databaseStatusText(indexState), style = MaterialTheme.typography.bodySmall)
+        CinemaText(databaseStatusText(indexState), role = TextRole.BodySmall)
 
         val currentStatusText =
             when (multiState) {
@@ -222,16 +219,16 @@ private fun GuideStatusLines(
                     stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
                 }
             }
-        Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
+        CinemaText(currentStatusText, role = TextRole.BodySmall)
 
         lastRun?.let { stats ->
             val time = NumberUtils.formatTimestamp(LocalContext.current, stats.updatedAtMs)
             val duration = NumberUtils.formatDuration(stats.durationMs)
             val errorText = if (stats.errors > 0) stringResource(R.string.epg_last_run_errors, stats.errors) else ""
-            Text(
-                text = stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+            CinemaText(
+                stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
     }

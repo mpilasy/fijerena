@@ -10,9 +10,6 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +19,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
@@ -57,7 +58,7 @@ fun ColumnScope.ProviderFormSection(
         ProviderType.XTREAM -> {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = url,
                 onValueChange = { newValue ->
                     val parsed = parseUrlCredentials(newValue)
@@ -72,8 +73,8 @@ fun ColumnScope.ProviderFormSection(
                     }
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_url_label)) },
-                placeholder = { Text(stringResource(R.string.provider_url_placeholder_xtream)) },
+                label = stringResource(R.string.provider_url_label),
+                placeholder = stringResource(R.string.provider_url_placeholder_xtream),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
@@ -81,26 +82,26 @@ fun ColumnScope.ProviderFormSection(
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = username,
                 onValueChange = {
                     onUsernameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_username_label)) },
+                label = stringResource(R.string.provider_username_label),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = password,
                 onValueChange = {
                     onPasswordChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_password_label)) },
+                label = stringResource(R.string.provider_password_label),
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -125,7 +126,7 @@ fun ColumnScope.ProviderFormSection(
         ProviderType.JELLYFIN -> {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = url,
                 onValueChange = { newValue ->
                     val parsed = parseUrlCredentials(newValue)
@@ -138,8 +139,8 @@ fun ColumnScope.ProviderFormSection(
                     }
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_url_label)) },
-                placeholder = { Text(stringResource(R.string.provider_url_placeholder_jellyfin)) },
+                label = stringResource(R.string.provider_url_label),
+                placeholder = stringResource(R.string.provider_url_placeholder_jellyfin),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
@@ -147,26 +148,26 @@ fun ColumnScope.ProviderFormSection(
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = username,
                 onValueChange = {
                     onUsernameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_username_label)) },
+                label = stringResource(R.string.provider_username_label),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = password,
                 onValueChange = {
                     onPasswordChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_password_label)) },
+                label = stringResource(R.string.provider_password_label),
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -189,10 +190,10 @@ fun ColumnScope.ProviderFormSection(
 
             if (!isEditMode) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Text(
-                    text = stringResource(R.string.provider_or_separator),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                CinemaText(
+                    stringResource(R.string.provider_or_separator),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.xs))
@@ -210,7 +211,7 @@ fun ColumnScope.ProviderFormSection(
                     enabled = !isBusy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.provider_use_quick_connect))
+                    CinemaText(stringResource(R.string.provider_use_quick_connect), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             }
         }
@@ -218,54 +219,54 @@ fun ColumnScope.ProviderFormSection(
         ProviderType.SMB -> {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = host,
                 onValueChange = {
                     onHostChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_host_label)) },
-                placeholder = { Text(stringResource(R.string.provider_host_placeholder)) },
+                label = stringResource(R.string.provider_host_label),
+                placeholder = stringResource(R.string.provider_host_placeholder),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = shareName,
                 onValueChange = {
                     onShareNameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_share_label)) },
-                placeholder = { Text(stringResource(R.string.provider_share_placeholder)) },
+                label = stringResource(R.string.provider_share_label),
+                placeholder = stringResource(R.string.provider_share_placeholder),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = username,
                 onValueChange = {
                     onUsernameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_username_optional_label)) },
+                label = stringResource(R.string.provider_username_optional_label),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = password,
                 onValueChange = {
                     onPasswordChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_password_optional_label)) },
+                label = stringResource(R.string.provider_password_optional_label),
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -294,14 +295,14 @@ fun ColumnScope.ProviderFormSection(
         ProviderType.REMOTE_M3U -> {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            OutlinedTextField(
+            CinemaTextField(
                 value = url,
                 onValueChange = {
                     onUrlChange(it)
                     onErrorChange(null)
                 },
-                label = { Text(stringResource(R.string.provider_m3u_url_label)) },
-                placeholder = { Text(stringResource(R.string.provider_m3u_url_placeholder)) },
+                label = stringResource(R.string.provider_m3u_url_label),
+                placeholder = stringResource(R.string.provider_m3u_url_placeholder),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),

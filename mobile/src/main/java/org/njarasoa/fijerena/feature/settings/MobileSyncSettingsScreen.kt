@@ -14,17 +14,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,16 +39,21 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.QrCode
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.settings.components.QrScanner
@@ -108,7 +106,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.live_sync_title)) },
+                title = { CinemaText(stringResource(R.string.live_sync_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back)) }
                 },
@@ -130,11 +128,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                     ),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
-            Text(
-                stringResource(R.string.live_sync_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-            )
+            CinemaText(stringResource(R.string.live_sync_desc), tone = TextTone.Secondary)
 
             val qr = ui.handoffQr ?: ui.inviteQr
             when {
@@ -172,7 +166,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                             it
                     })
                     CinemaButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
-                        Text(stringResource(R.string.live_sync_leave))
+                        CinemaText(stringResource(R.string.live_sync_leave), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                 }
 
@@ -181,7 +175,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            ui.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = CinemaError) }
+            ui.error?.let { CinemaText(it, tone = TextTone.Danger) }
         }
     }
 
@@ -242,31 +236,31 @@ private fun SetupPanel(
     var setupSecret by remember { mutableStateOf("") }
     // Joining needs no address: the invite carries it.
     CinemaButton(onClick = onScan, modifier = Modifier.fillMaxWidth(), enabled = !ui.busy) {
-        Text(stringResource(R.string.live_sync_join_scan))
+        CinemaText(stringResource(R.string.live_sync_join_scan), role = TextRole.Label, tone = TextTone.Inherit)
     }
-    HorizontalDivider()
+    CinemaDivider()
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-            OutlinedTextField(
+            CinemaTextField(
                 value = ui.serverUrl,
                 onValueChange = viewModel::onServerUrlChanged,
-                label = { Text(stringResource(R.string.live_sync_server_label)) },
-                placeholder = { Text(stringResource(R.string.live_sync_server_hint)) },
+                label = stringResource(R.string.live_sync_server_label),
+                placeholder = stringResource(R.string.live_sync_server_hint),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
             )
             if (!ui.serverChecked) {
                 CinemaOutlinedButton(onClick = viewModel::checkServer, enabled = ui.serverUrl.isNotBlank() && !ui.busy) {
-                    Text(stringResource(R.string.live_sync_check_server))
+                    CinemaText(stringResource(R.string.live_sync_check_server), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             } else {
-                Text(stringResource(R.string.live_sync_server_found), color = CinemaAccent)
+                CinemaText(stringResource(R.string.live_sync_server_found), tone = TextTone.Accent)
                 if (ui.setupSecretRequired) {
-                    OutlinedTextField(
+                    CinemaTextField(
                         value = setupSecret,
                         onValueChange = { setupSecret = it },
-                        label = { Text(stringResource(R.string.live_sync_setup_secret_label)) },
+                        label = stringResource(R.string.live_sync_setup_secret_label),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -276,7 +270,7 @@ private fun SetupPanel(
                 CinemaButton(
                     onClick = { viewModel.createAccount(setupSecret) },
                     enabled = !ui.busy && (!ui.setupSecretRequired || setupSecret.isNotBlank()),
-                ) { Text(stringResource(R.string.live_sync_create)) }
+                ) { CinemaText(stringResource(R.string.live_sync_create), role = TextRole.Label, tone = TextTone.Inherit) }
             }
         }
     }
@@ -295,13 +289,11 @@ private fun PairingPanel(
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             QrCode(text = qr, size = 280.dp, contentDescription = stringResource(R.string.live_sync_qr_description))
-            Text(instructions, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                stringResource(R.string.live_sync_waiting),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-            )
-            CinemaOutlinedButton(onClick = onClose) { Text(stringResource(R.string.common_cancel)) }
+            CinemaText(instructions)
+            CinemaText(stringResource(R.string.live_sync_waiting), role = TextRole.BodySmall, tone = TextTone.Secondary)
+            CinemaOutlinedButton(onClick = onClose) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         }
     }
 }
@@ -317,30 +309,30 @@ private fun LinkedPanel(
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-            Text(
+            CinemaText(
                 statusLine(status),
-                style = MaterialTheme.typography.titleSmall,
-                color = if (status.lastError != null && !status.syncing) CinemaError else CinemaAccent,
+                role = TextRole.Heading,
+                tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Accent,
             )
             if (devMode && status.lastError != null) {
-                Text("[dev] ${status.lastError}", style = MaterialTheme.typography.bodySmall)
+                CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall)
             }
-            Text(
+            CinemaText(
                 stringResource(R.string.live_sync_server_line, status.serverUrl.orEmpty()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm), modifier = Modifier.padding(top = CinemaSpacing.xs)) {
                 CinemaButton(onClick = onAddDevice, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.live_sync_add_device))
+                    CinemaText(stringResource(R.string.live_sync_add_device), role = TextRole.Label, tone = TextTone.Inherit)
                 }
                 CinemaOutlinedButton(onClick = onScan, enabled = !busy, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.live_sync_scan_code))
+                    CinemaText(stringResource(R.string.live_sync_scan_code), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             }
             // Same weight as Scan a code: one primary (Add a device) per card (M-11).
             CinemaOutlinedButton(onClick = onSyncNow, enabled = !status.syncing, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.live_sync_now))
+                CinemaText(stringResource(R.string.live_sync_now), role = TextRole.Label, tone = TextTone.Inherit)
             }
         }
     }
@@ -358,12 +350,12 @@ private fun DevicesPanel(
     val active = devices?.filterNot { it.revoked } ?: return
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-            Text(stringResource(R.string.live_sync_devices_title), style = MaterialTheme.typography.titleSmall, color = CinemaAccent)
+            CinemaText(stringResource(R.string.live_sync_devices_title), role = TextRole.Heading, tone = TextTone.Accent)
             active.forEach { device ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(device.name, style = MaterialTheme.typography.bodyLarge)
-                        Text(
+                        CinemaText(device.name)
+                        CinemaText(
                             if (device.current) {
                                 stringResource(
                                     R.string.live_sync_device_this,
@@ -371,31 +363,27 @@ private fun DevicesPanel(
                             } else {
                                 stringResource(R.string.live_sync_device_last_seen, relative(device.lastSeen))
                             },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                         nowPlaying[device.id]?.let {
-                            Text(
-                                nowPlayingLine(it),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaAccent,
-                            )
+                            CinemaText(nowPlayingLine(it), role = TextRole.BodySmall, tone = TextTone.Accent)
                         }
                         stopStates[device.id]?.let { state ->
-                            Text(
+                            CinemaText(
                                 if (state == SyncSettingsViewModel.StopState.STOPPING) {
                                     stringResource(R.string.live_sync_stopping)
                                 } else {
                                     stringResource(R.string.live_sync_stop_unreachable, device.name)
                                 },
-                                style = MaterialTheme.typography.bodySmall,
-                                color =
+                                role = TextRole.BodySmall,
+                                tone =
                                     if (state ==
                                         SyncSettingsViewModel.StopState.STOPPING
                                     ) {
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        TextTone.Secondary
                                     } else {
-                                        CinemaError
+                                        TextTone.Danger
                                     },
                             )
                         }
@@ -408,7 +396,7 @@ private fun DevicesPanel(
                             onClick = { onStop(device) },
                             icon = Icons.Filled.Stop,
                             label = stringResource(R.string.live_sync_stop),
-                            tint = CinemaError,
+                            tint = CinemaTheme.colors.danger,
                         )
                     }
                     IconAction(
@@ -421,7 +409,7 @@ private fun DevicesPanel(
                             onClick = { onRemove(device) },
                             icon = CinemaIcons.Delete,
                             label = stringResource(R.string.live_sync_device_remove),
-                            tint = CinemaError,
+                            tint = CinemaTheme.colors.danger,
                         )
                     }
                 }
@@ -437,14 +425,10 @@ private fun ShareNowPlayingRow(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.live_sync_share_playing), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(R.string.live_sync_share_playing_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-            )
+            CinemaText(stringResource(R.string.live_sync_share_playing))
+            CinemaText(stringResource(R.string.live_sync_share_playing_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        CinemaSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -456,24 +440,28 @@ private fun RenameDialog(
     onDismiss: () -> Unit,
 ) {
     var name by remember(device.id) { mutableStateOf(device.name) }
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.live_sync_device_rename_title, device.name)) },
+        title = { CinemaText(stringResource(R.string.live_sync_device_rename_title, device.name), role = TextRole.Title) },
         text = {
-            OutlinedTextField(
+            CinemaTextField(
                 value = name,
                 onValueChange = { name = it.take(AppSettings.MAX_DEVICE_NAME_LENGTH) },
-                label = { Text(stringResource(R.string.live_sync_device_name_label)) },
-                supportingText = { Text(stringResource(R.string.live_sync_device_name_hint)) },
+                label = stringResource(R.string.live_sync_device_name_label),
+                supportingText = stringResource(R.string.live_sync_device_name_hint),
                 singleLine = true,
             )
         },
-        confirmButton = { CinemaDialogActionButton(onClick = { onSave(name) }) { Text(stringResource(R.string.provider_save_button)) } },
+        confirmButton = {
+            CinemaDialogActionButton(onClick = {
+                onSave(name)
+            }) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
+        },
         dismissButton = {
             CinemaDialogActionButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
     )
 }
@@ -486,16 +474,20 @@ private fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(message) },
-        confirmButton = { CinemaDialogActionButton(onClick = onConfirm, kind = ButtonKind.Danger) { Text(confirm) } },
+        title = { CinemaText(title, role = TextRole.Title) },
+        text = { CinemaText(message, tone = TextTone.Secondary) },
+        confirmButton = {
+            CinemaDialogActionButton(onClick = onConfirm, kind = ButtonKind.Danger) {
+                CinemaText(confirm, role = TextRole.Label, tone = TextTone.Inherit)
+            }
+        },
         dismissButton = {
             CinemaDialogActionButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
     )
 }

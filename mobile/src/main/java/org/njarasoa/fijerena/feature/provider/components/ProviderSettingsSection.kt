@@ -11,12 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -35,11 +29,17 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
@@ -48,20 +48,12 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 internal fun ProviderSectionTitle(
     title: String,
     subtitle: String? = null,
-    titleColor: Color = MaterialTheme.colorScheme.primary,
+    titleTone: TextTone = TextTone.Accent,
 ) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = titleColor,
-    )
+    CinemaText(title, role = TextRole.Heading, tone = titleTone)
     subtitle?.let {
         Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-        Text(
-            text = it,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
+        CinemaText(it, role = TextRole.BodySmall, tone = TextTone.Secondary)
     }
 }
 
@@ -96,19 +88,15 @@ private fun ProviderChoiceRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-            )
+            CinemaText(title, role = TextRole.Heading)
+            CinemaText(description, role = TextRole.BodySmall, tone = TextTone.Secondary)
         }
         Spacer(modifier = Modifier.width(CinemaSpacing.md))
-        Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+        CinemaText(value, tone = TextTone.Accent)
         Icon(
             CinemaIcons.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            tint = CinemaTheme.colors.textSecondary,
         )
     }
 }
@@ -211,18 +199,11 @@ fun ColumnScope.ProviderSettingsSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.provider_auto_resume_label),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text = stringResource(R.string.provider_auto_resume_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
+                        CinemaText(stringResource(R.string.provider_auto_resume_label), role = TextRole.Heading)
+                        CinemaText(stringResource(R.string.provider_auto_resume_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
                     }
                     Spacer(modifier = Modifier.width(CinemaSpacing.md))
-                    Switch(
+                    CinemaSwitch(
                         checked = autoResumeEnabled,
                         onCheckedChange = { enabled ->
                             onAutoResumeEnabledChange(enabled)
@@ -267,15 +248,15 @@ fun ColumnScope.ProviderSettingsSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = stringResource(R.string.provider_enable_caching_label), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text = stringResource(R.string.provider_enable_caching_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            CinemaText(stringResource(R.string.provider_enable_caching_label), role = TextRole.Heading)
+                            CinemaText(
+                                stringResource(R.string.provider_enable_caching_desc),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
                         Spacer(modifier = Modifier.width(CinemaSpacing.md))
-                        Switch(
+                        CinemaSwitch(
                             checked = cachingEnabled,
                             onCheckedChange = { enabled ->
                                 onCachingEnabledChange(enabled)
@@ -332,35 +313,34 @@ private fun ShortNameDialog(
 ) {
     var value by remember { mutableStateOf(initial) }
     var taken by remember { mutableStateOf<String?>(null) }
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_short_name_label)) },
+        title = { CinemaText(stringResource(R.string.provider_short_name_label), role = TextRole.Title) },
         text = {
-            OutlinedTextField(
+            CinemaTextField(
                 value = value,
                 onValueChange = {
                     value = it.take(SourceShortNames.MAX_LENGTH)
                     taken = null
                 },
-                placeholder = { Text(automatic) },
+                placeholder = automatic,
                 singleLine = true,
                 isError = taken != null,
-                supportingText = {
-                    Text(
-                        taken?.let { stringResource(R.string.provider_short_name_taken, it) }
-                            ?: stringResource(R.string.provider_short_name_desc),
-                    )
-                },
+                supportingText =
+                    taken?.let { stringResource(R.string.provider_short_name_taken, it) }
+                        ?: stringResource(R.string.provider_short_name_desc),
             )
         },
         confirmButton = {
             CinemaDialogActionButton(onClick = {
                 val wanted = value.trim()
                 onSave(wanted) { taken = wanted }
-            }) { Text(stringResource(R.string.common_ok)) }
+            }) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }

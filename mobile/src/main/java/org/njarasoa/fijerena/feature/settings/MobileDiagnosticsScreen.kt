@@ -14,9 +14,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,14 +24,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
@@ -41,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.text.CinemaCodeText
 
 /**
  * Settings → Diagnostics on mobile (developer mode): recorded crashes and process exit reasons,
@@ -59,7 +59,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
     if (showClearConfirm) {
         CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { Text(stringResource(R.string.settings_diagnostics_clear_confirm_title)) },
+            title = { CinemaText(stringResource(R.string.settings_diagnostics_clear_confirm_title), role = TextRole.Title) },
             confirmButton = {
                 CinemaDialogActionButton(
                     onClick = {
@@ -67,13 +67,13 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                         showClearConfirm = false
                     },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.settings_diagnostics_clear)) }
+                ) { CinemaText(stringResource(R.string.settings_diagnostics_clear), role = TextRole.Label, tone = TextTone.Inherit) }
             },
             dismissButton = {
                 CinemaDialogActionButton(
                     onClick = { showClearConfirm = false },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_cancel)) }
+                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
             },
         )
     }
@@ -81,7 +81,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_diagnostics_title)) },
+                title = { CinemaText(stringResource(R.string.settings_diagnostics_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
@@ -120,27 +120,19 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             item {
-                Text(
-                    text = stringResource(R.string.settings_diagnostics_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                )
+                CinemaText(stringResource(R.string.settings_diagnostics_desc), tone = TextTone.Secondary)
             }
             val loaded = entries
             if (loaded != null && loaded.isEmpty()) {
                 item {
-                    Text(stringResource(R.string.settings_diagnostics_empty), style = MaterialTheme.typography.bodyLarge)
+                    CinemaText(stringResource(R.string.settings_diagnostics_empty))
                 }
             }
             items(loaded.orEmpty()) { entry ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                        Text(entry.title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(
-                            text = entry.detail,
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textHigh),
-                        )
+                        CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Accent)
+                        CinemaCodeText(entry.detail)
                     }
                 }
             }

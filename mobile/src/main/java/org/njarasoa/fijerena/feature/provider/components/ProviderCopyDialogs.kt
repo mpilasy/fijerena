@@ -8,11 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +20,13 @@ import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -43,23 +43,25 @@ fun DuplicateProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_duplicate_title)) },
+        title = { CinemaText(stringResource(R.string.provider_duplicate_title), role = TextRole.Title) },
         text = {
-            OutlinedTextField(
+            CinemaTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.provider_duplicate_name_label)) },
+                label = stringResource(R.string.provider_duplicate_name_label),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
         },
         confirmButton = {
             CinemaDialogActionButton(onClick = { onConfirm(name.trim().ifBlank { defaultName }) }, kind = ButtonKind.Main) {
-                Text(stringResource(R.string.provider_duplicate_button))
+                CinemaText(stringResource(R.string.provider_duplicate_button), role = TextRole.Label, tone = TextTone.Inherit)
             }
         },
         dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaOutlinedButton(onClick = onDismiss) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }
@@ -80,47 +82,47 @@ fun CopyProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_copy_to_title)) },
+        title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.provider_copy_to_target_label), style = MaterialTheme.typography.titleSmall)
+                CinemaText(stringResource(R.string.provider_copy_to_target_label), role = TextRole.Heading)
                 targets.forEach { candidate ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = targetId == candidate.id, onClick = { targetId = candidate.id })
+                        CinemaRadioButton(selected = targetId == candidate.id, onClick = { targetId = candidate.id })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text(candidate.name, style = MaterialTheme.typography.bodyMedium)
+                        CinemaText(candidate.name)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                Text(stringResource(R.string.provider_copy_to_options_label), style = MaterialTheme.typography.titleSmall)
+                CinemaText(stringResource(R.string.provider_copy_to_options_label), role = TextRole.Heading)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = copySettings, onCheckedChange = { copySettings = it })
+                    CinemaCheckbox(checked = copySettings, onCheckedChange = { copySettings = it })
                     Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    Text(stringResource(R.string.provider_copy_to_settings_label), style = MaterialTheme.typography.bodyMedium)
+                    CinemaText(stringResource(R.string.provider_copy_to_settings_label))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = copyFavorites, onCheckedChange = { copyFavorites = it })
+                    CinemaCheckbox(checked = copyFavorites, onCheckedChange = { copyFavorites = it })
                     Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    Text(stringResource(R.string.provider_copy_to_favorites_label), style = MaterialTheme.typography.bodyMedium)
+                    CinemaText(stringResource(R.string.provider_copy_to_favorites_label))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = copyWatchHistory, onCheckedChange = { copyWatchHistory = it })
+                    CinemaCheckbox(checked = copyWatchHistory, onCheckedChange = { copyWatchHistory = it })
                     Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    Text(stringResource(R.string.provider_copy_to_watch_history_label), style = MaterialTheme.typography.bodyMedium)
+                    CinemaText(stringResource(R.string.provider_copy_to_watch_history_label))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = copyConnection, onCheckedChange = { copyConnection = it })
+                    CinemaCheckbox(checked = copyConnection, onCheckedChange = { copyConnection = it })
                     Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    Text(stringResource(R.string.provider_copy_to_connection_label), style = MaterialTheme.typography.bodyMedium)
+                    CinemaText(stringResource(R.string.provider_copy_to_connection_label))
                 }
                 if (copyConnection) {
                     val targetName = targets.firstOrNull { it.id == targetId }?.name.orEmpty()
-                    Text(
+                    CinemaText(
                         stringResource(R.string.provider_copy_to_connection_warning_format, targetName),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaError,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Danger,
                     )
                 }
             }
@@ -140,10 +142,12 @@ fun CopyProviderDialog(
                     )
                 },
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_copy_to_button)) }
+            ) { CinemaText(stringResource(R.string.provider_copy_to_button), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaOutlinedButton(onClick = onDismiss) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }

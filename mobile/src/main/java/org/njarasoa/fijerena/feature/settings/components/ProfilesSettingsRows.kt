@@ -8,12 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -29,14 +25,17 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -79,17 +78,12 @@ fun ProfilesSettingsRows(
         )
     }
     if (message != null) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaError,
-            modifier = Modifier.padding(horizontal = Spacing.md),
-        )
+        CinemaText(message, tone = TextTone.Danger, modifier = Modifier.padding(horizontal = Spacing.md))
     }
     if (expertMode) {
         SettingsListRow(
             title = stringResource(R.string.settings_profiles_add),
-            leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTextSecondary) },
+            leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTheme.colors.textSecondary) },
             trailing = {},
             onClick = {
                 onDismissMessage()
@@ -123,7 +117,7 @@ internal fun ProfileAddDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_dialog_add_title)) },
+        title = { CinemaText(stringResource(R.string.profile_dialog_add_title), role = TextRole.Title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                 ProfileNameField(
@@ -147,10 +141,12 @@ internal fun ProfileAddDialog(
                     }
                 },
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.profile_save_button)) }
+            ) { CinemaText(stringResource(R.string.profile_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }
@@ -162,17 +158,12 @@ internal fun ProfileNameField(
     onNameChange: (String) -> Unit,
     showError: Boolean,
 ) {
-    OutlinedTextField(
+    CinemaTextField(
         value = name,
         onValueChange = onNameChange,
-        label = { Text(stringResource(R.string.profile_name_label)) },
+        label = stringResource(R.string.profile_name_label),
         isError = showError,
-        supportingText =
-            if (showError) {
-                { Text(stringResource(R.string.profile_error_name_required)) }
-            } else {
-                null
-            },
+        supportingText = if (showError) stringResource(R.string.profile_error_name_required) else null,
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -184,7 +175,7 @@ internal fun ProfileColourPicker(
     colorIndex: Int,
     onPick: (Int) -> Unit,
 ) {
-    Text(stringResource(R.string.profile_color_label), color = CinemaTextSecondary)
+    CinemaText(stringResource(R.string.profile_color_label), tone = TextTone.Secondary)
     // Two rows: the whole palette on one line doesn't fit a phone-width dialog.
     CinemaProfileColors.palette.indices.chunked(SWATCHES_PER_ROW).forEach { rowIndices ->
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
@@ -211,12 +202,12 @@ internal fun ProfileSwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            CinemaText(title)
             if (summary != null) {
-                Text(summary, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+                CinemaText(summary, tone = TextTone.Secondary)
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        CinemaSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -231,9 +222,18 @@ private fun ColorSwatch(
         modifier =
             Modifier
                 .size(MobileDimensions.iconLarge)
-                .clip(CircleShape)
-                .then(if (selected) Modifier.border(MobileDimensions.strokeWidth, CinemaTextPrimary, CircleShape) else Modifier)
-                .clickable(onClick = onClick)
+                .clip(CinemaTheme.shapes.identity)
+                .then(
+                    if (selected) {
+                        Modifier.border(
+                            MobileDimensions.strokeWidth,
+                            CinemaTheme.colors.textPrimary,
+                            CinemaTheme.shapes.identity,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ).clickable(onClick = onClick)
                 .semantics {
                     contentDescription = label
                     this.selected = selected

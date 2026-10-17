@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -20,6 +18,9 @@ import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -103,7 +104,7 @@ fun QuickConnectDialog(
 
         CinemaAlertDialog(
             onDismissRequest = { onShowQuickConnectDialogChange(false) },
-            title = { Text(stringResource(R.string.provider_quick_connect_title)) },
+            title = { CinemaText(stringResource(R.string.provider_quick_connect_title), role = TextRole.Title) },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -111,47 +112,29 @@ fun QuickConnectDialog(
                 ) {
                     when {
                         qcError != null -> {
-                            Text(
-                                text = qcError,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                            CinemaText(qcError, tone = TextTone.Danger)
                         }
 
                         qcCode.isEmpty() -> {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                            Text(
-                                text = stringResource(R.string.provider_connecting_server),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                            CinemaText(stringResource(R.string.provider_connecting_server))
                         }
 
                         else -> {
-                            Text(
-                                text = stringResource(R.string.provider_qc_enter_code),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                            CinemaText(stringResource(R.string.provider_qc_enter_code))
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                            Text(
-                                text = qcCode,
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.displayMedium,
-                            )
+                            CinemaText(qcCode, role = TextRole.Display, tone = TextTone.Accent)
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            Text(
-                                text = stringResource(R.string.provider_qc_instructions),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            CinemaText(
+                                stringResource(R.string.provider_qc_instructions),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                            Text(
-                                text = stringResource(R.string.provider_qc_waiting),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            CinemaText(stringResource(R.string.provider_qc_waiting), role = TextRole.BodySmall, tone = TextTone.Secondary)
                         }
                     }
                 }
@@ -159,7 +142,7 @@ fun QuickConnectDialog(
             confirmButton = {},
             dismissButton = {
                 CinemaOutlinedButton(onClick = { onShowQuickConnectDialogChange(false) }) {
-                    Text(stringResource(R.string.common_cancel))
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             },
         )

@@ -10,15 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaRadioButton
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -38,7 +39,7 @@ fun <T> SettingsPickerDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { CinemaText(title, role = TextRole.Title) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { (label, value) ->
@@ -50,12 +51,12 @@ fun <T> SettingsPickerDialog(
                                 .padding(vertical = Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(
+                        CinemaRadioButton(
                             selected = value == selected,
                             onClick = null, // handled by Row clickable
                         )
                         Spacer(modifier = Modifier.width(Spacing.sm))
-                        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                        CinemaText(text = label)
                     }
                 }
                 footer?.invoke(this)
@@ -63,7 +64,7 @@ fun <T> SettingsPickerDialog(
         },
         confirmButton = {
             CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
-                Text(stringResource(R.string.player_back))
+                CinemaText(stringResource(R.string.player_back), role = TextRole.Label, tone = TextTone.Inherit)
             }
         },
     )

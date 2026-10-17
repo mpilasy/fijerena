@@ -24,11 +24,16 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -68,7 +73,7 @@ fun MobileProviderSelectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.provider_selection_title)) },
+                title = { CinemaText(stringResource(R.string.provider_selection_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
@@ -108,11 +113,7 @@ fun MobileProviderSelectionScreen(
                 }
 
                 is ProviderUiState.Error -> {
-                    Text(
-                        text = state.message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = CinemaError,
-                    )
+                    CinemaText(state.message, tone = TextTone.Danger)
                 }
 
                 is ProviderUiState.SingleProvider -> {
@@ -143,9 +144,9 @@ fun MobileProviderSelectionScreen(
     deleteConfirmProvider?.let { provider ->
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
-            title = { Text(stringResource(R.string.provider_delete_confirm_title)) },
+            title = { CinemaText(stringResource(R.string.provider_delete_confirm_title), role = TextRole.Title) },
             text = {
-                Text(stringResource(R.string.provider_delete_confirm_message, provider.name))
+                CinemaText(stringResource(R.string.provider_delete_confirm_message, provider.name), tone = TextTone.Secondary)
             },
             confirmButton = {
                 CinemaDialogActionButton(
@@ -155,12 +156,12 @@ fun MobileProviderSelectionScreen(
                     },
                     kind = ButtonKind.Danger,
                 ) {
-                    Text(stringResource(R.string.provider_delete_button))
+                    CinemaText(stringResource(R.string.provider_delete_button), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             },
             dismissButton = {
                 CinemaOutlinedButton(onClick = { deleteConfirmProvider = null }) {
-                    Text(stringResource(R.string.common_cancel))
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             },
         )
@@ -199,11 +200,11 @@ fun MobileProviderSelectionScreen(
     copyResultMessage?.let { message ->
         CinemaAlertDialog(
             onDismissRequest = { viewModel.clearCopyResultMessage() },
-            title = { Text(stringResource(R.string.provider_copy_to_title)) },
-            text = { Text(message) },
+            title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title) },
+            text = { CinemaText(message, tone = TextTone.Secondary) },
             confirmButton = {
                 CinemaDialogActionButton(onClick = { viewModel.clearCopyResultMessage() }, kind = ButtonKind.Main) {
-                    Text(stringResource(R.string.common_ok))
+                    CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             },
         )
@@ -253,7 +254,6 @@ private fun MobileProviderRow(
     onCopyTo: (ProviderEntity) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    val dimmed = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
     GlassPanel(
         modifier =
             Modifier
@@ -271,23 +271,18 @@ private fun MobileProviderRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = provider.name,
-                    style = MaterialTheme.typography.titleMedium,
+                CinemaText(provider.name, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                CinemaText(
+                    provider.url,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = provider.url,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = dimmed,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = provider.username,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = dimmed,
+                CinemaText(
+                    provider.username,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -303,7 +298,13 @@ private fun MobileProviderRow(
                     // Guide sources only apply to sources that carry live channels
                     if (MediaProviderFactory.hasLiveTv(provider)) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.epg_sources_header)) },
+                            text = {
+                                CinemaText(
+                                    stringResource(R.string.epg_sources_header),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            },
                             leadingIcon = { Icon(CinemaIcons.LiveTv, contentDescription = null) },
                             onClick = {
                                 menuOpen = false
@@ -312,7 +313,13 @@ private fun MobileProviderRow(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.provider_duplicate_button)) },
+                        text = {
+                            CinemaText(
+                                stringResource(R.string.provider_duplicate_button),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        },
                         leadingIcon = { Icon(CinemaIcons.ContentCopy, contentDescription = null) },
                         onClick = {
                             menuOpen = false
@@ -321,7 +328,13 @@ private fun MobileProviderRow(
                     )
                     if (canCopyTo) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.provider_copy_to_button)) },
+                            text = {
+                                CinemaText(
+                                    stringResource(R.string.provider_copy_to_button),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            },
                             leadingIcon = { Icon(CinemaIcons.SwapHoriz, contentDescription = null) },
                             onClick = {
                                 menuOpen = false
@@ -329,14 +342,20 @@ private fun MobileProviderRow(
                             },
                         )
                     }
-                    HorizontalDivider()
+                    CinemaDivider()
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.provider_delete_button)) },
+                        text = {
+                            CinemaText(
+                                stringResource(R.string.provider_delete_button),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        },
                         leadingIcon = { Icon(CinemaIcons.Delete, contentDescription = null) },
                         colors =
                             MenuDefaults.itemColors(
-                                textColor = MaterialTheme.colorScheme.error,
-                                leadingIconColor = MaterialTheme.colorScheme.error,
+                                textColor = CinemaTheme.colors.danger,
+                                leadingIconColor = CinemaTheme.colors.danger,
                             ),
                         onClick = {
                             menuOpen = false

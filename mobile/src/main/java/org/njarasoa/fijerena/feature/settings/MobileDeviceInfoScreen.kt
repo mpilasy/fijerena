@@ -15,9 +15,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,8 +26,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
@@ -53,7 +53,7 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.device_info_title)) },
+                title = { CinemaText(stringResource(R.string.device_info_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
@@ -87,43 +87,26 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             item {
-                Text(
-                    text = stringResource(R.string.device_info_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                )
+                CinemaText(stringResource(R.string.device_info_desc), tone = TextTone.Secondary)
             }
             if (failed) {
                 item {
-                    Text(
-                        stringResource(R.string.device_info_load_failed),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    CinemaText(stringResource(R.string.device_info_load_failed), tone = TextTone.Danger)
                 }
             }
             items(sections.orEmpty()) { section ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                        Text(
-                            stringResource(section.title),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Accent)
                         section.rows.forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                                Text(
-                                    text = row.label.asString(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                                CinemaText(
+                                    row.label.asString(),
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
                                     modifier = Modifier.weight(LABEL_WEIGHT),
                                 )
-                                Text(
-                                    text = row.value.asString(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textHigh),
-                                    modifier = Modifier.weight(VALUE_WEIGHT),
-                                )
+                                CinemaText(row.value.asString(), role = TextRole.BodySmall, modifier = Modifier.weight(VALUE_WEIGHT))
                             }
                         }
                     }
