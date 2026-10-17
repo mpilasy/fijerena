@@ -50,15 +50,21 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -168,10 +174,10 @@ fun TvProviderSelectionScreen(
             }
 
             is ProviderUiState.Error -> {
-                Text(
-                    text = state.message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaError,
+                CinemaText(
+                    state.message,
+                    role = TextRole.Body,
+                    tone = TextTone.Danger,
                 )
             }
 
@@ -199,15 +205,17 @@ fun TvProviderSelectionScreen(
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
             title = {
-                Text(
+                CinemaText(
                     stringResource(R.string.provider_delete_confirm_title),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    role = TextRole.Title,
+                    tone = TextTone.Primary,
                 )
             },
             text = {
-                Text(
+                CinemaText(
                     stringResource(R.string.provider_delete_confirm_message, provider.name),
-                    color = CinemaTextSecondary,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             },
             confirmButton = {
@@ -218,7 +226,11 @@ fun TvProviderSelectionScreen(
                     },
                     kind = ButtonKind.Danger,
                 ) {
-                    Text(stringResource(R.string.provider_delete_button))
+                    CinemaText(
+                        stringResource(R.string.provider_delete_button),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
                 }
             },
             dismissButton = {
@@ -226,10 +238,10 @@ fun TvProviderSelectionScreen(
                     onClick = { deleteConfirmProvider = null },
                     kind = ButtonKind.Other,
                 ) {
-                    Text(stringResource(R.string.common_cancel))
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             },
-            containerColor = CinemaSurface,
+            containerColor = CinemaTheme.colors.surface,
         )
     }
 
@@ -283,17 +295,17 @@ fun TvProviderSelectionScreen(
     copyResultMessage?.let { message ->
         CinemaAlertDialog(
             onDismissRequest = { viewModel.clearCopyResultMessage() },
-            title = { Text(stringResource(R.string.provider_copy_to_title), color = MaterialTheme.colorScheme.onSurface) },
-            text = { Text(message, color = CinemaTextSecondary) },
+            title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title, tone = TextTone.Primary) },
+            text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
             confirmButton = {
                 CinemaButton(
                     onClick = { viewModel.clearCopyResultMessage() },
                     kind = ButtonKind.Main,
                 ) {
-                    Text(stringResource(R.string.common_ok))
+                    CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             },
-            containerColor = CinemaSurface,
+            containerColor = CinemaTheme.colors.surface,
         )
     }
 }
@@ -328,7 +340,7 @@ private fun ProviderList(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(TvFocusTokens.restingContainer, RoundedCornerShape(CornerRadius.small))
+                        .background(TvFocusTokens.restingContainer, cornerShape(CornerRadius.small))
                         .padding(end = Spacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
@@ -343,19 +355,19 @@ private fun ProviderList(
                             .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id)
                             .leftToRail(),
                     headlineContent = {
-                        Text(text = provider.name, style = MaterialTheme.typography.titleSmall)
+                        TvContentText(text = provider.name, role = TextRole.Heading)
                     },
                     supportingContent = {
                         Column {
-                            Text(
-                                text = provider.url,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            CinemaText(
+                                provider.url,
+                                role = TextRole.Body,
+                                tone = TextTone.Secondary,
                             )
-                            Text(
-                                text = provider.username,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextSecondary,
+                            CinemaText(
+                                provider.username,
+                                role = TextRole.Body,
+                                tone = TextTone.Secondary,
                             )
                         }
                     },

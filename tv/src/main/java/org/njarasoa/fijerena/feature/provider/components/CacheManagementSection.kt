@@ -21,11 +21,15 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -57,19 +61,6 @@ fun CacheManagementSection(
     onSyncClick: () -> Unit = {},
 ) {
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    // Memoize scaled TextStyles to avoid allocating new copies per recomposition
-    val styles =
-        remember(scale, typography) {
-            object {
-                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-                val headlineSmall = typography.headlineSmall.copy(fontSize = typography.headlineSmall.fontSize.scaled(scale))
-                val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
-                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            }
-        }
-
     ProviderSectionTitle(
         title = stringResource(R.string.provider_section_library_data),
         subtitle = stringResource(R.string.provider_data_management_desc),
@@ -95,10 +86,10 @@ fun CacheManagementSection(
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val time = NumberUtils.formatTimestamp(context, lastSyncedAtMs)
                 val duration = NumberUtils.formatDuration(lastSyncDurationMs)
-                Text(
-                    text = stringResource(R.string.provider_last_sync_status, time, duration),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                CinemaText(
+                    stringResource(R.string.provider_last_sync_status, time, duration),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
 
                 // Delta only means something for Xtream — every other provider type has no
@@ -108,15 +99,14 @@ fun CacheManagementSection(
                 // zeroing on failure), so showing it next to an error would misleadingly read as
                 // "this failed run found 5 changes".
                 if (isXtream && lastSyncError == null) {
-                    Text(
-                        text =
-                            if (lastSyncInserted == 0 && lastSyncUpdated == 0 && lastSyncDeleted == 0) {
-                                stringResource(R.string.provider_sync_no_changes)
-                            } else {
-                                stringResource(R.string.provider_sync_delta, lastSyncInserted, lastSyncUpdated, lastSyncDeleted)
-                            },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                    CinemaText(
+                        if (lastSyncInserted == 0 && lastSyncUpdated == 0 && lastSyncDeleted == 0) {
+                            stringResource(R.string.provider_sync_no_changes)
+                        } else {
+                            stringResource(R.string.provider_sync_delta, lastSyncInserted, lastSyncUpdated, lastSyncDeleted)
+                        },
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
                 }
             }
@@ -125,19 +115,19 @@ fun CacheManagementSection(
                 val errorMsg = (syncState as? SyncState.Error)?.message ?: lastSyncError
                 if (errorMsg != null) {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                    Text(
-                        text = errorMsg,
-                        style = styles.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                    CinemaText(
+                        errorMsg,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Danger,
                     )
                 }
             }
             if (syncState is SyncState.Success) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = stringResource(R.string.provider_sync_success),
-                    style = styles.bodySmall,
-                    color = CinemaAccent,
+                CinemaText(
+                    stringResource(R.string.provider_sync_success),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Accent,
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -145,15 +135,15 @@ fun CacheManagementSection(
 
         val totalItems = stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
 
-        Text(
-            text = stringResource(R.string.provider_total_db_items_label),
-            style = styles.bodyLarge,
-            color = CinemaTextPrimary,
+        CinemaText(
+            stringResource(R.string.provider_total_db_items_label),
+            role = TextRole.Body,
+            tone = TextTone.Primary,
         )
-        Text(
-            text = stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
-            style = styles.headlineSmall,
-            color = CinemaAccent,
+        CinemaText(
+            stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
+            role = TextRole.Title,
+            tone = TextTone.Accent,
         )
 
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -166,8 +156,6 @@ fun CacheManagementSection(
                     NumberUtils.formatCount(stats.liveTv.categoryCount),
                     NumberUtils.formatCount(stats.liveTv.itemsCount),
                 ),
-            labelStyle = styles.titleSmall,
-            valueStyle = styles.bodyMedium,
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
         CountRow(
@@ -178,8 +166,6 @@ fun CacheManagementSection(
                     NumberUtils.formatCount(stats.movies.categoryCount),
                     NumberUtils.formatCount(stats.movies.itemsCount),
                 ),
-            labelStyle = styles.titleSmall,
-            valueStyle = styles.bodyMedium,
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
         CountRow(
@@ -191,16 +177,14 @@ fun CacheManagementSection(
                     NumberUtils.formatCount(stats.tvShows.itemsCount),
                     NumberUtils.formatCount(stats.tvShows.episodesCount),
                 ),
-            labelStyle = styles.titleSmall,
-            valueStyle = styles.bodyMedium,
         )
 
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-        Text(
-            text = stringResource(R.string.provider_epg_stats, NumberUtils.formatCount(stats.epgCount)),
-            style = styles.bodySmall,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+        CinemaText(
+            stringResource(R.string.provider_epg_stats, NumberUtils.formatCount(stats.epgCount)),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
         )
     }
 }
@@ -209,12 +193,10 @@ fun CacheManagementSection(
 private fun CountRow(
     label: String,
     value: String,
-    labelStyle: androidx.compose.ui.text.TextStyle,
-    valueStyle: androidx.compose.ui.text.TextStyle,
 ) {
     Column {
-        Text(text = label, style = labelStyle, color = CinemaTextPrimary)
-        Text(text = value, style = valueStyle, color = CinemaAccent)
+        CinemaText(text = label, role = TextRole.Heading, tone = TextTone.Primary)
+        CinemaText(text = value, role = TextRole.Body, tone = TextTone.Accent)
     }
 }
 
@@ -236,8 +218,6 @@ fun ProviderDangerZoneSection(
     onClearTvShowsClick: () -> Unit,
 ) {
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val bodySmall = remember(scale, typography) { typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale)) }
 
     @Composable
     fun DangerAction(
@@ -248,11 +228,7 @@ fun ProviderDangerZoneSection(
     ) {
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
         description?.let {
-            Text(
-                text = it,
-                style = bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
+            CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Secondary)
             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
         }
         ProviderDangerButton(
@@ -264,7 +240,7 @@ fun ProviderDangerZoneSection(
 
     ProviderSectionTitle(
         title = stringResource(R.string.provider_section_danger_zone),
-        titleColor = CinemaError,
+        titleTone = TextTone.Danger,
     )
     DangerAction(
         description = stringResource(R.string.provider_clear_favorites_desc),

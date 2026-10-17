@@ -37,11 +37,15 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.feature.epg.localizedEpgPhase
@@ -97,10 +101,10 @@ fun GuideMaintenancePane(
 
     SettingsSubPane(title = stringResource(R.string.settings_guide_maintenance_title), onBack = onBack) {
         GuideStatusLines(processingState, indexState, queuedTaskIds, lastPipelineStats)
-        Text(
+        CinemaText(
             stringResource(R.string.epg_maintenance_desc_tv),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
         )
         CinemaSecondaryButton(
             onClick = { viewModel.cleanupFiles() },
@@ -112,10 +116,10 @@ fun GuideMaintenancePane(
             text = stringResource(R.string.epg_purge_btn),
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-        Text(
-            text = stringResource(R.string.provider_section_danger_zone),
-            style = MaterialTheme.typography.titleSmall,
-            color = CinemaError,
+        CinemaText(
+            stringResource(R.string.provider_section_danger_zone),
+            role = TextRole.Heading,
+            tone = TextTone.Danger,
         )
         ProviderDangerButton(
             onClick = { showClearConfirm = true },
@@ -142,18 +146,20 @@ fun GuideMaintenancePane(
                 )
             },
             title = {
-                Text(
+                CinemaText(
                     stringResource(R.string.epg_clear_db_confirm_title),
-                    color = CinemaTextPrimary,
+                    role = TextRole.Title,
+                    tone = TextTone.Primary,
                 )
             },
             text = {
-                Text(
+                CinemaText(
                     stringResource(R.string.epg_clear_db_confirm_message),
-                    color = CinemaTextSecondary,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             },
-            containerColor = CinemaSurface,
+            containerColor = CinemaTheme.colors.surface,
         )
     }
 }
@@ -190,11 +196,11 @@ internal fun SettingsSubPane(
                 }
             },
     ) {
-        Text(
-            text = "‹ $title",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        CinemaText(
+            "‹ $title",
             modifier = Modifier.padding(horizontal = Spacing.xs),
+            role = TextRole.Title,
+            tone = TextTone.Primary,
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
         Column(
@@ -241,7 +247,7 @@ private fun GuideStatusLines(
     lastRun: EpgPipelineStatsEntity?,
 ) {
     Column {
-        Text(databaseStatusText(indexState), style = MaterialTheme.typography.bodySmall)
+        CinemaText(databaseStatusText(indexState), role = TextRole.BodySmall, tone = TextTone.Primary)
 
         val currentStatusText =
             when (multiState) {
@@ -292,16 +298,16 @@ private fun GuideStatusLines(
                     stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
                 }
             }
-        Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
+        CinemaText(currentStatusText, role = TextRole.BodySmall, tone = TextTone.Primary)
 
         lastRun?.let { stats ->
             val time = NumberUtils.formatTimestamp(LocalContext.current, stats.updatedAtMs)
             val duration = NumberUtils.formatDuration(stats.durationMs)
             val errorText = if (stats.errors > 0) stringResource(R.string.epg_last_run_errors, stats.errors) else ""
-            Text(
-                text = stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+            CinemaText(
+                stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
     }

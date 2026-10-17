@@ -53,8 +53,11 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -65,6 +68,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSourceUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
@@ -130,7 +134,7 @@ fun ProfilesSettingsCard(
             )
         }
         if (message != null) {
-            Text(text = message, style = MaterialTheme.typography.bodyMedium, color = CinemaError)
+            CinemaText(message, role = TextRole.Body, tone = TextTone.Danger)
         }
         SettingsRow(
             title = stringResource(R.string.settings_profiles_add),
@@ -295,11 +299,11 @@ fun ProfileEditPane(
                     }
                 },
         ) {
-            Text(
-                text = "‹ $title",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+            CinemaText(
+                "‹ $title",
                 modifier = Modifier.padding(horizontal = Spacing.xs),
+                role = TextRole.Title,
+                tone = TextTone.Primary,
             )
             Spacer(modifier = Modifier.height(Spacing.sm))
             Column(
@@ -317,7 +321,11 @@ fun ProfileEditPane(
                     editButtonFocusRequester = nameFocus,
                 )
                 if (showNameError) {
-                    Text(stringResource(R.string.profile_error_name_required), color = CinemaError)
+                    CinemaText(
+                        stringResource(R.string.profile_error_name_required),
+                        role = TextRole.Body,
+                        tone = TextTone.Danger,
+                    )
                 }
                 SettingsRow(
                     title = stringResource(R.string.profile_color_label),
@@ -497,17 +505,17 @@ private fun ProfileSourcesPane(
                 }
             },
     ) {
-        Text(
-            text = "‹ ${stringResource(R.string.profile_sources_title)}",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        CinemaText(
+            "‹ ${stringResource(R.string.profile_sources_title)}",
             modifier = Modifier.padding(horizontal = Spacing.xs),
+            role = TextRole.Title,
+            tone = TextTone.Primary,
         )
-        Text(
-            text = stringResource(R.string.profile_sources_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary,
+        CinemaText(
+            stringResource(R.string.profile_sources_desc),
             modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+            role = TextRole.Body,
+            tone = TextTone.Secondary,
         )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -555,9 +563,13 @@ internal fun ProfileAddDialog(
                     editButtonFocusRequester = nameFocusRequester,
                 )
                 if (showNameError) {
-                    Text(stringResource(R.string.profile_error_name_required), color = CinemaError)
+                    CinemaText(
+                        stringResource(R.string.profile_error_name_required),
+                        role = TextRole.Body,
+                        tone = TextTone.Danger,
+                    )
                 }
-                Text(stringResource(R.string.profile_color_label), color = CinemaTextSecondary)
+                CinemaText(stringResource(R.string.profile_color_label), role = TextRole.Body, tone = TextTone.Secondary)
                 // Two rows: the whole palette on one line doesn't fit the dialog's width.
                 CinemaProfileColors.palette.indices.chunked(SWATCHES_PER_ROW).forEach { rowIndices ->
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
@@ -634,7 +646,7 @@ private fun ColorSwatch(
                     contentDescription = label
                     this.selected = selected
                 },
-        shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+        shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.identity),
         colors =
             ClickableSurfaceDefaults.colors(
                 containerColor = color,
@@ -651,11 +663,11 @@ private fun ColorSwatch(
             ClickableSurfaceDefaults.border(
                 border =
                     if (selected) {
-                        Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTextPrimary))
+                        Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTheme.colors.textPrimary))
                     } else {
                         Border.None
                     },
-                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
+                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTheme.colors.accentSoft)),
             ),
     ) {}
 }

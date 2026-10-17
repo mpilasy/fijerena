@@ -33,6 +33,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -41,10 +44,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -77,15 +82,12 @@ fun ProviderLoginsSection(
 ) {
     val scale = LocalUiScale.current
     val context = LocalContext.current
-    val typography = MaterialTheme.typography
-    val bodySmall = remember(scale, typography) { typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale)) }
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     // Today, for the expiry colours: yellow at 15 days or fewer, red at 7 or fewer and once expired.
     val now = remember { Instant.now() }
     val zone = remember { ZoneId.systemDefault() }
-    val normalStatusColor = remember { CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh) }
 
     // The last result, shown under the rows (and in the add dialog) until the next action.
     var shownMessage by remember { mutableStateOf<String?>(null) }
@@ -143,10 +145,10 @@ fun ProviderLoginsSection(
         subtitle = stringResource(R.string.provider_logins_desc),
     )
     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-    Text(
+    CinemaText(
         text = stringResource(R.string.provider_logins_update_warning),
-        style = bodySmall,
-        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+        role = TextRole.BodySmall,
+        tone = TextTone.Secondary,
     )
 
     rows.forEachIndexed { index, row ->
@@ -162,24 +164,25 @@ fun ProviderLoginsSection(
             val showMakeMain = !row.isMain && row.hasPassword
             val showRemove = rows.size > 1
             val makeMainRequester = remember { FocusRequester() }
-            val statusColor =
+            val statusTone =
                 when (ExtraLoginsViewModel.expiryLevel(row, now, zone)) {
-                    SubscriptionExpiry.Level.URGENT -> CinemaError
-                    SubscriptionExpiry.Level.SOON -> CinemaWarning
-                    SubscriptionExpiry.Level.NORMAL -> normalStatusColor
+                    SubscriptionExpiry.Level.URGENT -> TextTone.Danger
+                    SubscriptionExpiry.Level.SOON -> TextTone.Warning
+                    SubscriptionExpiry.Level.NORMAL -> TextTone.Secondary
                 }
             val loginText: @Composable () -> Unit = {
                 Column {
-                    Text(
+                    // A current login's title is the light accent, as on a selected row (TvFocusTokens.currentText).
+                    CinemaText(
                         text = row.username,
-                        color = if (row.isMain) TvFocusTokens.currentText else CinemaTextPrimary,
+                        tone = if (row.isMain) TextTone.AccentSoft else TextTone.Primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
+                    CinemaText(
                         text = ExtraLoginsViewModel.statusText(context, row),
-                        style = bodySmall,
-                        color = statusColor,
+                        role = TextRole.BodySmall,
+                        tone = statusTone,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -196,12 +199,12 @@ fun ProviderLoginsSection(
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(mainRowRequester) else Modifier)
                             .paneItem(pane, "login:${row.username}"),
-                    headlineContent = { Text(row.username) },
+                    headlineContent = { TvContentText(row.username) },
                     supportingContent = {
-                        Text(
+                        CinemaText(
                             text = ExtraLoginsViewModel.statusText(context, row),
-                            style = bodySmall,
-                            color = statusColor,
+                            role = TextRole.BodySmall,
+                            tone = statusTone,
                         )
                     },
                 )
@@ -261,7 +264,7 @@ fun ProviderLoginsSection(
 
     shownMessage?.takeIf { !showAddDialog }?.let {
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-        Text(text = it, style = bodySmall, color = CinemaAccent)
+        CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Accent)
     }
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -337,7 +340,7 @@ private fun AddLoginDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_logins_add), color = CinemaTextPrimary) },
+        title = { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Title, tone = TextTone.Primary) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 ReadOnlyFieldWithEdit(
@@ -358,7 +361,7 @@ private fun AddLoginDialog(
                 val status = if (busy) stringResource(R.string.provider_logins_checking_add) else message
                 status?.let {
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    Text(text = it, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+                    CinemaText(it, role = TextRole.Body, tone = TextTone.Secondary)
                 }
             }
         },
@@ -368,14 +371,14 @@ private fun AddLoginDialog(
                 onClick = { onAdd(username, password.trim()) },
                 enabled = !busy && username.isNotBlank() && password.isNotBlank(),
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.common_add)) }
+            ) { CinemaText(stringResource(R.string.common_add), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }

@@ -15,7 +15,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -38,10 +42,6 @@ fun JellyfinForm(
 ) {
     val scale = LocalUiScale.current
     val resources = LocalResources.current
-    val scaledBodySmall =
-        MaterialTheme.typography.bodySmall.let { style ->
-            remember(scale, style) { style.copy(fontSize = style.fontSize.scaled(scale)) }
-        }
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
@@ -94,10 +94,10 @@ fun JellyfinForm(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
+            CinemaText(
                 text = stringResource(R.string.provider_or_separator),
-                style = scaledBodySmall,
-                color = CinemaTextSecondary,
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaSecondaryButton(

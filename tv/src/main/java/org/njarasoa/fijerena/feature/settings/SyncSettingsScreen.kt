@@ -35,7 +35,10 @@ import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.QrCode
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -43,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
@@ -97,7 +101,7 @@ fun SyncSettingsScreen() {
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
         TvScreenHeader(title = stringResource(R.string.live_sync_title))
-        Text(stringResource(R.string.live_sync_desc), style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+        CinemaText(stringResource(R.string.live_sync_desc), role = TextRole.Body, tone = TextTone.Secondary)
 
         val qr = ui.handoffQr ?: ui.inviteQr
         if (qr != null) {
@@ -142,10 +146,10 @@ fun SyncSettingsScreen() {
             val hasDevices = ui.devices.orEmpty().any { !it.revoked }
             DevicesPanel(ui.devices, nowPlaying, lastActionFocus, onRename = { renaming = it }, onRemove = { confirmRemove = it })
             // Rare and drastic: last, under its own heading, outlined in the error colour.
-            Text(
+            CinemaText(
                 stringResource(R.string.provider_section_danger_zone),
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaError,
+                role = TextRole.Heading,
+                tone = TextTone.Danger,
             )
             ProviderDangerButton(
                 onClick = { confirmLeave = true },
@@ -156,7 +160,7 @@ fun SyncSettingsScreen() {
             SetupPanel(ui, viewModel)
         }
 
-        ui.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = CinemaError) }
+        ui.error?.let { CinemaText(it, role = TextRole.Body, tone = TextTone.Danger) }
     }
 
     confirmRemove?.let { device ->
@@ -223,7 +227,7 @@ private fun SetupPanel(
                     modifier = Modifier.leftToRail(),
                 )
             } else {
-                Text(stringResource(R.string.live_sync_server_found), color = CinemaAccent)
+                CinemaText(stringResource(R.string.live_sync_server_found), role = TextRole.Body, tone = TextTone.Accent)
                 if (ui.setupSecretRequired) {
                     ReadOnlyFieldWithEdit(
                         value = setupSecret,
@@ -268,10 +272,11 @@ private fun PairingPanel(
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // look-ok: the QR code's size is what a phone camera needs to scan it from the sofa, not a look
             QrCode(text = qr, size = 260.dp, contentDescription = stringResource(R.string.live_sync_qr_description))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                Text(instructions, style = MaterialTheme.typography.bodyLarge, color = CinemaTextPrimary)
-                Text(stringResource(R.string.live_sync_waiting), style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+                CinemaText(instructions, role = TextRole.Body, tone = TextTone.Primary)
+                CinemaText(stringResource(R.string.live_sync_waiting), role = TextRole.Body, tone = TextTone.Secondary)
                 // The panel's only control: Left from it goes to the navigation rail.
                 CinemaSecondaryButton(onClick = onClose, text = stringResource(R.string.common_cancel), modifier = Modifier.leftToRail())
             }
@@ -289,25 +294,18 @@ private fun LinkedPanel(
     val scale = LocalUiScale.current
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-            Text(
+            CinemaText(
                 statusLine(status),
-                style = MaterialTheme.typography.titleMedium,
-                color =
-                    if (status.lastError != null &&
-                        !status.syncing
-                    ) {
-                        CinemaError
-                    } else {
-                        CinemaAccent
-                    },
+                role = TextRole.Heading,
+                tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Accent,
             )
             if (devMode && status.lastError != null) {
-                Text("[dev] ${status.lastError}", style = MaterialTheme.typography.bodySmall, color = CinemaTextSecondary)
+                CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall, tone = TextTone.Secondary)
             }
-            Text(
+            CinemaText(
                 stringResource(R.string.live_sync_server_line, status.serverUrl.orEmpty()),
-                style = MaterialTheme.typography.bodySmall,
-                color = CinemaTextSecondary,
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
             Spacer(Modifier.height(Spacing.xs.scaled(scale)))
             CinemaSecondaryButton(
@@ -334,12 +332,16 @@ private fun DevicesPanel(
     val last = active.lastOrNull()
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-            Text(stringResource(R.string.live_sync_devices_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccent)
+            CinemaText(
+                stringResource(R.string.live_sync_devices_title),
+                role = TextRole.Heading,
+                tone = TextTone.Accent,
+            )
             active.forEach { device ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(device.name, style = MaterialTheme.typography.bodyLarge, color = CinemaTextPrimary)
-                        Text(
+                        CinemaText(device.name, role = TextRole.Body, tone = TextTone.Primary)
+                        CinemaText(
                             if (device.current) {
                                 stringResource(
                                     R.string.live_sync_device_this,
@@ -347,14 +349,14 @@ private fun DevicesPanel(
                             } else {
                                 stringResource(R.string.live_sync_device_last_seen, relative(device.lastSeen))
                             },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CinemaTextSecondary,
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                         nowPlaying[device.id]?.let {
-                            Text(
+                            CinemaText(
                                 nowPlayingLine(it),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaAccent,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Accent,
                             )
                         }
                     }
@@ -402,12 +404,12 @@ private fun RenameDialog(
                 modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                 colors =
                     androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary,
+                        focusedTextColor = CinemaTheme.colors.textPrimary,
+                        unfocusedTextColor = CinemaTheme.colors.textPrimary,
+                        cursorColor = CinemaTheme.colors.accent,
+                        focusedBorderColor = CinemaTheme.colors.accent,
+                        focusedLabelColor = CinemaTheme.colors.accent,
+                        unfocusedLabelColor = CinemaTheme.colors.textSecondary,
                     ),
             )
         },

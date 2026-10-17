@@ -11,10 +11,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.SourceSubscription
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -58,24 +62,24 @@ private fun SourceSubscriptions(subscriptions: List<SourceSubscription>) {
     Column {
         subscriptions.forEach { source ->
             if (named) {
-                Text(
-                    text = source.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                CinemaText(
+                    source.name,
+                    role = TextRole.Body,
+                    tone = TextTone.Primary,
                 )
             }
             if (source.url.isNotEmpty()) {
-                Text(
-                    text = source.url,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                CinemaText(
+                    source.url,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             }
             source.expiry?.let { expiry ->
                 LabelValue(
                     label = stringResource(R.string.settings_provider_expires_label),
                     value = expiry,
-                    valueColor = if (source.isExpired) CinemaError else MaterialTheme.colorScheme.onSurface,
+                    valueTone = if (source.isExpired) TextTone.Danger else TextTone.Primary,
                 )
                 source.maxConnections?.let { maxConnections ->
                     LabelValue(
@@ -84,10 +88,10 @@ private fun SourceSubscriptions(subscriptions: List<SourceSubscription>) {
                     )
                 }
                 if (source.isTrial) {
-                    Text(
+                    CinemaText(
                         stringResource(R.string.settings_provider_trial_account_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaAccent,
+                        role = TextRole.Body,
+                        tone = TextTone.Accent,
                     )
                 }
             }
@@ -100,15 +104,15 @@ private fun SourceSubscriptions(subscriptions: List<SourceSubscription>) {
 private fun LabelValue(
     label: String,
     value: String,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    valueTone: TextTone = TextTone.Primary,
 ) {
     Row {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary,
+        CinemaText(
+            label,
             modifier = Modifier.width(TvDimensions.settingsInputWidth),
+            role = TextRole.Body,
+            tone = TextTone.Secondary,
         )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = valueColor)
+        CinemaText(text = value, role = TextRole.Body, tone = valueTone)
     }
 }

@@ -28,6 +28,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.SafeModeViewModel
@@ -89,23 +92,23 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
             modifier = Modifier.widthIn(max = TvDimensions.dialogWidthLarge.scaled(scale)),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         ) {
-            Text(
-                text = stringResource(R.string.safe_mode_title),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
+            CinemaText(
+                stringResource(R.string.safe_mode_title),
+                role = TextRole.Display,
+                tone = TextTone.Primary,
             )
-            Text(
-                text = stringResource(R.string.safe_mode_message),
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextPrimary,
+            CinemaText(
+                stringResource(R.string.safe_mode_message),
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
-            Text(
-                text = stringResource(R.string.safe_mode_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
+            CinemaText(
+                stringResource(R.string.safe_mode_hint),
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
             clearStateText(clearState)?.let { status ->
-                Text(text = status, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                CinemaText(status, role = TextRole.Body, tone = TextTone.Primary)
             }
             Row(
                 modifier = Modifier.padding(top = Spacing.md.scaled(scale)),

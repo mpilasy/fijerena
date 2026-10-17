@@ -20,10 +20,14 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SourceShortNames
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
@@ -63,20 +67,13 @@ internal fun Modifier.rowNeighbours(
 internal fun ProviderSectionTitle(
     title: String,
     subtitle: String? = null,
-    titleColor: Color = CinemaAccent,
+    titleTone: TextTone = TextTone.Accent,
 ) {
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val titleStyle = remember(scale, typography) { typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale)) }
-    val subtitleStyle = remember(scale, typography) { typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale)) }
-    Text(text = title, style = titleStyle, color = titleColor)
+    CinemaText(text = title, role = TextRole.Heading, tone = titleTone)
     subtitle?.let {
         Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-        Text(
-            text = it,
-            style = subtitleStyle,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
+        CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Secondary)
     }
 }
 
@@ -197,10 +194,10 @@ fun ProviderSettingsSection(
                 },
             modifier = Modifier.paneItem(pane, "short_name"),
         )
-        Text(
+        CinemaText(
             text = field.error ?: stringResource(R.string.provider_short_name_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (field.error != null) CinemaError else CinemaTextSecondary,
+            role = TextRole.BodySmall,
+            tone = if (field.error != null) TextTone.Danger else TextTone.Secondary,
         )
     }
 }

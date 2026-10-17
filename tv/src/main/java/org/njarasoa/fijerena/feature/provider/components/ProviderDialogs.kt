@@ -54,6 +54,11 @@ import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -63,6 +68,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
@@ -90,21 +96,21 @@ fun ConfirmActionDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, color = CinemaTextPrimary) },
-        text = { Text(text, color = CinemaTextSecondary) },
+        title = { CinemaText(title, role = TextRole.Title, tone = TextTone.Primary) },
+        text = { CinemaText(text, role = TextRole.Body, tone = TextTone.Secondary) },
         confirmButton = {
             CinemaButton(
                 onClick = onConfirm,
                 kind = if (isDanger) ButtonKind.Danger else ButtonKind.Main,
-            ) { Text(confirmText) }
+            ) { CinemaText(confirmText, role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -117,15 +123,6 @@ fun CategoryFilterDialog(
     onDismiss: () -> Unit,
 ) {
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val scaledStyles =
-        remember(scale, typography) {
-            object {
-                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-            }
-        }
     var filterMode by remember { mutableStateOf(currentFilters.mode) }
     var rules by remember { mutableStateOf(currentFilters.rules) }
     var editingIndex by remember { mutableStateOf<Int?>(null) }
@@ -175,13 +172,17 @@ fun CategoryFilterDialog(
         // controls in a full-screen panel.
         modifier = Modifier.fillMaxWidth(PANEL_SCREEN_FRACTION * scale).fillMaxHeight(PANEL_SCREEN_FRACTION * scale),
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        title = { Text(title, color = CinemaTextPrimary) },
+        title = { CinemaText(title, role = TextRole.Title, tone = TextTone.Primary) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             ) {
-                Text(stringResource(R.string.provider_filter_mode_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                CinemaText(
+                    stringResource(R.string.provider_filter_mode_label),
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
+                )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically,
@@ -198,42 +199,36 @@ fun CategoryFilterDialog(
                         text = stringResource(R.string.provider_filter_include_short),
                     )
                 }
-                Text(
+                CinemaText(
                     if (filterMode == FilterMode.EXCLUDE) {
                         stringResource(R.string.provider_filter_hide_matching_desc)
                     } else {
                         stringResource(R.string.provider_filter_show_matching_desc)
                     },
-                    style = scaledStyles.bodySmall,
-                    color = CinemaTextSecondary,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
                 if (filterMode == FilterMode.INCLUDE && rules.isEmpty()) {
-                    Text(
+                    CinemaText(
                         stringResource(R.string.provider_filter_include_empty_warning),
-                        style = scaledStyles.bodySmall,
-                        color = CinemaError,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Danger,
                     )
                 }
 
-                Text(stringResource(R.string.provider_filter_rules_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                CinemaText(
+                    stringResource(R.string.provider_filter_rules_label),
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
+                )
                 rules.forEachIndexed { index, rule ->
                     if (editingIndex == index) {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                            OutlinedTextField(
+                            CinemaTextField(
                                 value = editingValue,
                                 onValueChange = { editingValue = it },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                colors =
-                                    OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = CinemaSurface,
-                                        unfocusedContainerColor = CinemaSurface,
-                                        focusedBorderColor = CinemaAccent,
-                                        unfocusedBorderColor = CinemaSurfaceVariant,
-                                        focusedTextColor = CinemaTextPrimary,
-                                        unfocusedTextColor = CinemaTextPrimary,
-                                        cursorColor = CinemaAccent,
-                                    ),
                             )
                             MatchTypeChipRow(selected = editingMatchType, onSelect = { editingMatchType = it })
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
@@ -249,11 +244,23 @@ fun CategoryFilterDialog(
                                         editingIndex = null
                                     },
                                     kind = ButtonKind.Main,
-                                ) { Text(stringResource(R.string.provider_save_button)) }
+                                ) {
+                                    CinemaText(
+                                        stringResource(R.string.provider_save_button),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
                                 CinemaButton(
                                     onClick = { editingIndex = null },
                                     kind = ButtonKind.Other,
-                                ) { Text(stringResource(R.string.common_cancel)) }
+                                ) {
+                                    CinemaText(
+                                        stringResource(R.string.common_cancel),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -261,19 +268,19 @@ fun CategoryFilterDialog(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = matchTypeLabel(rule.matchType),
-                                style = scaledStyles.bodySmall,
-                                color = CinemaTextSecondary,
+                            CinemaText(
+                                matchTypeLabel(rule.matchType),
                                 modifier = Modifier.width(TvDimensions.iconButtonSize.scaled(scale)),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
-                            Text(
-                                text = rule.value,
-                                style = scaledStyles.bodyMedium,
-                                color = CinemaTextPrimary,
+                            CinemaText(
+                                rule.value,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
+                                role = TextRole.Body,
+                                tone = TextTone.Primary,
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaIconButton(
@@ -300,10 +307,10 @@ fun CategoryFilterDialog(
                     }
                 }
 
-                Text(
+                CinemaText(
                     stringResource(R.string.provider_filter_add_rules_section_label),
-                    style = scaledStyles.titleSmall,
-                    color = CinemaTextPrimary,
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
                 )
                 // A live OutlinedTextField sitting in the D-pad path is a dead end on TV: once
                 // focused it swallows every direction key, so the Add button and the entire
@@ -326,14 +333,14 @@ fun CategoryFilterDialog(
                     },
                     enabled = addRulesText.isNotBlank(),
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_add)) }
+                ) { CinemaText(stringResource(R.string.common_add), role = TextRole.Label, tone = TextTone.Inherit) }
 
                 pendingAddValues?.let { values ->
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                        Text(
+                        CinemaText(
                             stringResource(R.string.provider_filter_choose_match_type_prompt),
-                            style = scaledStyles.bodyMedium,
-                            color = CinemaTextPrimary,
+                            role = TextRole.Body,
+                            tone = TextTone.Primary,
                         )
                         MatchTypeChipRow(selected = pendingAddMatchType, onSelect = { pendingAddMatchType = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
@@ -344,20 +351,36 @@ fun CategoryFilterDialog(
                                     pendingAddValues = null
                                 },
                                 kind = ButtonKind.Main,
-                            ) { Text(stringResource(R.string.common_ok)) }
+                            ) {
+                                CinemaText(
+                                    stringResource(R.string.common_ok),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            }
                             CinemaButton(
                                 onClick = { pendingAddValues = null },
                                 kind = ButtonKind.Other,
-                            ) { Text(stringResource(R.string.common_cancel)) }
+                            ) {
+                                CinemaText(
+                                    stringResource(R.string.common_cancel),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            }
                         }
                     }
                 }
 
-                Text(stringResource(R.string.provider_filter_script_title), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
-                Text(
+                CinemaText(
+                    stringResource(R.string.provider_filter_script_title),
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
+                )
+                CinemaText(
                     stringResource(R.string.provider_filter_script_desc),
-                    style = scaledStyles.bodySmall,
-                    color = CinemaTextSecondary,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                     ScriptType.entries.forEach { script ->
@@ -380,15 +403,15 @@ fun CategoryFilterDialog(
                     onSave(newFilters)
                 },
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_save_button)) }
+            ) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -455,7 +478,13 @@ fun QuickConnectDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_quick_connect_title), color = CinemaTextPrimary) },
+        title = {
+            CinemaText(
+                stringResource(R.string.provider_quick_connect_title),
+                role = TextRole.Title,
+                tone = TextTone.Primary,
+            )
+        },
         text = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -463,53 +492,49 @@ fun QuickConnectDialog(
             ) {
                 when {
                     qcError != null -> {
-                        Text(
-                            text = qcError!!,
-                            color = CinemaError,
-                            style = MaterialTheme.typography.bodyMedium,
+                        CinemaText(
+                            qcError!!,
+                            role = TextRole.Body,
+                            tone = TextTone.Danger,
                         )
                     }
 
                     qcCode.isEmpty() -> {
-                        CircularProgressIndicator(color = CinemaAccent)
+                        CircularProgressIndicator(color = CinemaTheme.colors.accent)
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Text(
-                            text = stringResource(R.string.provider_connecting_server),
-                            color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodyMedium,
+                        CinemaText(
+                            stringResource(R.string.provider_connecting_server),
+                            role = TextRole.Body,
+                            tone = TextTone.Secondary,
                         )
                     }
 
                     else -> {
-                        Text(
-                            text = stringResource(R.string.provider_qc_enter_code),
-                            color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodyMedium,
+                        CinemaText(
+                            stringResource(R.string.provider_qc_enter_code),
+                            role = TextRole.Body,
+                            tone = TextTone.Secondary,
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Text(
+                        CinemaText(
                             text = qcCode,
-                            color = CinemaAccent,
-                            style =
-                                MaterialTheme.typography.displayMedium.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.displayMedium.fontSize
-                                            .scaled(scale),
-                                ),
+                            role = TextRole.Display,
+                            tone = TextTone.Accent,
+                            emphasis = true,
                         )
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                        Text(
-                            text = stringResource(R.string.provider_qc_instructions),
-                            color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodySmall,
+                        CinemaText(
+                            stringResource(R.string.provider_qc_instructions),
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                        CircularProgressIndicator(color = CinemaAccent)
+                        CircularProgressIndicator(color = CinemaTheme.colors.accent)
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Text(
-                            text = stringResource(R.string.provider_qc_waiting),
-                            color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodySmall,
+                        CinemaText(
+                            stringResource(R.string.provider_qc_waiting),
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                     }
                 }
@@ -520,9 +545,9 @@ fun QuickConnectDialog(
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -538,7 +563,7 @@ fun DuplicateProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_duplicate_title), color = CinemaTextPrimary) },
+        title = { CinemaText(stringResource(R.string.provider_duplicate_title), role = TextRole.Title, tone = TextTone.Primary) },
         text = {
             ReadOnlyFieldWithEdit(
                 value = name,
@@ -550,15 +575,21 @@ fun DuplicateProviderDialog(
             CinemaButton(
                 onClick = { onConfirm(name.trim().ifBlank { defaultName }) },
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_duplicate_button)) }
+            ) {
+                CinemaText(
+                    stringResource(R.string.provider_duplicate_button),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
         dismissButton = {
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -602,14 +633,14 @@ fun ProviderActionsMenuDialog(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(TvDimensions.iconSmall),
-                    tint = CinemaAccent,
+                    tint = CinemaTheme.colors.accent,
                 )
             },
             headlineContent = {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextPrimary,
+                CinemaText(
+                    label,
+                    role = TextRole.Body,
+                    tone = TextTone.Primary,
                 )
             },
         )
@@ -618,11 +649,11 @@ fun ProviderActionsMenuDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = provider.name,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
+            CinemaText(
+                provider.name,
                 maxLines = 2,
+                role = TextRole.Heading,
+                tone = TextTone.Primary,
             )
         },
         text = {
@@ -655,7 +686,7 @@ fun ProviderActionsMenuDialog(
                         onClick = onCopyTo,
                     )
                 }
-                HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
+                CinemaDivider()
                 // Outlined in the error colour, filled only while focused: the delete confirm
                 // that follows carries the filled error button (T5, follow-up from T4).
                 ProviderDangerButton(
@@ -670,9 +701,9 @@ fun ProviderActionsMenuDialog(
         },
         initialFocus = editFocusRequester,
         confirmButton = {},
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
+        containerColor = CinemaTheme.colors.surface,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }
 
@@ -693,16 +724,16 @@ fun CopyProviderDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.provider_copy_to_title), color = CinemaTextPrimary) },
+        title = { CinemaText(stringResource(R.string.provider_copy_to_title), role = TextRole.Title, tone = TextTone.Primary) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = TvDimensions.dialogWidth).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                Text(
+                CinemaText(
                     stringResource(R.string.provider_copy_to_target_label),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CinemaTextPrimary,
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
                 )
                 targets.forEachIndexed { index, candidate ->
                     TvRadioRow(
@@ -715,10 +746,10 @@ fun CopyProviderDialog(
 
                 Spacer(modifier = Modifier.height(Spacing.sm))
 
-                Text(
+                CinemaText(
                     stringResource(R.string.provider_copy_to_options_label),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CinemaTextPrimary,
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
                 )
                 TvCheckRow(checked = copySettings, onCheckedChange = {
                     copySettings = it
@@ -740,10 +771,10 @@ fun CopyProviderDialog(
                 )
                 if (copyConnection) {
                     val targetName = targets.firstOrNull { it.id == targetId }?.name.orEmpty()
-                    Text(
+                    CinemaText(
                         stringResource(R.string.provider_copy_to_connection_warning_format, targetName),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaError,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Danger,
                     )
                 }
             }
@@ -764,14 +795,14 @@ fun CopyProviderDialog(
                     )
                 },
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_copy_to_button)) }
+            ) { CinemaText(stringResource(R.string.provider_copy_to_button), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }
