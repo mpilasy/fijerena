@@ -9,19 +9,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.colorOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /** Where a setting lives, shown as a small chip under the row's summary (shared visual rules, A). */
@@ -47,17 +48,9 @@ fun SettingsGroupHeader(
                 .fillMaxWidth()
                 .padding(start = Spacing.md, end = Spacing.md, top = Spacing.lg, bottom = Spacing.xs),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        CinemaText(title, role = TextRole.Label, tone = TextTone.Accent)
         if (description != null) {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-            )
+            CinemaText(description, role = TextRole.BodySmall, tone = TextTone.Secondary)
         }
     }
 }
@@ -77,7 +70,8 @@ fun SettingsListRow(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
 ) {
-    val contentAlpha = if (enabled) 1f else CinemaAlpha.textDisabled
+    val titleTone = if (enabled) TextTone.Primary else TextTone.Disabled
+    val summaryTone = if (enabled) TextTone.Secondary else TextTone.Disabled
     Row(
         modifier =
             Modifier
@@ -91,17 +85,12 @@ fun SettingsListRow(
             Spacer(modifier = Modifier.width(Spacing.sm))
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-            )
+            CinemaText(title, tone = titleTone)
             if (summary != null) {
-                val summaryColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow * contentAlpha)
                 if (summary is AnnotatedString) {
-                    Text(text = summary, style = MaterialTheme.typography.bodyMedium, color = summaryColor)
+                    CinemaText(summary, tone = summaryTone)
                 } else {
-                    Text(text = summary.toString(), style = MaterialTheme.typography.bodyMedium, color = summaryColor)
+                    CinemaText(summary.toString(), tone = summaryTone)
                 }
             }
             if (scope != null) {
@@ -118,7 +107,7 @@ fun SettingsListRow(
                 Icon(
                     CinemaIcons.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow * contentAlpha),
+                    tint = colorOf(summaryTone),
                 )
             }
         }
@@ -141,14 +130,10 @@ private fun SettingsScopeChip(scope: SettingsScope) {
             Modifier
                 .padding(top = Spacing.xxs)
                 .background(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.ghost),
-                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                    color = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.ghost),
+                    shape = CinemaTheme.shapes.chip,
                 ).padding(horizontal = Spacing.xs, vertical = Spacing.xxxs),
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
+        CinemaText(label, role = TextRole.Caption, tone = TextTone.Secondary)
     }
 }

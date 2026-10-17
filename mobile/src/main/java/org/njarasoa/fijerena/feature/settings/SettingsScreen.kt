@@ -31,12 +31,16 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -285,7 +289,7 @@ fun MobileSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = { CinemaText(stringResource(R.string.settings_title), role = TextRole.Title) },
                 navigationIcon = {
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
@@ -479,29 +483,18 @@ fun MobileSettingsScreen(
                             .clickable(onClick = onVersionClick)
                             .padding(horizontal = Spacing.md, vertical = Spacing.xs),
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME),
-                        style = MaterialTheme.typography.bodyLarge,
+                    CinemaText(stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME))
+                    CinemaText(stringResource(R.string.settings_about_tagline), role = TextRole.BodySmall, tone = TextTone.Secondary)
+                    CinemaText(stringResource(R.string.app_disclaimer_no_content), role = TextRole.BodySmall, tone = TextTone.Secondary)
+                    CinemaText(
+                        stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
-                    Text(
-                        text = stringResource(R.string.settings_about_tagline),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    )
-                    Text(
-                        text = stringResource(R.string.app_disclaimer_no_content),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    CinemaText(
+                        stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
                 }
                 SettingsListRow(
@@ -576,25 +569,22 @@ private fun WatchDelayPickerDialog(
         footer =
             if (customOpen) {
                 {
-                    OutlinedTextField(
+                    CinemaTextField(
                         value = customText,
                         onValueChange = { newValue ->
                             customText = newValue
                             newValue.toIntOrNull()?.let(onSecondsChange)
                         },
-                        label = { Text(stringResource(R.string.settings_watch_delay_label)) },
+                        label = stringResource(R.string.settings_watch_delay_label),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        supportingText = {
-                            Text(
-                                stringResource(
-                                    R.string.settings_watch_delay_range_format,
-                                    AppSettings.MIN_WATCH_DELAY_SECONDS,
-                                    AppSettings.MAX_WATCH_DELAY_SECONDS,
-                                ),
-                            )
-                        },
+                        supportingText =
+                            stringResource(
+                                R.string.settings_watch_delay_range_format,
+                                AppSettings.MIN_WATCH_DELAY_SECONDS,
+                                AppSettings.MAX_WATCH_DELAY_SECONDS,
+                            ),
                     )
                 }
             } else {
@@ -605,10 +595,10 @@ private fun WatchDelayPickerDialog(
 
 @Composable
 private fun SettingsMessage(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+    CinemaText(
+        text,
+        role = TextRole.BodySmall,
+        tone = TextTone.Secondary,
         modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xxs),
     )
 }
@@ -627,7 +617,7 @@ private fun manageSourcesSummary(uiState: SettingsUiState): AnnotatedString {
     val expiresLabel = stringResource(R.string.settings_provider_expires_label)
     val maxConnectionsLabel = stringResource(R.string.settings_provider_max_connections_label)
     val trialLabel = stringResource(R.string.settings_provider_trial_account_label)
-    val errorColor = MaterialTheme.colorScheme.error
+    val errorColor = CinemaTheme.colors.danger
     val named = uiState.subscriptions.size > 1
     return buildAnnotatedString {
         append(names)

@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -24,8 +21,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 
@@ -61,23 +61,19 @@ fun ColumnScope.ProviderGuideSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.provider_provides_guide_label),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text =
-                                if (providerSettings.providesGuide == false && !providerSettings.providesGuideSetByUser) {
-                                    stringResource(R.string.provider_provides_guide_detected_off_desc)
-                                } else {
-                                    stringResource(R.string.provider_provides_guide_desc)
-                                },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        CinemaText(stringResource(R.string.provider_provides_guide_label), role = TextRole.Heading)
+                        CinemaText(
+                            if (providerSettings.providesGuide == false && !providerSettings.providesGuideSetByUser) {
+                                stringResource(R.string.provider_provides_guide_detected_off_desc)
+                            } else {
+                                stringResource(R.string.provider_provides_guide_desc)
+                            },
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                     }
                     Spacer(modifier = Modifier.width(CinemaSpacing.md))
-                    Switch(
+                    CinemaSwitch(
                         checked = providerSettings.providesGuideOn,
                         onCheckedChange = onProvidesGuideChange,
                     )
@@ -89,14 +85,19 @@ fun ColumnScope.ProviderGuideSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = stringResource(R.string.epg_sources_header), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        text = guideSourcesValue(sources.size, sources.maxOfOrNull { it.lastIngestedAtMs } ?: 0L),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    CinemaText(stringResource(R.string.epg_sources_header), role = TextRole.Heading)
+                    CinemaText(
+                        guideSourcesValue(
+                            sources.size,
+                            sources.maxOfOrNull {
+                                it.lastIngestedAtMs
+                            } ?: 0L,
+                        ),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
                 }
-                Text(text = "›", style = MaterialTheme.typography.titleMedium)
+                CinemaText("›", role = TextRole.Heading)
             }
         }
     }

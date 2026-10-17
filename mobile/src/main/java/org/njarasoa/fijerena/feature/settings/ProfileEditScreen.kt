@@ -12,7 +12,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,9 +27,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
@@ -74,7 +75,7 @@ fun MobileProfileEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.profile_dialog_edit_title)) },
+                title = { CinemaText(stringResource(R.string.profile_dialog_edit_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
@@ -162,11 +163,11 @@ fun MobileProfileEditScreen(
                     CinemaOutlinedButton(
                         onClick = { viewModel.switchTo(profileId, onProfileSwitched) },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.profile_switch_to_button)) }
+                    ) { CinemaText(stringResource(R.string.profile_switch_to_button), role = TextRole.Label, tone = TextTone.Inherit) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                     CinemaOutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.common_cancel))
+                        CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                     CinemaButton(
                         onClick = {
@@ -183,11 +184,11 @@ fun MobileProfileEditScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(R.string.profile_save_button)) }
+                    ) { CinemaText(stringResource(R.string.profile_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
                 }
                 if (canDelete) {
                     CinemaButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
-                        Text(stringResource(R.string.profile_delete_button))
+                        CinemaText(stringResource(R.string.profile_delete_button), role = TextRole.Label, tone = TextTone.Inherit)
                     }
                 }
             }
@@ -219,13 +220,13 @@ fun MobileProfileEditScreen(
                 // Each switch is saved at once, like the filters' own Save; Close only closes.
                 CinemaAlertDialog(
                     onDismissRequest = { editingSources = false },
-                    title = { Text(stringResource(R.string.profile_sources_title)) },
+                    title = { CinemaText(stringResource(R.string.profile_sources_title), role = TextRole.Title) },
                     text = {
                         Column(
                             modifier = Modifier.verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                         ) {
-                            Text(stringResource(R.string.profile_sources_desc))
+                            CinemaText(stringResource(R.string.profile_sources_desc), tone = TextTone.Secondary)
                             sources.forEach { source ->
                                 ProfileSwitchRow(
                                     title = source.name,
@@ -239,7 +240,7 @@ fun MobileProfileEditScreen(
                         CinemaDialogActionButton(
                             onClick = { editingSources = false },
                             kind = ButtonKind.Other,
-                        ) { Text(stringResource(R.string.common_close)) }
+                        ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
                     },
                 )
             }
@@ -247,8 +248,8 @@ fun MobileProfileEditScreen(
             if (confirmDelete) {
                 CinemaAlertDialog(
                     onDismissRequest = { confirmDelete = false },
-                    title = { Text(stringResource(R.string.profile_delete_confirm_title, profile.name)) },
-                    text = { Text(stringResource(R.string.profile_delete_confirm_text)) },
+                    title = { CinemaText(stringResource(R.string.profile_delete_confirm_title, profile.name), role = TextRole.Title) },
+                    text = { CinemaText(stringResource(R.string.profile_delete_confirm_text), tone = TextTone.Secondary) },
                     confirmButton = {
                         CinemaDialogActionButton(
                             onClick = {
@@ -257,13 +258,13 @@ fun MobileProfileEditScreen(
                                 onBack()
                             },
                             kind = ButtonKind.Danger,
-                        ) { Text(stringResource(R.string.profile_delete_button)) }
+                        ) { CinemaText(stringResource(R.string.profile_delete_button), role = TextRole.Label, tone = TextTone.Inherit) }
                     },
                     dismissButton = {
                         CinemaDialogActionButton(
                             onClick = { confirmDelete = false },
                             kind = ButtonKind.Other,
-                        ) { Text(stringResource(R.string.common_cancel)) }
+                        ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
                     },
                 )
             }

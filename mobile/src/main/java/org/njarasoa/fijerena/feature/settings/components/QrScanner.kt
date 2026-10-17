@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +26,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -37,7 +34,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import java.util.concurrent.Executors
@@ -59,25 +60,26 @@ fun QrScanner(
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     LaunchedEffect(Unit) { if (!granted) permission.launch(Manifest.permission.CAMERA) }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(CinemaTheme.colors.mediaScrim)) {
         if (granted) CameraPreview(onScanned)
         Column(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(CinemaSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(if (granted) R.string.live_sync_scan_hint else R.string.live_sync_camera_permission),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                tone = TextTone.OnMedia,
                 textAlign = TextAlign.Center,
             )
             if (!granted) {
                 CinemaButton(onClick = { permission.launch(Manifest.permission.CAMERA) }) {
-                    Text(stringResource(R.string.live_sync_camera_grant))
+                    CinemaText(stringResource(R.string.live_sync_camera_grant), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             }
-            CinemaOutlinedButton(onClick = onClose) { Text(stringResource(R.string.common_cancel)) }
+            CinemaOutlinedButton(onClick = onClose) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         }
     }
 }

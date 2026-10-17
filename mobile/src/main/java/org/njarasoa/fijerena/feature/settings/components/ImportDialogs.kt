@@ -6,9 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +17,10 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -39,39 +40,33 @@ fun ImportOptionsDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_import_select_title)) },
+        title = { CinemaText(stringResource(R.string.settings_import_select_title), role = TextRole.Title) },
         text = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
+                    CinemaCheckbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
                     Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    Text(stringResource(R.string.settings_import_general_label), style = MaterialTheme.typography.bodyMedium)
+                    CinemaText(stringResource(R.string.settings_import_general_label))
                 }
                 if (parsed.hasProviders) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
+                        CinemaCheckbox(checked = optProviders, onCheckedChange = { optProviders = it })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text(
-                            stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        CinemaText(stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size))
                     }
                 }
                 if (parsed.hasEpgSources) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
+                        CinemaCheckbox(checked = optEpg, onCheckedChange = { optEpg = it })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text(
-                            stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        CinemaText(stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size))
                     }
                 }
                 if (parsed.hasFavorites) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
+                        CinemaCheckbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text(stringResource(R.string.settings_import_favorites_label), style = MaterialTheme.typography.bodyMedium)
+                        CinemaText(stringResource(R.string.settings_import_favorites_label))
                     }
                 }
             }
@@ -89,10 +84,12 @@ fun ImportOptionsDialog(
                     onConfirm(options)
                 },
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.common_import)) }
+            ) { CinemaText(stringResource(R.string.common_import), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaOutlinedButton(onClick = onDismiss) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }
@@ -107,13 +104,14 @@ fun ImportConflictDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_import_provider_conflict_title)) },
+        title = { CinemaText(stringResource(R.string.settings_import_provider_conflict_title), role = TextRole.Title) },
         text = {
-            Text(
+            CinemaText(
                 stringResource(
                     R.string.settings_import_conflict_message,
                     conflicts.joinToString("\n") { "• $it" },
                 ),
+                tone = TextTone.Secondary,
             )
         },
         confirmButton = {
@@ -129,22 +127,44 @@ fun ImportConflictDialog(
                         onClick = onOverwrite,
                         modifier = Modifier.weight(1f),
                         kind = ButtonKind.Main,
-                    ) { Text(stringResource(R.string.common_overwrite), maxLines = 1) }
+                    ) {
+                        CinemaText(
+                            stringResource(R.string.common_overwrite),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                            maxLines = 1,
+                        )
+                    }
                     CinemaDialogActionButton(
                         onClick = onDuplicate,
                         modifier = Modifier.weight(1f),
                         kind = ButtonKind.Main,
-                    ) { Text(stringResource(R.string.common_duplicate), maxLines = 1) }
+                    ) {
+                        CinemaText(
+                            stringResource(R.string.common_duplicate),
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                            maxLines = 1,
+                        )
+                    }
                 }
                 CinemaDialogActionButton(
                     onClick = onSkip,
                     modifier = Modifier.fillMaxWidth(),
                     kind = ButtonKind.Main,
-                ) { Text(stringResource(R.string.settings_import_skip_duplicates_button)) }
+                ) {
+                    CinemaText(
+                        stringResource(R.string.settings_import_skip_duplicates_button),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
+                }
             }
         },
         dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }

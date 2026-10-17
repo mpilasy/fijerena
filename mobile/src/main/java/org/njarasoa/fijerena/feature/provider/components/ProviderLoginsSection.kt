@@ -11,13 +11,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,19 +33,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.viewmodels.ExtraLoginsViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
-import org.njarasoa.fijerena.ui.theme.CinemaError
-import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import java.time.Instant
 import java.time.ZoneId
 
@@ -124,11 +122,7 @@ fun ColumnScope.ProviderLoginsSection(
                 subtitle = stringResource(R.string.provider_logins_desc),
             )
             Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-            Text(
-                text = stringResource(R.string.provider_logins_update_warning),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-            )
+            CinemaText(stringResource(R.string.provider_logins_update_warning), role = TextRole.BodySmall, tone = TextTone.Secondary)
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             rows.forEach { row ->
                 Row(
@@ -136,15 +130,15 @@ fun ColumnScope.ProviderLoginsSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = row.username, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            text = ExtraLoginsViewModel.statusText(context, row),
-                            style = MaterialTheme.typography.bodySmall,
-                            color =
+                        CinemaText(row.username, role = TextRole.Heading)
+                        CinemaText(
+                            ExtraLoginsViewModel.statusText(context, row),
+                            role = TextRole.BodySmall,
+                            tone =
                                 when (ExtraLoginsViewModel.expiryLevel(row, now, zone)) {
-                                    SubscriptionExpiry.Level.URGENT -> CinemaError
-                                    SubscriptionExpiry.Level.SOON -> CinemaWarning
-                                    SubscriptionExpiry.Level.NORMAL -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                    SubscriptionExpiry.Level.URGENT -> TextTone.Danger
+                                    SubscriptionExpiry.Level.SOON -> TextTone.Warning
+                                    SubscriptionExpiry.Level.NORMAL -> TextTone.Secondary
                                 },
                         )
                     }
@@ -162,7 +156,7 @@ fun ColumnScope.ProviderLoginsSection(
                             icon = Icons.Outlined.Delete,
                             label = stringResource(R.string.provider_logins_remove),
                             enabled = !busy,
-                            tint = CinemaError,
+                            tint = CinemaTheme.colors.danger,
                         )
                     }
                 }
@@ -175,7 +169,7 @@ fun ColumnScope.ProviderLoginsSection(
                 },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.provider_logins_add)) }
+            ) { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Label, tone = TextTone.Inherit) }
         }
     }
 
@@ -202,14 +196,15 @@ fun ColumnScope.ProviderLoginsSection(
         val promoted = loginsViewModel.promotedOnRemove(username)
         CinemaAlertDialog(
             onDismissRequest = { removeUsername = null },
-            title = { Text(stringResource(R.string.provider_logins_remove_confirm_title)) },
+            title = { CinemaText(stringResource(R.string.provider_logins_remove_confirm_title), role = TextRole.Title) },
             text = {
-                Text(
+                CinemaText(
                     if (promoted != null) {
                         stringResource(R.string.provider_logins_remove_main_confirm_format, username, promoted)
                     } else {
                         stringResource(R.string.provider_logins_remove_confirm_format, username)
                     },
+                    tone = TextTone.Secondary,
                 )
             },
             confirmButton = {
@@ -219,13 +214,13 @@ fun ColumnScope.ProviderLoginsSection(
                         removeUsername = null
                     },
                     kind = ButtonKind.Danger,
-                ) { Text(stringResource(R.string.provider_logins_remove)) }
+                ) { CinemaText(stringResource(R.string.provider_logins_remove), role = TextRole.Label, tone = TextTone.Inherit) }
             },
             dismissButton = {
                 CinemaDialogActionButton(
                     onClick = { removeUsername = null },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_cancel)) }
+                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
             },
         )
     }
@@ -245,28 +240,28 @@ private fun AddLoginDialog(
     var passwordVisible by remember { mutableStateOf(false) }
     CinemaAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text(stringResource(R.string.provider_logins_add)) },
+        title = { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Title) },
         text = {
             Column {
-                OutlinedTextField(
+                CinemaTextField(
                     value = username,
                     onValueChange = {
                         username = it
                         onEdit()
                     },
-                    label = { Text(stringResource(R.string.provider_username_label)) },
+                    label = stringResource(R.string.provider_username_label),
                     singleLine = true,
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                OutlinedTextField(
+                CinemaTextField(
                     value = password,
                     onValueChange = {
                         password = it
                         onEdit()
                     },
-                    label = { Text(stringResource(R.string.provider_password_label)) },
+                    label = stringResource(R.string.provider_password_label),
                     singleLine = true,
                     enabled = !busy,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -288,11 +283,7 @@ private fun AddLoginDialog(
                 val status = if (busy) stringResource(R.string.provider_logins_checking_add) else message
                 status?.let {
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (busy) MaterialTheme.colorScheme.onSurface else CinemaError,
-                    )
+                    CinemaText(it, tone = if (busy) TextTone.Primary else TextTone.Danger)
                 }
             }
         },
@@ -301,14 +292,14 @@ private fun AddLoginDialog(
                 onClick = { onAdd(username, password) },
                 enabled = !busy,
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_logins_add)) }
+            ) { CinemaText(stringResource(R.string.provider_logins_add), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
             CinemaDialogActionButton(
                 onClick = onDismiss,
                 enabled = !busy,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_cancel)) }
+            ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
         },
     )
 }

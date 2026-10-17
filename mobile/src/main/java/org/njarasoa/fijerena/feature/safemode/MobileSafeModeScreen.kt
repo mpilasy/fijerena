@@ -8,11 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,9 +23,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SafeModeViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -51,7 +50,7 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
     var confirmingClear by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.safe_mode_title)) }) },
+        topBar = { TopAppBar(title = { CinemaText(stringResource(R.string.safe_mode_title), role = TextRole.Title) }) },
     ) { paddingValues ->
         Column(
             modifier =
@@ -62,50 +61,45 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
                     .padding(CinemaSpacing.md),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
-            Text(
-                text = stringResource(R.string.safe_mode_message),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = stringResource(R.string.safe_mode_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-            )
+            CinemaText(stringResource(R.string.safe_mode_message))
+            CinemaText(stringResource(R.string.safe_mode_hint), tone = TextTone.Secondary)
             clearStateText(clearState)?.let { status ->
-                Text(text = status, style = MaterialTheme.typography.bodyMedium)
+                CinemaText(status)
             }
             CinemaButton(
                 onClick = { activity?.let { SafeMode.leave(it) } },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.safe_mode_continue)) }
+            ) { CinemaText(stringResource(R.string.safe_mode_continue), role = TextRole.Label, tone = TextTone.Inherit) }
             CinemaOutlinedButton(
                 onClick = { confirmingClear = true },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = clearState != SafeModeViewModel.ClearState.CLEARING,
-            ) { Text(stringResource(R.string.safe_mode_clear_caches)) }
+            ) { CinemaText(stringResource(R.string.safe_mode_clear_caches), role = TextRole.Label, tone = TextTone.Inherit) }
             CinemaOutlinedButton(
                 onClick = onShowDiagnostics,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.safe_mode_diagnostics)) }
+            ) { CinemaText(stringResource(R.string.safe_mode_diagnostics), role = TextRole.Label, tone = TextTone.Inherit) }
         }
     }
 
     if (confirmingClear) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { confirmingClear = false },
-            title = { Text(stringResource(R.string.safe_mode_clear_confirm_title)) },
-            text = { Text(stringResource(R.string.safe_mode_clear_confirm_message)) },
+            title = { CinemaText(stringResource(R.string.safe_mode_clear_confirm_title), role = TextRole.Title) },
+            text = { CinemaText(stringResource(R.string.safe_mode_clear_confirm_message), tone = TextTone.Secondary) },
             confirmButton = {
                 CinemaDialogActionButton(onClick = {
                     confirmingClear = false
                     viewModel.clearCaches()
-                }, kind = ButtonKind.Danger) { Text(stringResource(R.string.safe_mode_clear_confirm)) }
+                }, kind = ButtonKind.Danger) {
+                    CinemaText(stringResource(R.string.safe_mode_clear_confirm), role = TextRole.Label, tone = TextTone.Inherit)
+                }
             },
             dismissButton = {
                 CinemaDialogActionButton(
                     onClick = { confirmingClear = false },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_cancel)) }
+                ) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
             },
         )
     }

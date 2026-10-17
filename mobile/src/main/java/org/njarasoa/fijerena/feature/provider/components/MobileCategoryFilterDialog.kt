@@ -10,18 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,16 +33,23 @@ import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * The content-filter editor (exclude / include-only rules by category name, allowed scripts),
@@ -82,50 +83,61 @@ fun MobileCategoryFilterDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { CinemaText(title, role = TextRole.Title) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
-                Text(text = stringResource(R.string.provider_filter_mode_label), style = MaterialTheme.typography.bodyMedium)
+                CinemaText(stringResource(R.string.provider_filter_mode_label))
                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                     CinemaFilterChip(
                         selected = filterMode == FilterMode.EXCLUDE,
                         onClick = { filterMode = FilterMode.EXCLUDE },
-                        label = { Text(stringResource(R.string.provider_filter_exclude)) },
+                        label = {
+                            CinemaText(
+                                stringResource(R.string.provider_filter_exclude),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        },
                     )
                     CinemaFilterChip(
                         selected = filterMode == FilterMode.INCLUDE,
                         onClick = { filterMode = FilterMode.INCLUDE },
-                        label = { Text(stringResource(R.string.provider_filter_include)) },
+                        label = {
+                            CinemaText(
+                                stringResource(R.string.provider_filter_include),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        },
                     )
                 }
-                Text(
-                    text =
-                        if (filterMode == FilterMode.EXCLUDE) {
-                            stringResource(R.string.provider_filter_exclude_desc)
-                        } else {
-                            stringResource(R.string.provider_filter_include_desc)
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                CinemaText(
+                    if (filterMode == FilterMode.EXCLUDE) {
+                        stringResource(R.string.provider_filter_exclude_desc)
+                    } else {
+                        stringResource(R.string.provider_filter_include_desc)
+                    },
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
                 if (filterMode == FilterMode.INCLUDE && rules.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.provider_filter_include_empty_warning),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                    CinemaText(
+                        stringResource(R.string.provider_filter_include_empty_warning),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Danger,
                     )
                 }
 
                 // Add section first — the thing you open this dialog to do most often.
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                    OutlinedTextField(
+                    CinemaTextField(
                         value = addRulesText,
                         onValueChange = { addRulesText = it },
-                        label = { Text(stringResource(R.string.provider_filter_add_rules_label)) },
-                        placeholder = { Text(stringResource(R.string.provider_filter_prefixes_placeholder)) },
+                        label = stringResource(R.string.provider_filter_add_rules_label),
+                        placeholder = stringResource(R.string.provider_filter_prefixes_placeholder),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = false,
                         minLines = 2,
@@ -139,14 +151,11 @@ fun MobileCategoryFilterDialog(
                             }
                         },
                         enabled = addRulesText.isNotBlank(),
-                    ) { Text(stringResource(R.string.common_add)) }
+                    ) { CinemaText(stringResource(R.string.common_add), role = TextRole.Label, tone = TextTone.Inherit) }
 
                     pendingAddValues?.let { values ->
                         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                            Text(
-                                text = stringResource(R.string.provider_filter_choose_match_type),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                            CinemaText(stringResource(R.string.provider_filter_choose_match_type))
                             // Manual 2-per-row wrap, not FlowRow — see MatchTypeChipRow note in
                             // tv/ProviderDialogs.kt for why FlowRow is avoided here right now.
                             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
@@ -156,7 +165,13 @@ fun MobileCategoryFilterDialog(
                                             CinemaFilterChip(
                                                 selected = pendingAddMatchType == type,
                                                 onClick = { pendingAddMatchType = type },
-                                                label = { Text(matchTypeLabel(type)) },
+                                                label = {
+                                                    CinemaText(
+                                                        matchTypeLabel(type),
+                                                        role = TextRole.Label,
+                                                        tone = TextTone.Inherit,
+                                                    )
+                                                },
                                             )
                                         }
                                     }
@@ -167,9 +182,9 @@ fun MobileCategoryFilterDialog(
                                     rules = rules.withAddedRules(values, pendingAddMatchType)
                                     addRulesText = ""
                                     pendingAddValues = null
-                                }) { Text(stringResource(R.string.common_ok)) }
+                                }) { CinemaText(stringResource(R.string.common_ok), role = TextRole.Label, tone = TextTone.Inherit) }
                                 CinemaOutlinedButton(onClick = { pendingAddValues = null }) {
-                                    Text(stringResource(R.string.common_cancel))
+                                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
                                 }
                             }
                         }
@@ -177,27 +192,27 @@ fun MobileCategoryFilterDialog(
                 }
 
                 if (rules.isNotEmpty()) {
-                    HorizontalDivider()
+                    CinemaDivider()
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
                     rules.forEachIndexed { index, rule ->
                         if (editingIndex == index) {
                             Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                color = CinemaTheme.colors.accentStrong,
+                                shape = CinemaTheme.shapes.chip,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(
                                     modifier = Modifier.padding(CinemaSpacing.sm),
                                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.provider_filter_edit_rule),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    CinemaText(
+                                        stringResource(R.string.provider_filter_edit_rule),
+                                        role = TextRole.Caption,
+                                        tone = TextTone.AccentSoft,
                                     )
-                                    OutlinedTextField(
+                                    CinemaTextField(
                                         value = editingValue,
                                         onValueChange = { editingValue = it },
                                         modifier = Modifier.fillMaxWidth(),
@@ -210,7 +225,13 @@ fun MobileCategoryFilterDialog(
                                                     CinemaFilterChip(
                                                         selected = editingMatchType == type,
                                                         onClick = { editingMatchType = type },
-                                                        label = { Text(matchTypeLabel(type)) },
+                                                        label = {
+                                                            CinemaText(
+                                                                matchTypeLabel(type),
+                                                                role = TextRole.Label,
+                                                                tone = TextTone.Inherit,
+                                                            )
+                                                        },
                                                     )
                                                 }
                                             }
@@ -226,9 +247,19 @@ fun MobileCategoryFilterDialog(
                                                     }
                                             }
                                             editingIndex = null
-                                        }) { Text(stringResource(R.string.common_ok)) }
+                                        }) {
+                                            CinemaText(
+                                                stringResource(R.string.common_ok),
+                                                role = TextRole.Label,
+                                                tone = TextTone.Inherit,
+                                            )
+                                        }
                                         CinemaOutlinedButton(onClick = { editingIndex = null }) {
-                                            Text(stringResource(R.string.common_cancel))
+                                            CinemaText(
+                                                stringResource(R.string.common_cancel),
+                                                role = TextRole.Label,
+                                                tone = TextTone.Inherit,
+                                            )
                                         }
                                     }
                                 }
@@ -238,19 +269,13 @@ fun MobileCategoryFilterDialog(
                                 modifier = Modifier.fillMaxWidth().heightIn(min = CinemaSpacing.xl + CinemaSpacing.xxs),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
-                                    text = matchTypeLabel(rule.matchType),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                CinemaText(
+                                    matchTypeLabel(rule.matchType),
+                                    role = TextRole.Caption,
+                                    tone = TextTone.Secondary,
                                     modifier = Modifier.width(MobileDimensions.buttonHeight),
                                 )
-                                Text(
-                                    text = rule.value,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f),
-                                )
+                                CinemaText(rule.value, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                 IconButton(
                                     onClick = {
                                         editingIndex = index
@@ -283,22 +308,18 @@ fun MobileCategoryFilterDialog(
                     }
                 }
 
-                Text(text = stringResource(R.string.provider_filter_script_title), style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = stringResource(R.string.provider_filter_script_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                )
+                CinemaText(stringResource(R.string.provider_filter_script_title))
+                CinemaText(stringResource(R.string.provider_filter_script_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
                 ScriptType.entries.forEach { script ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
+                        CinemaCheckbox(
                             checked = script in selectedScripts,
                             onCheckedChange = { checked ->
                                 selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
                             },
                         )
                         Spacer(modifier = Modifier.width(CinemaSpacing.xxs))
-                        Text(text = script.displayName, style = MaterialTheme.typography.bodyMedium)
+                        CinemaText(script.displayName)
                     }
                 }
             }
@@ -307,10 +328,12 @@ fun MobileCategoryFilterDialog(
             CinemaDialogActionButton(
                 onClick = { onSave(CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)) },
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_save_button)) }
+            ) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            CinemaOutlinedButton(onClick = onDismiss) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }

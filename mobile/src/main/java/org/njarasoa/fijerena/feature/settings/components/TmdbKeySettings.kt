@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,8 +25,11 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyCheck
 import org.njarasoa.fijerena.core.network.tmdb.TmdbKeyState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -67,7 +67,7 @@ fun TmdbKeyDialog(
     var draft by rememberSaveable(uiState.savedKey) { mutableStateOf(uiState.savedKey) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.tmdb_settings_title)) },
+        title = { CinemaText(stringResource(R.string.tmdb_settings_title), role = TextRole.Title) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -78,41 +78,33 @@ fun TmdbKeyDialog(
                     contentDescription = stringResource(R.string.tmdb_logo_description),
                     modifier = Modifier.height(MobileDimensions.iconSmall),
                 )
-                Text(stringResource(R.string.tmdb_settings_desc), style = MaterialTheme.typography.bodyMedium)
+                CinemaText(stringResource(R.string.tmdb_settings_desc), tone = TextTone.Secondary)
                 // The banner is about the saved key: gone once another key is typed or tested.
                 if (uiState.state == TmdbKeyState.Rejected && draft == uiState.savedKey) {
-                    Text(
-                        text = stringResource(R.string.tmdb_rejected_message),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    CinemaText(stringResource(R.string.tmdb_rejected_message), tone = TextTone.Danger)
                 }
-                OutlinedTextField(
+                CinemaTextField(
                     value = draft,
                     onValueChange = {
                         draft = it.trim()
                         viewModel.clearCheck()
                     },
-                    label = { Text(stringResource(R.string.tmdb_key_label)) },
+                    label = stringResource(R.string.tmdb_key_label),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    supportingText = { Text(stringResource(R.string.tmdb_key_hint)) },
+                    supportingText = stringResource(R.string.tmdb_key_hint),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 tmdbCheckText(uiState.testing, uiState.lastCheck)?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                    )
+                    CinemaText(it, role = TextRole.BodySmall, tone = TextTone.Secondary)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     CinemaDialogActionButton(
                         onClick = { viewModel.test(draft) },
                         enabled = draft.isNotBlank() && !uiState.testing,
                         kind = ButtonKind.Other,
-                    ) { Text(stringResource(R.string.tmdb_test_button)) }
+                    ) { CinemaText(stringResource(R.string.tmdb_test_button), role = TextRole.Label, tone = TextTone.Inherit) }
                     if (uiState.savedKey.isNotBlank()) {
                         CinemaDialogActionButton(
                             onClick = {
@@ -120,7 +112,7 @@ fun TmdbKeyDialog(
                                 onDismiss()
                             },
                             kind = ButtonKind.Other,
-                        ) { Text(stringResource(R.string.tmdb_remove_button)) }
+                        ) { CinemaText(stringResource(R.string.tmdb_remove_button), role = TextRole.Label, tone = TextTone.Inherit) }
                     }
                 }
             }
@@ -133,10 +125,12 @@ fun TmdbKeyDialog(
                 },
                 enabled = draft.isNotBlank() && draft != uiState.savedKey,
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_save_button)) }
+            ) { CinemaText(stringResource(R.string.provider_save_button), role = TextRole.Label, tone = TextTone.Inherit) }
         },
         dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+            }
         },
     )
 }
@@ -153,11 +147,7 @@ fun TmdbAttribution() {
             contentDescription = stringResource(R.string.tmdb_logo_description),
             modifier = Modifier.height(MobileDimensions.iconSmall),
         )
-        Text(
-            text = stringResource(R.string.tmdb_attribution),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
+        CinemaText(stringResource(R.string.tmdb_attribution), role = TextRole.BodySmall, tone = TextTone.Secondary)
     }
 }
 
