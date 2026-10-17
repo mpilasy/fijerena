@@ -57,8 +57,8 @@ timings taken on an emulator are only meaningful on such a build. Release builds
 ./gradlew :mobile:assembleRelease
 ```
 
-The build defines no signing configuration, so these produce unsigned APKs
-(`*-release-unsigned.apk`); sign them (e.g. with `apksigner`) before installing. Minification is off.
+Signed with the release key when one is configured (see Releasing below), otherwise unsigned
+(`*-release-unsigned.apk`; sign them, e.g. with `apksigner`, before installing). Minification is off.
 
 ---
 
@@ -77,17 +77,18 @@ Run style checks and tests before committing code:
 # added to CI; only new issues fail. Regenerate one with ./gradlew :<module>:updateLintBaseline)
 ./gradlew lintDebug
 
-# Run unit tests (CI runs testDebugUnitTest)
-./gradlew test
+# Run unit tests (what CI runs)
+./gradlew testDebugUnitTest
 
 # Source gates (see AGENTS.md, constraints 7 and 13, and the TV focus rules)
 scripts/check-cancellation.sh       # catch (Exception) in suspend code rethrows CancellationException
 scripts/check-viewmodel-launch.sh   # no new bare viewModelScope.launch (use launchGuarded)
 scripts/check-focus-retry.sh        # no requestFocus() + catch (IllegalStateException)
+scripts/check-design-system.sh      # no raw colours, sizes or Material controls outside the theme (per-file allow-list)
 ```
 
-CI runs on every push to `main`, or by hand (`workflow_dispatch`), in three workflows under `.github/workflows/`:
-- `checks.yml`: a grep for blanket destructive Room fallbacks and the three gates above.
+CI runs on every push to `main`, or by hand (`workflow_dispatch`), in these workflows under `.github/workflows/`:
+- `checks.yml`: a grep for blanket destructive Room fallbacks and the four gates above.
 - `android-build.yml` (not for docs-only, server-only or focus-walk changes): ktlint, unit tests,
   Android Lint, a check that the build left `core/network/schemas` unchanged, `assembleDebug`, then
   `assembleDebugAndroidTest` so the instrumented tests keep compiling.
@@ -259,7 +260,7 @@ still builds, unsigned (`*-release-unsigned.apk`).
 
 1. Raise `fijerena.versionCode` (every release, or the APK won't install over the last one) and
    set `fijerena.versionName` in `gradle.properties`.
-2. Retitle `docs/RELEASE_NOTES.md`'s "Version: Unreleased" heading to the version.
+2. Retitle `docs/RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
 3. Commit, push `main`, then tag and push the tag:
    `git tag v<version> && git push origin v<version>`.
 
@@ -287,7 +288,7 @@ Every build records what went wrong on the device itself, so a crash on a TV is 
 the fact without logcat having been attached:
 
 - **Diagnostics** (expert mode on for the profile in use, on its page under Settings →
-  Profiles; then Settings → About & advanced → Open Diagnostics; mobile's can also Share as
+  Profiles; then Settings → About & advanced → Open diagnostics; mobile's can also Share as
   text) lists, newest
   first, the app's own crash log — uncaught exceptions, and exceptions absorbed by the app-wide
   coroutine scopes (`AppScopes`), sync records that couldn't be applied, a database set aside on
@@ -375,7 +376,7 @@ is on a destructive control (Delete, Clear, Remove, Purge, Shrink, Reset, Leave 
 counts a mismatch and stops pressing OK, since a walk started in the wrong place once pressed a
 library-data Clear button while recording. The one exception is the `REMOVE` step, for removals the
 Undo bar takes back: it presses OK only while focus is on "Remove from Recent", "Remove from
-Favorites" or an edit-mode row (its ✕ reads "Remove") — never Clear / Delete / anything else — the
+Favourites" or an edit-mode row (its ✕ reads "Remove") — never Clear / Delete / anything else — the
 walk's next line must be `MENU` (the undo), and on any mismatch while a removal is still undoable,
 or a walk ending without its `MENU`, the script presses Menu itself to undo it.
 
@@ -396,6 +397,7 @@ there. Each file's header comments name the start screen, the source it expects 
 | `guide.txt` | TV Guide grid, header, programme details |
 | `details.txt` | Movie details and the episodes list |
 | `search.txt` | Search field (`TvSearchField`) and recent searches |
+| `search-sources.txt` | Search: the source filter row under the field (a profile with two sources, Expert mode) |
 | `settings.txt` | Settings rail and panes, pickers |
 | `settings-guide.txt` | Settings: Source & guide rows and guide data maintenance |
 | `sources.txt` | Sources rows and their fixed slots |
@@ -403,18 +405,18 @@ there. Each file's header comments name the start screen, the source it expects 
 | `epg-management.txt` | Guide sources of one source, a row's Auto-refresh picker |
 | `live-sync.txt` | Live sync screen |
 | `recent-remove.txt` | Live TV browse, Recent (iptv): menu opens on Remove from Recent, removal → next row, Menu undoes; edit mode (pencil, OK removes, Menu undoes), Back from Clear Recent → the pencil |
-| `favorites-remove.txt` | Live TV browse, Favorites (iptv, one favourite): Remove from Favorites with no confirmation, the empty list's Refresh focused, Menu undoes |
+| `favorites-remove.txt` | Live TV browse, Favourites (iptv, one favourite): Remove from Favourites with no confirmation, the empty list's Refresh focused, Menu undoes |
 | `live-panel-remove.txt` | Live TV preview's channel panel, Recent tab (iptv): removal → next row (not the tabs), Menu undoes |
-| `home-card-actions.txt` | Home (iptv): a Channels card's menu, removal → next card, Menu undoes; a Favorite channels card opens on Remove from Favorites, Back keeps focus |
+| `home-card-actions.txt` | Home (iptv): a Channels card's menu, removal → next card, Menu undoes; a Favourite channels card opens on Remove from Favourites, Back keeps focus |
 
-All fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches
+The first fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches
 after the fixes). After the navigation rail and the Home change (2026-10-08 / 09): `home.txt`,
 `home-rows.txt`, `sources.txt` and `live-tv-preview.txt` re-run with 0 mismatches; `search.txt`
 and `settings.txt` match on their rail steps but depend on the device's recent searches and on a
 profile page that needs another source; `details.txt`, `live-tv-browse.txt`, `guide.txt` and
 `epg-management.txt` were edited by hand for the rail and not yet re-run (`guide.txt` and
-`epg-management.txt` need a source with a guide). The Recent and Favorites rework (2026-10-09:
-immediate removal with Undo, edit mode, Home card actions, the Favorite channels row) was walked by
+`epg-management.txt` need a source with a guide). The Recent and Favourites rework (2026-10-09:
+immediate removal with Undo, edit mode, Home card actions, the Favourite channels row) was walked by
 hand on the emulator, then the four walks above were recorded (2026-10-09, 0 mismatches each) and
 `home.txt` re-run (0 mismatches); `home-rows.txt` not re-run after it. Some file headers still say "not yet recorded" from before those rounds.
 

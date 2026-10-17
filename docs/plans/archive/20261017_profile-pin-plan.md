@@ -2,6 +2,8 @@
 
 **Status:** Done 2026-10-17 — all five phases, walked on the TV and phone emulators. Not checked: the 5-minute background re-lock on a device (unit-tested), a PIN arriving by live sync while the app is open (takes effect at the next lock check), the Shields.
 
+Changed 2026-10-17 (942463e9): the PIN is asked only on opening Settings and what it opens (`isSettingsArea`); picking a profile, launch and coming back never ask. Add profile on TV's picker and becoming Expert still ask an Expert's PIN.
+
 An optional 4-digit PIN per profile. It locks the profile (picking it, launching into it) and, on
 an Expert profile (the admin, for now — see `project_admin_is_expert`), it is the admin PIN: the
 admin-only parts of the app ask for it. A profile without a PIN behaves exactly as today.

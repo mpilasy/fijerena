@@ -28,8 +28,9 @@ automatic Xtream guide source URLs.)
 | `total_programmes` | INTEGER | Total programmes from pipeline |
 
 ### Table: `profiles` (added v11)
-The people using the app. Favourites, watch state, Recent Categories and the last-browsed
-bookmarks are per profile; providers, EPG sources and settings are shared. See
+The people using the app. Favourites, watch state, Recent Categories, the last-browsed
+bookmarks, category filters, which sources a profile has and a few settings (theme, Look and Feel,
+Expert mode, PIN; §5) are per profile; providers, EPG sources and the other settings are shared. See
 `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
 
 | Column | Type | Description |
@@ -149,7 +150,7 @@ written (no shared transaction): provider passwords (`provider`), Jellyfin login
 (`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
 `theme_id` and `ui_style_id` (per profile; a device-wide `theme_id` record from an older build,
 profile `shared`, is ignored), `dev_mode` (per profile), `autoplay_next_episode` (per
-profile), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
+profile), `pin_hash` (per profile; a removed PIN is sent as blank), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
 `epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
 ignored.
 
@@ -569,6 +570,9 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 |-----|------|-------------|
 | `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
 | `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `dev_mode` |
+| `pin_hash_<profileId>` | TEXT | That profile's optional 4-digit PIN as `ProfilePins` stores it (`salt:hash`, salted PBKDF2); absent or blank = no PIN. Synced per profile (a removal as blank); removed with the profile — see `docs/plans/archive/20261017_profile-pin-plan.md` |
+| `pin_failures_<profileId>`, `pin_wait_until_<profileId>` | INT, LONG | Wrong PINs in a row for that profile on this device, and when it may be tried again (epoch ms; 0 = now). Per device, never synced; removed with the profile |
+| `last_tab_<profileId>` | TEXT | The section (a `ContentType`) that profile last had open in the phone's bottom bar, opened at the next start. Per device, never synced; removed with the profile |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
 | `last_provider_<profileId>` | TEXT | Retired (multi-source Phase 6): `providerKey` of the provider that profile last picked. No longer written nor synced (a value an older build sends is ignored); read only by the one-time upgrade to per-profile sources (`profile_sources_seeded_v1`) |
 | `profile_sources_<profileId>` | TEXT | The sources that profile has: a JSON array of `providerKey`s (sorted). Absent = none stored (a profile from before the upgrade, or one synced from an older build); a key with no provider on this device is kept and skipped (`ProviderRepository.profileSources`), A new provider is added to the profile in use's; a new profile copies the profile in use's; removed with the profile. Synced per profile and per source (`profile_source:<providerKey>` setting records, on or off; linking seeds one for every source on or known here) — see `docs/plans/20261012_multi-source-search-history-plan.md` → Phase 2 |
@@ -581,7 +585,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |
 | `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
 | `epg_refresh_interval_copied_v1` | BOOLEAN | One-time flag, per install (never synced): `EpgRefreshSchedule.copyLegacyIntervalOnce` has written the retired device-wide interval (`epg_auto_refresh` off or `epg_refresh_interval` -1 → -1, else the interval) into every `epg_source` row whose `refresh_interval_hours` is null. Set only after it succeeds |
-| `app_language` | TEXT | ISO 639-1 code (`en`, `mg`; default `en`) |
+| `app_language` | TEXT | ISO 639-1 code (`en`, `fr`, `mg`; default `en`) |
 | `provider_name` | TEXT | Legacy single-provider name. Never written any more; a few screens still read it as a fallback (default `My Provider`) until the active provider's name loads |
 | `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for a fast cold start (TV) |
 | `orphan_sweep_pending` | BOOLEAN | Set while `deleteProvider` runs, cleared when it finishes; still set at the next start means a deletion was interrupted, and that start sweeps for orphaned catalogue rows. Per device, never synced |

@@ -22,7 +22,7 @@ fijerena/
     ui/              shared ViewModels, theme tokens, shared components, AppContainer,
                      live-sync manager, TV Guide layout engine
     navigation/      Screen routes, navigateOnce, ContentType
-    data/            AuthViewModel (restored Xtream session)
+    data/            AuthViewModel (not used by either app)
   server/            live-sync server (Cloudflare Worker / Docker)
 ```
 
@@ -30,7 +30,7 @@ fijerena/
 
 ```
 tv, mobile ──→ core:ui, core:network, core:player, core:navigation, core:data
-core:ui ─────→ core:network, core:player
+core:ui ─────→ core:network, core:player, core:navigation
 core:network ─→ core:player   (api)
 core:data ───→ core:player    (api)
 core:player, core:navigation  → no project dependencies
@@ -42,7 +42,7 @@ core:player, core:navigation  → no project dependencies
 
 | Class | Module | Role |
 |-------|--------|------|
-| `AppContainer` (`di/`) | core:ui | Manual DI: one `ProviderRepository` and one `MediaRepository` per source, resolved behind a `Mutex`; `clearAllCaches()` on a source switch; `externalSwitches` when live sync moves the device off a profile or source |
+| `AppContainer` (`di/`) | core:ui | Manual DI: one `ProviderRepository` and one `MediaRepository` per source, resolved behind a `Mutex`; `clearAllCaches()`; `externalSwitches` when live sync moves the device off its profile, `sourceDeletions` when it deletes a source the profile has |
 | `FijerenaApplication` | core:ui | Start-up: crash-loop check, EPG initialisation, migrations, sync |
 | `MediaRepository` | core:network | Per-source, per-profile facade: catalogue, favourites, watch state, Recent, guide pages |
 | `ProviderRepository` (`provider/`) | core:network | Sources, per-source settings, credentials, database shrink |
@@ -100,7 +100,7 @@ IDs are `String` throughout (Jellyfin UUIDs, SMB paths, file URIs).
 
 | Store | Contents | Classes |
 |-------|----------|---------|
-| `providers.db` (`SettingsDatabase`, Room v16) | Sources (config, active flag, sync stats and last-sync delta), guide sources (with change-detection validators), pipeline stats, profiles, live-sync bookkeeping | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity`, `ProfileEntity`, settings-sync entities |
+| `providers.db` (`SettingsDatabase`, Room v17) | Sources (config, sync stats and last-sync delta), guide sources (with change-detection validators), pipeline stats, profiles, live-sync bookkeeping | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity`, `ProfileEntity`, settings-sync entities |
 | `xtream_v2.db` (`XtreamDatabase`, Room v24) | Xtream catalogue (categories, streams, series, episodes, per-stream EPG payloads, FTS4), and the provider-agnostic `watch_state` and `favorite_state` tables | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
 | `epg_index.db` (`EpgIndexDatabase`, Room v17) | Guide programme index with FTS4 | `epgindex/` |
 | EncryptedSharedPreferences | Passwords and sessions per source (and per profile for Jellyfin logins) | `provider_creds_<id>`, `xtream_secure_credentials` |
@@ -251,15 +251,17 @@ mobile/.../ui/theme/Color.kt        re-exports (computed get() properties)
 | Theme | ID | Accent | Background | Surface |
 |-------|----|--------|-----------|---------|
 | Deep Night (default) | `deep_night` | `#2979FF` electric blue | `#0F1014` | `#161A20` |
-| AMOLED Black | `amoled_black` | `#E0E0E0` near-white | `#000000` | `#0A0A0A` |
+| Pure Black | `amoled_black` | `#E0E0E0` near-white | `#000000` | `#0A0A0A` |
 | Amethyst | `amethyst` | `#9C6BFF` purple | `#0F1014` | `#161A20` |
 | Teal | `teal` | `#26C6DA` teal | `#0F1014` | `#161A20` |
+| Forest | `forest` | `#2EBD85` green | `#0E1311` | `#141B18` |
+| Daylight (light, Expert mode only) | `daylight` | `#1565C0` deep blue | `#F4F6F9` | `#FFFFFF` |
 
-The live / secondary orange `#FF6D00` is the same in every theme.
+The live / secondary orange is `#FF6D00` in every dark theme (`#D84315` in Daylight). Each profile has its own theme (`theme_id_<profileId>`); `palettesFor(admin, current)` leaves Daylight out of the picker without Expert mode.
 
 ### Look and Feel (`UiStyle`)
 
-`core/ui/.../theme/UiStyle.kt` carries shape, type weight and tracking, dialog position and scrim, grid spacing and focus effect, and icon style. Four presets — **Material** (default), **Cupertino**, **Roku** and **BRAVIA** — chosen in Settings (`AppSettings.uiStyleId`). Any palette combines with any style.
+`core/ui/.../theme/UiStyle.kt` carries shape (radii, rounded or cut corners), font family, type weight and tracking, dialog position and scrim, grid spacing and focus effect, and icon style. Five presets, shown as **Standard** (`material`, default), **Rounded** (`cupertino`), **Sharp** (`roku`), **Balanced** (`bravia`) and **Serif** (`serif`) — chosen per profile on its page (`AppSettings.uiStyleId`, stored as `ui_style_id_<profileId>`). Any palette combines with any style. Both reach the screens through `CinemaTheme` (`theme/CinemaTheme.kt`: colour, text, shape and border roles) and the style classes; the rules are in AGENTS.md → Design system.
 
 ### UI Scale (TV)
 
@@ -274,7 +276,8 @@ Settings → Display → Text & grid size (0.4–1.0, default 0.8). TV `MainActi
 | `CinemaAnimation` | core:ui | Durations: focus, nav transition (300 ms), controls auto-hide (TV 15 s, mobile 5 s), toast (3 s), stats update (1 s), up-next lead (90 s) |
 | `CinemaCornerRadius` | core:ui | Corner radii |
 | `CinemaSpacing` | core:ui | Spacing scale (none, xxxs through xxl) |
-| `CinemaThemePalette` | core:ui | Palette data class and the 4 palettes |
+| `CinemaThemePalette` | core:ui | Palette data class and the 6 palettes |
+| `CinemaTheme` | core:ui | Colour, text, shape and border roles read from the palette and the Look and Feel |
 | `UiStyle` | core:ui | Look-and-feel presets |
 | `TvDimensions` | tv | TV sizes (safe margins, dialog widths, progress bars, guide column) |
 | `TvFocusTokens` | tv | Focus scale, border, containers, driven by `LocalUiStyle` |
@@ -282,11 +285,11 @@ Settings → Display → Text & grid size (0.4–1.0, default 0.8). TV `MainActi
 
 ### Typography (TV)
 
-A 15-style scale (48 sp down to 14 sp): display and headline styles in Manrope, title, body and label in Roboto. Body text is at least 18 sp.
+A 15-style scale (48 sp down to 14 sp): display and headline styles in Manrope, title, body and label in Roboto, unless the Look and Feel sets a font (`UiTypeTokens.fontFamily`; Serif). Body text is at least 18 sp.
 
 ### Focus System (TV)
 
-- Scale, outline and shadow come from `LocalUiStyle.current.grid` through `TvFocusTokens`: focus scale 1.0 (Roku, outline only) to 1.09 (Cupertino); outline 3 dp when the style uses one, never below `minFocusBorderWidth` (2 dp).
+- Scale, outline and shadow come from `LocalUiStyle.current.grid` through `TvFocusTokens`: focus scale 1.0 (Sharp, outline only) to 1.09 (Rounded); outline 3 dp when the style uses one, never below `minFocusBorderWidth` (2 dp).
 - Modifiers: `tv/ui/components/modifiers/FocusModifiers.kt`. Focus behaviour (panes, return focus, retries) is the contract in [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md#tv-focus).
 
 ### Safe Margins (TV Overscan)
@@ -328,8 +331,6 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | `SafeModeViewModel` | Safe mode's Clear caches |
 | `PlaybackViewModel` (core:player) | Playback control over `StreamingPlaybackService` |
 
-`LoginViewModel` (like `Screen.Login`) remains but no screen uses it.
-
 ---
 
 ## Screen Inventory
@@ -338,7 +339,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Home | `feature/contentselection/ContentTypeSelectionScreen.kt` (+ `components/TvContinueWatchingShelf.kt`) | Header (clock, source, Search the guide), Continue Watching, Channels and favourites rows; no section tiles (the rail) |
+| Home | `feature/contentselection/ContentTypeSelectionScreen.kt` (+ `components/TvContinueWatchingShelf.kt`) | Header (clock, the sources' sync line, Search the guide), Continue Watching, Channels, favourites and favourite-category rows; no section tiles (the rail) |
 | Navigation rail | `ui/components/rail/TvNavRail.kt`, `TvNavRailState.kt`; `navigation/TvSections.kt` | Profile, Home, sections, Search, Settings down the left edge, over every screen but the player and the Live TV preview |
 | Category screen | `feature/category/TvCategoryGridScreen.kt` | Categories and items in two panes; Live TV preview layer |
 | Movie details | `feature/movie/MovieDetailsScreen.kt` | Hero, Play / Resume, tabs, related titles |
@@ -346,7 +347,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | Player | `feature/player/TvPlayerScreen.kt` → `ui/player/PlayerScreen.kt` | The `Player` route (movies, episodes); `PlayerScreen` also renders Live TV full screen inside the preview layer |
 | Search | `feature/search/SearchScreen.kt` | Query field, grouped results |
 | Settings | `feature/settings/SettingsScreen.kt` (+ `components/`) | Group rail and pane |
-| Sources | `feature/provider/ProviderSelectionScreen.kt` | Source list: use, guide, add, edit, copy, delete |
+| Sources | `feature/provider/ProviderSelectionScreen.kt` | Source list: guide, add, edit, copy, delete |
 | Add / Edit Source | `feature/provider/TvAddProviderScreen.kt` (+ `components/`) | Connection form; per-source settings, filters, library data |
 | TV Guide | `feature/epg/TvEpgGuideScreen.kt` + `feature/epg/TvGuideGrid.kt` | Time grid |
 | Guide sources | `feature/epg/TvEpgManagementScreen.kt` | XMLTV sources of one source |
@@ -360,13 +361,14 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 
 Live TV and category parts (`feature/category/components/`): `TwoColumnLayout`, `CategoryList`, `StreamList`, `LiveTvSplitLayout` (preview and full screen), `LiveTvChannelPanel`, `ChannelContext`, `FavoriteMenuDialog` (row actions), `CategoryStates`, `CategoryGridUtils`.
 
-Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEffects`; `components/overlays/` `TvPlayerControlsOverlay` (OSD), `TvStatsOverlay`, `TvTuningOverlay`, `TvUpNextOverlay`; `components/dialogs/` audio, subtitle, quality and chapter pickers.
+Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEffects`; `components/overlays/` `TvPlayerControlsOverlay` (OSD), `TvStatsOverlay`, `TvTuningOverlay`, `TvUpNextOverlay`, `TvSlowConnectionBanner`; `components/dialogs/` audio, subtitle, quality and chapter pickers.
 
 ### Mobile (`mobile/`)
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Home | `feature/contentselection/ContentTypeSelectionScreen.kt` (+ `components/MobileContinueWatchingShelf.kt`) | Content types, header buttons, Continue Watching |
+| Bottom bar | `navigation/MobileBottomBar.kt`, `MobileDockStyle.kt` | Section tabs, Search, the profile slot (no Home) |
+| Tab header | `feature/contentselection/MobileSourceTopBar.kt` | Section name, the sources' sync line, Search the guide, Search |
 | Category list | `feature/category/MobileCategoryListScreen.kt` | Categories and items; Live TV dock and full screen |
 | Movie details | `feature/movie/MovieDetailsScreen.kt` | Hero, Play / Resume, related titles |
 | Episodes | `feature/episode/EpisodeSelectionScreen.kt` | Season tabs, episode list |
@@ -378,7 +380,8 @@ Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEff
 | TV Guide | `feature/epg/MobileEpgGuideScreen.kt` + `feature/epg/MobileGuideGrid.kt` | Date tabs, time grid, programme sheet |
 | Guide sources | `feature/epg/MobileEpgManagementScreen.kt` | XMLTV sources of one source |
 | Search the guide | `feature/epgbrowser/MobileEpgBrowserScreen.kt` | Programme search |
-| Profile picker | `feature/profile/ProfilePickerScreen.kt` | "Who's watching?" |
+| Profile menu | `feature/profile/MobileProfileMenu.kt`, `ProfileSheet.kt` | The profiles, Settings, Browse entries |
+| Profile page | `feature/settings/ProfileEditScreen.kt` | A profile's page |
 | Live sync | `feature/settings/MobileSyncSettingsScreen.kt` (+ `components/QrScanner.kt`) | Sync group setup, pairing, devices, Remote Stop |
 | Diagnostics | `feature/settings/MobileDiagnosticsScreen.kt` | Crash log and exit history, Share |
 | Device info | `feature/settings/MobileDeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts, Share |

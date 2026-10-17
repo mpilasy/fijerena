@@ -63,8 +63,8 @@ The full reference is **[docs/FEATURES.md](docs/FEATURES.md)**; this is the shor
   filters; profiles, favourites, progress and settings kept in step across your devices, end-to-end
   encrypted, through a sync server you host yourself ([server/](server/README.md)); TVs join by QR
   code from a phone.
-- **Settings:** dark themes, several looks, English, French and Malagasy, UI scale on TV,
-  export/import.
+- **Settings:** colour themes and looks per profile, an optional profile PIN, English, French and
+  Malagasy, UI scale on TV, export/import.
 
 ## Privacy
 
@@ -100,8 +100,9 @@ Nothing is required to build, and no build carries a TMDB key. For TMDB details,
 (v3 API key or v4 read access token, free from themoviedb.org → Settings → API) in the app:
 Settings → Source & guide → Film and series details (TMDB). Without one, nothing is sent to TMDB.
 
-`./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs. The build has no
-signing configuration yet, so they come out unsigned.
+`./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs, signed when the
+`FIJERENA_*` signing variables or a `keystore.properties` provide a key, unsigned otherwise (see
+[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) → Releasing).
 
 ### Installing a development build
 
@@ -127,6 +128,7 @@ Device discovery, backup/restore, logs and debugging are in
 ./gradlew lintDebug            # Android Lint; each module's lint-baseline.xml holds the old warnings
 ./gradlew testDebugUnitTest    # unit tests
 scripts/check-cancellation.sh && scripts/check-viewmodel-launch.sh && scripts/check-focus-retry.sh
+scripts/check-design-system.sh
 ```
 
 GitHub Actions runs these on every push to `main`: `checks.yml` (the gates), `android-build.yml`

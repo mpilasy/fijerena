@@ -21,6 +21,8 @@ says what the app stores, what it sends and to whom.
   Android's encrypted shared preferences, whose key lives in the Android Keystore. A guide source
   that an Xtream source adds by itself is stored without the login; the login is added only when
   the guide is downloaded.
+- **Profile PINs:** an optional profile PIN is kept only as a salted hash, with the profile's
+  settings (and synced with them, if you use live sync).
 - **Crash log:** errors are written to a log in the app's private storage, with logins and
   passwords redacted. It leaves the device only if you share it yourself.
 - **No Android backup:** the app opts out of cloud backup and of device-to-device transfer. To
