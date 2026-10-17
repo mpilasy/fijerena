@@ -56,8 +56,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
+import org.njarasoa.fijerena.core.ui.components.rememberProfilePinFlow
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -77,6 +80,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
+import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButtonArea
@@ -226,6 +230,17 @@ fun ProfileEditPane(
     val filtersFocus = remember { FocusRequester() }
     val sourcesFocus = remember { FocusRequester() }
     val deleteFocus = remember { FocusRequester() }
+    val pinFocus = remember { FocusRequester() }
+    // The PIN row (docs/plans/20261017_profile-pin-plan.md): saved as it is set, like the theme.
+    val everyone by viewModel.profiles.collectAsStateWithLifecycle()
+    val onlyExpert = remember(profile.id, everyone) { viewModel.isLastExpert(profile.id) }
+    val pinFlow =
+        rememberProfilePinFlow(
+            pins = viewModel.pins,
+            profileId = profile.id,
+            own = profile.isActive,
+            lastExpert = stored.devMode && onlyExpert,
+        )
 
     // Content filters act on Xtream catalogues only (as they did in Edit Source).
     val filterSources by remember(profile.id) { viewModel.filterSources(profile.id) }.collectAsStateWithLifecycle(emptyList())
@@ -381,6 +396,13 @@ fun ProfileEditPane(
                     themeRowFocusRequester = themeFocus,
                     uiStyleRowFocusRequester = lookFocus,
                 )
+                SettingsRow(
+                    title = stringResource(R.string.profile_pin_title),
+                    description = stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
+                    value = stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off),
+                    onClick = pinFlow::start,
+                    focusRequester = pinFocus,
+                )
                 // Only for an Expert (the admin, for now), who may give it to or take it from any
                 // profile; otherwise it is turned on by tapping the version in About 7 times
                 // (DeveloperModeTaps).
@@ -505,6 +527,51 @@ fun ProfileEditPane(
             )
         }
 
+        pinFlow.request?.let { request ->
+            val prompt =
+                rememberPinPromptState(viewModel.pins, request) {
+                    pinFlow.promptDone()
+                    if (pinFlow.step == null) refocus = pinFocus
+                }
+            TvPinDialog(
+                state = prompt,
+                onCancel = {
+                    pinFlow.cancel()
+                    refocus = pinFocus
+                },
+            )
+        }
+        if (pinFlow.step == ProfilePinFlow.Step.OPTIONS) {
+            val closeOptions = {
+                pinFlow.cancel()
+                refocus = pinFocus
+            }
+            CinemaAlertDialog(
+                onDismissRequest = closeOptions,
+                containerColor = CinemaTheme.colors.background,
+                titleContentColor = CinemaTheme.colors.textPrimary,
+                title = { CinemaText(stringResource(R.string.profile_pin_title)) },
+                confirmButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main) {
+                            CinemaText(stringResource(R.string.profile_pin_change))
+                        }
+                        CinemaButton(
+                            onClick = {
+                                pinFlow.remove()
+                                refocus = pinFocus
+                            },
+                            kind = ButtonKind.Danger,
+                        ) { CinemaText(stringResource(R.string.profile_pin_remove)) }
+                    }
+                },
+                dismissButton = {
+                    CinemaButton(onClick = closeOptions, kind = ButtonKind.Other) {
+                        CinemaText(stringResource(R.string.common_cancel))
+                    }
+                },
+            )
+        }
         if (confirmDelete) {
             ConfirmActionDialog(
                 title = stringResource(R.string.profile_delete_confirm_title, profile.name),

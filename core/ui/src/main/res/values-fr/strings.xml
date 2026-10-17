@@ -1257,4 +1257,25 @@
         <item quantity="one">%1$s a expiré il y a %2$d jour</item>
         <item quantity="other">%1$s a expiré il y a %2$d jours</item>
     </plurals>
+    <string name="profile_pin_title">Code PIN</string>
+    <string name="profile_pin_on">Activé</string>
+    <string name="profile_pin_off">Désactivé</string>
+    <string name="profile_pin_desc">Demandé avant d\'utiliser ce profil</string>
+    <string name="profile_pin_desc_expert">Demandé avant d\'utiliser ce profil ou ses réglages d\'administration</string>
+    <string name="profile_pin_change">Changer le code PIN</string>
+    <string name="profile_pin_remove">Supprimer le code PIN</string>
+    <string name="pin_choose">Choisissez un code PIN à 4 chiffres</string>
+    <string name="pin_repeat">Saisissez de nouveau le même code PIN</string>
+    <string name="pin_mismatch">Les deux codes PIN diffèrent : choisissez-en un de nouveau.</string>
+    <string name="pin_enter_current">Saisissez le code PIN actuel</string>
+    <string name="pin_enter_for">Saisissez le code PIN de %1$s</string>
+    <string name="pin_wrong_left">Code PIN incorrect. Encore %1$d essais avant une attente.</string>
+    <string name="pin_wrong_wait">Code PIN incorrect. Réessayez dans %1$s.</string>
+    <string name="pin_waiting">Trop de codes PIN incorrects. Réessayez dans %1$s.</string>
+    <string name="pin_seconds">%1$d s</string>
+    <string name="pin_minutes">%1$d min</string>
+    <string name="pin_erase">Effacer</string>
+    <string name="pin_last_expert_warning">C\'est le seul profil en mode expert : si son code PIN est oublié, seul l\'effacement des données de l\'application rend l\'administration.</string>
+    <string name="pin_set_done">Code PIN défini</string>
+    <string name="pin_removed">Code PIN supprimé</string>
 </resources>

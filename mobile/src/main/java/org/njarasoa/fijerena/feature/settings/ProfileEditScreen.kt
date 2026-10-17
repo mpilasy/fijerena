@@ -28,8 +28,11 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
+import org.njarasoa.fijerena.core.ui.components.rememberProfilePinFlow
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -47,6 +50,7 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.feature.settings.components.SettingsScope
+import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -144,6 +148,42 @@ fun MobileProfileEditScreen(
                     onDismiss = { choosingLook = false },
                 )
             }
+            // The PIN row (docs/plans/20261017_profile-pin-plan.md): saved as it is set, like the theme.
+            val onlyExpert = remember(profileId, profiles) { viewModel.isLastExpert(profileId) }
+            val pinFlow =
+                rememberProfilePinFlow(
+                    pins = viewModel.pins,
+                    profileId = profileId,
+                    own = profile.isActive,
+                    lastExpert = stored.devMode && onlyExpert,
+                )
+            pinFlow.request?.let { request ->
+                PinDialog(
+                    state = rememberPinPromptState(viewModel.pins, request, pinFlow::promptDone),
+                    onCancel = pinFlow::cancel,
+                )
+            }
+            if (pinFlow.step == ProfilePinFlow.Step.OPTIONS) {
+                CinemaAlertDialog(
+                    onDismissRequest = pinFlow::cancel,
+                    title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title, tone = TextTone.Inherit) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                            CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main, modifier = Modifier.fillMaxWidth()) {
+                                CinemaText(stringResource(R.string.profile_pin_change), role = TextRole.Label, tone = TextTone.Inherit)
+                            }
+                            CinemaButton(onClick = pinFlow::remove, kind = ButtonKind.Danger, modifier = Modifier.fillMaxWidth()) {
+                                CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
+                            CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                        }
+                    },
+                )
+            }
             var editingSources by rememberSaveable { mutableStateOf(false) }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
@@ -175,6 +215,13 @@ fun MobileProfileEditScreen(
                     title = stringResource(R.string.settings_ui_style_section_title),
                     summary = AllUiStyles.firstOrNull { it.id == uiStyleId }?.let { stringResource(it.nameRes) } ?: uiStyleId,
                     onClick = { choosingLook = true },
+                )
+                SettingsListRow(
+                    title = stringResource(R.string.profile_pin_title),
+                    summary =
+                        stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off) + " · " +
+                            stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
+                    onClick = pinFlow::start,
                 )
                 // Only for an Expert (the admin, for now), who may give it to or take it from any
                 // profile; otherwise it is turned on by tapping the version in About 7 times

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -111,6 +112,9 @@ class ProfilesViewModel(
      * listed profiles, which a profile page has read; true while they aren't, to be safe.
      */
     fun isLastExpert(id: String): Boolean = profiles.value.none { it.id != id && appSettings.devMode(it.id) }
+
+    /** The profiles' optional PINs (docs/plans/20261017_profile-pin-plan.md). */
+    val pins = ProfilePins(appSettings)
 
     fun addProfile(
         name: String,

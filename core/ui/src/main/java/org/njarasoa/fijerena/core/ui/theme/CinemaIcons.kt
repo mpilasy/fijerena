@@ -2,18 +2,21 @@ package org.njarasoa.fijerena.core.ui.theme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
+import androidx.compose.material.icons.automirrored.sharp.Backspace
 import androidx.compose.material.icons.automirrored.sharp.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.sharp.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.sharp.List
@@ -42,6 +45,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.LiveTv
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Pause
@@ -87,6 +91,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Pause
@@ -132,6 +137,7 @@ import androidx.compose.material.icons.sharp.Info
 import androidx.compose.material.icons.sharp.KeyboardArrowDown
 import androidx.compose.material.icons.sharp.KeyboardArrowUp
 import androidx.compose.material.icons.sharp.LiveTv
+import androidx.compose.material.icons.sharp.Lock
 import androidx.compose.material.icons.sharp.MoreVert
 import androidx.compose.material.icons.sharp.Movie
 import androidx.compose.material.icons.sharp.Pause
@@ -204,6 +210,15 @@ object CinemaIcons {
     val Close: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.Close, Icons.Outlined.Close, Icons.Sharp.Close)
+
+    val Backspace: ImageVector
+        @Composable @ReadOnlyComposable
+        get() =
+            pick(Icons.AutoMirrored.Rounded.Backspace, Icons.AutoMirrored.Outlined.Backspace, Icons.AutoMirrored.Sharp.Backspace)
+
+    val Lock: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Lock, Icons.Outlined.Lock, Icons.Sharp.Lock)
 
     val Delete: ImageVector
         @Composable @ReadOnlyComposable
