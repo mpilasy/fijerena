@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.feature.settings
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
@@ -113,7 +115,8 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                 Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(CinemaSpacing.md),
+                    .padding(start = CinemaSpacing.md, top = CinemaSpacing.md, end = CinemaSpacing.md),
+            contentPadding = PaddingValues(bottom = CinemaSpacing.md + LocalDockInset.current),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             item {

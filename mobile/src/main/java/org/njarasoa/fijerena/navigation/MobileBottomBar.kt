@@ -1,11 +1,20 @@
 package org.njarasoa.fijerena.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
@@ -13,9 +22,15 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -125,9 +140,10 @@ const val TAB_LABELS_MIN_WIDTH_DP = 380
 fun showsTabLabels(widthDp: Int): Boolean = widthDp >= TAB_LABELS_MIN_WIDTH_DP
 
 /**
- * Material's navigation bar, [selected] highlighted: icon with its name under it on every tab, or
- * icons only on a narrow screen ([showsTabLabels]) — the name then shows in a tooltip on long-press
- * and is the icon's content description.
+ * The phone's bottom bar, as [MobileDockStyle] says it looks: a floating rounded bar, [selected] in
+ * a lighter pill in the accent. Each tab is its icon with its name under it, or the icon only on a
+ * narrow screen ([showsTabLabels]) — the name then shows in a tooltip on long-press and is the
+ * icon's content description.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,37 +151,65 @@ fun MobileBottomBar(
     tabs: List<MobileTab>,
     selected: MobileTab,
     onSelect: (MobileTab) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val showLabels = showsTabLabels(LocalConfiguration.current.screenWidthDp)
-    NavigationBar {
-        tabs.forEach { tab ->
-            val label = tab.label()
-            NavigationBarItem(
-                selected = tab == selected,
-                onClick = { onSelect(tab) },
-                icon = {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(
+                    start = MobileDockStyle.sideMargin,
+                    end = MobileDockStyle.sideMargin,
+                    bottom = MobileDockStyle.bottomMargin,
+                ),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MobileDockStyle.barShape)
+                    .background(MobileDockStyle.barContainer)
+                    .border(MobileDockStyle.barOutlineWidth, MobileDockStyle.barOutline, MobileDockStyle.barShape)
+                    .padding(MobileDockStyle.barPadding)
+                    .selectableGroup(),
+        ) {
+            tabs.forEach { tab ->
+                val isSelected = tab == selected
+                val label = tab.label()
+                val color = if (isSelected) MobileDockStyle.selectedContent else MobileDockStyle.content
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .clip(MobileDockStyle.tabShape)
+                            .background(if (isSelected) MobileDockStyle.selectedTabContainer else Color.Transparent)
+                            .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(tab) })
+                            .padding(vertical = MobileDockStyle.tabVerticalPadding),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(MobileDockStyle.iconToLabel),
+                ) {
                     if (showLabels) {
-                        Icon(tab.icon(), contentDescription = null)
+                        Icon(tab.icon(), contentDescription = null, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = color,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     } else {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                             tooltip = { PlainTooltip { Text(label) } },
                             state = rememberTooltipState(),
                         ) {
-                            Icon(tab.icon(), contentDescription = label)
+                            Icon(tab.icon(), contentDescription = label, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
                         }
                     }
-                },
-                label = if (showLabels) ({ Text(label) }) else null,
-                // The theme's accent for the selected tab, not Material's default (the palette's
-                // orange, the same in every theme).
-                colors =
-                    NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                    ),
-            )
+                }
+            }
         }
     }
 }

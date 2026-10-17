@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -85,6 +86,7 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
@@ -560,7 +562,14 @@ private fun EpisodeListContent(
 
     LazyColumn(
         state = listState,
-        contentPadding = PaddingValues(CinemaSpacing.md),
+        contentPadding =
+            PaddingValues(
+                start = CinemaSpacing.md,
+                top = CinemaSpacing.md,
+                end = CinemaSpacing.md,
+                bottom =
+                    CinemaSpacing.md + LocalDockInset.current,
+            ),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         modifier =
             Modifier

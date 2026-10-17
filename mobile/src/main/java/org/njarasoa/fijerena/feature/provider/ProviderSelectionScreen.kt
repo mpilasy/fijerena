@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.provider
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -220,6 +222,7 @@ private fun MobileProviderList(
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = LocalDockInset.current),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             MobileProviderRow(

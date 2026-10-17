@@ -3,7 +3,9 @@ package org.njarasoa.fijerena.navigation
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,17 +13,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -459,470 +467,474 @@ fun MobileNavHost(
             onBack = onBack,
         )
     }
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        // Screens keep handling the system bars themselves; with the bar up, its height (which
-        // takes in the navigation bar) is padded off and consumed below.
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            val entry = currentEntry
-            val dockCovers = entry != null && liveDocks[entry.id]?.second == true
-            if (currentTab != null && tabs.isNotEmpty() && !dockCovers && !hidesBottomBar(entry?.destination)) {
-                MobileBottomBar(tabs = tabs, selected = currentTab, onSelect = ::selectTab)
-            }
-        },
-    ) { barPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(barPadding).consumeWindowInsets(barPadding),
-            // Screen.Player defines its own vertical slide (below) — these NavHost-wide defaults
-            // apply to the *other* screen in a Player transition too (the one that didn't define
-            // its own transitions), so without the Player check here that screen independently
-            // slid sideways while Player slid vertically: two perpendicular animations running at
-            // once. Fading instead of sliding the non-Player side lets Player's own vertical
-            // motion read as the transition, rather than fighting a lateral one.
-            enterTransition = {
-                if (isPlayerTransition(initialState, targetState)) {
-                    fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                } else {
-                    slideIntoContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs),
-                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+    // The bar floats over the screens (MobileDockStyle): content runs behind it, and each screen ends
+    // its scrolling content with [LocalDockInset] of space so its last row can scroll clear of it.
+    val entry = currentEntry
+    val dockCovers = entry != null && liveDocks[entry.id]?.second == true
+    val showBar = currentTab != null && tabs.isNotEmpty() && !dockCovers && !hidesBottomBar(entry?.destination)
+    var barHeightPx by remember { mutableIntStateOf(0) }
+    val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else 0.dp
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+        CompositionLocalProvider(LocalDockInset provides dockInset) {
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.consumeWindowInsets(PaddingValues(bottom = dockInset)),
+                // Screen.Player defines its own vertical slide (below) — these NavHost-wide defaults
+                // apply to the *other* screen in a Player transition too (the one that didn't define
+                // its own transitions), so without the Player check here that screen independently
+                // slid sideways while Player slid vertically: two perpendicular animations running at
+                // once. Fading instead of sliding the non-Player side lets Player's own vertical
+                // motion read as the transition, rather than fighting a lateral one.
+                enterTransition = {
+                    if (isPlayerTransition(initialState, targetState)) {
+                        fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    } else {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs),
+                        ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    }
+                },
+                exitTransition = {
+                    if (isPlayerTransition(initialState, targetState)) {
+                        fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    } else {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Left,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs),
+                        ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    }
+                },
+                popEnterTransition = {
+                    if (isPlayerTransition(initialState, targetState)) {
+                        fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    } else {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs),
+                        ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    }
+                },
+                popExitTransition = {
+                    if (isPlayerTransition(initialState, targetState)) {
+                        fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    } else {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs),
+                        ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    }
+                },
+            ) {
+                composable<Screen.EpgBrowser> { backStackEntry ->
+                    val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
+                    MobileEpgBrowserScreen(
+                        categoryId = browserScreen.categoryId,
+                        categoryName = browserScreen.categoryName,
+                        providerId = browserScreen.providerId,
+                        onBack = { navController.navigateUp() },
+                        onGuideSources = { id ->
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
+                        // Its TV Guide opens on Recent (D7); Back from the grid returns here.
+                        onTvGuide = { categoryId, categoryName, providerId ->
+                            navController.navigateOnce(
+                                Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName, providerId = providerId),
+                            )
+                        },
+                        onNavigateToPlayer = { matched ->
+                            // Land on the docked mini-player, not full-screen — same parity as every
+                            // other Live TV entry point.
+                            navController.navigateOnce(
+                                Screen.CategoryList(
+                                    contentType = ContentType.LIVE_TV,
+                                    initialCategoryId = matched.categoryId,
+                                    initialStreamId = matched.streamId.toString(),
+                                    providerId = matched.providerId,
+                                ),
+                            )
+                        },
+                    )
                 }
-            },
-            exitTransition = {
-                if (isPlayerTransition(initialState, targetState)) {
-                    fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                } else {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs),
-                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                }
-            },
-            popEnterTransition = {
-                if (isPlayerTransition(initialState, targetState)) {
-                    fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                } else {
-                    slideIntoContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs),
-                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                }
-            },
-            popExitTransition = {
-                if (isPlayerTransition(initialState, targetState)) {
-                    fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                } else {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs),
-                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                }
-            },
-        ) {
-            composable<Screen.EpgBrowser> { backStackEntry ->
-                val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
-                MobileEpgBrowserScreen(
-                    categoryId = browserScreen.categoryId,
-                    categoryName = browserScreen.categoryName,
-                    providerId = browserScreen.providerId,
-                    onBack = { navController.navigateUp() },
-                    onGuideSources = { id ->
-                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
-                    },
-                    // Its TV Guide opens on Recent (D7); Back from the grid returns here.
-                    onTvGuide = { categoryId, categoryName, providerId ->
-                        navController.navigateOnce(
-                            Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName, providerId = providerId),
-                        )
-                    },
-                    onNavigateToPlayer = { matched ->
-                        // Land on the docked mini-player, not full-screen — same parity as every
-                        // other Live TV entry point.
-                        navController.navigateOnce(
-                            Screen.CategoryList(
-                                contentType = ContentType.LIVE_TV,
-                                initialCategoryId = matched.categoryId,
-                                initialStreamId = matched.streamId.toString(),
-                                providerId = matched.providerId,
-                            ),
-                        )
-                    },
-                )
-            }
 
-            composable<Screen.CategoryList> { backStackEntry ->
-                CategoryListDestination(
-                    navController,
-                    backStackEntry.toRoute<Screen.CategoryList>(),
-                    onHome = ::openLiveTvRoot,
-                    onDockChanged = reportLiveDock(backStackEntry.id),
-                )
-            }
-
-            // The tabs' roots: the section's list under the source's top bar. Live TV's reports
-            // its dock, which the bar stops on leaving the tab and hides under.
-            composable<Screen.LiveTvTab> { backStackEntry ->
-                tabRoot(MobileTab.LIVE_TV) {
+                composable<Screen.CategoryList> { backStackEntry ->
                     CategoryListDestination(
                         navController,
-                        Screen.CategoryList(ContentType.LIVE_TV),
+                        backStackEntry.toRoute<Screen.CategoryList>(),
                         onHome = ::openLiveTvRoot,
-                        sourceTopBar = sourceTopBar(MobileTab.LIVE_TV),
-                        libraryLoading = libraryLoading,
                         onDockChanged = reportLiveDock(backStackEntry.id),
                     )
                 }
-            }
 
-            composable<Screen.MoviesTab> {
-                tabRoot(MobileTab.MOVIES) {
-                    CategoryListDestination(
-                        navController,
-                        Screen.CategoryList(ContentType.MOVIES),
-                        onHome = ::openLiveTvRoot,
-                        sourceTopBar = sourceTopBar(MobileTab.MOVIES),
-                        libraryLoading = libraryLoading,
-                    )
+                // The tabs' roots: the section's list under the source's top bar. Live TV's reports
+                // its dock, which the bar stops on leaving the tab and hides under.
+                composable<Screen.LiveTvTab> { backStackEntry ->
+                    tabRoot(MobileTab.LIVE_TV) {
+                        CategoryListDestination(
+                            navController,
+                            Screen.CategoryList(ContentType.LIVE_TV),
+                            onHome = ::openLiveTvRoot,
+                            sourceTopBar = sourceTopBar(MobileTab.LIVE_TV),
+                            libraryLoading = libraryLoading,
+                            onDockChanged = reportLiveDock(backStackEntry.id),
+                        )
+                    }
                 }
-            }
 
-            composable<Screen.TvShowsTab> {
-                tabRoot(MobileTab.TV_SHOWS) {
-                    CategoryListDestination(
-                        navController,
-                        Screen.CategoryList(ContentType.TV_SHOWS),
-                        onHome = ::openLiveTvRoot,
-                        sourceTopBar = sourceTopBar(MobileTab.TV_SHOWS),
-                        libraryLoading = libraryLoading,
-                    )
+                composable<Screen.MoviesTab> {
+                    tabRoot(MobileTab.MOVIES) {
+                        CategoryListDestination(
+                            navController,
+                            Screen.CategoryList(ContentType.MOVIES),
+                            onHome = ::openLiveTvRoot,
+                            sourceTopBar = sourceTopBar(MobileTab.MOVIES),
+                            libraryLoading = libraryLoading,
+                        )
+                    }
                 }
-            }
 
-            // Player Screen — vertical slide, not the lateral push used by list/detail screens:
-            // opening full-screen video reads as rising up, not stepping sideways into a list.
-            composable<Screen.Player>(
-                enterTransition = {
-                    slideIntoContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Up,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
-                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                },
-                exitTransition = {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Down,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
-                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                },
-                popEnterTransition = {
-                    slideIntoContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Up,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
-                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Down,
-                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
-                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                },
-            ) { backStackEntry ->
-                val playerScreen = backStackEntry.toRoute<Screen.Player>()
-                MobilePlayerScreen(
-                    streamId = playerScreen.streamId,
-                    streamName = playerScreen.streamName,
-                    categoryId = playerScreen.categoryId,
-                    contentType = playerScreen.contentType,
-                    episodeId = playerScreen.episodeId,
-                    episodeExtension = playerScreen.episodeExtension,
-                    seriesId = playerScreen.seriesId,
-                    seriesName = playerScreen.seriesName,
-                    startFromBeginning = playerScreen.startFromBeginning,
-                    catchup =
-                        playerScreen.catchupStartSec?.let {
-                            CatchupWindow(it, playerScreen.catchupDurationSec, playerScreen.catchupOffsetSec)
+                composable<Screen.TvShowsTab> {
+                    tabRoot(MobileTab.TV_SHOWS) {
+                        CategoryListDestination(
+                            navController,
+                            Screen.CategoryList(ContentType.TV_SHOWS),
+                            onHome = ::openLiveTvRoot,
+                            sourceTopBar = sourceTopBar(MobileTab.TV_SHOWS),
+                            libraryLoading = libraryLoading,
+                        )
+                    }
+                }
+
+                // Player Screen — vertical slide, not the lateral push used by list/detail screens:
+                // opening full-screen video reads as rising up, not stepping sideways into a list.
+                composable<Screen.Player>(
+                    enterTransition = {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Up,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                        ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    },
+                    exitTransition = {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Down,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                        ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    },
+                    popEnterTransition = {
+                        slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Up,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                        ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    },
+                    popExitTransition = {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Down,
+                            animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                        ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    },
+                ) { backStackEntry ->
+                    val playerScreen = backStackEntry.toRoute<Screen.Player>()
+                    MobilePlayerScreen(
+                        streamId = playerScreen.streamId,
+                        streamName = playerScreen.streamName,
+                        categoryId = playerScreen.categoryId,
+                        contentType = playerScreen.contentType,
+                        episodeId = playerScreen.episodeId,
+                        episodeExtension = playerScreen.episodeExtension,
+                        seriesId = playerScreen.seriesId,
+                        seriesName = playerScreen.seriesName,
+                        startFromBeginning = playerScreen.startFromBeginning,
+                        catchup =
+                            playerScreen.catchupStartSec?.let {
+                                CatchupWindow(it, playerScreen.catchupDurationSec, playerScreen.catchupOffsetSec)
+                            },
+                        programTitle = playerScreen.programTitle,
+                        providerId = playerScreen.providerId,
+                        // Catch-up's Watch live: the channel in the docked mini-player in place of the
+                        // player, so Back returns where the catch-up was opened from.
+                        onWatchLive = {
+                            navController.navigateOnce(
+                                Screen.CategoryList(
+                                    contentType = ContentType.LIVE_TV,
+                                    initialCategoryId = playerScreen.categoryId,
+                                    initialStreamId = playerScreen.streamId,
+                                    providerId = playerScreen.providerId,
+                                ),
+                            ) { popUpTo<Screen.Player> { inclusive = true } }
                         },
-                    programTitle = playerScreen.programTitle,
-                    providerId = playerScreen.providerId,
-                    // Catch-up's Watch live: the channel in the docked mini-player in place of the
-                    // player, so Back returns where the catch-up was opened from.
-                    onWatchLive = {
-                        navController.navigateOnce(
-                            Screen.CategoryList(
-                                contentType = ContentType.LIVE_TV,
-                                initialCategoryId = playerScreen.categoryId,
-                                initialStreamId = playerScreen.streamId,
-                                providerId = playerScreen.providerId,
-                            ),
-                        ) { popUpTo<Screen.Player> { inclusive = true } }
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onHome = ::openLiveTvRoot,
-                )
-            }
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onHome = ::openLiveTvRoot,
+                    )
+                }
 
-            composable<Screen.AddProvider> { backStackEntry ->
-                val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
-                MobileAddProviderScreen(
-                    editId = addProviderScreen.editId,
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onSuccess = {
-                        navController.navigateUp()
-                    },
-                    onGuideSources = { id ->
-                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
-                    },
-                )
-            }
+                composable<Screen.AddProvider> { backStackEntry ->
+                    val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
+                    MobileAddProviderScreen(
+                        editId = addProviderScreen.editId,
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onSuccess = {
+                            navController.navigateUp()
+                        },
+                        onGuideSources = { id ->
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
+                    )
+                }
 
-            composable<Screen.ProviderSelection> {
-                MobileProviderSelectionScreen(
-                    onAddProvider = {
-                        navController.navigateOnce(Screen.AddProvider())
-                    },
-                    onEditProvider = { id ->
-                        navController.navigateOnce(Screen.AddProvider(editId = id))
-                    },
-                    onManageEpg = { id ->
-                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                )
-            }
+                composable<Screen.ProviderSelection> {
+                    MobileProviderSelectionScreen(
+                        onAddProvider = {
+                            navController.navigateOnce(Screen.AddProvider())
+                        },
+                        onEditProvider = { id ->
+                            navController.navigateOnce(Screen.AddProvider(editId = id))
+                        },
+                        onManageEpg = { id ->
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
 
-            composable<Screen.ProfileEdit> { backStackEntry ->
-                val route = backStackEntry.toRoute<Screen.ProfileEdit>()
-                // Settings' ProfilesViewModel (the page only opens from Settings): a save or delete
-                // runs on in its scope after this page is popped.
-                val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
-                MobileProfileEditScreen(
-                    profileId = route.profileId,
-                    viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
-                    onBack = { navController.navigateUp() },
-                    onProfileSwitched = {
-                        // As after the profile picker: every screen below may hold the previous
-                        // profile's repository, so start over on its last tab.
-                        coroutineScope.launch { startOver() }
-                    },
-                )
-            }
+                composable<Screen.ProfileEdit> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.ProfileEdit>()
+                    // Settings' ProfilesViewModel (the page only opens from Settings): a save or delete
+                    // runs on in its scope after this page is popped.
+                    val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
+                    MobileProfileEditScreen(
+                        profileId = route.profileId,
+                        viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
+                        onBack = { navController.navigateUp() },
+                        onProfileSwitched = {
+                            // As after the profile picker: every screen below may hold the previous
+                            // profile's repository, so start over on its last tab.
+                            coroutineScope.launch { startOver() }
+                        },
+                    )
+                }
 
-            // A tab root (the bar's Settings tab): no back arrow, Back leaves the app as on the others.
-            composable<Screen.Settings> {
-                MobileSettingsScreen(
-                    onBack = null,
-                    onThemeChanged = onThemeChanged,
-                    onUiStyleChanged = onUiStyleChanged,
-                    onManageProviders = {
-                        navController.navigateOnce(Screen.ProviderSelection)
-                    },
-                    onDiagnostics = {
-                        navController.navigateOnce(Screen.Diagnostics)
-                    },
-                    onDeviceInfo = {
-                        navController.navigateOnce(Screen.DeviceInfo)
-                    },
-                    onLiveSync = {
-                        navController.navigateOnce(Screen.SyncSettings)
-                    },
-                    onEditSource = { id ->
-                        navController.navigateOnce(Screen.AddProvider(editId = id))
-                    },
-                    onEditProfile = { id ->
-                        navController.navigateOnce(Screen.ProfileEdit(profileId = id))
-                    },
-                    onProviderChanged = {
-                        coroutineScope.launch {
-                            // The first source was added: no screen may keep a repository from before it.
-                            org.njarasoa.fijerena.core.ui.di.AppContainer
-                                .getInstance(context)
-                                .clearAllCaches()
-                            startOver()
-                        }
-                    },
-                )
-            }
+                // A tab root (the bar's Settings tab): no back arrow, Back leaves the app as on the others.
+                composable<Screen.Settings> {
+                    MobileSettingsScreen(
+                        onBack = null,
+                        onThemeChanged = onThemeChanged,
+                        onUiStyleChanged = onUiStyleChanged,
+                        onManageProviders = {
+                            navController.navigateOnce(Screen.ProviderSelection)
+                        },
+                        onDiagnostics = {
+                            navController.navigateOnce(Screen.Diagnostics)
+                        },
+                        onDeviceInfo = {
+                            navController.navigateOnce(Screen.DeviceInfo)
+                        },
+                        onLiveSync = {
+                            navController.navigateOnce(Screen.SyncSettings)
+                        },
+                        onEditSource = { id ->
+                            navController.navigateOnce(Screen.AddProvider(editId = id))
+                        },
+                        onEditProfile = { id ->
+                            navController.navigateOnce(Screen.ProfileEdit(profileId = id))
+                        },
+                        onProviderChanged = {
+                            coroutineScope.launch {
+                                // The first source was added: no screen may keep a repository from before it.
+                                org.njarasoa.fijerena.core.ui.di.AppContainer
+                                    .getInstance(context)
+                                    .clearAllCaches()
+                                startOver()
+                            }
+                        },
+                    )
+                }
 
-            composable<Screen.SyncSettings> {
-                org.njarasoa.fijerena.feature.settings
-                    .MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
-            }
+                composable<Screen.SyncSettings> {
+                    org.njarasoa.fijerena.feature.settings
+                        .MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
+                }
 
-            composable<Screen.NewerData> {
-                MobileNewerDataScreen()
-            }
+                composable<Screen.NewerData> {
+                    MobileNewerDataScreen()
+                }
 
-            composable<Screen.SafeMode> {
-                MobileSafeModeScreen(onShowDiagnostics = { navController.navigateOnce(Screen.Diagnostics) })
-            }
+                composable<Screen.SafeMode> {
+                    MobileSafeModeScreen(onShowDiagnostics = { navController.navigateOnce(Screen.Diagnostics) })
+                }
 
-            composable<Screen.Diagnostics> {
-                org.njarasoa.fijerena.feature.settings
-                    .MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
-            }
+                composable<Screen.Diagnostics> {
+                    org.njarasoa.fijerena.feature.settings
+                        .MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
+                }
 
-            composable<Screen.DeviceInfo> {
-                org.njarasoa.fijerena.feature.settings
-                    .MobileDeviceInfoScreen(onBack = { navController.navigateUp() })
-            }
+                composable<Screen.DeviceInfo> {
+                    org.njarasoa.fijerena.feature.settings
+                        .MobileDeviceInfoScreen(onBack = { navController.navigateUp() })
+                }
 
-            composable<Screen.Search> { backStackEntry ->
-                val searchScreen = backStackEntry.toRoute<Screen.Search>()
-                search(searchScreen) { navController.navigateUp() }
-            }
+                composable<Screen.Search> { backStackEntry ->
+                    val searchScreen = backStackEntry.toRoute<Screen.Search>()
+                    search(searchScreen) { navController.navigateUp() }
+                }
 
-            // The Search tab's root: Search over everything, no Back arrow (Back leaves the app,
-            // as on every tab's root).
-            composable<Screen.SearchTab> {
-                search(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL), null)
-            }
+                // The Search tab's root: Search over everything, no Back arrow (Back leaves the app,
+                // as on every tab's root).
+                composable<Screen.SearchTab> {
+                    search(Screen.Search(SearchViewModel.CONTENT_TYPE_ALL), null)
+                }
 
-            composable<Screen.MovieDetails> { backStackEntry ->
-                val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
-                MobileMovieDetailsScreen(
-                    movieId = movieDetailsScreen.movieId,
-                    movieName = movieDetailsScreen.movieName,
-                    categoryId = movieDetailsScreen.categoryId,
-                    providerId = movieDetailsScreen.providerId,
-                    onPlayMovie = { movieId, movieName, extension, startFromBeginning, playedCategoryId ->
-                        navController.navigateOnce(
-                            Screen.Player(
-                                streamId = movieId,
-                                streamName = movieName,
-                                categoryId = playedCategoryId,
-                                contentType = ContentType.MOVIES,
-                                episodeExtension = extension,
-                                startFromBeginning = startFromBeginning,
-                                providerId = movieDetailsScreen.providerId,
-                            ),
-                        )
-                    },
-                    onCategorySelected = { categoryId ->
-                        navController.navigateOnce(
-                            Screen.CategoryList(
-                                contentType = ContentType.MOVIES,
-                                initialCategoryId = categoryId,
-                                providerId = movieDetailsScreen.providerId,
-                            ),
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onRelatedTitleSelected = { related ->
-                        navController.navigateOnce(
-                            Screen.MovieDetails(
-                                movieId = related.id,
-                                movieName = related.name,
-                                categoryId = related.categoryId,
-                                providerId = related.sourceOr(movieDetailsScreen.providerId),
-                            ),
-                        )
-                    },
-                )
-            }
+                composable<Screen.MovieDetails> { backStackEntry ->
+                    val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
+                    MobileMovieDetailsScreen(
+                        movieId = movieDetailsScreen.movieId,
+                        movieName = movieDetailsScreen.movieName,
+                        categoryId = movieDetailsScreen.categoryId,
+                        providerId = movieDetailsScreen.providerId,
+                        onPlayMovie = { movieId, movieName, extension, startFromBeginning, playedCategoryId ->
+                            navController.navigateOnce(
+                                Screen.Player(
+                                    streamId = movieId,
+                                    streamName = movieName,
+                                    categoryId = playedCategoryId,
+                                    contentType = ContentType.MOVIES,
+                                    episodeExtension = extension,
+                                    startFromBeginning = startFromBeginning,
+                                    providerId = movieDetailsScreen.providerId,
+                                ),
+                            )
+                        },
+                        onCategorySelected = { categoryId ->
+                            navController.navigateOnce(
+                                Screen.CategoryList(
+                                    contentType = ContentType.MOVIES,
+                                    initialCategoryId = categoryId,
+                                    providerId = movieDetailsScreen.providerId,
+                                ),
+                            )
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onRelatedTitleSelected = { related ->
+                            navController.navigateOnce(
+                                Screen.MovieDetails(
+                                    movieId = related.id,
+                                    movieName = related.name,
+                                    categoryId = related.categoryId,
+                                    providerId = related.sourceOr(movieDetailsScreen.providerId),
+                                ),
+                            )
+                        },
+                    )
+                }
 
-            composable<Screen.EpisodeSelection> { backStackEntry ->
-                val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
-                MobileEpisodeSelectionScreen(
-                    seriesId = episodeSelectionScreen.seriesId,
-                    seriesName = episodeSelectionScreen.seriesName,
-                    categoryId = episodeSelectionScreen.categoryId,
-                    initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
-                    providerId = episodeSelectionScreen.providerId,
-                    onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning, series ->
-                        navController.navigateOnce(
-                            Screen.Player(
-                                streamId = episodeId,
-                                streamName = episodeTitle,
-                                categoryId = series.categoryId,
-                                contentType = ContentType.TV_SHOWS,
-                                episodeId = episodeId,
-                                episodeExtension = extension,
-                                seriesId = series.seriesId,
-                                seriesName = series.seriesName,
-                                startFromBeginning = startFromBeginning,
-                                providerId = episodeSelectionScreen.providerId,
-                            ),
-                        )
-                    },
-                    onCategorySelected = { categoryId ->
-                        navController.navigateOnce(
-                            Screen.CategoryList(
-                                contentType = ContentType.TV_SHOWS,
-                                initialCategoryId = categoryId,
-                                providerId = episodeSelectionScreen.providerId,
-                            ),
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onRelatedTitleSelected = { related ->
-                        navController.navigateOnce(
-                            Screen.EpisodeSelection(
-                                seriesId = related.id,
-                                seriesName = related.name,
-                                categoryId = related.categoryId,
-                                providerId = related.sourceOr(episodeSelectionScreen.providerId),
-                            ),
-                        )
-                    },
-                )
-            }
+                composable<Screen.EpisodeSelection> { backStackEntry ->
+                    val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
+                    MobileEpisodeSelectionScreen(
+                        seriesId = episodeSelectionScreen.seriesId,
+                        seriesName = episodeSelectionScreen.seriesName,
+                        categoryId = episodeSelectionScreen.categoryId,
+                        initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
+                        providerId = episodeSelectionScreen.providerId,
+                        onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning, series ->
+                            navController.navigateOnce(
+                                Screen.Player(
+                                    streamId = episodeId,
+                                    streamName = episodeTitle,
+                                    categoryId = series.categoryId,
+                                    contentType = ContentType.TV_SHOWS,
+                                    episodeId = episodeId,
+                                    episodeExtension = extension,
+                                    seriesId = series.seriesId,
+                                    seriesName = series.seriesName,
+                                    startFromBeginning = startFromBeginning,
+                                    providerId = episodeSelectionScreen.providerId,
+                                ),
+                            )
+                        },
+                        onCategorySelected = { categoryId ->
+                            navController.navigateOnce(
+                                Screen.CategoryList(
+                                    contentType = ContentType.TV_SHOWS,
+                                    initialCategoryId = categoryId,
+                                    providerId = episodeSelectionScreen.providerId,
+                                ),
+                            )
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onRelatedTitleSelected = { related ->
+                            navController.navigateOnce(
+                                Screen.EpisodeSelection(
+                                    seriesId = related.id,
+                                    seriesName = related.name,
+                                    categoryId = related.categoryId,
+                                    providerId = related.sourceOr(episodeSelectionScreen.providerId),
+                                ),
+                            )
+                        },
+                    )
+                }
 
-            composable<Screen.EpgManagement> { backStackEntry ->
-                val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
-                MobileEpgManagementScreen(
-                    providerId = epgScreen.providerId,
-                    onBack = { navController.navigateUp() },
-                )
-            }
+                composable<Screen.EpgManagement> { backStackEntry ->
+                    val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
+                    MobileEpgManagementScreen(
+                        providerId = epgScreen.providerId,
+                        onBack = { navController.navigateUp() },
+                    )
+                }
 
-            composable<Screen.EpgGuide> { backStackEntry ->
-                val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
-                MobileEpgGuideScreen(
-                    categoryId = epgScreen.categoryId,
-                    categoryName = epgScreen.categoryName,
-                    focusChannelId = epgScreen.focusChannelId,
-                    providerId = epgScreen.providerId,
-                    // Each row on its own source: a Recent or Favourites guide lists every source's.
-                    onProgramSelected = { _, channel ->
-                        // Land on the docked mini-player, not full-screen.
-                        navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
-                    },
-                    // Catch-up: the programme from the channel's archive, full screen.
-                    onWatchFromStart = { program, channel ->
-                        navController.navigateOnce(catchupRoute(program, channel, channel.sourceOr(epgScreen.providerId)))
-                    },
-                    onChannelSelected = { channel ->
-                        navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
-                    },
-                    // One search (G-9): "Search the guide", filtered to this guide's channels.
-                    onSearch = {
-                        navController.navigateOnce(
-                            Screen.EpgBrowser(
-                                categoryId = epgScreen.categoryId,
-                                categoryName = epgScreen.categoryName,
-                                providerId = epgScreen.providerId,
-                            ),
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                )
+                composable<Screen.EpgGuide> { backStackEntry ->
+                    val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
+                    MobileEpgGuideScreen(
+                        categoryId = epgScreen.categoryId,
+                        categoryName = epgScreen.categoryName,
+                        focusChannelId = epgScreen.focusChannelId,
+                        providerId = epgScreen.providerId,
+                        // Each row on its own source: a Recent or Favourites guide lists every source's.
+                        onProgramSelected = { _, channel ->
+                            // Land on the docked mini-player, not full-screen.
+                            navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
+                        },
+                        // Catch-up: the programme from the channel's archive, full screen.
+                        onWatchFromStart = { program, channel ->
+                            navController.navigateOnce(catchupRoute(program, channel, channel.sourceOr(epgScreen.providerId)))
+                        },
+                        onChannelSelected = { channel ->
+                            navController.navigateOnce(guideChannelRoute(channel, epgScreen.providerId))
+                        },
+                        // One search (G-9): "Search the guide", filtered to this guide's channels.
+                        onSearch = {
+                            navController.navigateOnce(
+                                Screen.EpgBrowser(
+                                    categoryId = epgScreen.categoryId,
+                                    categoryName = epgScreen.categoryName,
+                                    providerId = epgScreen.providerId,
+                                ),
+                            )
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
             }
+        }
+        if (showBar && currentTab != null) {
+            MobileBottomBar(
+                tabs = tabs,
+                selected = currentTab,
+                onSelect = ::selectTab,
+                modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { barHeightPx = it.height },
+            )
         }
     }
 }

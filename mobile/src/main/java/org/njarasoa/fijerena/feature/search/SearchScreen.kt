@@ -5,6 +5,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -77,6 +78,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.searchSourceCounts
 import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -768,7 +770,7 @@ private fun SearchResults(
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                contentPadding = PaddingValues(bottom = Spacing.md),
+                contentPadding = PaddingValues(bottom = Spacing.md + LocalDockInset.current),
             ) {
                 // Progress / complete message
                 if (isSearching && searchProgress != null) {

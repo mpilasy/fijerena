@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.feature.movie
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -49,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
@@ -236,7 +238,14 @@ private fun MovieDetailsContent(
         // largely on screen anyway, so splitting it would add churn without saving measurement.
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(CinemaSpacing.md),
+            contentPadding =
+                PaddingValues(
+                    start = CinemaSpacing.md,
+                    top = CinemaSpacing.md,
+                    end = CinemaSpacing.md,
+                    bottom =
+                        CinemaSpacing.md + LocalDockInset.current,
+                ),
         ) {
             item(key = "detail") {
                 Column {

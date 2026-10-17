@@ -59,6 +59,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
 import org.njarasoa.fijerena.feature.settings.components.QrScanner
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -120,7 +121,13 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(CinemaSpacing.md),
+                    .padding(
+                        start = CinemaSpacing.md,
+                        top = CinemaSpacing.md,
+                        end = CinemaSpacing.md,
+                        bottom =
+                            CinemaSpacing.md + LocalDockInset.current,
+                    ),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             Text(

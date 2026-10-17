@@ -194,6 +194,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
@@ -1689,7 +1690,14 @@ private fun StreamsList(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
+                    contentPadding =
+                        PaddingValues(
+                            start = Spacing.sm,
+                            top = Spacing.xs,
+                            end = Spacing.sm,
+                            bottom =
+                                Spacing.xs + LocalDockInset.current,
+                        ),
                     verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
                 ) {
                     itemsIndexed(

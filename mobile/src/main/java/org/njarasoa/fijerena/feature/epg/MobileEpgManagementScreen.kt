@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -35,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
+import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -129,7 +131,14 @@ fun MobileEpgManagementScreen(
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(CinemaSpacing.md),
+                contentPadding =
+                    PaddingValues(
+                        start = CinemaSpacing.md,
+                        top = CinemaSpacing.md,
+                        end = CinemaSpacing.md,
+                        bottom =
+                            CinemaSpacing.md + LocalDockInset.current,
+                    ),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
                 // Refresh the stale or failed sources of this list
