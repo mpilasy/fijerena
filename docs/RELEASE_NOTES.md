@@ -3,7 +3,7 @@
 ## Unreleased
 
 - **The right keyboard in every field:** addresses (source servers, guide URLs, live sync) get the web-address keyboard and no longer gain a space and a capital after each dot; user names get the email keyboard, passwords and keys stay out of suggestions, names start each word with a capital, a source's short name types in capitals, and the guide's time offset gets a pad with a minus. TV and phone.
-- **TV Home shows your favourite categories:** a last row with the favourite categories of Live TV, Movies and TV Shows; OK opens the section on that category; hold OK or Menu to remove one, with Undo.
+- **TV Home shows your favourite categories:** each section's under its favourites — Favourite channel categories, Favourite movie categories, Favourite show categories; OK opens the section on that category; hold OK or Menu to remove one, with Undo.
 - **Profile PIN:** any profile can have an optional 4-digit PIN (its page → PIN). It is asked when the profile is picked, at launch and after 5 minutes away; on an Expert profile it also guards the admin settings, and while an Expert has a PIN becoming Expert or adding a profile on TV's picker asks for one. A PIN syncs to the group's devices; an Expert can remove a forgotten one from that profile's page. TV (number pad) and phone (number keyboard).
 - **A profile deleted on another device asks who is watching:** the device using it stops what it was showing or playing and opens the profile picker (TV) or the profile menu (phone). TV and phone.
 - **Deleting a source on one device no longer stops playback on another:** a linked device only starts over when the deleted source was one its profile uses, and then waits until nothing is playing. TV and phone.

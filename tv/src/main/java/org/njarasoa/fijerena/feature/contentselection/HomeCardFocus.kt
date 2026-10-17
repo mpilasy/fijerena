@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.contentselection
 
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 
 /** Home's rows, top to bottom. */
@@ -7,10 +8,22 @@ internal enum class HomeShelf {
     CONTINUE_WATCHING,
     CHANNELS,
     FAVORITE_CHANNELS,
+    FAVORITE_CHANNEL_CATEGORIES,
     FAVORITE_MOVIES,
+    FAVORITE_MOVIE_CATEGORIES,
     FAVORITE_SHOWS,
-    FAVORITE_CATEGORIES,
+    FAVORITE_SHOW_CATEGORIES,
 }
+
+/** The section of a favourite categories row, each right under that section's favourites; null for the other rows. */
+internal val HomeShelf.categoriesContentType: String?
+    get() =
+        when (this) {
+            HomeShelf.FAVORITE_CHANNEL_CATEGORIES -> ContentType.LIVE_TV
+            HomeShelf.FAVORITE_MOVIE_CATEGORIES -> ContentType.MOVIES
+            HomeShelf.FAVORITE_SHOW_CATEGORIES -> ContentType.TV_SHOWS
+            else -> null
+        }
 
 /** A favourites row: its menu opens on Remove from Favorites; the others are Recent rows. */
 internal val HomeShelf.isFavorites: Boolean

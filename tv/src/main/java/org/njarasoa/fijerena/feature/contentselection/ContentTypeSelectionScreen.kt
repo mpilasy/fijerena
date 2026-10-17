@@ -361,18 +361,39 @@ fun ContentTypeSelectionScreen(
     val favoriteMoviesListState = rememberLazyListState()
     val favoriteShowsFirstFocus = remember { FocusRequester() }
     val favoriteShowsListState = rememberLazyListState()
-    val favoriteCategoriesFirstFocus = remember { FocusRequester() }
-    val favoriteCategoriesListState = rememberLazyListState()
+    // A favourite categories row per section, each under that section's favourites.
+    val categoryShelves = HomeShelf.entries.filter { it.categoriesContentType != null }
+    val categoriesFirstFocus = remember { categoryShelves.associateWith { FocusRequester() } }
+    val categoriesListState = categoryShelves.associateWith { rememberLazyListState() }
+    val categoriesOf: (HomeShelf) -> List<SourcedFavoriteCategory> = { shelf ->
+        favoriteCategories.filter { it.category.contentType == shelf.categoriesContentType }
+    }
     // The first card of the first row that has one: where focus opens and where Down from the header
     // goes. Null with no row at all; the sections are on the navigation rail then.
     val firstRowFocus =
         when {
             continueWatchingItems.isNotEmpty() -> shelfFirstFocus
+
             liveRowEntries.isNotEmpty() -> liveRowFirstFocus
+
             favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
+
+            categoriesOf(
+                HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
+            ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_CHANNEL_CATEGORIES)
+
             favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
+
+            categoriesOf(
+                HomeShelf.FAVORITE_MOVIE_CATEGORIES,
+            ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_MOVIE_CATEGORIES)
+
             favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
-            favoriteCategories.isNotEmpty() -> favoriteCategoriesFirstFocus
+
+            categoriesOf(
+                HomeShelf.FAVORITE_SHOW_CATEGORIES,
+            ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_SHOW_CATEGORIES)
+
             else -> null
         }
     val rail = LocalTvNavRail.current
@@ -463,21 +484,37 @@ fun ContentTypeSelectionScreen(
     val shelfKeys: (HomeShelf) -> List<String> = { shelf ->
         when (shelf) {
             HomeShelf.CONTINUE_WATCHING -> continueWatchingItems.map { it.sourceKey }
+
             HomeShelf.CHANNELS -> liveRowEntries.map { it.item.sourceKey }
+
             HomeShelf.FAVORITE_CHANNELS -> favoriteChannelEntries.map { it.item.sourceKey }
+
             HomeShelf.FAVORITE_MOVIES -> favoriteMovies.map { it.sourceKey }
+
             HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.sourceKey }
-            HomeShelf.FAVORITE_CATEGORIES -> favoriteCategories.map { it.key }
+
+            HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
+            HomeShelf.FAVORITE_MOVIE_CATEGORIES,
+            HomeShelf.FAVORITE_SHOW_CATEGORIES,
+            -> categoriesOf(shelf).map { it.key }
         }
     }
     val listStateOf: (HomeShelf) -> LazyListState = { shelf ->
         when (shelf) {
             HomeShelf.CONTINUE_WATCHING -> shelfListState
+
             HomeShelf.CHANNELS -> liveRowListState
+
             HomeShelf.FAVORITE_CHANNELS -> favoriteChannelsListState
+
             HomeShelf.FAVORITE_MOVIES -> favoriteMoviesListState
+
             HomeShelf.FAVORITE_SHOWS -> favoriteShowsListState
-            HomeShelf.FAVORITE_CATEGORIES -> favoriteCategoriesListState
+
+            HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
+            HomeShelf.FAVORITE_MOVIE_CATEGORIES,
+            HomeShelf.FAVORITE_SHOW_CATEGORIES,
+            -> categoriesListState.getValue(shelf)
         }
     }
     val focusAfterChange: (HomeShelf, List<String>, String) -> Unit = { shelf, oldKeys, key ->
@@ -555,7 +592,10 @@ fun ContentTypeSelectionScreen(
                 takeOut(favoriteShows, key, { it.sourceKey }, { favoriteShows }) { favoriteShows = it }
             }
 
-            HomeShelf.FAVORITE_CATEGORIES -> {
+            HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
+            HomeShelf.FAVORITE_MOVIE_CATEGORIES,
+            HomeShelf.FAVORITE_SHOW_CATEGORIES,
+            -> {
                 takeOut(favoriteCategories, key, { it.key }, { favoriteCategories }) { favoriteCategories = it }
             }
         }
@@ -665,7 +705,11 @@ fun ContentTypeSelectionScreen(
                 ),
             onConfirm = {
                 if (repo != null) {
-                    removeCard(HomeShelf.FAVORITE_CATEGORIES, favorite.key, category.categoryName) {
+                    removeCard(
+                        categoryShelves.first { it.categoriesContentType == category.contentType },
+                        favorite.key,
+                        category.categoryName,
+                    ) {
                         withContext(Dispatchers.IO) { repo.removeFavoriteCategory(category.categoryId, category.contentType) }
                         suspend {
                             withContext(Dispatchers.IO) {
@@ -777,6 +821,38 @@ fun ContentTypeSelectionScreen(
     }
 
     val scale = LocalUiScale.current
+    // A section's favourite categories, under its favourites; nothing when it has none.
+    val favoriteCategoriesRow: @Composable (HomeShelf, String) -> Unit = { shelf, title ->
+        val categories = categoriesOf(shelf)
+        if (categories.isNotEmpty()) {
+            TvFavoriteCategoriesRow(
+                title = title,
+                categories = categories,
+                onCategorySelected = { category ->
+                    leaveTo(RETURN_FAVORITE_CATEGORIES_PREFIX + category.key) {
+                        onFavoriteCategorySelected(
+                            category.category.categoryId,
+                            category.category.contentType,
+                            category.providerId,
+                        )
+                    }
+                },
+                onOpenActions = { category -> categoryMenu = category },
+                firstItemFocus = categoriesFirstFocus.getValue(shelf),
+                listState = categoriesListState.getValue(shelf),
+                itemModifier = { category ->
+                    Modifier
+                        .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CATEGORIES_PREFIX + category.key)
+                        .then(cardFocusTarget(shelf, category.key))
+                },
+                sourceNames = sourceNames,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xl.scaled(scale)),
+            )
+        }
+    }
 
     // Menu undoes the last removal while its bar shows.
     Box(modifier = Modifier.fillMaxSize().undoOnRemoteKeys(undoBar)) {
@@ -1008,6 +1084,11 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
+                            favoriteCategoriesRow(
+                                HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
+                                stringResource(R.string.home_favorite_channel_categories),
+                            )
+
                             if (favoriteMovies.isNotEmpty()) {
                                 TvFavoritesRow(
                                     title = stringResource(R.string.home_favorite_movies),
@@ -1040,6 +1121,11 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
+                            favoriteCategoriesRow(
+                                HomeShelf.FAVORITE_MOVIE_CATEGORIES,
+                                stringResource(R.string.home_favorite_movie_categories),
+                            )
+
                             if (favoriteShows.isNotEmpty()) {
                                 TvFavoritesRow(
                                     title = stringResource(R.string.home_favorite_shows),
@@ -1069,34 +1155,10 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
-                            if (favoriteCategories.isNotEmpty()) {
-                                TvFavoriteCategoriesRow(
-                                    title = stringResource(R.string.category_favorite_categories_label),
-                                    categories = favoriteCategories,
-                                    onCategorySelected = { category ->
-                                        leaveTo(RETURN_FAVORITE_CATEGORIES_PREFIX + category.key) {
-                                            onFavoriteCategorySelected(
-                                                category.category.categoryId,
-                                                category.category.contentType,
-                                                category.providerId,
-                                            )
-                                        }
-                                    },
-                                    onOpenActions = { category -> categoryMenu = category },
-                                    firstItemFocus = favoriteCategoriesFirstFocus,
-                                    listState = favoriteCategoriesListState,
-                                    itemModifier = { category ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CATEGORIES_PREFIX + category.key)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_CATEGORIES, category.key))
-                                    },
-                                    sourceNames = sourceNames,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
+                            favoriteCategoriesRow(
+                                HomeShelf.FAVORITE_SHOW_CATEGORIES,
+                                stringResource(R.string.home_favorite_show_categories),
+                            )
                         }
                     }
                 }
@@ -1176,7 +1238,7 @@ private suspend fun loadFavorites(
     supportedContentTypes: Set<String>,
 ): List<MediaItem> = if (contentType in supportedContentTypes) merged.favorites(contentType) else emptyList()
 
-/** The Favourite categories row: every section the profile's sources have, Live TV, Movies, TV Shows in that order. */
+/** The favourite categories rows: every section the profile's sources have, Live TV, Movies, TV Shows in that order. */
 private suspend fun loadFavoriteCategories(
     merged: MergedLists,
     supportedContentTypes: Set<String>,
