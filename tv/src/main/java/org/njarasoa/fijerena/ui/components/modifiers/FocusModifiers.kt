@@ -139,7 +139,6 @@ private class TvFocusableNode(
         measurable: Measurable,
         constraints: Constraints,
     ): MeasureResult {
-        // Cache dp-to-px conversions
         borderWidthPx = borderWidth.toPx()
         cornerRadiusPx = cornerRadius.toPx()
 
@@ -147,7 +146,6 @@ private class TvFocusableNode(
         val scaledWidth = (placeable.width * currentScale).toInt()
         val scaledHeight = (placeable.height * currentScale).toInt()
         return layout(scaledWidth, scaledHeight) {
-            // Center the placeable within the scaled bounds
             val offsetX = (scaledWidth - placeable.width) / 2
             val offsetY = (scaledHeight - placeable.height) / 2
             placeable.place(offsetX, offsetY)

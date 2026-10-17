@@ -263,9 +263,6 @@ fun CinemaIconButton(
     }
 }
 
-/**
- * Danger Icon Button - Circular variant with standard TV interaction
- */
 @Composable
 fun CinemaDangerIconButton(
     onClick: () -> Unit,

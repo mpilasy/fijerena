@@ -82,7 +82,7 @@ fun GuideMaintenanceRow(
 }
 
 /**
- * EPG Management's former System Status lines, then Cleanup and Purge, then Clear All Data last,
+ * The guide's System Status lines, then Cleanup and Purge, then Clear All Data last,
  * in error style and behind its confirm. Focus opens on Cleanup, never on the destructive action.
  */
 @Composable

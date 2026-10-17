@@ -193,9 +193,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import kotlin.math.roundToInt
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
-/**
- * Episode selection screen for TV shows.
- */
 @Composable
 fun EpisodeSelectionScreen(
     seriesId: String,
@@ -234,8 +231,7 @@ fun EpisodeSelectionScreen(
 
     // Retained across a background refresh so the episode list stays on screen with just a
     // spinning refresh icon, instead of the whole thing dropping to a full-screen loading state
-    // and losing scroll position and the expanded season. Mirrors the mobile screen, which
-    // already did this.
+    // and losing scroll position and the expanded season.
     var lastSuccess by remember { mutableStateOf<SeriesDetailsViewModel.UiState.Success?>(null) }
     (uiState as? SeriesDetailsViewModel.UiState.Success)?.let { lastSuccess = it }
     val isRefreshing = uiState is SeriesDetailsViewModel.UiState.Loading && lastSuccess != null

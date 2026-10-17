@@ -154,9 +154,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
-/**
- * Search screen for searching streams across all categories.
- */
 @Composable
 private fun localizedContentTypeLabel(contentType: String): String =
     when (contentType) {

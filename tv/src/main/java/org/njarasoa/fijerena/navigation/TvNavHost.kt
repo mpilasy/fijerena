@@ -86,9 +86,6 @@ import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.RailItem
 import org.njarasoa.fijerena.ui.components.rail.TvNavRailState
 
-/**
- * TV-optimized navigation host with D-pad focus management.
- */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun TvNavHost(
@@ -1002,7 +999,6 @@ fun TvNavHost(
                             )
                         }
 
-                        // EPG Management Screen (scoped to one provider)
                         composable<Screen.EpgManagement> { backStackEntry ->
                             val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                             TvEpgManagementScreen(

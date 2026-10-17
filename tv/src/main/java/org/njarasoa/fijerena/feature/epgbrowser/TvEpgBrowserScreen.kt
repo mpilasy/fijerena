@@ -948,7 +948,6 @@ private fun ProgramCard(
                 )
             }
 
-            // Confirmation dialog for non-ON-AIR matched airings
             val pending = pendingConfirmAiring
             val matched = pending?.matchedStream
             if (pending != null && matched != null) {

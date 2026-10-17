@@ -52,9 +52,6 @@ import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.player.UpNextState
 import org.njarasoa.fijerena.ui.theme.*
 
-/**
- * TV player screen that integrates stream playback via StreamLoaderViewModel.
- */
 @Composable
 fun TvPlayerScreen(
     streamId: String,

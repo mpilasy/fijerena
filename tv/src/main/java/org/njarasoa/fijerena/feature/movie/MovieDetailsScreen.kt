@@ -122,9 +122,6 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
-/**
- * Movie details screen for VOD content.
- */
 @Composable
 fun MovieDetailsScreen(
     movieId: String,

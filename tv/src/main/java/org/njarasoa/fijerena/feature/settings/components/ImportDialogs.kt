@@ -199,7 +199,6 @@ private fun OptionRow(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    // Interactive TV Surface for D-pad focus
     androidx.tv.material3.Surface(
         onClick = {
             onToggle()
