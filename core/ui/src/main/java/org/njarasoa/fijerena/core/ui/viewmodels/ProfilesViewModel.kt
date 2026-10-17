@@ -185,6 +185,10 @@ class ProfilesViewModel(
     }
 
     /** [id]'s own settings — not necessarily the profile this device uses. */
+
+    /** The profile in use has Expert mode (admin, for now): it may change sources and content filters. */
+    val viewerIsAdmin: Boolean get() = appSettings.isDevMode
+
     fun settingsOf(id: String): ProfileSettings = ProfileSettings(appSettings.devMode(id), appSettings.autoplayNextEpisode(id))
 
     /** [id]'s colour theme and Look and Feel; set at once, like its sources (the profile in use repaints). */

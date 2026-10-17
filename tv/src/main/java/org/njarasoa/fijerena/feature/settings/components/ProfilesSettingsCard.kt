@@ -191,6 +191,8 @@ fun ProfileEditPane(
     onDeleted: () -> Unit,
     onBack: () -> Unit,
     scale: Float,
+    /** The profile in use has Expert mode (admin, for now): Sources and Content filters show. */
+    adminView: Boolean = true,
     focusOnOpen: Boolean = true,
     entryModifier: Modifier = Modifier,
     title: String = stringResource(R.string.profile_dialog_edit_title),
@@ -379,8 +381,9 @@ fun ProfileEditPane(
                     uiStyleRowFocusRequester = lookFocus,
                 )
                 // Only while it is on, to turn it off: it is turned on by tapping the version in
-                // About 7 times (DeveloperModeTaps).
-                if (stored.devMode) {
+                // About 7 times (DeveloperModeTaps). Gone as soon as the profile in use no longer has it, so a
+                // profile that just turned it off can't turn it straight back on here.
+                if (adminView && stored.devMode) {
                     TvSwitchRow(
                         checked = devMode,
                         onCheckedChange = { devMode = it },
@@ -395,7 +398,8 @@ fun ProfileEditPane(
                     description = stringResource(R.string.settings_autoplay_next_episode_desc),
                 )
                 // With one source there is nothing to choose: it stays on.
-                if (sources.size > 1) {
+                // Sources and Content filters (the parental control) are admin-only.
+                if (adminView && sources.size > 1) {
                     SettingsRow(
                         title = stringResource(R.string.profile_sources_title),
                         description = null,
@@ -404,7 +408,7 @@ fun ProfileEditPane(
                         focusRequester = sourcesFocus,
                     )
                 }
-                if (filterSources.isNotEmpty()) {
+                if (adminView && filterSources.isNotEmpty()) {
                     SettingsRow(
                         title = stringResource(R.string.profile_content_filters_title),
                         description = stringResource(R.string.provider_category_filters_desc),

@@ -1238,8 +1238,15 @@ private fun CategoryResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            CinemaText(
+                text = result.categoryName,
+                role = TextRole.Heading,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            // At the row's end, as on a title's row.
             result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
-            CinemaText(text = result.categoryName, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

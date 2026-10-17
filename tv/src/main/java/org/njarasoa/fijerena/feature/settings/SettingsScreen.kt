@@ -192,6 +192,10 @@ fun SettingsScreen(
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
     // Back round trip from a child screen come back to the same group.
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
+    // Without Expert mode (admin, for now) the shared setup groups are not listed; a group left
+    // selected when Expert mode was turned off falls back to Profiles.
+    val visibleGroups = SettingsGroup.entries.filter { uiState.isDevMode || !it.adminOnly }
+    if (selectedGroup !in visibleGroups) selectedGroup = SettingsGroup.PROFILES
     val railPane = rememberPaneFocus()
     val contentPane = rememberPaneFocus()
     val focusManager = LocalFocusManager.current
@@ -316,7 +320,7 @@ fun SettingsScreen(
                             .tvPane(railPane, exitRight = contentPane, exitUp = false),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    SettingsGroup.entries.forEach { group ->
+                    visibleGroups.forEach { group ->
                         TvInputListItem(
                             selected = group == selectedGroup,
                             onClick = {
@@ -333,7 +337,7 @@ fun SettingsScreen(
                                         if (isLeft) focusManager.moveFocus(FocusDirection.Left)
                                         isLeft
                                     }.leftToRail(),
-                            headlineContent = { TvContentText(stringResource(group.titleRes)) },
+                            headlineContent = { TvContentText(stringResource(group.titleFor(uiState.isDevMode))) },
                         )
                     }
                 }
@@ -410,6 +414,7 @@ fun SettingsScreen(
                                             onDeleted = { closeProfile(true) },
                                             onBack = { if (ownProfilePage) leaveOwnProfilePage() else closeProfile(false) },
                                             scale = scale,
+                                            adminView = uiState.isDevMode,
                                             focusOnOpen = !ownProfilePage,
                                             title =
                                                 if (ownProfilePage) {
@@ -492,6 +497,7 @@ fun SettingsScreen(
                                                             SettingPicker.WATCH_DELAY.returnKey,
                                                         ),
                                                     watchDelayRowModifier = entryModifier,
+                                                    showPerSourceHint = uiState.isDevMode,
                                                 )
                                             }
                                         }
@@ -686,15 +692,21 @@ private const val PANE_WEIGHT = 0.7f
 /** The seven groups of the shared Settings IA (plan Part I, A), in rail order. */
 enum class SettingsGroup(
     @StringRes val titleRes: Int,
+    /** Shared setup only Expert mode (admin, for now) sees: sources, Live sync, backups. */
+    val adminOnly: Boolean = false,
 ) {
     PROFILES(R.string.settings_profiles_title),
-    SOURCE_GUIDE(R.string.settings_group_source_guide),
+    SOURCE_GUIDE(R.string.settings_group_source_guide, adminOnly = true),
     PLAYBACK(R.string.settings_playback_section_title),
     DISPLAY(R.string.settings_group_display),
-    LIVE_SYNC(R.string.live_sync_title),
-    BACKUP_STORAGE(R.string.settings_group_backup_storage),
+    LIVE_SYNC(R.string.live_sync_title, adminOnly = true),
+    BACKUP_STORAGE(R.string.settings_group_backup_storage, adminOnly = true),
     ABOUT_ADVANCED(R.string.settings_group_about_advanced),
     ;
+
+    /** The group's name: About & advanced is plain About without Expert mode, which has nothing advanced. */
+    @StringRes
+    fun titleFor(admin: Boolean): Int = if (this == ABOUT_ADVANCED && !admin) R.string.settings_about_section_title else titleRes
 
     /** The pane key of this group's first focusable row — where Right from the rail lands. */
     val entryKey: String get() = "$name:first"

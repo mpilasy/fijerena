@@ -293,15 +293,18 @@ fun MobileSettingsScreen(
             }
 
             // === 2. Source & guide ===
-            item {
-                SettingsGroupHeader(stringResource(R.string.settings_group_source_guide))
-                // One way in (D6): switching, editing and guide sources live on the Sources list.
-                SettingsListRow(
-                    title = stringResource(R.string.settings_provider_manage_button),
-                    summary = manageSourcesSummary(uiState),
-                    onClick = onManageProviders,
-                )
-                TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
+            // Shared setup: Expert mode (admin, for now) only.
+            if (uiState.isDevMode) {
+                item {
+                    SettingsGroupHeader(stringResource(R.string.settings_group_source_guide))
+                    // One way in (D6): switching, editing and guide sources live on the Sources list.
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_provider_manage_button),
+                        summary = manageSourcesSummary(uiState),
+                        onClick = onManageProviders,
+                    )
+                    TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
+                }
             }
 
             // === 3. Playback ===
@@ -315,19 +318,22 @@ fun MobileSettingsScreen(
                     summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                     onClick = { showWatchDelayPicker = true },
                 )
-                // The per-source playback settings live on Edit Source: a real row into it.
-                SettingsListRow(
-                    title = stringResource(R.string.provider_edit_title),
-                    summary = stringResource(R.string.settings_per_source_playback_hint),
-                    onClick = {
-                        when (val choice = SourceChoice.of(uiState.profileSources)) {
-                            is SourceChoice.One -> onEditSource(choice.source.first)
-                            is SourceChoice.Ask -> choosingEditSource = true
-                            SourceChoice.None -> Unit
-                        }
-                    },
-                    enabled = uiState.profileSources.isNotEmpty(),
-                )
+                // Per-source settings change the source for everyone: Expert mode (admin, for now) only.
+                if (uiState.isDevMode) {
+                    // The per-source playback settings live on Edit Source: a real row into it.
+                    SettingsListRow(
+                        title = stringResource(R.string.provider_edit_title),
+                        summary = stringResource(R.string.settings_per_source_playback_hint),
+                        onClick = {
+                            when (val choice = SourceChoice.of(uiState.profileSources)) {
+                                is SourceChoice.One -> onEditSource(choice.source.first)
+                                is SourceChoice.Ask -> choosingEditSource = true
+                                SourceChoice.None -> Unit
+                            }
+                        },
+                        enabled = uiState.profileSources.isNotEmpty(),
+                    )
+                }
             }
 
             // === 4. Display ===
@@ -360,90 +366,100 @@ fun MobileSettingsScreen(
             }
 
             // === 5. Live sync ===
-            item {
-                SettingsGroupHeader(stringResource(R.string.live_sync_title))
-                LiveSyncRow(onOpen = onLiveSync)
+            // Shared setup: Expert mode (admin, for now) only.
+            if (uiState.isDevMode) {
+                item {
+                    SettingsGroupHeader(stringResource(R.string.live_sync_title))
+                    LiveSyncRow(onOpen = onLiveSync)
+                }
             }
 
             // === 6. Backup & storage ===
-            item {
-                SettingsGroupHeader(
-                    title = stringResource(R.string.settings_group_backup_storage),
-                    description = stringResource(R.string.settings_scope_device_section),
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_export_button),
-                    summary = stringResource(R.string.settings_export_import_desc),
-                    trailing = {},
-                    onClick = { exportLauncher.launch("fijerena_settings.json") },
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_import_button),
-                    trailing = {},
-                    onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
-                )
-                if (uiState.isDevMode) {
-                    val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
+            // Device data and backups (with source logins): Expert mode (admin, for now) only.
+            if (uiState.isDevMode) {
+                item {
+                    SettingsGroupHeader(
+                        title = stringResource(R.string.settings_group_backup_storage),
+                        description = stringResource(R.string.settings_scope_device_section),
+                    )
                     SettingsListRow(
-                        title = stringResource(R.string.settings_quick_import_button),
+                        title = stringResource(R.string.settings_export_button),
+                        summary = stringResource(R.string.settings_export_import_desc),
                         trailing = {},
-                        onClick = {
-                            val path = exportManager.getQuickImportPath()
-                            if (path != null) {
-                                coroutineScope.launch {
-                                    val parseResult = exportManager.parseImportPath(path)
-                                    parseResult
-                                        .onSuccess { parsed ->
-                                            pendingParsedImport = parsed
-                                            pendingImportOptions = SettingsExportManager.ImportOptions()
-                                            showImportOptionsDialog = true
-                                        }.onFailure { e ->
-                                            viewModel.setExportImportMessage(
-                                                resources.getString(R.string.settings_import_failed, e.message ?: ""),
-                                            )
-                                        }
+                        onClick = { exportLauncher.launch("fijerena_settings.json") },
+                    )
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_import_button),
+                        trailing = {},
+                        onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
+                    )
+                    if (uiState.isDevMode) {
+                        val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_quick_import_button),
+                            trailing = {},
+                            onClick = {
+                                val path = exportManager.getQuickImportPath()
+                                if (path != null) {
+                                    coroutineScope.launch {
+                                        val parseResult = exportManager.parseImportPath(path)
+                                        parseResult
+                                            .onSuccess { parsed ->
+                                                pendingParsedImport = parsed
+                                                pendingImportOptions = SettingsExportManager.ImportOptions()
+                                                showImportOptionsDialog = true
+                                            }.onFailure { e ->
+                                                viewModel.setExportImportMessage(
+                                                    resources.getString(R.string.settings_import_failed, e.message ?: ""),
+                                                )
+                                            }
+                                    }
+                                } else {
+                                    viewModel.setExportImportMessage(fileNotFoundText)
                                 }
-                            } else {
-                                viewModel.setExportImportMessage(fileNotFoundText)
+                            },
+                        )
+                    }
+                    uiState.exportImportMessage?.let { SettingsMessage(it) }
+                    SettingsListRow(
+                        title =
+                            stringResource(
+                                if (uiState.isPruningDatabase) {
+                                    R.string.settings_shrink_database_button_running
+                                } else {
+                                    R.string.settings_shrink_database_button
+                                },
+                            ),
+                        summary = stringResource(R.string.settings_shrink_database_desc),
+                        trailing = {
+                            if (uiState.isPruningDatabase) {
+                                CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                             }
                         },
+                        onClick = { viewModel.pruneDatabase() },
+                        enabled = !uiState.isPruningDatabase,
                     )
+                    uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
+                    if (uiState.isDevMode && uiState.lastShrinkAtMs > 0L) {
+                        val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
+                        val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
+                        SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
+                        val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
+                        SettingsMessage(
+                            stringResource(R.string.settings_shrink_database_dev_stats_delta, uiState.lastShrinkRowsRemoved, bytesStr),
+                        )
+                    }
+                    GuideMaintenanceRow(viewModel = epgViewModel)
                 }
-                uiState.exportImportMessage?.let { SettingsMessage(it) }
-                SettingsListRow(
-                    title =
-                        stringResource(
-                            if (uiState.isPruningDatabase) {
-                                R.string.settings_shrink_database_button_running
-                            } else {
-                                R.string.settings_shrink_database_button
-                            },
-                        ),
-                    summary = stringResource(R.string.settings_shrink_database_desc),
-                    trailing = {
-                        if (uiState.isPruningDatabase) {
-                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                        }
-                    },
-                    onClick = { viewModel.pruneDatabase() },
-                    enabled = !uiState.isPruningDatabase,
-                )
-                uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
-                if (uiState.isDevMode && uiState.lastShrinkAtMs > 0L) {
-                    val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
-                    val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
-                    SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
-                    val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
-                    SettingsMessage(
-                        stringResource(R.string.settings_shrink_database_dev_stats_delta, uiState.lastShrinkRowsRemoved, bytesStr),
-                    )
-                }
-                GuideMaintenanceRow(viewModel = epgViewModel)
             }
 
             // === 7. About & advanced ===
             item {
-                SettingsGroupHeader(stringResource(R.string.settings_group_about_advanced))
+                SettingsGroupHeader(
+                    stringResource(
+                        if (uiState.isDevMode) R.string.settings_group_about_advanced else R.string.settings_about_section_title,
+                    ),
+                )
                 // Tapping the version 7 times turns developer mode on (DeveloperModeTaps).
                 val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, viewModel::enableDevMode)
                 Column(

@@ -28,12 +28,13 @@ fun PlaybackSettingsCard(
     watchDelayRowFocusRequester: FocusRequester? = null,
     /** Goes on the watch-delay row, the card's first focusable — the pane's entry row. */
     watchDelayRowModifier: Modifier = Modifier,
+    /** Expert mode (admin): the note pointing to the per-source settings, which only it can reach. */
+    showPerSourceHint: Boolean = true,
 ) {
+    val scope = stringResource(R.string.settings_scope_device_section)
     SettingsSection(
         title = stringResource(R.string.settings_playback_section_title),
-        description =
-            stringResource(R.string.settings_scope_device_section) + "\n" +
-                stringResource(R.string.settings_per_source_playback_hint),
+        description = if (showPerSourceHint) scope + "\n" + stringResource(R.string.settings_per_source_playback_hint) else scope,
     ) {
         SettingsRow(
             title = stringResource(R.string.settings_watch_delay_row_title),

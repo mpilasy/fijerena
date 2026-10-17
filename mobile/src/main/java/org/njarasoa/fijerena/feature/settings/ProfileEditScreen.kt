@@ -78,7 +78,14 @@ fun MobileProfileEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { CinemaText(stringResource(R.string.profile_dialog_edit_title), role = TextRole.Title) },
+                title = {
+                    // Without Expert mode a profile only edits itself: "Your profile", as on TV.
+                    val admin = remember { viewModel.viewerIsAdmin }
+                    CinemaText(
+                        stringResource(if (admin) R.string.profile_dialog_edit_title else R.string.profile_own_page_title),
+                        role = TextRole.Title,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
@@ -135,6 +142,8 @@ fun MobileProfileEditScreen(
                 )
             }
             var editingSources by rememberSaveable { mutableStateOf(false) }
+            // Sources and Content filters (the parental control) are admin-only.
+            val adminView = remember { viewModel.viewerIsAdmin }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
 
@@ -167,8 +176,9 @@ fun MobileProfileEditScreen(
                     onClick = { choosingLook = true },
                 )
                 // Only while it is on, to turn it off: it is turned on by tapping the version in
-                // About 7 times (DeveloperModeTaps).
-                if (stored.devMode) {
+                // About 7 times (DeveloperModeTaps). Gone as soon as the profile in use no longer has it, so a
+                // profile that just turned it off can't turn it straight back on here.
+                if (adminView && stored.devMode) {
                     ProfileSwitchRow(
                         title = stringResource(R.string.settings_developer_mode_title),
                         checked = devMode,
@@ -181,14 +191,14 @@ fun MobileProfileEditScreen(
                     onCheckedChange = { autoplayNextEpisode = it },
                 )
                 // With one source there is nothing to choose: it stays on.
-                if (sources.size > 1) {
+                if (adminView && sources.size > 1) {
                     SettingsListRow(
                         title = stringResource(R.string.profile_sources_title),
                         summary = stringResource(R.string.profile_sources_count_format, sources.count { it.isOn }, sources.size),
                         onClick = { editingSources = true },
                     )
                 }
-                if (filterSources.isNotEmpty()) {
+                if (adminView && filterSources.isNotEmpty()) {
                     SettingsListRow(
                         title = stringResource(R.string.profile_content_filters_title),
                         summary = filterSources.joinToString { it.name },

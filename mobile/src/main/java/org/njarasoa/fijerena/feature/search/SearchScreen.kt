@@ -1115,7 +1115,6 @@ private fun CategoryResultCard(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
             Icon(
                 CinemaIcons.Folder,
                 contentDescription = null,
@@ -1127,7 +1126,10 @@ private fun CategoryResultCard(
                 overflow = TextOverflow.Ellipsis,
                 role = TextRole.Body,
                 tone = TextTone.Primary,
+                modifier = Modifier.weight(1f),
             )
+            // At the row's end, as on a title's row.
+            result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
         }
     }
 }

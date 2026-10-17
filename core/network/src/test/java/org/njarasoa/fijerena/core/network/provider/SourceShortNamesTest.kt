@@ -16,7 +16,7 @@ class SourceShortNamesTest {
     @Test
     fun namesStartingAlikeGetLongerUntilTheyDiffer() {
         val names = SourceShortNames.of(listOf(Source(1, "bears", ""), Source(2, "bearstv", ""), Source(3, "jellyxtream", "")))
-        assertEquals(mapOf(1L to "BEARS", 2L to "BEARST", 3L to "JEL"), names)
+        assertEquals(mapOf(1L to "BEARS", 2L to "BEATV", 3L to "JEL"), names)
     }
 
     @Test
@@ -27,9 +27,16 @@ class SourceShortNamesTest {
     }
 
     @Test
+    fun namesSharingALongStartStayFiveLettersOrFewer() {
+        val names = SourceShortNames.of(listOf(Source(1, "bears", ""), Source(2, "xstream4kb", ""), Source(3, "xstream4kp", "")))
+        assertEquals(mapOf(1L to "BEA", 2L to "XSTB", 3L to "XSTP"), names)
+        assertTrue(names.values.all { it.length <= SourceShortNames.MAX_LENGTH })
+    }
+
+    @Test
     fun theSameNameTwiceGetsANumber() {
         val names = SourceShortNames.of(listOf(Source(1, "xstream4k", ""), Source(2, "xstream4k", "")))
-        assertEquals(mapOf(1L to "XSTREAM4K", 2L to "XSTREAM4K2"), names)
+        assertEquals(mapOf(1L to "XST", 2L to "XST2"), names)
     }
 
     @Test
