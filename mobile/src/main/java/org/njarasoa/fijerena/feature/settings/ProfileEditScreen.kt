@@ -148,7 +148,7 @@ fun MobileProfileEditScreen(
                     onDismiss = { choosingLook = false },
                 )
             }
-            // The PIN row (docs/plans/20261017_profile-pin-plan.md): saved as it is set, like the theme.
+            // The PIN row (docs/plans/archive/20261017_profile-pin-plan.md): saved as it is set, like the theme.
             val onlyExpert = remember(profileId, profiles) { viewModel.isLastExpert(profileId) }
             val pinFlow =
                 rememberProfilePinFlow(

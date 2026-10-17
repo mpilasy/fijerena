@@ -1095,7 +1095,7 @@ fun TvNavHost(
     }
 
     // The profile in use is locked by its PIN until typed in this session — at launch, after a
-    // while in the background, after a switch live sync made (docs/plans/20261017_profile-pin-plan.md).
+    // while in the background, after a switch live sync made (docs/plans/archive/20261017_profile-pin-plan.md).
     // Not over the picker, which asks itself, nor the safe-mode / newer-data screens. Cancel opens the picker.
     if (startDestination != null) {
         val gateProfiles: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))

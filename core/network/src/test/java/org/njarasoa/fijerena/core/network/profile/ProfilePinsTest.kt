@@ -15,7 +15,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.profile.ProfilePins.Check
 
-/** A profile's optional PIN: hashed, checked, throttled per device, synced (docs/plans/20261017_profile-pin-plan.md, Phase 1). */
+/** A profile's optional PIN: hashed, checked, throttled per device, synced (docs/plans/archive/20261017_profile-pin-plan.md, Phase 1). */
 class ProfilePinsTest {
     private lateinit var settings: AppSettings
     private var clock = 1_000_000L

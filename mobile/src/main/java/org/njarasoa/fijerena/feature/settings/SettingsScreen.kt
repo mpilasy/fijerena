@@ -97,7 +97,7 @@ fun MobileSettingsScreen(
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
     // Becoming Expert (the 7 taps on the version) asks an Expert's PIN while one has a PIN
-    // (docs/plans/20261017_profile-pin-plan.md, Phase 4).
+    // (docs/plans/archive/20261017_profile-pin-plan.md, Phase 4).
     var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
     val enableExpert = {
         val holders = profilesViewModel.adminPinHolders()

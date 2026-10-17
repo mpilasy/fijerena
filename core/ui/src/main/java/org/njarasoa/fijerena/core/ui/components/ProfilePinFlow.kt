@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.ui.R
 
 /**
- * The profile page's PIN row (docs/plans/20261017_profile-pin-plan.md, Phase 2), the same on TV
+ * The profile page's PIN row (docs/plans/archive/20261017_profile-pin-plan.md, Phase 2), the same on TV
  * and phone: without a PIN it chooses one; with one, the profile's own page asks for it first,
  * then offers Change or Remove — an Expert on another profile's page goes straight to those (the
  * "forgot my PIN" path). Saved at once, like the theme.

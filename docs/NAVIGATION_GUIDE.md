@@ -181,6 +181,7 @@ Both hosts look up the source on start (`initializeStartup()`: provider count, o
 | Components | `androidx.tv.material3`, D-pad focus | Material3, touch |
 | Transitions | Fade in / out, `CinemaAnimation.navTransitionMs` (300 ms), every screen | Slide left + fade on push, slide right + fade on pop; `Player` slides up in and down out while the other screen only fades |
 | Profile picker at launch | With two or more profiles | Never (the bar's profile slot) |
+| Profile PIN (the profile has one, not typed this session) | Asked by the picker before switching; a prompt over an opaque screen while the profile in use is locked, Cancel → `ProfilePicker` (back stack cleared) | Asked by the profile menu before switching; the same prompt, Cancel → the profile menu insisting on a choice |
 
 ## TV Focus
 

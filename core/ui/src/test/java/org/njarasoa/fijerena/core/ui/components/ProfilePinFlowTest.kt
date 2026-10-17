@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 
-/** The profile page's PIN row (docs/plans/20261017_profile-pin-plan.md, Phase 2). */
+/** The profile page's PIN row (docs/plans/archive/20261017_profile-pin-plan.md, Phase 2). */
 class ProfilePinFlowTest {
     private val pins = mockk<ProfilePins>(relaxed = true)
 

@@ -127,7 +127,7 @@ fun ProfileSheet(
                             colors = rowColors,
                             modifier =
                                 Modifier.clickable {
-                                    // A profile with a PIN asks for it first (docs/plans/20261017_profile-pin-plan.md).
+                                    // A profile with a PIN asks for it first (docs/plans/archive/20261017_profile-pin-plan.md).
                                     when {
                                         viewModel.needsPin(profile.id) -> unlocking = profile
                                         profile.isActive -> onDismiss()

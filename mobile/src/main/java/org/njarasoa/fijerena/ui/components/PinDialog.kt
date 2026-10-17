@@ -27,7 +27,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
- * A PIN prompt on the phone (docs/plans/20261017_profile-pin-plan.md): [state]'s title, the dots
+ * A PIN prompt on the phone (docs/plans/archive/20261017_profile-pin-plan.md): [state]'s title, the dots
  * and its message over a field the number keyboard types into (shown hidden); the fourth digit
  * submits. Cancel, Back or a tap outside calls [onCancel] — unless [cancellable] is false.
  */

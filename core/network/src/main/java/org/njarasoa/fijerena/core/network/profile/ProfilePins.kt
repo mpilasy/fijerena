@@ -8,7 +8,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
 /**
- * A profile's optional 4-digit PIN (docs/plans/20261017_profile-pin-plan.md): set, removed and
+ * A profile's optional 4-digit PIN (docs/plans/archive/20261017_profile-pin-plan.md): set, removed and
  * checked here. Only a salted PBKDF2 hash is kept ([AppSettings.pinHash], synced per profile);
  * after [FREE_TRIES] wrong PINs in a row each further one waits, from [FIRST_WAIT_MS] doubling up
  * to [MAX_WAIT_MS], counted per device. It keeps kids and guests out; it is no real security.

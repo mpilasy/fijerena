@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/** How long a typed PIN keeps its profile unlocked (docs/plans/20261017_profile-pin-plan.md, Phase 3). */
+/** How long a typed PIN keeps its profile unlocked (docs/plans/archive/20261017_profile-pin-plan.md, Phase 3). */
 class PinSessionTest {
     @Before
     fun setup() {

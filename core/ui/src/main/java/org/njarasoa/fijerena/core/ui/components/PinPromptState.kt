@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.ui.R
 
-/** What a PIN prompt is for (docs/plans/20261017_profile-pin-plan.md). */
+/** What a PIN prompt is for (docs/plans/archive/20261017_profile-pin-plan.md). */
 sealed interface PinRequest {
     val profileId: String
 

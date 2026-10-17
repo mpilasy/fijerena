@@ -11,7 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 
-/** The PIN prompt both apps share (docs/plans/20261017_profile-pin-plan.md, Phase 2). */
+/** The PIN prompt both apps share (docs/plans/archive/20261017_profile-pin-plan.md, Phase 2). */
 class PinPromptStateTest {
     private val context = mockk<Context>(relaxed = true).also { every { it.getString(any()) } returns "msg" }
     private val pins = mockk<ProfilePins>(relaxed = true)

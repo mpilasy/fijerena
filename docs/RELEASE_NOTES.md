@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Profile PIN:** any profile can have an optional 4-digit PIN (its page → PIN). It is asked when the profile is picked, at launch and after 5 minutes away; on an Expert profile it also guards the admin settings, and while an Expert has a PIN becoming Expert or adding a profile on TV's picker asks for one. A PIN syncs to the group's devices; an Expert can remove a forgotten one from that profile's page. TV (number pad) and phone (number keyboard).
 - **A profile deleted on another device asks who is watching:** the device using it stops what it was showing or playing and opens the profile picker (TV) or the profile menu (phone). TV and phone.
 - **Deleting a source on one device no longer stops playback on another:** a linked device only starts over when the deleted source was one its profile uses, and then waits until nothing is playing. TV and phone.
 - **There is always an admin:** at least one profile keeps Expert mode — the last one can't turn it off, an Expert can give it to any profile from its page, and if none is left (after a sync or an import) the oldest profile gets it back. TV and phone.

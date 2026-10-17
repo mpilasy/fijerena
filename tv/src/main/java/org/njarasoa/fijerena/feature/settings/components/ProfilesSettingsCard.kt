@@ -231,7 +231,7 @@ fun ProfileEditPane(
     val sourcesFocus = remember { FocusRequester() }
     val deleteFocus = remember { FocusRequester() }
     val pinFocus = remember { FocusRequester() }
-    // The PIN row (docs/plans/20261017_profile-pin-plan.md): saved as it is set, like the theme.
+    // The PIN row (docs/plans/archive/20261017_profile-pin-plan.md): saved as it is set, like the theme.
     val everyone by viewModel.profiles.collectAsStateWithLifecycle()
     val onlyExpert = remember(profile.id, everyone) { viewModel.isLastExpert(profile.id) }
     val pinFlow =

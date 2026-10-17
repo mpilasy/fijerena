@@ -980,7 +980,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
     // The profile in use is locked by its PIN until typed in this session — at launch, after a
-    // while in the background, after a switch live sync made (docs/plans/20261017_profile-pin-plan.md).
+    // while in the background, after a switch live sync made (docs/plans/archive/20261017_profile-pin-plan.md).
     // Cancel opens the profile menu, which then insists on a choice.
     activeProfile?.let { profile ->
         LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }

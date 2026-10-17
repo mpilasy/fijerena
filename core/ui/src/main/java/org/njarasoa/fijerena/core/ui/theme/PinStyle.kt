@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * How a PIN prompt looks in both apps (docs/plans/20261017_profile-pin-plan.md): the dots for the
+ * How a PIN prompt looks in both apps (docs/plans/archive/20261017_profile-pin-plan.md): the dots for the
  * digits typed and, on TV, the number pad's keys. Colours come from [CinemaTheme]; only the sizes
  * are decided here.
  */

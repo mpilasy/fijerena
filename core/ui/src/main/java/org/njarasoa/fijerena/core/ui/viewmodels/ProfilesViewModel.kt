@@ -114,7 +114,7 @@ class ProfilesViewModel(
      */
     fun isLastExpert(id: String): Boolean = profiles.value.none { it.id != id && appSettings.devMode(it.id) }
 
-    /** The profiles' optional PINs (docs/plans/20261017_profile-pin-plan.md). */
+    /** The profiles' optional PINs (docs/plans/archive/20261017_profile-pin-plan.md). */
     val pins = ProfilePins(appSettings)
 
     /**

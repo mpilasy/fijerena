@@ -74,7 +74,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
-    // A profile with a PIN asks for it before the switch (docs/plans/20261017_profile-pin-plan.md).
+    // A profile with a PIN asks for it before the switch (docs/plans/archive/20261017_profile-pin-plan.md).
     var unlocking by remember { mutableStateOf<ProfileUi?>(null) }
     var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
     val activeFocusRequester = remember { FocusRequester() }

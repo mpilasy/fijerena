@@ -1,6 +1,6 @@
 # Profile PIN
 
-**Status:** In progress (started 2026-10-17). Decisions D1–D3 made.
+**Status:** Done 2026-10-17 — all five phases, walked on the TV and phone emulators. Not checked: the 5-minute background re-lock on a device (unit-tested), a PIN arriving by live sync while the app is open (takes effect at the next lock check), the Shields.
 
 An optional 4-digit PIN per profile. It locks the profile (picking it, launching into it) and, on
 an Expert profile (the admin, for now — see `project_admin_is_expert`), it is the admin PIN: the
@@ -68,7 +68,7 @@ no PIN anywhere it stays as today.
 | 2 | PIN entry component (TV pad, phone keyboard) and the profile page's PIN row | Done (Phase 2 commit; walked on both emulators) |
 | 3 | Locked profiles: picker, phone profile menu, launch | Done (Phase 3 commit; walked on both emulators) |
 | 4 | Admin gate: session unlock, admin-only screens, the 7 taps | Done (Phase 4 commit; walked on both emulators). Admin-only screens need nothing more: an Expert profile with a PIN is locked by Phase 3, so its screens are reached only unlocked; the 7 taps and Add profile on TV's picker ask any Expert's PIN |
-| 5 | Docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator walks on both apps | Not started |
+| 5 | Docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES), emulator walks on both apps | Done (Phase 5 commit) |
 
 ## Risks
 

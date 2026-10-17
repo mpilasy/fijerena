@@ -33,7 +33,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * A PIN prompt on TV (docs/plans/20261017_profile-pin-plan.md): [state]'s title, the dots and its
+ * A PIN prompt on TV (docs/plans/archive/20261017_profile-pin-plan.md): [state]'s title, the dots and its
  * message over a 3×4 number pad (1–9, Erase, 0) the D-pad moves on; a remote's digit keys and
  * Delete type directly. The fourth digit submits. Focus opens on 1; Back or Cancel calls [onCancel].
  */

@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * Which profiles' PINs were typed in this session (docs/plans/20261017_profile-pin-plan.md): a
+ * Which profiles' PINs were typed in this session (docs/plans/archive/20261017_profile-pin-plan.md): a
  * profile with a PIN is used only while unlocked here. Kept in memory, so a new process asks again;
  * the app spending [RELOCK_AFTER_MS] or more in the background locks everything, and changing the
  * profile in use keeps only that profile unlocked (a switch back asks again). Compose state, so the
