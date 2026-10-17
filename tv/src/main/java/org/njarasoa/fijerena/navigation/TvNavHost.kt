@@ -576,6 +576,11 @@ fun TvNavHost(
                                         ),
                                     )
                                 },
+                                onFavoriteCategorySelected = { categoryId, contentType, source ->
+                                    navController.navigateOnce(
+                                        Screen.CategoryList(contentType = contentType, initialCategoryId = categoryId, providerId = source),
+                                    )
+                                },
                                 // Same routes as the lists' onStreamSelected (item.id is the movie or series id).
                                 onFavoriteSelected = { item, favoriteType ->
                                     if (favoriteType == ContentType.TV_SHOWS) {

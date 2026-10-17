@@ -120,6 +120,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
+import org.njarasoa.fijerena.core.ui.history.SourcedFavoriteCategory
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
@@ -153,6 +154,7 @@ import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
 import org.njarasoa.fijerena.feature.contentselection.components.SourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
+import org.njarasoa.fijerena.feature.contentselection.components.TvFavoriteCategoriesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -188,6 +190,8 @@ fun ContentTypeSelectionScreen(
     onLiveChannelSelected: (streamId: String, contextCategoryId: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A favourite movie (ContentType.MOVIES) or show (ContentType.TV_SHOWS) from its Home row.
     onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
+    /** A Favourite categories card: its section's list, on that category of its source. */
+    onFavoriteCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A "Browse <source>" entry of a profile with no Xtream source (O1): that source's sections.
     onBrowse: (BrowseSource) -> Unit = {},
     // A profile with no source: Add Source.
@@ -245,6 +249,8 @@ fun ContentTypeSelectionScreen(
     // Favourite movies and shows rows (Phase 5), loaded with the Live row.
     var favoriteMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    // Every section's favourite categories, after them.
+    var favoriteCategories by remember { mutableStateOf<List<SourcedFavoriteCategory>>(emptyList()) }
 
     // The Undo of a card's removal (Hold OK / Menu on a card, below).
     val undoBar = rememberUndoBarState()
@@ -291,6 +297,7 @@ fun ContentTypeSelectionScreen(
         favoriteChannelEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadFavoriteChannels(merged) else emptyList()
         favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
+        favoriteCategories = loadFavoriteCategories(merged, supportedContentTypes)
         liveRowLoaded = true
     }
     LaunchedEffect(mergedLists, liveRowEntries, favoriteChannelEntries) {
@@ -329,6 +336,7 @@ fun ContentTypeSelectionScreen(
                     coroutineScope.launch {
                         favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
                         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
+                        favoriteCategories = loadFavoriteCategories(merged, supportedContentTypes)
                     }
                 }
             }
@@ -353,6 +361,8 @@ fun ContentTypeSelectionScreen(
     val favoriteMoviesListState = rememberLazyListState()
     val favoriteShowsFirstFocus = remember { FocusRequester() }
     val favoriteShowsListState = rememberLazyListState()
+    val favoriteCategoriesFirstFocus = remember { FocusRequester() }
+    val favoriteCategoriesListState = rememberLazyListState()
     // The first card of the first row that has one: where focus opens and where Down from the header
     // goes. Null with no row at all; the sections are on the navigation rail then.
     val firstRowFocus =
@@ -362,6 +372,7 @@ fun ContentTypeSelectionScreen(
             favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
             favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
             favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
+            favoriteCategories.isNotEmpty() -> favoriteCategoriesFirstFocus
             else -> null
         }
     val rail = LocalTvNavRail.current
@@ -1023,6 +1034,32 @@ fun ContentTypeSelectionScreen(
                                             .padding(top = Spacing.xl.scaled(scale)),
                                 )
                             }
+
+                            if (favoriteCategories.isNotEmpty()) {
+                                TvFavoriteCategoriesRow(
+                                    title = stringResource(R.string.category_favorite_categories_label),
+                                    categories = favoriteCategories,
+                                    onCategorySelected = { category ->
+                                        leaveTo(RETURN_FAVORITE_CATEGORIES_PREFIX + category.key) {
+                                            onFavoriteCategorySelected(
+                                                category.category.categoryId,
+                                                category.category.contentType,
+                                                category.providerId,
+                                            )
+                                        }
+                                    },
+                                    firstItemFocus = favoriteCategoriesFirstFocus,
+                                    listState = favoriteCategoriesListState,
+                                    itemModifier = { category ->
+                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CATEGORIES_PREFIX + category.key)
+                                    },
+                                    sourceNames = sourceNames,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
                         }
                     }
                 }
@@ -1044,6 +1081,7 @@ private const val RETURN_LIVE_ROW_PREFIX = "live:"
 private const val RETURN_FAVORITE_CHANNELS_PREFIX = "favLive:"
 private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
 private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
+private const val RETURN_FAVORITE_CATEGORIES_PREFIX = "favCat:"
 
 /** What a card's menu acts on. */
 private class HomeCardItem(
@@ -1100,6 +1138,17 @@ private suspend fun loadFavorites(
     contentType: String,
     supportedContentTypes: Set<String>,
 ): List<MediaItem> = if (contentType in supportedContentTypes) merged.favorites(contentType) else emptyList()
+
+/** The Favourite categories row: every section the profile's sources have, Live TV, Movies, TV Shows in that order. */
+private suspend fun loadFavoriteCategories(
+    merged: MergedLists,
+    supportedContentTypes: Set<String>,
+): List<SourcedFavoriteCategory> =
+    withContext(Dispatchers.IO) {
+        merged.favoriteCategories(
+            listOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS).filter { it in supportedContentTypes },
+        )
+    }
 
 /**
  * The Channels row for the active profile: last watched — the newest of its sources' last channels
