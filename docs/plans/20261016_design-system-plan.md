@@ -1,6 +1,6 @@
 # Design system: every look from the theme and Look and Feel
 
-**Status:** Built 2026-10-16. Every file in both apps and core is at 0 in `scripts/check-design-system.sh` (allow-list empty, 2,700+ sites moved); checked on both emulators in Daylight with Standard and Serif. Left: a full walk of every screen in each theme and Look and Feel (Phase 8), icon stroke width (`icon.strokeWidth`), the TV button look the user has not settled.
+**Status:** Built 2026-10-16. Every file in both apps and core is at 0 in `scripts/check-design-system.sh` (allow-list empty, 2,700+ sites moved); checked on both emulators in Daylight with Standard and Serif. Left: a full walk of every screen in each theme and Look and Feel (Phase 8), the TV button look the user has not settled.
 
 ## Goal
 
@@ -45,7 +45,7 @@ is partly tokenised: colours come from the palette and corners from the style th
 | `MaterialTheme.colorScheme.*` read directly | 45 | 244 | 0 |
 
 Look and Feel values: `dialog.position` is applied by `CinemaAlertDialog` (Rounded: bottom sheet,
-Sharp: full screen) — on TV too, until D3; `icon.strokeWidth` is never applied; `grid.focusUsesShadow`
+Sharp: full screen) — on TV too, until D3; the icon stroke width was never applied and was removed (Material icons have fixed line widths); `grid.focusUsesShadow`
 is applied to cards only, not buttons. Palette colours with hard-coded defaults shared by every
 theme: success, warning, error, live, and all four text colours.
 

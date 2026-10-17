@@ -63,7 +63,6 @@ enum class IconStyle { FILLED, OUTLINED, BOLD_OUTLINED }
 @Immutable
 data class UiIconTokens(
     val style: IconStyle,
-    val strokeWidth: Float,
 )
 
 @Immutable
@@ -95,7 +94,7 @@ val MaterialStyle =
             ),
         dialog = UiDialogTokens(cornerRadius = 28.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.32f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.04f, focusUsesOutline = true, focusUsesShadow = false),
-        icon = UiIconTokens(style = IconStyle.FILLED, strokeWidth = 2f),
+        icon = UiIconTokens(style = IconStyle.FILLED),
     )
 
 val CupertinoStyle =
@@ -113,7 +112,7 @@ val CupertinoStyle =
             ),
         dialog = UiDialogTokens(cornerRadius = 18.dp, position = DialogPosition.BOTTOM_SHEET, scrimAlpha = 0.4f),
         grid = UiGridTokens(spacing = 10.dp, focusScale = 1.09f, focusUsesOutline = false, focusUsesShadow = true),
-        icon = UiIconTokens(style = IconStyle.OUTLINED, strokeWidth = 1.4f),
+        icon = UiIconTokens(style = IconStyle.OUTLINED),
     )
 
 val RokuStyle =
@@ -131,7 +130,7 @@ val RokuStyle =
             ),
         dialog = UiDialogTokens(cornerRadius = 0.dp, position = DialogPosition.FULL_BLEED, scrimAlpha = 0.55f),
         grid = UiGridTokens(spacing = 4.dp, focusScale = 1.0f, focusUsesOutline = true, focusUsesShadow = false),
-        icon = UiIconTokens(style = IconStyle.FILLED, strokeWidth = 3f),
+        icon = UiIconTokens(style = IconStyle.FILLED),
     )
 
 val BraviaStyle =
@@ -149,7 +148,7 @@ val BraviaStyle =
             ),
         dialog = UiDialogTokens(cornerRadius = 8.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.4f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.06f, focusUsesOutline = true, focusUsesShadow = true),
-        icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED, strokeWidth = 1.8f),
+        icon = UiIconTokens(style = IconStyle.BOLD_OUTLINED),
     )
 
 val SerifStyle =
@@ -167,7 +166,7 @@ val SerifStyle =
             ),
         dialog = UiDialogTokens(cornerRadius = 14.dp, position = DialogPosition.CENTERED, scrimAlpha = 0.45f),
         grid = UiGridTokens(spacing = 8.dp, focusScale = 1.05f, focusUsesOutline = true, focusUsesShadow = false),
-        icon = UiIconTokens(style = IconStyle.OUTLINED, strokeWidth = 1.6f),
+        icon = UiIconTokens(style = IconStyle.OUTLINED),
     )
 
 val AllUiStyles: List<UiStyle> = listOf(MaterialStyle, CupertinoStyle, RokuStyle, BraviaStyle, SerifStyle)
