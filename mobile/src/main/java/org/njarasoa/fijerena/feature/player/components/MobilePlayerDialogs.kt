@@ -36,8 +36,8 @@ fun AudioTrackSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
-    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    // Keyed on tracksVersion, not composed once: a dialog opened before ExoPlayer resolved
+    // tracks would freeze on an empty list for its whole lifetime.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val audioTracks = remember(tracksVersion) { viewModel.getAudioTracks() }
 
@@ -125,8 +125,8 @@ fun SubtitleSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
-    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    // Keyed on tracksVersion, not composed once: a dialog opened before ExoPlayer resolved
+    // tracks would freeze on an empty list for its whole lifetime.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val subtitleTracks = remember(tracksVersion) { viewModel.getSubtitleTracks() }
     val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
@@ -145,7 +145,6 @@ fun SubtitleSelectorDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                // "Off" option
                 Surface(
                     onClick = {
                         viewModel.disableSubtitles()
@@ -246,8 +245,8 @@ fun QualitySelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
-    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    // Keyed on tracksVersion, not composed once: a dialog opened before ExoPlayer resolved
+    // tracks would freeze on an empty list for its whole lifetime.
     val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
     val videoQualities = remember(tracksVersion) { viewModel.getVideoQualities() }
     val hasManualSelection = videoQualities.any { it.isSelected }
@@ -266,7 +265,6 @@ fun QualitySelectorDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                // "Auto" option
                 Surface(
                     onClick = {
                         viewModel.enableAutoQuality()

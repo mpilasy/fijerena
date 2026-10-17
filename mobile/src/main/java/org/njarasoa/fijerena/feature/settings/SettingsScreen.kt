@@ -157,7 +157,6 @@ fun MobileSettingsScreen(
     var showImportOptionsDialog by remember { mutableStateOf(false) }
     var pendingImportOptions by remember { mutableStateOf(SettingsExportManager.ImportOptions()) }
 
-    // SAF launcher for export (create file)
     val exportLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.CreateDocument("application/json"),
@@ -176,7 +175,6 @@ fun MobileSettingsScreen(
             }
         }
 
-    // SAF launcher for import (open file)
     val importLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
@@ -246,7 +244,6 @@ fun MobileSettingsScreen(
         )
     }
 
-    // Value-row pickers
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showWatchDelayPicker by remember { mutableStateOf(false) }
     var showTmdbKeyDialog by remember { mutableStateOf(false) }

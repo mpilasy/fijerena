@@ -151,7 +151,6 @@ fun MobileEpgManagementScreen(
                     ),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
-                // Refresh the stale or failed sources of this list
                 if (staleSourceCount > 0 || failedSourceCount > 0) {
                     item {
                         Row(

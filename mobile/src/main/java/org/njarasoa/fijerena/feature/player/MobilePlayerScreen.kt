@@ -517,7 +517,6 @@ fun MobilePlayerContent(
             }
         }
 
-        // Auto-hide channel toast
         LaunchedEffect(showChannelToast, channelToastTick) {
             if (showChannelToast) {
                 delay(CinemaAnimation.toastDismissMs)
@@ -525,7 +524,6 @@ fun MobilePlayerContent(
             }
         }
 
-        // Auto-hide seek ripple pill
         LaunchedEffect(seekRippleSide, seekRippleTick) {
             if (seekRippleSide != 0) {
                 delay(CinemaAnimation.seekRippleDismissMs)
@@ -534,7 +532,6 @@ fun MobilePlayerContent(
             }
         }
 
-        // Selector dialogs
         var showAudioTrackSelector by remember { mutableStateOf(false) }
         var showSubtitleSelector by remember { mutableStateOf(false) }
         var showQualitySelector by remember { mutableStateOf(false) }
@@ -569,7 +566,6 @@ fun MobilePlayerContent(
             }
         }
 
-        // Auto-hide controls after 5 seconds
         LaunchedEffect(showControls) {
             if (showControls && !showStats) {
                 delay(CinemaAnimation.controlsAutoHideMobileMs)
@@ -577,7 +573,6 @@ fun MobilePlayerContent(
             }
         }
 
-        // Configure player buffer profile based on content type
         LaunchedEffect(contentType) {
             val playerContentType =
                 when (contentType) {
@@ -591,7 +586,6 @@ fun MobilePlayerContent(
             StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
         }
 
-        // Start playback when URL is ready or channel changes
         val currentStreamId = (streamState as? StreamLoaderViewModel.StreamState.Success)?.streamId
         LaunchedEffect(currentStreamId) {
             val state = streamState
@@ -633,7 +627,6 @@ fun MobilePlayerContent(
                         )
                     viewModel.playStream(metadata, state.resumePosition)
 
-                    // Restore saved track settings when player is ready
                     if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
                         // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
                         // in snapshotFlow{} never registers an observable read, so it emits once and
@@ -818,7 +811,6 @@ fun MobilePlayerContent(
                                                 change.consume()
                                                 verticalAccumulator += dragAmount.y
                                                 horizontalAccumulator += dragAmount.x
-                                                // Vertical: channel switching
                                                 if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > swipePx) {
                                                     hasFiredVerticalThisGesture = true
                                                     if (verticalAccumulator < 0) {
@@ -828,7 +820,6 @@ fun MobilePlayerContent(
                                                     }
                                                     verticalAccumulator = 0f
                                                 }
-                                                // Horizontal: overlay panels
                                                 if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > swipePx) {
                                                     hasFiredHorizontalThisGesture = true
                                                     when {
@@ -899,7 +890,6 @@ fun MobilePlayerContent(
                     // P4: the connection can't keep up with the stream.
                     if (!isInPipMode) rememberSlowConnectionText()?.let { SlowConnectionBanner(text = it) }
 
-                    // Loading/Error overlays
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
@@ -1002,7 +992,6 @@ fun MobilePlayerContent(
                         )
                     }
 
-                    // Stats overlay
                     AnimatedVisibility(
                         visible = !isInPipMode && showStats,
                         enter = fadeIn(),

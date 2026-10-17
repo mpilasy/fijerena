@@ -292,7 +292,6 @@ fun MobileCategoryListScreen(
     // The TV Guide needs a guide: the source's own EPG or an indexed XMLTV file.
     val hasEpgData = supportsNativeEpg || epgIndexState is EpgIndexState.Indexed
 
-    // Refresh last played item when returning from player
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         // The first RESUMED is this screen's own initial composition, which just ran the load
@@ -388,10 +387,9 @@ fun MobileCategoryListScreen(
 
     val target = dockTarget
 
-    // Auto-enter PiP (Android 12+) was hardcoded off at Activity creation and never turned back
-    // on — MainActivity.onUserLeaveHint()'s manual fallback only runs below SDK 31, so without
-    // this, leaving the app (Home button, app-switch) while the mini-player was actively playing
-    // never entered PiP on any S+ device at all.
+    // Auto-enter PiP (Android 12+) is off until set here: MainActivity.onUserLeaveHint()'s
+    // manual fallback only runs below SDK 31, so leaving the app (Home, app-switch) while the
+    // mini-player plays enters PiP only through these params.
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
         val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
         LaunchedEffect(dockPlaybackState) {
@@ -670,7 +668,6 @@ fun MobileCategoryListScreen(
                 // docked anyway (category chips are hidden here too, see below).
                 if (!(isLiveTv && target != null && isLandscape)) {
                     val sectionActions: @Composable RowScope.() -> Unit = {
-                        // EPG button - show for Live TV when native EPG or XMLTV file is available
                         if (contentType == ContentType.LIVE_TV) {
                             val state = uiState
                             if (state is CategoryViewModel.UiState.Success) {
@@ -800,7 +797,6 @@ fun MobileCategoryListScreen(
                                     SourceExpiryBanner()
                                 }
 
-                                // EPG error/status banner (Live TV only)
                                 if (contentType == ContentType.LIVE_TV) {
                                     val epgMessage =
                                         when (epgIndexState) {
@@ -1062,9 +1058,8 @@ fun MobileCategoryListScreen(
                                             // preceding siblings to reduce the incoming constraint.
                                             // BoxWithConstraints sidesteps it: it reads the actual measured
                                             // width and derives a plain .height() from it, the same
-                                            // primitive the old fixed-120dp workaround used, just computed
-                                            // instead of hardcoded — coerced against maxHeight too, so it
-                                            // never overflows the column on unusually short screens.
+                                            // primitive, computed instead of hardcoded — coerced against maxHeight
+                                            // too, so it never overflows the column on unusually short screens.
                                             BoxWithConstraints(
                                                 modifier =
                                                     Modifier

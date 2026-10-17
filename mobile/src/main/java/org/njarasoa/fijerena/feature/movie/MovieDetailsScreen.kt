@@ -131,9 +131,9 @@ fun MobileMovieDetailsScreen(
                         },
                     )
                 },
-                // Favorite/Watched moved into the icon row under the Play button (see
-                // MovieDetailsContent) — matches the Plex/Netflix "actions under the poster"
-                // layout instead of a top-bar icon cluster.
+                // Favourite and Watched are in the icon row under the Play button (see
+                // MovieDetailsContent), the Plex/Netflix "actions under the poster" layout, not a
+                // top-bar icon cluster.
             )
         },
     ) { paddingValues ->
@@ -268,7 +268,6 @@ private fun MovieDetailsContent(
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                    // Movie metadata - genre on its own line
                     movieDetail.metadata.genre?.let { genre ->
                         CinemaText(
                             text = genre,

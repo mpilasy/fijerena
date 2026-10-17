@@ -106,7 +106,6 @@ fun MobileStatsOverlay(
     val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L)
         ?: remember { mutableStateOf(0L) }
 
-    // Collect stream stats from service
     val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
     val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L)
@@ -173,7 +172,6 @@ fun MobileStatsOverlay(
                     }
                 if (newBufferHealth != bufferHealth) bufferHealth = newBufferHealth
 
-                // Fallback resolution from videoSize
                 if (videoResolution == naText || videoResolution == "0 x 0") {
                     val size = p.videoSize
                     if (size.width > 0 && size.height > 0) {
@@ -267,13 +265,11 @@ fun MobileStatsOverlay(
                 // If bitrate is still unknown for video but we have a bandwidth estimate, use a portion of it as a guess for VOD/IPTV
                 val bw = serviceBandwidth
                 if (currentVideoBitrate <= 0 && bw > 0) {
-                    // Estimate video bitrate as ~90% of current throughput if audio is unknown
                     val estimatedBitrate = (bw * 0.9).toInt()
                     val newVideoBitrate = "~" + formatBitrate(estimatedBitrate)
                     if (newVideoBitrate != videoBitrate) videoBitrate = newVideoBitrate
                 }
 
-                // Use bandwidth estimate for network speed
                 val newNetworkSpeed =
                     if (bw > 0) {
                         formatBitrate(bw.toInt())
@@ -289,7 +285,6 @@ fun MobileStatsOverlay(
             heap = AppPerformanceMonitor.heapSnapshot()
             uiFramesSkipped = jankMonitor.skippedFrames
 
-            // Update stream elapsed time
             val startTime = serviceStartTimeMs
             if (startTime > 0L) {
                 val elapsedSec = (android.os.SystemClock.elapsedRealtime() - startTime) / 1000

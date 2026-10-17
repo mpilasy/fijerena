@@ -55,7 +55,6 @@ object MobileDimensions {
     /** A tab root's top bar: the section's name over the source line's 48 dp touch row. */
     val homeTopBarHeight: Dp = 84.dp
 
-    // Design system: sizes that were literals in screen and component code.
     val streamThumbnailWidth: Dp = 96.dp
     val streamThumbnailHeight: Dp = 54.dp
     val channelSwipeThreshold: Dp = 56.dp

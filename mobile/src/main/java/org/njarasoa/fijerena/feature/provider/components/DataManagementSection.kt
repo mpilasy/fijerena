@@ -76,7 +76,6 @@ fun ColumnScope.DataManagementSection(
                             )
                         }
 
-                        // Last Sync Stats
                         if ((currentProvider?.lastSyncedAtMs ?: 0L) > 0L) {
                             Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                             val time = NumberUtils.formatTimestamp(LocalContext.current, currentProvider?.lastSyncedAtMs ?: 0L)
@@ -220,7 +219,6 @@ fun ColumnScope.ProviderDangerZoneSection(
                 cacheStats?.let { stats ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                    // Clear all cached library
                     CinemaText(stringResource(R.string.provider_data_management_desc), role = TextRole.BodySmall, tone = TextTone.Secondary)
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
                     DangerButton(

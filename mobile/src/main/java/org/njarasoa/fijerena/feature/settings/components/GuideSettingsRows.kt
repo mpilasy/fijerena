@@ -38,14 +38,14 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /*
- * The guide's device-wide maintenance, moved out of the per-source EPG Management screen into
- * Settings → Backup & storage (A-9, M5). Auto-refresh is set on each guide source's row
+ * The guide's device-wide maintenance, in Settings → Backup & storage (A-9, M5). Auto-refresh is
+ * set on each guide source's row
  * (docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b).
  */
 
 /**
- * "Guide data maintenance" row: the guide database's state as its summary; opens the old
- * System Status lines plus Cleanup, Purge and Clear All Data (behind its confirm).
+ * "Guide data maintenance" row: the guide database's state as its summary; opens the System
+ * Status lines plus Cleanup, Purge and Clear All Data (behind its confirm).
  */
 @Composable
 fun GuideMaintenanceRow(viewModel: EpgManagementViewModel) {
@@ -159,7 +159,7 @@ private fun databaseStatusText(indexState: EpgIndexState): String =
         }
     }
 
-/** EPG Management's former System Status card: database, current run, last run. */
+/** The guide's System Status lines: database, current run, last run. */
 @Composable
 private fun GuideStatusLines(
     multiState: MultiSourceState,

@@ -215,9 +215,8 @@ fun MobileEpisodeSelectionScreen(
                         },
                     )
                 },
-                // Favorite moved into the icon row under the Play/Resume button (see
-                // EpisodeListContent) — matches the Plex/Netflix "actions under the poster" layout
-                // instead of a top-bar icon.
+                // Favourite is in the icon row under the Play/Resume button (see EpisodeListContent),
+                // the Plex/Netflix "actions under the poster" layout, not a top-bar icon.
             )
         },
     ) { paddingValues ->

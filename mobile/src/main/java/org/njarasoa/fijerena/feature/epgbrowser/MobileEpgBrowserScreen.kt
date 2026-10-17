@@ -386,7 +386,6 @@ internal fun MobileGuideSearchPane(
             }
         }
 
-        // Indexing progress banner
         val currentIndexState = indexState
         if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
             val idx = currentIndexState
@@ -655,7 +654,6 @@ private fun MobileProgramCard(
                     .fillMaxWidth()
                     .padding(CinemaSpacing.md),
         ) {
-            // Title row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -692,7 +690,6 @@ private fun MobileProgramCard(
                 )
             }
 
-            // Airings
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
             val visibleAirings =
                 if (expanded || !showExpander) {
@@ -709,7 +706,6 @@ private fun MobileProgramCard(
                 )
             }
 
-            // Confirmation dialog for non-ON-AIR matched airings
             val pending = pendingConfirmAiring
             val matched = pending?.matchedStream
             if (pending != null && matched != null) {

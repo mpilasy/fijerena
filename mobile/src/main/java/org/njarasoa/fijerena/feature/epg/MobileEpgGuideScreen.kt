@@ -306,8 +306,7 @@ fun MobileEpgGuideScreen(
                         )
                     }
 
-                    // The phone still shows a list without channels as it did before NoChannels
-                    // had a state of its own.
+                    // NoChannels shares the error layout: a message and Retry.
                     is EpgViewModel.UiState.Error, EpgViewModel.UiState.NoChannels -> {
                         RetryWhenOnline { viewModel.loadEpgData() }
                         Box(

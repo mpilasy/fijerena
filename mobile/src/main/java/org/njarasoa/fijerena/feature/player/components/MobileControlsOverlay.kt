@@ -148,7 +148,6 @@ fun MobileControlsOverlay(
     // transport controls floating over the video.
     var showInfo by remember { mutableStateOf(false) }
 
-    // Extract resolution and codec periodically
     LaunchedEffect(playbackState, metadata.streamUrl) {
         if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering) {
             // Keep checking every second as tracks might take time to load
@@ -426,7 +425,6 @@ fun MobileControlsOverlay(
                         }
                     }
 
-                    // VOD progress bar and time info
                     if (hasSeekBar) {
                         var isSeeking by remember { mutableStateOf(false) }
                         var seekPosition by remember { mutableStateOf(0f) }
@@ -535,7 +533,6 @@ fun MobileControlsOverlay(
                         }
                     }
 
-                    // Control buttons row (horizontally scrollable icons)
                     Row(
                         modifier =
                             Modifier
@@ -620,7 +617,6 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        // Stats for nerds (always visible)
                         CinemaIconButton(
                             onClick = onStats,
                             icon = {
@@ -628,7 +624,6 @@ fun MobileControlsOverlay(
                             },
                         )
 
-                        // Info: title + synopsis popover (only if there's a synopsis to show)
                         if (!metadata.description.isNullOrBlank()) {
                             CinemaIconButton(
                                 onClick = { showInfo = true },

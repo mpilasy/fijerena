@@ -167,7 +167,6 @@ fun MobileSearchScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
-    // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
 
     // The menu's result's source: its Favourite and Mark show watched act there.
@@ -778,7 +777,6 @@ private fun SearchResults(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 contentPadding = PaddingValues(bottom = Spacing.md + LocalDockInset.current),
             ) {
-                // Progress / complete message
                 if (isSearching && searchProgress != null) {
                     item(key = "search_progress", contentType = "status") {
                         Row(
@@ -811,7 +809,6 @@ private fun SearchResults(
                     }
                 }
 
-                // Dev stats on separate line
                 if (devStats != null) {
                     item(key = "dev_stats", contentType = "status") {
                         CinemaText(

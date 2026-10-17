@@ -133,13 +133,11 @@ fun MobileAddProviderScreen(
     // either.
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
-    // Quick Connect state (Jellyfin only)
     var showQuickConnectDialog by remember { mutableStateOf(false) }
     var qcCode by remember { mutableStateOf("") }
     var qcSecret by remember { mutableStateOf("") }
     var qcError by remember { mutableStateOf<String?>(null) }
 
-    // Cache management state (edit mode only)
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -158,7 +156,6 @@ fun MobileAddProviderScreen(
     var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
     var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
 
-    // Provider settings state (edit mode only)
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
     var autoResumeEnabled by remember { mutableStateOf(true) }
     var watchHistorySize by remember { mutableStateOf("25") }
@@ -427,7 +424,6 @@ fun MobileAddProviderScreen(
 
             Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-            // Name field (common to all types)
             CinemaTextField(
                 value = name,
                 onValueChange = {
@@ -606,7 +602,6 @@ fun MobileAddProviderScreen(
                 )
             }
 
-            // Validation failure dialog
             val failedState = saveState as? SaveState.ValidationFailed
             if (failedState != null) {
                 val saveUrl =
@@ -660,7 +655,6 @@ fun MobileAddProviderScreen(
                 )
             }
 
-            // Cache confirmation dialogs
             if (showClearCacheDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearCacheDialog = false },

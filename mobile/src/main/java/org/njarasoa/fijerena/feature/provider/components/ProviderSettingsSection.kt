@@ -194,7 +194,6 @@ fun ColumnScope.ProviderSettingsSection(
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                // Auto-Resume
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -243,7 +242,6 @@ fun ColumnScope.ProviderSettingsSection(
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                    // Enable Caching
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
