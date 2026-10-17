@@ -58,10 +58,10 @@ class ProfilesViewModel(
     private val repository: ProfileRepository,
     private val appSettings: AppSettings,
 ) : ViewModel() {
-    private val activeProfileId = MutableStateFlow(appSettings.activeProfileId)
-
     val profiles: StateFlow<List<ProfileUi>> =
-        combine(repository.observeProfiles(), activeProfileId) { rows, activeId ->
+        // The stored profile in use, so a switch live sync makes (the profile in use deleted on
+        // another device) shows as well as [switchTo]'s.
+        combine(repository.observeProfiles(), appSettings.observeActiveProfileId()) { rows, activeId ->
             rows.map { ProfileUi(it.id, it.name, it.colorIndex, it.id == activeId) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
@@ -82,7 +82,7 @@ class ProfilesViewModel(
     ) {
         // One switch at a time: a second pick while one runs would only queue behind it.
         if (_switchingTo.value != null) return
-        if (id == activeProfileId.value) {
+        if (id == appSettings.activeProfileId) {
             onSwitched()
             return
         }
@@ -90,7 +90,6 @@ class ProfilesViewModel(
         viewModelScope.launch {
             try {
                 AppContainer.getInstance(context).switchProfile(id)
-                activeProfileId.value = id
                 onSwitched()
             } finally {
                 _switchingTo.value = null

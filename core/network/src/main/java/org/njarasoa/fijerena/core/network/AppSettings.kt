@@ -545,6 +545,16 @@ class AppSettings(
     }
 
     /** The active profile's colour theme and Look and Feel, now and whenever either changes (a profile switch included). */
+
+    /** [activeProfileId], and again whenever it changes — here or by a switch live sync makes. */
+    fun observeActiveProfileId(): Flow<String> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(activeProfileId) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(activeProfileId)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
     fun observeLook(): Flow<Pair<String, String>> =
         callbackFlow {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(themeId to uiStyleId) }
