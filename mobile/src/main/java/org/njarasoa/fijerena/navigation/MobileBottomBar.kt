@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -40,10 +42,13 @@ import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 
 /**
  * The phone's bottom bar tabs (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home
@@ -158,6 +163,8 @@ fun MobileBottomBar(
     selected: MobileTab,
     onSelect: (MobileTab) -> Unit,
     modifier: Modifier = Modifier,
+    /** The profile in use, which the Settings slot shows (its avatar over its name) in place of Settings. */
+    profile: ProfileUi? = null,
 ) {
     val showLabels = showsTabLabels(LocalConfiguration.current.screenWidthDp)
     Box(
@@ -183,8 +190,23 @@ fun MobileBottomBar(
         ) {
             tabs.forEach { tab ->
                 val isSelected = tab == selected
-                val label = tab.label()
                 val color = if (isSelected) MobileDockStyle.selectedContent else MobileDockStyle.content
+                // The last slot is the profile's: its menu switches profile and opens Settings.
+                val slotProfile = profile?.takeIf { tab == MobileTab.SETTINGS }
+                val label = slotProfile?.name ?: tab.label()
+                val icon: @Composable (description: String?) -> Unit = { description ->
+                    if (slotProfile != null) {
+                        ProfileAvatar(
+                            name = slotProfile.name,
+                            colorIndex = slotProfile.colorIndex,
+                            size = MobileDockStyle.iconSize,
+                            fontSize = textStyleOf(TextRole.Caption).fontSize,
+                            modifier = Modifier.semantics { description?.let { contentDescription = it } },
+                        )
+                    } else {
+                        Icon(tab.icon(), contentDescription = description, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
+                    }
+                }
                 Column(
                     modifier =
                         Modifier
@@ -197,7 +219,7 @@ fun MobileBottomBar(
                     verticalArrangement = Arrangement.spacedBy(MobileDockStyle.iconToLabel),
                 ) {
                     if (showLabels) {
-                        Icon(tab.icon(), contentDescription = null, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
+                        icon(null)
                         CompositionLocalProvider(LocalContentColor provides color) {
                             CinemaText(
                                 text = label,
@@ -221,7 +243,7 @@ fun MobileBottomBar(
                             },
                             state = rememberTooltipState(),
                         ) {
-                            Icon(tab.icon(), contentDescription = label, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
+                            icon(label)
                         }
                     }
                 }

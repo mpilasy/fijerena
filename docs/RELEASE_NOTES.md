@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Phone: your profile is in the bottom bar.** The last slot shows the profile in use (its avatar and name) in place of Settings; tapping it opens a menu to switch profile, open Settings, or browse a Jellyfin or M3U source. The avatar leaves the top of the screen.
 - **Channels without a logo in search show their initial:** a channel whose logo is missing or never loads shows the first letter of its name (tags like "|ALB|" skipped) instead of an endless loading shimmer. TV and phone.
 - **Daylight is for the admin:** the light colour theme is offered only with Expert mode; everyone else picks among the dark ones. TV and phone.
 - **A simpler Settings for everyone but the admin:** without Expert mode, Settings shows only Your profile (name, colour, theme, Look and Feel, play next episode automatically), Count as watched, Display and About; sources, Live sync, backups, diagnostics, and a profile's sources and content filters are for the admin (Expert mode, for now). TV and phone.

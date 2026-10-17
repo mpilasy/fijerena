@@ -85,7 +85,7 @@ TV navigation rail (every screen but the player, the Live TV preview and first-r
 ├─→ Search(current section | "ALL")
 └─→ Settings
 
-Phone bottom bar: LiveTvTab | MoviesTab | TvShowsTab | SearchTab | Settings, each a saved stack (Back-Stack Rule 7)
+Phone bottom bar: LiveTvTab | MoviesTab | TvShowsTab | SearchTab | profile slot, each a saved stack (Back-Stack Rule 7); the profile slot opens the profile menu (switch profile, Settings — the slot's tab —, Browse entries)
 Phone profile sheet: Browse <source> ─→ CategoryList(type, source), pushed in the current tab
 
 ContentTypeSelection (Home, TV)
@@ -180,7 +180,7 @@ Both hosts look up the source on start (`initializeStartup()`: provider count, o
 |---|---|---|
 | Components | `androidx.tv.material3`, D-pad focus | Material3, touch |
 | Transitions | Fade in / out, `CinemaAnimation.navTransitionMs` (300 ms), every screen | Slide left + fade on push, slide right + fade on pop; `Player` slides up in and down out while the other screen only fades |
-| Profile picker at launch | With two or more profiles | Never (header avatar only) |
+| Profile picker at launch | With two or more profiles | Never (the bar's profile slot) |
 
 ## TV Focus
 

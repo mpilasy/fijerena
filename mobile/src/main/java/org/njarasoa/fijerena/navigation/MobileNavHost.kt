@@ -64,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
@@ -75,6 +76,7 @@ import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
+import org.njarasoa.fijerena.feature.profile.MobileProfileMenu
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.safemode.MobileNewerDataScreen
@@ -328,8 +330,19 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
 
+    // A Browse entry (O1) picked in the profile menu: that source's section, on it alone, pushed in
+    // this tab — or its sign-in while the profile has no login for it.
+    fun browseSection(
+        providerId: Long,
+        contentType: String,
+    ) = leaveTabRoot { navController.navigateOnce(Screen.CategoryList(contentType = contentType, providerId = providerId)) }
+
+    fun browseSignIn(providerId: Long) =
+        leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
+
     // The top bar of [tab]'s root: the section's name over the sources' sync summary; Search the
-    // guide on Live TV, the section's Search, and the profile avatar (profiles; Settings is a tab).
+    // guide on Live TV and the section's Search. The profile avatar is in the dock — in the top bar
+    // only while there is no dock (no section).
     fun sourceTopBar(tab: MobileTab): @Composable ((() -> Unit)?) -> Unit =
         { onSearch ->
             MobileSourceTopBar(
@@ -346,12 +359,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 // tab, as after the profile page's switch.
                 onProfileChosen = { coroutineScope.launch { startOver() } },
                 // A Browse entry (O1): that source's section, on it alone, pushed in this tab.
-                onBrowseSection = { providerId, contentType ->
-                    leaveTabRoot { navController.navigateOnce(Screen.CategoryList(contentType = contentType, providerId = providerId)) }
-                },
-                onBrowseSignIn = { providerId ->
-                    leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
-                },
+                onBrowseSection = ::browseSection,
+                onBrowseSignIn = ::browseSignIn,
+                showProfile = tabs.isEmpty(),
+                onSettings = { selectTab(MobileTab.SETTINGS) },
             )
         }
 
@@ -470,6 +481,10 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val dockCovers = entry != null && liveDocks[entry.id]?.second == true
     val showBar = currentTab != null && tabs.isNotEmpty() && !dockCovers && !hidesBottomBar(entry?.destination)
     var barHeightPx by remember { mutableIntStateOf(0) }
+    // The dock's profile slot: the profile in use, and its menu.
+    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
+    var showProfileMenu by remember { mutableStateOf(false) }
     val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else CinemaSpacing.none
     Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.surface)) {
         CompositionLocalProvider(LocalDockInset provides dockInset) {
@@ -927,11 +942,24 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             MobileBottomBar(
                 tabs = tabs,
                 selected = currentTab,
-                onSelect = ::selectTab,
+                // The profile slot opens its menu (switch profile, Settings, Browse entries).
+                onSelect = { tab -> if (tab == MobileTab.SETTINGS) showProfileMenu = true else selectTab(tab) },
                 modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { barHeightPx = it.height },
+                profile = activeProfile,
             )
         }
     }
+    MobileProfileMenu(
+        visible = showProfileMenu,
+        viewModel = profilesViewModel,
+        sections = profileSections,
+        onDismiss = { showProfileMenu = false },
+        // Every screen may hold the previous profile's repository: start over on its last tab.
+        onProfileChosen = { coroutineScope.launch { startOver() } },
+        onSettings = { selectTab(MobileTab.SETTINGS) },
+        onBrowseSection = ::browseSection,
+        onBrowseSignIn = ::browseSignIn,
+    )
 }
 
 /**

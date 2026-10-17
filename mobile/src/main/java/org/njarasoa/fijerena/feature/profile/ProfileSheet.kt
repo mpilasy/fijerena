@@ -33,7 +33,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
- * The profile avatar's sheet on a tab root: the profiles, the one in use marked — tapping another
+ * The profile menu's sheet (the dock's profile slot): the profiles, the one in use marked — tapping another
  * switches to it and then calls [onProfileChosen], for the caller to start over on its last tab —
  * and Settings, where profiles are added and edited. Under them, a "Browse <source>" row for each
  * of the profile's sources outside the merged tabs ([browse]: Jellyfin, M3U;
@@ -45,6 +45,7 @@ fun ProfileSheet(
     viewModel: ProfilesViewModel,
     onProfileChosen: () -> Unit,
     onDismiss: () -> Unit,
+    onSettings: () -> Unit,
     browse: List<BrowseSource> = emptyList(),
     onBrowse: (BrowseSource) -> Unit = {},
 ) {
@@ -97,6 +98,16 @@ fun ProfileSheet(
                                 },
                         )
                     }
+                    ListItem(
+                        headlineContent = { CinemaText(stringResource(R.string.settings_title)) },
+                        leadingContent = { Icon(CinemaIcons.Settings, contentDescription = null) },
+                        colors = rowColors,
+                        modifier =
+                            Modifier.clickable {
+                                onDismiss()
+                                onSettings()
+                            },
+                    )
                     if (browse.isNotEmpty()) CinemaDivider()
                     browse.forEach { source ->
                         ListItem(

@@ -75,7 +75,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
-import org.njarasoa.fijerena.feature.profile.ProfileSheet
+import org.njarasoa.fijerena.feature.profile.MobileProfileMenu
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -86,11 +86,8 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * line for all the profile's sources (O3 of docs/plans/20261012_multi-source-search-history-plan.md:
  * "Updated 2 hours ago", "Updating 1 of 3…", "1 failed"), which opens a sheet with each source's
  * status and reason; nothing when no source syncs. Then Search the guide ([onSearchGuide], Live TV
- * only, once the guide index is ready), the section's Search ([onSearch]) and the profile avatar,
- * whose sheet switches profile ([onProfileChosen] runs after the switch) and opens Settings, and
- * lists a "Browse <source>" row per source outside the merged tabs ([sections]' Browse entries,
- * O1): [onBrowseSection] opens the section picked (a dialog asks which when it has several),
- * [onBrowseSignIn] the source's sign-in while this profile has no login for it.
+ * only, once the guide index is ready) and the section's Search ([onSearch]). The profile avatar
+ * and its [MobileProfileMenu] sit in the dock; here only with [showProfile], while there is no dock.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,14 +99,15 @@ fun MobileSourceTopBar(
     onProfileChosen: () -> Unit,
     onBrowseSection: (providerId: Long, contentType: String) -> Unit = { _, _ -> },
     onBrowseSignIn: (providerId: Long) -> Unit = {},
+    /** The avatar and its profile menu: only while there is no dock, which otherwise holds them. */
+    showProfile: Boolean = false,
+    onSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var showProfileSheet by remember { mutableStateOf(false) }
-    // A Browse entry's sections, when it has more than one: picked in a dialog.
-    var browseChoice by remember { mutableStateOf<Pair<BrowseSource, List<String>>?>(null) }
 
     // The summary line (phone home overhaul plan, Phase 2; one line for all sources since
     // multi-source Phase 6): re-read as each source's sync starts, ends and records its result.
@@ -146,8 +144,8 @@ fun MobileSourceTopBar(
             if (onSearch != null) {
                 IconAction(onClick = onSearch, icon = CinemaIcons.Search, label = stringResource(R.string.common_search))
             }
-            // Always shown, even with one profile, so profiles are discoverable.
-            activeProfile?.let { profile ->
+            // Without a dock (no section), the profile menu's only way in.
+            activeProfile?.takeIf { showProfile }?.let { profile ->
                 val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
                 IconButton(
                     onClick = { showProfileSheet = true },
@@ -164,82 +162,16 @@ fun MobileSourceTopBar(
         },
     )
 
-    if (showProfileSheet) {
-        ProfileSheet(
-            viewModel = profilesViewModel,
-            onProfileChosen = onProfileChosen,
-            onDismiss = { showProfileSheet = false },
-            browse = sections?.browse.orEmpty(),
-            onBrowse = { browsed ->
-                coroutineScope.launch {
-                    when (val opening = ProfileSections.opening(context, browsed.providerId)) {
-                        ProfileSections.Opening.SignIn -> {
-                            onBrowseSignIn(browsed.providerId)
-                        }
-
-                        is ProfileSections.Opening.Sections -> {
-                            when (opening.contentTypes.size) {
-                                0 -> Unit
-                                1 -> onBrowseSection(browsed.providerId, opening.contentTypes.first())
-                                else -> browseChoice = browsed to opening.contentTypes
-                            }
-                        }
-                    }
-                }
-            },
-        )
-    }
-
-    browseChoice?.let { (browsed, contentTypes) ->
-        CinemaAlertDialog(
-            onDismissRequest = { browseChoice = null },
-            title = {
-                CinemaText(
-                    stringResource(R.string.browse_source, browsed.name),
-                    role = TextRole.Title,
-                    tone = TextTone.Inherit,
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                    contentTypes.forEach { contentType ->
-                        Surface(
-                            onClick = {
-                                browseChoice = null
-                                onBrowseSection(browsed.providerId, contentType)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = CinemaTheme.colors.surfaceRaised,
-                            shape = CinemaTheme.shapes.chip,
-                        ) {
-                            CinemaText(
-                                text =
-                                    stringResource(
-                                        when (contentType) {
-                                            ContentType.LIVE_TV -> R.string.provider_live_tv_label
-                                            ContentType.MOVIES -> R.string.provider_movies_label
-                                            else -> R.string.provider_tv_shows_label
-                                        },
-                                    ),
-                                modifier = Modifier.padding(CinemaSpacing.md),
-                                role = TextRole.Body,
-                                tone = TextTone.Inherit,
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                CinemaDialogActionButton(onClick = { browseChoice = null }, kind = ButtonKind.Other) {
-                    CinemaText(
-                        stringResource(R.string.common_cancel),
-                        role = TextRole.Label,
-                        tone = TextTone.Inherit,
-                    )
-                }
-            },
-        )
-    }
+    MobileProfileMenu(
+        visible = showProfileSheet,
+        viewModel = profilesViewModel,
+        sections = sections,
+        onDismiss = { showProfileSheet = false },
+        onProfileChosen = onProfileChosen,
+        onSettings = onSettings,
+        onBrowseSection = onBrowseSection,
+        onBrowseSignIn = onBrowseSignIn,
+    )
 
     if (showSourcesSheet) {
         MobileSourcesStatusSheet(states = syncStates, onDismiss = { showSourcesSheet = false })
