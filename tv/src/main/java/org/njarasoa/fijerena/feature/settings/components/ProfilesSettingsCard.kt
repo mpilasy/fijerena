@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -351,44 +352,50 @@ fun ProfileEditPane(
                         focusRequester = filtersFocus,
                     )
                 }
-                // Switching to the profile already in use would do nothing.
-                if (!profile.isActive) {
-                    CinemaSecondaryButton(
-                        onClick = onSwitch,
-                        text = stringResource(R.string.profile_switch_to_button),
+                // The actions: half the page wide, against its right edge.
+                Column(
+                    modifier = Modifier.fillMaxWidth(ACTIONS_WIDTH_FRACTION).align(Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    // Switching to the profile already in use would do nothing.
+                    if (!profile.isActive) {
+                        CinemaSecondaryButton(
+                            onClick = onSwitch,
+                            text = stringResource(R.string.profile_switch_to_button),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    CinemaPrimaryButton(
+                        onClick = {
+                            if (name.isBlank()) {
+                                showNameError = true
+                            } else {
+                                viewModel.updateProfile(
+                                    profile.id,
+                                    name,
+                                    colorIndex,
+                                    stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode),
+                                )
+                                onSaved()
+                            }
+                        },
+                        text = stringResource(R.string.profile_save_button),
                         modifier = Modifier.fillMaxWidth(),
                     )
-                }
-                CinemaPrimaryButton(
-                    onClick = {
-                        if (name.isBlank()) {
-                            showNameError = true
-                        } else {
-                            viewModel.updateProfile(
-                                profile.id,
-                                name,
-                                colorIndex,
-                                stored.copy(devMode = devMode, autoplayNextEpisode = autoplayNextEpisode),
-                            )
-                            onSaved()
-                        }
-                    },
-                    text = stringResource(R.string.profile_save_button),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                CinemaSecondaryButton(
-                    onClick = onBack,
-                    text = stringResource(R.string.common_cancel),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // The profile in use and the last one left can't be deleted (ProfileRepository refuses
-                // both); not offering the button beats offering it and then explaining why not.
-                if (canDelete) {
                     CinemaSecondaryButton(
-                        onClick = { confirmDelete = true },
-                        text = stringResource(R.string.profile_delete_button),
-                        modifier = Modifier.fillMaxWidth().focusRequester(deleteFocus),
+                        onClick = onBack,
+                        text = stringResource(R.string.common_cancel),
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                    // The profile in use and the last one left can't be deleted (ProfileRepository refuses
+                    // both); not offering the button beats offering it and then explaining why not.
+                    if (canDelete) {
+                        CinemaSecondaryButton(
+                            onClick = { confirmDelete = true },
+                            text = stringResource(R.string.profile_delete_button),
+                            modifier = Modifier.fillMaxWidth().focusRequester(deleteFocus),
+                        )
+                    }
                 }
             }
         }
@@ -644,3 +651,5 @@ private fun ColorSwatch(
             ),
     ) {}
 }
+
+private const val ACTIONS_WIDTH_FRACTION = 0.5f
