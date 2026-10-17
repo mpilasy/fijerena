@@ -176,9 +176,9 @@ class AppContainer(
     private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
-     * The profile changed without the user picking — live sync moving this device off a profile.
-     * The nav hosts rebuild the back stack from home on each, as the profile picker does after
-     * [switchProfile].
+     * The profile in use was deleted on another device, and live sync moved this device to
+     * another: the nav hosts drop every screen, playback included, and ask who is watching — TV's
+     * profile picker, the phone's profile menu.
      */
     val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
 

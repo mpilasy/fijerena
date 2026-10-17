@@ -90,9 +90,8 @@ fun TvNavHost(
 
     fun clearSectionStacks() = TvSection.entries.forEach { navController.clearBackStack(it.route) }
 
-    // Live sync moved this device off a profile, or deleted a source of the profile in use on
-    // another device: every screen may hold the old one's repository, so start over from home —
-    // what the profile picker does.
+    // Live sync deleted a source of the profile in use on another device: every screen may hold
+    // its repository, so start over from home — what the profile picker does.
     fun startOverFromHome() {
         // Before the graph exists (very first frames) there is nothing to rebuild.
         if (navController.currentBackStackEntry == null) return
@@ -101,11 +100,19 @@ fun TvNavHost(
             popUpTo(navController.graph.id) { inclusive = true }
         }
     }
+    // The profile in use was deleted on another device: whatever was on screen or playing goes,
+    // and the profile picker asks who is watching.
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
             .externalSwitches
-            .collect { startOverFromHome() }
+            .collect {
+                if (navController.currentBackStackEntry == null) return@collect
+                clearSectionStacks()
+                navController.navigate(Screen.ProfilePicker) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                }
+            }
     }
     // A deleted source waits for the player to close: what plays keeps playing.
     var sourceDeleted by remember { mutableStateOf(false) }

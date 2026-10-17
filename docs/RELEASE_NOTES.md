@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A profile deleted on another device asks who is watching:** the device using it stops what it was showing or playing and opens the profile picker (TV) or the profile menu (phone). TV and phone.
 - **Deleting a source on one device no longer stops playback on another:** a linked device only starts over when the deleted source was one its profile uses, and then waits until nothing is playing. TV and phone.
 - **There is always an admin:** at least one profile keeps Expert mode — the last one can't turn it off, an Expert can give it to any profile from its page, and if none is left (after a sync or an import) the oldest profile gets it back. TV and phone.
 - **Phone: your profile is in the bottom bar.** The last slot shows the profile in use (its avatar and name) in place of Settings; tapping it opens a menu to switch profile, open Settings, or browse a Jellyfin or M3U source. The avatar leaves the top of the screen.

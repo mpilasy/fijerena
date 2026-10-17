@@ -229,8 +229,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
 
-    // Live sync moved this device off a profile: every screen may hold the old one's repository,
-    // so start over — what the profile picker does.
+    // The profile in use was deleted on another device (live sync moved this one to another):
+    // every screen goes, playback included, and the profile menu asks who is watching.
+    var showProfileMenu by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
@@ -239,6 +240,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 // Before the graph exists (very first frames) there is nothing to rebuild.
                 if (navController.currentBackStackEntry == null) return@collect
                 startOver()
+                showProfileMenu = true
             }
     }
     // Another device deleted a source of the profile in use: the same, once nothing plays — the
@@ -506,7 +508,6 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // The dock's profile slot: the profile in use, and its menu.
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
-    var showProfileMenu by remember { mutableStateOf(false) }
     val dockInset = if (showBar) with(LocalDensity.current) { barHeightPx.toDp() } else CinemaSpacing.none
     Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.surface)) {
         CompositionLocalProvider(LocalDockInset provides dockInset) {
