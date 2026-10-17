@@ -45,7 +45,7 @@ object MobileDockStyle {
     val iconSize: Dp = 26.dp
     val iconToLabel: Dp = 2.dp
 
-    private const val BAR_ALPHA = 0.85f
+    private const val BAR_ALPHA = 0.95f
     private const val OUTLINE_ALPHA = 0.08f
     private const val SELECTED_FILL_ALPHA = 0.10f
 }

@@ -45,6 +45,8 @@ object CinemaTheme {
 /** Colours by what they are for, never by hue: a theme decides the hues. */
 @Immutable
 data class CinemaColorRoles(
+    /** A light theme: dark text on light surfaces. */
+    val isLight: Boolean,
     val background: Color,
     val surface: Color,
     /** A row, card or control at rest, one step above [surface]. */
@@ -83,6 +85,7 @@ data class CinemaColorRoles(
     companion object {
         fun from(palette: CinemaThemePalette): CinemaColorRoles =
             CinemaColorRoles(
+                isLight = palette.isLight,
                 background = palette.background,
                 surface = palette.surface,
                 surfaceRaised = palette.surfaceVariant,

@@ -207,7 +207,9 @@ val DaylightPalette =
         isLight = true,
         accent = Color(0xFF1565C0),
         accentDark = Color(0xFF0D47A1),
-        accentLight = Color(0xFF42A5F5),
+        // On white the soft accent has to be the darker blue: it marks the current row, the selected tab and
+        // a focused icon's label as text.
+        accentLight = Color(0xFF0D47A1),
         orange = Color(0xFFE65100),
         orangeDark = Color(0xFFBF360C),
         orangeLight = Color(0xFFFF8F00),

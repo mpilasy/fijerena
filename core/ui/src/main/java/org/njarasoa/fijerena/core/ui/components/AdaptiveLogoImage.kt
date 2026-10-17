@@ -28,8 +28,9 @@ import org.njarasoa.fijerena.core.ui.theme.cornerShape
  * TMDB logo art for [contentDescription], TMDB isn't guaranteed to be light-on-transparent —
  * some titles' only logo is a dark wordmark meant for a light background (e.g. "Pluribus"'s is
  * near-black), which would otherwise vanish against this app's dark UI. Samples the loaded image
- * and adds a light backing plate only when it's actually dark, so the (more common) light logos
- * keep rendering exactly as before — bare, no plate.
+ * and adds a backing plate only when the logo is the same lightness as the theme behind it: a light
+ * plate for a dark logo on a dark theme, a dark plate for a light logo (the common case) on a light
+ * theme. Otherwise the logo shows bare.
  *
  * [modifier] should carry the caller's sizing (e.g. `.height(x)`); the plate, when needed, wraps
  * around that.
@@ -48,6 +49,9 @@ fun AdaptiveLogoImage(
     // dark UI and the plate's padding never shifts the layout after it has shown.
     var isDark by remember(logoUrl) { mutableStateOf(LogoToneCache.get(logoUrl)) }
     val scope = rememberCoroutineScope()
+    val c = CinemaTheme.colors
+    // The plate decision compares the logo with the theme: isDark == the theme is dark.
+    val plate: Boolean? = isDark?.let { it != c.isLight }
     AsyncImage(
         model = logoUrl,
         contentDescription = contentDescription,
@@ -71,19 +75,23 @@ fun AdaptiveLogoImage(
             }
         },
         modifier =
-            when (isDark) {
+            when (plate) {
+                null -> {
+                    modifier.alpha(0f)
+                }
+
+                // A logo the same lightness as the background behind it vanishes: a dark wordmark on
+                // a dark theme gets a light plate, a light one (most logos) on a light theme a dark one.
                 true -> {
+                    val plateColor =
+                        if (c.isLight) c.mediaScrim.copy(alpha = LOGO_PLATE_DARK_ALPHA) else c.onMedia.copy(alpha = LOGO_PLATE_ALPHA)
                     modifier
-                        .background(CinemaTheme.colors.onMedia.copy(alpha = LOGO_PLATE_ALPHA), cornerShape(ControlStyle.logoPlateCorner))
+                        .background(plateColor, cornerShape(ControlStyle.logoPlateCorner))
                         .padding(horizontal = ControlStyle.logoPlatePaddingHorizontal, vertical = ControlStyle.logoPlatePaddingVertical)
                 }
 
                 false -> {
                     modifier
-                }
-
-                null -> {
-                    modifier.alpha(0f)
                 }
             },
     )
@@ -161,3 +169,4 @@ internal fun isDarkPixels(pixels: IntArray): Boolean {
 }
 
 private const val LOGO_PLATE_ALPHA = 0.9f
+private const val LOGO_PLATE_DARK_ALPHA = 0.7f
