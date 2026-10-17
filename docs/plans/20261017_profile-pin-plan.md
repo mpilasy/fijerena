@@ -6,6 +6,8 @@ An optional 4-digit PIN per profile. It locks the profile (picking it, launching
 an Expert profile (the admin, for now — see `project_admin_is_expert`), it is the admin PIN: the
 admin-only parts of the app ask for it. A profile without a PIN behaves exactly as today.
 
+No PIN on any profile is valid and the default: the app then behaves as before.
+
 This keeps kids and guests out; it is not real security (adb or root reads the app's data), the
 same level as a streaming service's profile lock.
 
@@ -62,7 +64,7 @@ no PIN anywhere it stays as today.
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | `ProfilePins` (hash, verify, throttle) + `AppSettings` keys, sync, deletion cleanup; tests | In progress |
+| 1 | `ProfilePins` (hash, verify, throttle) + `AppSettings` keys, sync, deletion cleanup; tests | Done (Phase 1 commit) |
 | 2 | PIN entry component (TV pad, phone keyboard) and the profile page's PIN row | Not started |
 | 3 | Locked profiles: picker, phone profile menu, launch | Not started |
 | 4 | Admin gate: session unlock, admin-only screens, the 7 taps | Not started |

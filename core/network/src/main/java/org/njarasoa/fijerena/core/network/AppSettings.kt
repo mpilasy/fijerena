@@ -39,6 +39,9 @@ class AppSettings(
         private const val KEY_PROFILE_SOURCES_SEEDED = "profile_sources_seeded_v1"
         private const val KEY_PROFILE_SOURCE_RECORDS_QUEUED = "profile_source_records_queued_v1"
         private const val KEY_AUTOPLAY_NEXT_EPISODE = "autoplay_next_episode"
+        private const val KEY_PIN_HASH = "pin_hash"
+        private const val KEY_PIN_FAILURES = "pin_failures"
+        private const val KEY_PIN_WAIT_UNTIL = "pin_wait_until"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
@@ -98,8 +101,9 @@ class AppSettings(
                 KEY_DEV_MODE,
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_TMDB_API_KEY,
+                KEY_PIN_HASH,
             )
-        val PER_PROFILE_SETTING_KEYS = setOf(KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE)
+        val PER_PROFILE_SETTING_KEYS = setOf(KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_PIN_HASH)
 
         /**
          * A profile's sources sync one record per source — `profile_source:<providerKey>`, true or
@@ -375,6 +379,11 @@ class AppSettings(
                     value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 }
 
+                // Blank: the PIN was removed.
+                KEY_PIN_HASH -> {
+                    if (profileId != SyncKind.SHARED && value.isString) putString(profileKey(key, profileId), value.content)
+                }
+
                 // A device-wide theme an older build sends (profile id SHARED) has no profile to go to: dropped.
                 KEY_THEME_ID, KEY_UI_STYLE_ID -> {
                     if (profileId != SyncKind.SHARED && value.isString && value.content.isNotBlank()) {
@@ -410,7 +419,7 @@ class AppSettings(
                 )
             }
 
-            KEY_THEME_ID, KEY_UI_STYLE_ID -> {
+            KEY_THEME_ID, KEY_UI_STYLE_ID, KEY_PIN_HASH -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             }
 
@@ -422,6 +431,44 @@ class AppSettings(
 
     /** Drops a deleted profile's developer-mode flag. */
     fun removeDevMode(profileId: String) = prefs.edit { remove(devModeKey(profileId)) }
+
+    /**
+     * [profileId]'s PIN as stored by `ProfilePins` (`salt:hash`), or null without one. Per profile
+     * and synced, so one PIN works on every device; a removed PIN is kept blank so the removal
+     * syncs too.
+     */
+    fun pinHash(profileId: String): String? = prefs.getString(profileKey(KEY_PIN_HASH, profileId), null)?.takeIf { it.isNotBlank() }
+
+    fun setPinHash(
+        profileId: String,
+        hash: String?,
+    ) {
+        prefs.edit { putString(profileKey(KEY_PIN_HASH, profileId), hash.orEmpty()) }
+        SettingsSyncQueue.setting(context, KEY_PIN_HASH, profileId)
+    }
+
+    /** Wrong PINs in a row for [profileId] on this device (not synced). */
+    fun pinFailures(profileId: String): Int = prefs.getInt(profileKey(KEY_PIN_FAILURES, profileId), 0)
+
+    /** When [profileId]'s PIN may be tried again on this device, epoch ms; 0 when it may now. */
+    fun pinWaitUntil(profileId: String): Long = prefs.getLong(profileKey(KEY_PIN_WAIT_UNTIL, profileId), 0L)
+
+    fun setPinThrottle(
+        profileId: String,
+        failures: Int,
+        waitUntil: Long,
+    ) = prefs.edit {
+        putInt(profileKey(KEY_PIN_FAILURES, profileId), failures)
+        putLong(profileKey(KEY_PIN_WAIT_UNTIL, profileId), waitUntil)
+    }
+
+    /** Drops a deleted profile's PIN and its wrong-PIN count. */
+    fun removePin(profileId: String) =
+        prefs.edit {
+            remove(profileKey(KEY_PIN_HASH, profileId))
+            remove(profileKey(KEY_PIN_FAILURES, profileId))
+            remove(profileKey(KEY_PIN_WAIT_UNTIL, profileId))
+        }
 
     /** Drops a deleted profile's autoplay-next-episode choice. */
     fun removeAutoplayNextEpisode(profileId: String) = prefs.edit { remove(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId)) }

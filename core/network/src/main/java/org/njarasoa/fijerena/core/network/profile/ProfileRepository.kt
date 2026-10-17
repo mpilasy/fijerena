@@ -110,7 +110,7 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider, and its developer-mode flag, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
+     * logins on every provider, and its developer-mode flag, PIN, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -143,6 +143,7 @@ class ProfileRepository(
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
                     AppSettings(context).removeAutoplayNextEpisode(id)
+                    AppSettings(context).removePin(id)
                     AppSettings(context).removeLook(id)
                     AppSettings(context).removeProfileSearchHistory(id)
                     AppSettings(context).removeLastTab(id)
