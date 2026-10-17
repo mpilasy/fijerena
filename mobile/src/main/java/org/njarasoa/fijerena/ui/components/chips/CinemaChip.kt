@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.ui.components.chips
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ChipColors
@@ -14,6 +13,7 @@ import androidx.compose.material3.SelectableChipElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * Themed replacement for [FilterChip] — M3's default chip shape ignores the app's
@@ -41,7 +41,7 @@ fun CinemaFilterChip(
         enabled = enabled,
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
-        shape = RoundedCornerShape(CinemaCornerRadius.small),
+        shape = cornerShape(CinemaCornerRadius.small),
         colors = colors,
         elevation = elevation,
         border = border,
@@ -70,7 +70,7 @@ fun CinemaAssistChip(
         enabled = enabled,
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
-        shape = RoundedCornerShape(CinemaCornerRadius.small),
+        shape = cornerShape(CinemaCornerRadius.small),
         colors = colors,
         elevation = elevation,
         border = border,

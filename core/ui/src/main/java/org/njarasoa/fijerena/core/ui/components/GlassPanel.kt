@@ -4,7 +4,6 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -15,6 +14,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * Frosted glass surface composable.
@@ -30,7 +30,7 @@ fun GlassPanel(
     modifier: Modifier = Modifier,
     blurRadius: Float = 20f,
     backgroundAlpha: Float = 1f,
-    panelShape: Shape = RoundedCornerShape(CinemaCornerRadius.large),
+    panelShape: Shape = cornerShape(CinemaCornerRadius.large),
     content: @Composable () -> Unit,
 ) {
     val palette = CinemaThemeHolder.current

@@ -1,9 +1,9 @@
 package org.njarasoa.fijerena.ui.components
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 
 /**
@@ -21,7 +21,7 @@ fun TvGlassPanel(
         modifier = modifier,
         blurRadius = blurRadius,
         backgroundAlpha = backgroundAlpha,
-        panelShape = RoundedCornerShape(CornerRadius.large),
+        panelShape = cornerShape(CornerRadius.large),
         content = content,
     )
 }

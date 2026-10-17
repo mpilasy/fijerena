@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.navigation
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
@@ -12,6 +11,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * How the phone's bottom bar ([MobileBottomBar]) looks, in one place: a floating bar lifted off the
@@ -26,7 +26,7 @@ object MobileDockStyle {
     /** The Display style's button corner, as every button: a pill on Rounded, square on Sharp. */
     val barShape: Shape
         @Composable @ReadOnlyComposable
-        get() = RoundedCornerShape(LocalUiStyle.current.shapes.button)
+        get() = cornerShape(LocalUiStyle.current.shapes.button)
     val barContainer: Color get() = CinemaSurfaceVariant.copy(alpha = BAR_ALPHA)
     val barOutline: Color get() = CinemaTextPrimary.copy(alpha = OUTLINE_ALPHA)
     val barOutlineWidth: Dp = 1.dp
@@ -37,7 +37,7 @@ object MobileDockStyle {
     /** The tab in use's pill: the bar's corner less the space between them, so the two curves run parallel. */
     val tabShape: Shape
         @Composable @ReadOnlyComposable
-        get() = RoundedCornerShape((LocalUiStyle.current.shapes.button - barPadding).coerceAtLeast(0.dp))
+        get() = cornerShape((LocalUiStyle.current.shapes.button - barPadding).coerceAtLeast(0.dp))
     val tabVerticalPadding: Dp = 8.dp
     val selectedTabContainer: Color get() = CinemaTextPrimary.copy(alpha = SELECTED_FILL_ALPHA)
     val selectedContent: Color get() = CinemaAccent

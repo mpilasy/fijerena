@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.ui.theme
 
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -151,12 +150,12 @@ data class CinemaShapeRoles(
     companion object {
         fun from(style: UiStyle): CinemaShapeRoles =
             CinemaShapeRoles(
-                button = RoundedCornerShape(style.shapes.button),
-                chip = RoundedCornerShape(style.shapes.chip),
-                field = RoundedCornerShape(style.shapes.chip),
-                card = RoundedCornerShape(style.shapes.card),
-                dialog = RoundedCornerShape(style.dialog.cornerRadius),
-                control = RoundedCornerShape(style.shapes.chip),
+                button = style.shapes.shape(style.shapes.button),
+                chip = style.shapes.shape(style.shapes.chip),
+                field = style.shapes.shape(style.shapes.chip),
+                card = style.shapes.shape(style.shapes.card),
+                dialog = style.shapes.shape(style.dialog.cornerRadius),
+                control = style.shapes.shape(style.shapes.chip),
                 identity = CircleShape,
             )
     }

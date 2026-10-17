@@ -6,7 +6,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +17,7 @@ import androidx.tv.material3.ToggleableSurfaceDefaults
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -54,7 +54,7 @@ fun TvSelectableButton(
         onCheckedChange = { onSelect() },
         modifier = modifier,
         enabled = enabled,
-        shape = ToggleableSurfaceDefaults.shape(shape = RoundedCornerShape(CornerRadius.small)),
+        shape = ToggleableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.small)),
         colors =
             ToggleableSurfaceDefaults.colors(
                 containerColor = TvFocusTokens.restingContainer,
@@ -81,7 +81,7 @@ fun TvSelectableButton(
                 focusedBorder =
                     Border(
                         border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
-                        shape = RoundedCornerShape(CornerRadius.small),
+                        shape = cornerShape(CornerRadius.small),
                     ),
             ),
         glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),

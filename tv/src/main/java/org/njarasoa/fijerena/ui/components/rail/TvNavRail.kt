@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +76,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
 import org.njarasoa.fijerena.ui.components.input.FOCUS_RETRY_MAX_FRAMES
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
@@ -289,7 +289,7 @@ private fun RailOverlay(
                 maxLines = 1,
                 modifier =
                     Modifier
-                        .background(panel.copy(alpha = 1f), RoundedCornerShape(CornerRadius.large))
+                        .background(panel.copy(alpha = 1f), cornerShape(CornerRadius.large))
                         .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             )
         }
@@ -373,7 +373,7 @@ private fun RailButton(
     icon: @Composable () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(CornerRadius.small)
+    val shape = cornerShape(CornerRadius.small)
     val lit = isCurrent || focused
     Surface(
         onClick = onClick,

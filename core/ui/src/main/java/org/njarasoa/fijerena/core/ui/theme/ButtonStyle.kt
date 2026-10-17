@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.core.ui.theme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
@@ -45,7 +44,7 @@ abstract class ButtonStyle {
 
     val shape: Shape
         @Composable @ReadOnlyComposable
-        get() = RoundedCornerShape(LocalUiStyle.current.shapes.button)
+        get() = cornerShape(LocalUiStyle.current.shapes.button)
 
     open fun container(kind: ButtonKind): Color =
         when (kind) {

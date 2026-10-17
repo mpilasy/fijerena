@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.ui.components.cards
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
@@ -12,6 +11,7 @@ import androidx.compose.ui.Modifier
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -46,7 +46,7 @@ fun CinemaCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(CinemaCornerRadius.medium),
+        shape = cornerShape(CinemaCornerRadius.medium),
         colors = colors,
         elevation = elevation,
         border = border,
@@ -69,7 +69,7 @@ fun CinemaCard(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        shape = RoundedCornerShape(CinemaCornerRadius.medium),
+        shape = cornerShape(CinemaCornerRadius.medium),
         colors = colors,
         elevation = elevation,
         border = border,

@@ -3,7 +3,6 @@
 package org.njarasoa.fijerena.ui.components.cards
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
@@ -16,6 +15,7 @@ import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
@@ -69,7 +69,7 @@ object TvListRowDefaults {
         val focused =
             Border(
                 border = BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline),
-                shape = RoundedCornerShape(CornerRadius.medium),
+                shape = cornerShape(CornerRadius.medium),
             )
         return CardDefaults.border(border = Border.None, focusedBorder = focused, pressedBorder = focused)
     }
@@ -86,7 +86,7 @@ object TvListRowDefaults {
     fun glow(): CardGlow = CardDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow)
 
     @Composable
-    fun shape(): CardShape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium))
+    fun shape(): CardShape = CardDefaults.shape(shape = cornerShape(CornerRadius.medium))
 
     /** A row's title: [TvFocusTokens.currentText] on a current row at rest, white otherwise — never the accent on focus. */
     @ReadOnlyComposable

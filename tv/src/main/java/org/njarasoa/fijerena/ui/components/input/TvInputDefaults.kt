@@ -3,7 +3,6 @@
 package org.njarasoa.fijerena.ui.components.input
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
@@ -26,6 +25,7 @@ import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.ListItemShape
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
@@ -93,7 +93,7 @@ object TvInputDefaults {
         )
 
     @Composable
-    fun shape(): ListItemShape = ListItemDefaults.shape(shape = RoundedCornerShape(CornerRadius.small))
+    fun shape(): ListItemShape = ListItemDefaults.shape(shape = cornerShape(CornerRadius.small))
 
     @Composable
     fun glow(): ListItemGlow =
@@ -107,7 +107,7 @@ object TvInputDefaults {
     private fun focusBorder(): Border =
         Border(
             border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = TvFocusTokens.focusedRowOutline),
-            shape = RoundedCornerShape(CornerRadius.small),
+            shape = cornerShape(CornerRadius.small),
         )
 }
 

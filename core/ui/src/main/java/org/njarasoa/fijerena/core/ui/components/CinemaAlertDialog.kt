@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * Themed replacement for [androidx.compose.material3.AlertDialog] — branches on the active
@@ -69,7 +69,7 @@ fun CinemaAlertDialog(
     properties: DialogProperties = DialogProperties(),
 ) {
     val tokens = LocalUiStyle.current.dialog
-    val shape = RoundedCornerShape(tokens.cornerRadius)
+    val shape = cornerShape(tokens.cornerRadius)
 
     // A new Dialog window doesn't inherit Compose's focus state from the screen behind it, so
     // without an explicit initial-focus request TV's D-pad has nothing to move onto — key

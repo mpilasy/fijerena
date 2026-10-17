@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.ui.components
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +20,7 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * TMDB logo art for [contentDescription], TMDB isn't guaranteed to be light-on-transparent —
@@ -72,7 +72,7 @@ fun AdaptiveLogoImage(
             when (isDark) {
                 true -> {
                     modifier
-                        .background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.9f), cornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 }
 

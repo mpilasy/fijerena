@@ -5,7 +5,6 @@ package org.njarasoa.fijerena.ui.components.cards
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +21,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 
 /**
@@ -65,7 +65,7 @@ fun AccentBlock(
                 .fillMaxSize()
                 .background(
                     brush = gradient,
-                    shape = RoundedCornerShape(CornerRadius.medium),
+                    shape = cornerShape(CornerRadius.medium),
                 ),
         contentAlignment = Alignment.Center,
     ) {

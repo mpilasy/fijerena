@@ -1219,6 +1219,7 @@
     <string name="ui_style_rounded">Arrondi</string>
     <string name="ui_style_sharp">Net</string>
     <string name="ui_style_balanced">Équilibré</string>
+    <string name="ui_style_serif">Sérif</string>
     <string name="theme_deep_night">Nuit profonde</string>
     <string name="theme_pure_black">Noir pur</string>
     <string name="theme_amethyst">Améthyste</string>

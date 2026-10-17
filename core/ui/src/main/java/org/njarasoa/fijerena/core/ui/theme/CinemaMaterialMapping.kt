@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -61,11 +60,11 @@ fun cinemaMaterialColorScheme(colors: CinemaColorRoles): ColorScheme =
 /** The Look and Feel's corners handed to Material 3 ([Shapes]), for both apps. */
 fun cinemaMaterialShapes(style: UiStyle): Shapes =
     Shapes(
-        extraSmall = RoundedCornerShape(CinemaSpacing.xxs),
-        small = RoundedCornerShape(style.shapes.chip),
-        medium = RoundedCornerShape(style.shapes.card),
-        large = RoundedCornerShape(style.shapes.card + CinemaSpacing.xxs),
-        extraLarge = RoundedCornerShape(style.shapes.dialog),
+        extraSmall = style.shapes.shape(CinemaSpacing.xxs),
+        small = style.shapes.shape(style.shapes.chip),
+        medium = style.shapes.shape(style.shapes.card),
+        large = style.shapes.shape(style.shapes.card + CinemaSpacing.xxs),
+        extraLarge = style.shapes.shape(style.shapes.dialog),
     )
 
 /** Black on a light colour, white on a dark one. */

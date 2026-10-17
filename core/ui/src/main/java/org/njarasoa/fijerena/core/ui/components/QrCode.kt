@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -21,6 +20,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * [text] as a QR code: black on white whatever the theme, since scanners expect dark modules on a
@@ -46,7 +46,7 @@ fun QrCode(
     Box(
         modifier
             .size(size)
-            .background(Color.White, RoundedCornerShape(12.dp))
+            .background(Color.White, cornerShape(12.dp))
             .padding(size / 12)
             .semantics { this.contentDescription = contentDescription },
     ) {

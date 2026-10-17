@@ -1217,6 +1217,7 @@
     <string name="ui_style_rounded">Rounded</string>
     <string name="ui_style_sharp">Sharp</string>
     <string name="ui_style_balanced">Balanced</string>
+    <string name="ui_style_serif">Serif</string>
     <string name="theme_deep_night">Deep night</string>
     <string name="theme_pure_black">Pure black</string>
     <string name="theme_amethyst">Amethyst</string>

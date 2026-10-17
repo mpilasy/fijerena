@@ -103,6 +103,11 @@ Two colour themes added to prove the inputs drive everything: **Forest** (dark, 
 **Daylight** (the first light theme: dark text on near-white). Every screen must read correctly in
 both; Daylight exposes anything still assuming a dark background.
 
+Look and Feel **Serif** proves the same for shapes and type: a serif font for every piece of text
+(`UiTypeTokens.fontFamily`) and cut corners — an octagon-like outline — for every corner
+(`UiShapeTokens.cut`, built by `cornerShape()` / `UiShapeTokens.shape()`). Any corner or font that
+does not change under Serif is still hard-coded.
+
 ## Execution
 
 The shared layer is built first: `CinemaText` (roles and tones), `CinemaTextField`, `CinemaCheckbox`,

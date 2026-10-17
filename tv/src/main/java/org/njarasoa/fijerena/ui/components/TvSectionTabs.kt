@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -172,17 +172,17 @@ private fun SectionTab(
                     scaleY = focusScale
                 }.currentIndicator(
                     active = isSelected,
-                    shape = RoundedCornerShape(CornerRadius.medium),
+                    shape = cornerShape(CornerRadius.medium),
                     edge = CurrentIndicatorEdge.Bottom,
                 ).background(
                     color = containerColor,
-                    shape = RoundedCornerShape(CornerRadius.medium),
+                    shape = cornerShape(CornerRadius.medium),
                 ).then(
                     if (isFocused) {
                         Modifier.border(
                             width = TvFocusTokens.focusBorderWidth,
                             color = CinemaAccentLight,
-                            shape = RoundedCornerShape(CornerRadius.medium),
+                            shape = cornerShape(CornerRadius.medium),
                         )
                     } else {
                         Modifier

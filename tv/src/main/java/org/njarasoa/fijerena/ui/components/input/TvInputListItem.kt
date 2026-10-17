@@ -8,13 +8,13 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.ListItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
@@ -43,7 +43,7 @@ internal fun TvInputListItem(
         modifier =
             modifier.currentIndicator(
                 active = selected,
-                shape = RoundedCornerShape(CornerRadius.small),
+                shape = cornerShape(CornerRadius.small),
                 containerScale = listItemScale(interactionSource, enabled),
             ),
         enabled = enabled,

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * Content type hint for choosing fallback gradient colors.
@@ -72,7 +72,7 @@ fun CinemaThumbnail(
     contentDescription: String? = null,
 ) {
     val radius = CinemaCornerRadius.medium
-    val shape = remember(radius) { RoundedCornerShape(radius) }
+    val shape = cornerShape(radius)
     val context = LocalContext.current
     val isLogo = contentType == ThumbnailContentType.LIVE_TV
     val palette = CinemaThemeHolder.current
@@ -263,7 +263,7 @@ fun SkeletonRow(
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(cardRadius))
+                .clip(cornerShape(cardRadius))
                 .background(palette.surfaceVariant.copy(alpha = CinemaAlpha.tint)),
     ) {
         Row(
@@ -278,7 +278,7 @@ fun SkeletonRow(
                 modifier =
                     Modifier
                         .size(width = thumbnailWidth, height = thumbnailHeight)
-                        .clip(RoundedCornerShape(chipRadius)),
+                        .clip(cornerShape(chipRadius)),
             ) {
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
             }
@@ -292,7 +292,7 @@ fun SkeletonRow(
                         Modifier
                             .fillMaxWidth(0.7f)
                             .height(CinemaSpacing.md)
-                            .clip(RoundedCornerShape(chipRadius)),
+                            .clip(cornerShape(chipRadius)),
                 ) {
                     ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
                 }
@@ -302,7 +302,7 @@ fun SkeletonRow(
                         Modifier
                             .fillMaxWidth(0.4f)
                             .height(CinemaSpacing.sm)
-                            .clip(RoundedCornerShape(chipRadius)),
+                            .clip(cornerShape(chipRadius)),
                 ) {
                     ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
                 }

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -21,15 +20,16 @@ import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialColorScheme
 import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialShapes
 import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.core.ui.theme.paletteById
+import org.njarasoa.fijerena.core.ui.theme.shape
 import org.njarasoa.fijerena.core.ui.theme.styleById
 
 private fun cinemaShapes(tokens: UiShapeTokens) =
     Shapes(
-        extraSmall = RoundedCornerShape(CinemaSpacing.xxs),
-        small = RoundedCornerShape(tokens.chip),
-        medium = RoundedCornerShape(tokens.card),
-        large = RoundedCornerShape(tokens.card + CinemaSpacing.xxs),
-        extraLarge = RoundedCornerShape(tokens.dialog),
+        extraSmall = tokens.shape(CinemaSpacing.xxs),
+        small = tokens.shape(tokens.chip),
+        medium = tokens.shape(tokens.card),
+        large = tokens.shape(tokens.card + CinemaSpacing.xxs),
+        extraLarge = tokens.shape(tokens.dialog),
     )
 
 /** [CinemaTheme]'s text roles from the TV's typography (which carries the Look and Feel). */
