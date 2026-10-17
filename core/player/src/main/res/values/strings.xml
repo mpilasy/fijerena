@@ -24,6 +24,7 @@
     <string name="player_error_account_busy_all_logins_gave_up_format" tools:ignore="PluralsCandidate">All %1$d logins of this source are still streaming on other devices (HTTP %2$d). Stop playback on one of them, wait a few minutes, then press Retry.</string>
     <string name="player_error_http_server_unavailable_format">HTTP %1$d — Server unavailable. Try again shortly.</string>
     <string name="player_error_http_server_error_format">HTTP %1$d — Server error. Try again later.</string>
+    <string name="player_error_server_down_retrying_format">The provider\'s server isn\'t responding (HTTP %1$d). Trying again — playback starts by itself.</string>
     <string name="player_error_http_access_denied_format">HTTP %1$d — Stream access denied.</string>
     <string name="player_error_http_unavailable_format">HTTP %1$d — Stream unavailable.</string>
     <string name="player_error_stream_unavailable">Stream unavailable.</string>

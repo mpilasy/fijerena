@@ -23,6 +23,7 @@
     <string name="player_error_account_busy_all_logins_gave_up_format">Mbola mandeha amin\'ny fitaovana hafa avokoa ireo fidirana %1$d an\'ity loharano ity (HTTP %2$d). Ajanony amin\'ny iray amin\'ireo ny famakiana, miandrasa minitra vitsivitsy, dia tsindrio ny Andramo indray.</string>
     <string name="player_error_http_server_unavailable_format">HTTP %1$d — Tsy azo idirana ny mpizara. Andramo aorian\'izay fotsiny.</string>
     <string name="player_error_http_server_error_format">HTTP %1$d — Nisy olana tamin\'ny mpizara. Andramo indray aoriana.</string>
+    <string name="player_error_server_down_retrying_format">Tsy mamaly ny mpizaran\'ny mpamatsy (HTTP %1$d). Manandrana indray — hiantomboka ho azy ny famakiana.</string>
     <string name="player_error_http_access_denied_format">HTTP %1$d — Voarara ny fidirana amin\'ny fantsakana.</string>
     <string name="player_error_http_unavailable_format">HTTP %1$d — Tsy azo jerena ny fantsakana.</string>
     <string name="player_error_stream_unavailable">Tsy azo jerena ny fantsakana.</string>

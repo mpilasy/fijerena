@@ -6,6 +6,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.session.MediaSession
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -78,6 +79,29 @@ class StreamingPlaybackServiceRecoveryTest {
         // A hard retry: the source replaces the old one from its default position, then prepares.
         verify { player.setMediaSource(sources.last()) }
         verify(atLeast = 2) { player.prepare() }
+    }
+
+    @Test
+    fun `a server down says so through the retry, and the retry keeps the message up`() {
+        service = spyk(service)
+        every { service.getString(any(), any()) } returns "server down"
+        service.playStream(vod)
+
+        service.handleStreamEndedOrError("HTTP 523", httpStatus = 523)
+
+        assertEquals(PlaybackState.Error("server down"), service.playbackState.value)
+        posted.single().first.run()
+        assertEquals(PlaybackState.Error("server down"), service.playbackState.value)
+        verify { player.setMediaSource(sources.last()) }
+    }
+
+    @Test
+    fun `another HTTP error retries behind buffering`() {
+        service.playStream(vod)
+
+        service.handleStreamEndedOrError("HTTP 404", httpStatus = 404)
+
+        assertEquals(PlaybackState.Buffering, service.playbackState.value)
     }
 
     @Test

@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.core.player.source.AccountBusy
 import org.njarasoa.fijerena.core.player.source.AccountBusyWait
 import org.njarasoa.fijerena.core.player.source.AlternateLogin
 import org.njarasoa.fijerena.core.player.source.LoginSwitch
+import org.njarasoa.fijerena.core.player.source.ServerDown
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import java.io.IOException
 import java.util.UUID
@@ -566,8 +567,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
                 player = player,
                 onPositionSave = ::savePosition,
-                onStreamEndedOrError = { errorMessage ->
-                    handleStreamEndedOrError(errorMessage)
+                onStreamEndedOrError = { errorMessage, httpStatus ->
+                    handleStreamEndedOrError(errorMessage, httpStatus)
                 },
                 onFinalError = ::handleFinalError,
                 onAccountBusy = ::handleAccountBusy,
@@ -831,7 +832,11 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     }
 
-    private fun attemptStreamRetry(metadata: PlayerMetadata) {
+    /** [serverDownStatus]: the attempt failed with a [ServerDown] status, said on screen through the retry. */
+    private fun attemptStreamRetry(
+        metadata: PlayerMetadata,
+        serverDownStatus: Int? = null,
+    ) {
         val maxRetries = if (metadata.isLive) MAX_LIVE_RETRIES else MAX_VOD_RETRIES
         if (retryCount >= maxRetries) {
             val detail =
@@ -874,8 +879,15 @@ class StreamingPlaybackService : MediaSessionService() {
 
         // updatePlaybackState() already pushed the player's raw STATE_IDLE through before
         // onPlayerError ran, so without this the screen goes silently blank for the whole
-        // retry delay — indistinguishable from a dead app. Show buffering instead.
-        _playbackState.value = PlaybackState.Buffering
+        // retry delay — indistinguishable from a dead app. Show buffering instead, or, when the
+        // provider's server is down, say so: the message stays up through the attempt, as the
+        // account-busy one does, and only playing replaces it.
+        _playbackState.value =
+            if (serverDownStatus != null) {
+                PlaybackState.Error(getString(R.string.player_error_server_down_retrying_format, serverDownStatus))
+            } else {
+                PlaybackState.Buffering
+            }
 
         // Captured now, not read from the field inside the closure — a later fault (before this
         // delayed retry fires) could overwrite pendingResumePositionMs with a different value.
@@ -883,7 +895,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
         val retryRunnable =
             Runnable {
-                playerListener?.resetErrorState()
+                if (serverDownStatus != null) playerListener?.holdErrorUntilReady() else playerListener?.resetErrorState()
                 reprepare(metadata, resumePosition)
             }
         pendingRetry = retryRunnable
@@ -1014,7 +1026,10 @@ class StreamingPlaybackService : MediaSessionService() {
         pendingRetry = null
     }
 
-    internal fun handleStreamEndedOrError(errorMessage: String?) {
+    internal fun handleStreamEndedOrError(
+        errorMessage: String?,
+        httpStatus: Int? = null,
+    ) {
         val metadata = _currentMetadata.value
         val endedEmpty = (getPlayer()?.duration ?: C.TIME_UNSET).let { it == C.TIME_UNSET || it <= 0L }
         if (errorMessage == null && metadata.catchupLabel != null && endedEmpty) {
@@ -1031,7 +1046,7 @@ class StreamingPlaybackService : MediaSessionService() {
         }
         lastErrorMessage = errorMessage
         pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
-        attemptStreamRetry(metadata)
+        attemptStreamRetry(metadata, httpStatus?.takeIf(ServerDown::isServerDown))
     }
 
     /**
@@ -1518,7 +1533,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
         private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
-        private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
+        private val onStreamEndedOrError: (errorMessage: String?, httpStatus: Int?) -> Unit = { _, _ -> },
         private val onFinalError: (message: String, exception: Exception?) -> Unit = { _, _ -> },
         private val onAccountBusy: (httpStatus: Int) -> Unit = {},
         private val isCatchup: () -> Boolean = { false },
@@ -1640,7 +1655,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 onFinalError(errorMessage, error)
                 return
             }
-            onStreamEndedOrError(errorMessage)
+            onStreamEndedOrError(errorMessage, httpStatus)
         }
 
         private fun isMissingArchive(
@@ -1694,7 +1709,7 @@ class StreamingPlaybackService : MediaSessionService() {
                             context.getString(R.string.player_error_http_connection_limit_format, code)
                         }
 
-                        502, 503, 504 -> {
+                        502, 503, 504, in 520..527 -> {
                             context.getString(R.string.player_error_http_server_unavailable_format, code)
                         }
 
@@ -1786,7 +1801,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     }
 
                     Player.STATE_ENDED -> {
-                        onStreamEndedOrError(null)
+                        onStreamEndedOrError(null, null)
                         return
                     }
 

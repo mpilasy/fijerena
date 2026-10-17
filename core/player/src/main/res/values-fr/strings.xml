@@ -23,6 +23,7 @@
     <string name="player_error_account_busy_all_logins_gave_up_format">Les %1$d identifiants de cette source diffusent toujours sur d\'autres appareils (HTTP %2$d). Arrêtez la lecture sur l\'un d\'eux, patientez quelques minutes, puis appuyez sur Réessayer.</string>
     <string name="player_error_http_server_unavailable_format">HTTP %1$d — Serveur indisponible. Réessayez sous peu.</string>
     <string name="player_error_http_server_error_format">HTTP %1$d — Erreur serveur. Réessayez plus tard.</string>
+    <string name="player_error_server_down_retrying_format">Le serveur du fournisseur ne répond pas (HTTP %1$d). Nouvel essai en cours — la lecture démarre d\'elle-même.</string>
     <string name="player_error_http_access_denied_format">HTTP %1$d — Accès au flux refusé.</string>
     <string name="player_error_http_unavailable_format">HTTP %1$d — Flux indisponible.</string>
     <string name="player_error_stream_unavailable">Flux indisponible.</string>
