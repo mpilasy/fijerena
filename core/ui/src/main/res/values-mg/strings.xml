@@ -949,6 +949,7 @@
     <string name="settings_profiles_active_marker">Ampiasaina amin\'ity fitaovana ity</string>
     <string name="profile_dialog_add_title">Mombamomba vaovao</string>
     <string name="profile_dialog_edit_title">Hanova mombamomba</string>
+    <string name="profile_own_page_title">Ny mombamomba anao</string>
     <string name="profile_name_label">Anarana</string>
     <string name="profile_color_label">Loko</string>
     <string name="profile_color_option_format">Loko %1$d</string>

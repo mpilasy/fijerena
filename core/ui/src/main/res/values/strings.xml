@@ -815,6 +815,7 @@
     <string name="settings_profiles_active_marker">Using on this device</string>
     <string name="profile_dialog_add_title">New profile</string>
     <string name="profile_dialog_edit_title">Edit profile</string>
+    <string name="profile_own_page_title">Your profile</string>
     <string name="profile_name_label">Name</string>
     <string name="profile_color_label">Colour</string>
     <string name="profile_color_option_format">Colour %1$d</string>

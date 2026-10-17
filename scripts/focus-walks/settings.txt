@@ -5,6 +5,8 @@
 # the group's first row; Left (or Back) from anywhere in the pane returns to the rail row of
 # the group; Back on the rail leaves Settings. A picker opens in the pane on the current value;
 # Left or Back closes it with focus back on its row. Expectations are Part I T3 behaviour.
+# Needs Expert mode on for main: without it the Profiles pane is main's own page, not the list of
+# profiles (2026-10-16), and the Profiles part below does not apply.
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04 (version/build line and source value
 # blanked to the stable prefix).
 @start Profiles

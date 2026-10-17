@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -170,6 +171,10 @@ fun ProfilesSettingsCard(
  * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, Save /
  * Cancel, and Delete last. Left and Back leave it unsaved, like Cancel. Content filters are saved
  * by their own editor's Save, and Sources by each switch, at once.
+ *
+ * Without Expert mode the Profiles group shows the profile in use's page in place of its rows:
+ * [focusOnOpen] false leaves focus on the Settings rail, and [entryModifier] (on the name row)
+ * is where entering the pane lands; [title] reads "Your profile" there.
  */
 @Composable
 fun ProfileEditPane(
@@ -181,6 +186,9 @@ fun ProfileEditPane(
     onDeleted: () -> Unit,
     onBack: () -> Unit,
     scale: Float,
+    focusOnOpen: Boolean = true,
+    entryModifier: Modifier = Modifier,
+    title: String = stringResource(R.string.profile_dialog_edit_title),
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
     var colorIndex by rememberSaveable(profile.id) { mutableIntStateOf(profile.colorIndex) }
@@ -243,9 +251,10 @@ fun ProfileEditPane(
                 when {
                     returnToColour -> colourFocus
                     returnToSources -> sourcesFocus
-                    else -> nameFocus
+                    focusOnOpen -> nameFocus
+                    else -> null
                 }
-            target.requestFocusWithRetry()
+            target?.requestFocusWithRetry()
             returnToColour = false
             returnToSources = false
         }
@@ -257,11 +266,13 @@ fun ProfileEditPane(
         // Left and Back leave the page (Left = back one level). Taken in onKeyEvent, after the focused
         // control: the name's text field keeps Left for its cursor and Back to cancel its edit. A Back
         // whose press the field took is swallowed on release too, or it would also close the page.
+        // Shown without focus (focusOnOpen false), Back belongs to the Settings rail until the page has it.
         var backPressed by remember { mutableStateOf(false) }
-        BackHandler(onBack = onBack)
+        var pageHasFocus by remember { mutableStateOf(false) }
+        BackHandler(enabled = focusOnOpen || pageHasFocus, onBack = onBack)
         Column(
             modifier =
-                Modifier.fillMaxSize().onKeyEvent { event ->
+                Modifier.fillMaxSize().onFocusChanged { pageHasFocus = it.hasFocus }.onKeyEvent { event ->
                     when (event.key) {
                         Key.Back -> {
                             if (event.type == KeyEventType.KeyDown) {
@@ -285,7 +296,7 @@ fun ProfileEditPane(
                 },
         ) {
             Text(
-                text = "‹ ${stringResource(R.string.profile_dialog_edit_title)}",
+                text = "‹ $title",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = Spacing.xs),
@@ -302,6 +313,7 @@ fun ProfileEditPane(
                         showNameError = false
                     },
                     label = stringResource(R.string.profile_name_label),
+                    modifier = entryModifier,
                     editButtonFocusRequester = nameFocus,
                 )
                 if (showNameError) {
