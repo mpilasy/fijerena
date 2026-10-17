@@ -17,7 +17,6 @@ object PlayerConfigFactory {
     fun createTrackSelector(context: Context): DefaultTrackSelector {
         val capabilities = DeviceDetector.detect()
 
-        // Use the non-deprecated constructor (Media3 1.9+)
         val parameters =
             DefaultTrackSelector.Parameters
                 .Builder()

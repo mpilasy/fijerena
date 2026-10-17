@@ -179,7 +179,6 @@ class SettingsViewModel(
                         )
                 }
 
-                // Trigger UI refresh for providers
                 refreshProviderInfo()
                 _uiState.value = _uiState.value.copy(exportImportMessage = message)
             } else {

@@ -77,8 +77,6 @@ data class UiStyle(
     val icon: UiIconTokens,
 )
 
-// --- Predefined styles ---
-
 val MaterialStyle =
     UiStyle(
         id = "material",

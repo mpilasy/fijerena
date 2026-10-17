@@ -148,7 +148,6 @@ class StreamLoaderViewModel(
     var requestedStreamId: String? = initialStreamId
         private set
 
-    // Job to handle delayed history saving
     private var historyJob: Job? = null
 
     // The load in flight (resolve the URL, publish Success). A new load cancels the previous one.

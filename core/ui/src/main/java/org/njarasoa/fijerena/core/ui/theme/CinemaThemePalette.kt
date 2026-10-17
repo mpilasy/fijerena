@@ -55,8 +55,6 @@ data class CinemaThemePalette(
     val onAccent: Color get() = if (accent.luminance() > 0.5f) Color.Black else Color.White
 }
 
-// --- Predefined Palettes ---
-
 val DeepNightPalette =
     CinemaThemePalette(
         id = "deep_night",
@@ -251,8 +249,6 @@ fun palettesFor(
 ): List<CinemaThemePalette> = AllPalettes.filter { admin || !it.expertOnly || it.id == current }
 
 fun paletteById(id: String): CinemaThemePalette = AllPalettes.firstOrNull { it.id == id } ?: DeepNightPalette
-
-// --- Global holder for non-composable and composable access ---
 
 object CinemaThemeHolder {
     var current: CinemaThemePalette by mutableStateOf(DeepNightPalette)

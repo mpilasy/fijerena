@@ -525,7 +525,6 @@ class SearchViewModel(
             if (serverSearchSuccess) {
                 serverResults
             } else {
-                // Fall back to client-side search
                 _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_fallback_local))
                 kotlinx.coroutines.delay(50) // Allow UI to render the new loading message
 
