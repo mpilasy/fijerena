@@ -41,6 +41,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.navigation.isSettingsArea
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -979,13 +980,15 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             )
         }
     }
-    // The profile in use is locked by its PIN until typed in this session — at launch, after a
-    // while in the background, after a switch live sync made (docs/plans/archive/20261017_profile-pin-plan.md).
-    // Cancel opens the profile menu, which then insists on a choice.
+    // Settings and what it opens ask the PIN of the profile in use, once per session (locked again
+    // after a while in the background or a switch of profile). Picking a profile and watching never
+    // ask. Cancel leaves Settings for the app's first tab.
+    val gateDestination = navController.currentBackStackEntryAsState().value?.destination
     activeProfile?.let { profile ->
         LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
-        if (!showProfileMenu && profilesViewModel.needsPin(profile.id)) {
-            // Nothing of the locked profile shows behind the prompt.
+        val inSettings = gateDestination.isSettingsArea() || (gateDestination != null && navController.currentTab() == MobileTab.SETTINGS)
+        if (!showProfileMenu && inSettings && profilesViewModel.needsPin(profile.id)) {
+            // Nothing of Settings shows behind the prompt.
             Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
             PinDialog(
                 state =
@@ -994,8 +997,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
                     ) {},
                 onCancel = {
-                    mustChooseProfile = true
-                    showProfileMenu = true
+                    while (navController.currentDestination.isSettingsArea() &&
+                        navController.currentDestination?.hasRoute<Screen.Settings>() != true &&
+                        navController.popBackStack()
+                    ) {
+                        Unit
+                    }
+                    if (navController.currentTab() == MobileTab.SETTINGS) selectTab(openingTab)
                 },
             )
         }

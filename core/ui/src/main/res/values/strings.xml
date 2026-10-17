@@ -1261,8 +1261,8 @@
     <string name="profile_pin_title">PIN</string>
     <string name="profile_pin_on">On</string>
     <string name="profile_pin_off">Off</string>
-    <string name="profile_pin_desc">Asked before anyone uses this profile</string>
-    <string name="profile_pin_desc_expert">Asked before anyone uses this profile or its admin settings</string>
+    <string name="profile_pin_desc">Asked before Settings opens on this profile</string>
+    <string name="profile_pin_desc_expert">Asked before Settings opens on this profile</string>
     <string name="profile_pin_change">Change PIN</string>
     <string name="profile_pin_remove">Remove PIN</string>
     <string name="pin_choose">Choose a 4-digit PIN</string>

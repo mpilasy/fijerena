@@ -1255,8 +1255,8 @@
     <string name="profile_pin_title">PIN</string>
     <string name="profile_pin_on">Mandeha</string>
     <string name="profile_pin_off">Tsy mandeha</string>
-    <string name="profile_pin_desc">Angatahina alohan\'ny hampiasana ity mombamomba ity</string>
-    <string name="profile_pin_desc_expert">Angatahina alohan\'ny hampiasana ity mombamomba ity na ny fandrindrana fitantanana</string>
+    <string name="profile_pin_desc">Angatahina alohan\'ny hanokafana ny fandrindrana amin\'ity mombamomba ity</string>
+    <string name="profile_pin_desc_expert">Angatahina alohan\'ny hanokafana ny fandrindrana amin\'ity mombamomba ity</string>
     <string name="profile_pin_change">Ovay ny PIN</string>
     <string name="profile_pin_remove">Esory ny PIN</string>
     <string name="pin_choose">Mifidiana PIN misy isa 4</string>

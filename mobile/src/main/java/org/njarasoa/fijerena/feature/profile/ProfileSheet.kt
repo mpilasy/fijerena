@@ -67,21 +67,6 @@ fun ProfileSheet(
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     val rowColors = ListItemDefaults.colors(containerColor = CinemaTheme.colors.clear)
-    var unlocking by remember { mutableStateOf<ProfileUi?>(null) }
-    unlocking?.let { profile ->
-        PinDialog(
-            state =
-                rememberPinPromptState(
-                    viewModel.pins,
-                    PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
-                ) {
-                    unlocking = null
-                    if (profile.isActive) onDismiss() else viewModel.switchTo(profile.id, onProfileChosen)
-                },
-            onCancel = { unlocking = null },
-        )
-    }
-
     ModalBottomSheet(
         onDismissRequest = { if (!mustChoose) onDismiss() },
         sheetState = rememberModalBottomSheetState(confirmValueChange = { !mustChoose || it != SheetValue.Hidden }),
@@ -127,12 +112,7 @@ fun ProfileSheet(
                             colors = rowColors,
                             modifier =
                                 Modifier.clickable {
-                                    // A profile with a PIN asks for it first (docs/plans/archive/20261017_profile-pin-plan.md).
-                                    when {
-                                        viewModel.needsPin(profile.id) -> unlocking = profile
-                                        profile.isActive -> onDismiss()
-                                        else -> viewModel.switchTo(profile.id, onProfileChosen)
-                                    }
+                                    if (profile.isActive) onDismiss() else viewModel.switchTo(profile.id, onProfileChosen)
                                 },
                         )
                     }

@@ -1263,8 +1263,8 @@
     <string name="profile_pin_title">Code PIN</string>
     <string name="profile_pin_on">Activé</string>
     <string name="profile_pin_off">Désactivé</string>
-    <string name="profile_pin_desc">Demandé avant d\'utiliser ce profil</string>
-    <string name="profile_pin_desc_expert">Demandé avant d\'utiliser ce profil ou ses réglages d\'administration</string>
+    <string name="profile_pin_desc">Demandé avant d\'ouvrir les réglages sur ce profil</string>
+    <string name="profile_pin_desc_expert">Demandé avant d\'ouvrir les réglages sur ce profil</string>
     <string name="profile_pin_change">Changer le code PIN</string>
     <string name="profile_pin_remove">Supprimer le code PIN</string>
     <string name="pin_choose">Choisissez un code PIN à 4 chiffres</string>

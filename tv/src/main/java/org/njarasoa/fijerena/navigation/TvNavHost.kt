@@ -35,6 +35,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.navigation.isSettingsArea
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -1099,22 +1100,17 @@ fun TvNavHost(
         }
     }
 
-    // The profile in use is locked by its PIN until typed in this session — at launch, after a
-    // while in the background, after a switch live sync made (docs/plans/archive/20261017_profile-pin-plan.md).
-    // Not over the picker, which asks itself, nor the safe-mode / newer-data screens. Cancel opens the picker.
+    // Settings and what it opens ask the PIN of the profile in use, once per session (locked again
+    // after a while in the background or a switch of profile). Picking a profile and watching never
+    // ask. Cancel leaves Settings.
     if (startDestination != null) {
         val gateProfiles: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
         val inUse by gateProfiles.activeProfile.collectAsStateWithLifecycle()
         val destination = navController.currentBackStackEntryAsState().value?.destination
-        val exempt =
-            destination == null ||
-                destination.hasRoute<Screen.ProfilePicker>() ||
-                destination.hasRoute<Screen.SafeMode>() ||
-                destination.hasRoute<Screen.NewerData>()
         inUse?.let { profile ->
             LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
-            if (!exempt && gateProfiles.needsPin(profile.id)) {
-                // Nothing of the locked profile shows behind the prompt.
+            if (destination.isSettingsArea() && gateProfiles.needsPin(profile.id)) {
+                // Nothing of Settings shows behind the prompt.
                 Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
                 TvPinDialog(
                     state =
@@ -1123,10 +1119,7 @@ fun TvNavHost(
                             PinRequest.Check(profile.id, stringResource(R.string.pin_enter_for, profile.name)),
                         ) {},
                     onCancel = {
-                        clearSectionStacks()
-                        navController.navigate(Screen.ProfilePicker) {
-                            popUpTo(navController.graph.id) { inclusive = true }
-                        }
+                        while (navController.currentDestination.isSettingsArea() && navController.popBackStack()) Unit
                     },
                 )
             }

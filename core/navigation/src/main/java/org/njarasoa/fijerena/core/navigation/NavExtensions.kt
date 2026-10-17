@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.navigation
 
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavOptionsBuilder
 
 /**
@@ -28,3 +30,20 @@ fun NavController.navigateOnce(
         navigate(route, builder)
     }
 }
+
+/**
+ * Settings and the screens it opens — sources, guide sources, live sync, a profile's page,
+ * diagnostics: what the PIN of the profile in use guards.
+ */
+fun NavDestination?.isSettingsArea(): Boolean =
+    this != null &&
+        (
+            hasRoute<Screen.Settings>() ||
+                hasRoute<Screen.ProviderSelection>() ||
+                hasRoute<Screen.AddProvider>() ||
+                hasRoute<Screen.ProfileEdit>() ||
+                hasRoute<Screen.EpgManagement>() ||
+                hasRoute<Screen.SyncSettings>() ||
+                hasRoute<Screen.Diagnostics>() ||
+                hasRoute<Screen.DeviceInfo>()
+        )
