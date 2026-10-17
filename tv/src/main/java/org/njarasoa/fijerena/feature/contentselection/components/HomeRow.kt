@@ -23,6 +23,9 @@ import androidx.compose.ui.input.key.type
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -45,11 +48,11 @@ fun <T> HomeRow(
 ) {
     if (items.isEmpty()) return
     Column(modifier = modifier) {
-        Text(
+        CinemaText(
             text = title,
             // The TV section-title style (TV UI audit #2): the same on every Home row and on Search's groups.
-            style = MaterialTheme.typography.headlineSmall,
-            color = CinemaTextPrimary,
+            role = TextRole.Title,
+            tone = TextTone.Primary,
             modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
         )
         LazyRow(

@@ -13,7 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -29,18 +33,17 @@ fun TvSlowConnectionBanner(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    val background = CinemaBackground
+    val background = CinemaTheme.colors.background
     val pill = remember(background) { background.copy(alpha = CinemaAlpha.glass) }
-    val radius = CornerRadius.medium
-    val pillShape = remember(radius) { RoundedCornerShape(radius) }
+    val pillShape = CinemaTheme.shapes.card
     Box(
         modifier = modifier.fillMaxSize().padding(top = Spacing.xl),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Text(
+        CinemaText(
             text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = CinemaTextPrimary,
+            role = TextRole.Heading,
+            tone = TextTone.Primary,
             modifier =
                 Modifier
                     .background(pill, pillShape)

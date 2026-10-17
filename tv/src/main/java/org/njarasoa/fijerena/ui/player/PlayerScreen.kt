@@ -31,6 +31,7 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -57,7 +58,10 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
@@ -65,6 +69,7 @@ import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.player.components.BufferingContent
@@ -245,7 +250,7 @@ fun PlayerScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground)
+                .background(CinemaTheme.colors.mediaScrim)
                 .then(
                     // Only make the player box focusable when controls and menus are NOT visible.
                     // This allows focus to pass to the active overlay (e.g. the channel panel).
@@ -499,11 +504,11 @@ fun PlayerScreen(
                         .padding(Spacing.xl),
                 contentAlignment = Alignment.TopStart,
             ) {
-                Text(
+                CinemaText(
                     text = TimeFormat.formatClockTime(Date(tick)),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
-                    modifier = Modifier.height(screenHeight * 0.1f),
+                    role = TextRole.Display,
+                    tone = TextTone.OnMedia,
+                    modifier = Modifier.height(screenHeight * 0.1f).alpha(CinemaAlpha.textDisabled),
                 )
             }
         }
@@ -582,7 +587,7 @@ fun PlayerScreen(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
+                            .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.tint))
                             .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
                 ) {
                     TvGlassPanel(

@@ -41,6 +41,9 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.SourceSyncState
 import org.njarasoa.fijerena.core.ui.home.SourceSyncStatus
 import org.njarasoa.fijerena.core.ui.home.SyncSummary
@@ -55,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -67,12 +71,7 @@ import java.util.Date
 @Composable
 fun HomeClock(modifier: Modifier = Modifier) {
     val now = rememberMinuteTick()
-    Text(
-        text = TimeFormat.formatClockTime(Date(now)),
-        style = MaterialTheme.typography.titleLarge,
-        color = CinemaTextSecondary,
-        modifier = modifier,
-    )
+    CinemaText(text = TimeFormat.formatClockTime(Date(now)), role = TextRole.Title, tone = TextTone.Secondary, modifier = modifier)
 }
 
 /**
@@ -99,16 +98,15 @@ private fun StatusLine(
 ) {
     val dotColor =
         when (status) {
-            SourceSyncStatus.UPDATING -> CinemaWarning
-            SourceSyncStatus.FAILED -> CinemaError
-            else -> CinemaSuccess
+            SourceSyncStatus.UPDATING -> CinemaTheme.colors.warning
+            SourceSyncStatus.FAILED -> CinemaTheme.colors.danger
+            else -> CinemaTheme.colors.success
         }
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         StatusDot(color = dotColor, pulsing = status == SourceSyncStatus.UPDATING)
-        Text(
+        CinemaText(
             text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = CinemaTextPrimary,
+            role = TextRole.Label,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = Spacing.xs),
@@ -135,10 +133,10 @@ internal fun SourcesStatusSheet(
         initialFocus = firstRow,
         onDismissRequest = onDismiss,
         // The darkest surface behind the rows, as the TV pickers (TV UI audit #3).
-        containerColor = CinemaBackground,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
-        title = { androidx.compose.material3.Text(stringResource(R.string.home_sources_status_title)) },
+        containerColor = CinemaTheme.colors.background,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
+        title = { CinemaText(stringResource(R.string.home_sources_status_title), role = TextRole.Title) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -164,7 +162,7 @@ internal fun SourcesStatusSheet(
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
+            ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
         },
     )
 }
@@ -193,6 +191,6 @@ private fun StatusDot(
             Modifier
                 .size(TvDimensions.liveDotSize)
                 .graphicsLayer { this.alpha = alpha?.value ?: 1f }
-                .background(color, CircleShape),
+                .background(color, CinemaTheme.shapes.identity),
     )
 }

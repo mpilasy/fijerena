@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -450,7 +451,7 @@ private fun LoadingScreen() {
     ) {
         MitohanaLoading(
             style = MaterialTheme.typography.headlineMedium,
-            color = CinemaAccent,
+            color = CinemaTheme.colors.accent,
         )
     }
 }

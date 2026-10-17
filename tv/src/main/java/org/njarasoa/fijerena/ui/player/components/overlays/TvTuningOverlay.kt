@@ -25,7 +25,11 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -47,11 +51,10 @@ fun TvTuningOverlay(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    val background = CinemaBackground
+    val background = CinemaTheme.colors.background
     val scrim = remember(background) { background.copy(alpha = CinemaAlpha.scrim) }
     val pill = remember(background) { background.copy(alpha = CinemaAlpha.glass) }
-    val radius = CornerRadius.medium
-    val pillShape = remember(radius) { RoundedCornerShape(radius) }
+    val pillShape = CinemaTheme.shapes.card
     val context = LocalContext.current
     val showDetails = remember { !compact && AppSettings(context.applicationContext).isDevMode }
     Box(
@@ -70,14 +73,14 @@ fun TvTuningOverlay(
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(if (compact) TvDimensions.iconSmall else TvDimensions.iconMedium),
-                    color = CinemaAccent,
+                    color = CinemaTheme.colors.accent,
                     strokeWidth = TvDimensions.borderFocused,
                 )
-                Text(
+                CinemaText(
                     // The clean name: "CP24 ◉", not "CA - CP24 HD ◉".
                     text = stringResource(R.string.live_tuning_format, parseDisplayTitle(channelName).title.ifBlank { channelName }),
-                    style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                    color = CinemaTextPrimary,
+                    role = if (compact) TextRole.Heading else TextRole.Title,
+                    tone = TextTone.Primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

@@ -55,17 +55,21 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
@@ -216,8 +220,7 @@ internal fun LiveTvSplitLayout(
             .fillMaxSize()
             .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
 
-    val previewRadius = CornerRadius.medium
-    val previewPaneShape = remember(previewRadius) { RoundedCornerShape(previewRadius) }
+    val previewPaneShape = CinemaTheme.shapes.card
 
     // The context list (ChannelContext, LT2). The channel was chosen from one list — the browsed
     // category, Recent or Favourites: TvCategoryGridScreen passes that list's id as this entry's
@@ -671,7 +674,7 @@ internal fun LiveTvSplitLayout(
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
                             .clip(previewPaneShape)
-                            .background(CinemaSurface),
+                            .background(CinemaTheme.colors.surface),
                 ) {
                     // TextureView (not the default SurfaceView): this box sits next to the
                     // scrolling/recomposing channel list, and SurfaceView there stalls the main
@@ -692,7 +695,7 @@ internal fun LiveTvSplitLayout(
                     } else if (previewPlaybackState !is PlaybackState.Playing) {
                         CircularProgressIndicator(
                             modifier = Modifier.align(Alignment.Center),
-                            color = CinemaAccent,
+                            color = CinemaTheme.colors.accent,
                         )
                     }
                 }
@@ -713,20 +716,14 @@ internal fun LiveTvSplitLayout(
                     BadgedTitle(
                         raw = resolved?.streamName ?: target.name,
                         style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaTextPrimary,
+                        color = CinemaTheme.colors.textPrimary,
                     )
                     val categoryName =
                         target.categoryId
                             .takeUnless { it in CategoryViewModel.VIRTUAL_CATEGORY_IDS }
                             ?.let { categoryMap[it]?.name }
                     if (categoryName != null) {
-                        Text(
-                            text = categoryName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = CinemaTextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        CinemaText(text = categoryName, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -735,10 +732,9 @@ internal fun LiveTvSplitLayout(
                 if (nowProg != null || nextProg != null) {
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         if (nowProg != null) {
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.epg_now_prefix, nowProg.title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = CinemaTextPrimary,
+                                role = TextRole.Heading,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -746,15 +742,14 @@ internal fun LiveTvSplitLayout(
                             LinearProgressIndicator(
                                 progress = { fraction },
                                 modifier = Modifier.fillMaxWidth(),
-                                color = CinemaAccent,
-                                trackColor = CinemaSurface,
+                                color = CinemaTheme.colors.accent,
+                                trackColor = CinemaTheme.colors.surface,
                             )
                         }
                         if (nextProg != null) {
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.live_preview_next_format, nextProg.title),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = CinemaTextSecondary,
+                                tone = TextTone.Secondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -762,10 +757,9 @@ internal fun LiveTvSplitLayout(
                     }
                 }
 
-                Text(
+                CinemaText(
                     text = stringResource(R.string.live_preview_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary,
+                    tone = TextTone.Secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

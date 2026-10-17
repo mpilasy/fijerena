@@ -38,7 +38,13 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.colorOf
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -59,7 +65,7 @@ fun BufferingContent() {
     Column(horizontalAlignment = CenterHorizontally) {
         MitohanaLoading(
             style = MaterialTheme.typography.headlineSmall,
-            color = CinemaAccent,
+            color = CinemaTheme.colors.accent,
         )
         if (isDevMode) {
             Spacer(modifier = Modifier.height(Spacing.md))
@@ -74,11 +80,7 @@ fun EndedContent(onBack: () -> Unit) {
         horizontalAlignment = CenterHorizontally,
         modifier = Modifier.padding(Spacing.xl),
     ) {
-        Text(
-            text = stringResource(R.string.player_playback_ended),
-            color = CinemaTextPrimary,
-            style = MaterialTheme.typography.headlineSmall,
-        )
+        CinemaText(text = stringResource(R.string.player_playback_ended), role = TextRole.Title)
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
             onClick = onBack,
@@ -103,7 +105,7 @@ fun ErrorContent(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = 0.95f)),
+                .background(CinemaTheme.colors.background.copy(alpha = 0.95f)),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -113,38 +115,24 @@ fun ErrorContent(
                     .padding(Spacing.xxl)
                     .width(TvDimensions.dialogWidth),
         ) {
-            Text(
-                text = stringResource(R.string.player_playback_error_prefix),
-                color = CinemaError,
-                style = MaterialTheme.typography.headlineMedium,
-            )
+            CinemaText(text = stringResource(R.string.player_playback_error_prefix), role = TextRole.Display, tone = TextTone.Danger)
 
             Spacer(modifier = Modifier.height(Spacing.lg))
 
-            Text(
-                text = error.message,
-                color = CinemaTextPrimary,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            CinemaText(text = error.message, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
             if (isDevMode && error.exception != null) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = CinemaSurface,
-                    shape = RoundedCornerShape(CornerRadius.small),
+                    color = CinemaTheme.colors.surface,
+                    shape = CinemaTheme.shapes.chip,
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.md),
                     ) {
-                        Text(
-                            text = stringResource(R.string.player_technical_details),
-                            color = CinemaAccent,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                        CinemaText(text = stringResource(R.string.player_technical_details), role = TextRole.Label, tone = TextTone.Accent)
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
                         val typeLabel = stringResource(R.string.player_error_type_label)
@@ -169,10 +157,11 @@ fun ErrorContent(
                                 append("\n$stackTraceLabel\n$stackTrace")
                             }
 
+                        // look-ok: developer-mode stack trace, monospace; its size and colour are the theme's roles
                         Text(
                             text = errorDetails,
-                            color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.labelSmall,
+                            color = colorOf(TextTone.Secondary),
+                            style = textStyleOf(TextRole.Caption),
                             fontFamily = FontFamily.Monospace,
                             modifier =
                                 Modifier

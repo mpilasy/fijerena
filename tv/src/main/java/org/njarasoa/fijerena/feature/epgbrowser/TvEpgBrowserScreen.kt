@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -91,9 +92,12 @@ import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
@@ -110,6 +114,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
@@ -121,9 +126,15 @@ import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
+import org.njarasoa.fijerena.ui.components.TvStatusBadge
+import org.njarasoa.fijerena.ui.components.TvStatusBadgeKind
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
@@ -227,7 +238,7 @@ fun TvEpgBrowserScreen(
                     onClick = { if (!isRefreshing) viewModel.refreshStale() },
                     icon = CinemaIcons.Refresh,
                     label = stringResource(R.string.epg_browser_refresh_stale_description),
-                    iconTint = if (staleSourceCount > 0) CinemaWarning else null,
+                    iconTint = if (staleSourceCount > 0) CinemaTheme.colors.warning else null,
                     iconModifier = if (isRefreshing) Modifier.rotate(refreshAngle) else Modifier,
                 )
                 // The guides this search runs over, of a source that can have them.
@@ -315,18 +326,17 @@ internal fun TvGuideSearchPane(
     val scale = LocalUiScale.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        val freshnessColor =
+        val freshnessTone =
             if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
                 (oldestIngestedAtMs == null && hasOffSources)
             ) {
-                CinemaWarning
+                TextTone.Warning
             } else {
-                CinemaTextSecondary
+                TextTone.Secondary
             }
-        Text(
+        CinemaText(
             text = freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources),
-            style = MaterialTheme.typography.bodyMedium,
-            color = freshnessColor,
+            tone = freshnessTone,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -339,15 +349,10 @@ internal fun TvGuideSearchPane(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.epg_browser_no_file_message),
-                        style =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.bodyLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaTextSecondary,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 }
             }
@@ -357,15 +362,10 @@ internal fun TvGuideSearchPane(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = state.message,
-                        style =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.bodyLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaError,
+                        role = TextRole.Body,
+                        tone = TextTone.Danger,
                     )
                 }
             }
@@ -496,15 +496,10 @@ private fun EpgBrowserContent(
         }
 
         if (isDevMode && epgDbStats != null) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_browser_dev_stats_format, epgDbStats),
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.labelSmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                role = TextRole.Caption,
+                tone = TextTone.Tertiary,
                 modifier = Modifier.padding(top = Spacing.xs.scaled(scale)),
             )
         }
@@ -532,7 +527,7 @@ private fun EpgBrowserContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text(
+                    CinemaText(
                         text =
                             if (idx is EpgIndexState.Indexing) {
                                 stringResource(
@@ -541,23 +536,13 @@ private fun EpgBrowserContent(
                             } else {
                                 stringResource(R.string.epg_browser_optimizing_index_label)
                             },
-                        style =
-                            MaterialTheme.typography.labelMedium.copy(
-                                fontSize =
-                                    MaterialTheme.typography.labelMedium.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaAccentLight,
+                        role = TextRole.Label,
+                        tone = TextTone.AccentSoft,
                     )
-                    Text(
+                    CinemaText(
                         text = progressText,
-                        style =
-                            MaterialTheme.typography.labelMedium.copy(
-                                fontSize =
-                                    MaterialTheme.typography.labelMedium.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaTextSecondary,
+                        role = TextRole.Label,
+                        tone = TextTone.Secondary,
                     )
                 }
                 LinearProgressIndicator(
@@ -566,8 +551,8 @@ private fun EpgBrowserContent(
                         Modifier
                             .fillMaxWidth()
                             .padding(top = Spacing.xxs.scaled(scale)),
-                    color = CinemaAccent,
-                    trackColor = CinemaSurface,
+                    color = CinemaTheme.colors.accent,
+                    trackColor = CinemaTheme.colors.surface,
                 )
             }
         }
@@ -597,15 +582,9 @@ private fun EpgBrowserContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         val hintText = stringResource(R.string.epg_browser_hint_search_titles)
-                        Text(
+                        CinemaText(
                             text = hintText,
-                            style =
-                                MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.bodyLarge.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            tone = TextTone.Secondary,
                         )
                     }
                 }
@@ -616,15 +595,9 @@ private fun EpgBrowserContent(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = uiState.message(),
-                        style =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.bodyLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        tone = TextTone.Secondary,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -637,7 +610,7 @@ private fun EpgBrowserContent(
                 ) {
                     MitadyLoading(
                         style = MaterialTheme.typography.headlineMedium,
-                        color = CinemaAccent,
+                        color = CinemaTheme.colors.accent,
                     )
                 }
             }
@@ -681,11 +654,7 @@ private fun EpgSearchHistorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(R.string.epg_browser_recent_searches),
-                style = MaterialTheme.typography.headlineSmall,
-                color = CinemaTextPrimary,
-            )
+            CinemaText(text = stringResource(R.string.epg_browser_recent_searches), role = TextRole.Title)
             CinemaIconButton(
                 onClick = onClearAll,
                 icon = {
@@ -693,7 +662,7 @@ private fun EpgSearchHistorySection(
                         imageVector = CinemaIcons.Delete,
                         contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        tint = CinemaTextPrimary,
+                        tint = CinemaTheme.colors.textPrimary,
                     )
                 },
             )
@@ -705,8 +674,9 @@ private fun EpgSearchHistorySection(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         ) {
+            val chipLook = TvCardLooks.chip()
             history.forEachIndexed { index, term ->
-                Card(
+                TvCard(
                     onClick = { onItemClick(term) },
                     // The first recent search starts the first line: Left from it goes to the navigation
                     // rail (where the wrapped lines start isn't known here).
@@ -716,20 +686,7 @@ private fun EpgSearchHistorySection(
                             firstItemFocusRequester != null -> Modifier.focusRequester(firstItemFocusRequester).leftToRail()
                             else -> Modifier.leftToRail()
                         },
-                    colors =
-                        CardDefaults.colors(
-                            containerColor = CinemaSurface,
-                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
-                        ),
-                    scale =
-                        CardDefaults.scale(
-                            scale = TvFocusTokens.defaultScale,
-                            focusedScale = TvFocusTokens.focusedScaleContent,
-                        ),
-                    shape =
-                        CardDefaults.shape(
-                            shape = RoundedCornerShape(CornerRadius.medium),
-                        ),
+                    look = chipLook,
                 ) {
                     Row(
                         modifier =
@@ -743,18 +700,13 @@ private fun EpgSearchHistorySection(
                         Icon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
-                            tint = CinemaTextSecondary,
+                            tint = CinemaTheme.colors.textSecondary,
                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         )
-                        Text(
+                        CinemaText(
                             text = term,
-                            style =
-                                MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.bodyMedium.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaTextPrimary,
+                            role = TextRole.Body,
+                            tone = TextTone.Primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -792,23 +744,13 @@ private fun ResultsContent(
     Column {
         // Counts, timing and search path: developer information (TV UI audit #15).
         if (isDevMode) {
-            Text(
-                text = results.statsLine(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                modifier = Modifier.padding(bottom = Spacing.sm),
-            )
+            CinemaText(text = results.statsLine(), tone = TextTone.Secondary, modifier = Modifier.padding(bottom = Spacing.sm))
         }
         if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_browser_partial_results_note),
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaWarning,
+                role = TextRole.Body,
+                tone = TextTone.Warning,
                 modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale)),
             )
         }
@@ -818,15 +760,9 @@ private fun ResultsContent(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                CinemaText(
                     text = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
-                    style =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodyLarge.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    tone = TextTone.Secondary,
                 )
             }
         } else {
@@ -894,7 +830,7 @@ private fun ResultsContent(
                 pinnedHeaderLabel?.let { label ->
                     DateHeader(
                         dateLabel = label,
-                        modifier = Modifier.background(CinemaSurface),
+                        modifier = Modifier.background(CinemaTheme.colors.surface),
                     )
                 }
             }
@@ -912,15 +848,10 @@ private fun DateHeader(
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
-    Text(
+    CinemaText(
         text = dateLabel,
-        style =
-            MaterialTheme.typography.titleSmall.copy(
-                fontSize =
-                    MaterialTheme.typography.titleSmall.fontSize
-                        .scaled(scale),
-            ),
-        color = CinemaAccentLight,
+        role = TextRole.Heading,
+        tone = TextTone.AccentSoft,
         modifier =
             modifier
                 .fillMaxWidth()
@@ -944,17 +875,13 @@ private fun ProgramCard(
     val scale = LocalUiScale.current
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
-    androidx.compose.material3.Card(
+    Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.xs.scaled(scale)),
-        colors =
-            androidx.compose.material3.CardDefaults.cardColors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-            ),
-        shape = RoundedCornerShape(CornerRadius.medium),
+                .padding(horizontal = Spacing.xs.scaled(scale))
+                .clip(CinemaTheme.shapes.card)
+                .background(CinemaTheme.colors.surface),
     ) {
         Column(
             modifier =
@@ -967,15 +894,10 @@ private fun ProgramCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
+                CinemaText(
                     text = program.title,
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontSize =
-                                MaterialTheme.typography.titleMedium.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextPrimary,
+                    role = TextRole.Heading,
+                    tone = TextTone.Primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).bounceMarquee(),
@@ -985,15 +907,10 @@ private fun ProgramCard(
                     GlassPanel(
                         modifier = Modifier.padding(start = Spacing.sm.scaled(scale)),
                     ) {
-                        Text(
+                        CinemaText(
                             text = category,
-                            style =
-                                MaterialTheme.typography.labelMedium.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.labelMedium.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaAccentLight,
+                            role = TextRole.Label,
+                            tone = TextTone.AccentSoft,
                             modifier =
                                 Modifier.padding(
                                     horizontal = Spacing.sm.scaled(scale),
@@ -1006,15 +923,10 @@ private fun ProgramCard(
 
             val description = program.description
             if (!description.isNullOrBlank()) {
-                Text(
+                CinemaText(
                     text = description,
-                    style =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodyMedium.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = Spacing.xs.scaled(scale)),
@@ -1044,15 +956,15 @@ private fun ProgramCard(
                 val airingContext = LocalContext.current
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = { Text(stringResource(R.string.epg_browser_watch_confirm_title), color = CinemaTextPrimary) },
+                    title = { CinemaText(stringResource(R.string.epg_browser_watch_confirm_title), role = TextRole.Title) },
                     text = {
-                        Text(
+                        CinemaText(
                             stringResource(
                                 R.string.epg_browser_watch_confirm_message,
                                 formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
                                 pending.channelName,
                             ),
-                            color = CinemaTextSecondary,
+                            tone = TextTone.Secondary,
                         )
                     },
                     confirmButton = {
@@ -1064,7 +976,13 @@ private fun ProgramCard(
                                     onAiringLeave(program.airings.indexOf(pending))
                                     onNavigateToPlayer(matched)
                                 }
-                            }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+                            }) {
+                                CinemaText(
+                                    stringResource(R.string.epg_browser_watch_now_btn),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            }
 
                             if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
                                 CinemaButton(onClick = {
@@ -1077,14 +995,22 @@ private fun ProgramCard(
                                         startEpochSeconds = pending.startEpoch,
                                         endEpochSeconds = pending.endEpoch,
                                     )
-                                }) { Text(stringResource(R.string.epg_browser_add_calendar_btn)) }
+                                }) {
+                                    CinemaText(
+                                        stringResource(R.string.epg_browser_add_calendar_btn),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
                             }
                         }
                     },
                     dismissButton = {
-                        CinemaButton(onClick = { pendingConfirmAiring = null }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaButton(onClick = {
+                            pendingConfirmAiring = null
+                        }) { CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit) }
                     },
-                    containerColor = CinemaSurface,
+                    containerColor = CinemaTheme.colors.surface,
                 )
             }
         }
@@ -1122,18 +1048,13 @@ private fun AiringRow(
                     imageVector = CinemaIcons.PlayArrow,
                     contentDescription = stringResource(R.string.epg_browser_watch_description),
                     modifier = Modifier.size(Spacing.lg.scaled(scale)),
-                    tint = if (isOnAir) CinemaSuccess else CinemaAccentLight,
+                    tint = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.accentSoft,
                 )
             }
-            Text(
+            CinemaText(
                 text = airing.channelName,
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccentLight,
+                role = TextRole.Body,
+                tone = TextTone.AccentSoft,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).bounceMarquee(),
@@ -1141,20 +1062,14 @@ private fun AiringRow(
             if (isDevMode && airing.sourceId > 0) {
                 val sourceName = sourceLabels[airing.sourceId]
                 if (sourceName != null) {
-                    Text(
+                    CinemaText(
                         text = sourceName,
-                        style =
-                            MaterialTheme.typography.labelSmall.copy(
-                                fontSize =
-                                    MaterialTheme.typography.labelSmall.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                        role = TextRole.Caption,
+                        tone = TextTone.Tertiary,
                     )
                 }
             }
             if (isOnAir || isSoon) {
-                val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
                 val badgeLabel =
                     if (isOnAir) {
                         stringResource(
@@ -1163,37 +1078,18 @@ private fun AiringRow(
                     } else {
                         stringResource(R.string.epg_browser_soon_badge)
                     }
-                Text(
-                    text = badgeLabel,
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize =
-                                MaterialTheme.typography.labelSmall.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaBackground,
-                    modifier =
-                        Modifier
-                            .background(badgeColor, RoundedCornerShape(CornerRadius.small))
-                            .padding(horizontal = Spacing.xs.scaled(scale), vertical = Spacing.xxs.scaled(scale)),
-                )
+                TvStatusBadge(text = badgeLabel, kind = if (isOnAir) TvStatusBadgeKind.Success else TvStatusBadgeKind.Warning)
             }
             val airingContext = LocalContext.current
-            Text(
+            CinemaText(
                 text = formatAiringTime(airingContext, airing.startEpoch, airing.endEpoch),
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color =
+                tone =
                     if (isOnAir) {
-                        CinemaSuccess
+                        TextTone.Success
                     } else if (isSoon) {
-                        CinemaWarning
+                        TextTone.Warning
                     } else {
-                        CinemaTextSecondary
+                        TextTone.Secondary
                     },
             )
         }

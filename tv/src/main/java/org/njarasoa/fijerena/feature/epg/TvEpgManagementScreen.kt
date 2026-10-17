@@ -34,15 +34,19 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -262,9 +266,9 @@ fun TvEpgManagementScreen(
                                         colors =
                                             ToggleableSurfaceDefaults.colors(
                                                 containerColor = TvFocusTokens.restingContainer,
-                                                contentColor = CinemaTextSecondary,
+                                                contentColor = CinemaTheme.colors.textSecondary,
                                                 focusedContainerColor = TvFocusTokens.focusedContainer,
-                                                focusedContentColor = CinemaTextPrimary,
+                                                focusedContentColor = CinemaTheme.colors.textPrimary,
                                                 selectedContainerColor = TvFocusTokens.restingContainer,
                                                 selectedContentColor = TvFocusTokens.currentText,
                                                 focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
@@ -282,27 +286,24 @@ fun TvEpgManagementScreen(
                                                 border = Border.None,
                                                 focusedBorder =
                                                     Border(
-                                                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
-                                                        shape = CircleShape,
+                                                        border =
+                                                            BorderStroke(
+                                                                TvFocusTokens.focusBorderWidth,
+                                                                CinemaTheme.colors.accentSoft,
+                                                            ),
+                                                        shape = CinemaTheme.shapes.control,
                                                     ),
                                             ),
                                         glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
-                                        shape = ToggleableSurfaceDefaults.shape(shape = CircleShape),
+                                        shape = ToggleableSurfaceDefaults.shape(shape = CinemaTheme.shapes.control),
                                     ) {
                                         Box(
                                             modifier = Modifier.padding(Spacing.xs.scaled(scale)),
                                             contentAlignment = Alignment.Center,
                                         ) {
-                                            Switch(
+                                            CinemaSwitch(
                                                 checked = source.enabled,
                                                 onCheckedChange = null,
-                                                colors =
-                                                    SwitchDefaults.colors(
-                                                        checkedThumbColor = CinemaAccent,
-                                                        checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                                                        uncheckedThumbColor = CinemaTextSecondary,
-                                                        uncheckedTrackColor = CinemaSurfaceVariant,
-                                                    ),
                                             )
                                         }
                                     }
@@ -310,34 +311,34 @@ fun TvEpgManagementScreen(
                                     StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
 
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(
+                                        CinemaText(
                                             text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
-                                            style = MaterialTheme.typography.titleMedium,
+                                            role = TextRole.Heading,
                                         )
-                                        Text(
+                                        CinemaText(
                                             text = guideSourceUrlHint(source.url),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                            role = TextRole.BodySmall,
+                                            tone = TextTone.Secondary,
                                             maxLines = 1,
                                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         )
                                         // The source's own guide, whose switch is "Provides a guide" (Edit Source).
                                         if (provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true) {
-                                            Text(
+                                            CinemaText(
                                                 text = stringResource(R.string.epg_source_own_guide_hint),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                                role = TextRole.BodySmall,
+                                                tone = TextTone.Secondary,
                                             )
                                         }
-                                        Text(
+                                        CinemaText(
                                             text =
                                                 EpgManagementViewModel
                                                     .refreshSummary(
                                                         source.enabled,
                                                         viewModel.refreshIntervalHours(source),
                                                     ).asString(),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                                            role = TextRole.BodySmall,
+                                            tone = TextTone.Secondary,
                                         )
                                     }
                                 }
@@ -378,16 +379,16 @@ fun TvEpgManagementScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                         ) {
-                                            Text(
+                                            CinemaText(
                                                 text =
                                                     stringResource(
                                                         R.string.epg_source_phase_format,
                                                         localizedEpgPhase(activeProgress.phase),
                                                     ),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Accent,
                                             )
-                                            Text(
+                                            CinemaText(
                                                 // No size from the server (panel-a sends none): the bytes so far instead of a percentage.
                                                 text =
                                                     if (activeProgress.progressPercent >= 0) {
@@ -395,22 +396,22 @@ fun TvEpgManagementScreen(
                                                     } else {
                                                         NumberUtils.formatBytes(activeProgress.downloadedBytes)
                                                     },
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Accent,
                                             )
                                         }
                                         if (activeProgress.progressPercent >= 0) {
                                             LinearProgressIndicator(
                                                 progress = { activeProgress.progressPercent / 100f },
                                                 modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
-                                                color = MaterialTheme.colorScheme.primary,
-                                                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                                color = CinemaTheme.colors.accent,
+                                                trackColor = CinemaTheme.colors.textPrimary.copy(alpha = 0.1f),
                                             )
                                         } else {
                                             LinearProgressIndicator(
                                                 modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
-                                                color = MaterialTheme.colorScheme.primary,
-                                                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                                color = CinemaTheme.colors.accent,
+                                                trackColor = CinemaTheme.colors.textPrimary.copy(alpha = 0.1f),
                                             )
                                         }
                                     }
@@ -445,10 +446,10 @@ fun TvEpgManagementScreen(
                                             // the stored download/ingest durations are from whenever
                                             // it last actually ran, so showing them here would read
                                             // as work that didn't happen this time.
-                                            Text(
+                                            CinemaText(
                                                 text = stringResource(R.string.epg_source_stat_unchanged),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = org.njarasoa.fijerena.ui.theme.CinemaWarning,
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Warning,
                                             )
                                         } else {
                                             SourceStat(
@@ -476,10 +477,10 @@ fun TvEpgManagementScreen(
 
                                         val lastError = source.lastError
                                         if (lastError != null) {
-                                            Text(
+                                            CinemaText(
                                                 text = stringResource(R.string.epg_database_error, lastError),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.error,
+                                                role = TextRole.Caption,
+                                                tone = TextTone.Danger,
                                             )
                                         }
                                     }
@@ -536,23 +537,20 @@ fun TvEpgManagementScreen(
                 )
             },
             title = {
-                Text(
-                    stringResource(R.string.epg_delete_source_confirm_title),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                )
+                CinemaText(stringResource(R.string.epg_delete_source_confirm_title), role = TextRole.Title)
             },
             text = {
-                Text(
+                CinemaText(
                     stringResource(
                         R.string.epg_delete_source_message_tv,
                         source.label.ifBlank {
                             source.url
                         },
                     ),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                    tone = TextTone.Secondary,
                 )
             },
-            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
+            containerColor = CinemaTheme.colors.surface,
         )
     }
 }
@@ -577,11 +575,11 @@ private fun StatusIndicator(
 ) {
     val color =
         when {
-            !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            source.lastError != null -> MaterialTheme.colorScheme.error
-            source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            nowMs - source.lastIngestedAtMs > staleThresholdMs -> org.njarasoa.fijerena.ui.theme.CinemaWarning
-            else -> org.njarasoa.fijerena.ui.theme.CinemaSuccess
+            !source.enabled -> CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.tint)
+            source.lastError != null -> CinemaTheme.colors.danger
+            source.lastIngestedAtMs == 0L -> CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.tint)
+            nowMs - source.lastIngestedAtMs > staleThresholdMs -> CinemaTheme.colors.warning
+            else -> CinemaTheme.colors.success
         }
 
     androidx.compose.foundation.Canvas(modifier = Modifier.size(TvDimensions.liveDotSize.scaled(scale))) {
@@ -597,15 +595,8 @@ private fun SourceStat(
     scale: Float,
 ) {
     Column {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        CinemaText(text = label, role = TextRole.Caption, tone = TextTone.Secondary)
+        CinemaText(text = value, role = TextRole.BodySmall)
     }
 }
 
@@ -648,15 +639,13 @@ private fun EpgSourceEditDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                if (initialSource ==
-                    null
-                ) {
+            CinemaText(
+                if (initialSource == null) {
                     stringResource(R.string.epg_add_source_title)
                 } else {
                     stringResource(R.string.epg_edit_source_title)
                 },
-                color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                role = TextRole.Title,
             )
         },
         confirmButton = {
@@ -677,61 +666,31 @@ private fun EpgSourceEditDialog(
         dismissButton = {
             CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel))
         },
-        containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                androidx.compose.material3.OutlinedTextField(
+                CinemaTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
-                    supportingText = { Text(stringResource(R.string.epg_xmltv_url_hint)) },
+                    label = stringResource(R.string.epg_xmltv_url_label),
+                    supportingText = stringResource(R.string.epg_xmltv_url_hint),
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
-                    colors =
-                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                            unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                            cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                            focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                        ),
                 )
-                androidx.compose.material3.OutlinedTextField(
+                CinemaTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text(stringResource(R.string.epg_label_optional)) },
+                    label = stringResource(R.string.epg_label_optional),
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
-                    colors =
-                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                            unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                            cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                            focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                        ),
                 )
-                androidx.compose.material3.OutlinedTextField(
+                CinemaTextField(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
-                    label = { Text(stringResource(R.string.epg_timezone_label)) },
-                    supportingText = { Text(stringResource(R.string.epg_timezone_hint)) },
+                    label = stringResource(R.string.epg_timezone_label),
+                    supportingText = stringResource(R.string.epg_timezone_hint),
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
-                    colors =
-                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                            unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                            cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                            focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                            unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                        ),
                 )
             }
         },

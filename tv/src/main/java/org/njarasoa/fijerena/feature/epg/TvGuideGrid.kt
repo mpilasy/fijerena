@@ -116,8 +116,11 @@ import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
@@ -135,6 +138,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
@@ -146,6 +150,10 @@ import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -479,7 +487,6 @@ private fun GuideHeader(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val lineStyle = MaterialTheme.typography.bodyMedium
     val dateLabel = selectedDate.format(EPG_DATE_FORMATTER)
     Column(modifier = modifier) {
         // The shared TV header (TV UI audit #22): "TV Guide", the list and the day as its subtitle.
@@ -577,24 +584,24 @@ private fun GuideHeader(
                 }
             }
         if (statusLine != null) {
-            Text(
+            CinemaText(
                 text = statusLine,
-                style = lineStyle,
-                color = CinemaTextSecondary,
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         if (showDevStats && state is EpgViewModel.UiState.Ready) {
-            Text(
+            CinemaText(
                 text = state.devStats,
-                style = lineStyle,
-                color = CinemaTextTertiary,
+                role = TextRole.Body,
+                tone = TextTone.Tertiary,
                 maxLines = 1,
             )
         }
         if (state is EpgViewModel.UiState.Ready) {
-            GuideFocusLine(focus = focus, state = state, style = lineStyle)
+            GuideFocusLine(focus = focus, state = state)
         }
     }
 }
@@ -634,7 +641,6 @@ private fun statusLine(state: EpgViewModel.UiState.Ready): String =
 private fun GuideFocusLine(
     focus: GuideFocus,
     state: EpgViewModel.UiState.Ready,
-    style: TextStyle,
 ) {
     val scale = LocalUiScale.current
     val nowEpochSeconds by rememberNowEpochSecondsState()
@@ -651,24 +657,24 @@ private fun GuideFocusLine(
     val program = focus.shownProgram?.takeIf { it.endTime > dayStart && it.startTime < dayEnd }
     val endedAt = state.lastListingEndSec?.takeIf { guideListingsEnded(it, nowEpochSeconds, dayStart, dayEnd) }
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
+        CinemaText(
             text =
                 if (program == null) {
                     ""
                 } else {
                     program.title + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime)
                 },
-            style = style,
-            color = CinemaTextPrimary,
+            role = TextRole.Body,
+            tone = TextTone.Primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         if (endedAt != null) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_guide_listings_end_format, TimeFormat.formatTime(endedAt)),
-                style = style,
-                color = CinemaAccentLight,
+                role = TextRole.Body,
+                tone = TextTone.AccentSoft,
                 maxLines = 1,
                 modifier = Modifier.padding(start = Spacing.md.scaled(scale)),
             )
@@ -703,7 +709,7 @@ private fun LoadingBody() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
             modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
-            color = CinemaAccent,
+            color = CinemaTheme.colors.accent,
         )
     }
 }
@@ -748,16 +754,8 @@ private fun NoListingsBody(
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             modifier = Modifier.padding(Spacing.xl.scaled(scale)),
         ) {
-            Text(
-                text = stringResource(R.string.epg_guide_no_listings_title),
-                style = MaterialTheme.typography.headlineMedium,
-                color = CinemaTextPrimary,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary,
-            )
+            CinemaText(text = stringResource(R.string.epg_guide_no_listings_title), role = TextRole.Display)
+            CinemaText(text = message, tone = TextTone.Secondary)
             CinemaPrimaryButton(
                 onClick = onRefresh,
                 text = stringResource(R.string.common_refresh),
@@ -1011,7 +1009,8 @@ private fun GuideBody(
     // Held as State, not read here: reading it in this scope would make the 60s tick recompose the
     // whole grid. Cells read it through a derived phase; the now line reads it in the draw phase.
     val nowEpochSeconds = rememberNowEpochSecondsState()
-    val cardStyle = guideCardStyle()
+    // Built once per grid, not once per cell: the CardDefaults calls are @Composable.
+    val cardStyle = TvCardLooks.guideCell()
     // Wide enough for the channel's logo beside its name (TV UI audit #22).
     val channelColumnWidth = TvDimensions.epgChannelColumnWidth + TvDimensions.iconXLarge
     val columnGap = Spacing.sm.scaled(scale)
@@ -1307,6 +1306,7 @@ private fun GuideBody(
         )
     }
     val openActions: (MediaItem) -> Unit = { channel -> scope.launch { actions = channel to isFavoriteChannel(channel) } }
+    val nowLineColor = CinemaTheme.colors.accent
 
     Column(
         modifier =
@@ -1320,7 +1320,7 @@ private fun GuideBody(
                     val x = canvasLeftPx + layout.xFor(now) - scrollState.value
                     if (x < canvasLeftPx || x > size.width) return@drawWithContent
                     drawLine(
-                        color = CinemaAccent,
+                        color = nowLineColor,
                         start = Offset(x, 0f),
                         end = Offset(x, size.height),
                         strokeWidth = TvDimensions.borderFocused.toPx(),
@@ -1425,7 +1425,6 @@ private fun TimeRuler(
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val labelStyle = remember(scale, typography) { typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale)) }
     val ticks = remember(layout, composeRange) { layout.tickMarks(composeRange.first, composeRange.last) }
     val tickWidthPx = (GuideLayout.DEFAULT_TICK_STEP_MIN * layout.pxPerMinute).roundToInt().coerceAtLeast(1)
     val totalWidthPx = layout.totalWidthPx.roundToInt()
@@ -1441,12 +1440,12 @@ private fun TimeRuler(
                                     Modifier
                                         .width(TvDimensions.borderDefault)
                                         .fillMaxHeight()
-                                        .background(CinemaTextTertiary),
+                                        .background(CinemaTheme.colors.textTertiary),
                             )
-                            Text(
+                            CinemaText(
                                 text = TimeFormat.formatTime(tick.epochSec),
-                                style = labelStyle,
-                                color = CinemaTextSecondary,
+                                role = TextRole.Label,
+                                tone = TextTone.Secondary,
                                 maxLines = 1,
                                 modifier = Modifier.padding(start = Spacing.xxs.scaled(scale)),
                             )
@@ -1474,7 +1473,7 @@ private fun GuideRow(
     composeRange: LongRange,
     scrollState: ScrollState,
     nowEpochSeconds: State<Long>,
-    cardStyle: GuideCardStyle,
+    cardStyle: TvCardLook,
     focus: GuideFocus,
     returnFocus: NavReturnFocus,
     returnChannelRequester: FocusRequester?,
@@ -1513,10 +1512,10 @@ private fun GuideRow(
         Spacer(modifier = Modifier.width(columnGap))
         if (noListings) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
-                Text(
+                CinemaText(
                     text = stringResource(R.string.epg_guide_no_listings_title),
-                    style = cardStyle.titleStyle,
-                    color = CinemaTextTertiary,
+                    role = TextRole.Body,
+                    tone = TextTone.Tertiary,
                     maxLines = 1,
                     modifier = Modifier.padding(horizontal = Spacing.md),
                 )
@@ -1621,27 +1620,27 @@ private fun ProgramDetailsDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
+            CinemaText(
                 text = program.title,
-                style = typography.headlineSmall,
-                color = CinemaTextPrimary,
+                role = TextRole.Title,
+                tone = TextTone.Primary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                Text(text = channel.name, style = typography.bodyLarge, color = CinemaAccentLight, maxLines = 1)
-                Text(
+                CinemaText(text = channel.name, tone = TextTone.AccentSoft, maxLines = 1)
+                CinemaText(
                     text = dayLabel + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime),
-                    style = typography.bodyLarge,
-                    color = CinemaTextSecondary,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
                 if (description != null) {
-                    Text(
+                    CinemaText(
                         text = description,
-                        style = typography.bodyLarge,
-                        color = CinemaTextPrimary,
+                        role = TextRole.Body,
+                        tone = TextTone.Primary,
                         maxLines = DETAILS_DESCRIPTION_MAX_LINES,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1657,22 +1656,22 @@ private fun ProgramDetailsDialog(
                         onClick = onWatchFromStart,
                         modifier = Modifier.focusRequester(fromStartRequester),
                         kind = ButtonKind.Main,
-                    ) { Text(stringResource(R.string.epg_details_watch_from_start), color = CinemaTextPrimary) }
+                    ) { CinemaText(stringResource(R.string.epg_details_watch_from_start), role = TextRole.Label, tone = TextTone.Inherit) }
                 }
                 CinemaButton(
                     onClick = onWatchChannel,
                     modifier = Modifier.focusRequester(watchRequester),
                     kind = if (onWatchFromStart != null) ButtonKind.Other else ButtonKind.Main,
-                ) { Text(stringResource(R.string.epg_details_watch_channel), color = CinemaTextPrimary) }
+                ) { CinemaText(stringResource(R.string.epg_details_watch_channel), role = TextRole.Label, tone = TextTone.Inherit) }
             }
         },
         dismissButton = {
             CinemaButton(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
-            ) { Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
+            ) { CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit) }
         },
-        containerColor = CinemaSurface,
+        containerColor = CinemaTheme.colors.surface,
     )
 }
 
@@ -1680,76 +1679,18 @@ private fun ProgramDetailsDialog(
 // Cells
 // ---------------------------------------------------------------------------------------------
 
-/**
- * Card styling for the guide, built once per grid composition instead of once per cell: the
- * `CardDefaults` calls are `@Composable`, so hoisting them is what stops the 50×N allocations.
- */
-@Immutable
-private data class GuideCardStyle(
-    val colors: CardColors,
-    val cardScale: CardScale,
-    val glow: CardGlow,
-    val border: CardBorder,
-    val shape: CardShape,
-    val titleStyle: TextStyle,
-    val timeStyle: TextStyle,
-    val channelStyle: TextStyle,
-)
-
-@Composable
-private fun guideCardStyle(): GuideCardStyle {
-    val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val shape = RoundedCornerShape(CinemaCornerRadius.medium)
-    return GuideCardStyle(
-        colors =
-            CardDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        cardScale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
-        border =
-            CardDefaults.border(
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
-                        shape = shape,
-                    ),
-            ),
-        shape = CardDefaults.shape(shape = shape),
-        titleStyle = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale)),
-        timeStyle = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale)),
-        channelStyle = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale)),
-    )
-}
-
 @Composable
 private fun ChannelCell(
     channel: MediaItem,
     sourceName: String?,
-    cardStyle: GuideCardStyle,
+    cardStyle: TvCardLook,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     var isFocused by remember { mutableStateOf(false) }
-    Card(
+    TvCard(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier =
@@ -1758,11 +1699,7 @@ private fun ChannelCell(
                 .padding(vertical = Spacing.xxs.scaled(scale))
                 .onFocusChanged { isFocused = it.isFocused }
                 .onMenuKey(onLongClick),
-        colors = cardStyle.colors,
-        scale = cardStyle.cardScale,
-        glow = cardStyle.glow,
-        border = cardStyle.border,
-        shape = cardStyle.shape,
+        look = cardStyle,
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(Spacing.sm.scaled(scale)),
@@ -1779,10 +1716,10 @@ private fun ChannelCell(
             // The name on one line under its source's badge when the rows mix sources.
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 sourceName?.let { SourceBadge(it) }
-                Text(
+                CinemaText(
                     text = channel.name,
-                    style = cardStyle.channelStyle,
-                    color = CinemaTextPrimary,
+                    role = TextRole.Body,
+                    tone = TextTone.Primary,
                     maxLines = if (sourceName != null && LocalShowSourceBadges.current) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1803,7 +1740,7 @@ private fun ProgramCell(
     timeOnly: Boolean,
     archiveDays: Int,
     nowEpochSeconds: State<Long>,
-    cardStyle: GuideCardStyle,
+    cardStyle: TvCardLook,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1831,18 +1768,14 @@ private fun ProgramCell(
             }
         }
 
-    Card(
+    TvCard(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier =
             modifier
                 .padding(horizontal = TvDimensions.borderDefault, vertical = Spacing.xxs.scaled(scale))
                 .onMenuKey(onLongClick),
-        colors = cardStyle.colors,
-        scale = cardStyle.cardScale,
-        glow = cardStyle.glow,
-        border = cardStyle.border,
-        shape = cardStyle.shape,
+        look = cardStyle,
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             if (phase == CellPhase.ON_AIR) {
@@ -1851,7 +1784,7 @@ private fun ProgramCell(
                         Modifier
                             .width(Spacing.xxs.scaled(scale))
                             .fillMaxHeight()
-                            .background(CinemaAccent),
+                            .background(CinemaTheme.colors.accent),
                 )
             }
             if (cell.labelFits && timeOnly) {
@@ -1863,11 +1796,10 @@ private fun ProgramCell(
                             .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = shortTime(cell.program.startTime),
-                        style = cardStyle.titleStyle,
-                        fontWeight = if (phase == CellPhase.ON_AIR) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (phase == CellPhase.ON_AIR) CinemaAccentLight else CinemaTextSecondary,
+                        emphasis = phase == CellPhase.ON_AIR,
+                        tone = if (phase == CellPhase.ON_AIR) TextTone.AccentSoft else TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                     )
@@ -1895,23 +1827,22 @@ private fun ProgramCell(
                             Icon(
                                 imageVector = CinemaIcons.Replay,
                                 contentDescription = stringResource(R.string.epg_replayable),
-                                tint = CinemaTextPrimary,
+                                tint = CinemaTheme.colors.textPrimary,
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         }
-                        Text(
+                        CinemaText(
                             text = cell.program.title,
-                            style = cardStyle.titleStyle,
-                            fontWeight = if (phase == CellPhase.ON_AIR) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (phase == CellPhase.ON_AIR) CinemaAccentLight else CinemaTextPrimary,
+                            emphasis = phase == CellPhase.ON_AIR,
+                            tone = if (phase == CellPhase.ON_AIR) TextTone.AccentSoft else TextTone.Primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Text(
+                    CinemaText(
                         text = TimeFormat.formatTimeRange(cell.program.startTime, cell.program.endTime),
-                        style = cardStyle.timeStyle,
-                        color = CinemaTextSecondary,
+                        role = TextRole.Caption,
+                        tone = TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Clip,
                     )

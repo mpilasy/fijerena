@@ -44,9 +44,12 @@ import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -54,7 +57,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -104,7 +112,7 @@ private fun TvContinueWatchingCard(
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    Card(
+    TvCard(
         onClick = onClick,
         onLongClick = onOpenActions,
         modifier =
@@ -112,30 +120,7 @@ private fun TvContinueWatchingCard(
                 .width(TvDimensions.continueWatchingCardWidth)
                 .onFocusChanged { isFocused = it.isFocused }
                 .openActionsOnMenuKey(onOpenActions),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaSurface,
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleSubtle,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
-        border =
-            CardDefaults.border(
-                border = Border(BorderStroke(TvFocusTokens.borderThin, CinemaGlassBorder)),
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTextPrimary),
-                        shape = RoundedCornerShape(CinemaCornerRadius.medium),
-                    ),
-            ),
-        glow = CardDefaults.glow(glow = TvFocusTokens.restingGlow, focusedGlow = TvFocusTokens.focusedGlow),
+        look = TvCardLooks.shelf(),
     ) {
         Column {
             CinemaThumbnail(
@@ -154,8 +139,8 @@ private fun TvContinueWatchingCard(
                 LinearProgressIndicator(
                     progress = { item.progress },
                     modifier = Modifier.fillMaxWidth().height(TvDimensions.resumeBarHeight),
-                    color = CinemaAccent,
-                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                    color = CinemaTheme.colors.accent,
+                    trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
                 )
             }
             Column(modifier = Modifier.padding(Spacing.sm)) {
@@ -165,10 +150,12 @@ private fun TvContinueWatchingCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = parsedTitle.title.ifBlank { item.name },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary,
+                    CinemaText(
+                        text =
+                            parsedTitle.title.ifBlank {
+                                item.name
+                            },
+                        role = TextRole.Heading,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -204,13 +191,7 @@ private fun TvContinueWatchingCard(
                     sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // A card is narrow: the language only, not the formats.
                     parsedTitle.badge?.let { LanguageBadge(it) }
-                    Text(
-                        text = subtitleLine,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    CinemaText(text = subtitleLine, tone = TextTone.Secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

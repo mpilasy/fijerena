@@ -53,9 +53,12 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
@@ -64,12 +67,17 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.ui.components.UndoBarState
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
@@ -140,7 +148,8 @@ internal fun CategoryList(
         if (selectedCategoryKey != null) paneFocus.focusKey(selectedCategoryKey)
     }
 
-    val cardStyle = categoryCardStyle()
+    // Built once per list, not once per row (CardDefaults calls are @Composable).
+    val cardStyle = TvCardLooks.listRow()
 
     // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a category opens
     // this menu, in place of the hidden ★ that was an extra Right stop before the items (F-C-5).
@@ -178,27 +187,21 @@ internal fun CategoryList(
     // unbounded for the composable's whole lifetime.
     val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
-    val palette = LocalCinemaTheme.current
-    val panelRadius = CornerRadius.small
-    val panelShape = remember(panelRadius) { RoundedCornerShape(panelRadius) }
+    val panelShape = CinemaTheme.shapes.chip
+    val borderEdge = CinemaTheme.colors.glassBorder
+    val borderShine = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.ghost)
     val borderBrush =
-        remember(palette) {
+        remember(borderEdge, borderShine) {
             androidx.compose.ui.graphics.Brush.verticalGradient(
-                colors =
-                    listOf(
-                        CinemaGlassBorder,
-                        Color.White.copy(alpha = CinemaAlpha.ghost),
-                        CinemaGlassBorder,
-                    ),
+                colors = listOf(borderEdge, borderShine, borderEdge),
             )
         }
 
     Column(modifier = modifier) {
         // The pane's title; the screen's one Refresh is in the header (TV UI audit #5).
-        Text(
+        CinemaText(
             text = stringResource(R.string.search_tab_categories),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+            role = TextRole.Title,
             modifier = Modifier.padding(bottom = Spacing.md),
         )
 
@@ -207,7 +210,7 @@ internal fun CategoryList(
                 Modifier
                     .fillMaxSize()
                     .background(
-                        color = CinemaGlassBackground,
+                        color = CinemaTheme.colors.glass,
                         shape = panelShape,
                     ).border(
                         width = TvDimensions.borderDefault,
@@ -245,7 +248,7 @@ internal fun CategoryList(
                                 .fillMaxWidth()
                                 .height(TvDimensions.borderFocused)
                                 .padding(horizontal = Spacing.md)
-                                .background(CinemaAccent.copy(alpha = CinemaAlpha.tint)),
+                                .background(CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.tint)),
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.xs))
@@ -300,43 +303,12 @@ private fun virtualCategoryIcon(categoryId: String): ImageVector =
         else -> CinemaIcons.Folder
     }
 
-/**
- * Row card styling, built once per list composition instead of once per row.
- *
- * `TvListRowDefaults.*` are `@Composable` and so cannot be wrapped in `remember`; hoisting the calls out
- * of the item body is what stops a full `CardColors`/`CardBorder`/`CardScale`/`CardGlow`/`CardShape` set being
- * allocated per visible row per recomposition. Same pattern, and same reason, as `StreamList`'s
- * `StreamCardStyle`. The selected category keeps these colours and gets the P5 "current" bar and
- * title colour instead of a fill of its own, which looked like focus (F-C-8).
- */
-@Immutable
-private data class CategoryCardStyle(
-    val colors: CardColors,
-    val border: CardBorder,
-    val cardScale: CardScale,
-    val glow: CardGlow,
-    val shape: CardShape,
-    val titleMedium: TextStyle,
-)
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun categoryCardStyle(): CategoryCardStyle =
-    CategoryCardStyle(
-        colors = TvListRowDefaults.colors(),
-        border = TvListRowDefaults.border(),
-        cardScale = TvListRowDefaults.scale(),
-        glow = TvListRowDefaults.glow(),
-        shape = TvListRowDefaults.shape(),
-        titleMedium = MaterialTheme.typography.titleMedium,
-    )
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun CategoryItem(
     category: MediaCategory,
     isSelected: Boolean,
-    cardStyle: CategoryCardStyle,
+    cardStyle: TvCardLook,
     isFavorite: Boolean = false,
     /** The category's source, while the list mixes several (a badge); null with one. */
     sourceName: String? = null,
@@ -356,7 +328,7 @@ private fun CategoryItem(
     // clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
 
-    Card(
+    TvCard(
         onClick = onClick,
         onLongClick = onOpenActions,
         modifier =
@@ -370,11 +342,7 @@ private fun CategoryItem(
                     onOpenActions()
                     true
                 },
-        colors = cardStyle.colors,
-        border = cardStyle.border,
-        shape = cardStyle.shape,
-        scale = cardStyle.cardScale,
-        glow = cardStyle.glow,
+        look = cardStyle,
     ) {
         Row(
             modifier =
@@ -395,18 +363,12 @@ private fun CategoryItem(
                 )
             }
             if (isFavorite) {
-                Text(
-                    text = "★",
-                    style = cardStyle.titleMedium,
-                    color = CinemaAccent,
-                )
+                CinemaText(text = "★", role = TextRole.Heading, tone = TextTone.Accent)
             }
-            Text(
+            TvRowTitle(
                 text = category.name,
-                style = cardStyle.titleMedium,
-                color = TvListRowDefaults.titleColor(isCurrent = isSelected, isFocused = isFocused),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                isCurrent = isSelected,
+                isFocused = isFocused,
                 // weight(1f) keeps the hint below at the row's end.
                 modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
             )

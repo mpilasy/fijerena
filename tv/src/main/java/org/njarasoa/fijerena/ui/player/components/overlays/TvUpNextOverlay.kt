@@ -32,7 +32,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.upNextCode
 import org.njarasoa.fijerena.core.ui.components.upNextPlot
 import org.njarasoa.fijerena.core.ui.components.upNextTitle
@@ -96,10 +99,10 @@ fun TvUpNextOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.player_up_next_compact_format, upNextCode(episode), secondsLeft),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = CinemaTextPrimary,
+                        role = TextRole.Label,
+                        tone = TextTone.Primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -128,19 +131,19 @@ fun TvUpNextOverlay(
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         title?.let {
-                            Text(
+                            CinemaText(
                                 text = it,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = CinemaTextPrimary,
+                                role = TextRole.Heading,
+                                tone = TextTone.Primary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
                         plot?.let {
-                            Text(
+                            CinemaText(
                                 text = it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextSecondary,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                             )
