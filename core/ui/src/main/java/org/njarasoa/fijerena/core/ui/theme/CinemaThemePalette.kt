@@ -17,6 +17,8 @@ data class CinemaThemePalette(
     @param:StringRes val nameRes: Int,
     /** A light theme: dark text on light surfaces, dark system-bar icons. */
     val isLight: Boolean,
+    /** Offered only to a profile with Expert mode (admin, for now): kept for testing, not for viewing. */
+    val expertOnly: Boolean = false,
     // Primary accent
     val accent: Color,
     val accentDark: Color,
@@ -205,6 +207,8 @@ val DaylightPalette =
         id = "daylight",
         nameRes = R.string.theme_daylight,
         isLight = true,
+        // A streaming app is watched in dim rooms and its art is made for dark: kept for admins.
+        expertOnly = true,
         accent = Color(0xFF1565C0),
         accentDark = Color(0xFF0D47A1),
         // On white the soft accent has to be the darker blue: it marks the current row, the selected tab and
@@ -239,6 +243,12 @@ val AllPalettes: List<CinemaThemePalette> =
         ForestPalette,
         DaylightPalette,
     )
+
+/** The colour themes [admin] may pick; [current] stays listed so its picker can show it. */
+fun palettesFor(
+    admin: Boolean,
+    current: String,
+): List<CinemaThemePalette> = AllPalettes.filter { admin || !it.expertOnly || it.id == current }
 
 fun paletteById(id: String): CinemaThemePalette = AllPalettes.firstOrNull { it.id == id } ?: DeepNightPalette
 

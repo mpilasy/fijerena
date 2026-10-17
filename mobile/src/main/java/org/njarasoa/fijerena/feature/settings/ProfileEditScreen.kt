@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.palettesFor
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
@@ -110,6 +111,8 @@ fun MobileProfileEditScreen(
                 viewModel.loadCategoryFilters(source.id, profileId) { editingFilters = source to it }
             }
             var confirmDelete by remember { mutableStateOf(false) }
+            // Sources, Content filters, Expert mode and the expert-only themes are admin-only.
+            val adminView = remember { viewModel.viewerIsAdmin }
             // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
             var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
             var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
@@ -118,7 +121,7 @@ fun MobileProfileEditScreen(
             if (choosingTheme) {
                 SettingsPickerDialog(
                     title = stringResource(R.string.settings_theme_section_title),
-                    options = AllPalettes.map { stringResource(it.nameRes) to it.id },
+                    options = palettesFor(adminView, themeId).map { stringResource(it.nameRes) to it.id },
                     selected = themeId,
                     onSelect = { id ->
                         themeId = id
@@ -142,8 +145,6 @@ fun MobileProfileEditScreen(
                 )
             }
             var editingSources by rememberSaveable { mutableStateOf(false) }
-            // Sources and Content filters (the parental control) are admin-only.
-            val adminView = remember { viewModel.viewerIsAdmin }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
 

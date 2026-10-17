@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
+import org.njarasoa.fijerena.core.ui.theme.palettesFor
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /** Display's Theme and Look and feel rows; they sit in the Display section (SettingsScreen). */
@@ -51,10 +52,14 @@ fun ThemePickerPane(
     selectedThemeId: String,
     onPick: (String) -> Unit,
     onBack: () -> Unit,
+    admin: Boolean = true,
 ) {
     SettingsPickerPane(
         title = stringResource(R.string.settings_theme_section_title),
-        options = AllPalettes.map { palette -> PickerOption(stringResource(palette.nameRes), palette.id) { PaletteSwatches(palette) } },
+        options =
+            palettesFor(admin, selectedThemeId).map { palette ->
+                PickerOption(stringResource(palette.nameRes), palette.id) { PaletteSwatches(palette) }
+            },
         selectedValue = selectedThemeId,
         onPick = onPick,
         onBack = onBack,

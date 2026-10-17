@@ -255,6 +255,7 @@ fun ProfileEditPane(
     } else if (choosingTheme) {
         ThemePickerPane(
             selectedThemeId = themeId,
+            admin = adminView,
             onPick = {
                 themeId = it
                 viewModel.setTheme(profile.id, it)
