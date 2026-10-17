@@ -56,7 +56,10 @@ import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
@@ -66,6 +69,7 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
@@ -119,11 +123,12 @@ fun MobileSourceTopBar(
     TopAppBar(
         title = {
             Column {
-                Text(
+                CinemaText(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    role = TextRole.Title,
+                    tone = TextTone.Inherit,
                 )
                 MobileSyncSummaryLine(
                     summary = syncSummary,
@@ -187,7 +192,13 @@ fun MobileSourceTopBar(
     browseChoice?.let { (browsed, contentTypes) ->
         CinemaAlertDialog(
             onDismissRequest = { browseChoice = null },
-            title = { Text(stringResource(R.string.browse_source, browsed.name)) },
+            title = {
+                CinemaText(
+                    stringResource(R.string.browse_source, browsed.name),
+                    role = TextRole.Title,
+                    tone = TextTone.Inherit,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     contentTypes.forEach { contentType ->
@@ -197,10 +208,10 @@ fun MobileSourceTopBar(
                                 onBrowseSection(browsed.providerId, contentType)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                            color = CinemaTheme.colors.surfaceRaised,
+                            shape = CinemaTheme.shapes.chip,
                         ) {
-                            Text(
+                            CinemaText(
                                 text =
                                     stringResource(
                                         when (contentType) {
@@ -210,6 +221,8 @@ fun MobileSourceTopBar(
                                         },
                                     ),
                                 modifier = Modifier.padding(CinemaSpacing.md),
+                                role = TextRole.Body,
+                                tone = TextTone.Inherit,
                             )
                         }
                     }
@@ -217,7 +230,11 @@ fun MobileSourceTopBar(
             },
             confirmButton = {
                 CinemaDialogActionButton(onClick = { browseChoice = null }, kind = ButtonKind.Other) {
-                    Text(stringResource(R.string.common_cancel))
+                    CinemaText(
+                        stringResource(R.string.common_cancel),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
                 }
             },
         )
@@ -243,14 +260,21 @@ fun MobileSourcesPanel(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
+        CinemaText(
             text = message,
-            style = MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
+            role = TextRole.Title,
+            tone = TextTone.Inherit,
         )
         actions.forEachIndexed { index, (label, onClick) ->
             Spacer(modifier = Modifier.height(if (index == 0) CinemaSpacing.lg else CinemaSpacing.sm))
-            CinemaDialogActionButton(onClick = onClick, kind = if (index == 0) ButtonKind.Main else ButtonKind.Other) { Text(label) }
+            CinemaDialogActionButton(onClick = onClick, kind = if (index == 0) ButtonKind.Main else ButtonKind.Other) {
+                CinemaText(
+                    label,
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
@@ -22,6 +23,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +39,11 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * The phone's bottom bar tabs (docs/plans/archive/20261007_phone-home-overhaul-plan.md → Redesign: no Home
@@ -184,7 +190,7 @@ fun MobileBottomBar(
                         Modifier
                             .weight(1f)
                             .clip(MobileDockStyle.tabShape)
-                            .background(if (isSelected) MobileDockStyle.selectedTabContainer else Color.Transparent)
+                            .background(if (isSelected) MobileDockStyle.selectedTabContainer else CinemaTheme.colors.clear)
                             .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(tab) })
                             .padding(vertical = MobileDockStyle.tabVerticalPadding),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -192,17 +198,27 @@ fun MobileBottomBar(
                 ) {
                     if (showLabels) {
                         Icon(tab.icon(), contentDescription = null, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = color,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        CompositionLocalProvider(LocalContentColor provides color) {
+                            CinemaText(
+                                text = label,
+                                role = TextRole.Caption,
+                                tone = TextTone.Inherit,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     } else {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                            tooltip = { PlainTooltip { Text(label) } },
+                            tooltip = {
+                                PlainTooltip {
+                                    CinemaText(
+                                        label,
+                                        role = TextRole.BodySmall,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
+                            },
                             state = rememberTooltipState(),
                         ) {
                             Icon(tab.icon(), contentDescription = label, tint = color, modifier = Modifier.size(MobileDockStyle.iconSize))

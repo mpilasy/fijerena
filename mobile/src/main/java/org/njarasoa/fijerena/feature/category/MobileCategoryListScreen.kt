@@ -154,6 +154,8 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
@@ -163,6 +165,8 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -181,7 +185,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
@@ -196,6 +200,9 @@ import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.CinemaIconTab
+import org.njarasoa.fijerena.ui.components.CinemaIconTabRow
+import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
@@ -645,7 +652,7 @@ fun MobileCategoryListScreen(
     // full-screen branch above needs no equivalent — MobilePlayerContent already hides its own
     // chrome in PiP.
     if (isInPip) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.mediaScrim)) {
             EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
         }
         return
@@ -654,7 +661,7 @@ fun MobileCategoryListScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
         Scaffold(
-            containerColor = Color.Transparent,
+            containerColor = CinemaTheme.colors.clear,
             topBar = {
                 // Hidden in the landscape split — the title/EPG/search row eats vertical space the
                 // video pane needs, and none of its actions (EPG, search, category nav) apply while
@@ -675,7 +682,15 @@ fun MobileCategoryListScreen(
                                     TooltipBox(
                                         positionProvider =
                                             TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-                                        tooltip = { PlainTooltip { Text(guideLabel) } },
+                                        tooltip = {
+                                            PlainTooltip {
+                                                CinemaText(
+                                                    guideLabel,
+                                                    role = TextRole.BodySmall,
+                                                    tone = TextTone.Inherit,
+                                                )
+                                            }
+                                        },
                                         state = rememberTooltipState(),
                                     ) {
                                         CinemaIconButton(
@@ -692,7 +707,7 @@ fun MobileCategoryListScreen(
                                                 Icon(
                                                     CinemaIcons.DateRange,
                                                     guideLabel,
-                                                    tint = CinemaTextPrimary,
+                                                    tint = CinemaTheme.colors.textPrimary,
                                                 )
                                             },
                                         )
@@ -703,7 +718,7 @@ fun MobileCategoryListScreen(
                         CinemaIconButton(
                             onClick = { stopDockThen(onSearchClick) },
                             icon = {
-                                Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTheme.colors.textPrimary)
                             },
                         )
                     }
@@ -712,20 +727,26 @@ fun MobileCategoryListScreen(
                     } else {
                         TopAppBar(
                             title = {
-                                Text(
+                                CinemaText(
                                     when (contentType) {
                                         ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
                                         ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
                                         ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
                                         else -> contentType.replace("_", " ")
                                     },
+                                    role = TextRole.Title,
+                                    tone = TextTone.Inherit,
                                 )
                             },
                             navigationIcon = {
                                 CinemaIconButton(
                                     onClick = { stopDockThen(onBack) },
                                     icon = {
-                                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
+                                        Icon(
+                                            CinemaIcons.ArrowBack,
+                                            stringResource(R.string.player_back),
+                                            tint = CinemaTheme.colors.textPrimary,
+                                        )
                                     },
                                 )
                             },
@@ -797,14 +818,14 @@ fun MobileCategoryListScreen(
                                             }
                                         }
                                     if (epgMessage != null) {
-                                        Text(
+                                        CinemaText(
                                             text = epgMessage,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color =
+                                            role = TextRole.BodySmall,
+                                            tone =
                                                 if (epgIndexState is EpgIndexState.Indexing) {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                    TextTone.Secondary
                                                 } else {
-                                                    MaterialTheme.colorScheme.error
+                                                    TextTone.Danger
                                                 },
                                             modifier =
                                                 Modifier.padding(
@@ -852,10 +873,7 @@ fun MobileCategoryListScreen(
                                             },
                                     )
 
-                                    HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.outline,
-                                        thickness = MobileDimensions.dividerThin,
-                                    )
+                                    CinemaDivider()
                                 }
 
                                 // Streams list with pull-to-refresh — while a preview is docked, always
@@ -1049,8 +1067,8 @@ fun MobileCategoryListScreen(
                                                 modifier =
                                                     Modifier
                                                         .fillMaxWidth()
-                                                        .clip(RoundedCornerShape(CinemaCornerRadius.medium))
-                                                        .background(CinemaSurface)
+                                                        .clip(CinemaTheme.shapes.card)
+                                                        .background(CinemaTheme.colors.surface)
                                                         .clickable(onClick = { fullScreen = true }),
                                             ) {
                                                 val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
@@ -1074,7 +1092,7 @@ fun MobileCategoryListScreen(
                                                     if (dockPlaybackState !is PlaybackState.Playing) {
                                                         CircularProgressIndicator(
                                                             modifier = Modifier.align(Alignment.Center),
-                                                            color = CinemaAccent,
+                                                            color = CinemaTheme.colors.accent,
                                                         )
                                                     }
 
@@ -1088,7 +1106,7 @@ fun MobileCategoryListScreen(
                                                         Icon(
                                                             CinemaIcons.Close,
                                                             contentDescription = stringResource(R.string.common_close),
-                                                            tint = CinemaTextPrimary,
+                                                            tint = CinemaTheme.colors.textPrimary,
                                                         )
                                                     }
                                                 }
@@ -1098,31 +1116,31 @@ fun MobileCategoryListScreen(
                                             BadgedTitle(
                                                 raw = dockSuccess?.streamName ?: target.name,
                                                 style = MaterialTheme.typography.titleLarge,
-                                                color = CinemaTextPrimary,
+                                                color = CinemaTheme.colors.textPrimary,
                                             )
                                             val nowProg = dockSuccess?.currentEpgProgram
                                             if (nowProg != null) {
-                                                Text(
+                                                CinemaText(
                                                     text = stringResource(R.string.epg_now_prefix, nowProg.title),
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = CinemaTextPrimary,
                                                     maxLines = 2,
+                                                    role = TextRole.Heading,
+                                                    tone = TextTone.Primary,
                                                 )
                                                 val fraction = nowProg.elapsedFraction()
                                                 LinearProgressIndicator(
                                                     progress = { fraction },
                                                     modifier = Modifier.fillMaxWidth(),
-                                                    color = CinemaAccent,
-                                                    trackColor = CinemaSurface,
+                                                    color = CinemaTheme.colors.accent,
+                                                    trackColor = CinemaTheme.colors.surface,
                                                 )
                                             }
                                             val nextProg = dockSuccess?.nextEpgProgram
                                             if (nextProg != null) {
-                                                Text(
+                                                CinemaText(
                                                     text = stringResource(R.string.category_up_next_format, nextProg.title),
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = CinemaTextSecondary,
                                                     maxLines = 1,
+                                                    role = TextRole.Body,
+                                                    tone = TextTone.Secondary,
                                                 )
                                             }
                                         }
@@ -1163,19 +1181,19 @@ fun MobileCategoryListScreen(
                                                     Icon(
                                                         CinemaIcons.Close,
                                                         contentDescription = stringResource(R.string.common_close),
-                                                        tint = CinemaTextPrimary,
+                                                        tint = CinemaTheme.colors.textPrimary,
                                                     )
                                                 }
 
-                                                val palette = CinemaThemeHolder.current
+                                                val colors = CinemaTheme.colors
                                                 // Memoize brush to avoid allocating new Brush + listOf on
                                                 // every recomposition — mirrors GradientOverlay.kt.
                                                 val scrimBrush =
-                                                    remember(palette.background) {
+                                                    remember(colors.background) {
                                                         Brush.verticalGradient(
                                                             listOf(
-                                                                Color.Transparent,
-                                                                palette.background.copy(alpha = CinemaAlpha.imageOverlay),
+                                                                colors.clear,
+                                                                colors.background.copy(alpha = CinemaAlpha.imageOverlay),
                                                             ),
                                                         )
                                                     }
@@ -1191,15 +1209,15 @@ fun MobileCategoryListScreen(
                                                     BadgedTitle(
                                                         raw = dockSuccess?.streamName ?: target.name,
                                                         style = MaterialTheme.typography.titleLarge,
-                                                        color = CinemaTextPrimary,
+                                                        color = CinemaTheme.colors.textPrimary,
                                                     )
                                                     val nowProg = dockSuccess?.currentEpgProgram
                                                     if (nowProg != null) {
-                                                        Text(
+                                                        CinemaText(
                                                             text = stringResource(R.string.epg_now_prefix, nowProg.title),
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                                                             maxLines = 1,
+                                                            role = TextRole.Body,
+                                                            tone = TextTone.Primary,
                                                         )
                                                     }
                                                 }
@@ -1224,17 +1242,22 @@ fun MobileCategoryListScreen(
                                     verticalArrangement = Arrangement.spacedBy(Spacing.md),
                                     modifier = Modifier.padding(Spacing.xl),
                                 ) {
-                                    Text(
+                                    CinemaText(
                                         text = stringResource(R.string.common_error),
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = MaterialTheme.colorScheme.error,
+                                        role = TextRole.Display,
+                                        tone = TextTone.Danger,
                                     )
-                                    Text(
+                                    CinemaText(
                                         text = state.message,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        role = TextRole.Body,
+                                        tone = TextTone.Inherit,
                                     )
                                     CinemaButton(onClick = { viewModel.retry() }) {
-                                        Text(stringResource(R.string.common_retry))
+                                        CinemaText(
+                                            stringResource(R.string.common_retry),
+                                            role = TextRole.Label,
+                                            tone = TextTone.Inherit,
+                                        )
                                     }
                                 }
                             }
@@ -1259,24 +1282,20 @@ private fun DockListTabs(
     selected: PreviewListSource,
     onSelect: (PreviewListSource) -> Unit,
 ) {
-    PrimaryTabRow(selectedTabIndex = selected.ordinal, containerColor = Color.Transparent) {
-        PreviewListSource.entries.forEach { source ->
-            Tab(
-                selected = source == selected,
-                onClick = { onSelect(source) },
-                text = {
-                    Text(
-                        stringResource(
-                            when (source) {
-                                PreviewListSource.RECENT -> R.string.category_recent_label
-                                PreviewListSource.FAVORITES -> R.string.settings_import_favorites_label
-                            },
-                        ),
-                    )
-                },
-            )
-        }
-    }
+    CinemaTabRow(
+        selectedIndex = selected.ordinal,
+        labels =
+            PreviewListSource.entries.map { source ->
+                stringResource(
+                    when (source) {
+                        PreviewListSource.RECENT -> R.string.category_recent_label
+                        PreviewListSource.FAVORITES -> R.string.settings_import_favorites_label
+                    },
+                )
+            },
+        onSelect = { onSelect(PreviewListSource.entries[it]) },
+        transparent = true,
+    )
 }
 
 /** Anchor values for a stream row's swipe-reveal action strip (see [StreamsList]). */
@@ -1294,7 +1313,7 @@ private fun SwipeActionButton(
         modifier =
             Modifier
                 .size(MobileDimensions.swipeActionCircleSize)
-                .clip(CircleShape)
+                .clip(CinemaTheme.shapes.control)
                 .background(tint)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -1304,7 +1323,7 @@ private fun SwipeActionButton(
             contentDescription = contentDescription,
             // Contrasts against the tinted circle behind it — `tint` here would put a same-hue icon
             // on a same-hue background, all but invisible.
-            tint = CinemaTextPrimary,
+            tint = CinemaTheme.colors.textPrimary,
             modifier = Modifier.size(MobileDimensions.iconDefault),
         )
     }
@@ -1334,8 +1353,8 @@ private fun CategoryChipRow(
     val listState = rememberLazyListState()
     val chipColors =
         FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            selectedContainerColor = CinemaTheme.colors.accent,
+            selectedLabelColor = CinemaTheme.colors.onAccent,
         )
 
     // Entrance animation plays once per item: LazyRow recycles item composition off the ends
@@ -1359,37 +1378,11 @@ private fun CategoryChipRow(
         // while a real category is picked.
         if (virtualCategories.isNotEmpty()) {
             val selectedModeIndex = virtualCategories.indexOfFirst { it.key == selectedCategoryKey }
-            PrimaryScrollableTabRow(
-                selectedTabIndex = selectedModeIndex.coerceAtLeast(0),
-                containerColor = Color.Transparent,
-                edgePadding = CinemaSpacing.xxs,
-                indicator = {
-                    if (selectedModeIndex >= 0) {
-                        TabRowDefaults.PrimaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(selectedModeIndex, matchContentSize = true),
-                            width = Dp.Unspecified,
-                        )
-                    }
-                },
-                divider = {},
-            ) {
-                virtualCategories.forEach { category ->
-                    LeadingIconTab(
-                        selected = category.key == selectedCategoryKey,
-                        onClick = { onCategorySelected(category.id, category.providerId) },
-                        text = { Text(text = virtualCategoryName(category), maxLines = 1) },
-                        icon = {
-                            Icon(
-                                imageVector = virtualCategoryIcon(category.id),
-                                contentDescription = null,
-                                modifier = Modifier.size(MobileDimensions.iconSmall),
-                            )
-                        },
-                        selectedContentColor = MaterialTheme.colorScheme.primary,
-                        unselectedContentColor = CinemaTextSecondary,
-                    )
-                }
-            }
+            CinemaIconTabRow(
+                selectedIndex = selectedModeIndex,
+                tabs = virtualCategories.map { CinemaIconTab(virtualCategoryName(it), virtualCategoryIcon(it.id)) },
+                onSelect = { index -> virtualCategories[index].let { onCategorySelected(it.id, it.providerId) } },
+            )
         }
 
         Row(
@@ -1434,7 +1427,7 @@ private fun CategoryChipRow(
                     onClick = onGuideClick,
                     icon = CinemaIcons.DateRange,
                     label = stringResource(R.string.common_tv_guide),
-                    tint = CinemaTextSecondary,
+                    tint = CinemaTheme.colors.textSecondary,
                 )
             }
         }
@@ -1514,8 +1507,10 @@ private fun CategoryChip(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
                     sourceName?.let { SourceBadge(it) }
-                    Text(
+                    CinemaText(
                         text = name,
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         // Marquee only on the selected chip. Touch has no focus, so gating on
@@ -1541,7 +1536,13 @@ private fun CategoryChip(
         )
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
-                text = { Text(favoriteLabel) },
+                text = {
+                    CinemaText(
+                        favoriteLabel,
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
@@ -1601,7 +1602,7 @@ private fun StreamsList(
     // Built once per list composition rather than once per row. CardDefaults.cardColors is
     // @Composable, so it can't be wrapped in remember — hoisting the call out of the item body
     // is what stops a CardColors being allocated per visible row per recomposition.
-    val streamCardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val streamCardColors = CardDefaults.cardColors(containerColor = CinemaTheme.colors.surface)
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
@@ -1646,11 +1647,11 @@ private fun StreamsList(
             Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.sm, vertical = Spacing.xs),
             ) {
-                Text(
+                CinemaText(
                     text = stringResource(R.string.category_loading_streams),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = Spacing.xs),
+                    role = TextRole.Caption,
+                    tone = TextTone.Secondary,
                 )
                 SkeletonList(
                     rowCount = 8,
@@ -1674,16 +1675,16 @@ private fun StreamsList(
                 val isCategoryList =
                     selectedCategoryId == CategoryViewModel.FAVORITE_CATEGORIES_ID ||
                         selectedCategoryId == CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
-                Text(
+                CinemaText(
                     text =
                         if (isCategoryList) {
                             stringResource(R.string.category_count_format, itemCount)
                         } else {
                             itemCountText(contentType, itemCount)
                         },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.sm).padding(top = Spacing.xs, bottom = Spacing.xxs),
+                    role = TextRole.Caption,
+                    tone = TextTone.Secondary,
                 )
                 val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
                 val isFavoritesList = selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
@@ -1790,8 +1791,8 @@ private fun StreamsList(
                                         .align(Alignment.CenterStart)
                                         .width(favoriteRevealWidth)
                                         .fillMaxHeight()
-                                        .clip(RoundedCornerShape(CinemaCornerRadius.medium))
-                                        .background(CinemaSurface)
+                                        .clip(CinemaTheme.shapes.card)
+                                        .background(CinemaTheme.colors.surface)
                                         .clickable(
                                             indication = null,
                                             interactionSource = remember { MutableInteractionSource() },
@@ -1807,7 +1808,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
                                             ),
-                                        tint = CinemaSuccess,
+                                        tint = CinemaTheme.colors.success,
                                         onClick = {
                                             onToggleFavorite(item)
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -1830,7 +1831,7 @@ private fun StreamsList(
                                                         R.string.watched_mark_show
                                                     },
                                                 ),
-                                            tint = CinemaAccent,
+                                            tint = CinemaTheme.colors.accent,
                                             onClick = {
                                                 onSetShowWatched(showSeriesId, isShowWatched != true, item.providerId)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -1843,7 +1844,7 @@ private fun StreamsList(
                                                 stringResource(
                                                     if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
                                                 ),
-                                            tint = CinemaAccent,
+                                            tint = CinemaTheme.colors.accent,
                                             onClick = {
                                                 onToggleWatched(item)
                                                 scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -1860,8 +1861,8 @@ private fun StreamsList(
                                             .align(Alignment.CenterEnd)
                                             .width(deleteRevealWidth)
                                             .fillMaxHeight()
-                                            .clip(RoundedCornerShape(CinemaCornerRadius.medium))
-                                            .background(CinemaSurface)
+                                            .clip(CinemaTheme.shapes.card)
+                                            .background(CinemaTheme.colors.surface)
                                             .clickable(
                                                 indication = null,
                                                 interactionSource = remember { MutableInteractionSource() },
@@ -1876,7 +1877,7 @@ private fun StreamsList(
                                             stringResource(
                                                 if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
                                             ),
-                                        tint = CinemaError,
+                                        tint = CinemaTheme.colors.danger,
                                         onClick = {
                                             if (isRecentList) onRemoveItem?.invoke(item) else onRemoveFavorite?.invoke(item)
                                             scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
@@ -1994,18 +1995,18 @@ private val MediaItem.isSeparatorRow: Boolean
 /** A separator row as what it is: a heading over the channels that follow, text only, not tappable. */
 @Composable
 private fun SeparatorRow(name: String) {
-    Text(
+    CinemaText(
         text =
             name
                 .trim()
                 .trim('#')
                 .trim()
                 .ifEmpty { name.trim() },
-        style = MaterialTheme.typography.titleSmall,
-        color = CinemaTextSecondary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(start = Spacing.xs, end = Spacing.xs, top = Spacing.sm),
+        role = TextRole.Label,
+        tone = TextTone.Secondary,
     )
 }
 
@@ -2086,7 +2087,7 @@ internal fun StreamCard(
         colors = cardColors,
         border =
             if (isCurrentlyPlaying) {
-                androidx.compose.foundation.BorderStroke(MobileDimensions.strokeWidth, CinemaAccent)
+                androidx.compose.foundation.BorderStroke(MobileDimensions.strokeWidth, CinemaTheme.colors.accent)
             } else {
                 cinemaCardHairlineBorder()
             },
@@ -2167,8 +2168,7 @@ internal fun StreamCard(
         ) {
             // 16:9, with the resume bar on the thumbnail's bottom edge rather than along the whole
             // card (phone UI audit P1, as on the TV).
-            val thumbnailRadius = CinemaCornerRadius.medium
-            val thumbnailShape = remember(thumbnailRadius) { RoundedCornerShape(thumbnailRadius) }
+            val thumbnailShape = CinemaTheme.shapes.card
             Box(
                 modifier =
                     Modifier
@@ -2194,10 +2194,10 @@ internal fun StreamCard(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(MobileDimensions.resumeBarHeight),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                        color = CinemaTheme.colors.accent,
+                        trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
                         drawStopIndicator = {},
-                        gapSize = 0.dp,
+                        gapSize = CinemaSpacing.none,
                     )
                 }
             }
@@ -2210,17 +2210,17 @@ internal fun StreamCard(
                         Icon(
                             imageVector = CinemaIcons.CheckCircle,
                             contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaSuccess,
+                            tint = CinemaTheme.colors.success,
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
-                    Text(
+                    CinemaText(
                         text = displayTitle,
-                        style = MaterialTheme.typography.bodyLarge,
+                        role = TextRole.Body,
                         // The primary text colour; the accent only marks what's current
                         // (phone UI audit P1).
-                        color = if (isCurrent) CinemaAccent else CinemaTextPrimary,
+                        tone = if (isCurrent) TextTone.Accent else TextTone.Primary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         // Only the row that's actually playing scrolls its title.
@@ -2230,11 +2230,11 @@ internal fun StreamCard(
                     sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
                 }
                 nowPlayingText?.let { text ->
-                    Text(
+                    CinemaText(
                         text = text,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaAccent,
                         maxLines = 1,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Accent,
                     )
                 }
                 // The second line: the title's badges, then the category,
@@ -2247,26 +2247,40 @@ internal fun StreamCard(
                     ) {
                         TitleBadges(parsedTitle)
                         lineText?.let { text ->
-                            Text(
+                            CinemaText(
                                 text = text,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (text == nowLine) MaterialTheme.colorScheme.tertiary else CinemaTextSecondary,
+                                role = TextRole.BodySmall,
+                                tone =
+                                    if (text ==
+                                        nowLine
+                                    ) {
+                                        TextTone.AccentSoft
+                                    } else {
+                                        TextTone.Secondary
+                                    },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = if (isCurrentlyPlaying && text == nowLine) Modifier.bounceMarquee() else Modifier,
+                                modifier =
+                                    if (isCurrentlyPlaying &&
+                                        text == nowLine
+                                    ) {
+                                        Modifier.bounceMarquee()
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         }
                     }
                 }
                 // A film's year line keeps a Now line, if it has one, under it.
                 nowLine?.takeIf { sourceLine == null && metaLine.isNotEmpty() }?.let { line ->
-                    Text(
+                    CinemaText(
                         text = line,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.AccentSoft,
                     )
                 }
             }

@@ -27,11 +27,17 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -99,11 +105,13 @@ fun MobileEpgManagementScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
+                    CinemaText(
                         providerName?.let { stringResource(R.string.epg_management_title_format, it) }
                             ?: stringResource(R.string.epg_sources_header),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        role = TextRole.Title,
+                        tone = TextTone.Inherit,
                     )
                 },
                 navigationIcon = {
@@ -153,7 +161,11 @@ fun MobileEpgManagementScreen(
                                     onClick = { viewModel.refreshStale() },
                                     modifier = Modifier.weight(1f),
                                 ) {
-                                    Text(stringResource(R.string.epg_refresh_stale_btn, staleSourceCount))
+                                    CinemaText(
+                                        stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
                                 }
                             }
                             if (failedSourceCount > 0) {
@@ -161,7 +173,11 @@ fun MobileEpgManagementScreen(
                                     onClick = { viewModel.refreshFailed() },
                                     modifier = Modifier.weight(1f),
                                 ) {
-                                    Text(stringResource(R.string.epg_retry_failed_btn, failedSourceCount))
+                                    CinemaText(
+                                        stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
                                 }
                             }
                         }
@@ -292,7 +308,7 @@ private fun EpgSourceCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     val useLabel = stringResource(R.string.epg_source_use_label)
-                    Switch(
+                    CinemaSwitch(
                         checked = source.enabled,
                         onCheckedChange = onEnabledChange,
                         modifier = Modifier.semantics { contentDescription = useLabel },
@@ -301,28 +317,29 @@ private fun EpgSourceCard(
                     StatusIndicator(source, nowMs, staleThresholdMs)
 
                     Column {
-                        Text(
+                        CinemaText(
                             text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
-                            style = MaterialTheme.typography.titleMedium,
+                            role = TextRole.Heading,
+                            tone = TextTone.Inherit,
                         )
-                        Text(
+                        CinemaText(
                             text = guideSourceUrlHint(source.url),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                         if (isOwnGuide) {
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.epg_source_own_guide_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
-                        Text(
+                        CinemaText(
                             text = refreshSummary,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                     }
                 }
@@ -339,12 +356,12 @@ private fun EpgSourceCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.epg_source_phase_format, localizedEpgPhase(activeProgress.phase)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            role = TextRole.Caption,
+                            tone = TextTone.Accent,
                         )
-                        Text(
+                        CinemaText(
                             // No size from the server (panel-a sends none): the bytes so far instead of a percentage.
                             text =
                                 if (activeProgress.progressPercent >= 0) {
@@ -352,22 +369,22 @@ private fun EpgSourceCard(
                                 } else {
                                     NumberUtils.formatBytes(activeProgress.downloadedBytes)
                                 },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            role = TextRole.Caption,
+                            tone = TextTone.Accent,
                         )
                     }
                     if (activeProgress.progressPercent >= 0) {
                         LinearProgressIndicator(
                             progress = { activeProgress.progressPercent / 100f },
                             modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                            color = CinemaTheme.colors.accent,
+                            trackColor = CinemaTheme.colors.textPrimary.copy(alpha = 0.1f),
                         )
                     } else {
                         LinearProgressIndicator(
                             modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                            color = CinemaTheme.colors.accent,
+                            trackColor = CinemaTheme.colors.textPrimary.copy(alpha = 0.1f),
                         )
                     }
                 }
@@ -433,11 +450,11 @@ private fun EpgSourceCard(
 
             val lastError = source.lastError
             if (lastError != null) {
-                Text(
+                CinemaText(
                     text = stringResource(R.string.epg_database_error, lastError),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CinemaError,
                     modifier = Modifier.padding(top = CinemaSpacing.xs),
+                    role = TextRole.Caption,
+                    tone = TextTone.Danger,
                 )
             }
 
@@ -462,7 +479,7 @@ private fun EpgSourceCard(
                     onClick = { showDeleteConfirm = true },
                     icon = CinemaIcons.Delete,
                     label = stringResource(R.string.provider_delete_button),
-                    tint = CinemaError,
+                    tint = CinemaTheme.colors.danger,
                 )
             }
         }
@@ -478,16 +495,40 @@ private fun EpgSourceCard(
                         showDeleteConfirm = false
                     },
                     kind = ButtonKind.Danger,
-                ) { Text(stringResource(R.string.provider_delete_button)) }
+                ) {
+                    CinemaText(
+                        stringResource(R.string.provider_delete_button),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
+                }
             },
             dismissButton = {
                 CinemaDialogActionButton(
                     onClick = { showDeleteConfirm = false },
                     kind = ButtonKind.Other,
-                ) { Text(stringResource(R.string.common_cancel)) }
+                ) {
+                    CinemaText(
+                        stringResource(R.string.common_cancel),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
+                }
             },
-            title = { Text(stringResource(R.string.epg_delete_source_title)) },
-            text = { Text(stringResource(R.string.epg_delete_source_confirm_message, source.label)) },
+            title = {
+                CinemaText(
+                    stringResource(R.string.epg_delete_source_title),
+                    role = TextRole.Title,
+                    tone = TextTone.Inherit,
+                )
+            },
+            text = {
+                CinemaText(
+                    stringResource(R.string.epg_delete_source_confirm_message, source.label),
+                    role = TextRole.Body,
+                    tone = TextTone.Inherit,
+                )
+            },
         )
     }
 }
@@ -524,11 +565,11 @@ private fun StatusIndicator(
 ) {
     val color =
         when {
-            !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            source.lastError != null -> CinemaError
-            source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            nowMs - source.lastIngestedAtMs > staleThresholdMs -> org.njarasoa.fijerena.ui.theme.CinemaWarning
-            else -> CinemaSuccess
+            !source.enabled -> CinemaTheme.colors.textDisabled
+            source.lastError != null -> CinemaTheme.colors.danger
+            source.lastIngestedAtMs == 0L -> CinemaTheme.colors.textDisabled
+            nowMs - source.lastIngestedAtMs > staleThresholdMs -> CinemaTheme.colors.warning
+            else -> CinemaTheme.colors.success
         }
 
     androidx.compose.foundation.Canvas(modifier = Modifier.size(CinemaSpacing.xs + CinemaSpacing.xxxs)) {
@@ -542,14 +583,15 @@ private fun SourceStat(
     value: String,
 ) {
     Column {
-        Text(
+        CinemaText(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            role = TextRole.Caption,
+            tone = TextTone.Secondary,
         )
-        Text(
+        CinemaText(
             text = value,
-            style = MaterialTheme.typography.bodySmall,
+            role = TextRole.BodySmall,
+            tone = TextTone.Inherit,
         )
     }
 }
@@ -567,7 +609,7 @@ private fun EpgSourceEditDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
+            CinemaText(
                 if (initialSource ==
                     null
                 ) {
@@ -575,6 +617,8 @@ private fun EpgSourceEditDialog(
                 } else {
                     stringResource(R.string.epg_edit_source_title)
                 },
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
             )
         },
         confirmButton = {
@@ -590,33 +634,45 @@ private fun EpgSourceEditDialog(
                 },
                 enabled = url.isNotBlank(),
                 kind = ButtonKind.Main,
-            ) { Text(stringResource(R.string.provider_save_button)) }
+            ) {
+                CinemaText(
+                    stringResource(R.string.provider_save_button),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
         dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(
+                    stringResource(R.string.common_cancel),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                OutlinedTextField(
+                CinemaTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
-                    supportingText = { Text(stringResource(R.string.epg_xmltv_url_hint)) },
+                    label = stringResource(R.string.epg_xmltv_url_label),
+                    supportingText = stringResource(R.string.epg_xmltv_url_hint),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                CinemaTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text(stringResource(R.string.epg_label_optional)) },
+                    label = stringResource(R.string.epg_label_optional),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                OutlinedTextField(
+                CinemaTextField(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
-                    label = { Text(stringResource(R.string.epg_timezone_label)) },
-                    supportingText = { Text(stringResource(R.string.epg_timezone_hint)) },
+                    label = stringResource(R.string.epg_timezone_label),
+                    supportingText = stringResource(R.string.epg_timezone_hint),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +43,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -69,20 +67,25 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -703,7 +706,7 @@ fun MobilePlayerContent(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground)
+                        .background(CinemaTheme.colors.mediaScrim)
                         .then(
                             if (isInPipMode) {
                                 Modifier
@@ -896,12 +899,12 @@ fun MobilePlayerContent(
                             if (!hasStartedPlaying || showRecoverySpinner) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
-                                        style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
-                                        color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                                        style = textStyleOf(TextRole.Display),
+                                        color = CinemaTheme.colors.onMedia,
                                     )
                                     // Expert mode: what the wait is made of (as on TV).
                                     if (appSettings.isDevMode && !isInPipMode) {
-                                        Spacer(Modifier.height(12.dp))
+                                        Spacer(Modifier.height(CinemaSpacing.sm))
                                         BufferingDetails()
                                     }
                                 }
@@ -1100,17 +1103,17 @@ fun MobilePlayerContent(
                 ) {
                     GlassPanel(
                         modifier = Modifier.padding(horizontal = CinemaSpacing.xl),
-                        panelShape = RoundedCornerShape(percent = 50),
+                        panelShape = CinemaTheme.shapes.control,
                     ) {
-                        Text(
+                        CinemaText(
                             text =
                                 stringResource(
                                     if (seekRippleSide < 0) R.string.player_seek_rewind_format else R.string.player_seek_forward_format,
                                     seekRippleSeconds,
                                 ),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaTextPrimary,
                             modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.md),
+                            role = TextRole.Display,
+                            tone = TextTone.Primary,
                         )
                     }
                 }

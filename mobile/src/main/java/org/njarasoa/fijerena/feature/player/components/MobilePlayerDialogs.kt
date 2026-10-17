@@ -22,8 +22,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -39,10 +43,20 @@ fun AudioTrackSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.player_select_audio)) },
+        title = {
+            CinemaText(
+                stringResource(R.string.player_select_audio),
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
+            )
+        },
         text = {
             if (audioTracks.isEmpty()) {
-                Text(stringResource(R.string.player_no_audio))
+                CinemaText(
+                    stringResource(R.string.player_no_audio),
+                    role = TextRole.Body,
+                    tone = TextTone.Inherit,
+                )
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -57,11 +71,11 @@ fun AudioTrackSelectorDialog(
                             modifier = Modifier.fillMaxWidth(),
                             color =
                                 if (track.isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer
+                                    CinemaTheme.colors.accentStrong
                                 } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
+                                    CinemaTheme.colors.surfaceRaised
                                 },
-                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                            shape = CinemaTheme.shapes.chip,
                         ) {
                             Column(modifier = Modifier.padding(Spacing.sm)) {
                                 Row(
@@ -69,23 +83,24 @@ fun AudioTrackSelectorDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text(
+                                    CinemaText(
                                         text = track.label,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        role = TextRole.Body,
+                                        tone = TextTone.Inherit,
+                                        emphasis = track.isSelected,
                                     )
                                     if (track.isSelected) {
-                                        Text(
+                                        CinemaText(
                                             text = stringResource(R.string.player_active),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            role = TextRole.BodySmall,
+                                            tone = TextTone.Accent,
                                         )
                                     }
                                 }
-                                Text(
+                                CinemaText(
                                     text = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
                                 )
                             }
                         }
@@ -94,7 +109,13 @@ fun AudioTrackSelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(
+                    stringResource(R.string.common_close),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
     )
 }
@@ -112,7 +133,13 @@ fun SubtitleSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.player_select_subtitles)) },
+        title = {
+            CinemaText(
+                stringResource(R.string.player_select_subtitles),
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -127,11 +154,11 @@ fun SubtitleSelectorDialog(
                     modifier = Modifier.fillMaxWidth(),
                     color =
                         if (!hasActiveSubtitle) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            CinemaTheme.colors.accentStrong
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            CinemaTheme.colors.surfaceRaised
                         },
-                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                    shape = CinemaTheme.shapes.chip,
                 ) {
                     Row(
                         modifier =
@@ -141,16 +168,17 @@ fun SubtitleSelectorDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.common_off),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (!hasActiveSubtitle) FontWeight.Bold else FontWeight.Normal,
+                            role = TextRole.Body,
+                            tone = TextTone.Inherit,
+                            emphasis = !hasActiveSubtitle,
                         )
                         if (!hasActiveSubtitle) {
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.player_active),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Accent,
                             )
                         }
                     }
@@ -165,11 +193,11 @@ fun SubtitleSelectorDialog(
                         modifier = Modifier.fillMaxWidth(),
                         color =
                             if (track.isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
+                                CinemaTheme.colors.accentStrong
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                CinemaTheme.colors.surfaceRaised
                             },
-                        shape = RoundedCornerShape(CinemaCornerRadius.small),
+                        shape = CinemaTheme.shapes.chip,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
                             Row(
@@ -177,23 +205,24 @@ fun SubtitleSelectorDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
+                                CinemaText(
                                     text = track.label,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    role = TextRole.Body,
+                                    tone = TextTone.Inherit,
+                                    emphasis = track.isSelected,
                                 )
                                 if (track.isSelected) {
-                                    Text(
+                                    CinemaText(
                                         text = stringResource(R.string.player_active),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        role = TextRole.BodySmall,
+                                        tone = TextTone.Accent,
                                     )
                                 }
                             }
-                            Text(
+                            CinemaText(
                                 text = track.mimeType.substringAfterLast("/").uppercase(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }
@@ -201,7 +230,13 @@ fun SubtitleSelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(
+                    stringResource(R.string.common_close),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
     )
 }
@@ -219,7 +254,13 @@ fun QualitySelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.player_select_quality)) },
+        title = {
+            CinemaText(
+                stringResource(R.string.player_select_quality),
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -234,11 +275,11 @@ fun QualitySelectorDialog(
                     modifier = Modifier.fillMaxWidth(),
                     color =
                         if (!hasManualSelection) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            CinemaTheme.colors.accentStrong
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            CinemaTheme.colors.surfaceRaised
                         },
-                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                    shape = CinemaTheme.shapes.chip,
                 ) {
                     Column(modifier = Modifier.padding(Spacing.sm)) {
                         Row(
@@ -246,23 +287,24 @@ fun QualitySelectorDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.player_quality_auto),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (!hasManualSelection) FontWeight.Bold else FontWeight.Normal,
+                                role = TextRole.Body,
+                                tone = TextTone.Inherit,
+                                emphasis = !hasManualSelection,
                             )
                             if (!hasManualSelection) {
-                                Text(
+                                CinemaText(
                                     text = stringResource(R.string.player_active),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Accent,
                                 )
                             }
                         }
-                        Text(
+                        CinemaText(
                             text = stringResource(R.string.player_quality_auto_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                     }
                 }
@@ -276,11 +318,11 @@ fun QualitySelectorDialog(
                         modifier = Modifier.fillMaxWidth(),
                         color =
                             if (quality.isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
+                                CinemaTheme.colors.accentStrong
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                CinemaTheme.colors.surfaceRaised
                             },
-                        shape = RoundedCornerShape(CinemaCornerRadius.small),
+                        shape = CinemaTheme.shapes.chip,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
                             Row(
@@ -288,20 +330,21 @@ fun QualitySelectorDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
+                                CinemaText(
                                     text = quality.label,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (quality.isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    role = TextRole.Body,
+                                    tone = TextTone.Inherit,
+                                    emphasis = quality.isSelected,
                                 )
                                 if (quality.isSelected) {
-                                    Text(
+                                    CinemaText(
                                         text = stringResource(R.string.player_active),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        role = TextRole.BodySmall,
+                                        tone = TextTone.Accent,
                                     )
                                 }
                             }
-                            Text(
+                            CinemaText(
                                 text =
                                     stringResource(
                                         R.string.player_quality_dimensions_format,
@@ -309,8 +352,8 @@ fun QualitySelectorDialog(
                                         quality.height,
                                         quality.frameRate.toInt(),
                                     ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }
@@ -318,7 +361,13 @@ fun QualitySelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_close)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(
+                    stringResource(R.string.common_close),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
     )
 }

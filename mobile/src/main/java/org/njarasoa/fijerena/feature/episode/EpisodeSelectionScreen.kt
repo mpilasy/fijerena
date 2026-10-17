@@ -66,11 +66,15 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.parseDurationToSeconds
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
@@ -82,11 +86,13 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ExpandablePlot
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaLine
@@ -184,7 +190,15 @@ fun MobileEpisodeSelectionScreen(
         topBar = {
             TopAppBar(
                 // TMDB's clean title once it resolves, the provider's raw stream name until then
-                title = { Text(tmdbTitle ?: (lastSuccess?.streamName ?: seriesName), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    CinemaText(
+                        tmdbTitle ?: (lastSuccess?.streamName ?: seriesName),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        role = TextRole.Title,
+                        tone = TextTone.Inherit,
+                    )
+                },
                 navigationIcon = {
                     CinemaIconButton(
                         onClick = {
@@ -195,7 +209,7 @@ fun MobileEpisodeSelectionScreen(
                             }
                         },
                         icon = {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTheme.colors.textPrimary)
                         },
                     )
                 },
@@ -209,7 +223,7 @@ fun MobileEpisodeSelectionScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(CinemaTheme.colors.background)
                     .padding(paddingValues),
         ) {
             val errorState = uiState as? SeriesDetailsViewModel.UiState.Error
@@ -452,12 +466,30 @@ private fun EpisodeListContent(
         }
     }
     markManyError?.let { message ->
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { markManyError = null },
-            title = { Text(stringResource(R.string.watched_mark_many_failed)) },
-            text = { Text(message) },
+            title = {
+                CinemaText(
+                    stringResource(R.string.watched_mark_many_failed),
+                    role = TextRole.Title,
+                    tone = TextTone.Inherit,
+                )
+            },
+            text = {
+                CinemaText(
+                    message,
+                    role = TextRole.Body,
+                    tone = TextTone.Inherit,
+                )
+            },
             confirmButton = {
-                CinemaDialogActionButton(onClick = { markManyError = null }) { Text(stringResource(R.string.common_ok)) }
+                CinemaDialogActionButton(onClick = { markManyError = null }) {
+                    CinemaText(
+                        stringResource(R.string.common_ok),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
+                }
             },
         )
     }
@@ -612,10 +644,10 @@ private fun EpisodeListContent(
 
                 seriesDetail.metadata.genre?.let { genre ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                    Text(
+                    CinemaText(
                         text = genre,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        role = TextRole.Heading,
+                        tone = TextTone.Accent,
                     )
                 }
 
@@ -696,13 +728,20 @@ private fun EpisodeListContent(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(actionText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        CinemaText(
+                            actionText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
                         anchorOwnTitle?.let {
-                            Text(
+                            CinemaText(
                                 text = it,
-                                style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Inherit,
                             )
                         }
                     }
@@ -718,7 +757,7 @@ private fun EpisodeListContent(
                         icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                         label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
                         onClick = onToggleFavorite,
-                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                        tint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                     )
                     if (hasResume) {
                         DetailIconAction(
@@ -744,7 +783,7 @@ private fun EpisodeListContent(
                             icon = if (allWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
                             label = stringResource(if (allWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
                             onClick = { markEpisodesWatched(null, !allWatched) },
-                            tint = if (allWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            tint = if (allWatched) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                         )
                     }
                 }
@@ -757,15 +796,11 @@ private fun EpisodeListContent(
                 // Segmented detail sections — tab state is hoisted above the LazyColumn (see
                 // there); this item only reads it.
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                PrimaryTabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
-                    tabs.forEach { tab ->
-                        Tab(
-                            selected = tab == selectedTab,
-                            onClick = { pickedTab = tab },
-                            text = { Text(seriesDetailTabLabel(tab)) },
-                        )
-                    }
-                }
+                CinemaTabRow(
+                    selectedIndex = tabs.indexOf(selectedTab),
+                    labels = tabs.map { seriesDetailTabLabel(it) },
+                    onSelect = { pickedTab = tabs[it] },
+                )
 
                 if (selectedTab == SeriesDetailTab.DETAILS) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -811,10 +846,12 @@ private fun EpisodeListContent(
                             DropdownMenu(expanded = menu?.first == season, onDismissRequest = { seasonMenu = null }) {
                                 DropdownMenuItem(
                                     text = {
-                                        Text(
+                                        CinemaText(
                                             stringResource(
                                                 if (allWatched) R.string.watched_unmark_season else R.string.watched_mark_season,
                                             ),
+                                            role = TextRole.Label,
+                                            tone = TextTone.Inherit,
                                         )
                                     },
                                     leadingIcon = {
@@ -961,14 +998,12 @@ private fun StreamNamePicker(
     modifier: Modifier = Modifier,
 ) {
     // As the other rows' values (MobileDetailRow): the row already says "Stream name:".
-    val textStyle = MaterialTheme.typography.bodyMedium
-    val textColor = CinemaTextPrimary
 
     if (alternates.isEmpty()) {
-        Text(
+        CinemaText(
             text = currentName,
-            style = textStyle,
-            color = textColor,
+            role = TextRole.Body,
+            tone = TextTone.Primary,
             modifier = modifier,
         )
         return
@@ -989,28 +1024,40 @@ private fun StreamNamePicker(
                     expanded = true
                 },
         ) {
-            Text(
+            CinemaText(
                 text = currentName,
-                style = textStyle,
-                color = textColor,
+                role = TextRole.Body,
+                tone = TextTone.Primary,
                 modifier = Modifier.weight(1f, fill = false),
             )
             Icon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = CinemaTheme.colors.accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text(currentName, color = MaterialTheme.colorScheme.primary) },
-                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                text = {
+                    CinemaText(
+                        currentName,
+                        role = TextRole.Body,
+                        tone = TextTone.Accent,
+                    )
+                },
+                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) },
                 onClick = { expanded = false },
             )
             alternates.forEach { alternate ->
                 DropdownMenuItem(
-                    text = { Text(alternate.name) },
+                    text = {
+                        CinemaText(
+                            alternate.name,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                     // With several sources, each copy's own (it opens there).
                     leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                     onClick = {
@@ -1083,9 +1130,10 @@ private fun EpisodeDetailContent(
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Episode title — the provider's often only repeats the show and the number ("EN - Show - S01E22")
-        Text(
+        CinemaText(
             text = episodeOwnTitle(episode.title).ifBlank { stringResource(R.string.series_episode_label, episode.episodeNumber) },
-            style = MaterialTheme.typography.headlineLarge,
+            role = TextRole.Display,
+            tone = TextTone.Inherit,
         )
 
         val seasonLabel = episode.seasonNumber?.let { "S${it.toString().padStart(2, '0')}" } ?: ""
@@ -1095,19 +1143,19 @@ private fun EpisodeDetailContent(
                 seasonLabel.ifEmpty { null },
                 episodeLabel,
             ).joinToString(" ")
-        Text(
+        CinemaText(
             text = subLabel,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            role = TextRole.Heading,
+            tone = TextTone.Accent,
         )
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         seriesDetail.metadata.genre?.let { genre ->
-            Text(
+            CinemaText(
                 text = genre,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
+                role = TextRole.Heading,
+                tone = TextTone.Accent,
             )
         }
 
@@ -1149,7 +1197,11 @@ private fun EpisodeDetailContent(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
+                CinemaText(
+                    stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             CinemaOutlinedButton(
@@ -1158,7 +1210,11 @@ private fun EpisodeDetailContent(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.movie_start_beginning))
+                CinemaText(
+                    stringResource(R.string.movie_start_beginning),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
         } else {
             CinemaButton(
@@ -1167,7 +1223,11 @@ private fun EpisodeDetailContent(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.series_play_episode_action))
+                CinemaText(
+                    stringResource(R.string.series_play_episode_action),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
         }
 
@@ -1180,15 +1240,20 @@ private fun EpisodeDetailContent(
                 onClick = { openExternalUrl(trailerContext, trailer) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.details_watch_trailer))
+                CinemaText(
+                    stringResource(R.string.details_watch_trailer),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
         }
 
         episode.metadata.plot?.let { plotText ->
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-            Text(
+            CinemaText(
                 text = plotText,
-                style = MaterialTheme.typography.bodyLarge,
+                role = TextRole.Body,
+                tone = TextTone.Inherit,
             )
         }
 
@@ -1196,22 +1261,22 @@ private fun EpisodeDetailContent(
 
         val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
         cast?.let {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.movie_cast_format, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         }
 
         val director = episode.metadata.director ?: seriesDetail.metadata.director
         director?.let {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.movie_director_format, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
 
@@ -1220,41 +1285,41 @@ private fun EpisodeDetailContent(
         val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
         if (isDevMode) {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-            Text(
+            CinemaText(
                 text =
                     stringResource(
                         R.string.details_tmdb_format,
                         episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
                     ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
 
         episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-            Text(
+            CinemaText(
                 text = "${stringResource(R.string.tech_container_label)} ${ext.uppercase()}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
 
         episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-            Text(
+            CinemaText(
                 text = stringResource(R.string.series_aired_format, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
 
         episode.metadata.bitrate?.takeIf { it > 0 }?.let {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-            Text(
+            CinemaText(
                 text = stringResource(R.string.series_bitrate_format, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
     }
@@ -1308,7 +1373,7 @@ private fun SeasonTabs(
                 }
                 // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
                 // underneath it and need to actually be hidden, not show through.
-                .background(MaterialTheme.colorScheme.background)
+                .background(CinemaTheme.colors.background)
                 .padding(vertical = CinemaSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
@@ -1316,21 +1381,16 @@ private fun SeasonTabs(
             val isSelected = season.seasonNumber == selectedSeason
             // Long-press: the season's menu (mark it watched or unwatched), anchored on the chip.
             Box {
-                Text(
+                CinemaText(
                     text = stringResource(R.string.series_season_name_format, season.seasonNumber),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color =
-                        if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                        },
+                    role = TextRole.Heading,
+                    emphasis = isSelected,
+                    tone = if (isSelected) TextTone.Accent else TextTone.Secondary,
                     modifier =
                         Modifier
                             .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textLow) else Color.Transparent,
-                                RoundedCornerShape(CinemaCornerRadius.medium),
+                                if (isSelected) CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.textLow) else CinemaTheme.colors.clear,
+                                CinemaTheme.shapes.card,
                             ).combinedClickable(
                                 role = Role.Button,
                                 onLongClick = onSeasonLongPress?.let { { it(season.seasonNumber) } },
@@ -1357,7 +1417,7 @@ private fun EpisodeCard(
         modifier = Modifier.fillMaxWidth(),
         border =
             if (isContinueWatching) {
-                BorderStroke(MobileDimensions.strokeWidth, MaterialTheme.colorScheme.primary)
+                BorderStroke(MobileDimensions.strokeWidth, CinemaTheme.colors.accent)
             } else {
                 cinemaCardHairlineBorder()
             },
@@ -1384,10 +1444,10 @@ private fun EpisodeCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 if (isContinueWatching) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.series_continue_watching_badge),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
                     )
                 }
                 // Episode number, with the watched check beside it — the 40dp thumbnail is too
@@ -1396,10 +1456,10 @@ private fun EpisodeCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
                 ) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        role = TextRole.Label,
+                        tone = TextTone.Accent,
                     )
                     // Watched toggle (Phase 6, docs/plans/archive/20260828_watch-state-durable-storage-plan.md): the
                     // badge itself is the tap target, since CinemaCard's onClick already owns the
@@ -1413,7 +1473,7 @@ private fun EpisodeCard(
                                     imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
                                     contentDescription =
                                         if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
-                                    tint = if (isWatched) CinemaSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (isWatched) CinemaTheme.colors.success else CinemaTheme.colors.textSecondary,
                                     modifier = Modifier.size(MobileDimensions.iconSmall),
                                 )
                             },
@@ -1422,7 +1482,7 @@ private fun EpisodeCard(
                         Icon(
                             imageVector = CinemaIcons.CheckCircle,
                             contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaSuccess,
+                            tint = CinemaTheme.colors.success,
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
@@ -1433,31 +1493,32 @@ private fun EpisodeCard(
                 // Episode title: nothing when the provider's only repeats the show and the number
                 val ownTitle = remember(episode.title) { episodeOwnTitle(episode.title) }
                 if (ownTitle.isNotBlank()) {
-                    Text(
+                    CinemaText(
                         text = ownTitle,
-                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
+                        role = TextRole.Body,
+                        tone = TextTone.Inherit,
                     )
                 }
 
                 episode.metadata.plot?.let { plotText ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-                    Text(
+                    CinemaText(
                         text = plotText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
                 }
 
                 episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-                    Text(
+                    CinemaText(
                         text = formatDuration(duration),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                     )
                 }
             }
@@ -1475,8 +1536,8 @@ private fun EpisodeCard(
                         // Clear the continue-watching border, which is drawn over the card edge.
                         .padding(bottom = MobileDimensions.strokeWidth)
                         .height(MobileDimensions.resumeBarHeight),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
+                color = CinemaTheme.colors.accent,
+                trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
             )
         }
     }
@@ -1493,7 +1554,11 @@ private fun LoadingScreen() {
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             CircularProgressIndicator()
-            Text(stringResource(R.string.series_loading_episodes))
+            CinemaText(
+                stringResource(R.string.series_loading_episodes),
+                role = TextRole.Body,
+                tone = TextTone.Inherit,
+            )
         }
     }
 }
@@ -1512,17 +1577,22 @@ private fun ErrorScreen(
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             modifier = Modifier.padding(CinemaSpacing.xl),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.series_error_loading),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error,
+                role = TextRole.Display,
+                tone = TextTone.Danger,
             )
-            Text(
+            CinemaText(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge,
+                role = TextRole.Body,
+                tone = TextTone.Inherit,
             )
             CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
-                Text(stringResource(R.string.common_back))
+                CinemaText(
+                    stringResource(R.string.common_back),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
             }
         }
     }

@@ -76,9 +76,15 @@ import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
@@ -87,6 +93,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -166,7 +173,13 @@ fun MobileEpgBrowserScreen(
             TopAppBar(
                 // No source subtitle: the search covers every source of the profile. The guide's
                 // status goes below the bar.
-                title = { Text(stringResource(R.string.epg_browser_title)) },
+                title = {
+                    CinemaText(
+                        stringResource(R.string.epg_browser_title),
+                        role = TextRole.Title,
+                        tone = TextTone.Inherit,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
@@ -194,9 +207,9 @@ fun MobileEpgBrowserScreen(
                                 contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
                                 tint =
                                     if (staleSourceCount > 0) {
-                                        CinemaWarning
+                                        CinemaTheme.colors.warning
                                     } else {
-                                        MaterialTheme.colorScheme.onSurface
+                                        CinemaTheme.colors.textPrimary
                                     },
                             )
                         }
@@ -283,37 +296,37 @@ internal fun MobileGuideSearchPane(
             if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
                 (oldestIngestedAtMs == null && hasOffSources)
             ) {
-                CinemaWarning
+                TextTone.Warning
             } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                TextTone.Secondary
             }
-        Text(
+        CinemaText(
             text = freshnessText,
-            style = MaterialTheme.typography.bodySmall,
-            color = freshnessColor,
+            role = TextRole.BodySmall,
+            tone = freshnessColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = Spacing.md),
         )
         if (isDevMode && epgDbStats != null) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 modifier = Modifier.padding(horizontal = Spacing.md),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
             )
         }
 
         val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
-        OutlinedTextField(
+        CinemaTextField(
             value = query,
             onValueChange = { onQueryChange(it) },
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
-            placeholder = { Text(placeholderText) },
+            placeholder = placeholderText,
             leadingIcon = {
                 Icon(
                     imageVector = CinemaIcons.Search,
@@ -347,7 +360,6 @@ internal fun MobileGuideSearchPane(
                         }
                     },
                 ),
-            shape = RoundedCornerShape(CinemaCornerRadius.medium),
         )
 
         // "In <category> only" (GD5).
@@ -359,16 +371,17 @@ internal fun MobileGuideSearchPane(
                         .padding(horizontal = Spacing.md)
                         .clickable { inContextOnly = !inContextOnly },
             ) {
-                Checkbox(
+                CinemaCheckbox(
                     checked = inContextOnly,
                     onCheckedChange = { inContextOnly = it },
                     modifier = Modifier.size(MobileDimensions.iconLarge),
                 )
-                Text(
+                CinemaText(
                     text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
-                    style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    role = TextRole.Caption,
+                    tone = TextTone.Inherit,
                 )
             }
         }
@@ -399,7 +412,7 @@ internal fun MobileGuideSearchPane(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text(
+                    CinemaText(
                         text =
                             if (idx is EpgIndexState.Indexing) {
                                 stringResource(
@@ -408,13 +421,13 @@ internal fun MobileGuideSearchPane(
                             } else {
                                 stringResource(R.string.epg_browser_optimizing_label)
                             },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
                     )
-                    Text(
+                    CinemaText(
                         text = progressText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        role = TextRole.Caption,
+                        tone = TextTone.Secondary,
                     )
                 }
                 LinearProgressIndicator(
@@ -450,10 +463,10 @@ internal fun MobileGuideSearchPane(
                         contentAlignment = Alignment.Center,
                     ) {
                         val hintText = stringResource(R.string.epg_browser_hint_search_titles)
-                        Text(
+                        CinemaText(
                             text = hintText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            role = TextRole.Body,
+                            tone = TextTone.Secondary,
                         )
                     }
                 }
@@ -464,11 +477,11 @@ internal fun MobileGuideSearchPane(
                     modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = state.message(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 }
             }
@@ -478,10 +491,10 @@ internal fun MobileGuideSearchPane(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = stringResource(R.string.epg_browser_no_file_message),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                     )
                 }
             }
@@ -493,7 +506,7 @@ internal fun MobileGuideSearchPane(
                 ) {
                     MitadyLoading(
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = CinemaTheme.colors.accent,
                     )
                 }
             }
@@ -515,10 +528,10 @@ internal fun MobileGuideSearchPane(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CinemaText(
                         text = state.message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
+                        role = TextRole.Body,
+                        tone = TextTone.Danger,
                     )
                 }
             }
@@ -546,22 +559,22 @@ private fun MobileResultsContent(
         }
 
     Column {
-        Text(
+        CinemaText(
             text = results.statsLine(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier =
                 Modifier.padding(
                     horizontal = Spacing.md,
                     vertical = CinemaSpacing.xxs,
                 ),
+            role = TextRole.Body,
+            tone = TextTone.Secondary,
         )
         if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_browser_partial_results_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = CinemaWarning,
                 modifier = Modifier.padding(horizontal = Spacing.md, vertical = CinemaSpacing.xxs),
+                role = TextRole.BodySmall,
+                tone = TextTone.Warning,
             )
         }
 
@@ -570,10 +583,10 @@ private fun MobileResultsContent(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                CinemaText(
                     text = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             }
         } else {
@@ -608,15 +621,15 @@ private fun MobileResultsContent(
 
 @Composable
 private fun MobileDateHeader(dateLabel: String) {
-    Text(
+    CinemaText(
         text = dateLabel,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(CinemaTheme.colors.surface)
                 .padding(vertical = CinemaSpacing.sm),
+        role = TextRole.Label,
+        tone = TextTone.Accent,
     )
 }
 
@@ -648,33 +661,34 @@ private fun MobileProgramCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
+                CinemaText(
                     text = program.title,
-                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).bounceMarquee(),
+                    role = TextRole.Heading,
+                    tone = TextTone.Inherit,
                 )
                 val category = program.category
                 if (category != null) {
-                    Text(
+                    CinemaText(
                         text = category,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = CinemaSpacing.sm),
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
                     )
                 }
             }
 
             val description = program.description
             if (!description.isNullOrBlank()) {
-                Text(
+                CinemaText(
                     text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = if (expanded) Int.MAX_VALUE else 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = CinemaSpacing.xs),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
             }
 
@@ -702,14 +716,22 @@ private fun MobileProgramCard(
                 val airingContext = LocalContext.current
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = { Text(stringResource(R.string.epg_browser_watch_confirm_title)) },
+                    title = {
+                        CinemaText(
+                            stringResource(R.string.epg_browser_watch_confirm_title),
+                            role = TextRole.Title,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                     text = {
-                        Text(
+                        CinemaText(
                             stringResource(
                                 R.string.epg_browser_watch_confirm_message,
                                 formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
                                 pending.channelName,
                             ),
+                            role = TextRole.Body,
+                            tone = TextTone.Inherit,
                         )
                     },
                     confirmButton = {
@@ -723,7 +745,13 @@ private fun MobileProgramCard(
                                     }
                                 },
                                 kind = ButtonKind.Other,
-                            ) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+                            ) {
+                                CinemaText(
+                                    stringResource(R.string.epg_browser_watch_now_btn),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            }
 
                             if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
                                 CinemaDialogActionButton(
@@ -739,14 +767,26 @@ private fun MobileProgramCard(
                                         )
                                     },
                                     kind = ButtonKind.Other,
-                                ) { Text(stringResource(R.string.epg_browser_add_calendar_btn)) }
+                                ) {
+                                    CinemaText(
+                                        stringResource(R.string.epg_browser_add_calendar_btn),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
                             }
                         }
                     },
                     dismissButton = {
                         CinemaDialogActionButton(onClick = {
                             pendingConfirmAiring = null
-                        }, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+                        }, kind = ButtonKind.Other) {
+                            CinemaText(
+                                stringResource(R.string.common_cancel),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        }
                     },
                 )
             }
@@ -772,9 +812,9 @@ private fun MobileProgramCard(
                                 stringResource(R.string.epg_browser_show_more)
                             },
                         modifier = Modifier.size(CinemaSpacing.lg),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = CinemaTheme.colors.accent,
                     )
-                    Text(
+                    CinemaText(
                         text =
                             if (expanded) {
                                 stringResource(R.string.epg_browser_show_less)
@@ -784,8 +824,8 @@ private fun MobileProgramCard(
                                     program.airings.size - 3,
                                 )
                             },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
                     )
                 }
             }
@@ -837,19 +877,19 @@ private fun MobileAiringRow(
                 imageVector = CinemaIcons.PlayArrow,
                 contentDescription = stringResource(R.string.epg_browser_watch_description),
                 modifier = Modifier.size(CinemaSpacing.lg),
-                tint = if (isOnAir) CinemaSuccess else MaterialTheme.colorScheme.primary,
+                tint = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.accent,
             )
         }
-        Text(
+        CinemaText(
             text = airing.channelName,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).bounceMarquee(),
+            role = TextRole.BodySmall,
+            tone = TextTone.Accent,
         )
         if (isOnAir || isSoon) {
-            val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
+            val badgeColor = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.warning
             val badgeLabel =
                 if (isOnAir) {
                     stringResource(
@@ -858,27 +898,23 @@ private fun MobileAiringRow(
                 } else {
                     stringResource(R.string.epg_browser_soon_badge)
                 }
-            Text(
+            CinemaBadge(
                 text = badgeLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = CinemaBackground,
-                modifier =
-                    Modifier
-                        .background(badgeColor, RoundedCornerShape(CinemaCornerRadius.small))
-                        .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
+                backgroundColor = badgeColor,
+                textColor = CinemaTheme.colors.background,
             )
         }
         val airingContext = LocalContext.current
-        Text(
+        CinemaText(
             text = formatAiringTime(airingContext, airing.startEpoch, airing.endEpoch),
-            style = MaterialTheme.typography.bodySmall,
-            color =
+            role = TextRole.BodySmall,
+            tone =
                 if (isOnAir) {
-                    CinemaSuccess
+                    TextTone.Success
                 } else if (isSoon) {
-                    CinemaWarning
+                    TextTone.Warning
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    TextTone.Secondary
                 },
         )
     }
@@ -900,16 +936,16 @@ private fun MobileEpgSearchHistorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_browser_recent_searches),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                role = TextRole.Label,
+                tone = TextTone.Secondary,
             )
             IconButton(onClick = onClearAll) {
                 Icon(
                     imageVector = CinemaIcons.Delete,
                     contentDescription = stringResource(R.string.epg_browser_clear_all_description),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(MobileDimensions.iconSmall),
                 )
             }
@@ -923,7 +959,15 @@ private fun MobileEpgSearchHistorySection(
             history.forEach { term ->
                 CinemaAssistChip(
                     onClick = { onItemClick(term) },
-                    label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    label = {
+                        CinemaText(
+                            term,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                     leadingIcon = {
                         Icon(
                             imageVector = CinemaIcons.Search,

@@ -19,9 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -38,7 +42,7 @@ fun LoadingScreen() {
     ) {
         MitohanaLoading(
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = CinemaTheme.colors.accent,
         )
     }
 }
@@ -58,22 +62,30 @@ fun ErrorScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
             modifier = Modifier.padding(Spacing.xl),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.player_error),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error,
+                role = TextRole.Display,
+                tone = TextTone.Danger,
             )
-            Text(
+            CinemaText(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 CinemaButton(onClick = onRetry) {
-                    Text(stringResource(R.string.player_retry))
+                    CinemaText(
+                        stringResource(R.string.player_retry),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
                 }
                 CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
-                    Text(stringResource(R.string.player_back))
+                    CinemaText(
+                        stringResource(R.string.player_back),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
                 }
             }
         }
@@ -89,41 +101,49 @@ fun ErrorOverlay(
 ) {
     Surface(
         modifier = Modifier.padding(Spacing.xl),
-        color = CinemaBackground.copy(alpha = CinemaAlpha.overlayMedium),
+        color = CinemaTheme.colors.background.copy(alpha = CinemaAlpha.overlayMedium),
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(Spacing.lg),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.player_error),
-                style = MaterialTheme.typography.headlineSmall,
-                color = CinemaError,
+                role = TextRole.Display,
+                tone = TextTone.Danger,
             )
             Spacer(modifier = Modifier.height(Spacing.md))
-            Text(
+            CinemaText(
                 text = error.message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextPrimary,
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
             // Developer mode: the raw error beneath the friendly one.
             val rawMessage = error.exception?.message
             if (isDevMode && rawMessage != null) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
-                Text(
+                CinemaText(
                     text = rawMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextSecondary,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.lg))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 CinemaButton(onClick = onRetry) {
-                    Text(stringResource(R.string.player_retry))
+                    CinemaText(
+                        stringResource(R.string.player_retry),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
                 }
                 CinemaButton(kind = ButtonKind.Other, onClick = onBack) {
-                    Text(stringResource(R.string.player_back))
+                    CinemaText(
+                        stringResource(R.string.player_back),
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
                 }
             }
         }
@@ -142,14 +162,14 @@ fun SlowConnectionBanner(text: String) {
     ) {
         Surface(
             modifier = Modifier.padding(horizontal = Spacing.md),
-            color = CinemaBackground.copy(alpha = CinemaAlpha.overlayMedium),
+            color = CinemaTheme.colors.background.copy(alpha = CinemaAlpha.overlayMedium),
             shape = MaterialTheme.shapes.medium,
         ) {
-            Text(
+            CinemaText(
                 text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextPrimary,
                 modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
         }
     }

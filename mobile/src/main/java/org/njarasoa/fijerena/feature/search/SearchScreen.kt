@@ -45,10 +45,13 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
@@ -63,6 +66,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
@@ -79,6 +83,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.showsGuideTab
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.epgbrowser.MobileGuideSearchPane
 import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.CinemaTabRow
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
@@ -254,11 +260,15 @@ fun MobileSearchScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(stringResource(R.string.common_search))
-                        Text(
+                        CinemaText(
+                            stringResource(R.string.common_search),
+                            role = TextRole.Title,
+                            tone = TextTone.Inherit,
+                        )
+                        CinemaText(
                             text = localizedContentTypeLabel(contentType),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Secondary,
                         )
                     }
                 },
@@ -322,27 +332,25 @@ fun MobileSearchScreen(
 
             // Search bar — searches as you type; the keyboard's search action runs it at once.
             val keyboardController = LocalSoftwareKeyboardController.current
-            OutlinedTextField(
+            CinemaSearchField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(Spacing.md),
-                placeholder = { Text(searchPlaceholder(contentType), color = CinemaTextPrimary.copy(alpha = 0.6f)) },
-                shape = androidx.compose.foundation.shape.CircleShape,
+                placeholder = searchPlaceholder(contentType),
                 leadingIcon = {
                     Icon(
                         imageVector = CinemaIcons.Search,
                         contentDescription = null,
-                        tint = CinemaTextPrimary.copy(alpha = 0.6f),
                     )
                 },
                 trailingIcon = {
                     if (uiState is SearchViewModel.UiState.Loading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(MobileDimensions.iconDefault),
-                            color = CinemaTextPrimary,
+                            color = CinemaTheme.colors.textPrimary,
                         )
                     } else if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,13 +370,12 @@ fun MobileSearchScreen(
                                 Icon(
                                     imageVector = CinemaIcons.Close,
                                     contentDescription = stringResource(R.string.provider_clear_button),
-                                    tint = CinemaTextPrimary,
+                                    tint = CinemaTheme.colors.textPrimary,
                                 )
                             }
                         }
                     }
                 },
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions =
                     KeyboardActions(
@@ -379,24 +386,13 @@ fun MobileSearchScreen(
                             }
                         },
                     ),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedContainerColor = CinemaSurfaceVariant,
-                        unfocusedContainerColor = CinemaSurfaceLight,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.2f),
-                    ),
             )
             sources.firstOrNull { it.providerId == source }?.let { chosen ->
-                Text(
+                CinemaText(
                     text = stringResource(R.string.search_source_only_format, chosen.name),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = Spacing.lg, bottom = Spacing.xs),
+                    role = TextRole.Caption,
+                    tone = TextTone.Accent,
                 )
             }
 
@@ -499,27 +495,20 @@ internal fun MobileSearchTabs(
     selected: SearchTab,
     onSelect: (SearchTab) -> Unit,
 ) {
-    PrimaryTabRow(selectedTabIndex = selected.ordinal, containerColor = Color.Transparent) {
-        SearchTab.entries.forEach { tab ->
-            Tab(
-                selected = tab == selected,
-                onClick = { onSelect(tab) },
-                text = {
-                    Text(
-                        stringResource(
-                            when (tab) {
-                                SearchTab.CATALOGUE -> R.string.search_tab_catalogue
-                                SearchTab.GUIDE -> R.string.search_tab_guide
-                            },
-                        ),
-                        maxLines = 1,
-                    )
-                },
-                selectedContentColor = MaterialTheme.colorScheme.primary,
-                unselectedContentColor = CinemaTextSecondary,
-            )
-        }
-    }
+    CinemaTabRow(
+        selectedIndex = selected.ordinal,
+        labels =
+            SearchTab.entries.map { tab ->
+                stringResource(
+                    when (tab) {
+                        SearchTab.CATALOGUE -> R.string.search_tab_catalogue
+                        SearchTab.GUIDE -> R.string.search_tab_guide
+                    },
+                )
+            },
+        onSelect = { onSelect(SearchTab.entries[it]) },
+        transparent = true,
+    )
 }
 
 /**
@@ -538,7 +527,7 @@ private fun SourceFilterAction(
             onClick = { expanded = true },
             icon = CinemaIcons.Tune,
             label = stringResource(R.string.search_source_filter_label),
-            tint = if (selected != null) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+            tint = if (selected != null) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             val choices =
@@ -546,7 +535,13 @@ private fun SourceFilterAction(
                     sources.map { it.providerId to "${it.name} (${it.count})" }
             for ((providerId, label) in choices) {
                 DropdownMenuItem(
-                    text = { Text(label) },
+                    text = {
+                        CinemaText(
+                            label,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                     onClick = {
                         onSelect(providerId)
                         expanded = false
@@ -601,7 +596,7 @@ private fun LoadingView(message: String? = null) {
     ) {
         MitadyLoading(
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = CinemaTheme.colors.accent,
             overrideText = message,
         )
     }
@@ -618,14 +613,15 @@ private fun ErrorView(message: String) {
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
             modifier = Modifier.padding(Spacing.xl),
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.common_error),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error,
+                role = TextRole.Display,
+                tone = TextTone.Danger,
             )
-            Text(
+            CinemaText(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge,
+                role = TextRole.Body,
+                tone = TextTone.Inherit,
             )
         }
     }
@@ -661,9 +657,9 @@ private fun SearchResults(
     // is what stops a CardColors being allocated per visible result per recomposition.
     val categoryCardColors =
         CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = CinemaAlpha.tint),
+            containerColor = CinemaTheme.colors.accentStrong.copy(alpha = CinemaAlpha.tint),
         )
-    val streamCardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val streamCardColors = CardDefaults.cardColors(containerColor = CinemaTheme.colors.surface)
 
     fun toggleGroup(contentType: String) {
         expandedGroups = expandedGroups.toggled(contentType)
@@ -683,10 +679,10 @@ private fun SearchResults(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                CinemaText(
                     text = stringResource(R.string.search_categories_streams_hint),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
                 )
             }
         }
@@ -695,22 +691,22 @@ private fun SearchResults(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
+            CinemaText(
                 text =
                     if (queryContentType == "ALL") {
                         stringResource(R.string.search_no_results_query_format, query)
                     } else {
                         stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
                     },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
             if (sourceErrors.isNotEmpty()) {
-                Text(
+                CinemaText(
                     text = sourceErrors.joinToString("\n"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.BottomCenter),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Danger,
                 )
             }
         }
@@ -751,7 +747,13 @@ private fun SearchResults(
                     CinemaFilterChip(
                         selected = effectiveFilter == null,
                         onClick = { onTypeFilterChange(null) },
-                        label = { Text("${stringResource(R.string.content_type_all_label)} ($totalCount)") },
+                        label = {
+                            CinemaText(
+                                "${stringResource(R.string.content_type_all_label)} ($totalCount)",
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        },
                     )
                     for ((type, cats, streams) in groupedByType) {
                         val count = cats.size + streams.size
@@ -759,7 +761,13 @@ private fun SearchResults(
                             CinemaFilterChip(
                                 selected = effectiveFilter == type,
                                 onClick = { onTypeFilterChange(if (effectiveFilter == type) null else type) },
-                                label = { Text("${localizedContentTypeLabel(type)} ($count)") },
+                                label = {
+                                    CinemaText(
+                                        "${localizedContentTypeLabel(type)} ($count)",
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                },
                             )
                         }
                     }
@@ -785,22 +793,22 @@ private fun SearchResults(
                         ) {
                             MitadyLoading(
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = CinemaTheme.colors.accent,
                             )
-                            Text(
+                            CinemaText(
                                 text = " ($searchProgress)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                role = TextRole.Body,
+                                tone = TextTone.Accent,
                             )
                         }
                     }
                 } else if (!isSearching && searchProgress != null) {
                     item(key = "search_complete", contentType = "status") {
-                        Text(
+                        CinemaText(
                             text = searchProgress,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(vertical = Spacing.xs),
+                            role = TextRole.Body,
+                            tone = TextTone.Accent,
                         )
                     }
                 }
@@ -808,13 +816,10 @@ private fun SearchResults(
                 // Dev stats on separate line
                 if (devStats != null) {
                     item(key = "dev_stats", contentType = "status") {
-                        Text(
+                        CinemaText(
                             text = devStats,
-                            style =
-                                MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium,
-                                ),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            role = TextRole.Caption,
+                            tone = TextTone.Secondary,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = androidx.compose.ui.text.style.TextAlign.End,
                         )
@@ -911,10 +916,10 @@ private fun SearchResults(
 
                 if (sourceErrors.isNotEmpty()) {
                     item(key = "source_errors", contentType = "status") {
-                        Text(
+                        CinemaText(
                             text = sourceErrors.joinToString("\n"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
+                            role = TextRole.BodySmall,
+                            tone = TextTone.Danger,
                         )
                     }
                 }
@@ -940,16 +945,16 @@ private fun MobileSearchHistorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            CinemaText(
                 text = stringResource(R.string.epg_browser_recent_searches),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                role = TextRole.Label,
+                tone = TextTone.Secondary,
             )
             IconButton(onClick = onClearAll) {
                 Icon(
                     imageVector = CinemaIcons.Delete,
                     contentDescription = stringResource(R.string.epg_browser_clear_all_description),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(MobileDimensions.iconSmall),
                 )
             }
@@ -963,7 +968,15 @@ private fun MobileSearchHistorySection(
             history.forEach { term ->
                 CinemaAssistChip(
                     onClick = { onItemClick(term) },
-                    label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    label = {
+                        CinemaText(
+                            term,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            role = TextRole.Label,
+                            tone = TextTone.Inherit,
+                        )
+                    },
                     leadingIcon = {
                         Icon(
                             imageVector = CinemaIcons.Search,
@@ -1016,16 +1029,16 @@ private fun SearchSectionHeader(
                 .padding(vertical = Spacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        CinemaText(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            role = TextRole.Heading,
+            tone = TextTone.Accent,
         )
         Spacer(Modifier.weight(1f))
-        Text(
+        CinemaText(
             text = searchCountLabel(count, hiddenCount),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            role = TextRole.Body,
+            tone = TextTone.Secondary,
         )
     }
 }
@@ -1044,8 +1057,8 @@ private fun MobileCollapsibleHeader(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = Spacing.xxs),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.tint),
-        shape = RoundedCornerShape(CinemaCornerRadius.small),
+        color = CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.tint),
+        shape = CinemaTheme.shapes.chip,
     ) {
         Row(
             modifier =
@@ -1055,23 +1068,23 @@ private fun MobileCollapsibleHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            CinemaText(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
+                role = TextRole.Heading,
+                tone = TextTone.Accent,
+                emphasis = true,
             )
             Spacer(Modifier.weight(1f))
-            Text(
+            CinemaText(
                 text = searchCountLabel(count, hiddenCount),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 modifier = Modifier.padding(end = Spacing.xs),
+                role = TextRole.Body,
+                tone = TextTone.Secondary,
             )
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = CinemaTheme.colors.accent,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
@@ -1108,14 +1121,14 @@ private fun CategoryResultCard(
             Icon(
                 CinemaIcons.Folder,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = CinemaTheme.colors.accent,
             )
-            Text(
+            CinemaText(
                 text = result.categoryName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                role = TextRole.Body,
+                tone = TextTone.Primary,
             )
         }
     }
@@ -1170,13 +1183,13 @@ private fun SearchResultCard(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
+                    CinemaText(
                         text = parsedTitle.titleWithoutYear.ifBlank { result.streamName },
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
+                        role = TextRole.Body,
+                        tone = TextTone.Primary,
                     )
                     // Its source (when the search covers several) ends the line, in the same place on every row.
                     result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
@@ -1187,11 +1200,11 @@ private fun SearchResultCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TitleBadges(parsedTitle)
-                    Text(
+                    CinemaText(
                         // The year the title gave, before the category, so a long category can't push it off.
                         text = listOfNotNull(parsedTitle.year?.toString(), result.categoryName).joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

@@ -59,8 +59,11 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
@@ -69,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -163,6 +167,7 @@ fun MobileGuideGrid(
             .collect { (first, last) -> currentOnRowsVisible(first, last) }
     }
 
+    val nowLineColor = CinemaTheme.colors.accent
     Column(
         modifier =
             modifier
@@ -175,7 +180,7 @@ fun MobileGuideGrid(
                     val x = canvasLeftPx + layout.xFor(now) - scrollState.value
                     if (x < canvasLeftPx || x > size.width) return@drawWithContent
                     drawLine(
-                        color = CinemaAccent,
+                        color = nowLineColor,
                         start = Offset(x, 0f),
                         end = Offset(x, size.height),
                         strokeWidth = nowLineWidthPx,
@@ -246,14 +251,14 @@ private fun TimeRuler(
                                     Modifier
                                         .width(MobileDimensions.dividerThin)
                                         .fillMaxHeight()
-                                        .background(CinemaTextTertiary),
+                                        .background(CinemaTheme.colors.textTertiary),
                             )
-                            Text(
+                            CinemaText(
                                 text = TimeFormat.formatTime(tick.epochSec),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CinemaTextSecondary,
                                 maxLines = 1,
                                 modifier = Modifier.padding(start = CinemaSpacing.xxs),
+                                role = TextRole.Caption,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }
@@ -296,12 +301,12 @@ private fun GuideRow(
         )
         if (noListings) {
             Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
-                Text(
+                CinemaText(
                     text = stringResource(R.string.epg_guide_no_listings_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.padding(horizontal = CinemaSpacing.sm),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
                 )
             }
             return@Row
@@ -322,7 +327,7 @@ private fun GuideRow(
                             Modifier
                                 .padding(vertical = CinemaSpacing.xxs)
                                 .alpha(CinemaAlpha.tint)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(CinemaTheme.colors.surfaceRaised),
                     )
                     cells.forEach { cell ->
                         key(cell.program.id) {
@@ -382,13 +387,13 @@ private fun ChannelCell(
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
         }
-        Text(
+        CinemaText(
             text = channel.name,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
             maxLines = if (hasLogo) 1 else 2,
             overflow = TextOverflow.Ellipsis,
+            role = TextRole.Caption,
+            tone = TextTone.Primary,
+            emphasis = true,
         )
     }
 }
@@ -423,8 +428,7 @@ private fun ProgramCell(
                 }
             }
         }
-    val radius = CinemaCornerRadius.small
-    val shape = remember(radius) { RoundedCornerShape(radius) }
+    val shape = CinemaTheme.shapes.chip
     val onAir = phase == CellPhase.ON_AIR
 
     Row(
@@ -433,7 +437,7 @@ private fun ProgramCell(
                 .padding(horizontal = MobileDimensions.dividerThin, vertical = CinemaSpacing.xxs)
                 .alpha(if (phase == CellPhase.PAST) CinemaAlpha.textDisabled else 1f)
                 .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(CinemaTheme.colors.surfaceRaised)
                 .clickable(onClick = onClick),
     ) {
         if (onAir) {
@@ -442,7 +446,7 @@ private fun ProgramCell(
                     Modifier
                         .width(CinemaSpacing.xxs)
                         .fillMaxHeight()
-                        .background(CinemaAccent),
+                        .background(CinemaTheme.colors.accent),
             )
         }
         if (cell.labelFits) {
@@ -468,25 +472,25 @@ private fun ProgramCell(
                         Icon(
                             imageVector = CinemaIcons.Replay,
                             contentDescription = stringResource(R.string.epg_replayable),
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = CinemaTheme.colors.textPrimary,
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
-                    Text(
+                    CinemaText(
                         text = cell.program.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (onAir) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (onAir) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        role = TextRole.BodySmall,
+                        emphasis = onAir,
+                        tone = if (onAir) TextTone.Accent else TextTone.Primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
+                CinemaText(
                     text = TimeFormat.formatTimeRange(cell.program.startTime, cell.program.endTime),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Clip,
+                    role = TextRole.Caption,
+                    tone = TextTone.Secondary,
                 )
             }
         }

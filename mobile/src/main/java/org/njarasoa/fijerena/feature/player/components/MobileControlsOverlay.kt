@@ -74,13 +74,18 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
@@ -172,13 +177,11 @@ fun MobileControlsOverlay(
         }
     }
 
-    val typography = MaterialTheme.typography
-
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
+                .background(CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.tint))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -215,19 +218,19 @@ fun MobileControlsOverlay(
                             modifier = Modifier.padding(top = Spacing.xxxs),
                         ) {
                             if (videoResolution != null) {
-                                Text(
+                                CinemaText(
                                     text = videoResolution!!,
-                                    style = typography.labelSmall,
-                                    color = CinemaAccent,
-                                    fontWeight = FontWeight.Bold,
+                                    role = TextRole.Caption,
+                                    tone = TextTone.Accent,
+                                    emphasis = true,
                                 )
                             }
                             if (videoCodec != null) {
                                 CinemaBadge(
                                     text = videoCodec!!,
-                                    backgroundColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
-                                    textColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                    style = typography.labelSmall.copy(fontSize = 10.sp),
+                                    backgroundColor = CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.tint),
+                                    textColor = CinemaTheme.colors.onMedia.copy(alpha = CinemaAlpha.textMedium),
+                                    style = textStyleOf(TextRole.Caption),
                                 )
                             }
                         }
@@ -260,7 +263,7 @@ fun MobileControlsOverlay(
                             Icon(
                                 imageVector = CinemaIcons.FastRewind,
                                 contentDescription = stringResource(R.string.player_rewind_1min_description),
-                                tint = CinemaTextPrimary,
+                                tint = CinemaTheme.colors.onMedia,
                                 modifier = Modifier.size(MobileDimensions.iconLarge),
                             )
                         }
@@ -280,7 +283,7 @@ fun MobileControlsOverlay(
                                 stringResource(
                                     if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause,
                                 ),
-                            tint = CinemaTextPrimary,
+                            tint = CinemaTheme.colors.onMedia,
                             modifier = Modifier.size(MobileDimensions.iconPlayIcon),
                         )
                     }
@@ -292,7 +295,7 @@ fun MobileControlsOverlay(
                             Icon(
                                 imageVector = CinemaIcons.FastForward,
                                 contentDescription = stringResource(R.string.player_fast_forward_5min_description),
-                                tint = CinemaTextPrimary,
+                                tint = CinemaTheme.colors.onMedia,
                                 modifier = Modifier.size(MobileDimensions.iconLarge),
                             )
                         }
@@ -339,17 +342,17 @@ fun MobileControlsOverlay(
                                     modifier =
                                         Modifier
                                             .size(MobileDimensions.liveDotSize)
-                                            .background(CinemaLive, shape = CircleShape),
+                                            .background(CinemaTheme.colors.live, shape = CinemaTheme.shapes.identity),
                                 )
-                                Text(
+                                CinemaText(
                                     text = stringResource(R.string.player_live),
-                                    style = typography.labelLarge,
-                                    color = CinemaTextPrimary,
+                                    role = TextRole.Label,
+                                    tone = TextTone.Primary,
                                 )
                                 BadgedTitle(
                                     raw = metadata.title,
-                                    style = typography.titleMedium,
-                                    color = CinemaTextPrimary,
+                                    style = textStyleOf(TextRole.Heading),
+                                    color = CinemaTheme.colors.textPrimary,
                                     modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
                                 )
                             } else if (metadata.catchupLabel != null) {
@@ -357,27 +360,27 @@ fun MobileControlsOverlay(
                                 Icon(
                                     imageVector = CinemaIcons.Replay,
                                     contentDescription = null,
-                                    tint = CinemaAccentLight,
+                                    tint = CinemaTheme.colors.accentSoft,
                                     modifier = Modifier.size(MobileDimensions.iconSmall),
                                 )
-                                Text(
+                                CinemaText(
                                     text = stringResource(R.string.player_catchup),
-                                    style = typography.labelLarge,
-                                    color = CinemaTextPrimary,
+                                    role = TextRole.Label,
+                                    tone = TextTone.Primary,
                                 )
                                 BadgedTitle(
                                     raw = metadata.title,
-                                    style = typography.titleMedium,
-                                    color = CinemaTextPrimary,
+                                    style = textStyleOf(TextRole.Heading),
+                                    color = CinemaTheme.colors.textPrimary,
                                     modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
                                 )
-                                Text(
+                                CinemaText(
                                     text = "· ${metadata.catchupLabel}",
-                                    style = typography.titleMedium,
-                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f, fill = false),
+                                    role = TextRole.Heading,
+                                    tone = TextTone.Primary,
                                 )
                             } else {
                                 // Some providers' episode titles already embed the show name and
@@ -391,33 +394,33 @@ fun MobileControlsOverlay(
                                     }
                                 BadgedTitle(
                                     raw = metadata.showTitle ?: metadata.title,
-                                    style = typography.titleMedium,
-                                    color = CinemaTextPrimary,
+                                    style = textStyleOf(TextRole.Heading),
+                                    color = CinemaTheme.colors.textPrimary,
                                     modifier = Modifier.weight(1f, fill = false),
                                 )
                                 if (!episodeLine.isNullOrBlank()) {
-                                    Text(
+                                    CinemaText(
                                         text = "· $episodeLine",
-                                        style = typography.titleMedium,
-                                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false),
+                                        role = TextRole.Heading,
+                                        tone = TextTone.Primary,
                                     )
                                 }
                             }
                         }
                         if (hasSeekBar) {
-                            Text(
+                            CinemaText(
                                 text =
                                     stringResource(
                                         R.string.movie_ends_at_format,
                                         org.njarasoa.fijerena.core.ui.theme.TimeFormat
                                             .formatClockTime(Date(System.currentTimeMillis() + (duration - position))),
                                     ),
-                                style = typography.bodySmall,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 maxLines = 1,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }
@@ -430,17 +433,17 @@ fun MobileControlsOverlay(
 
                         val scrubberColors =
                             SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                                thumbColor = CinemaTheme.colors.accent,
+                                activeTrackColor = CinemaTheme.colors.accent,
+                                inactiveTrackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.tint),
                             )
                         val scrubberInteractionSource = remember { MutableInteractionSource() }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
+                            CinemaText(
                                 text = formatTime(position),
-                                style = typography.bodySmall,
-                                color = CinemaTextPrimary,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Primary,
                             )
                             Slider(
                                 value = if (isSeeking) seekPosition else position.toFloat() / duration.toFloat(),
@@ -477,10 +480,10 @@ fun MobileControlsOverlay(
                                     )
                                 },
                             )
-                            Text(
+                            CinemaText(
                                 text = formatTime(duration),
-                                style = typography.bodySmall,
-                                color = CinemaTextPrimary,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Primary,
                             )
                         }
                     } else if (isLive && currentEpgProgram != null) {
@@ -490,12 +493,12 @@ fun MobileControlsOverlay(
                             val epgContext = LocalContext.current
                             val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
                             val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
-                            Text(
+                            CinemaText(
                                 text = stringResource(R.string.player_now_playing_format, currentEpgProgram.title, nowStart, nowEnd),
-                                style = typography.bodySmall,
-                                color = CinemaTextPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Primary,
                             )
                             // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
                             val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
@@ -513,21 +516,21 @@ fun MobileControlsOverlay(
                                         .fillMaxWidth()
                                         .padding(vertical = Spacing.xxs)
                                         .height(Spacing.xxxs),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                                color = CinemaTheme.colors.accent,
+                                trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.tint),
                             )
                             if (nextEpgProgram != null) {
-                                Text(
+                                CinemaText(
                                     text =
                                         stringResource(
                                             R.string.player_up_next_format,
                                             nextEpgProgram.title,
                                             formatEpochTime(epgContext, nextEpgProgram.startTime),
                                         ),
-                                    style = typography.bodySmall,
-                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
+                                    role = TextRole.BodySmall,
+                                    tone = TextTone.Secondary,
                                 )
                             }
                         }
@@ -546,7 +549,11 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onWatchLive,
                                 icon = {
-                                    Icon(CinemaIcons.LiveTv, stringResource(R.string.player_osd_watch_live), tint = CinemaTextPrimary)
+                                    Icon(
+                                        CinemaIcons.LiveTv,
+                                        stringResource(R.string.player_osd_watch_live),
+                                        tint = CinemaTheme.colors.textPrimary,
+                                    )
                                 },
                             )
                         }
@@ -555,7 +562,11 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onStartOver,
                                 icon = {
-                                    Icon(CinemaIcons.Replay, stringResource(R.string.player_osd_start_over), tint = CinemaTextPrimary)
+                                    Icon(
+                                        CinemaIcons.Replay,
+                                        stringResource(R.string.player_osd_start_over),
+                                        tint = CinemaTheme.colors.textPrimary,
+                                    )
                                 },
                             )
                         }
@@ -564,7 +575,7 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onAudioTrack,
                                 icon = {
-                                    Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tint = CinemaTextPrimary)
+                                    Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tint = CinemaTheme.colors.textPrimary)
                                 },
                             )
                         }
@@ -573,7 +584,11 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onSubtitle,
                                 icon = {
-                                    Icon(CinemaIcons.Subtitles, stringResource(R.string.player_subtitles), tint = CinemaTextPrimary)
+                                    Icon(
+                                        CinemaIcons.Subtitles,
+                                        stringResource(R.string.player_subtitles),
+                                        tint = CinemaTheme.colors.textPrimary,
+                                    )
                                 },
                             )
                         }
@@ -582,7 +597,7 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = onQuality,
                                 icon = {
-                                    Icon(CinemaIcons.Tune, stringResource(R.string.player_quality), tint = CinemaTextPrimary)
+                                    Icon(CinemaIcons.Tune, stringResource(R.string.player_quality), tint = CinemaTheme.colors.textPrimary)
                                 },
                             )
                         }
@@ -600,7 +615,7 @@ fun MobileControlsOverlay(
                                             stringResource(
                                                 if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
                                             ),
-                                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                                        tint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                                     )
                                 },
                             )
@@ -610,7 +625,7 @@ fun MobileControlsOverlay(
                         CinemaIconButton(
                             onClick = onStats,
                             icon = {
-                                Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats), tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats), tint = CinemaTheme.colors.textPrimary)
                             },
                         )
 
@@ -619,7 +634,7 @@ fun MobileControlsOverlay(
                             CinemaIconButton(
                                 onClick = { showInfo = true },
                                 icon = {
-                                    Icon(CinemaIcons.Info, stringResource(R.string.player_info), tint = CinemaTextPrimary)
+                                    Icon(CinemaIcons.Info, stringResource(R.string.player_info), tint = CinemaTheme.colors.textPrimary)
                                 },
                             )
                         }
@@ -634,7 +649,7 @@ fun MobileControlsOverlay(
                                     Icon(
                                         CinemaIcons.SkipNext,
                                         contentDescription = stringResource(R.string.player_next_episode),
-                                        tint = CinemaTextPrimary,
+                                        tint = CinemaTheme.colors.textPrimary,
                                     )
                                 },
                             )
@@ -652,7 +667,7 @@ fun MobileControlsOverlay(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .background(CinemaBackground.copy(alpha = CinemaAlpha.scrim))
+                        .background(CinemaTheme.colors.scrim)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
@@ -665,18 +680,18 @@ fun MobileControlsOverlay(
                             .widthIn(max = MobileDimensions.statsOverlayMaxWidth * 1.5f)
                             .padding(CinemaSpacing.xl)
                             .background(
-                                color = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
-                                shape = RoundedCornerShape(Spacing.sm),
+                                color = CinemaTheme.colors.surface.copy(alpha = CinemaAlpha.scrim),
+                                shape = CinemaTheme.shapes.card,
                             ).padding(CinemaSpacing.lg),
                 ) {
                     Column {
-                        BadgedTitle(raw = metadata.title, style = typography.titleMedium, color = CinemaTextPrimary)
+                        BadgedTitle(raw = metadata.title, style = textStyleOf(TextRole.Heading), color = CinemaTheme.colors.textPrimary)
                         metadata.description?.let { description ->
-                            Text(
+                            CinemaText(
                                 text = description,
-                                style = typography.bodyMedium,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                                 modifier = Modifier.padding(top = CinemaSpacing.sm),
+                                role = TextRole.Body,
+                                tone = TextTone.Primary,
                             )
                         }
                     }
@@ -695,11 +710,11 @@ private fun ClockDisplay() {
             delay(1000L)
         }
     }
-    Text(
+    CinemaText(
         text =
             org.njarasoa.fijerena.core.ui.theme.TimeFormat
                 .formatClockTime(Date(tick)),
-        style = MaterialTheme.typography.titleMedium,
-        color = CinemaTextPrimary,
+        role = TextRole.Heading,
+        tone = TextTone.OnMedia,
     )
 }

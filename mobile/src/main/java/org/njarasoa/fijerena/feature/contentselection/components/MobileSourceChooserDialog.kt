@@ -15,9 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -33,7 +37,13 @@ fun MobileSourceChooserDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.source_chooser_title)) },
+        title = {
+            CinemaText(
+                stringResource(R.string.source_chooser_title),
+                role = TextRole.Title,
+                tone = TextTone.Inherit,
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -43,16 +53,27 @@ fun MobileSourceChooserDialog(
                     Surface(
                         onClick = { onChosen(id) },
                         modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(CinemaCornerRadius.small),
+                        color = CinemaTheme.colors.surfaceRaised,
+                        shape = CinemaTheme.shapes.chip,
                     ) {
-                        Text(text = name, modifier = Modifier.padding(CinemaSpacing.md))
+                        CinemaText(
+                            text = name,
+                            modifier = Modifier.padding(CinemaSpacing.md),
+                            role = TextRole.Body,
+                            tone = TextTone.Inherit,
+                        )
                     }
                 }
             }
         },
         confirmButton = {
-            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) { Text(stringResource(R.string.common_cancel)) }
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(
+                    stringResource(R.string.common_cancel),
+                    role = TextRole.Label,
+                    tone = TextTone.Inherit,
+                )
+            }
         },
     )
 }
