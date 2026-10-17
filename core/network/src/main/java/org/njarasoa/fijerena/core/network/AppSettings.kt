@@ -617,7 +617,7 @@ class AppSettings(
 
     /**
      * Get or set application language (ISO 639-1 code).
-     * Supported: "en", "mg"
+     * Supported: "en", "fr", "mg"
      * Default: "en"
      */
     var language: String
