@@ -1,32 +1,36 @@
 package org.njarasoa.fijerena.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
-import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
-import org.njarasoa.fijerena.core.ui.theme.UiShapeTokens
+import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
+import org.njarasoa.fijerena.core.ui.theme.ProvideCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.UiStyleHolder
+import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialColorScheme
+import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialShapes
 import org.njarasoa.fijerena.core.ui.theme.paletteById
 import org.njarasoa.fijerena.core.ui.theme.styleById
 
-private fun cinemaShapes(tokens: UiShapeTokens) =
-    Shapes(
-        extraSmall = RoundedCornerShape(CinemaSpacing.xxs),
-        small = RoundedCornerShape(tokens.chip),
-        medium = RoundedCornerShape(tokens.card),
-        large = RoundedCornerShape(tokens.card + CinemaSpacing.xxs),
-        extraLarge = RoundedCornerShape(tokens.dialog),
+/** [CinemaTheme]'s text roles from the phone's typography (which carries the Look and Feel). */
+private fun cinemaTypeRoles(typography: Typography) =
+    CinemaTypeRoles(
+        display = typography.headlineMedium,
+        title = typography.titleLarge,
+        heading = typography.titleMedium,
+        body = typography.bodyMedium,
+        bodySmall = typography.bodySmall,
+        label = typography.labelLarge,
+        caption = typography.labelSmall,
     )
 
+/**
+ * The phone's theme: [CinemaTheme] from the colour theme [themeId] and the Look and Feel [styleId],
+ * and Material 3 themed from it, so its components follow too.
+ */
 @Composable
 fun FirstVideoPlayerTheme(
     themeId: String = "deep_night",
@@ -42,46 +46,12 @@ fun FirstVideoPlayerTheme(
         UiStyleHolder.current = style
     }
 
-    val colorScheme =
-        remember(palette) {
-            darkColorScheme(
-                primary = palette.accent,
-                onPrimary = palette.onAccent,
-                primaryContainer = palette.accentDark,
-                onPrimaryContainer = palette.accentLight,
-                secondary = palette.orange,
-                onSecondary = Color.White,
-                secondaryContainer = palette.orangeDark,
-                onSecondaryContainer = palette.orangeLight,
-                tertiary = palette.accentLight,
-                onTertiary = Color.Black,
-                tertiaryContainer = palette.surface,
-                onTertiaryContainer = palette.accentLight,
-                error = palette.error,
-                onError = Color.White,
-                errorContainer = palette.error.copy(alpha = 0.2f),
-                onErrorContainer = palette.error.copy(alpha = 0.8f),
-                background = palette.background,
-                onBackground = palette.textPrimary,
-                surface = palette.surface,
-                onSurface = palette.textPrimary,
-                surfaceVariant = palette.surfaceVariant,
-                onSurfaceVariant = palette.textSecondary,
-                outline = palette.surfaceLight,
-                outlineVariant = palette.surfaceVariant,
-                surfaceTint = palette.accent,
-                inverseSurface = palette.textPrimary,
-                inverseOnSurface = palette.background,
-                inversePrimary = palette.accentDark,
-                scrim = Color.Black.copy(alpha = 0.5f),
-            )
-        }
-
-    CompositionLocalProvider(LocalCinemaTheme provides palette, LocalUiStyle provides style) {
+    val typography = remember(style) { cinemaTypography(style.type) }
+    ProvideCinemaTheme(palette, style, remember(typography) { cinemaTypeRoles(typography) }) {
         MaterialTheme(
-            colorScheme = colorScheme,
-            typography = remember(style) { cinemaTypography(style.type) },
-            shapes = remember(style) { cinemaShapes(style.shapes) },
+            colorScheme = remember(palette) { cinemaMaterialColorScheme(CinemaColorRoles.from(palette)) },
+            typography = typography,
+            shapes = remember(style) { cinemaMaterialShapes(style) },
             content = content,
         )
     }

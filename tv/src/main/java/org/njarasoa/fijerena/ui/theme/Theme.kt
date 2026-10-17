@@ -2,84 +2,25 @@ package org.njarasoa.fijerena.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Shapes
+import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
+import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
-import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
+import org.njarasoa.fijerena.core.ui.theme.ProvideCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.UiShapeTokens
 import org.njarasoa.fijerena.core.ui.theme.UiStyleHolder
+import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialColorScheme
+import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialShapes
+import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.core.ui.theme.paletteById
 import org.njarasoa.fijerena.core.ui.theme.styleById
-
-/**
- * Non-TV Material3 mirror of the palette.
- *
- * TV screens only theme `androidx.tv.material3.MaterialTheme`, but the dialogs, text fields and
- * selection controls inside them come from `androidx.compose.material3`, which reads its *own*
- * `MaterialTheme`. Left unprovided that resolves to Material3's stock **light** scheme, which is
- * why every [org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog] on TV rendered as a white
- * panel with a purple button regardless of the selected theme.
- *
- * The `surfaceContainer*` roles matter specifically: `AlertDialogDefaults.containerColor` resolves
- * to `surfaceContainerHigh`.
- */
-private fun cinemaMaterialColorScheme(palette: org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette) =
-    androidx.compose.material3.darkColorScheme(
-        primary = palette.accent,
-        onPrimary = palette.onAccent,
-        primaryContainer = palette.accentDark,
-        onPrimaryContainer = palette.accentLight,
-        secondary = palette.orange,
-        onSecondary = androidx.compose.ui.graphics.Color.Black,
-        secondaryContainer = palette.orangeDark,
-        onSecondaryContainer = palette.orangeLight,
-        tertiary = palette.accentLight,
-        onTertiary = androidx.compose.ui.graphics.Color.Black,
-        tertiaryContainer = palette.surface,
-        onTertiaryContainer = palette.accentLight,
-        error = palette.error,
-        onError = androidx.compose.ui.graphics.Color.White,
-        errorContainer = palette.error.copy(alpha = 0.2f),
-        onErrorContainer = palette.error.copy(alpha = 0.8f),
-        background = palette.background,
-        onBackground = palette.textPrimary,
-        surface = palette.surface,
-        onSurface = palette.textPrimary,
-        surfaceVariant = palette.surfaceVariant,
-        onSurfaceVariant = palette.textSecondary,
-        // Dialogs land on `surfaceContainerHigh`, and the controls inside them rest on
-        // `surfaceVariant` — so the dialog has to sit one step *below* that, or an unfocused
-        // option is the same colour as the panel behind it and disappears.
-        surfaceContainerLowest = palette.background,
-        surfaceContainerLow = palette.background,
-        surfaceContainer = palette.surface,
-        surfaceContainerHigh = palette.surface,
-        surfaceContainerHighest = palette.surfaceVariant,
-        outline = palette.surfaceLight,
-        outlineVariant = palette.surfaceVariant,
-        surfaceTint = palette.accent,
-        inverseSurface = palette.textPrimary,
-        inverseOnSurface = palette.background,
-        scrim =
-            androidx.compose.ui.graphics.Color.Black
-                .copy(alpha = 0.5f),
-    )
-
-private fun cinemaMaterialShapes(tokens: UiShapeTokens) =
-    androidx.compose.material3.Shapes(
-        extraSmall = RoundedCornerShape(CinemaSpacing.xxs),
-        small = RoundedCornerShape(tokens.chip),
-        medium = RoundedCornerShape(tokens.card),
-        large = RoundedCornerShape(tokens.card + CinemaSpacing.xxs),
-        extraLarge = RoundedCornerShape(tokens.dialog),
-    )
 
 private fun cinemaShapes(tokens: UiShapeTokens) =
     Shapes(
@@ -90,6 +31,57 @@ private fun cinemaShapes(tokens: UiShapeTokens) =
         extraLarge = RoundedCornerShape(tokens.dialog),
     )
 
+/** [CinemaTheme]'s text roles from the TV's typography (which carries the Look and Feel). */
+private fun cinemaTypeRoles(typography: Typography) =
+    CinemaTypeRoles(
+        display = typography.headlineMedium,
+        title = typography.titleLarge,
+        heading = typography.titleMedium,
+        body = typography.bodyMedium,
+        bodySmall = typography.bodySmall,
+        label = typography.labelLarge,
+        caption = typography.labelSmall,
+    )
+
+/** TV Material's colours from [CinemaTheme]'s roles. */
+private fun cinemaTvColorScheme(colors: CinemaColorRoles) =
+    darkColorScheme(
+        primary = colors.accent,
+        onPrimary = colors.onAccent,
+        primaryContainer = colors.accentStrong,
+        onPrimaryContainer = colors.accentSoft,
+        secondary = colors.highlight,
+        onSecondary = contentOn(colors.highlight),
+        secondaryContainer = colors.highlight.copy(alpha = CONTAINER_ALPHA),
+        onSecondaryContainer = colors.highlight,
+        tertiary = colors.accentSoft,
+        onTertiary = contentOn(colors.accentSoft),
+        tertiaryContainer = colors.surface,
+        onTertiaryContainer = colors.accentSoft,
+        error = colors.danger,
+        onError = colors.onDanger,
+        errorContainer = colors.danger.copy(alpha = CONTAINER_ALPHA),
+        onErrorContainer = colors.danger,
+        background = colors.background,
+        onBackground = colors.textPrimary,
+        surface = colors.surface,
+        onSurface = colors.textPrimary,
+        surfaceVariant = colors.surfaceRaised,
+        onSurfaceVariant = colors.textSecondary,
+        border = colors.surfaceHigh,
+        surfaceTint = colors.accent,
+        inverseSurface = colors.textPrimary,
+        inverseOnSurface = colors.background,
+        scrim = colors.scrim,
+    )
+
+private const val CONTAINER_ALPHA = 0.2f
+
+/**
+ * The TV's theme: [CinemaTheme] from the colour theme [themeId] and the Look and Feel [styleId];
+ * TV Material and Material 3 (dialogs, text fields, selection controls inside TV screens) both
+ * themed from it.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FirstVideoPlayerTheme(
@@ -106,51 +98,16 @@ fun FirstVideoPlayerTheme(
         UiStyleHolder.current = style
     }
 
-    val colorScheme =
-        remember(palette) {
-            darkColorScheme(
-                primary = palette.accent,
-                onPrimary = androidx.compose.ui.graphics.Color.White,
-                primaryContainer = palette.accentDark,
-                onPrimaryContainer = palette.accentLight,
-                secondary = palette.orange,
-                onSecondary = androidx.compose.ui.graphics.Color.Black,
-                secondaryContainer = palette.orangeDark,
-                onSecondaryContainer = palette.orangeLight,
-                tertiary = palette.accentLight,
-                onTertiary = androidx.compose.ui.graphics.Color.Black,
-                tertiaryContainer = palette.surface,
-                onTertiaryContainer = palette.accentLight,
-                error = palette.error,
-                onError = androidx.compose.ui.graphics.Color.White,
-                errorContainer = palette.error.copy(alpha = 0.2f),
-                onErrorContainer = palette.error.copy(alpha = 0.8f),
-                background = palette.background,
-                onBackground = palette.textPrimary,
-                surface = palette.surface,
-                onSurface = palette.textPrimary,
-                surfaceVariant = palette.surfaceVariant,
-                onSurfaceVariant = palette.textSecondary,
-                border = palette.surfaceLight,
-                surfaceTint = palette.accent,
-                inverseSurface = palette.textPrimary,
-                inverseOnSurface = palette.background,
-                scrim =
-                    androidx.compose.ui.graphics.Color.Black
-                        .copy(alpha = 0.5f),
-            )
-        }
-
+    val colors = remember(palette) { CinemaColorRoles.from(palette) }
     val typography = remember(style) { cinemaTypography(style.type) }
-
-    CompositionLocalProvider(LocalCinemaTheme provides palette, LocalUiStyle provides style) {
+    ProvideCinemaTheme(palette, style, remember(typography) { cinemaTypeRoles(typography) }) {
         androidx.compose.material3.MaterialTheme(
-            colorScheme = remember(palette) { cinemaMaterialColorScheme(palette) },
-            shapes = remember(style) { cinemaMaterialShapes(style.shapes) },
+            colorScheme = remember(colors) { cinemaMaterialColorScheme(colors) },
+            shapes = remember(style) { cinemaMaterialShapes(style) },
             typography = remember(typography) { cinemaMaterialTypography(typography) },
         ) {
             MaterialTheme(
-                colorScheme = colorScheme,
+                colorScheme = remember(colors) { cinemaTvColorScheme(colors) },
                 typography = typography,
                 shapes = remember(style) { cinemaShapes(style.shapes) },
                 content = content,

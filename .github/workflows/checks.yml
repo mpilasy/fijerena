@@ -37,3 +37,7 @@ jobs:
       # docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-05.
       - name: TV focus requests retry on the result, not an exception
         run: scripts/check-focus-retry.sh
+
+      # docs/plans/20261016_design-system-plan.md.
+      - name: Looks come from the theme and Look and Feel
+        run: scripts/check-design-system.sh

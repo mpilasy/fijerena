@@ -1,6 +1,6 @@
 # Design system: every look from the theme and Look and Feel
 
-**Status:** Decided (2026-10-16): D1–D6 taken as proposed. Phase 1 next.
+**Status:** In progress (2026-10-16): D1–D6 decided as proposed; Phase 1 built (not committed), Phase 2 next.
 
 ## Goal
 
@@ -101,7 +101,7 @@ today's offenders and must only shrink; it is empty when the plan is done. AGENT
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | `CinemaTheme` semantic tokens (colours, type, shapes, borders, spacing, motion) from palette + style; palettes state every colour; `check-design-system.sh` with allowlist; AGENTS rule | Not started |
+| 1 | `CinemaTheme` semantic tokens (colours, type, shapes, borders, spacing, motion) from palette + style; palettes state every colour; `check-design-system.sh` with allowlist; AGENTS rule | Built 2026-10-16: `CinemaTheme.kt`, one Material 3 mapping for both apps (`CinemaMaterialMapping.kt`), both app themes on `ProvideCinemaTheme`; gate in CI with 519 sites in 81 files allowed |
 | 2 | Text: `CinemaText(role)`; the ~790 `Text(` calls and 40 ad-hoc styles move to roles; fixed weights and sizes gone | Not started |
 | 3 | Surfaces: rows, cards, panels, glass (`SurfaceStyle`); hand-drawn borders and dividers | Not started |
 | 4 | Inputs: text fields, switches, checkboxes, radio buttons, sliders | Not started |

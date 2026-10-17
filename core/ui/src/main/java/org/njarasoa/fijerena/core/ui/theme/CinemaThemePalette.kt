@@ -31,16 +31,18 @@ data class CinemaThemePalette(
     // Glassmorphism
     val glassBackground: Color,
     val glassBorder: Color,
-    // Status (constant across themes)
-    val success: Color = Color(0xFF4CAF50),
-    val warning: Color = Color(0xFFFFC107),
-    val error: Color = Color(0xFFF44336),
-    val live: Color = Color(0xFFFF6D00),
-    // Text (constant across themes)
-    val textPrimary: Color = Color(0xFFFFFFFF),
-    val textSecondary: Color = Color(0xFFB0B0B0),
-    val textTertiary: Color = Color(0xFF808080),
-    val textDisabled: Color = Color(0xFF606060),
+    // Status — every theme states its own, so a light theme can darken them
+    val success: Color,
+    val warning: Color,
+    val error: Color,
+    val live: Color,
+    // Text
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val textTertiary: Color,
+    val textDisabled: Color,
+    /** Dims what is behind a dialog or over a picture. */
+    val scrim: Color,
 ) {
     /**
      * Text and icons on the accent (filled buttons, the selected tab): white on a dark accent,
@@ -67,6 +69,15 @@ val DeepNightPalette =
         surfaceLight = Color(0xFF2A3038),
         glassBackground = Color(0xBF0F1014),
         glassBorder = Color(0x142979FF),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFC107),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFB0B0B0),
+        textTertiary = Color(0xFF808080),
+        textDisabled = Color(0xFF606060),
+        scrim = Color(0x80000000),
     )
 
 val AmoledBlackPalette =
@@ -85,6 +96,15 @@ val AmoledBlackPalette =
         surfaceLight = Color(0xFF1A1A1A),
         glassBackground = Color(0xBF000000),
         glassBorder = Color(0x14E0E0E0),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFC107),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFB0B0B0),
+        textTertiary = Color(0xFF808080),
+        textDisabled = Color(0xFF606060),
+        scrim = Color(0x80000000),
     )
 
 val AmethystPalette =
@@ -103,6 +123,15 @@ val AmethystPalette =
         surfaceLight = Color(0xFF2A3038),
         glassBackground = Color(0xBF0F1014),
         glassBorder = Color(0x149C6BFF),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFC107),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFB0B0B0),
+        textTertiary = Color(0xFF808080),
+        textDisabled = Color(0xFF606060),
+        scrim = Color(0x80000000),
     )
 
 val TealPalette =
@@ -121,6 +150,15 @@ val TealPalette =
         surfaceLight = Color(0xFF2A3038),
         glassBackground = Color(0xBF0F1014),
         glassBorder = Color(0x1426C6DA),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFC107),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFB0B0B0),
+        textTertiary = Color(0xFF808080),
+        textDisabled = Color(0xFF606060),
+        scrim = Color(0x80000000),
     )
 
 val AllPalettes: List<CinemaThemePalette> =
