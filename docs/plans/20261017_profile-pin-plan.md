@@ -1,6 +1,6 @@
 # Profile PIN
 
-**Status:** Planned 2026-10-17; not started. Decisions D1–D3 made.
+**Status:** In progress (started 2026-10-17). Decisions D1–D3 made.
 
 An optional 4-digit PIN per profile. It locks the profile (picking it, launching into it) and, on
 an Expert profile (the admin, for now — see `project_admin_is_expert`), it is the admin PIN: the
@@ -62,7 +62,7 @@ no PIN anywhere it stays as today.
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | `ProfilePins` (hash, verify, throttle) + `AppSettings` keys, sync, deletion cleanup; tests | Not started |
+| 1 | `ProfilePins` (hash, verify, throttle) + `AppSettings` keys, sync, deletion cleanup; tests | In progress |
 | 2 | PIN entry component (TV pad, phone keyboard) and the profile page's PIN row | Not started |
 | 3 | Locked profiles: picker, phone profile menu, launch | Not started |
 | 4 | Admin gate: session unlock, admin-only screens, the 7 taps | Not started |
