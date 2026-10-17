@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -549,6 +550,8 @@ class SettingsExportManager(
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
                     appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
                 }
+                // A file from a non-Expert profile mustn't leave this install without one.
+                ProfileRepository(context).ensureAnExpert()
 
                 val providerRepo = ProviderRepository(context)
                 val existingProviders = providerRepo.getAllProvidersList()

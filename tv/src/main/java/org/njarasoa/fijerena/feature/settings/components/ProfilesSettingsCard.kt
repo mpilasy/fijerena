@@ -381,15 +381,22 @@ fun ProfileEditPane(
                     themeRowFocusRequester = themeFocus,
                     uiStyleRowFocusRequester = lookFocus,
                 )
-                // Only while it is on, to turn it off: it is turned on by tapping the version in
-                // About 7 times (DeveloperModeTaps). Gone as soon as the profile in use no longer has it, so a
-                // profile that just turned it off can't turn it straight back on here.
-                if (adminView && stored.devMode) {
+                // Only for an Expert (the admin, for now), who may give it to or take it from any
+                // profile; otherwise it is turned on by tapping the version in About 7 times
+                // (DeveloperModeTaps).
+                if (adminView) {
+                    // There is always an Expert: the only one can't turn it off.
+                    val listed by viewModel.profiles.collectAsStateWithLifecycle()
+                    val lastExpert = remember(profile.id, listed) { viewModel.isLastExpert(profile.id) }
                     TvSwitchRow(
                         checked = devMode,
                         onCheckedChange = { devMode = it },
                         label = stringResource(R.string.settings_developer_mode_title),
-                        description = stringResource(R.string.settings_developer_mode_desc),
+                        description =
+                            stringResource(
+                                if (lastExpert) R.string.settings_developer_mode_last else R.string.settings_developer_mode_desc,
+                            ),
+                        enabled = !lastExpert,
                     )
                 }
                 TvSwitchRow(

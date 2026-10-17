@@ -106,6 +106,13 @@ class ProfilesViewModel(
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    /**
+     * Whether [id] is the only profile with Expert mode (the admin, for now): it can't turn it off,
+     * so there is always one (see [ProfileRepository.ensureAnExpert], the backstop). From the
+     * listed profiles, which a profile page has read; true while they aren't, to be safe.
+     */
+    fun isLastExpert(id: String): Boolean = profiles.value.none { it.id != id && appSettings.devMode(it.id) }
+
     fun addProfile(
         name: String,
         colorIndex: Int,
@@ -121,7 +128,9 @@ class ProfilesViewModel(
     ) {
         // Only what changed, so an untouched switch doesn't queue a sync record.
         val stored = settingsOf(id)
-        if (settings.devMode != stored.devMode) appSettings.setDevMode(id, settings.devMode)
+        // The last Expert keeps it (its page disables the switch; this guards the rest).
+        val devMode = settings.devMode || isLastExpert(id)
+        if (devMode != stored.devMode) appSettings.setDevMode(id, devMode)
         if (settings.autoplayNextEpisode != stored.autoplayNextEpisode) {
             appSettings.setAutoplayNextEpisode(id, settings.autoplayNextEpisode)
         }

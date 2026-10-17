@@ -554,6 +554,7 @@
     <string name="app_disclaimer_no_content">Fijerena ne fournit ni n\'héberge aucun contenu. Il lit les sources que vous ajoutez.</string>
     <string name="settings_developer_mode_title">Mode expert</string>
     <string name="settings_developer_mode_desc">Diagnostics, détails techniques et types de source encore en développement (SMB, fichiers locaux)</string>
+    <string name="settings_developer_mode_last">Seul profil en mode expert, il le garde : donnez d\'abord le mode expert à un autre profil.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
     <string name="settings_diagnostics_open">Ouvrir les diagnostics</string>

@@ -64,7 +64,25 @@ class ProfileRepository(
         settings.moveLegacySearchHistoryToDefaultProfile()
         ProviderRepository(context).seedProfileSourcesOnce()
         seedProfileSourceRecordsOnce(settings)
+        ensureAnExpert()
     }
+
+    /**
+     * Keeps at least one profile with Expert mode (the admin, for now), whatever changed it — an
+     * upgrade, a deletion, a sync from another device, a backup import: with none, the oldest
+     * profile gets it, synced like any change (the same oldest profile on every device, so they
+     * agree). Returns that profile's id, or null when there was an Expert already (or no profile).
+     * The profile pages also refuse to turn off the last one; this is the backstop.
+     */
+    suspend fun ensureAnExpert(): String? =
+        withContext(Dispatchers.IO) {
+            val settings = AppSettings(context)
+            val profiles = dao.getAll()
+            if (profiles.isEmpty() || profiles.any { settings.devMode(it.id) }) return@withContext null
+            val oldest = profiles.minWith(compareBy<ProfileEntity>({ it.createdAt }, { it.id }))
+            settings.setDevMode(oldest.id, true)
+            oldest.id
+        }
 
     /**
      * One-time upgrade: a device linked before a profile's sources synced per source has none of
@@ -131,6 +149,7 @@ class ProfileRepository(
                     AppSettings(context).removeProfileSources(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
+                    ensureAnExpert()
                     val settingsDb = SettingsDatabase.getInstance(context)
                     settingsDb.withTransaction {
                         dao.deleteRecordingTombstone(id)

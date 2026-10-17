@@ -501,6 +501,7 @@
     <string name="app_disclaimer_no_content">Tsy manome na mitahiry votoaty i Fijerena. Ny loharano ampidirinao ihany no alefany.</string>
     <string name="settings_developer_mode_title">Manam-pahaizana</string>
     <string name="settings_developer_mode_desc">Fitiliana, antsipiriany ara-teknika, ary karazana loharano mbola amboarina (SMB, rakitra eo an-toerana)</string>
+    <string name="settings_developer_mode_last">Io ihany no manam-pahaizana, ka mitazona izany: omeo mombamomba hafa aloha ny manam-pahaizana.</string>
     <string name="settings_export_import_section_title">Alefa / Ampidiro</string>
     <string name="settings_export_import_desc">Alefaso amin\'ny rakitra ny fandrindrana rehetra na ampidiro avy amin\'ny fitaovana hafa</string>
     <string name="common_export">Alefa</string>

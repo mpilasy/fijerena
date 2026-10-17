@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **There is always an admin:** at least one profile keeps Expert mode — the last one can't turn it off, an Expert can give it to any profile from its page, and if none is left (after a sync or an import) the oldest profile gets it back. TV and phone.
 - **Phone: your profile is in the bottom bar.** The last slot shows the profile in use (its avatar and name) in place of Settings; tapping it opens a menu to switch profile, open Settings, or browse a Jellyfin or M3U source. The avatar leaves the top of the screen.
 - **Channels without a logo in search show their initial:** a channel whose logo is missing or never loads shows the first letter of its name (tags like "|ALB|" skipped) instead of an endless loading shimmer. TV and phone.
 - **Daylight is for the admin:** the light colour theme is offered only with Expert mode; everyone else picks among the dark ones. TV and phone.

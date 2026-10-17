@@ -582,6 +582,7 @@
     <string name="app_disclaimer_no_content">Fijerena does not provide or host any content. It plays the sources you add.</string>
     <string name="settings_developer_mode_title">Expert mode</string>
     <string name="settings_developer_mode_desc">Diagnostics, technical details, and source types still in development (SMB, local files)</string>
+    <string name="settings_developer_mode_last">The only profile with Expert mode keeps it: give Expert mode to another profile first.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
     <string name="settings_diagnostics_open">Open diagnostics</string>

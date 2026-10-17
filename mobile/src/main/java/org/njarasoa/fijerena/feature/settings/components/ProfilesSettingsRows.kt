@@ -197,9 +197,10 @@ internal fun ProfileSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     summary: String? = null,
+    enabled: Boolean = true,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) },
+        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -208,7 +209,7 @@ internal fun ProfileSwitchRow(
                 CinemaText(summary, tone = TextTone.Secondary)
             }
         }
-        CinemaSwitch(checked = checked, onCheckedChange = onCheckedChange)
+        CinemaSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 
