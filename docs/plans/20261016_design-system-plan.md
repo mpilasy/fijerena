@@ -1,6 +1,6 @@
 # Design system: every look from the theme and Look and Feel
 
-**Status:** In progress (2026-10-16): D1–D6 decided as proposed; Phase 1 done (e3c1bf2c); the shared components for Phases 2–6 are built, the feature code is being moved onto them area by area.
+**Status:** Built 2026-10-16. Every file in both apps and core is at 0 in `scripts/check-design-system.sh` (allow-list empty, 2,700+ sites moved); checked on both emulators in Daylight with Standard and Serif. Left: a full walk of every screen in each theme and Look and Feel (Phase 8), icon stroke width (`icon.strokeWidth`), the TV button look the user has not settled.
 
 ## Goal
 
@@ -121,10 +121,10 @@ split by area across up to four helpers, each file to 0 in the allow-list.
 | Phase | Work | Status |
 |---|---|---|
 | 1 | `CinemaTheme` semantic tokens (colours, type, shapes, borders, spacing, motion) from palette + style; palettes state every colour; `check-design-system.sh` with allowlist; AGENTS rule | Built 2026-10-16: `CinemaTheme.kt`, one Material 3 mapping for both apps (`CinemaMaterialMapping.kt`), both app themes on `ProvideCinemaTheme`; gate in CI with 519 sites in 81 files allowed |
-| 2 | Text: `CinemaText(role)`; the ~790 `Text(` calls and 40 ad-hoc styles move to roles; fixed weights and sizes gone | Not started |
-| 3 | Surfaces: rows, cards, panels, glass (`SurfaceStyle`); hand-drawn borders and dividers | Not started |
-| 4 | Inputs: text fields, switches, checkboxes, radio buttons, sliders | Not started |
-| 5 | Chips, tabs, badges, progress; round shapes per D2 | Not started |
-| 6 | Dialogs and sheets (`DialogStyle`, D3); remaining raw Material dialogs | Not started |
-| 7 | Navigation: dock (phone), rail and headers (TV), icon buttons; focus glow (D4); `icon.strokeWidth` | Not started |
-| 8 | Allowlist empty; walk both emulators in every Look and Feel × two colour themes; docs (FEATURES, RELEASE_NOTES, AGENTS) | Not started |
+| 2 | Text: `CinemaText(role)`; the ~790 `Text(` calls and 40 ad-hoc styles move to roles; fixed weights and sizes gone | Done 2026-10-16 |
+| 3 | Surfaces: rows, cards, panels, glass (`SurfaceStyle`); hand-drawn borders and dividers | Done 2026-10-16 |
+| 4 | Inputs: text fields, switches, checkboxes, radio buttons, sliders | Done 2026-10-16 |
+| 5 | Chips, tabs, badges, progress; round shapes per D2 | Done 2026-10-16 |
+| 6 | Dialogs and sheets (`DialogStyle`, D3); remaining raw Material dialogs | Done 2026-10-16 |
+| 7 | Navigation: dock (phone), rail and headers (TV), icon buttons; focus glow (D4); `icon.strokeWidth` | Done 2026-10-16 |
+| 8 | Allowlist empty; walk both emulators in every Look and Feel × two colour themes; docs (FEATURES, RELEASE_NOTES, AGENTS) | Partly: allow-list empty, docs and AGENTS rule done; Daylight × Standard / Serif walked on a few screens per app |
