@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentRemoval
@@ -40,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import java.net.SocketTimeoutException
 
 class CategoryViewModel(
     private val context: Context,
@@ -64,6 +66,9 @@ class CategoryViewModel(
         private const val RECENT_CATEGORY_ROW_PREFIX = "recent_cat_"
         const val RECENTLY_VIEWED_CATEGORIES_ID = "recently_viewed_categories"
         private const val TAG = "CategoryViewModel"
+
+        // How long one source may take to list its categories before the list goes on without it.
+        private const val SOURCE_LOAD_TIMEOUT_MS = 15_000L
 
         val VIRTUAL_CATEGORY_IDS =
             setOf(
@@ -496,13 +501,23 @@ class CategoryViewModel(
         return withContext(Dispatchers.Default) { loadedCategories(reads) }
     }
 
-    /** [repo]'s categories of this list's type, its session restored first. */
-    private suspend fun sourceCategories(repo: MediaRepository): List<MediaCategory> {
-        if (!repo.isConnected()) {
-            repo.connect().exceptionOrNull()?.let { throw SourceConnectException(it) }
-        }
-        return repo.getFilteredCategories(contentType).getOrThrow()
-    }
+    /**
+     * [repo]'s categories of this list's type. Not logged in yet, the ones it has saved, its login
+     * left to run behind them — a server that doesn't answer no longer holds the list; with none
+     * saved, after its login. A source that takes longer than [SOURCE_LOAD_TIMEOUT_MS] fails.
+     */
+    private suspend fun sourceCategories(repo: MediaRepository): List<MediaCategory> =
+        withTimeoutOrNull(SOURCE_LOAD_TIMEOUT_MS) {
+            if (!repo.isConnected()) {
+                val saved = repo.getFilteredCategories(contentType).getOrNull()
+                if (!saved.isNullOrEmpty()) {
+                    viewModelScope.launchGuarded("CategoryViewModel.connectBehind") { repo.connect() }
+                    return@withTimeoutOrNull saved
+                }
+                repo.connect().exceptionOrNull()?.let { throw SourceConnectException(it) }
+            }
+            repo.getFilteredCategories(contentType).getOrThrow()
+        } ?: throw SourceConnectException(SocketTimeoutException("No answer in ${SOURCE_LOAD_TIMEOUT_MS / 1000} s"))
 
     /**
      * The message when no source of the list loads: the first failure's, friendly (a connection

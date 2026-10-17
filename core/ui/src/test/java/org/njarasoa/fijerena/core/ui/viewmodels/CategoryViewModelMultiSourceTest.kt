@@ -129,9 +129,23 @@ class CategoryViewModelMultiSourceTest {
     }
 
     @Test
+    fun `a source that isn't logged in lists its saved categories, its login left behind them`() {
+        every { repoA.isConnected() } returns false
+        coEvery { repoA.connect() } returns Result.failure(Exception("server down"))
+
+        val state = section().success { it.categories.any { category -> !category.isVirtual } }
+
+        assertEquals(
+            listOf(A to "c1", A to "c2", B to "c1"),
+            state.categories.filterNot { it.isVirtual }.map { it.providerId to it.id },
+        )
+    }
+
+    @Test
     fun `a section is built from the sources that load when its first can't connect`() {
         every { repoA.isConnected() } returns false
         coEvery { repoA.connect() } returns Result.failure(Exception("server down"))
+        coEvery { repoA.getFilteredCategories(ContentType.MOVIES) } returns Result.success(emptyList())
 
         val state = section().success { it.categories.any { category -> !category.isVirtual } }
 
@@ -142,6 +156,7 @@ class CategoryViewModelMultiSourceTest {
     fun `a section fails only when none of its sources loads`() {
         every { repoA.isConnected() } returns false
         coEvery { repoA.connect() } returns Result.failure(Exception("server down"))
+        coEvery { repoA.getFilteredCategories(ContentType.MOVIES) } returns Result.success(emptyList())
         coEvery { repoB.getFilteredCategories(ContentType.MOVIES) } returns Result.failure(Exception("broken"))
 
         val vm = section()

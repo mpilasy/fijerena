@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +33,18 @@ class XtreamSessionManager(
     private companion object {
         const val TAG = "XtreamSession"
         const val LIVE_CHECK_TIMEOUT_MS = 10_000L
+
+        // A restore that failed this recently is not tried again: the callers queued on the lock
+        // behind it get its failure instead of a fresh wait of their own (a server that doesn't
+        // answer costs each try OkHttp's 30 s connect timeout).
+        const val RESTORE_RETRY_AFTER_MS = 15_000L
     }
+
+    // The login answer of the session in use, for a caller that finds it already restored.
+    private var sessionAuth: XtreamAuthResponse? = null
+
+    // The last failed restore: when, and why.
+    private var lastRestoreFailure: Pair<Long, Exception>? = null
 
     var apiService: XtreamApiService? = null
         private set
@@ -101,6 +113,13 @@ class XtreamSessionManager(
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {
                 suspendResultOf {
+                    // Restored by the caller this one waited behind: that session, not another login.
+                    val restored = sessionAuth
+                    if (apiService != null && restored != null) return@suspendResultOf restored
+                    lastRestoreFailure?.let { (at, failure) ->
+                        if (SystemClock.elapsedRealtime() - at < RESTORE_RETRY_AFTER_MS) throw failure
+                    }
+
                     val credentials =
                         accountManager.getCredentials()
                             ?: throw Exception("No stored credentials found")
@@ -123,6 +142,7 @@ class XtreamSessionManager(
                                 throw e
                             } catch (e: Exception) {
                                 Log.e(TAG, Redact.text("Authentication failed for ${credentials.url}\n${Log.getStackTraceString(e)}"))
+                                lastRestoreFailure = SystemClock.elapsedRealtime() to e
                                 throw e
                             }
 
@@ -359,6 +379,8 @@ class XtreamSessionManager(
         apiService?.close()
         panelClock = XtreamPanelClock.from(authResponse?.serverInfo)
         apiService = newService
+        sessionAuth = authResponse.takeIf { newService != null }
+        if (newService != null) lastRestoreFailure = null
     }
 
     fun getCurrentUrl(): String? = accountManager.getCredentials()?.url

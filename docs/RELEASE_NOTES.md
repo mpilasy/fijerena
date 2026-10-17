@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A source whose server doesn't answer no longer holds a list on its spinner:** Live TV, Movies and TV Shows show the categories each source has saved right away and log in behind them; a source with nothing saved that takes more than 15 s is left out (the list says so only when no source loads), and the screens waiting on one source's login share its answer instead of each waiting 30 s in turn. TV and phone.
 - **The right keyboard in every field:** addresses (source servers, guide URLs, live sync) get the web-address keyboard and no longer gain a space and a capital after each dot; user names get the email keyboard, passwords and keys stay out of suggestions, names start each word with a capital, a source's short name types in capitals, and the guide's time offset gets a pad with a minus. TV and phone.
 - **TV Home shows your favourite categories:** each section's under its favourites — Favourite channel categories, Favourite movie categories, Favourite show categories; OK opens the section on that category; hold OK or Menu to remove one, with Undo.
 - **Profile PIN:** any profile can have an optional 4-digit PIN (its page → PIN). It is asked only when Settings is opened (again after 5 minutes away) — picking a profile and watching never ask; and while an Expert has a PIN becoming Expert or adding a profile on TV's picker asks for one. A PIN syncs to the group's devices; an Expert can remove a forgotten one from that profile's page. TV (number pad) and phone (number keyboard).
