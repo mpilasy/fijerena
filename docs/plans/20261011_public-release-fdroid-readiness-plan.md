@@ -114,8 +114,8 @@ and a first-run experience written for the developer rather than a stranger.
     or Releases, and the requirements. **Android 11+ excludes most cheap Android TV boxes and
     Fire OS 7, so say so up front.**
 - **Drop the household tooling from the public tree:**
-  - `deployToShield` (tv/build.gradle.kts:151-199)
-  - `scripts/tune-system-memory.sh` (sudo host tuning)
+  - `deployToShield` (tv/build.gradle.kts) — removed
+  - `scripts/tune-system-memory.sh` (sudo host tuning) — removed
   - `tools/jellyfin-xtream` (or document it as a dev-only bridge)
 - **Docs and agent files:**
   - **Decided 2026-10-11: archived plans don't go public.** `docs/plans/archive/` stays in the

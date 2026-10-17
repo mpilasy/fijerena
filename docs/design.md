@@ -22,17 +22,15 @@ fijerena/
     ui/              shared ViewModels, theme tokens, shared components, AppContainer,
                      live-sync manager, TV Guide layout engine
     navigation/      Screen routes, navigateOnce, ContentType
-    data/            AuthViewModel (not used by either app)
   server/            live-sync server (Cloudflare Worker / Docker)
 ```
 
 ### Dependency Graph
 
 ```
-tv, mobile ──→ core:ui, core:network, core:player, core:navigation, core:data
+tv, mobile ──→ core:ui, core:network, core:player, core:navigation
 core:ui ─────→ core:network, core:player, core:navigation
 core:network ─→ core:player   (api)
-core:data ───→ core:player    (api)
 core:player, core:navigation  → no project dependencies
 ```
 

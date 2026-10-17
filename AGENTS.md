@@ -39,8 +39,7 @@ fijerena/
 │   ├── player/      # Media3, playback service, domain models, diagnostics (CrashLog, SafeMode, AppScopes)
 │   ├── network/     # Source implementations, API clients, EPG pipeline, Room DBs, live sync client
 │   ├── navigation/  # Type-safe Screen definitions (shared)
-│   ├── ui/          # Shared ViewModels, design tokens, components, AppContainer
-│   └── data/        # AuthViewModel only
+│   └── ui/          # Shared ViewModels, design tokens, components, AppContainer
 ├── server/          # Live sync server (TypeScript; Cloudflare Worker or workerd in Docker) — see server/README.md
 ├── scripts/         # Build, deploy, backup/restore, CI checks, TV focus walks
 ├── tools/           # jellyfin-xtream test bridge (development only)

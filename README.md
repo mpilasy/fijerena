@@ -182,8 +182,7 @@ fijerena/
 │   ├── player/               # Media3 player, playback service, domain models, diagnostics
 │   ├── network/              # Source implementations, Room databases, EPG pipeline, live sync client
 │   ├── ui/                   # Shared ViewModels, Compose components, design tokens, strings
-│   ├── navigation/           # Type-safe navigation definitions
-│   └── data/                 # AuthViewModel only
+│   └── navigation/           # Type-safe navigation definitions
 ├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
 ├── scripts/                  # Build, deploy, backup/restore, CI checks, TV focus walks
 ├── tools/jellyfin-xtream/    # Development only: serves a Jellyfin library as an Xtream panel for testing

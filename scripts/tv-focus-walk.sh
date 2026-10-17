@@ -10,7 +10,7 @@
 # empty to send the key without checking. A first line `@start <substring>` checks focus
 # before any key is sent. `#` comments and blank lines are ignored.
 # REMOVE is OK for a removal that the Undo bar takes back (TV Recent and Favorites, 2026-10-09):
-# sent only while focus is on "Remove from Recent", "Remove from Favorites" or an edit-mode row
+# sent only while focus is on "Remove from Recent", "Remove from Favourites" or an edit-mode row
 # (its ✕ reads "Remove"), never on Clear / Delete / anything else; the walk's next line must be
 # MENU (the undo), and if anything after it mismatches the script presses Menu at once to undo.
 # CENTER is never sent while focus is on a destructive control (Delete, Clear, Remove, Purge,
@@ -129,7 +129,7 @@ for walk in "$@"; do
             REMOVE) step=$((step + 1))
                    before="$(focused_text)"
                    if [ "$derailed" = true ] ||
-                       ! printf '%s' "$before" | grep -qE '^(Remove from Recent|Remove from Favorites)$|/ Remove$' ||
+                       ! printf '%s' "$before" | grep -qE '^(Remove from Recent|Remove from Favou?rites)$|/ Remove$' ||
                        printf '%s' "$before" | grep -qiE 'clear|delete|purge|shrink|reset|leave the sync'; then
                        printf '%-3s %-8s →  %s\n' "$step" "$key" "REFUSED: not an undoable removal ($before)"
                        derailed=true
