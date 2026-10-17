@@ -39,11 +39,14 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -52,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
@@ -287,15 +291,9 @@ internal fun TwoColumnLayout(
                         else -> null
                     }
                 if (epgErrorMessage != null) {
-                    Text(
+                    CinemaText(
                         text = epgErrorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color =
-                            if (epgIndexState is EpgIndexState.Indexing) {
-                                CinemaTextSecondary
-                            } else {
-                                CinemaError
-                            },
+                        tone = if (epgIndexState is EpgIndexState.Indexing) TextTone.Secondary else TextTone.Danger,
                         modifier = Modifier.padding(bottom = Spacing.sm),
                     )
                 }
@@ -382,25 +380,17 @@ private fun ClearRecentDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = stringResource(R.string.recent_clear_confirm_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-            )
+            CinemaText(text = stringResource(R.string.recent_clear_confirm_title), role = TextRole.Heading)
         },
         text = {
-            Text(
-                text = stringResource(R.string.recent_clear_confirm_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
-            )
+            CinemaText(text = stringResource(R.string.recent_clear_confirm_message), tone = TextTone.Secondary)
         },
         confirmButton = {
             CinemaButton(
                 onClick = onConfirm,
                 kind = ButtonKind.Danger,
             ) {
-                Text(text = stringResource(R.string.recent_clear))
+                CinemaText(text = stringResource(R.string.recent_clear), role = TextRole.Label, tone = TextTone.Inherit)
             }
         },
         dismissButton = {
@@ -408,12 +398,12 @@ private fun ClearRecentDialog(
                 onClick = onDismiss,
                 kind = ButtonKind.Other,
             ) {
-                Text(text = stringResource(R.string.common_cancel))
+                CinemaText(text = stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
             }
         },
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
+        containerColor = CinemaTheme.colors.surface,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }
 

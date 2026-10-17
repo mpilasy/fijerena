@@ -75,6 +75,7 @@ import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgeKind
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
@@ -504,8 +505,8 @@ internal fun MobileGuideSearchPane(
                     contentAlignment = Alignment.Center,
                 ) {
                     MitadyLoading(
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaTheme.colors.accent,
+                        role = TextRole.Title,
+                        tone = TextTone.Accent,
                     )
                 }
             }
@@ -888,7 +889,6 @@ private fun MobileAiringRow(
             tone = TextTone.Accent,
         )
         if (isOnAir || isSoon) {
-            val badgeColor = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.warning
             val badgeLabel =
                 if (isOnAir) {
                     stringResource(
@@ -899,8 +899,7 @@ private fun MobileAiringRow(
                 }
             CinemaBadge(
                 text = badgeLabel,
-                backgroundColor = badgeColor,
-                textColor = CinemaTheme.colors.background,
+                kind = if (isOnAir) BadgeKind.Success else BadgeKind.Warning,
             )
         }
         val airingContext = LocalContext.current

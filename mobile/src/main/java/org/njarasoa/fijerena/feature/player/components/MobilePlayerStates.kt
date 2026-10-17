@@ -41,8 +41,8 @@ fun LoadingScreen() {
         contentAlignment = Alignment.Center,
     ) {
         MitohanaLoading(
-            style = MaterialTheme.typography.headlineSmall,
-            color = CinemaTheme.colors.accent,
+            role = TextRole.Title,
+            tone = TextTone.Accent,
         )
     }
 }

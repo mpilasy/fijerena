@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -128,7 +129,7 @@ fun ProfilesSettingsCard(
                         name = profile.name,
                         colorIndex = profile.colorIndex,
                         size = TvDimensions.iconMedium,
-                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                        fontSize = textStyleOf(TextRole.Label).fontSize,
                     )
                 },
             )
@@ -623,7 +624,8 @@ private fun ColourDot(
         colorIndex = index,
         size = TvDimensions.iconMedium.scaled(scale),
         fontSize =
-            MaterialTheme.typography.titleSmall.fontSize
+            textStyleOf(TextRole.Label)
+                .fontSize
                 .scaled(scale),
     )
 }

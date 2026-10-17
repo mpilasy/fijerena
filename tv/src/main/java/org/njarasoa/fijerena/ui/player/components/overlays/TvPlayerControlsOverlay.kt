@@ -78,14 +78,20 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgeKind
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -275,7 +281,7 @@ fun TvPlayerControlsOverlay(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.focusedTint)),
+                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.focusedTint)),
     ) {
         // Top: the clock, and the developer-mode resolution/codec line, on a soft gradient rather
         // than a band. Hidden while a side panel is open since they would collide with the panel's
@@ -287,7 +293,9 @@ fun TvPlayerControlsOverlay(
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .background(
-                            Brush.verticalGradient(listOf(CinemaBackground.copy(alpha = CinemaAlpha.textMedium), Color.Transparent)),
+                            Brush.verticalGradient(
+                                listOf(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.textMedium), CinemaTheme.colors.clear),
+                            ),
                         ).padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             ) {
                 // Self-ticking so only this leaf recomposes each second.
@@ -301,19 +309,13 @@ fun TvPlayerControlsOverlay(
                         modifier = Modifier.align(Alignment.TopStart),
                     ) {
                         if (videoResolution != null) {
-                            Text(
-                                text = videoResolution!!,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = CinemaAccent,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            CinemaText(text = videoResolution!!, role = TextRole.Label, tone = TextTone.Accent, emphasis = true)
                         }
                         if (videoCodec != null) {
                             CinemaBadge(
                                 text = videoCodec!!,
-                                backgroundColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
-                                textColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                style = MaterialTheme.typography.labelSmall,
+                                kind = BadgeKind.OnMedia,
+                                role = TextRole.Caption,
                             )
                         }
                     }
@@ -336,10 +338,10 @@ fun TvPlayerControlsOverlay(
                 },
                 colors =
                     ButtonDefaults.colors(
-                        containerColor = Color.Transparent,
-                        contentColor = CinemaTextPrimary,
-                        focusedContainerColor = CinemaTextPrimary,
-                        focusedContentColor = CinemaBackground,
+                        containerColor = CinemaTheme.colors.clear,
+                        contentColor = CinemaTheme.colors.textPrimary,
+                        focusedContainerColor = CinemaTheme.colors.textPrimary,
+                        focusedContentColor = CinemaTheme.colors.background,
                     ),
                 scale = ButtonDefaults.scale(focusedScale = TvFocusTokens.focusedScale, pressedScale = TvFocusTokens.pressedScale),
                 shape = ButtonDefaults.shape(shape = TvButtonStyle.shape),
@@ -389,17 +391,13 @@ fun TvPlayerControlsOverlay(
                             modifier =
                                 Modifier
                                     .size(TvDimensions.statsDotSize)
-                                    .background(CinemaLive, shape = CircleShape),
+                                    .background(CinemaTheme.colors.live, shape = CinemaTheme.shapes.identity),
                         )
-                        Text(
-                            text = stringResource(R.string.player_live),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = CinemaTextPrimary,
-                        )
+                        CinemaText(text = stringResource(R.string.player_live), role = TextRole.Label)
                         BadgedTitle(
                             raw = metadata.channelName,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaTextPrimary,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
                             modifier = Modifier.padding(start = Spacing.xs),
                             textModifier = Modifier.bounceMarquee(),
                         )
@@ -408,25 +406,21 @@ fun TvPlayerControlsOverlay(
                         Icon(
                             imageVector = CinemaIcons.Replay,
                             contentDescription = null,
-                            tint = CinemaAccentLight,
+                            tint = CinemaTheme.colors.accentSoft,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
-                        Text(
-                            text = stringResource(R.string.player_catchup),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = CinemaTextPrimary,
-                        )
+                        CinemaText(text = stringResource(R.string.player_catchup), role = TextRole.Label)
                         BadgedTitle(
                             raw = metadata.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaTextPrimary,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
                             modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xs),
                             textModifier = Modifier.bounceMarquee(),
                         )
-                        Text(
+                        CinemaText(
                             text = "· ${metadata.catchupLabel}",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                            role = TextRole.Title,
+                            tone = TextTone.Secondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
@@ -442,16 +436,16 @@ fun TvPlayerControlsOverlay(
                             }
                         BadgedTitle(
                             raw = metadata.showTitle ?: metadata.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = CinemaTextPrimary,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
                             modifier = Modifier.weight(1f, fill = false),
                             textModifier = Modifier.bounceMarquee(),
                         )
                         if (!episodeLine.isNullOrBlank()) {
-                            Text(
+                            CinemaText(
                                 text = "· $episodeLine",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                                role = TextRole.Title,
+                                tone = TextTone.Secondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false),
@@ -463,10 +457,9 @@ fun TvPlayerControlsOverlay(
                 // The plot (or the channel's description), secondary and short: two lines at most.
                 val description = metadata.description
                 if (!description.isNullOrBlank()) {
-                    Text(
+                    CinemaText(
                         text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                        tone = TextTone.Secondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier =
@@ -544,18 +537,16 @@ fun TvPlayerControlsOverlay(
                                         }
                                     }.border(
                                         width = TvFocusTokens.focusBorderWidth,
-                                        color = if (seekBarLit) TvFocusTokens.focusedRowOutline else Color.Transparent,
-                                        shape = RoundedCornerShape(CornerRadius.small),
+                                        color = if (seekBarLit) TvFocusTokens.focusedRowOutline else CinemaTheme.colors.clear,
+                                        shape = CinemaTheme.shapes.chip,
                                     ).padding(Spacing.xs),
                         ) {
-                            LinearProgressIndicator(
+                            CinemaProgressBar(
                                 progress = { displayPosition.toFloat() / duration.toFloat() },
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .height(if (seekBarLit) Spacing.xs else TvDimensions.progressBar),
-                                color = if (seekBarLit) CinemaAccentLight else MaterialTheme.colorScheme.primary,
-                                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                             )
                         }
 
@@ -570,13 +561,12 @@ fun TvPlayerControlsOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                             verticalAlignment = CenterVertically,
                         ) {
-                            Text(
+                            CinemaText(
                                 text = formatTime(displayPosition),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isScrubbing) CinemaAccentLight else CinemaTextPrimary,
-                                fontWeight = if (isScrubbing) FontWeight.Bold else FontWeight.Normal,
+                                tone = if (isScrubbing) TextTone.AccentSoft else TextTone.Primary,
+                                emphasis = isScrubbing,
                             )
-                            Text(
+                            CinemaText(
                                 text =
                                     if (isScrubbing) {
                                         stringResource(R.string.player_seek_hint)
@@ -587,18 +577,13 @@ fun TvPlayerControlsOverlay(
                                             TimeFormat.formatClockTime(Date(estimatedEndTimeMillis)),
                                         )
                                     },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                tone = TextTone.Secondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.End,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text(
-                                text = formatTime(duration),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary,
-                            )
+                            CinemaText(text = formatTime(duration))
                         }
 
                         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -606,7 +591,7 @@ fun TvPlayerControlsOverlay(
                 } else if (currentEpgProgram != null) {
                     // Live: Now with its times and the programme's progress, then Next.
                     val epgContext = LocalContext.current
-                    Text(
+                    CinemaText(
                         text =
                             stringResource(
                                 R.string.player_now_playing_format,
@@ -614,8 +599,6 @@ fun TvPlayerControlsOverlay(
                                 formatEpochTime(epgContext, currentEpgProgram.startTime),
                                 formatEpochTime(epgContext, currentEpgProgram.endTime),
                             ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -627,26 +610,23 @@ fun TvPlayerControlsOverlay(
                         } else {
                             0f
                         }
-                    LinearProgressIndicator(
+                    CinemaProgressBar(
                         progress = { epgProgress },
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = Spacing.xs)
                                 .height(TvDimensions.progressBar),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                     )
                     if (nextEpgProgram != null) {
-                        Text(
+                        CinemaText(
                             text =
                                 stringResource(
                                     R.string.player_osd_next_format,
                                     nextEpgProgram.title,
                                     formatEpochTime(epgContext, nextEpgProgram.startTime),
                                 ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            tone = TextTone.Secondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -741,7 +721,7 @@ fun TvPlayerControlsOverlay(
                                 icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 label = stringResource(if (isFavorite) R.string.player_favorited else R.string.player_favorite),
                                 onClick = onToggleFavorite,
-                                iconTint = if (isFavorite) CinemaAccent else null,
+                                iconTint = if (isFavorite) CinemaTheme.colors.accent else null,
                             )
                         }
 
@@ -845,10 +825,5 @@ private fun ClockDisplay(modifier: Modifier = Modifier) {
     }
     @Suppress("UNUSED_VARIABLE")
     val ignored = tick // Read to trigger recomposition
-    Text(
-        text = TimeFormat.formatClockTime(Date(tick)),
-        style = MaterialTheme.typography.titleMedium,
-        color = CinemaTextPrimary,
-        modifier = modifier,
-    )
+    CinemaText(text = TimeFormat.formatClockTime(Date(tick)), role = TextRole.Heading, modifier = modifier)
 }

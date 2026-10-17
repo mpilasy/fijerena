@@ -980,7 +980,10 @@ private fun CastChipsTabContent(cast: String) {
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
         cast.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { member ->
-            CinemaBadge(text = member, style = MaterialTheme.typography.bodyMedium)
+            CinemaBadge(
+                text = member,
+                role = TextRole.Body,
+            )
         }
     }
 }

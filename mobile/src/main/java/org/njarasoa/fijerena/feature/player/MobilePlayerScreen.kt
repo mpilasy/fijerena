@@ -900,8 +900,8 @@ fun MobilePlayerContent(
                             if (!hasStartedPlaying || showRecoverySpinner) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
-                                        style = textStyleOf(TextRole.Display),
-                                        color = CinemaTheme.colors.onMedia,
+                                        role = TextRole.Display,
+                                        tone = TextTone.OnMedia,
                                     )
                                     // Expert mode: what the wait is made of (as on TV).
                                     if (appSettings.isDevMode && !isInPipMode) {

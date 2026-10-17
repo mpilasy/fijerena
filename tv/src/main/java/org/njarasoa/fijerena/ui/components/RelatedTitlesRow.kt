@@ -119,7 +119,7 @@ fun RelatedTitlesRow(
  * `CardDefaults.*` are `@Composable`, so they cannot be wrapped in `remember` — hoisting the calls
  * out of the item body is what stops a `CardColors`/`CardScale`/`Border`/`CardGlow`/`CardShape` set
  * being allocated per card per recomposition. Same pattern, and same reason, as `StreamList`'s
- * `StreamCardStyle`.
+ * `TvCardLooks` (cards/TvCard.kt).
  */
 @Immutable
 private data class RelatedCardStyle(

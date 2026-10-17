@@ -14,7 +14,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -27,10 +30,10 @@ internal fun LoadingScreen() {
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Text(
+        CinemaText(
             text = stringResource(R.string.common_loading),
-            style = MaterialTheme.typography.titleMedium,
-            color = CinemaTextSecondary,
+            role = TextRole.Heading,
+            tone = TextTone.Secondary,
         )
         SkeletonList(
             rowCount = 6,

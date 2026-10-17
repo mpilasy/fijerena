@@ -341,7 +341,6 @@ fun MobileStatsOverlay(
                     .padding(CinemaSpacing.md)
                     .widthIn(max = MobileDimensions.statsOverlayMaxWidth),
         ) {
-            val typography = MaterialTheme.typography
             Column(
                 modifier =
                     Modifier
@@ -558,7 +557,6 @@ private fun StatNameRow(
     label: String,
     value: String,
 ) {
-    val typography = MaterialTheme.typography
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
@@ -585,7 +583,6 @@ private fun StatRow(
     label: String,
     value: String,
 ) {
-    val typography = MaterialTheme.typography
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

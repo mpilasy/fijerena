@@ -89,10 +89,14 @@ import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
@@ -105,6 +109,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchSourceCount
@@ -129,7 +134,11 @@ import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSearchField
@@ -569,16 +578,13 @@ private fun LoadingView(message: String? = null) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.iconXLarge),
-                color = CinemaAccent,
-            )
-            Text(
+            CinemaSpinner(modifier = Modifier.size(TvDimensions.iconXLarge))
+            CinemaText(
                 text =
                     message ?: androidx.compose.ui.res
                         .stringResource(org.njarasoa.fijerena.core.ui.R.string.search_loading_categories),
-                style = MaterialTheme.typography.titleLarge,
-                color = CinemaTextSecondary,
+                role = TextRole.Title,
+                tone = TextTone.Secondary,
             )
         }
     }
@@ -595,16 +601,8 @@ private fun ErrorView(message: String) {
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
             modifier = Modifier.padding(Spacing.xl),
         ) {
-            Text(
-                text = stringResource(R.string.common_error),
-                style = MaterialTheme.typography.displayMedium,
-                color = CinemaError,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary,
-            )
+            CinemaText(text = stringResource(R.string.common_error), role = TextRole.Display, tone = TextTone.Danger)
+            CinemaText(text = message, tone = TextTone.Secondary)
         }
     }
 }
@@ -787,11 +785,7 @@ private fun SearchHistorySection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(R.string.epg_browser_recent_searches),
-                style = MaterialTheme.typography.headlineSmall,
-                color = CinemaTextPrimary,
-            )
+            CinemaText(text = stringResource(R.string.epg_browser_recent_searches), role = TextRole.Title)
             CinemaIconButton(
                 onClick = onClearAll,
                 icon = {
@@ -799,7 +793,7 @@ private fun SearchHistorySection(
                         imageVector = CinemaIcons.Delete,
                         contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                         modifier = Modifier.size(TvDimensions.iconSmall),
-                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        tint = CinemaTheme.colors.textPrimary,
                     )
                 },
             )
@@ -823,8 +817,9 @@ private fun SearchHistorySection(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
+            val chipLook = TvCardLooks.chip()
             history.forEachIndexed { index, term ->
-                Card(
+                TvCard(
                     onClick = { onItemClick(term) },
                     // The first chip is at the screen's left edge: Left from it opens the TV
                     // navigation rail.
@@ -834,20 +829,7 @@ private fun SearchHistorySection(
                         } else {
                             Modifier
                         },
-                    colors =
-                        CardDefaults.colors(
-                            containerColor = CinemaSurface,
-                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
-                        ),
-                    scale =
-                        CardDefaults.scale(
-                            scale = TvFocusTokens.defaultScale,
-                            focusedScale = TvFocusTokens.focusedScaleContent,
-                        ),
-                    shape =
-                        CardDefaults.shape(
-                            shape = RoundedCornerShape(CornerRadius.medium),
-                        ),
+                    look = chipLook,
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
@@ -857,16 +839,10 @@ private fun SearchHistorySection(
                         Icon(
                             imageVector = CinemaIcons.Search,
                             contentDescription = null,
-                            tint = CinemaTextSecondary,
+                            tint = CinemaTheme.colors.textSecondary,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
-                        Text(
-                            text = term,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        CinemaText(text = term, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -905,7 +881,8 @@ private fun SearchResultsList(
     val firstItemFocusRequester = remember { FocusRequester() }
 
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
-    val rowStyle = searchRowStyle()
+    // The content rows' focus look, built once per results list rather than once per row.
+    val rowStyle = TvCardLooks.listRow()
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     // — not when Back has just rebuilt the list and NavReturnFocusEffect is about to hand focus to
@@ -926,8 +903,8 @@ private fun SearchResultsList(
             contentAlignment = Alignment.Center,
         ) {
             MitadyLoading(
-                style = MaterialTheme.typography.headlineMedium,
-                color = CinemaAccent,
+                role = TextRole.Display,
+                tone = TextTone.Accent,
             )
         }
     } else if (categoryResults.isEmpty() && results.isEmpty()) {
@@ -935,15 +912,14 @@ private fun SearchResultsList(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
+            CinemaText(
                 text =
                     if (queryContentType == "ALL") {
                         stringResource(R.string.search_no_results_query_format_tv, query)
                     } else {
                         stringResource(R.string.search_no_results_type_format_tv, localizedContentTypeLabel(queryContentType), query)
                     },
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                tone = TextTone.Secondary,
             )
             sourceErrors?.let { SourceErrorsLine(it, Modifier.align(Alignment.BottomCenter)) }
         }
@@ -964,27 +940,20 @@ private fun SearchResultsList(
                     ) {
                         if (isSearching) {
                             MitadyLoading(
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaAccent,
+                                role = TextRole.Body,
+                                tone = TextTone.Accent,
                             )
                         }
-                        Text(
-                            text = if (isSearching) " ($searchProgress)" else searchProgress,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaAccent,
-                        )
+                        CinemaText(text = if (isSearching) " ($searchProgress)" else searchProgress, tone = TextTone.Accent)
                     }
                 }
             }
 
             if (devStats != null) {
-                Text(
+                CinemaText(
                     text = devStats,
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium,
-                        ),
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                    role = TextRole.Caption,
+                    tone = TextTone.Tertiary,
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -1154,10 +1123,9 @@ private fun SourceErrorsLine(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Text(
+    CinemaText(
         text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = CinemaError,
+        tone = TextTone.Danger,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier.fillMaxWidth().padding(top = Spacing.xs),
@@ -1191,17 +1159,9 @@ private fun SearchSectionHeader(
                 .padding(horizontal = Spacing.md, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = CinemaTextPrimary,
-        )
+        CinemaText(text = title, role = TextRole.Title)
         Spacer(Modifier.weight(1f))
-        Text(
-            text = searchCountLabel(count, hiddenCount),
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
+        CinemaText(text = searchCountLabel(count, hiddenCount), tone = TextTone.Secondary)
     }
 }
 
@@ -1213,7 +1173,7 @@ private fun CollapsibleHeader(
     isExpanded: Boolean,
     onToggle: () -> Unit,
 ) {
-    Card(
+    TvCard(
         onClick = onToggle,
         // Group headers and result rows span the list from the screen's left edge: Left from any
         // of them opens the TV navigation rail.
@@ -1224,15 +1184,7 @@ private fun CollapsibleHeader(
                 .padding(vertical = Spacing.xs),
         // A section title that folds its group: no fill at rest, the content rows' focus look
         // (light lift, white outline) when focused.
-        colors =
-            CardDefaults.colors(
-                containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        shape = TvListRowDefaults.shape(),
-        border = TvListRowDefaults.border(),
+        look = TvCardLooks.foldingHeader(),
     ) {
         Row(
             modifier =
@@ -1242,60 +1194,32 @@ private fun CollapsibleHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = CinemaTextPrimary,
-            )
+            CinemaText(text = title, role = TextRole.Title)
             Spacer(Modifier.weight(1f))
-            Text(
+            CinemaText(
                 text = searchCountLabel(count, hiddenCount),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                tone = TextTone.Secondary,
                 modifier = Modifier.padding(end = Spacing.sm),
             )
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                tint = CinemaTextSecondary,
+                tint = CinemaTheme.colors.textSecondary,
                 modifier = Modifier.size(TvDimensions.iconMedium),
             )
         }
     }
 }
 
-/**
- * The content rows' focus look ([TvListRowDefaults]: light lift, white outline, text stays white),
- * built once per results list rather than once per row.
- */
-@Immutable
-private data class SearchRowStyle(
-    val colors: CardColors,
-    val border: CardBorder,
-    val cardScale: CardScale,
-    val glow: CardGlow,
-    val shape: CardShape,
-)
-
-@Composable
-private fun searchRowStyle(): SearchRowStyle =
-    SearchRowStyle(
-        colors = TvListRowDefaults.colors(),
-        border = TvListRowDefaults.border(),
-        cardScale = TvListRowDefaults.scale(),
-        glow = TvListRowDefaults.glow(),
-        shape = TvListRowDefaults.shape(),
-    )
-
 @Composable
 private fun CategoryResultItem(
     result: CategorySearchResult,
-    rowStyle: SearchRowStyle,
+    rowStyle: TvCardLook,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    TvCard(
         onClick = onClick,
         modifier =
             modifier
@@ -1304,11 +1228,7 @@ private fun CategoryResultItem(
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight)
                 .tvLongPress(onLongPress),
-        colors = rowStyle.colors,
-        border = rowStyle.border,
-        scale = rowStyle.cardScale,
-        glow = rowStyle.glow,
-        shape = rowStyle.shape,
+        look = rowStyle,
     ) {
         Row(
             modifier =
@@ -1319,13 +1239,7 @@ private fun CategoryResultItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             result.sourceName?.let { SourceBadge(it, providerId = result.providerId) }
-            Text(
-                text = result.categoryName,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            CinemaText(text = result.categoryName, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -1333,13 +1247,13 @@ private fun CategoryResultItem(
 @Composable
 private fun SearchResultItem(
     result: SearchResult,
-    rowStyle: SearchRowStyle,
+    rowStyle: TvCardLook,
     onClick: () -> Unit,
     focusRequester: FocusRequester?,
     modifier: Modifier = Modifier,
     onLongPress: () -> Unit = {},
 ) {
-    Card(
+    TvCard(
         onClick = onClick,
         modifier =
             modifier
@@ -1349,11 +1263,7 @@ private fun SearchResultItem(
                 .height(TvDimensions.cardHeight)
                 .tvLongPress(onLongPress)
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
-        colors = rowStyle.colors,
-        border = rowStyle.border,
-        scale = rowStyle.cardScale,
-        glow = rowStyle.glow,
-        shape = rowStyle.shape,
+        look = rowStyle,
     ) {
         Row(
             modifier =
@@ -1386,10 +1296,12 @@ private fun SearchResultItem(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = parsedTitle.titleWithoutYear.ifBlank { result.streamName },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary,
+                    CinemaText(
+                        text =
+                            parsedTitle.titleWithoutYear.ifBlank {
+                                result.streamName
+                            },
+                        role = TextRole.Heading,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -1404,11 +1316,11 @@ private fun SearchResultItem(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TitleBadges(parsedTitle)
-                    Text(
+                    CinemaText(
                         // The year the title gave, before the category, so a long category can't push it off.
                         text = listOfNotNull(parsedTitle.year?.toString(), result.categoryName).joinToString(" · "),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

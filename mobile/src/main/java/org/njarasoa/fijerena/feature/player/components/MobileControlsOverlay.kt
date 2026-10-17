@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgeKind
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
@@ -229,9 +230,8 @@ fun MobileControlsOverlay(
                             if (videoCodec != null) {
                                 CinemaBadge(
                                     text = videoCodec!!,
-                                    backgroundColor = CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.tint),
-                                    textColor = CinemaTheme.colors.onMedia.copy(alpha = CinemaAlpha.textMedium),
-                                    style = textStyleOf(TextRole.Caption),
+                                    kind = BadgeKind.OnMedia,
+                                    role = TextRole.Caption,
                                 )
                             }
                         }
@@ -352,8 +352,8 @@ fun MobileControlsOverlay(
                                 )
                                 BadgedTitle(
                                     raw = metadata.title,
-                                    style = textStyleOf(TextRole.Heading),
-                                    color = CinemaTheme.colors.textPrimary,
+                                    role = TextRole.Heading,
+                                    tone = TextTone.Primary,
                                     modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
                                 )
                             } else if (metadata.catchupLabel != null) {
@@ -371,8 +371,8 @@ fun MobileControlsOverlay(
                                 )
                                 BadgedTitle(
                                     raw = metadata.title,
-                                    style = textStyleOf(TextRole.Heading),
-                                    color = CinemaTheme.colors.textPrimary,
+                                    role = TextRole.Heading,
+                                    tone = TextTone.Primary,
                                     modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xxs),
                                 )
                                 CinemaText(
@@ -395,8 +395,8 @@ fun MobileControlsOverlay(
                                     }
                                 BadgedTitle(
                                     raw = metadata.showTitle ?: metadata.title,
-                                    style = textStyleOf(TextRole.Heading),
-                                    color = CinemaTheme.colors.textPrimary,
+                                    role = TextRole.Heading,
+                                    tone = TextTone.Primary,
                                     modifier = Modifier.weight(1f, fill = false),
                                 )
                                 if (!episodeLine.isNullOrBlank()) {
@@ -684,7 +684,11 @@ fun MobileControlsOverlay(
                             ).padding(CinemaSpacing.lg),
                 ) {
                     Column {
-                        BadgedTitle(raw = metadata.title, style = textStyleOf(TextRole.Heading), color = CinemaTheme.colors.textPrimary)
+                        BadgedTitle(
+                            raw = metadata.title,
+                            role = TextRole.Heading,
+                            tone = TextTone.Primary,
+                        )
                         metadata.description?.let { description ->
                             CinemaText(
                                 text = description,

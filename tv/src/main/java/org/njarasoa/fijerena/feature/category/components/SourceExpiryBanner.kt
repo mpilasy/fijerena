@@ -18,10 +18,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.SubscriptionExpiry
 import org.njarasoa.fijerena.core.ui.utils.expiringSources
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -42,7 +46,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             modifier =
                 modifier
                     .fillMaxWidth()
-                    .background(CinemaError, RoundedCornerShape(CinemaCornerRadius.small))
+                    .background(CinemaTheme.colors.danger, CinemaTheme.shapes.chip)
                     .padding(horizontal = Spacing.md, vertical = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -50,15 +54,16 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             Icon(
                 imageVector = CinemaIcons.Warning,
                 contentDescription = null,
-                tint = CinemaTextPrimary,
+                tint = CinemaTheme.colors.onDanger,
                 modifier = Modifier.size(TvDimensions.iconSmall),
             )
             Column {
                 expiring.forEach { source ->
-                    Text(
+                    CinemaText(
                         text = SubscriptionExpiry.bannerText(context.resources, source),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary,
+                        role = TextRole.Body,
+                        // The banner's colour on CinemaTheme.colors.danger (onDanger).
+                        tone = TextTone.Primary,
                     )
                 }
             }

@@ -1114,8 +1114,8 @@ fun MobileCategoryListScreen(
                                             // The clean name with its badges, as in the player.
                                             BadgedTitle(
                                                 raw = dockSuccess?.streamName ?: target.name,
-                                                style = MaterialTheme.typography.titleLarge,
-                                                color = CinemaTheme.colors.textPrimary,
+                                                role = TextRole.Title,
+                                                tone = TextTone.Primary,
                                             )
                                             val nowProg = dockSuccess?.currentEpgProgram
                                             if (nowProg != null) {
@@ -1202,8 +1202,8 @@ fun MobileCategoryListScreen(
                                                     // The clean name with its badges, as in the player.
                                                     BadgedTitle(
                                                         raw = dockSuccess?.streamName ?: target.name,
-                                                        style = MaterialTheme.typography.titleLarge,
-                                                        color = CinemaTheme.colors.textPrimary,
+                                                        role = TextRole.Title,
+                                                        tone = TextTone.Primary,
                                                     )
                                                     val nowProg = dockSuccess?.currentEpgProgram
                                                     if (nowProg != null) {

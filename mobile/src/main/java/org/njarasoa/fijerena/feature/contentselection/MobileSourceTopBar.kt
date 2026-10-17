@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
@@ -156,7 +157,7 @@ fun MobileSourceTopBar(
                         name = profile.name,
                         colorIndex = profile.colorIndex,
                         size = MobileDimensions.iconLarge,
-                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                        fontSize = textStyleOf(TextRole.Label).fontSize,
                     )
                 }
             }

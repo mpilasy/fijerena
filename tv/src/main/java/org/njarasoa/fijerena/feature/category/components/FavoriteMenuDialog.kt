@@ -16,6 +16,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -24,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -80,12 +84,7 @@ fun FavoriteContextMenuDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = itemName,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 2,
-            )
+            CinemaText(text = itemName, role = TextRole.Heading, maxLines = 2)
         },
         text = {
             Column(
@@ -105,15 +104,11 @@ fun FavoriteContextMenuDialog(
                                 imageVector = CinemaIcons.Delete,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaError,
+                                tint = CinemaTheme.colors.danger,
                             )
                         },
                         headlineContent = {
-                            Text(
-                                text = recentActionText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaError,
-                            )
+                            CinemaText(text = recentActionText, tone = TextTone.Danger)
                         },
                     )
                 }
@@ -135,15 +130,11 @@ fun FavoriteContextMenuDialog(
                             imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = if (isFavorite) CinemaError else CinemaAccent,
+                            tint = if (isFavorite) CinemaTheme.colors.danger else CinemaTheme.colors.accent,
                         )
                     },
                     headlineContent = {
-                        Text(
-                            text = favoriteActionText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isFavorite) CinemaError else CinemaTextPrimary,
-                        )
+                        CinemaText(text = favoriteActionText, tone = if (isFavorite) TextTone.Danger else TextTone.Primary)
                     },
                 )
 
@@ -160,15 +151,11 @@ fun FavoriteContextMenuDialog(
                                 imageVector = if (isWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaAccent,
+                                tint = CinemaTheme.colors.accent,
                             )
                         },
                         headlineContent = {
-                            Text(
-                                text = watchedActionText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary,
-                            )
+                            CinemaText(text = watchedActionText)
                         },
                     )
                 }
@@ -187,15 +174,11 @@ fun FavoriteContextMenuDialog(
                                 imageVector = if (showWatched) CinemaIcons.RadioButtonUnchecked else CinemaIcons.CheckCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaAccent,
+                                tint = CinemaTheme.colors.accent,
                             )
                         },
                         headlineContent = {
-                            Text(
-                                text = stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary,
-                            )
+                            CinemaText(text = stringResource(if (showWatched) R.string.watched_unmark_show else R.string.watched_mark_show))
                         },
                     )
                 }
@@ -212,23 +195,19 @@ fun FavoriteContextMenuDialog(
                             imageVector = CinemaIcons.Close,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTextSecondary,
+                            tint = CinemaTheme.colors.textSecondary,
                         )
                     },
                     headlineContent = {
-                        Text(
-                            text = stringResource(R.string.common_cancel),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextSecondary,
-                        )
+                        CinemaText(text = stringResource(R.string.common_cancel), tone = TextTone.Secondary)
                     },
                 )
             }
         },
         initialFocus = firstActionFocusRequester,
         confirmButton = {},
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
+        containerColor = CinemaTheme.colors.surface,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }

@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.TvUndoBar
@@ -189,7 +190,7 @@ internal fun LiveTvChannelPanel(
                         Icon(
                             imageVector = CinemaIcons.Refresh,
                             contentDescription = stringResource(R.string.category_refresh_streams_description),
-                            tint = CinemaTextPrimary,
+                            tint = CinemaTheme.colors.textPrimary,
                             modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                         )
                     },

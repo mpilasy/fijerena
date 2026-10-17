@@ -80,7 +80,11 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -88,6 +92,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
@@ -373,7 +378,7 @@ private fun MovieDetailsContent(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.background)) {
         // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the Similar
         // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
         // measure pass on every rebuild of this screen, which is why backing out of the player was
@@ -440,13 +445,7 @@ private fun MovieDetailsContent(
                         backdropUrl = backdropUrl,
                         logoUrl = logoUrl,
                         titleFallback = {
-                            Text(
-                                text = titleText,
-                                style = MaterialTheme.typography.displayLarge,
-                                color = CinemaTextPrimary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            CinemaText(text = titleText, role = TextRole.Display, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         },
                         metaLine = metaLine,
                         plot = movieDetail.metadata.plot,
@@ -510,7 +509,7 @@ private fun MovieDetailsContent(
                                     Icon(
                                         imageVector = CinemaIcons.Replay,
                                         contentDescription = stringResource(R.string.movie_start_beginning),
-                                        tint = CinemaTextPrimary,
+                                        tint = CinemaTheme.colors.textPrimary,
                                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                                     )
                                 },
@@ -533,7 +532,7 @@ private fun MovieDetailsContent(
                         TvIconAction(
                             onClick = onToggleFavorite,
                             icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                            iconTint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                            iconTint = if (isFavorite) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                             label = stringResource(R.string.details_action_favorite),
                             modifier = downToTabRow.then(upScrollToTop),
                         )
@@ -543,7 +542,7 @@ private fun MovieDetailsContent(
                             TvIconAction(
                                 onClick = onToggleWatched,
                                 icon = if (isWatched) CinemaIcons.CheckCircleFilled else CinemaIcons.CheckCircleOutline,
-                                iconTint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                                iconTint = if (isWatched) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                                 label = stringResource(R.string.details_action_watched),
                                 modifier = downToTabRow.then(upScrollToTop),
                             )
@@ -557,7 +556,7 @@ private fun MovieDetailsContent(
                                     Icon(
                                         imageVector = CinemaIcons.Movie,
                                         contentDescription = stringResource(R.string.details_watch_trailer_description),
-                                        tint = CinemaTextPrimary,
+                                        tint = CinemaTheme.colors.textPrimary,
                                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                                     )
                                 },
@@ -732,21 +731,9 @@ private fun LoadingScreen() {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
-                color = CinemaAccent,
-            )
+            CinemaSpinner(modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)))
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = stringResource(R.string.movie_loading_details),
-                style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleLarge.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary,
-            )
+            CinemaText(text = stringResource(R.string.movie_loading_details), role = TextRole.Title, tone = TextTone.Secondary)
         }
     }
 }
@@ -772,7 +759,10 @@ private fun CastTabContent(cast: String) {
         verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
     ) {
         cast.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { member ->
-            CinemaBadge(text = member, style = MaterialTheme.typography.bodyMedium)
+            CinemaBadge(
+                text = member,
+                role = TextRole.Body,
+            )
         }
     }
 }
@@ -802,7 +792,7 @@ private fun DetailsTabContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
-            Text(text = plot, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+            CinemaText(text = plot)
             Spacer(modifier = Modifier.height(Spacing.sm))
         }
         val displayRelease =
@@ -935,15 +925,10 @@ private fun StreamNamePicker(
     focusRequester: FocusRequester,
     onFocusedChanged: (Boolean) -> Unit = {},
 ) {
-    val textStyle = MaterialTheme.typography.bodyMedium
-    val textColor = CinemaTextPrimary
+    val textColor = CinemaTheme.colors.textPrimary
 
     if (alternates.isEmpty()) {
-        Text(
-            text = currentName,
-            style = textStyle,
-            color = textColor,
-        )
+        CinemaText(text = currentName)
         return
     }
 
@@ -960,14 +945,14 @@ private fun StreamNamePicker(
             modifier =
                 Modifier
                     .background(
-                        color = if (isFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
-                        shape = RoundedCornerShape(CornerRadius.medium),
+                        color = if (isFocused) CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.tint) else CinemaTheme.colors.clear,
+                        shape = CinemaTheme.shapes.card,
                     ).then(
                         if (isFocused) {
                             Modifier.border(
                                 width = TvFocusTokens.focusBorderWidth,
-                                color = CinemaAccentLight,
-                                shape = RoundedCornerShape(CornerRadius.medium),
+                                color = CinemaTheme.colors.accentSoft,
+                                shape = CinemaTheme.shapes.card,
                             )
                         } else {
                             Modifier
@@ -982,11 +967,7 @@ private fun StreamNamePicker(
                         expanded = true
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
-            Text(
-                text = currentName,
-                style = textStyle,
-                color = textColor,
-            )
+            CinemaText(text = currentName)
             Icon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
@@ -998,13 +979,13 @@ private fun StreamNamePicker(
             ProvideUiScaledDensity {
                 Column {
                     DropdownMenuItem(
-                        text = { Text(currentName, color = CinemaAccent) },
-                        leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaAccent) },
+                        text = { CinemaText(currentName, tone = TextTone.Accent) },
+                        leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) },
                         onClick = { expanded = false },
                     )
                     alternates.forEach { alternate ->
                         DropdownMenuItem(
-                            text = { Text(alternate.name, color = CinemaTextPrimary) },
+                            text = { CinemaText(alternate.name) },
                             // With several sources, each copy's own (it opens there).
                             leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                             onClick = {

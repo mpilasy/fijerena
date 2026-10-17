@@ -32,6 +32,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
@@ -113,9 +114,9 @@ fun CinemaButton(
         // colour and label style as TV Material's.
         CompositionLocalProvider(
             androidx.compose.material3.LocalContentColor provides LocalContentColor.current,
-            androidx.compose.material3.LocalTextStyle provides MaterialTheme.typography.labelLarge,
+            androidx.compose.material3.LocalTextStyle provides textStyleOf(TextRole.Label),
         ) {
-            ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+            ProvideTextStyle(textStyleOf(TextRole.Label)) {
                 Row(
                     modifier =
                         Modifier

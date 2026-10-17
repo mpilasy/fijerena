@@ -7,7 +7,8 @@
 #   - a colour literal (Color(0x…), Color.White / Black / …)
 #   - a .dp / .sp literal
 #   - a FontWeight, a RoundedCornerShape / CircleShape
-#   - MaterialTheme.colorScheme read directly, an ad-hoc text style (typography.x.copy(…))
+#   - MaterialTheme.colorScheme or MaterialTheme.typography read directly, an ad-hoc text style
+#     (typography.x.copy(…)) — text styles come from textStyleOf(role)
 #   - a raw Material control (Button, TextButton, OutlinedButton, TextField, OutlinedTextField,
 #     Switch, Checkbox, RadioButton, FilterChip, AlertDialog, Card, Divider, HorizontalDivider)
 #   - a raw Text( — text is CinemaText(role, tone); a raw progress indicator — CinemaProgressBar / CinemaSpinner
@@ -29,7 +30,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-design-system-allowlist.txt"
-PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
+PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|MaterialTheme\.typography|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
 
 count_file() {
     awk -v pat="$PATTERN" '

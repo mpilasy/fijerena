@@ -4,36 +4,3 @@
 # down: move a site to a component or a CinemaTheme role and lower the count in the same change; a
 # file at 0 leaves the list. A file not listed may have none.
 # See docs/plans/20261016_design-system-plan.md.
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/LanguageBadge.kt 12
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/MitadyLoading.kt 1
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/MitohanaLoading.kt 1
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryList.kt 12
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryStates.kt 2
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/FavoriteMenuDialog.kt 22
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvChannelPanel.kt 1
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvSplitLayout.kt 16
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/SourceExpiryBanner.kt 5
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/StreamList.kt 25
-tv/src/main/java/org/njarasoa/fijerena/feature/category/components/TwoColumnLayout.kt 12
-tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/HomeHeaderStatus.kt 12
-tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/HomeRow.kt 2
-tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/TvContinueWatchingShelf.kt 16
-tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/TvFavoritesRow.kt 12
-tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/components/TvLiveRow.kt 15
-tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt 10
-tv/src/main/java/org/njarasoa/fijerena/feature/epgbrowser/TvEpgBrowserScreen.kt 91
-tv/src/main/java/org/njarasoa/fijerena/feature/epg/TvEpgManagementScreen.kt 73
-tv/src/main/java/org/njarasoa/fijerena/feature/epg/TvGuideGrid.kt 62
-tv/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt 111
-tv/src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt 29
-tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt 1
-tv/src/main/java/org/njarasoa/fijerena/feature/search/SearchScreen.kt 50
-tv/src/main/java/org/njarasoa/fijerena/navigation/BrowseSectionsDialog.kt 11
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/dialogs/TvSelectorDialog.kt 7
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvPlayerControlsOverlay.kt 53
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvSlowConnectionBanner.kt 4
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt 51
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvTuningOverlay.kt 6
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvUpNextOverlay.kt 6
-tv/src/main/java/org/njarasoa/fijerena/ui/player/components/TvPlayerStates.kt 14
-tv/src/main/java/org/njarasoa/fijerena/ui/player/PlayerScreen.kt 4

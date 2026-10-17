@@ -39,10 +39,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
@@ -99,7 +103,7 @@ fun TvSelectorDialog(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy))
+                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.overlayHeavy))
                 .onPreviewKeyEvent { keyEvent ->
                     val isBack = keyEvent.key == Key.Back
                     // Close on KeyUp, so the release does not land on the button focus returns to.
@@ -131,18 +135,18 @@ fun TvSelectorDialog(
                         .focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                Text(
+                CinemaText(
                     text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = TvFocusTokens.emphasisWeight,
+                    role = TextRole.Title,
+                    tone = TextTone.Accent,
+                    emphasis = true,
                 )
 
                 if (options.isEmpty() && emptyText != null) {
-                    Text(
+                    CinemaText(
                         text = emptyText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = CinemaTextSecondary,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
                     )
                 }
@@ -177,10 +181,10 @@ fun TvSelectorDialog(
                             ),
                 )
 
-                Text(
+                CinemaText(
                     text = stringResource(R.string.player_nav_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextDisabled,
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Disabled,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )

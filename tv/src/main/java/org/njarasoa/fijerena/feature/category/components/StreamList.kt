@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -81,6 +82,8 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -97,11 +100,16 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.UndoBarState
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
 import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
@@ -112,39 +120,9 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
-/**
- * Row card styling, built once per list composition instead of once per row.
- * `TvListRowDefaults.colors` is `@Composable`, so it cannot be wrapped in `remember` — hoisting the
- * calls out of the item body is what stops a `CardColors`/`CardBorder`/`CardScale`/`CardGlow`/`CardShape` set
- * being allocated per visible row per recomposition. A data class so a fresh instance still
- * compares equal and lets rows skip.
- *
- * One type hierarchy for every row (TV UI audit): the title in `titleMedium`, every line under it
- * in `bodyMedium`.
- */
-@Immutable
-internal data class StreamCardStyle(
-    val colors: CardColors,
-    val border: CardBorder,
-    val cardScale: CardScale,
-    val glow: CardGlow,
-    val shape: CardShape,
-    val titleMedium: TextStyle,
-    val bodyMedium: TextStyle,
-)
-
-@OptIn(ExperimentalTvMaterial3Api::class)
+/** A stream row's look (a content list row), built once per list instead of once per row. */
 @Composable
-internal fun streamCardStyle(): StreamCardStyle =
-    StreamCardStyle(
-        colors = TvListRowDefaults.colors(),
-        border = TvListRowDefaults.border(),
-        cardScale = TvListRowDefaults.scale(),
-        glow = TvListRowDefaults.glow(),
-        shape = TvListRowDefaults.shape(),
-        titleMedium = MaterialTheme.typography.titleMedium,
-        bodyMedium = MaterialTheme.typography.bodyMedium,
-    )
+internal fun streamCardStyle(): TvCardLook = TvCardLooks.listRow()
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -420,10 +398,9 @@ internal fun StreamList(
         }
         if (editMode) {
             // What the mode does, under the list's title (plan → A, "Edit" mode).
-            Text(
+            CinemaText(
                 text = stringResource(if (isRecentList) R.string.edit_recent_hint else R.string.edit_favorites_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaAccent,
+                tone = TextTone.Accent,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(bottom = Spacing.sm),
@@ -435,8 +412,8 @@ internal fun StreamList(
                 Modifier
                     .fillMaxSize()
                     .background(
-                        color = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.tint),
-                        shape = RoundedCornerShape(CornerRadius.small),
+                        color = CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.tint),
+                        shape = CinemaTheme.shapes.chip,
                     ).then(
                         // The screen header above stays outside the pane: Up from the first row
                         // reaches it. Right goes nowhere (R1).
@@ -586,10 +563,9 @@ private fun StreamListHeader(
         modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Text(
+        CinemaText(
             text = selectedCategoryName ?: stringResource(R.string.category_select_category),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+            role = TextRole.Title,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
@@ -608,13 +584,7 @@ private fun StreamListHeader(
                         }
                     }
                 }
-            Text(
-                text = countText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary,
-                maxLines = 1,
-                modifier = Modifier.alignByBaseline(),
-            )
+            CinemaText(text = countText, tone = TextTone.Secondary, maxLines = 1, modifier = Modifier.alignByBaseline())
         }
     }
 }
@@ -625,18 +595,24 @@ private fun StreamListHeader(
  */
 @Composable
 private fun SeparatorRow(name: String) {
-    Text(
+    CinemaText(
         text =
             name
                 .trim()
                 .trim('#')
                 .trim()
                 .ifEmpty { name.trim() },
-        style = MaterialTheme.typography.titleSmall,
-        color = CinemaTextSecondary,
+        role = TextRole.Heading,
+        tone = TextTone.Secondary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(start = Spacing.md + Spacing.sm, end = Spacing.md, top = Spacing.sm),
+        modifier =
+            Modifier.padding(
+                start =
+                    Spacing.md + Spacing.sm,
+                end = Spacing.md,
+                top = Spacing.sm,
+            ),
     )
 }
 
@@ -667,7 +643,7 @@ internal fun StreamItem(
     /** Applied to the card itself (the focusable), not the row. */
     cardModifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
-    cardStyle: StreamCardStyle,
+    cardStyle: TvCardLook,
     modifier: Modifier = Modifier,
 ) {
     // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
@@ -678,7 +654,7 @@ internal fun StreamItem(
     // node draws the same clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
 
-    Card(
+    TvCard(
         onClick = onClick,
         onLongClick = onOpenActions,
         modifier =
@@ -692,11 +668,7 @@ internal fun StreamItem(
                     onOpenActions()
                     true
                 },
-        colors = cardStyle.colors,
-        border = cardStyle.border,
-        shape = cardStyle.shape,
-        scale = cardStyle.cardScale,
-        glow = cardStyle.glow,
+        look = cardStyle,
     ) {
         // Its code is left out when the category already opens with it.
         val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
@@ -760,8 +732,7 @@ internal fun StreamItem(
         ) {
             // The resume bar sits on the thumbnail's bottom edge, inside its row (TV UI audit
             // #11) — under the row it read as the next row's.
-            val thumbnailRadius = CinemaCornerRadius.medium
-            val thumbnailShape = remember(thumbnailRadius) { RoundedCornerShape(thumbnailRadius) }
+            val thumbnailShape = CinemaTheme.shapes.card
             Box(
                 modifier =
                     Modifier
@@ -790,8 +761,8 @@ internal fun StreamItem(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(TvDimensions.resumeBarHeight),
-                        color = CinemaAccent,
-                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                        color = CinemaTheme.colors.accent,
+                        trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
                         drawStopIndicator = {},
                         gapSize = Spacing.none,
                     )
@@ -804,31 +775,27 @@ internal fun StreamItem(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (isFavorite) {
-                        Text(
-                            text = "★",
-                            style = cardStyle.titleMedium,
-                            color = CinemaAccent,
-                        )
+                        CinemaText(text = "★", role = TextRole.Heading, tone = TextTone.Accent)
                     }
 
                     if (isWatched) {
                         Icon(
                             imageVector = CinemaIcons.CheckCircle,
                             contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaSuccess,
+                            tint = CinemaTheme.colors.success,
                             modifier = Modifier.size(TvDimensions.iconSmall),
                         )
                     }
 
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
 
-                    Text(
+                    TvRowTitle(
                         // See mobile's StreamCard — provider data occasionally sends a blank
                         // name (e.g. "EN -  (US)" with nothing between the dashes).
                         text = displayTitle,
-                        style = cardStyle.titleMedium,
-                        color = TvListRowDefaults.titleColor(isCurrent = isCurrent, isFocused = isFocused),
-                        maxLines = 1,
+                        isCurrent = isCurrent,
+                        isFocused = isFocused,
+                        overflow = TextOverflow.Clip,
                         modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
                     )
                     // The source (Expert mode) ends the first line, in the same place on every row.
@@ -844,10 +811,9 @@ internal fun StreamItem(
                     ) {
                         TitleBadges(parsedTitle)
                         lineText?.let { text ->
-                            Text(
+                            CinemaText(
                                 text = text,
-                                style = cardStyle.bodyMedium,
-                                color = if (text == nowLine) CinemaOrangeLight else CinemaTextSecondary,
+                                tone = if (text == nowLine) TextTone.Highlight else TextTone.Secondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = if (isFocused && text == nowLine) Modifier.bounceMarquee() else Modifier,
@@ -857,10 +823,9 @@ internal fun StreamItem(
                 }
                 // A film's year line keeps a Now line, if it has one, under it.
                 nowLine?.takeIf { sourceLine == null && metaLine.isNotEmpty() }?.let { line ->
-                    Text(
+                    CinemaText(
                         text = line,
-                        style = cardStyle.bodyMedium,
-                        color = CinemaOrangeLight,
+                        tone = TextTone.Highlight,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
@@ -884,7 +849,7 @@ internal fun RowActionsHint() {
     Icon(
         imageVector = CinemaIcons.MoreVert,
         contentDescription = stringResource(R.string.row_actions_hint),
-        tint = CinemaTextSecondary,
+        tint = CinemaTheme.colors.textSecondary,
         modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }
@@ -895,7 +860,7 @@ private fun RowRemoveHint() {
     Icon(
         imageVector = CinemaIcons.Close,
         contentDescription = stringResource(R.string.edit_remove_row),
-        tint = CinemaError,
+        tint = CinemaTheme.colors.danger,
         modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }

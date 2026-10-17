@@ -18,11 +18,15 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -44,12 +48,7 @@ internal fun BrowseSectionsDialog(
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = stringResource(R.string.browse_source, source.name),
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 2,
-            )
+            CinemaText(text = stringResource(R.string.browse_source, source.name), role = TextRole.Heading, maxLines = 2)
         },
         text = {
             Column(
@@ -66,15 +65,11 @@ internal fun BrowseSectionsDialog(
                                 imageVector = sectionIcon(contentType),
                                 contentDescription = null,
                                 modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = CinemaTextPrimary,
+                                tint = CinemaTheme.colors.textPrimary,
                             )
                         },
                         headlineContent = {
-                            Text(
-                                text = sectionLabel(contentType),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary,
-                            )
+                            CinemaText(text = sectionLabel(contentType))
                         },
                     )
                 }
@@ -87,24 +82,20 @@ internal fun BrowseSectionsDialog(
                             imageVector = CinemaIcons.Close,
                             contentDescription = null,
                             modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTextSecondary,
+                            tint = CinemaTheme.colors.textSecondary,
                         )
                     },
                     headlineContent = {
-                        Text(
-                            text = stringResource(R.string.common_cancel),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextSecondary,
-                        )
+                        CinemaText(text = stringResource(R.string.common_cancel), tone = TextTone.Secondary)
                     },
                 )
             }
         },
         initialFocus = firstFocus,
         confirmButton = {},
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
+        containerColor = CinemaTheme.colors.surface,
+        titleContentColor = CinemaTheme.colors.textPrimary,
+        textContentColor = CinemaTheme.colors.textSecondary,
     )
 }
 

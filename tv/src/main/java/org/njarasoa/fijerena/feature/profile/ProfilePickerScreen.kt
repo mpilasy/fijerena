@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -125,7 +126,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                             name = profile.name,
                             colorIndex = profile.colorIndex,
                             size = TvDimensions.profilePickerAvatarSize,
-                            fontSize = MaterialTheme.typography.displayLarge.fontSize,
+                            fontSize = textStyleOf(TextRole.Display).fontSize * PICKER_INITIAL_SCALE,
                         )
                     }
                 }
@@ -215,3 +216,6 @@ private fun PickerCard(
 }
 
 private const val ADD_PROFILE_KEY = "add-profile"
+
+/** The picker's big avatars carry a letter twice the Display role's size. */
+private const val PICKER_INITIAL_SCALE = 2f

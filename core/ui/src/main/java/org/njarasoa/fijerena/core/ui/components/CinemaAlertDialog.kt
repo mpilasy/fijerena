@@ -135,7 +135,7 @@ fun CinemaAlertDialog(
                             }
                             title?.let {
                                 CompositionLocalProvider(LocalContentColor provides titleContentColor) {
-                                    ProvideTextStyle(MaterialTheme.typography.headlineSmall, it)
+                                    ProvideTextStyle(textStyleOf(TextRole.Title), it)
                                 }
                                 Spacer(Modifier.height(CinemaSpacing.md))
                             }
@@ -144,7 +144,7 @@ fun CinemaAlertDialog(
                                 // rather than pushing the buttons off the bottom of the screen.
                                 Box(Modifier.weight(1f, fill = false)) {
                                     CompositionLocalProvider(LocalContentColor provides textContentColor) {
-                                        ProvideTextStyle(MaterialTheme.typography.bodyMedium, it)
+                                        ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                     }
                                 }
                                 Spacer(Modifier.height(CinemaSpacing.lg))
@@ -190,13 +190,13 @@ fun CinemaAlertDialog(
                                 }
                                 title?.let {
                                     CompositionLocalProvider(LocalContentColor provides titleContentColor) {
-                                        ProvideTextStyle(MaterialTheme.typography.headlineSmall, it)
+                                        ProvideTextStyle(textStyleOf(TextRole.Title), it)
                                     }
                                     Spacer(Modifier.height(CinemaSpacing.xs))
                                 }
                                 text?.let {
                                     CompositionLocalProvider(LocalContentColor provides textContentColor) {
-                                        ProvideTextStyle(MaterialTheme.typography.bodyMedium, it)
+                                        ProvideTextStyle(textStyleOf(TextRole.Body), it)
                                     }
                                 }
                             }
@@ -228,13 +228,13 @@ fun CinemaAlertDialog(
                         }
                         title?.let {
                             CompositionLocalProvider(LocalContentColor provides titleContentColor) {
-                                ProvideTextStyle(MaterialTheme.typography.headlineSmall, it)
+                                ProvideTextStyle(textStyleOf(TextRole.Title), it)
                             }
                             Spacer(Modifier.height(CinemaSpacing.xs))
                         }
                         text?.let {
                             CompositionLocalProvider(LocalContentColor provides textContentColor) {
-                                ProvideTextStyle(MaterialTheme.typography.bodyMedium, it)
+                                ProvideTextStyle(textStyleOf(TextRole.Body), it)
                             }
                             Spacer(Modifier.height(CinemaSpacing.md))
                         }

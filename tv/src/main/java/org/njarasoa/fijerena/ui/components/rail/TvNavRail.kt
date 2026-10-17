@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -337,7 +338,7 @@ private fun RailEntry(
                 name = profileInitial,
                 colorIndex = state.profileColorIndex,
                 size = TvDimensions.iconMedium,
-                fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                fontSize = textStyleOf(TextRole.Label).fontSize,
             )
         } else {
             Icon(

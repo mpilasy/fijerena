@@ -52,7 +52,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * ```
  *
  * The values are `@Composable` (they read the active theme and look and feel), so a list hoists
- * them out of its item body — once per list, not once per row (see `StreamList`'s `StreamCardStyle`).
+ * them out of its item body — once per list, not once per row (see `TvCardLooks` in cards/TvCard.kt).
  */
 object TvListRowDefaults {
     @ReadOnlyComposable

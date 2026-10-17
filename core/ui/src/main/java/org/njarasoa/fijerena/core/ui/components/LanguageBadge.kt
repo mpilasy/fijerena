@@ -34,29 +34,51 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
  * Shared badge primitive used for status indicators, codecs, ratings, and tags.
  */
+
+/** What a badge marks, which decides its colours. */
+enum class BadgeKind {
+    /** A tag: codes, formats, cast names — raised surface, secondary text. */
+    Neutral,
+
+    /** Over video or artwork: a dark tint, light text. */
+    OnMedia,
+
+    /** Something live now ("On air"): the success colour. */
+    Success,
+
+    /** Something about to happen ("Soon"): the warning colour. */
+    Warning,
+}
+
 @Composable
 fun CinemaBadge(
     text: String,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = CinemaSurfaceVariant,
-    textColor: Color = CinemaTextSecondary,
-    style: TextStyle = MaterialTheme.typography.labelSmall,
+    kind: BadgeKind = BadgeKind.Neutral,
+    role: TextRole = TextRole.Caption,
 ) {
-    val radius = CinemaCornerRadius.small
-    val shape = cornerShape(radius)
-    Text(
+    val c = CinemaTheme.colors
+    val (container, tone) =
+        when (kind) {
+            BadgeKind.Neutral -> c.surfaceRaised to TextTone.Secondary
+            BadgeKind.OnMedia -> c.mediaScrim.copy(alpha = CinemaAlpha.tint) to TextTone.OnMedia
+            BadgeKind.Success -> c.success to TextTone.OnAccent
+            BadgeKind.Warning -> c.warning to TextTone.OnAccent
+        }
+    CinemaText(
         text = text,
-        style = style,
-        color = textColor,
+        role = role,
+        tone = tone,
         modifier =
             modifier
-                .clip(shape)
-                .background(backgroundColor)
+                .clip(CinemaTheme.shapes.chip)
+                .background(container)
                 .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
     )
 }
@@ -71,12 +93,7 @@ fun LanguageBadge(
     code: String,
     modifier: Modifier = Modifier,
 ) {
-    CinemaBadge(
-        text = code,
-        modifier = modifier,
-        backgroundColor = CinemaSurfaceVariant,
-        textColor = CinemaTextSecondary,
-    )
+    CinemaBadge(text = code, modifier = modifier)
 }
 
 /**
@@ -113,9 +130,9 @@ fun titleBadgesDescription(parsed: ParsedTitle): String? =
 @Composable
 fun BadgedTitle(
     raw: String,
-    style: TextStyle,
     modifier: Modifier = Modifier,
-    color: Color = Color.Unspecified,
+    role: TextRole = TextRole.Heading,
+    tone: TextTone = TextTone.Primary,
     textModifier: Modifier = Modifier,
 ) {
     val parsed = remember(raw) { parseDisplayTitle(raw) }
@@ -125,10 +142,10 @@ fun BadgedTitle(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TitleBadges(parsed)
-        Text(
+        CinemaText(
             text = parsed.title.ifBlank { raw },
-            style = style,
-            color = color,
+            role = role,
+            tone = tone,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false).then(textModifier),
@@ -164,13 +181,13 @@ fun SourceBadge(
 fun RatingBadge(
     rating: String,
     modifier: Modifier = Modifier,
-    textColor: Color = CinemaAccent,
-    style: TextStyle = MaterialTheme.typography.bodySmall,
+    role: TextRole = TextRole.BodySmall,
+    tone: TextTone = TextTone.Accent,
 ) {
-    Text(
+    CinemaText(
         text = "★ ${formatRating(rating)}",
-        style = style,
-        color = textColor,
+        role = role,
+        tone = tone,
         maxLines = 1,
         modifier = modifier,
     )
@@ -185,17 +202,15 @@ fun CatchupBadge(
     days: Int,
     iconSize: Dp,
     modifier: Modifier = Modifier,
-    style: TextStyle = MaterialTheme.typography.labelSmall,
 ) {
-    val radius = CinemaCornerRadius.small
-    val shape = cornerShape(radius)
+    val shape = CinemaTheme.shapes.chip
     val description = pluralStringResource(R.plurals.catchup_badge_description, days, days)
     Row(
         modifier =
             modifier
                 .clearAndSetSemantics { contentDescription = description }
                 .clip(shape)
-                .background(CinemaSurfaceVariant)
+                .background(CinemaTheme.colors.surfaceRaised)
                 .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
@@ -203,13 +218,13 @@ fun CatchupBadge(
         Icon(
             imageVector = CinemaIcons.Replay,
             contentDescription = null,
-            tint = CinemaTextSecondary,
+            tint = CinemaTheme.colors.textSecondary,
             modifier = Modifier.size(iconSize),
         )
-        Text(
+        CinemaText(
             text = stringResource(R.string.catchup_badge_days, days),
-            style = style,
-            color = CinemaTextSecondary,
+            role = TextRole.Caption,
+            tone = TextTone.Secondary,
             maxLines = 1,
         )
     }

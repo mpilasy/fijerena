@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -68,7 +69,7 @@ fun ProfilesSettingsRows(
                     name = profile.name,
                     colorIndex = profile.colorIndex,
                     size = MobileDimensions.iconLarge,
-                    fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                    fontSize = textStyleOf(TextRole.Label).fontSize,
                 )
             },
             onClick = {
@@ -243,7 +244,7 @@ private fun ColorSwatch(
             name = "",
             colorIndex = index,
             size = MobileDimensions.iconLarge,
-            fontSize = MaterialTheme.typography.titleSmall.fontSize,
+            fontSize = textStyleOf(TextRole.Label).fontSize,
         )
     }
 }

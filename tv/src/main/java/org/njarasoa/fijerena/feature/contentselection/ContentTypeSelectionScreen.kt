@@ -112,7 +112,10 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -140,6 +143,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
@@ -755,16 +759,7 @@ fun ContentTypeSelectionScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        Text(
-                            text = stringResource(R.string.login_app_name),
-                            style =
-                                MaterialTheme.typography.headlineSmall.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.headlineSmall.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        CinemaText(text = stringResource(R.string.login_app_name), role = TextRole.Title)
                         HomeClock()
                     }
                     Row(
@@ -810,11 +805,11 @@ fun ContentTypeSelectionScreen(
                                             width = TvFocusTokens.focusBorderWidth,
                                             color =
                                                 if (summaryFocused) {
-                                                    CinemaAccentLight
+                                                    CinemaTheme.colors.accentSoft
                                                 } else {
-                                                    androidx.compose.ui.graphics.Color.Transparent
+                                                    CinemaTheme.colors.clear
                                                 },
-                                            shape = RoundedCornerShape(CinemaCornerRadius.large),
+                                            shape = CinemaTheme.shapes.dialog,
                                         ).leftToRail()
                                         .onFocusChanged { summaryFocused = it.isFocused }
                                         .clickable(role = Role.Button) { showSourcesSheet = true }
@@ -837,7 +832,7 @@ fun ContentTypeSelectionScreen(
                                     Icon(
                                         imageVector = CinemaIcons.MenuBook,
                                         contentDescription = stringResource(R.string.epg_browser_title),
-                                        tint = CinemaTextPrimary,
+                                        tint = CinemaTheme.colors.textPrimary,
                                     )
                                 },
                             )
@@ -1172,16 +1167,7 @@ private fun HomeSourcesPanel(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = message,
-            style =
-                MaterialTheme.typography.headlineSmall.copy(
-                    fontSize =
-                        MaterialTheme.typography.headlineSmall.fontSize
-                            .scaled(scale),
-                ),
-            color = CinemaTextPrimary,
-        )
+        CinemaText(text = message, role = TextRole.Title)
         actions.forEachIndexed { index, (label, onClick) ->
             Spacer(modifier = Modifier.height(if (index == 0) Spacing.lg.scaled(scale) else Spacing.sm.scaled(scale)))
             CinemaPrimaryButton(

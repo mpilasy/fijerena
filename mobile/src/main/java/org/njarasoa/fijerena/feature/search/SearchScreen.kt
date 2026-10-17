@@ -593,8 +593,8 @@ private fun LoadingView(message: String? = null) {
         contentAlignment = Alignment.Center,
     ) {
         MitadyLoading(
-            style = MaterialTheme.typography.headlineSmall,
-            color = CinemaTheme.colors.accent,
+            role = TextRole.Title,
+            tone = TextTone.Accent,
             overrideText = message,
         )
     }
@@ -790,8 +790,8 @@ private fun SearchResults(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             MitadyLoading(
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTheme.colors.accent,
+                                role = TextRole.Body,
+                                tone = TextTone.Accent,
                             )
                             CinemaText(
                                 text = " ($searchProgress)",

@@ -38,9 +38,13 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -49,7 +53,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -99,9 +108,8 @@ private fun TvLiveChannelCard(
     onOpenActions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(CinemaCornerRadius.medium)
     var isFocused by remember { mutableStateOf(false) }
-    Card(
+    TvCard(
         onClick = onClick,
         onLongClick = onOpenActions,
         modifier =
@@ -109,26 +117,7 @@ private fun TvLiveChannelCard(
                 .width(TvDimensions.continueWatchingCardWidth)
                 .onFocusChanged { isFocused = it.isFocused }
                 .openActionsOnMenuKey(onOpenActions),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaSurface,
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleSubtle,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        shape = CardDefaults.shape(shape = shape),
-        border =
-            CardDefaults.border(
-                border = Border(BorderStroke(TvFocusTokens.borderThin, CinemaGlassBorder)),
-                focusedBorder = Border(border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaTextPrimary), shape = shape),
-            ),
-        glow = CardDefaults.glow(glow = TvFocusTokens.restingGlow, focusedGlow = TvFocusTokens.focusedGlow),
+        look = TvCardLooks.shelf(),
     ) {
         Column {
             CinemaThumbnail(
@@ -144,11 +133,9 @@ private fun TvLiveChannelCard(
                 // No programme: no bar, but its height, so cards in the row line up.
                 Spacer(modifier = Modifier.height(TvDimensions.resumeBarHeight))
             } else {
-                LinearProgressIndicator(
+                CinemaProgressBar(
                     progress = { now.elapsedFraction() },
                     modifier = Modifier.fillMaxWidth().height(TvDimensions.resumeBarHeight),
-                    color = CinemaAccent,
-                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
                 )
             }
             Column(modifier = Modifier.padding(Spacing.sm)) {
@@ -158,10 +145,12 @@ private fun TvLiveChannelCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = parsedTitle.title.ifBlank { entry.item.name },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary,
+                    CinemaText(
+                        text =
+                            parsedTitle.title.ifBlank {
+                                entry.item.name
+                            },
+                        role = TextRole.Heading,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -179,11 +168,11 @@ private fun TvLiveChannelCard(
                     sourceName?.let { SourceBadge(it, providerId = entry.item.providerId) }
                     // A card is narrow: the language only, not the formats.
                     parsedTitle.badge?.let { LanguageBadge(it) }
-                    Text(
+                    CinemaText(
                         // A line even when empty, so cards in the row line up.
                         text = listOfNotNull(lastWatched, nowLine).joinToString(" • "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextSecondary,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
