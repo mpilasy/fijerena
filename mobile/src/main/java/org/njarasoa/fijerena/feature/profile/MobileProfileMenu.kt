@@ -48,6 +48,8 @@ fun MobileProfileMenu(
     onSettings: () -> Unit,
     onBrowseSection: (providerId: Long, contentType: String) -> Unit,
     onBrowseSignIn: (providerId: Long) -> Unit,
+    /** Asking who is watching: see [ProfileSheet]'s mustChoose. */
+    mustChoose: Boolean = false,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -64,6 +66,7 @@ fun MobileProfileMenu(
             },
             onDismiss = onDismiss,
             onSettings = onSettings,
+            mustChoose = mustChoose,
             browse = sections?.browse.orEmpty(),
             onBrowse = { browsed ->
                 coroutineScope.launch {

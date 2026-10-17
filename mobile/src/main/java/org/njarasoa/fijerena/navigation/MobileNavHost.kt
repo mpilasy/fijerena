@@ -232,6 +232,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // The profile in use was deleted on another device (live sync moved this one to another):
     // every screen goes, playback included, and the profile menu asks who is watching.
     var showProfileMenu by remember { mutableStateOf(false) }
+    // Set when the menu asks who is watching: it then stays until a profile is picked.
+    var mustChooseProfile by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         org.njarasoa.fijerena.core.ui.di.AppContainer
             .getInstance(context)
@@ -240,6 +242,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 // Before the graph exists (very first frames) there is nothing to rebuild.
                 if (navController.currentBackStackEntry == null) return@collect
                 startOver()
+                mustChooseProfile = true
                 showProfileMenu = true
             }
     }
@@ -976,9 +979,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         visible = showProfileMenu,
         viewModel = profilesViewModel,
         sections = profileSections,
-        onDismiss = { showProfileMenu = false },
+        onDismiss = {
+            showProfileMenu = false
+            mustChooseProfile = false
+        },
         // Every screen may hold the previous profile's repository: start over on its last tab.
         onProfileChosen = { coroutineScope.launch { startOver() } },
+        mustChoose = mustChooseProfile,
         onSettings = { selectTab(MobileTab.SETTINGS) },
         onBrowseSection = ::browseSection,
         onBrowseSignIn = ::browseSignIn,

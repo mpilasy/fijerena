@@ -11,6 +11,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -48,12 +51,21 @@ fun ProfileSheet(
     onSettings: () -> Unit,
     browse: List<BrowseSource> = emptyList(),
     onBrowse: (BrowseSource) -> Unit = {},
+    /**
+     * Asking who is watching (the profile in use was deleted on another device): only the
+     * profiles, and the sheet stays until one is picked — no swipe, scrim tap or Back closes it.
+     */
+    mustChoose: Boolean = false,
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     val rowColors = ListItemDefaults.colors(containerColor = CinemaTheme.colors.clear)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = { if (!mustChoose) onDismiss() },
+        sheetState = rememberModalBottomSheetState(confirmValueChange = { !mustChoose || it != SheetValue.Hidden }),
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = !mustChoose),
+    ) {
         ProvideUiScaledDensity {
             Column(modifier = Modifier.padding(bottom = CinemaSpacing.md)) {
                 val switchingName = switchingTo
@@ -98,6 +110,7 @@ fun ProfileSheet(
                                 },
                         )
                     }
+                    if (mustChoose) return@Column
                     ListItem(
                         headlineContent = { CinemaText(stringResource(R.string.settings_title)) },
                         leadingContent = { Icon(CinemaIcons.Settings, contentDescription = null) },
