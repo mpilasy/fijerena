@@ -431,6 +431,12 @@ fun SettingsScreen(
                                             onBack = { if (ownProfilePage) leaveOwnProfilePage() else closeProfile(false) },
                                             scale = scale,
                                             focusOnOpen = !ownProfilePage,
+                                            title =
+                                                if (ownProfilePage) {
+                                                    stringResource(R.string.profile_own_page_title)
+                                                } else {
+                                                    stringResource(R.string.profile_dialog_edit_title)
+                                                },
                                             entryModifier =
                                                 if (ownProfilePage) {
                                                     Modifier.paneItem(

@@ -171,7 +171,7 @@ fun ProfilesSettingsCard(
  *
  * Without Expert mode the Profiles group shows the profile in use's page in place of its rows:
  * [focusOnOpen] false leaves focus on the Settings rail, and [entryModifier] (on the name row)
- * is where entering the pane lands.
+ * is where entering the pane lands; [title] reads "Your profile" there.
  */
 @Composable
 fun ProfileEditPane(
@@ -185,6 +185,7 @@ fun ProfileEditPane(
     scale: Float,
     focusOnOpen: Boolean = true,
     entryModifier: Modifier = Modifier,
+    title: String = stringResource(R.string.profile_dialog_edit_title),
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
     var colorIndex by rememberSaveable(profile.id) { mutableIntStateOf(profile.colorIndex) }
@@ -292,7 +293,7 @@ fun ProfileEditPane(
                 },
         ) {
             Text(
-                text = "‹ ${stringResource(R.string.profile_dialog_edit_title)}",
+                text = "‹ $title",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = Spacing.xs),
