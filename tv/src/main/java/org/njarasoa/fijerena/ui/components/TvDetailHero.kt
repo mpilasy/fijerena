@@ -45,7 +45,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -79,7 +78,7 @@ fun TvDetailHero(
     sideSlot: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit,
 ) {
-    val palette = CinemaThemeHolder.current
+    val palette = CinemaTheme.colors
 
     // BoxWithConstraints, not a fixed aspectRatio: aspectRatio at heroBackdropAspect works out to
     // exactly full screen height on a 16:9 TV (screen width / (16/9) == screen height), so

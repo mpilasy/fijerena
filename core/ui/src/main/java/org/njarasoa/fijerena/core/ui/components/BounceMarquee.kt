@@ -97,7 +97,10 @@ private class BounceMarqueeNode(
 
         updateOverflow(if (isInfiniteWidth) 0 else (placeable.width - containerWidth).coerceAtLeast(0))
 
-        return layout(if (isInfiniteWidth) placeable.width else containerWidth, placeable.height) {
+        // As wide as the text, up to the space given: a short title must not claim the whole row
+        // (the player's "· S2:E10 · Over" was pushed halfway across the screen).
+        val width = if (isInfiniteWidth) placeable.width else placeable.width.coerceIn(constraints.minWidth, containerWidth)
+        return layout(width, placeable.height) {
             placeable.place(0, 0)
         }
     }

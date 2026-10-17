@@ -216,3 +216,37 @@ fun ProvideCinemaTheme(
         content = content,
     )
 }
+
+/**
+ * The colours for screens over video — the player and its controls: always dark, whatever the theme,
+ * since they sit on a picture. A dark theme's own roles are used as they are; a light theme's
+ * neutrals (background, surfaces, text, glass) come from the dark default, its accent stays.
+ */
+fun CinemaColorRoles.forMedia(): CinemaColorRoles {
+    if (!isLight) return this
+    return CinemaColorRoles.from(DeepNightPalette).copy(
+        accent = accent,
+        accentStrong = accentStrong,
+        onAccent = onAccent,
+        danger = danger,
+        highlight = highlight,
+    )
+}
+
+/**
+ * Provides [forMedia] colours to [content] (and to Material 3 inside it), for the player: its
+ * controls, panels, dialogs and text read dark on the video in every theme. TV adds TV Material's own
+ * scheme on top (tv `TvMediaTheme`).
+ */
+@Composable
+fun ProvideMediaTheme(content: @Composable () -> Unit) {
+    val media = CinemaTheme.colors.forMedia()
+    CompositionLocalProvider(LocalCinemaColors provides media) {
+        androidx.compose.material3.MaterialTheme(
+            colorScheme = remember(media) { cinemaMaterialColorScheme(media) },
+            typography = androidx.compose.material3.MaterialTheme.typography,
+            shapes = androidx.compose.material3.MaterialTheme.shapes,
+            content = content,
+        )
+    }
+}

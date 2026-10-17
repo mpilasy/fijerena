@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
@@ -61,7 +62,7 @@ object TvFocusTokens {
     /** Resting container for an interactive row or button. */
     val restingContainer: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaSurfaceVariant
+        get() = CinemaTheme.colors.surfaceRaised
 
     /**
      * Container behind the focused row or button. Must stay *lighter* than [restingContainer]:
@@ -70,7 +71,7 @@ object TvFocusTokens {
      */
     val focusedContainer: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaSurfaceLight
+        get() = CinemaTheme.colors.surfaceHigh
 
     /**
      * Outline of a focused content list row (channels, titles, categories, search results): white,
@@ -79,15 +80,15 @@ object TvFocusTokens {
      */
     val focusedRowOutline: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaTextPrimary
+        get() = CinemaTheme.colors.textPrimary
 
     /** Width of the "current" bar on a selected / current row's leading edge (see `Modifier.currentIndicator`). */
     val currentBarWidth: Dp = 4.dp
 
-    /** Colour of the "current" bar. The full accent, not [CinemaAccentLight], so it never reads as the focus outline. */
+    /** Colour of the "current" bar. The full accent, not [CinemaTheme.colors.accentSoft], so it never reads as the focus outline. */
     val currentAccent: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaAccent
+        get() = CinemaTheme.colors.accent
 
     /**
      * Title colour on a selected / current row, focused or not. The light accent, so it stays
@@ -95,7 +96,7 @@ object TvFocusTokens {
      */
     val currentText: Color
         @Composable @ReadOnlyComposable
-        get() = CinemaAccentLight
+        get() = CinemaTheme.colors.accentSoft
 
     /**
      * Focus ring on a profile avatar (F-PP-1): twice [focusBorderWidth], since a ring the width of
@@ -115,7 +116,7 @@ object TvFocusTokens {
         get() =
             if (LocalUiStyle.current.grid.focusUsesShadow) {
                 Glow(
-                    elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                    elevationColor = CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.cardElevationShadow),
                     elevation = focusShadowElevation,
                 )
             } else {
@@ -132,7 +133,7 @@ object TvFocusTokens {
         get() =
             if (LocalUiStyle.current.grid.focusUsesShadow) {
                 Glow(
-                    elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.ghost),
+                    elevationColor = CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.ghost),
                     elevation = glowElevation,
                 )
             } else {

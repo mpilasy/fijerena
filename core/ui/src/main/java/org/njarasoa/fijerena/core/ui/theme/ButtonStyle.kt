@@ -46,34 +46,51 @@ abstract class ButtonStyle {
         @Composable @ReadOnlyComposable
         get() = cornerShape(LocalUiStyle.current.shapes.button)
 
+    @Composable
+    @ReadOnlyComposable
     open fun container(kind: ButtonKind): Color =
         when (kind) {
-            ButtonKind.Main -> CinemaAccent
-            ButtonKind.Other -> CinemaTextPrimary.copy(alpha = OTHER_FILL_ALPHA)
-            ButtonKind.Danger -> CinemaError
+            ButtonKind.Main -> CinemaTheme.colors.accent
+            ButtonKind.Other -> CinemaTheme.colors.textPrimary.copy(alpha = OTHER_FILL_ALPHA)
+            ButtonKind.Danger -> CinemaTheme.colors.danger
         }
 
     /** The label on [kind]'s fill: readable on it in every theme (white on a dark accent, black on a light one). */
+    @Composable
+    @ReadOnlyComposable
     open fun content(kind: ButtonKind): Color =
         when (kind) {
-            ButtonKind.Main -> contentOn(CinemaAccent)
-            ButtonKind.Other -> CinemaTextPrimary
-            ButtonKind.Danger -> contentOn(CinemaError)
+            ButtonKind.Main -> contentOn(CinemaTheme.colors.accent)
+            ButtonKind.Other -> CinemaTheme.colors.textPrimary
+            ButtonKind.Danger -> contentOn(CinemaTheme.colors.danger)
         }
 
     /** The outline at rest: only [ButtonKind.Other] has one, so it reads as a button, not a row. */
+    @Composable
+    @ReadOnlyComposable
     open fun outline(kind: ButtonKind): BorderStroke? =
-        if (kind == ButtonKind.Other) BorderStroke(1.dp, CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)) else null
+        if (kind == ButtonKind.Other) BorderStroke(1.dp, CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textFaint)) else null
 
     /** An icon-only button at rest: a faint round fill behind the glyph. */
-    open val iconContainer: Color get() = CinemaTextPrimary.copy(alpha = OTHER_FILL_ALPHA)
-    open val iconContent: Color get() = CinemaTextPrimary
+    open val iconContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary.copy(alpha = OTHER_FILL_ALPHA)
+    open val iconContent: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary
 
     /** An icon-only button that deletes: [ButtonKind.Danger]'s colour, faint at rest. */
-    open val dangerIconContainer: Color get() = CinemaError.copy(alpha = DANGER_ICON_FILL_ALPHA)
+    open val dangerIconContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.danger.copy(alpha = DANGER_ICON_FILL_ALPHA)
 
-    open val disabledContainer: Color get() = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim)
-    open val disabledContent: Color get() = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
+    open val disabledContainer: Color
+
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.scrim)
+    open val disabledContent: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textFaint)
 
     private companion object {
         const val OTHER_FILL_ALPHA = 0.15f

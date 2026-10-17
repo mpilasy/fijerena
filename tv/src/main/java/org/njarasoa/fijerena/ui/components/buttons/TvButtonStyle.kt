@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.ui.components.buttons
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -10,6 +12,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * How buttons look on TV: [ButtonStyle]'s shared look with the TV's sizes, its focus and the
@@ -29,16 +32,32 @@ object TvButtonStyle : ButtonStyle() {
     const val AREA_WIDTH_FRACTION = 0.5f
 
     /** Focus: the button keeps its look and gains this ring and the Display style's focus scale. */
-    val focusRing: Color get() = CinemaTextPrimary
+    val focusRing: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary
 
     // Icon buttons: a resting disc that lifts to a lighter one with an accent ring when focused.
-    override val iconContainer: Color get() = CinemaSurfaceVariant
-    val iconFocusedContainer: Color get() = CinemaSurfaceLight
-    val iconFocusedContent: Color get() = CinemaAccentLight
-    val iconOutline: Color get() = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow)
-    val iconFocusRing: Color get() = CinemaAccentLight
+    override val iconContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.surfaceRaised
+    val iconFocusedContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.surfaceHigh
+    val iconFocusedContent: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.accentSoft
+    val iconOutline: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow)
+    val iconFocusRing: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.accentSoft
 
     // A deleting icon button: outlined in the danger colour, filled with it when focused.
-    val dangerIconOutline: Color get() = CinemaError
-    val dangerIconFocusedContainer: Color get() = CinemaError
+    val dangerIconOutline: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.danger
+    val dangerIconFocusedContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.danger
 }

@@ -29,7 +29,7 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 
 /**
  * Full-bleed decorative background: a heavily blurred, saturation-boosted wash of the given
@@ -52,7 +52,7 @@ fun AmbientBackdrop(
     blurRadius: Float = 140f,
     imageAlpha: Float = CinemaAlpha.imageOverlay,
 ) {
-    val palette = CinemaThemeHolder.current
+    val palette = CinemaTheme.colors
     val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val context = LocalContext.current
 
@@ -84,8 +84,8 @@ fun AmbientBackdrop(
         }
 
     val fallbackBrush =
-        remember(palette.background, palette.accentDark, extractedTint) {
-            val tint = extractedTint ?: palette.accentDark
+        remember(palette.background, palette.accentStrong, extractedTint) {
+            val tint = extractedTint ?: palette.accentStrong
             Brush.verticalGradient(
                 colors =
                     listOf(

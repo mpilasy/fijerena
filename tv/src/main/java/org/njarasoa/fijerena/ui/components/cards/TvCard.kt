@@ -154,13 +154,15 @@ object TvCardLooks {
     /** An episode row: raised at rest, an accent tint and shadow on focus. */
     @Composable
     fun episode(): TvCardLook =
+        // A content row's focus look, as every list row: a lighter lift and an outline, never an accent
+        // fill — the accent fill hid the current episode's accent title, on a light theme entirely.
         TvCardLook(
             colors =
                 CardDefaults.colors(
                     containerColor = CinemaTheme.colors.surface,
-                    focusedContainerColor = CinemaTheme.colors.accent.copy(alpha = CinemaAlpha.tint),
+                    focusedContainerColor = TvFocusTokens.focusedContainer,
                 ),
-            border = CardDefaults.border(),
+            border = TvListRowDefaults.border(),
             scale =
                 CardDefaults.scale(
                     scale = TvFocusTokens.defaultScale,

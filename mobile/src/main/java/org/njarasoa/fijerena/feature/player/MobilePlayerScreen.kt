@@ -87,6 +87,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.ProvideMediaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -286,860 +287,869 @@ fun MobilePlayerContent(
     // this one must then not pause or stop it.
     handedOff: () -> Boolean = { false },
 ) {
-    val context = LocalContext.current
-    val resources = LocalResources.current
-    val activity = context as? Activity
-    val appSettings = remember { AppSettings(context.applicationContext) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val scope = rememberCoroutineScope()
+    // Over video: dark in every theme (ProvideMediaTheme).
+    ProvideMediaTheme {
+        val context = LocalContext.current
+        val resources = LocalResources.current
+        val activity = context as? Activity
+        val appSettings = remember { AppSettings(context.applicationContext) }
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val scope = rememberCoroutineScope()
 
-    // Observe app focus/lifecycle to pause on background and stop after timeout
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    // ON_STOP, not ON_PAUSE — see onAppStopped's kdoc.
-                    Lifecycle.Event.ON_STOP -> {
-                        if (!handedOff()) viewModel.onAppStopped()
+        // Observe app focus/lifecycle to pause on background and stop after timeout
+        DisposableEffect(lifecycleOwner) {
+            val observer =
+                LifecycleEventObserver { _, event ->
+                    when (event) {
+                        // ON_STOP, not ON_PAUSE — see onAppStopped's kdoc.
+                        Lifecycle.Event.ON_STOP -> {
+                            if (!handedOff()) viewModel.onAppStopped()
+                        }
+
+                        Lifecycle.Event.ON_RESUME -> {
+                            viewModel.onAppResumed()
+                        }
+
+                        else -> {}
                     }
-
-                    Lifecycle.Event.ON_RESUME -> {
-                        viewModel.onAppResumed()
-                    }
-
-                    else -> {}
                 }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    // Force landscape while in the full-screen player, even though the rest of the app is
-    // portrait-locked and even if system auto-rotate is off. SENSOR_LANDSCAPE (not plain
-    // LANDSCAPE) still follows the sensor between landscape-left/landscape-right, it just never
-    // flips to portrait.
-    RequestOrientation(activity, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
-
-    // Immersive while in the full-screen player: the status and navigation bars are hidden, even
-    // while the controls show — a swipe from an edge brings them back for a moment. Leaving the
-    // player (or shrinking back to the Live TV dock) shows them again.
-    DisposableEffect(activity) {
-        val controller = activity?.window?.let { WindowCompat.getInsetsController(it, it.decorView) }
-        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller?.hide(WindowInsetsCompat.Type.systemBars())
-        onDispose {
-            controller?.show(WindowInsetsCompat.Type.systemBars())
-        }
-    }
-
-    val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
-
-    // Remember the last successful stream so a channel change can keep the player UI mounted
-    // (and the old video frame visible) through the Loading window instead of unmounting to a
-    // full-screen spinner and flashing black — mirrors TV's TvPlayerScreen. Every effect below
-    // that actually drives playback (position save, playStream trigger) still keys off the live
-    // streamState/currentStreamId, not this — only the final `when` that picks what to draw uses
-    // the frozen fallback, via displayState below.
-    // Cleared on Error, not just set on Success: without this, a channel switch that fails
-    // leaves the *previous* channel's frozen frame in place, and the next successful switch's
-    // own Loading window falls back to that now-stale frame instead of the spinner below —
-    // confusing after the viewer already saw an Error screen in between.
-    var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
-    when (streamState) {
-        is StreamLoaderViewModel.StreamState.Success -> {
-            lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
-        }
-
-        is StreamLoaderViewModel.StreamState.Error -> {
-            lastSuccessState = null
-        }
-
-        else -> {}
-    }
-    val displayState: StreamLoaderViewModel.StreamState =
-        if (streamState is StreamLoaderViewModel.StreamState.Loading && lastSuccessState != null) {
-            lastSuccessState!!
-        } else {
-            streamState
-        }
-
-    var showChannelToast by remember { mutableStateOf(false) }
-    // Bumped every time showChannelToast is (re)triggered, so the auto-hide LaunchedEffect below
-    // restarts its delay even when a second channel switch lands while the toast from the first
-    // one is still showing (showChannelToast itself stays true across both, so keying on it
-    // alone wouldn't restart the coroutine).
-    var channelToastTick by remember { mutableStateOf(0) }
-    // Tracks whether the stream-start effect below has run at least once, so its very first run
-    // (mounting on / promoting to full screen) can stay silent while every later run — a genuine
-    // channel switch — shows the toast, independent of whether playback itself needed restarting.
-    var hasHandledFirstStream by remember { mutableStateOf(false) }
-    var showCategoryOverlay by remember { mutableStateOf(false) }
-    var showLastWatchedOverlay by remember { mutableStateOf(false) }
-    var showControls by remember { mutableStateOf(true) }
-    var showStats by remember { mutableStateOf(false) }
-    // For lifting the subtitles above the controls' bottom panel while it shows.
-    var screenHeightPx by remember { mutableIntStateOf(0) }
-    var controlsPanelHeightPx by remember { mutableIntStateOf(0) }
-
-    // Back closes an open channel panel first, as on TV; without this it left the player
-    // altogether. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-19.
-    BackHandler(enabled = showCategoryOverlay || showLastWatchedOverlay) {
-        showCategoryOverlay = false
-        showLastWatchedOverlay = false
-    }
-
-    // Double-tap seek ripple pill (2a) — side is -1 (rewind, left 40%) or +1 (forward, right
-    // 40%), 0 means hidden. Accumulates across a burst of rapid taps in the same direction
-    // (10s, 20s, 30s...) rather than showing one pill per tap; seekRippleTick, same pattern as
-    // channelToastTick above, restarts the auto-hide delay on every tap in the burst.
-    var seekRippleSide by remember { mutableStateOf(0) }
-    var seekRippleSeconds by remember { mutableStateOf(0) }
-    var seekRippleTick by remember { mutableStateOf(0) }
-    val haptic = LocalHapticFeedback.current
-    var hasStartedPlaying by remember { mutableStateOf(false) }
-    var showRecoverySpinner by remember { mutableStateOf(false) }
-
-    // The flyout offers channels to switch to, so the one already playing is filtered out below —
-    // unlike the docked preview panel, which keeps it as the highlighted row. Held in display
-    // order so watching past the delay doesn't re-sort the list the viewer may have open.
-    val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
-    val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
-
-    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
-    val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
-
-    // Enable/disable PiP auto-enter — only for live video that's actually playing. Anything else
-    // (VOD, paused, idle) just leaves the app normally on Home/app-switch.
-    LaunchedEffect(playbackState::class, currentMetadata.isLive) {
-        val ps = playbackState
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
-            activity?.setPictureInPictureParams(
-                android.app.PictureInPictureParams
-                    .Builder()
-                    .setAutoEnterEnabled(isPlaying && currentMetadata.isLive)
-                    .build(),
-            )
-        }
-    }
-
-    // Live position polling for smooth VOD timer updates
-    var livePosition by remember { mutableLongStateOf(0L) }
-    var liveDuration by remember { mutableLongStateOf(0L) }
-
-    // Capture delegated properties into local variables for stable smart casting
-    val currentPs = playbackState
-    val currentMeta = currentMetadata
-
-    LaunchedEffect(currentPs) {
-        if (currentPs is PlaybackState.Error) {
-            android.util.Log.e("MobilePlayerScreen", "Playback Error: ${currentPs.message}")
-        }
-        if (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) {
-            while (true) {
-                StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
-                    livePosition = player.currentPosition
-                    liveDuration = player.duration.coerceAtLeast(0L)
-                }
-                delay(500L)
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
             }
         }
-    }
 
-    // Autoplay next episode. The "Up next" card shows over the playing episode once little enough
-    // is left (see showUpNext); its countdown is the playback time left, from the polled position,
-    // so it stops with the video. Per playing stream: the one whose card was cancelled or used
-    // (stays hidden for that episode), and the one a next episode is starting from until the new
-    // one plays — the player keeps reading the old episode, or Ended, until then.
-    val shownSuccess = displayState as? StreamLoaderViewModel.StreamState.Success
-    val autoplayNext = remember { appSettings.autoplayNextEpisode }
-    var upNextDismissedFor by remember { mutableStateOf<String?>(null) }
-    var upNextStartingFrom by remember { mutableStateOf<String?>(null) }
-    val upNextDismissed = upNextDismissedFor != null && upNextDismissedFor == shownSuccess?.streamId
-    // Hidden in picture-in-picture (nothing there to tap); the episode still rolls on at its end.
-    val upNext =
-        shownSuccess?.nextEpisode?.takeIf {
-            !isInPipMode &&
-                upNextStartingFrom == null &&
-                (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) &&
-                showUpNext(autoplayNext, shownSuccess.supportsAutoplayNext, it, livePosition, liveDuration, upNextDismissed)
-        }
-    val playUpNext: (EpisodeItem) -> Unit = { next ->
-        upNextDismissedFor = shownSuccess?.streamId
-        upNextStartingFrom = shownSuccess?.streamId
-        // Same path as the Next button: awaited finalise (the current episode is saved), then
-        // load the next one.
-        scope.launch {
-            finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
-            loaderViewModel.playNextEpisode(next)
-        }
-    }
-    // Cancel (or Back) hides the card for this episode; it plays on and ends as it always has.
-    val cancelUpNext: () -> Unit = { upNextDismissedFor = shownSuccess?.streamId }
-    BackHandler(enabled = upNext != null) { cancelUpNext() }
+        // Force landscape while in the full-screen player, even though the rest of the app is
+        // portrait-locked and even if system auto-rotate is off. SENSOR_LANDSCAPE (not plain
+        // LANDSCAPE) still follows the sensor between landscape-left/landscape-right, it just never
+        // flips to portrait.
+        RequestOrientation(activity, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
 
-    // The next episode is playing: forget the one it started from, and its stale position.
-    LaunchedEffect(currentPs, shownSuccess?.streamId) {
-        val startingFrom = upNextStartingFrom
-        if (startingFrom != null && currentPs !is PlaybackState.Ended && shownSuccess?.streamId != startingFrom) {
-            upNextStartingFrom = null
-            livePosition = 0L
-            liveDuration = 0L
+        // Immersive while in the full-screen player: the status and navigation bars are hidden, even
+        // while the controls show — a swipe from an edge brings them back for a moment. Leaving the
+        // player (or shrinking back to the Live TV dock) shows them again.
+        DisposableEffect(activity) {
+            val controller = activity?.window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+            controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller?.hide(WindowInsetsCompat.Type.systemBars())
+            onDispose {
+                controller?.show(WindowInsetsCompat.Type.systemBars())
+            }
         }
-    }
 
-    // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError only
-    // emits Ended for !metadata.isLive) — leave the player rather than sit on a frozen last
-    // frame with no controls (see the `else` branch below that deliberately renders nothing
-    // for Ended), unless the profile plays the next episode automatically, there is one and its
-    // card wasn't cancelled: then it plays at once (once the app is at least STARTED — PiP is).
-    LaunchedEffect(currentPs) {
-        if (currentPs is PlaybackState.Ended && upNextStartingFrom == null && continueOnEnd?.invoke() != true) {
-            val next =
-                upNextOnEnd(
-                    autoplayNext,
-                    shownSuccess?.supportsAutoplayNext == true,
-                    shownSuccess?.nextEpisode,
-                    upNextDismissed,
-                )
-            if (next != null) {
-                lifecycleOwner.lifecycle.awaitStarted()
-                playUpNext(next)
+        val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
+
+        // Remember the last successful stream so a channel change can keep the player UI mounted
+        // (and the old video frame visible) through the Loading window instead of unmounting to a
+        // full-screen spinner and flashing black — mirrors TV's TvPlayerScreen. Every effect below
+        // that actually drives playback (position save, playStream trigger) still keys off the live
+        // streamState/currentStreamId, not this — only the final `when` that picks what to draw uses
+        // the frozen fallback, via displayState below.
+        // Cleared on Error, not just set on Success: without this, a channel switch that fails
+        // leaves the *previous* channel's frozen frame in place, and the next successful switch's
+        // own Loading window falls back to that now-stale frame instead of the spinner below —
+        // confusing after the viewer already saw an Error screen in between.
+        var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
+        when (streamState) {
+            is StreamLoaderViewModel.StreamState.Success -> {
+                lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+            }
+
+            is StreamLoaderViewModel.StreamState.Error -> {
+                lastSuccessState = null
+            }
+
+            else -> {}
+        }
+        val displayState: StreamLoaderViewModel.StreamState =
+            if (streamState is StreamLoaderViewModel.StreamState.Loading && lastSuccessState != null) {
+                lastSuccessState!!
             } else {
-                onBack()
+                streamState
+            }
+
+        var showChannelToast by remember { mutableStateOf(false) }
+        // Bumped every time showChannelToast is (re)triggered, so the auto-hide LaunchedEffect below
+        // restarts its delay even when a second channel switch lands while the toast from the first
+        // one is still showing (showChannelToast itself stays true across both, so keying on it
+        // alone wouldn't restart the coroutine).
+        var channelToastTick by remember { mutableStateOf(0) }
+        // Tracks whether the stream-start effect below has run at least once, so its very first run
+        // (mounting on / promoting to full screen) can stay silent while every later run — a genuine
+        // channel switch — shows the toast, independent of whether playback itself needed restarting.
+        var hasHandledFirstStream by remember { mutableStateOf(false) }
+        var showCategoryOverlay by remember { mutableStateOf(false) }
+        var showLastWatchedOverlay by remember { mutableStateOf(false) }
+        var showControls by remember { mutableStateOf(true) }
+        var showStats by remember { mutableStateOf(false) }
+        // For lifting the subtitles above the controls' bottom panel while it shows.
+        var screenHeightPx by remember { mutableIntStateOf(0) }
+        var controlsPanelHeightPx by remember { mutableIntStateOf(0) }
+
+        // Back closes an open channel panel first, as on TV; without this it left the player
+        // altogether. See docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-19.
+        BackHandler(enabled = showCategoryOverlay || showLastWatchedOverlay) {
+            showCategoryOverlay = false
+            showLastWatchedOverlay = false
+        }
+
+        // Double-tap seek ripple pill (2a) — side is -1 (rewind, left 40%) or +1 (forward, right
+        // 40%), 0 means hidden. Accumulates across a burst of rapid taps in the same direction
+        // (10s, 20s, 30s...) rather than showing one pill per tap; seekRippleTick, same pattern as
+        // channelToastTick above, restarts the auto-hide delay on every tap in the burst.
+        var seekRippleSide by remember { mutableStateOf(0) }
+        var seekRippleSeconds by remember { mutableStateOf(0) }
+        var seekRippleTick by remember { mutableStateOf(0) }
+        val haptic = LocalHapticFeedback.current
+        var hasStartedPlaying by remember { mutableStateOf(false) }
+        var showRecoverySpinner by remember { mutableStateOf(false) }
+
+        // The flyout offers channels to switch to, so the one already playing is filtered out below —
+        // unlike the docked preview panel, which keeps it as the highlighted row. Held in display
+        // order so watching past the delay doesn't re-sort the list the viewer may have open.
+        val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
+        val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
+
+        val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+        val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
+        val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
+
+        // Enable/disable PiP auto-enter — only for live video that's actually playing. Anything else
+        // (VOD, paused, idle) just leaves the app normally on Home/app-switch.
+        LaunchedEffect(playbackState::class, currentMetadata.isLive) {
+            val ps = playbackState
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
+                activity?.setPictureInPictureParams(
+                    android.app.PictureInPictureParams
+                        .Builder()
+                        .setAutoEnterEnabled(isPlaying && currentMetadata.isLive)
+                        .build(),
+                )
             }
         }
-    }
 
-    // Auto-hide channel toast
-    LaunchedEffect(showChannelToast, channelToastTick) {
-        if (showChannelToast) {
-            delay(CinemaAnimation.toastDismissMs)
-            showChannelToast = false
-        }
-    }
+        // Live position polling for smooth VOD timer updates
+        var livePosition by remember { mutableLongStateOf(0L) }
+        var liveDuration by remember { mutableLongStateOf(0L) }
 
-    // Auto-hide seek ripple pill
-    LaunchedEffect(seekRippleSide, seekRippleTick) {
-        if (seekRippleSide != 0) {
-            delay(CinemaAnimation.seekRippleDismissMs)
-            seekRippleSide = 0
-            seekRippleSeconds = 0
-        }
-    }
+        // Capture delegated properties into local variables for stable smart casting
+        val currentPs = playbackState
+        val currentMeta = currentMetadata
 
-    // Selector dialogs
-    var showAudioTrackSelector by remember { mutableStateOf(false) }
-    var showSubtitleSelector by remember { mutableStateOf(false) }
-    var showQualitySelector by remember { mutableStateOf(false) }
-
-    // Track when video first starts playing so we stop showing the center spinner
-    LaunchedEffect(currentPs) {
-        if (currentPs is PlaybackState.Playing) {
-            hasStartedPlaying = true
-        }
-
-        if (currentPs is PlaybackState.Buffering) {
-            delay(POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS)
-            showRecoverySpinner = true
-        } else {
-            showRecoverySpinner = false
-        }
-    }
-
-    // Save playback position and track choices. Collected from the service's process-wide flow,
-    // not a listener set on one instance: on the first playback after a cold start this screen
-    // composes before the service exists. Composition-scoped, not lifecycle-gated, so PiP keeps
-    // saving. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-04.
-    LaunchedEffect(loaderViewModel) {
-        StreamingPlaybackService.positionSaves.collect { save ->
-            loaderViewModel.recordHistory(save.positionMs, save.durationMs, save.isPaused, save.audioTrackIndex, save.subtitleTrackIndex)
-        }
-    }
-
-    // Auto-hide controls after 5 seconds
-    LaunchedEffect(showControls) {
-        if (showControls && !showStats) {
-            delay(CinemaAnimation.controlsAutoHideMobileMs)
-            showControls = false
-        }
-    }
-
-    // Configure player buffer profile based on content type
-    LaunchedEffect(contentType) {
-        val playerContentType =
-            when (contentType) {
-                // Catch-up plays a live channel's archive like a film.
-                ContentType.LIVE_TV -> if (isCatchup) PlayerConfigFactory.ContentType.VOD else PlayerConfigFactory.ContentType.LIVE_TV
-
-                ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
-
-                else -> PlayerConfigFactory.ContentType.VOD
+        LaunchedEffect(currentPs) {
+            if (currentPs is PlaybackState.Error) {
+                android.util.Log.e("MobilePlayerScreen", "Playback Error: ${currentPs.message}")
             }
-        StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
-    }
-
-    // Start playback when URL is ready or channel changes
-    val currentStreamId = (streamState as? StreamLoaderViewModel.StreamState.Success)?.streamId
-    LaunchedEffect(currentStreamId) {
-        val state = streamState
-        if (state is StreamLoaderViewModel.StreamState.Success) {
-            // Promoting an already-playing docked preview to full screen re-mounts this
-            // composable (and thus re-runs this effect) even though nothing actually changed —
-            // skip re-issuing playStream() so promoting doesn't restart the stream from scratch.
-            val alreadyPlayingThis =
-                viewModel.currentMetadata.value.streamUrl == state.streamUrl &&
-                    viewModel.playbackState.value !is PlaybackState.Idle &&
-                    viewModel.playbackState.value !is PlaybackState.Error
-
-            // Toast visibility is intentionally independent of alreadyPlayingThis: when this
-            // screen is the promoted full-screen view of a Live TV dock (MobileCategoryListScreen),
-            // the dock's own effect already calls playStream() for the new channel before this one
-            // runs, so alreadyPlayingThis is true on every ordinary channel switch, not just on
-            // promote. Only the very first run of this effect (mount / promote) should stay silent.
-            if (hasHandledFirstStream) {
-                showChannelToast = true
-                channelToastTick++
+            if (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) {
+                while (true) {
+                    StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
+                        livePosition = player.currentPosition
+                        liveDuration = player.duration.coerceAtLeast(0L)
+                    }
+                    delay(500L)
+                }
             }
-            hasHandledFirstStream = true
+        }
 
-            if (!alreadyPlayingThis) {
-                val metadata =
-                    PlayerMetadata(
-                        title = state.streamName,
-                        channelName = appSettings.providerName,
-                        description = state.description,
-                        streamUrl = state.streamUrl,
-                        isLive = state.isLive,
-                        headers = state.streamHeaders,
-                        showTitle = state.seriesName,
-                        episodeLabel = state.episodeLabel,
-                        logoUrl = state.logoUrl,
-                        programTitle = state.currentEpgProgram?.title,
-                        catchupLabel = state.catchupLabel,
-                        sourceName = state.sourceName,
+        // Autoplay next episode. The "Up next" card shows over the playing episode once little enough
+        // is left (see showUpNext); its countdown is the playback time left, from the polled position,
+        // so it stops with the video. Per playing stream: the one whose card was cancelled or used
+        // (stays hidden for that episode), and the one a next episode is starting from until the new
+        // one plays — the player keeps reading the old episode, or Ended, until then.
+        val shownSuccess = displayState as? StreamLoaderViewModel.StreamState.Success
+        val autoplayNext = remember { appSettings.autoplayNextEpisode }
+        var upNextDismissedFor by remember { mutableStateOf<String?>(null) }
+        var upNextStartingFrom by remember { mutableStateOf<String?>(null) }
+        val upNextDismissed = upNextDismissedFor != null && upNextDismissedFor == shownSuccess?.streamId
+        // Hidden in picture-in-picture (nothing there to tap); the episode still rolls on at its end.
+        val upNext =
+            shownSuccess?.nextEpisode?.takeIf {
+                !isInPipMode &&
+                    upNextStartingFrom == null &&
+                    (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) &&
+                    showUpNext(autoplayNext, shownSuccess.supportsAutoplayNext, it, livePosition, liveDuration, upNextDismissed)
+            }
+        val playUpNext: (EpisodeItem) -> Unit = { next ->
+            upNextDismissedFor = shownSuccess?.streamId
+            upNextStartingFrom = shownSuccess?.streamId
+            // Same path as the Next button: awaited finalise (the current episode is saved), then
+            // load the next one.
+            scope.launch {
+                finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
+                loaderViewModel.playNextEpisode(next)
+            }
+        }
+        // Cancel (or Back) hides the card for this episode; it plays on and ends as it always has.
+        val cancelUpNext: () -> Unit = { upNextDismissedFor = shownSuccess?.streamId }
+        BackHandler(enabled = upNext != null) { cancelUpNext() }
+
+        // The next episode is playing: forget the one it started from, and its stale position.
+        LaunchedEffect(currentPs, shownSuccess?.streamId) {
+            val startingFrom = upNextStartingFrom
+            if (startingFrom != null && currentPs !is PlaybackState.Ended && shownSuccess?.streamId != startingFrom) {
+                upNextStartingFrom = null
+                livePosition = 0L
+                liveDuration = 0L
+            }
+        }
+
+        // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError only
+        // emits Ended for !metadata.isLive) — leave the player rather than sit on a frozen last
+        // frame with no controls (see the `else` branch below that deliberately renders nothing
+        // for Ended), unless the profile plays the next episode automatically, there is one and its
+        // card wasn't cancelled: then it plays at once (once the app is at least STARTED — PiP is).
+        LaunchedEffect(currentPs) {
+            if (currentPs is PlaybackState.Ended && upNextStartingFrom == null && continueOnEnd?.invoke() != true) {
+                val next =
+                    upNextOnEnd(
+                        autoplayNext,
+                        shownSuccess?.supportsAutoplayNext == true,
+                        shownSuccess?.nextEpisode,
+                        upNextDismissed,
                     )
-                viewModel.playStream(metadata, state.resumePosition)
+                if (next != null) {
+                    lifecycleOwner.lifecycle.awaitStarted()
+                    playUpNext(next)
+                } else {
+                    onBack()
+                }
+            }
+        }
 
-                // Restore saved track settings when player is ready
-                if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                    // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
-                    // in snapshotFlow{} never registers an observable read, so it emits once and
-                    // never again, leaving this stuck waiting forever instead of restoring tracks.
-                    val readyState =
-                        viewModel.playbackState
-                            .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
-                            .first()
+        // Auto-hide channel toast
+        LaunchedEffect(showChannelToast, channelToastTick) {
+            if (showChannelToast) {
+                delay(CinemaAnimation.toastDismissMs)
+                showChannelToast = false
+            }
+        }
 
-                    if (readyState !is PlaybackState.Error) {
-                        val service = StreamingPlaybackService.getInstance()
-                        if (service != null) {
-                            state.savedAudioTrackIndex?.let { audioIdx ->
-                                service.selectAudioTrack(audioIdx)
-                            }
-                            state.savedSubtitleTrackIndex?.let { subIdx ->
-                                service.selectSubtitleTrack(subIdx)
+        // Auto-hide seek ripple pill
+        LaunchedEffect(seekRippleSide, seekRippleTick) {
+            if (seekRippleSide != 0) {
+                delay(CinemaAnimation.seekRippleDismissMs)
+                seekRippleSide = 0
+                seekRippleSeconds = 0
+            }
+        }
+
+        // Selector dialogs
+        var showAudioTrackSelector by remember { mutableStateOf(false) }
+        var showSubtitleSelector by remember { mutableStateOf(false) }
+        var showQualitySelector by remember { mutableStateOf(false) }
+
+        // Track when video first starts playing so we stop showing the center spinner
+        LaunchedEffect(currentPs) {
+            if (currentPs is PlaybackState.Playing) {
+                hasStartedPlaying = true
+            }
+
+            if (currentPs is PlaybackState.Buffering) {
+                delay(POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS)
+                showRecoverySpinner = true
+            } else {
+                showRecoverySpinner = false
+            }
+        }
+
+        // Save playback position and track choices. Collected from the service's process-wide flow,
+        // not a listener set on one instance: on the first playback after a cold start this screen
+        // composes before the service exists. Composition-scoped, not lifecycle-gated, so PiP keeps
+        // saving. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+        LaunchedEffect(loaderViewModel) {
+            StreamingPlaybackService.positionSaves.collect { save ->
+                loaderViewModel.recordHistory(
+                    save.positionMs,
+                    save.durationMs,
+                    save.isPaused,
+                    save.audioTrackIndex,
+                    save.subtitleTrackIndex,
+                )
+            }
+        }
+
+        // Auto-hide controls after 5 seconds
+        LaunchedEffect(showControls) {
+            if (showControls && !showStats) {
+                delay(CinemaAnimation.controlsAutoHideMobileMs)
+                showControls = false
+            }
+        }
+
+        // Configure player buffer profile based on content type
+        LaunchedEffect(contentType) {
+            val playerContentType =
+                when (contentType) {
+                    // Catch-up plays a live channel's archive like a film.
+                    ContentType.LIVE_TV -> if (isCatchup) PlayerConfigFactory.ContentType.VOD else PlayerConfigFactory.ContentType.LIVE_TV
+
+                    ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
+
+                    else -> PlayerConfigFactory.ContentType.VOD
+                }
+            StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
+        }
+
+        // Start playback when URL is ready or channel changes
+        val currentStreamId = (streamState as? StreamLoaderViewModel.StreamState.Success)?.streamId
+        LaunchedEffect(currentStreamId) {
+            val state = streamState
+            if (state is StreamLoaderViewModel.StreamState.Success) {
+                // Promoting an already-playing docked preview to full screen re-mounts this
+                // composable (and thus re-runs this effect) even though nothing actually changed —
+                // skip re-issuing playStream() so promoting doesn't restart the stream from scratch.
+                val alreadyPlayingThis =
+                    viewModel.currentMetadata.value.streamUrl == state.streamUrl &&
+                        viewModel.playbackState.value !is PlaybackState.Idle &&
+                        viewModel.playbackState.value !is PlaybackState.Error
+
+                // Toast visibility is intentionally independent of alreadyPlayingThis: when this
+                // screen is the promoted full-screen view of a Live TV dock (MobileCategoryListScreen),
+                // the dock's own effect already calls playStream() for the new channel before this one
+                // runs, so alreadyPlayingThis is true on every ordinary channel switch, not just on
+                // promote. Only the very first run of this effect (mount / promote) should stay silent.
+                if (hasHandledFirstStream) {
+                    showChannelToast = true
+                    channelToastTick++
+                }
+                hasHandledFirstStream = true
+
+                if (!alreadyPlayingThis) {
+                    val metadata =
+                        PlayerMetadata(
+                            title = state.streamName,
+                            channelName = appSettings.providerName,
+                            description = state.description,
+                            streamUrl = state.streamUrl,
+                            isLive = state.isLive,
+                            headers = state.streamHeaders,
+                            showTitle = state.seriesName,
+                            episodeLabel = state.episodeLabel,
+                            logoUrl = state.logoUrl,
+                            programTitle = state.currentEpgProgram?.title,
+                            catchupLabel = state.catchupLabel,
+                            sourceName = state.sourceName,
+                        )
+                    viewModel.playStream(metadata, state.resumePosition)
+
+                    // Restore saved track settings when player is ready
+                    if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
+                        // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
+                        // in snapshotFlow{} never registers an observable read, so it emits once and
+                        // never again, leaving this stuck waiting forever instead of restoring tracks.
+                        val readyState =
+                            viewModel.playbackState
+                                .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
+                                .first()
+
+                        if (readyState !is PlaybackState.Error) {
+                            val service = StreamingPlaybackService.getInstance()
+                            if (service != null) {
+                                state.savedAudioTrackIndex?.let { audioIdx ->
+                                    service.selectAudioTrack(audioIdx)
+                                }
+                                state.savedSubtitleTrackIndex?.let { subIdx ->
+                                    service.selectSubtitleTrack(subIdx)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    // The series name / episode label / TMDB logo / synopsis above resolve asynchronously (a
-    // series-detail and a TMDB lookup) well after the effect above already started playback with
-    // whatever was known at that instant — almost always still null. Patch them into the OSD's
-    // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
-    val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
-    LaunchedEffect(
-        enrichedState?.seriesName,
-        enrichedState?.episodeLabel,
-        enrichedState?.logoUrl,
-        enrichedState?.description,
-        enrichedState?.currentEpgProgram?.title,
-    ) {
-        if (enrichedState != null) {
-            viewModel.updateMetadata(enrichedState.streamUrl) {
-                it.copy(
-                    showTitle = enrichedState.seriesName,
-                    episodeLabel = enrichedState.episodeLabel,
-                    logoUrl = enrichedState.logoUrl,
-                    description = enrichedState.description,
-                    programTitle = enrichedState.currentEpgProgram?.title,
-                )
+        // The series name / episode label / TMDB logo / synopsis above resolve asynchronously (a
+        // series-detail and a TMDB lookup) well after the effect above already started playback with
+        // whatever was known at that instant — almost always still null. Patch them into the OSD's
+        // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
+        val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
+        LaunchedEffect(
+            enrichedState?.seriesName,
+            enrichedState?.episodeLabel,
+            enrichedState?.logoUrl,
+            enrichedState?.description,
+            enrichedState?.currentEpgProgram?.title,
+        ) {
+            if (enrichedState != null) {
+                viewModel.updateMetadata(enrichedState.streamUrl) {
+                    it.copy(
+                        showTitle = enrichedState.seriesName,
+                        episodeLabel = enrichedState.episodeLabel,
+                        logoUrl = enrichedState.logoUrl,
+                        description = enrichedState.description,
+                        programTitle = enrichedState.currentEpgProgram?.title,
+                    )
+                }
             }
         }
-    }
 
-    when (val state = displayState) {
-        is StreamLoaderViewModel.StreamState.Loading -> {
-            LoadingScreen()
-        }
+        when (val state = displayState) {
+            is StreamLoaderViewModel.StreamState.Loading -> {
+                LoadingScreen()
+            }
 
-        is StreamLoaderViewModel.StreamState.Error -> {
-            RetryWhenOnline { loaderViewModel.retryLastLoad() }
-            ErrorScreen(
-                message = state.message,
-                onRetry = { loaderViewModel.retryLastLoad() },
-                onBack = onBack,
-            )
-        }
-
-        is StreamLoaderViewModel.StreamState.Success -> {
-            val isLiveContent = state.isLive
-            // Buffering is included alongside Playing/Paused (unlike the equivalent TV gate, which
-            // never excluded it in the first place) — without it, the tap gesture still flipped
-            // showControls, but the overlay itself stayed invisible for as long as a stream was
-            // buffering, silently swallowing every reveal tap. Idle/Error/Ended stay excluded:
-            // nothing here to control yet.
-            val controlsVisible =
-                !isInPipMode && showControls && !showStats &&
-                    (
-                        currentPs is PlaybackState.Playing ||
-                            currentPs is PlaybackState.Paused ||
-                            currentPs is PlaybackState.Buffering
-                    )
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(CinemaTheme.colors.mediaScrim)
-                        .then(
-                            if (isInPipMode) {
-                                Modifier
-                            } else {
-                                Modifier.pointerInput(showStats, isLiveContent) {
-                                    detectTapGestures(
-                                        onTap = {
-                                            if (!showStats) showControls = !showControls
-                                        },
-                                        // Double-tap 10s relative seek (2a), not pause/resume — that
-                                        // would duplicate the single-tap + center button path and break
-                                        // the double-tap-to-seek convention every other mobile video
-                                        // player uses (YouTube, Netflix, Plex, MX Player). Left 40% of
-                                        // the width rewinds, right 40% seeks forward, the center 20% is left alone —
-                                        // single tap already toggles the controls overlay, so a
-                                        // second meaning on center double-tap would be redundant.
-                                        onDoubleTap = { offset ->
-                                            if (!showStats && !isLiveContent) {
-                                                val width = size.width
-                                                when {
-                                                    offset.x < width * 0.4f -> {
-                                                        viewModel.seekRelative(-SEEK_STEP_MS)
-                                                        seekRippleSeconds =
-                                                            if (seekRippleSide ==
-                                                                -1
-                                                            ) {
-                                                                seekRippleSeconds + SEEK_STEP_SECONDS
-                                                            } else {
-                                                                SEEK_STEP_SECONDS
-                                                            }
-                                                        seekRippleSide = -1
-                                                        seekRippleTick++
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    }
-
-                                                    offset.x > width * 0.6f -> {
-                                                        viewModel.seekRelative(SEEK_STEP_MS)
-                                                        seekRippleSeconds =
-                                                            if (seekRippleSide ==
-                                                                1
-                                                            ) {
-                                                                seekRippleSeconds + SEEK_STEP_SECONDS
-                                                            } else {
-                                                                SEEK_STEP_SECONDS
-                                                            }
-                                                        seekRippleSide = 1
-                                                        seekRippleTick++
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
-                            },
-                        ).then(
-                            if (isInPipMode || !isLiveContent) {
-                                Modifier
-                            } else {
-                                Modifier.pointerInput(state.categoryStreams, showStats) {
-                                    var verticalAccumulator = 0f
-                                    var horizontalAccumulator = 0f
-                                    var hasFiredVerticalThisGesture = false
-                                    var hasFiredHorizontalThisGesture = false
-                                    var startedInEdge = false
-                                    // In dp, not px, so the distance is the same on every screen.
-                                    val swipePx = CHANNEL_SWIPE_THRESHOLD.toPx()
-                                    detectDragGestures(
-                                        onDragStart = { start ->
-                                            // A drag from the outer 10 % of an edge is the system's
-                                            // (back, notification shade, home) or a stray edge touch.
-                                            startedInEdge =
-                                                startsInChannelSwipeEdge(
-                                                    start.x,
-                                                    start.y,
-                                                    size.width.toFloat(),
-                                                    size.height.toFloat(),
-                                                )
-                                            verticalAccumulator = 0f
-                                            horizontalAccumulator = 0f
-                                            hasFiredVerticalThisGesture = false
-                                            hasFiredHorizontalThisGesture = false
-                                        },
-                                        onDragEnd = {
-                                            hasFiredVerticalThisGesture = false
-                                            hasFiredHorizontalThisGesture = false
-                                        },
-                                        onDragCancel = {
-                                            hasFiredVerticalThisGesture = false
-                                            hasFiredHorizontalThisGesture = false
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            // Without guarding the other two overlays the same way
-                                            // showStats already was, a vertical scroll inside the open
-                                            // category/last-watched drawer was consumed here instead —
-                                            // channel-skipping while the user tried to scroll the list.
-                                            if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
-                                            if (startedInEdge) return@detectDragGestures
-                                            change.consume()
-                                            verticalAccumulator += dragAmount.y
-                                            horizontalAccumulator += dragAmount.x
-                                            // Vertical: channel switching
-                                            if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > swipePx) {
-                                                hasFiredVerticalThisGesture = true
-                                                if (verticalAccumulator < 0) {
-                                                    loaderViewModel.nextChannel()
-                                                } else {
-                                                    loaderViewModel.prevChannel()
-                                                }
-                                                verticalAccumulator = 0f
-                                            }
-                                            // Horizontal: overlay panels
-                                            if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > swipePx) {
-                                                hasFiredHorizontalThisGesture = true
-                                                when {
-                                                    horizontalAccumulator > 0 && !showLastWatchedOverlay -> {
-                                                        showCategoryOverlay = true
-                                                    }
-
-                                                    horizontalAccumulator < 0 && !showCategoryOverlay -> {
-                                                        showLastWatchedOverlay = true
-                                                    }
-
-                                                    horizontalAccumulator > 0 && showLastWatchedOverlay -> {
-                                                        showLastWatchedOverlay = false
-                                                    }
-
-                                                    horizontalAccumulator < 0 && showCategoryOverlay -> {
-                                                        showCategoryOverlay = false
-                                                    }
-                                                }
-                                                horizontalAccumulator = 0f
-                                            }
-                                        },
-                                    )
-                                }
-                            },
-                        ),
-            ) {
-                // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
-                // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
-                // recomposition here never steals frames from the video. See
-                // MobileCategoryListScreen's videoSurface comment for why the dock needs the
-                // opposite (TextureView).
-                // While the controls are up, the subtitles sit above their bottom panel instead of
-                // on the title and seek bar. A share of the screen's height: the subtitles' own
-                // share is of the video's height, never taller than the screen, so a letterboxed
-                // video only lifts them a little further.
-                EmbeddedPlayerSurface(
-                    modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
-                    subtitleBottomPaddingFraction =
-                        if (controlsVisible && controlsPanelHeightPx > 0 && screenHeightPx > 0) {
-                            controlsPanelHeightPx.toFloat() / screenHeightPx + SUBTITLE_GAP_FRACTION
-                        } else {
-                            null
-                        },
+            is StreamLoaderViewModel.StreamState.Error -> {
+                RetryWhenOnline { loaderViewModel.retryLastLoad() }
+                ErrorScreen(
+                    message = state.message,
+                    onRetry = { loaderViewModel.retryLastLoad() },
+                    onBack = onBack,
                 )
+            }
 
-                // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
-                // session and stopping playback is NOT done here — this composable is shared
-                // between the standalone full-screen route (which does own that) and the Live
-                // TV dock's promoted view (where "leaving" just means shrinking back to the
-                // dock, and the stream must keep playing). See MobilePlayerScreen's own
-                // DisposableEffect for the standalone case.
-                DisposableEffect(Unit) {
-                    onDispose {
-                        if (viewModel.isInPictureInPictureMode.value) return@onDispose
-
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                            activity?.setPictureInPictureParams(
-                                android.app.PictureInPictureParams
-                                    .Builder()
-                                    .setAutoEnterEnabled(false)
-                                    .build(),
-                            )
-                        }
-                    }
-                }
-
-                // P4: the connection can't keep up with the stream.
-                if (!isInPipMode) rememberSlowConnectionText()?.let { SlowConnectionBanner(text = it) }
-
-                // Loading/Error overlays
+            is StreamLoaderViewModel.StreamState.Success -> {
+                val isLiveContent = state.isLive
+                // Buffering is included alongside Playing/Paused (unlike the equivalent TV gate, which
+                // never excluded it in the first place) — without it, the tap gesture still flipped
+                // showControls, but the overlay itself stayed invisible for as long as a stream was
+                // buffering, silently swallowing every reveal tap. Idle/Error/Ended stay excluded:
+                // nothing here to control yet.
+                val controlsVisible =
+                    !isInPipMode && showControls && !showStats &&
+                        (
+                            currentPs is PlaybackState.Playing ||
+                                currentPs is PlaybackState.Paused ||
+                                currentPs is PlaybackState.Buffering
+                        )
                 Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(CinemaTheme.colors.mediaScrim)
+                            .then(
+                                if (isInPipMode) {
+                                    Modifier
+                                } else {
+                                    Modifier.pointerInput(showStats, isLiveContent) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                if (!showStats) showControls = !showControls
+                                            },
+                                            // Double-tap 10s relative seek (2a), not pause/resume — that
+                                            // would duplicate the single-tap + center button path and break
+                                            // the double-tap-to-seek convention every other mobile video
+                                            // player uses (YouTube, Netflix, Plex, MX Player). Left 40% of
+                                            // the width rewinds, right 40% seeks forward, the center 20% is left alone —
+                                            // single tap already toggles the controls overlay, so a
+                                            // second meaning on center double-tap would be redundant.
+                                            onDoubleTap = { offset ->
+                                                if (!showStats && !isLiveContent) {
+                                                    val width = size.width
+                                                    when {
+                                                        offset.x < width * 0.4f -> {
+                                                            viewModel.seekRelative(-SEEK_STEP_MS)
+                                                            seekRippleSeconds =
+                                                                if (seekRippleSide ==
+                                                                    -1
+                                                                ) {
+                                                                    seekRippleSeconds + SEEK_STEP_SECONDS
+                                                                } else {
+                                                                    SEEK_STEP_SECONDS
+                                                                }
+                                                            seekRippleSide = -1
+                                                            seekRippleTick++
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        }
+
+                                                        offset.x > width * 0.6f -> {
+                                                            viewModel.seekRelative(SEEK_STEP_MS)
+                                                            seekRippleSeconds =
+                                                                if (seekRippleSide ==
+                                                                    1
+                                                                ) {
+                                                                    seekRippleSeconds + SEEK_STEP_SECONDS
+                                                                } else {
+                                                                    SEEK_STEP_SECONDS
+                                                                }
+                                                            seekRippleSide = 1
+                                                            seekRippleTick++
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    }
+                                },
+                            ).then(
+                                if (isInPipMode || !isLiveContent) {
+                                    Modifier
+                                } else {
+                                    Modifier.pointerInput(state.categoryStreams, showStats) {
+                                        var verticalAccumulator = 0f
+                                        var horizontalAccumulator = 0f
+                                        var hasFiredVerticalThisGesture = false
+                                        var hasFiredHorizontalThisGesture = false
+                                        var startedInEdge = false
+                                        // In dp, not px, so the distance is the same on every screen.
+                                        val swipePx = CHANNEL_SWIPE_THRESHOLD.toPx()
+                                        detectDragGestures(
+                                            onDragStart = { start ->
+                                                // A drag from the outer 10 % of an edge is the system's
+                                                // (back, notification shade, home) or a stray edge touch.
+                                                startedInEdge =
+                                                    startsInChannelSwipeEdge(
+                                                        start.x,
+                                                        start.y,
+                                                        size.width.toFloat(),
+                                                        size.height.toFloat(),
+                                                    )
+                                                verticalAccumulator = 0f
+                                                horizontalAccumulator = 0f
+                                                hasFiredVerticalThisGesture = false
+                                                hasFiredHorizontalThisGesture = false
+                                            },
+                                            onDragEnd = {
+                                                hasFiredVerticalThisGesture = false
+                                                hasFiredHorizontalThisGesture = false
+                                            },
+                                            onDragCancel = {
+                                                hasFiredVerticalThisGesture = false
+                                                hasFiredHorizontalThisGesture = false
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                // Without guarding the other two overlays the same way
+                                                // showStats already was, a vertical scroll inside the open
+                                                // category/last-watched drawer was consumed here instead —
+                                                // channel-skipping while the user tried to scroll the list.
+                                                if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
+                                                if (startedInEdge) return@detectDragGestures
+                                                change.consume()
+                                                verticalAccumulator += dragAmount.y
+                                                horizontalAccumulator += dragAmount.x
+                                                // Vertical: channel switching
+                                                if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > swipePx) {
+                                                    hasFiredVerticalThisGesture = true
+                                                    if (verticalAccumulator < 0) {
+                                                        loaderViewModel.nextChannel()
+                                                    } else {
+                                                        loaderViewModel.prevChannel()
+                                                    }
+                                                    verticalAccumulator = 0f
+                                                }
+                                                // Horizontal: overlay panels
+                                                if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > swipePx) {
+                                                    hasFiredHorizontalThisGesture = true
+                                                    when {
+                                                        horizontalAccumulator > 0 && !showLastWatchedOverlay -> {
+                                                            showCategoryOverlay = true
+                                                        }
+
+                                                        horizontalAccumulator < 0 && !showCategoryOverlay -> {
+                                                            showLastWatchedOverlay = true
+                                                        }
+
+                                                        horizontalAccumulator > 0 && showLastWatchedOverlay -> {
+                                                            showLastWatchedOverlay = false
+                                                        }
+
+                                                        horizontalAccumulator < 0 && showCategoryOverlay -> {
+                                                            showCategoryOverlay = false
+                                                        }
+                                                    }
+                                                    horizontalAccumulator = 0f
+                                                }
+                                            },
+                                        )
+                                    }
+                                },
+                            ),
                 ) {
-                    when (currentPs) {
-                        PlaybackState.Buffering -> {
-                            if (!hasStartedPlaying || showRecoverySpinner) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
-                                        role = TextRole.Display,
-                                        tone = TextTone.OnMedia,
-                                    )
-                                    // Expert mode: what the wait is made of (as on TV).
-                                    if (appSettings.isDevMode && !isInPipMode) {
-                                        Spacer(Modifier.height(CinemaSpacing.sm))
-                                        BufferingDetails()
+                    // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
+                    // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
+                    // recomposition here never steals frames from the video. See
+                    // MobileCategoryListScreen's videoSurface comment for why the dock needs the
+                    // opposite (TextureView).
+                    // While the controls are up, the subtitles sit above their bottom panel instead of
+                    // on the title and seek bar. A share of the screen's height: the subtitles' own
+                    // share is of the video's height, never taller than the screen, so a letterboxed
+                    // video only lifts them a little further.
+                    EmbeddedPlayerSurface(
+                        modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
+                        subtitleBottomPaddingFraction =
+                            if (controlsVisible && controlsPanelHeightPx > 0 && screenHeightPx > 0) {
+                                controlsPanelHeightPx.toFloat() / screenHeightPx + SUBTITLE_GAP_FRACTION
+                            } else {
+                                null
+                            },
+                    )
+
+                    // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
+                    // session and stopping playback is NOT done here — this composable is shared
+                    // between the standalone full-screen route (which does own that) and the Live
+                    // TV dock's promoted view (where "leaving" just means shrinking back to the
+                    // dock, and the stream must keep playing). See MobilePlayerScreen's own
+                    // DisposableEffect for the standalone case.
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            if (viewModel.isInPictureInPictureMode.value) return@onDispose
+
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                activity?.setPictureInPictureParams(
+                                    android.app.PictureInPictureParams
+                                        .Builder()
+                                        .setAutoEnterEnabled(false)
+                                        .build(),
+                                )
+                            }
+                        }
+                    }
+
+                    // P4: the connection can't keep up with the stream.
+                    if (!isInPipMode) rememberSlowConnectionText()?.let { SlowConnectionBanner(text = it) }
+
+                    // Loading/Error overlays
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when (currentPs) {
+                            PlaybackState.Buffering -> {
+                                if (!hasStartedPlaying || showRecoverySpinner) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
+                                            role = TextRole.Display,
+                                            tone = TextTone.OnMedia,
+                                        )
+                                        // Expert mode: what the wait is made of (as on TV).
+                                        if (appSettings.isDevMode && !isInPipMode) {
+                                            Spacer(Modifier.height(CinemaSpacing.sm))
+                                            BufferingDetails()
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        is PlaybackState.Error -> {
-                            ErrorOverlay(
-                                error = currentPs,
-                                isDevMode = appSettings.isDevMode,
-                                onRetry = { viewModel.playStream(currentMeta) },
-                                onBack = onBack,
-                            )
-                        }
-
-                        else -> { /* Playing or paused */ }
-                    }
-                }
-
-                // Touch controls overlay (see controlsVisible above for when it shows).
-                AnimatedVisibility(
-                    visible = controlsVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    MobileControlsOverlay(
-                        playbackState = currentPs,
-                        metadata = currentMeta,
-                        viewModel = viewModel,
-                        isLive = isLiveContent,
-                        isDeveloperMode = appSettings.isDevMode,
-                        isFavorite = state.isFavorite,
-                        livePosition = livePosition,
-                        liveDuration = liveDuration,
-                        currentEpgProgram = state.currentEpgProgram,
-                        nextEpgProgram = state.nextEpgProgram,
-                        onPlayPause = {
-                            if (currentPs is PlaybackState.Paused) {
-                                viewModel.resume()
-                            } else {
-                                viewModel.pause()
+                            is PlaybackState.Error -> {
+                                ErrorOverlay(
+                                    error = currentPs,
+                                    isDevMode = appSettings.isDevMode,
+                                    onRetry = { viewModel.playStream(currentMeta) },
+                                    onBack = onBack,
+                                )
                             }
-                        },
-                        onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(300_000L) }) else null,
-                        onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-60_000L) }) else null,
-                        // Finalizing the session and stopping playback is the caller's call —
-                        // see the DisposableEffect note above. Forward as-is.
-                        onBack = onBack,
-                        onStats = { showStats = true },
-                        onAudioTrack = { showAudioTrackSelector = true },
-                        onSubtitle = { showSubtitleSelector = true },
-                        onQuality = { showQualitySelector = true },
-                        // Not on catch-up: the favourite would be the channel, under the programme's name.
-                        onToggleFavorite =
-                            if (isCatchup) {
-                                null
-                            } else {
-                                { loaderViewModel.toggleFavorite() }
-                            },
-                        onWatchLive = onWatchLive,
-                        onStartOver = onStartOver,
-                        nextEpisode = state.nextEpisode,
-                        onPlayNextEpisode = { nextEp ->
-                            // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
-                            // in its own coroutine, which races an unawaited finalizeSession()'s
-                            // position-save read of that same state — see finalizeSessionAndAwait's
-                            // kdoc / docs/plans/archive/20260908_episode-selection-fragility-plan.md.
-                            scope.launch {
-                                finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
-                                loaderViewModel.playNextEpisode(nextEp)
-                            }
-                        },
-                        onPanelHeightChanged = { controlsPanelHeightPx = it },
-                    )
-                }
 
-                // Autoplay next episode: the "Up next" card.
-                upNext?.let { next ->
-                    MobileUpNextOverlay(
-                        episode = next,
-                        secondsLeft = upNextSecondsLeft(livePosition, liveDuration),
-                        belowClock = showControls,
-                        onPlayNow = { playUpNext(next) },
-                        onCancel = cancelUpNext,
-                    )
-                }
-
-                // Stats overlay
-                AnimatedVisibility(
-                    visible = !isInPipMode && showStats,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    MobileStatsOverlay(
-                        playbackState = currentPs,
-                        metadata = currentMeta,
-                        onClose = { showStats = false },
-                    )
-                }
-            }
-
-            // Category streams panel — slides in from the left
-            AnimatedVisibility(
-                visible = !isInPipMode && showCategoryOverlay,
-                enter = slideInHorizontally { -it },
-                exit = slideOutHorizontally { -it },
-            ) {
-                val categoryStreams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) }
-                // Asked while the panel is open only: channels that keep an archive get a catch-up badge.
-                val categoryCatchupDays by produceState(ImmutableCatchupDays(), categoryStreams) {
-                    value = ImmutableCatchupDays(loaderViewModel.catchupDays(categoryStreams))
-                }
-                MobileChannelListSheet(
-                    title = stringResource(R.string.player_category_channels),
-                    streams = categoryStreams,
-                    panelAlignment = Alignment.CenterStart,
-                    currentStreamId = state.streamId,
-                    catchupDays = categoryCatchupDays,
-                    onSelect = { item ->
-                        // Finalize current session properly before starting new one
-                        finalizeSession(viewModel.playbackState.value, loaderViewModel)
-
-                        showCategoryOverlay = false
-                        loaderViewModel.loadStream(item)
-                    },
-                    onDismiss = { showCategoryOverlay = false },
-                )
-            }
-
-            // Last watched panel — slides in from the right
-            AnimatedVisibility(
-                visible = !isInPipMode && showLastWatchedOverlay,
-                enter = slideInHorizontally { it },
-                exit = slideOutHorizontally { it },
-            ) {
-                val otherRecentStreams =
-                    remember(recentStreams, state.streamId) {
-                        ImmutableMediaList(recentStreams.filter { it.id != state.streamId })
+                            else -> { /* Playing or paused */ }
+                        }
                     }
-                val recentCatchupDays by produceState(ImmutableCatchupDays(), otherRecentStreams) {
-                    value = ImmutableCatchupDays(loaderViewModel.catchupDays(otherRecentStreams))
-                }
-                MobileChannelListSheet(
-                    title = stringResource(R.string.category_recent_label),
-                    streams = otherRecentStreams,
-                    panelAlignment = Alignment.CenterEnd,
-                    catchupDays = recentCatchupDays,
-                    onSelect = { item ->
-                        // Finalize current session properly before starting new one
-                        finalizeSession(viewModel.playbackState.value, loaderViewModel)
 
-                        showLastWatchedOverlay = false
-                        loaderViewModel.loadStream(item)
-                    },
-                    onDismiss = { showLastWatchedOverlay = false },
-                )
-            }
-
-            // Channel/program info toast — not shown while the category or last-watched panel is
-            // open; MobileChannelListSheet already highlights the current channel, so the toast
-            // would just be redundant on top of it (mirrors TV's PlayerScreen).
-            Box(modifier = Modifier.fillMaxSize()) {
-                AnimatedVisibility(
-                    visible = !isInPipMode && showChannelToast,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter),
-                ) {
-                    ChannelToast(
-                        channelName = state.streamName,
-                        currentEpgProgram = state.currentEpgProgram,
-                    )
-                }
-
-                // Small spinner over the frozen last frame while a new stream is being resolved
-                // (loaderViewModel.state is still Loading) — the Buffering overlay below only
-                // covers ExoPlayer's own buffering once playStream() has already been called, so
-                // without this the resolve gap between a channel switch and that call would show
-                // nothing at all.
-                AnimatedVisibility(
-                    visible = !isInPipMode && streamState is StreamLoaderViewModel.StreamState.Loading,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.Center),
-                ) {
-                    CinemaSpinner()
-                }
-
-                // Double-tap seek ripple pill (2a) — sits on whichever side was tapped, fading
-                // out CinemaAnimation.seekRippleDismissMs after the last tap in a burst.
-                AnimatedVisibility(
-                    visible = !isInPipMode && seekRippleSide != 0,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(if (seekRippleSide < 0) Alignment.CenterStart else Alignment.CenterEnd),
-                ) {
-                    GlassPanel(
-                        modifier = Modifier.padding(horizontal = CinemaSpacing.xl),
-                        panelShape = CinemaTheme.shapes.control,
+                    // Touch controls overlay (see controlsVisible above for when it shows).
+                    AnimatedVisibility(
+                        visible = controlsVisible,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
                     ) {
-                        CinemaText(
-                            text =
-                                stringResource(
-                                    if (seekRippleSide < 0) R.string.player_seek_rewind_format else R.string.player_seek_forward_format,
-                                    seekRippleSeconds,
-                                ),
-                            modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.md),
-                            role = TextRole.Display,
-                            tone = TextTone.Primary,
+                        MobileControlsOverlay(
+                            playbackState = currentPs,
+                            metadata = currentMeta,
+                            viewModel = viewModel,
+                            isLive = isLiveContent,
+                            isDeveloperMode = appSettings.isDevMode,
+                            isFavorite = state.isFavorite,
+                            livePosition = livePosition,
+                            liveDuration = liveDuration,
+                            currentEpgProgram = state.currentEpgProgram,
+                            nextEpgProgram = state.nextEpgProgram,
+                            onPlayPause = {
+                                if (currentPs is PlaybackState.Paused) {
+                                    viewModel.resume()
+                                } else {
+                                    viewModel.pause()
+                                }
+                            },
+                            onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(300_000L) }) else null,
+                            onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-60_000L) }) else null,
+                            // Finalizing the session and stopping playback is the caller's call —
+                            // see the DisposableEffect note above. Forward as-is.
+                            onBack = onBack,
+                            onStats = { showStats = true },
+                            onAudioTrack = { showAudioTrackSelector = true },
+                            onSubtitle = { showSubtitleSelector = true },
+                            onQuality = { showQualitySelector = true },
+                            // Not on catch-up: the favourite would be the channel, under the programme's name.
+                            onToggleFavorite =
+                                if (isCatchup) {
+                                    null
+                                } else {
+                                    { loaderViewModel.toggleFavorite() }
+                                },
+                            onWatchLive = onWatchLive,
+                            onStartOver = onStartOver,
+                            nextEpisode = state.nextEpisode,
+                            onPlayNextEpisode = { nextEp ->
+                                // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
+                                // in its own coroutine, which races an unawaited finalizeSession()'s
+                                // position-save read of that same state — see finalizeSessionAndAwait's
+                                // kdoc / docs/plans/archive/20260908_episode-selection-fragility-plan.md.
+                                scope.launch {
+                                    finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
+                                    loaderViewModel.playNextEpisode(nextEp)
+                                }
+                            },
+                            onPanelHeightChanged = { controlsPanelHeightPx = it },
+                        )
+                    }
+
+                    // Autoplay next episode: the "Up next" card.
+                    upNext?.let { next ->
+                        MobileUpNextOverlay(
+                            episode = next,
+                            secondsLeft = upNextSecondsLeft(livePosition, liveDuration),
+                            belowClock = showControls,
+                            onPlayNow = { playUpNext(next) },
+                            onCancel = cancelUpNext,
+                        )
+                    }
+
+                    // Stats overlay
+                    AnimatedVisibility(
+                        visible = !isInPipMode && showStats,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                    ) {
+                        MobileStatsOverlay(
+                            playbackState = currentPs,
+                            metadata = currentMeta,
+                            onClose = { showStats = false },
                         )
                     }
                 }
-            }
 
-            // Selector dialogs (outside the clickable Box)
-            if (showAudioTrackSelector) {
-                AudioTrackSelectorDialog(
-                    viewModel = viewModel,
-                    onDismiss = { showAudioTrackSelector = false },
-                )
-            }
+                // Category streams panel — slides in from the left
+                AnimatedVisibility(
+                    visible = !isInPipMode && showCategoryOverlay,
+                    enter = slideInHorizontally { -it },
+                    exit = slideOutHorizontally { -it },
+                ) {
+                    val categoryStreams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) }
+                    // Asked while the panel is open only: channels that keep an archive get a catch-up badge.
+                    val categoryCatchupDays by produceState(ImmutableCatchupDays(), categoryStreams) {
+                        value = ImmutableCatchupDays(loaderViewModel.catchupDays(categoryStreams))
+                    }
+                    MobileChannelListSheet(
+                        title = stringResource(R.string.player_category_channels),
+                        streams = categoryStreams,
+                        panelAlignment = Alignment.CenterStart,
+                        currentStreamId = state.streamId,
+                        catchupDays = categoryCatchupDays,
+                        onSelect = { item ->
+                            // Finalize current session properly before starting new one
+                            finalizeSession(viewModel.playbackState.value, loaderViewModel)
 
-            if (showSubtitleSelector) {
-                SubtitleSelectorDialog(
-                    viewModel = viewModel,
-                    onDismiss = { showSubtitleSelector = false },
-                )
-            }
+                            showCategoryOverlay = false
+                            loaderViewModel.loadStream(item)
+                        },
+                        onDismiss = { showCategoryOverlay = false },
+                    )
+                }
 
-            if (showQualitySelector) {
-                QualitySelectorDialog(
-                    viewModel = viewModel,
-                    onDismiss = { showQualitySelector = false },
-                )
+                // Last watched panel — slides in from the right
+                AnimatedVisibility(
+                    visible = !isInPipMode && showLastWatchedOverlay,
+                    enter = slideInHorizontally { it },
+                    exit = slideOutHorizontally { it },
+                ) {
+                    val otherRecentStreams =
+                        remember(recentStreams, state.streamId) {
+                            ImmutableMediaList(recentStreams.filter { it.id != state.streamId })
+                        }
+                    val recentCatchupDays by produceState(ImmutableCatchupDays(), otherRecentStreams) {
+                        value = ImmutableCatchupDays(loaderViewModel.catchupDays(otherRecentStreams))
+                    }
+                    MobileChannelListSheet(
+                        title = stringResource(R.string.category_recent_label),
+                        streams = otherRecentStreams,
+                        panelAlignment = Alignment.CenterEnd,
+                        catchupDays = recentCatchupDays,
+                        onSelect = { item ->
+                            // Finalize current session properly before starting new one
+                            finalizeSession(viewModel.playbackState.value, loaderViewModel)
+
+                            showLastWatchedOverlay = false
+                            loaderViewModel.loadStream(item)
+                        },
+                        onDismiss = { showLastWatchedOverlay = false },
+                    )
+                }
+
+                // Channel/program info toast — not shown while the category or last-watched panel is
+                // open; MobileChannelListSheet already highlights the current channel, so the toast
+                // would just be redundant on top of it (mirrors TV's PlayerScreen).
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AnimatedVisibility(
+                        visible = !isInPipMode && showChannelToast,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    ) {
+                        ChannelToast(
+                            channelName = state.streamName,
+                            currentEpgProgram = state.currentEpgProgram,
+                        )
+                    }
+
+                    // Small spinner over the frozen last frame while a new stream is being resolved
+                    // (loaderViewModel.state is still Loading) — the Buffering overlay below only
+                    // covers ExoPlayer's own buffering once playStream() has already been called, so
+                    // without this the resolve gap between a channel switch and that call would show
+                    // nothing at all.
+                    AnimatedVisibility(
+                        visible = !isInPipMode && streamState is StreamLoaderViewModel.StreamState.Loading,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.Center),
+                    ) {
+                        CinemaSpinner()
+                    }
+
+                    // Double-tap seek ripple pill (2a) — sits on whichever side was tapped, fading
+                    // out CinemaAnimation.seekRippleDismissMs after the last tap in a burst.
+                    AnimatedVisibility(
+                        visible = !isInPipMode && seekRippleSide != 0,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(if (seekRippleSide < 0) Alignment.CenterStart else Alignment.CenterEnd),
+                    ) {
+                        GlassPanel(
+                            modifier = Modifier.padding(horizontal = CinemaSpacing.xl),
+                            panelShape = CinemaTheme.shapes.control,
+                        ) {
+                            CinemaText(
+                                text =
+                                    stringResource(
+                                        if (seekRippleSide < 0) R.string.player_seek_rewind_format else R.string.player_seek_forward_format,
+                                        seekRippleSeconds,
+                                    ),
+                                modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.md),
+                                role = TextRole.Display,
+                                tone = TextTone.Primary,
+                            )
+                        }
+                    }
+                }
+
+                // Selector dialogs (outside the clickable Box)
+                if (showAudioTrackSelector) {
+                    AudioTrackSelectorDialog(
+                        viewModel = viewModel,
+                        onDismiss = { showAudioTrackSelector = false },
+                    )
+                }
+
+                if (showSubtitleSelector) {
+                    SubtitleSelectorDialog(
+                        viewModel = viewModel,
+                        onDismiss = { showSubtitleSelector = false },
+                    )
+                }
+
+                if (showQualitySelector) {
+                    QualitySelectorDialog(
+                        viewModel = viewModel,
+                        onDismiss = { showQualitySelector = false },
+                    )
+                }
             }
         }
     }

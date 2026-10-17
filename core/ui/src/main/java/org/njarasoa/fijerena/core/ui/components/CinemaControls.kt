@@ -215,25 +215,31 @@ fun CinemaPanel(
 }
 
 /**
- * A progress bar: the accent over a faint track, [ControlStyle.progressThickness] thick unless
+ * A progress bar: the accent over a faint track (brighter when [highlighted], the focused seek bar), [ControlStyle.progressThickness] thick unless
  * [modifier] sets a height. [progress] null is indeterminate (something is happening, amount unknown).
  */
 @Composable
 fun CinemaProgressBar(
     progress: (() -> Float)?,
     modifier: Modifier = Modifier,
+    highlighted: Boolean = false,
 ) {
     val c = CinemaTheme.colors
-    val track = c.textSecondary.copy(alpha = ControlStyle.PROGRESS_TRACK_ALPHA)
+    // [highlighted]: the bar is the focused control (TV seek bar) — the bright accent and a stronger track.
+    val bar = if (highlighted) c.accentSoft else c.accent
+    val track =
+        c.textSecondary.copy(
+            alpha = if (highlighted) ControlStyle.PROGRESS_TRACK_ALPHA_HIGHLIGHTED else ControlStyle.PROGRESS_TRACK_ALPHA,
+        )
     if (progress == null) {
         // look-ok: the component that wraps Material's LinearProgressIndicator
-        LinearProgressIndicator(modifier = modifier.height(ControlStyle.progressThickness), color = c.accent, trackColor = track)
+        LinearProgressIndicator(modifier = modifier.height(ControlStyle.progressThickness), color = bar, trackColor = track)
     } else {
         // look-ok: the component that wraps Material's LinearProgressIndicator
         LinearProgressIndicator(
             progress = progress,
             modifier = modifier.height(ControlStyle.progressThickness),
-            color = c.accent,
+            color = bar,
             trackColor = track,
             drawStopIndicator = {},
         )

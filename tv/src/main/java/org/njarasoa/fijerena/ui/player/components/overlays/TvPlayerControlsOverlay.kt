@@ -487,8 +487,10 @@ fun TvPlayerControlsOverlay(
                                 Modifier
                                     .fillMaxWidth()
                                     .focusRequester(seekBarFocusRequester)
-                                    .focusable(enabled = showFullControls)
+                                    // Before focusable(): after it, onFocusChanged only hears the
+                                    // children's focus, so the bar never lit up when focused.
                                     .onFocusChanged { isProgressBarFocused = it.isFocused }
+                                    .focusable(enabled = showFullControls)
                                     .onKeyEvent { event ->
                                         if (event.type == KeyEventType.KeyDown) {
                                             when (event.key) {
@@ -547,6 +549,7 @@ fun TvPlayerControlsOverlay(
                                     Modifier
                                         .fillMaxWidth()
                                         .height(if (seekBarLit) Spacing.xs else TvDimensions.progressBar),
+                                highlighted = seekBarLit,
                             )
                         }
 

@@ -32,4 +32,5 @@ object ControlStyle {
     val logoPlatePaddingVertical: Dp = CinemaSpacing.xs
     val logoPlateCorner: Dp = CinemaSpacing.xs
     const val PROGRESS_TRACK_ALPHA = 0.25f
+    const val PROGRESS_TRACK_ALPHA_HIGHLIGHTED = 0.4f
 }

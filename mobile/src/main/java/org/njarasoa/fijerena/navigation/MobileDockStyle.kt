@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
@@ -27,8 +28,12 @@ object MobileDockStyle {
     val barShape: Shape
         @Composable @ReadOnlyComposable
         get() = cornerShape(LocalUiStyle.current.shapes.button)
-    val barContainer: Color get() = CinemaSurfaceVariant.copy(alpha = BAR_ALPHA)
-    val barOutline: Color get() = CinemaTextPrimary.copy(alpha = OUTLINE_ALPHA)
+    val barContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.surfaceRaised.copy(alpha = BAR_ALPHA)
+    val barOutline: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary.copy(alpha = OUTLINE_ALPHA)
     val barOutlineWidth: Dp = 1.dp
 
     /** Space between the bar's edge and the tabs. */
@@ -39,9 +44,15 @@ object MobileDockStyle {
         @Composable @ReadOnlyComposable
         get() = cornerShape((LocalUiStyle.current.shapes.button - barPadding).coerceAtLeast(0.dp))
     val tabVerticalPadding: Dp = 8.dp
-    val selectedTabContainer: Color get() = CinemaTextPrimary.copy(alpha = SELECTED_FILL_ALPHA)
-    val selectedContent: Color get() = CinemaAccent
-    val content: Color get() = CinemaTextPrimary
+    val selectedTabContainer: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary.copy(alpha = SELECTED_FILL_ALPHA)
+    val selectedContent: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.accent
+    val content: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaTheme.colors.textPrimary
     val iconSize: Dp = 26.dp
     val iconToLabel: Dp = 2.dp
 

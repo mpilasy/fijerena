@@ -10,10 +10,12 @@ import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.ProvideCinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.ProvideMediaTheme
 import org.njarasoa.fijerena.core.ui.theme.UiShapeTokens
 import org.njarasoa.fijerena.core.ui.theme.UiStyleHolder
 import org.njarasoa.fijerena.core.ui.theme.cinemaMaterialColorScheme
@@ -45,7 +47,7 @@ private fun cinemaTypeRoles(typography: Typography) =
     )
 
 /** TV Material's colours from [CinemaTheme]'s roles. */
-private fun cinemaTvColorScheme(colors: CinemaColorRoles) =
+internal fun cinemaTvColorScheme(colors: CinemaColorRoles) =
     darkColorScheme(
         primary = colors.accent,
         onPrimary = colors.onAccent,
@@ -119,5 +121,20 @@ fun FirstVideoPlayerTheme(
                 content = content,
             )
         }
+    }
+}
+
+/** [ProvideMediaTheme] for TV: the player over video stays dark in every theme, TV Material included. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun TvMediaTheme(content: @Composable () -> Unit) {
+    ProvideMediaTheme {
+        val media = CinemaTheme.colors
+        MaterialTheme(
+            colorScheme = remember(media) { cinemaTvColorScheme(media) },
+            typography = MaterialTheme.typography,
+            shapes = MaterialTheme.shapes,
+            content = content,
+        )
     }
 }

@@ -40,7 +40,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
@@ -76,14 +76,14 @@ fun CinemaThumbnail(
     val shape = cornerShape(radius)
     val context = LocalContext.current
     val isLogo = contentType == ThumbnailContentType.LIVE_TV
-    val palette = CinemaThemeHolder.current
+    val palette = CinemaTheme.colors
 
     // Track measured size so Coil decodes at display resolution, not full source resolution
     Box(
         modifier =
             modifier
                 .clip(shape)
-                .then(if (isLogo) Modifier.background(palette.surfaceVariant) else Modifier),
+                .then(if (isLogo) Modifier.background(palette.surfaceRaised) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         if (!url.isNullOrBlank()) {
@@ -148,31 +148,31 @@ fun TypographyFallback(
     contentType: ThumbnailContentType,
     modifier: Modifier = Modifier,
 ) {
-    val palette = CinemaThemeHolder.current
+    val palette = CinemaTheme.colors
     val gradient =
         remember(contentType, palette) {
             when (contentType) {
                 ThumbnailContentType.LIVE_TV -> {
                     Brush.verticalGradient(
-                        colors = listOf(palette.orange, palette.orangeDark),
+                        colors = listOf(palette.highlight, palette.highlight),
                     )
                 }
 
                 ThumbnailContentType.MOVIE -> {
                     Brush.verticalGradient(
-                        colors = listOf(palette.accent, palette.accentDark),
+                        colors = listOf(palette.accent, palette.accentStrong),
                     )
                 }
 
                 ThumbnailContentType.TV_SHOW -> {
                     Brush.verticalGradient(
-                        colors = listOf(palette.accentLight, palette.accent),
+                        colors = listOf(palette.accentSoft, palette.accent),
                     )
                 }
 
                 ThumbnailContentType.DEFAULT -> {
                     Brush.verticalGradient(
-                        colors = listOf(palette.surfaceVariant, palette.surface),
+                        colors = listOf(palette.surfaceRaised, palette.surface),
                     )
                 }
             }
@@ -209,7 +209,7 @@ fun TypographyFallback(
  */
 @Composable
 fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
-    val palette = CinemaThemeHolder.current
+    val palette = CinemaTheme.colors
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateX by transition.animateFloat(
         initialValue = -300f,
@@ -233,7 +233,7 @@ fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
                 colors =
                     listOf(
                         palette.surface,
-                        palette.surfaceLight.copy(alpha = CinemaAlpha.imageOverlayLight),
+                        palette.surfaceHigh.copy(alpha = CinemaAlpha.imageOverlayLight),
                         palette.surface,
                     ),
                 start = Offset(0f, 0f),
@@ -260,13 +260,13 @@ fun SkeletonRow(
 ) {
     val cardRadius = CinemaCornerRadius.medium
     val chipRadius = CinemaCornerRadius.small
-    val palette = CinemaThemeHolder.current
+    val palette = CinemaTheme.colors
 
     Box(
         modifier =
             modifier
                 .clip(cornerShape(cardRadius))
-                .background(palette.surfaceVariant.copy(alpha = CinemaAlpha.tint)),
+                .background(palette.surfaceRaised.copy(alpha = CinemaAlpha.tint)),
     ) {
         Row(
             modifier =
