@@ -124,7 +124,7 @@ EpisodeSelection ─→ Player | CategoryList(TV_SHOWS, category) | EpisodeSelec
 
 Settings
 ├─→ ProviderSelection ─→ AddProvider() | AddProvider(editId) | EpgManagement(id)   Manage sources
-├─→ ProfileEdit(profileId)               a profile's row (mobile; TV: a page in the Profiles pane)
+├─→ ProfileEdit(profileId)               a profile's row (mobile; without Expert mode only the profile in use's row; TV: a page in the Profiles pane)
 ├─→ SyncSettings
 ├─→ DeviceInfo                           About & advanced
 ├─→ Diagnostics                          expert mode
@@ -207,7 +207,7 @@ Two-column TV screens (Live TV browse, Movies, TV Shows: `TwoColumnLayout`) are 
 - Entry focus on open: the selected category while the items load, then the items' entry row once they are there (the last played / opened item when it is in the list, else the first); an empty category keeps the category. OK on a category keeps focus on the category; Right enters its items.
 - Programmatic focus (`requestFocusWithRetry`, `NavReturnFocus`) passes through a pane untouched; only D-pad moves are redirected (`focusProperties { onEnter }` on the group, `onKeyEvent` for Left/Right, `onExit` + `cancelFocusChange()` for Down). `focusRestorer` is not used: it defines the same `onEnter` and the outer definition wins, and it cannot express the selected-row fallback.
 
-The same panes build TV Settings (rail and pane), Edit Source and the TV Guide header. In TV Settings a row can open a page in place of the group's rows — a picker, Guide data maintenance, the TMDB key (`SettingPicker.TMDB_KEY`, `TmdbKeyPane`: focus on the key field, Remove key last and confirmed), or a profile's page (`SettingPicker.PROFILE`, `ProfileEditPane`): Left or Back leaves it (a profile's page unsaved, like Cancel), with focus back on the row that opened it, or on the group's first row after the profile was deleted. The profile page takes Left and Back in `onKeyEvent`, after the focused control, so the name's text field keeps them while it is being edited; its colour opens a picker in the same place.
+The same panes build TV Settings (rail and pane), Edit Source and the TV Guide header. In TV Settings a row can open a page in place of the group's rows — a picker, Guide data maintenance, the TMDB key (`SettingPicker.TMDB_KEY`, `TmdbKeyPane`: focus on the key field, Remove key last and confirmed), or a profile's page (`SettingPicker.PROFILE`, `ProfileEditPane`): Left or Back leaves it (a profile's page unsaved, like Cancel), with focus back on the row that opened it, or on the group's first row after the profile was deleted. The profile page takes Left and Back in `onKeyEvent`, after the focused control, so the name's text field keeps them while it is being edited; its colour opens a picker in the same place. Without Expert mode the Profiles group has no rows: its pane is the profile in use's page (`SettingPicker.PROFILE` shown while `picker` is null, `focusOnOpen = false` so the rail keeps focus, the name row carrying the group's `paneItem` entry key). Right or OK on the rail enters it on the name; Left, Back, Cancel and Save return to the rail row, and a new `key` drops what was left unsaved. The screen's root Back interception stands aside for it, so the name field still keeps Back.
 
 ### Row actions (long-press OK / Menu)
 

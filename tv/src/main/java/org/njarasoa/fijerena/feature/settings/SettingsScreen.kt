@@ -264,12 +264,22 @@ fun SettingsScreen(
     // Detail Screens"); the BackHandler stays as the fallback. A picker takes its own Back.
     var paneHasFocus by remember { mutableStateOf(false) }
     val backToRail = { coroutineScope.launch { railPane.focusEntry() } }
-    BackHandler(enabled = paneHasFocus && picker == null) { backToRail() }
+    // Without Expert mode a profile can only edit itself: Profiles shows the page of the profile in
+    // use in place of the list of profiles, without taking focus from the rail. The page takes its
+    // own Back (after the name field, which keeps Back to cancel its edit) and leaves to the rail;
+    // a new key drops what was left unsaved.
+    val ownProfilePage = picker == null && selectedGroup == SettingsGroup.PROFILES && !uiState.isDevMode
+    var ownProfilePageKey by remember { mutableIntStateOf(0) }
+    val leaveOwnProfilePage = {
+        ownProfilePageKey++
+        backToRail()
+    }
+    BackHandler(enabled = paneHasFocus && picker == null && !ownProfilePage) { backToRail() }
 
     Box(
         modifier =
             Modifier.fillMaxSize().onPreviewKeyEvent { event ->
-                if (event.key == Key.Back && paneHasFocus && picker == null) {
+                if (event.key == Key.Back && paneHasFocus && picker == null && !ownProfilePage) {
                     if (event.type == KeyEventType.KeyUp) backToRail()
                     true
                 } else {
@@ -340,7 +350,7 @@ fun SettingsScreen(
                             .tvPane(contentPane, exitLeft = railPane, exitUp = false),
                 ) {
                     Box(modifier = Modifier.fillMaxSize().padding(Spacing.md)) {
-                        when (picker) {
+                        when (picker ?: SettingPicker.PROFILE.takeIf { ownProfilePage }) {
                             SettingPicker.THEME -> {
                                 ThemePickerPane(
                                     selectedThemeId = uiState.themeId,
@@ -402,24 +412,36 @@ fun SettingsScreen(
                             }
 
                             SettingPicker.PROFILE -> {
-                                val profile = profiles.firstOrNull { it.id == editingProfileId }
+                                val profile = profiles.firstOrNull { if (ownProfilePage) it.isActive else it.id == editingProfileId }
                                 // Gone (deleted on another device): close. An empty list is still loading.
                                 if (profile == null) {
-                                    LaunchedEffect(profiles) { if (profiles.isNotEmpty()) closeProfile(true) }
+                                    LaunchedEffect(profiles) { if (profiles.isNotEmpty() && !ownProfilePage) closeProfile(true) }
                                 } else {
-                                    ProfileEditPane(
-                                        profile = profile,
-                                        viewModel = profilesViewModel,
-                                        canDelete = !profile.isActive && profiles.size > 1,
-                                        onSaved = {
-                                            viewModel.refreshDevMode()
-                                            closeProfile(false)
-                                        },
-                                        onSwitch = { profilesViewModel.switchTo(profile.id, onProfileSwitched) },
-                                        onDeleted = { closeProfile(true) },
-                                        onBack = { closeProfile(false) },
-                                        scale = scale,
-                                    )
+                                    key(ownProfilePageKey) {
+                                        ProfileEditPane(
+                                            profile = profile,
+                                            viewModel = profilesViewModel,
+                                            canDelete = !profile.isActive && profiles.size > 1,
+                                            onSaved = {
+                                                viewModel.refreshDevMode()
+                                                if (ownProfilePage) leaveOwnProfilePage() else closeProfile(false)
+                                            },
+                                            onSwitch = { profilesViewModel.switchTo(profile.id, onProfileSwitched) },
+                                            onDeleted = { closeProfile(true) },
+                                            onBack = { if (ownProfilePage) leaveOwnProfilePage() else closeProfile(false) },
+                                            scale = scale,
+                                            focusOnOpen = !ownProfilePage,
+                                            entryModifier =
+                                                if (ownProfilePage) {
+                                                    Modifier.paneItem(
+                                                        contentPane,
+                                                        contentEntryKey,
+                                                    )
+                                                } else {
+                                                    Modifier
+                                                },
+                                        )
+                                    }
                                 }
                             }
 

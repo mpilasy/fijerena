@@ -43,7 +43,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings → Profiles: the profile rows (a tap opens the profile's page, [onEdit]) and "Add
- * profile". See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
+ * profile". Without Expert mode ([expertMode] false) a profile can only edit itself: one row, the
+ * profile in use, opens its own page, and there is no Add profile. See
+ * `docs/plans/archive/20260929_live-sync-plan.md` → User profiles.
  */
 @Composable
 fun ProfilesSettingsRows(
@@ -53,10 +55,11 @@ fun ProfilesSettingsRows(
     onAdd: (name: String, colorIndex: Int) -> Unit,
     onEdit: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
+    expertMode: Boolean = true,
 ) {
     var adding by remember { mutableStateOf(false) }
 
-    profiles.forEach { profile ->
+    profiles.filter { expertMode || it.isActive }.forEach { profile ->
         SettingsListRow(
             title = profile.name,
             summary = if (profile.isActive) stringResource(R.string.settings_profiles_active_marker) else null,
@@ -82,15 +85,17 @@ fun ProfilesSettingsRows(
             modifier = Modifier.padding(horizontal = Spacing.md),
         )
     }
-    SettingsListRow(
-        title = stringResource(R.string.settings_profiles_add),
-        leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTextSecondary) },
-        trailing = {},
-        onClick = {
-            onDismissMessage()
-            adding = true
-        },
-    )
+    if (expertMode) {
+        SettingsListRow(
+            title = stringResource(R.string.settings_profiles_add),
+            leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTextSecondary) },
+            trailing = {},
+            onClick = {
+                onDismissMessage()
+                adding = true
+            },
+        )
+    }
 
     if (adding) {
         ProfileAddDialog(

@@ -311,6 +311,7 @@ fun MobileSettingsScreen(
                     onAdd = profilesViewModel::addProfile,
                     onEdit = onEditProfile,
                     onDismissMessage = profilesViewModel::clearMessage,
+                    expertMode = uiState.isDevMode,
                 )
             }
 
