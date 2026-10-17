@@ -20,6 +20,7 @@ fun CinemaCodeText(
     role: TextRole = TextRole.BodySmall,
     tone: TextTone = TextTone.Primary,
 ) {
+    // look-ok: the component that wraps Material's Text
     Text(
         text = text,
         modifier = modifier,
