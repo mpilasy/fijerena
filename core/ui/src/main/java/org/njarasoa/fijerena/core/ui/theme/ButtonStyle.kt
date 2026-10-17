@@ -53,7 +53,13 @@ abstract class ButtonStyle {
             ButtonKind.Danger -> CinemaError
         }
 
-    open fun content(kind: ButtonKind): Color = CinemaTextPrimary
+    /** The label on [kind]'s fill: readable on it in every theme (white on a dark accent, black on a light one). */
+    open fun content(kind: ButtonKind): Color =
+        when (kind) {
+            ButtonKind.Main -> contentOn(CinemaAccent)
+            ButtonKind.Other -> CinemaTextPrimary
+            ButtonKind.Danger -> contentOn(CinemaError)
+        }
 
     /** The outline at rest: only [ButtonKind.Other] has one, so it reads as a button, not a row. */
     open fun outline(kind: ButtonKind): BorderStroke? =
