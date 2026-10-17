@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /** Title (and optional dimmed subtitle) of one Edit Source section. */
 @Composable
@@ -82,7 +83,7 @@ private fun ProviderChoiceRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp)
+                .heightIn(min = MobileDimensions.minTouchTarget)
                 .clickable(onClick = onClick)
                 .padding(vertical = CinemaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,

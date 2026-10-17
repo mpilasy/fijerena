@@ -1,9 +1,10 @@
 package org.njarasoa.fijerena.feature.player
 
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /** Drag distance, on either axis, that switches channel (vertical) or opens a channel sheet (horizontal). */
-internal val CHANNEL_SWIPE_THRESHOLD = 56.dp
+internal val CHANNEL_SWIPE_THRESHOLD = MobileDimensions.channelSwipeThreshold
 
 /** Share of the width and of the height, at each edge, where a drag starting there is ignored. */
 internal const val CHANNEL_SWIPE_EDGE_FRACTION = 0.1f

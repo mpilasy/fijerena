@@ -91,4 +91,7 @@ object TvDimensions {
     val resumeBarHeight: Dp = 5.dp
     val borderFocusedStats: Dp = 3.dp
     val borderThin: Dp = 0.5.dp
+
+    // Design system: sizes that were literals in component code.
+    val detailLabelWidth: Dp = 180.dp
 }

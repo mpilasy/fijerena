@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -116,7 +117,7 @@ fun QuickConnectDialog(
                         }
 
                         qcCode.isEmpty() -> {
-                            CircularProgressIndicator()
+                            CinemaSpinner()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                             CinemaText(stringResource(R.string.provider_connecting_server))
                         }
@@ -132,7 +133,7 @@ fun QuickConnectDialog(
                                 tone = TextTone.Secondary,
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            CircularProgressIndicator()
+                            CinemaSpinner()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                             CinemaText(stringResource(R.string.provider_qc_waiting), role = TextRole.BodySmall, tone = TextTone.Secondary)
                         }

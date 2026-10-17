@@ -68,6 +68,8 @@ import org.njarasoa.fijerena.core.player.model.parseDurationToSeconds
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -1528,7 +1530,7 @@ private fun EpisodeCard(
         // MobileCategoryListScreen, so a half-watched episode and a half-watched film read the
         // same. Poster-width was too short to be legible.
         if (watchProgress > 0f) {
-            LinearProgressIndicator(
+            CinemaProgressBar(
                 progress = { watchProgress.coerceIn(0f, 1f) },
                 modifier =
                     Modifier
@@ -1536,8 +1538,6 @@ private fun EpisodeCard(
                         // Clear the continue-watching border, which is drawn over the card edge.
                         .padding(bottom = MobileDimensions.strokeWidth)
                         .height(MobileDimensions.resumeBarHeight),
-                color = CinemaTheme.colors.accent,
-                trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
             )
         }
     }
@@ -1553,7 +1553,7 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
-            CircularProgressIndicator()
+            CinemaSpinner()
             CinemaText(
                 stringResource(R.string.series_loading_episodes),
                 role = TextRole.Body,

@@ -46,7 +46,7 @@ fun QrCode(
     Box(
         modifier
             .size(size)
-            .background(Color.White, cornerShape(12.dp))
+            .background(Color.White, cornerShape(12.dp)) // look-ok: a QR code must be black on white to scan
             .padding(size / 12)
             .semantics { this.contentDescription = contentDescription },
     ) {
@@ -56,6 +56,7 @@ fun QrCode(
                 for (x in 0 until matrix.width) {
                     if (matrix[x, y]) {
                         // A hair of overlap so no seams show between neighbouring modules.
+                        // look-ok: QR modules, black on white
                         drawRect(Color.Black, Offset(x * cell, y * cell), Size(cell + 0.5f, cell + 0.5f))
                     }
                 }

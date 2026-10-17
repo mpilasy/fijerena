@@ -38,11 +38,13 @@ import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * A filled text button: [ButtonKind.Main] unless [kind] says otherwise. Every phone text button
@@ -137,7 +139,7 @@ fun DetailIconAction(
             maxLines = 2,
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = CinemaSpacing.xxs),
         )
     }
 }
@@ -171,4 +173,4 @@ fun CinemaDangerIconButton(
 }
 
 /** The widest a labelled detail action gets; its label wraps inside it. */
-private val DETAIL_ACTION_MAX_WIDTH = 96.dp
+private val DETAIL_ACTION_MAX_WIDTH = MobileDimensions.detailActionMaxWidth

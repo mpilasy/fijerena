@@ -284,7 +284,7 @@ fun TvDetailRow(
 }
 
 /** Wide enough for the longest label in every language ("Anaran'ny fantsakana:"). */
-private val DETAIL_LABEL_WIDTH = 180.dp
+private val DETAIL_LABEL_WIDTH = TvDimensions.detailLabelWidth
 
 /**
  * A rating for the hero's meta line: "8.2/10" when it's a number, the provider's own text

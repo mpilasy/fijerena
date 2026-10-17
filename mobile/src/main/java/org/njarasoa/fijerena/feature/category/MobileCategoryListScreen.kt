@@ -155,6 +155,8 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -1090,10 +1092,7 @@ fun MobileCategoryListScreen(
                                                     // otherwise look identical to a live frozen frame —
                                                     // mirrors TV's LiveTvSplitLayout.
                                                     if (dockPlaybackState !is PlaybackState.Playing) {
-                                                        CircularProgressIndicator(
-                                                            modifier = Modifier.align(Alignment.Center),
-                                                            color = CinemaTheme.colors.accent,
-                                                        )
+                                                        CinemaSpinner(modifier = Modifier.align(Alignment.Center))
                                                     }
 
                                                     IconButton(
@@ -1127,12 +1126,7 @@ fun MobileCategoryListScreen(
                                                     tone = TextTone.Primary,
                                                 )
                                                 val fraction = nowProg.elapsedFraction()
-                                                LinearProgressIndicator(
-                                                    progress = { fraction },
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    color = CinemaTheme.colors.accent,
-                                                    trackColor = CinemaTheme.colors.surface,
-                                                )
+                                                CinemaProgressBar(progress = { fraction }, modifier = Modifier.fillMaxWidth())
                                             }
                                             val nextProg = dockSuccess?.nextEpgProgram
                                             if (nextProg != null) {
@@ -1979,8 +1973,8 @@ internal fun rowMenuActions(
     }
 
 /** A row's thumbnail: 16:9 (phone UI audit P1), sized so the row holds a title and one more line. */
-private val StreamThumbnailWidth = 96.dp
-private val StreamThumbnailHeight = 54.dp
+private val StreamThumbnailWidth = MobileDimensions.streamThumbnailWidth
+private val StreamThumbnailHeight = MobileDimensions.streamThumbnailHeight
 
 /** A row's height when its text fits beside the thumbnail; a longer title makes it taller. */
 private val StreamCardMinHeight = StreamThumbnailHeight + CinemaSpacing.xs * 2
@@ -2187,17 +2181,13 @@ internal fun StreamCard(
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (watchProgress > 0f) {
-                    LinearProgressIndicator(
+                    CinemaProgressBar(
                         progress = { watchProgress.coerceIn(0f, 1f) },
                         modifier =
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(MobileDimensions.resumeBarHeight),
-                        color = CinemaTheme.colors.accent,
-                        trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
-                        drawStopIndicator = {},
-                        gapSize = CinemaSpacing.none,
                     )
                 }
             }

@@ -214,21 +214,30 @@ fun CinemaPanel(
     }
 }
 
-/** A progress bar: the accent over a faint track, [ControlStyle.progressThickness] thick. */
+/**
+ * A progress bar: the accent over a faint track, [ControlStyle.progressThickness] thick unless
+ * [modifier] sets a height. [progress] null is indeterminate (something is happening, amount unknown).
+ */
 @Composable
 fun CinemaProgressBar(
-    progress: () -> Float,
+    progress: (() -> Float)?,
     modifier: Modifier = Modifier,
 ) {
     val c = CinemaTheme.colors
-    // look-ok: the component that wraps Material's LinearProgressIndicator
-    LinearProgressIndicator(
-        progress = progress,
-        modifier = modifier.height(ControlStyle.progressThickness),
-        color = c.accent,
-        trackColor = c.textSecondary.copy(alpha = ControlStyle.PROGRESS_TRACK_ALPHA),
-        drawStopIndicator = {},
-    )
+    val track = c.textSecondary.copy(alpha = ControlStyle.PROGRESS_TRACK_ALPHA)
+    if (progress == null) {
+        // look-ok: the component that wraps Material's LinearProgressIndicator
+        LinearProgressIndicator(modifier = modifier.height(ControlStyle.progressThickness), color = c.accent, trackColor = track)
+    } else {
+        // look-ok: the component that wraps Material's LinearProgressIndicator
+        LinearProgressIndicator(
+            progress = progress,
+            modifier = modifier.height(ControlStyle.progressThickness),
+            color = c.accent,
+            trackColor = track,
+            drawStopIndicator = {},
+        )
+    }
 }
 
 /** A spinner in the accent. */

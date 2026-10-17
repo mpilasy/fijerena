@@ -42,7 +42,7 @@ fun WatchedBadge(
         Icon(
             imageVector = Icons.Rounded.Check,
             contentDescription = stringResource(R.string.content_watched_badge),
-            tint = Color.White,
+            tint = CinemaTheme.colors.onMedia,
             modifier = Modifier.size(size * GLYPH_FRACTION),
         )
     }

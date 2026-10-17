@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 
 /**
  * A detail screen's headline: TMDB's transparent-PNG wordmark art when it has one for this
@@ -29,7 +30,7 @@ fun TitleLogoOrText(
     contentDescription: String,
     logoUrl: String?,
     modifier: Modifier = Modifier,
-    logoHeight: Dp = 56.dp,
+    logoHeight: Dp = ControlStyle.titleLogoHeight,
     fallback: @Composable () -> Unit,
 ) {
     var logoFailed by remember(logoUrl) { mutableStateOf(false) }

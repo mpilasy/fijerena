@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -500,7 +501,7 @@ fun QuickConnectDialog(
                     }
 
                     qcCode.isEmpty() -> {
-                        CircularProgressIndicator(color = CinemaTheme.colors.accent)
+                        CinemaSpinner()
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         CinemaText(
                             stringResource(R.string.provider_connecting_server),
@@ -529,7 +530,7 @@ fun QuickConnectDialog(
                             tone = TextTone.Secondary,
                         )
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                        CircularProgressIndicator(color = CinemaTheme.colors.accent)
+                        CinemaSpinner()
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         CinemaText(
                             stringResource(R.string.provider_qc_waiting),

@@ -67,6 +67,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -1090,7 +1091,7 @@ fun MobilePlayerContent(
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.Center),
                 ) {
-                    CircularProgressIndicator()
+                    CinemaSpinner()
                 }
 
                 // Double-tap seek ripple pill (2a) — sits on whichever side was tapped, fading

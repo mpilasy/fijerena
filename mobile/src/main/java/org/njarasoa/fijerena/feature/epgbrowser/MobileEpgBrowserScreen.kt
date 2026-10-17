@@ -78,6 +78,8 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
@@ -197,10 +199,7 @@ fun MobileEpgBrowserScreen(
                         enabled = !isRefreshing,
                     ) {
                         if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
-                                strokeWidth = MobileDimensions.strokeWidth,
-                            )
+                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                         } else {
                             Icon(
                                 imageVector = CinemaIcons.Refresh,
@@ -430,7 +429,7 @@ internal fun MobileGuideSearchPane(
                         tone = TextTone.Secondary,
                     )
                 }
-                LinearProgressIndicator(
+                CinemaProgressBar(
                     progress = { progressValue },
                     modifier =
                         Modifier

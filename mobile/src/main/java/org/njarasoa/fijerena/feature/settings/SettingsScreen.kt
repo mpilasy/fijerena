@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -452,7 +453,7 @@ fun MobileSettingsScreen(
                     summary = stringResource(R.string.settings_shrink_database_desc),
                     trailing = {
                         if (uiState.isPruningDatabase) {
-                            CircularProgressIndicator(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
+                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                         }
                     },
                     onClick = { viewModel.pruneDatabase() },

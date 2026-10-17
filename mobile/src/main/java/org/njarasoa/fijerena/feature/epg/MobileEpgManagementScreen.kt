@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
@@ -374,18 +375,12 @@ private fun EpgSourceCard(
                         )
                     }
                     if (activeProgress.progressPercent >= 0) {
-                        LinearProgressIndicator(
+                        CinemaProgressBar(
                             progress = { activeProgress.progressPercent / 100f },
                             modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
-                            color = CinemaTheme.colors.accent,
-                            trackColor = CinemaTheme.colors.textPrimary.copy(alpha = 0.1f),
                         )
                     } else {
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
-                            color = CinemaTheme.colors.accent,
-                            trackColor = CinemaTheme.colors.textPrimary.copy(alpha = 0.1f),
-                        )
+                        CinemaProgressBar(progress = null, modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs))
                     }
                 }
             } else {

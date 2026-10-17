@@ -85,7 +85,7 @@ fun TvIconAction(
                 .semantics { contentDescription = label },
         colors =
             ClickableSurfaceDefaults.colors(
-                containerColor = if (danger) Color.Transparent else TvButtonStyle.iconContainer,
+                containerColor = if (danger) CinemaTheme.colors.clear else TvButtonStyle.iconContainer,
                 contentColor = accent,
                 focusedContainerColor = if (danger) TvButtonStyle.dangerIconFocusedContainer else TvButtonStyle.iconFocusedContainer,
                 focusedContentColor = if (danger) TvButtonStyle.iconContent else TvButtonStyle.iconFocusedContent,

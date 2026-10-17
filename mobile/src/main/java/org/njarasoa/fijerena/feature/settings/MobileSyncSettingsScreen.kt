@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * Settings → Live sync on a phone. A phone joins by scanning an invite, adds a phone by showing
@@ -288,7 +289,7 @@ private fun PairingPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
-            QrCode(text = qr, size = 280.dp, contentDescription = stringResource(R.string.live_sync_qr_description))
+            QrCode(text = qr, size = MobileDimensions.qrCodeSize, contentDescription = stringResource(R.string.live_sync_qr_description))
             CinemaText(instructions)
             CinemaText(stringResource(R.string.live_sync_waiting), role = TextRole.BodySmall, tone = TextTone.Secondary)
             CinemaOutlinedButton(onClick = onClose) {

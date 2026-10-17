@@ -10,14 +10,15 @@
 #   - MaterialTheme.colorScheme read directly, an ad-hoc text style (typography.x.copy(…))
 #   - a raw Material control (Button, TextButton, OutlinedButton, TextField, OutlinedTextField,
 #     Switch, Checkbox, RadioButton, FilterChip, AlertDialog, Card, Divider, HorizontalDivider)
-#   - a raw Text( — text is CinemaText(role, tone)
+#   - a raw Text( — text is CinemaText(role, tone); a raw progress indicator — CinemaProgressBar / CinemaSpinner
 #   - a palette colour read directly (CinemaTextSecondary, CinemaAccent, …) — use a role
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
 # lowered, so the list only shrinks; it is empty when the plan is done.
 #
-# Not counted: theme files (/theme/) and style classes — the only places raw values live. The
+# Not counted: theme files (/theme/) and style classes (*Style.kt, and *Defaults.kt: a component's
+# defaults object is its style) — the only places raw values live. The
 # component library is counted like feature code: components read the theme too. Also not counted:
 # comment lines, and lines marked `// look-ok: <reason>` (or the line above).
 #
@@ -28,7 +29,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-design-system-allowlist.txt"
-PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)\b|\b[0-9]+(\.[0-9]+)?f?\.(dp|sp)\b|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
+PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?f?\.(dp|sp)([^A-Za-z0-9_]|$)|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text|CircularProgressIndicator|LinearProgressIndicator)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
 
 count_file() {
     awk -v pat="$PATTERN" '
@@ -47,7 +48,7 @@ count_file() {
 
 files() {
     find tv/src/main/java mobile/src/main/java core/ui/src/main/java -name '*.kt' \
-        -not -path '*/theme/*' -not -name '*Style.kt' | sort
+        -not -path '*/theme/*' -not -name '*Style.kt' -not -name '*Defaults.kt' | sort
 }
 
 if [ "${1:-}" = "--counts" ]; then

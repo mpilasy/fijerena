@@ -20,6 +20,8 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
@@ -72,8 +74,8 @@ fun AdaptiveLogoImage(
             when (isDark) {
                 true -> {
                     modifier
-                        .background(Color.White.copy(alpha = 0.9f), cornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .background(CinemaTheme.colors.onMedia.copy(alpha = LOGO_PLATE_ALPHA), cornerShape(ControlStyle.logoPlateCorner))
+                        .padding(horizontal = ControlStyle.logoPlatePaddingHorizontal, vertical = ControlStyle.logoPlatePaddingVertical)
                 }
 
                 false -> {
@@ -157,3 +159,5 @@ internal fun isDarkPixels(pixels: IntArray): Boolean {
     }
     return opaquePixels > 0 && (totalLuminance / opaquePixels) < 128
 }
+
+private const val LOGO_PLATE_ALPHA = 0.9f

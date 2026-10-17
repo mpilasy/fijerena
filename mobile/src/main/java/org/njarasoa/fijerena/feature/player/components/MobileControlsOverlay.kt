@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -509,15 +510,13 @@ fun MobileControlsOverlay(
                                 } else {
                                     0f
                                 }
-                            LinearProgressIndicator(
+                            CinemaProgressBar(
                                 progress = { epgProgress },
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = Spacing.xxs)
                                         .height(Spacing.xxxs),
-                                color = CinemaTheme.colors.accent,
-                                trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.tint),
                             )
                             if (nextEpgProgram != null) {
                                 CinemaText(

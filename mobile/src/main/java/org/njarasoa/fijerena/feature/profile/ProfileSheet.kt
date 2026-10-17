@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
@@ -59,10 +60,7 @@ fun ProfileSheet(
                     ListItem(
                         headlineContent = { CinemaText(stringResource(R.string.profile_switching, switchingName)) },
                         leadingContent = {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(MobileDimensions.iconLarge),
-                                strokeWidth = MobileDimensions.strokeWidth,
-                            )
+                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.iconLarge))
                         },
                         colors = rowColors,
                     )

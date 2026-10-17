@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
@@ -34,7 +35,7 @@ fun ScoreChip(
         modifier =
             modifier
                 .clip(cornerShape(CinemaCornerRadius.medium))
-                .background(Color.Black.copy(alpha = CinemaAlpha.detailScoreChipBackground))
+                .background(CinemaTheme.colors.mediaScrim.copy(alpha = CinemaAlpha.detailScoreChipBackground))
                 .padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
     ) {
         CinemaText(text = value, role = TextRole.Heading)

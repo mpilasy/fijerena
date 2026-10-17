@@ -63,7 +63,7 @@ fun MetaBadge(text: String) {
         modifier =
             Modifier
                 .border(
-                    width = 1.dp,
+                    width = CinemaTheme.borders.hairline,
                     color = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
                     shape = cornerShape(CinemaCornerRadius.small),
                 ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xxs),
@@ -169,7 +169,7 @@ fun MobileCategoryLinkRow(
 }
 
 /** Wide enough for "Container:" / "Réalisateur :"; a longer label wraps under itself. */
-private val DETAIL_LABEL_WIDTH = 112.dp
+private val DETAIL_LABEL_WIDTH = MobileDimensions.detailLabelWidth
 
 /** Synopsis cut to [collapsedLines] lines; tap to expand or collapse. */
 @Composable

@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
 /**
@@ -19,17 +20,11 @@ fun GradientOverlay(
     modifier: Modifier = Modifier,
     alpha: Float = CinemaAlpha.imageOverlay,
 ) {
-    val palette = CinemaThemeHolder.current
+    val c = CinemaTheme.colors
     // Memoize brush to avoid allocating new Brush + listOf on every recomposition
     val brush =
-        remember(palette.background, alpha) {
-            Brush.verticalGradient(
-                colors =
-                    listOf(
-                        Color.Transparent,
-                        palette.background.copy(alpha = alpha),
-                    ),
-            )
+        remember(c, alpha) {
+            Brush.verticalGradient(colors = listOf(c.clear, c.background.copy(alpha = alpha)))
         }
     Box(modifier = modifier.background(brush))
 }

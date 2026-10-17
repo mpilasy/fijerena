@@ -30,6 +30,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 import java.util.Locale
 
 /**
@@ -131,4 +132,4 @@ internal object BufferingFormat {
 private const val POLL_MS = 500L
 private const val CONNECTION_POLL_MS = 2_000L
 private const val SEPARATOR = " · "
-private val BAR_WIDTH = 240.dp
+private val BAR_WIDTH = ControlStyle.bufferingBarWidth

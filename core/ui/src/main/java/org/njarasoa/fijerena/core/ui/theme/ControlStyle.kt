@@ -22,5 +22,14 @@ object ControlStyle {
 
     /** A progress bar's thickness, and how strongly its track shows. */
     val progressThickness: Dp = 3.dp
+
+    /** The buffering details' bar (Expert mode). */
+    val bufferingBarWidth: Dp = 240.dp
+
+    /** A title's logo art where it replaces the title, and the plate behind a dark logo. */
+    val titleLogoHeight: Dp = 56.dp
+    val logoPlatePaddingHorizontal: Dp = CinemaSpacing.sm
+    val logoPlatePaddingVertical: Dp = CinemaSpacing.xs
+    val logoPlateCorner: Dp = CinemaSpacing.xs
     const val PROGRESS_TRACK_ALPHA = 0.25f
 }

@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
@@ -197,10 +198,7 @@ fun MobileEpgGuideScreen(
                         enabled = !isRefreshing,
                     ) {
                         if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
-                                strokeWidth = MobileDimensions.strokeWidth,
-                            )
+                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                         } else {
                             Icon(CinemaIcons.Refresh, stringResource(R.string.provider_refresh_button))
                         }
@@ -244,7 +242,7 @@ fun MobileEpgGuideScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator()
+                                CinemaSpinner()
                                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
                                 CinemaText(
                                     text = stringResource(R.string.epg_loading_guide),

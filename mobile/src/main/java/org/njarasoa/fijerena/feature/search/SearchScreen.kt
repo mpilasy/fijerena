@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
@@ -348,10 +349,7 @@ fun MobileSearchScreen(
                 },
                 trailingIcon = {
                     if (uiState is SearchViewModel.UiState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(MobileDimensions.iconDefault),
-                            color = CinemaTheme.colors.textPrimary,
-                        )
+                        CinemaSpinner(modifier = Modifier.size(MobileDimensions.iconDefault))
                     } else if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (sources.isNotEmpty()) {

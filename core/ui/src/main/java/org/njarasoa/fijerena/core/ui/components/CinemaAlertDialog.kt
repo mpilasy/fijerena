@@ -38,6 +38,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
@@ -217,7 +218,7 @@ fun CinemaAlertDialog(
                 sheetState = rememberModalBottomSheetState(),
                 shape = shape,
                 containerColor = containerColor,
-                scrimColor = Color.Black.copy(alpha = tokens.scrimAlpha),
+                scrimColor = CinemaTheme.colors.mediaScrim.copy(alpha = tokens.scrimAlpha),
             ) {
                 ProvideUiScaledDensity {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.xs)) {
