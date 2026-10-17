@@ -1,6 +1,6 @@
 # Design system: every look from the theme and Look and Feel
 
-**Status:** In progress (2026-10-16): D1–D6 decided as proposed; Phase 1 built (not committed), Phase 2 next.
+**Status:** In progress (2026-10-16): D1–D6 decided as proposed; Phase 1 done (e3c1bf2c); the shared components for Phases 2–6 are built, the feature code is being moved onto them area by area.
 
 ## Goal
 
@@ -44,8 +44,8 @@ is partly tokenised: colours come from the palette and corners from the style th
 | `N.dp` literals in feature code | 9 | 25 | 7 |
 | `MaterialTheme.colorScheme.*` read directly | 45 | 244 | 0 |
 
-Look and Feel values defined but never applied: `dialog.position` (Rounded: bottom sheet, Sharp:
-full screen — every dialog is centred today), `dialog.cornerRadius`, `icon.strokeWidth`; `grid.focusUsesShadow`
+Look and Feel values: `dialog.position` is applied by `CinemaAlertDialog` (Rounded: bottom sheet,
+Sharp: full screen) — on TV too, until D3; `icon.strokeWidth` is never applied; `grid.focusUsesShadow`
 is applied to cards only, not buttons. Palette colours with hard-coded defaults shared by every
 theme: success, warning, error, live, and all four text colours.
 
@@ -96,6 +96,20 @@ today's offenders and must only shrink; it is empty when the plan is done. AGENT
 - **D6 — order.** Decided: shared tokens and gate first, then one kind of element per phase, phone
   and TV together, each phase walked on both emulators in two Look and Feel options and two colour
   themes.
+
+## Test themes
+
+Two colour themes added to prove the inputs drive everything: **Forest** (dark, green accent) and
+**Daylight** (the first light theme: dark text on near-white). Every screen must read correctly in
+both; Daylight exposes anything still assuming a dark background.
+
+## Execution
+
+The shared layer is built first: `CinemaText` (roles and tones), `CinemaTextField`, `CinemaCheckbox`,
+`CinemaSwitch`, `CinemaRadioButton`, `CinemaDivider`, `CinemaPanel` (core/ui `components/`),
+`ControlStyle`, the media roles (`onMedia`, `mediaScrim`, `clear`). The gate counts raw `Text(` and
+direct palette reads too (2,213 sites in 103 files). Then the feature code is moved file by file,
+split by area across up to four helpers, each file to 0 in the allow-list.
 
 ## Phases
 

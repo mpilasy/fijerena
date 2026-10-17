@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
+import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.ProvideCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.UiShapeTokens
 import org.njarasoa.fijerena.core.ui.theme.UiStyleHolder
@@ -90,7 +91,12 @@ fun FirstVideoPlayerTheme(
     content: @Composable () -> Unit,
 ) {
     val palette = remember(themeId) { paletteById(themeId) }
-    val style = remember(styleId) { styleById(styleId) }
+    // Decision D3 (design-system plan): dialogs stay centred on TV in every Look and Feel — a bottom
+    // sheet or a full-screen dialog doesn't suit the remote.
+    val style =
+        remember(styleId) {
+            styleById(styleId).let { it.copy(dialog = it.dialog.copy(position = DialogPosition.CENTERED)) }
+        }
 
     // Set the global holders so non-composable code (re-export vals) can read them
     SideEffect {

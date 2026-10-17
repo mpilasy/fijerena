@@ -1,0 +1,179 @@
+package org.njarasoa.fijerena.core.ui.components
+
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+
+/** What a piece of text is (decision D1): its size and weight come with it. */
+enum class TextRole {
+    Display,
+    Title,
+    Heading,
+    Body,
+    BodySmall,
+    Label,
+    Caption,
+}
+
+/** What a piece of text says about itself: its colour comes with it. */
+enum class TextTone {
+    Primary,
+    Secondary,
+    Tertiary,
+    Disabled,
+    Accent,
+    AccentSoft,
+    Danger,
+    Success,
+    Warning,
+    Live,
+    Highlight,
+    OnAccent,
+
+    /** Over video or artwork: white whatever the theme. */
+    OnMedia,
+
+    /** The colour around it: a button's or a chip's content colour. */
+    Inherit,
+}
+
+/** [role]'s text style, from [CinemaTheme]. */
+@Composable
+@ReadOnlyComposable
+fun textStyleOf(role: TextRole): TextStyle {
+    val type = CinemaTheme.type
+    return when (role) {
+        TextRole.Display -> type.display
+        TextRole.Title -> type.title
+        TextRole.Heading -> type.heading
+        TextRole.Body -> type.body
+        TextRole.BodySmall -> type.bodySmall
+        TextRole.Label -> type.label
+        TextRole.Caption -> type.caption
+    }
+}
+
+/** [tone]'s colour, from [CinemaTheme]; [TextTone.Inherit] is the surrounding content colour. */
+@Composable
+@ReadOnlyComposable
+fun colorOf(tone: TextTone): Color {
+    val c = CinemaTheme.colors
+    return when (tone) {
+        TextTone.Primary -> c.textPrimary
+        TextTone.Secondary -> c.textSecondary
+        TextTone.Tertiary -> c.textTertiary
+        TextTone.Disabled -> c.textDisabled
+        TextTone.Accent -> c.accent
+        TextTone.AccentSoft -> c.accentSoft
+        TextTone.Danger -> c.danger
+        TextTone.Success -> c.success
+        TextTone.Warning -> c.warning
+        TextTone.Live -> c.live
+        TextTone.Highlight -> c.highlight
+        TextTone.OnAccent -> c.onAccent
+        TextTone.OnMedia -> c.onMedia
+        TextTone.Inherit -> LocalContentColor.current
+    }
+}
+
+/**
+ * The app's text, everywhere: [role] gives its size and weight, [tone] its colour, [emphasis] the
+ * Look and Feel's emphasis weight. Nothing else about its look is set by the caller, so a changed
+ * colour theme or Look and Feel reaches every piece of text.
+ */
+@Composable
+fun CinemaText(
+    text: String,
+    modifier: Modifier = Modifier,
+    role: TextRole = TextRole.Body,
+    tone: TextTone = TextTone.Primary,
+    emphasis: Boolean = false,
+    textAlign: TextAlign? = null,
+    maxLines: Int = Int.MAX_VALUE,
+    minLines: Int = 1,
+    overflow: TextOverflow = TextOverflow.Clip,
+    softWrap: Boolean = true,
+    strikethrough: Boolean = false,
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
+) {
+    Text(
+        text = text,
+        modifier = modifier,
+        style = resolvedStyle(role, emphasis, strikethrough),
+        color = colorOf(tone),
+        textAlign = textAlign,
+        maxLines = maxLines,
+        minLines = minLines,
+        overflow = overflow,
+        softWrap = softWrap,
+        onTextLayout = onTextLayout,
+    )
+}
+
+/** [CinemaText] for styled text (spans set their own emphasis or tone through the theme's roles). */
+@Composable
+fun CinemaText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    role: TextRole = TextRole.Body,
+    tone: TextTone = TextTone.Primary,
+    emphasis: Boolean = false,
+    textAlign: TextAlign? = null,
+    maxLines: Int = Int.MAX_VALUE,
+    minLines: Int = 1,
+    overflow: TextOverflow = TextOverflow.Clip,
+    softWrap: Boolean = true,
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
+) {
+    Text(
+        text = text,
+        modifier = modifier,
+        style = resolvedStyle(role, emphasis, false),
+        color = colorOf(tone),
+        textAlign = textAlign,
+        maxLines = maxLines,
+        minLines = minLines,
+        overflow = overflow,
+        softWrap = softWrap,
+        onTextLayout = onTextLayout ?: {},
+    )
+}
+
+/** The Look and Feel's emphasis weight, for a span inside [CinemaText] styled text. */
+val emphasisWeight: FontWeight
+    @Composable @ReadOnlyComposable
+    get() = FontWeight(LocalUiStyle.current.type.weightEmphasis)
+
+@Composable
+@ReadOnlyComposable
+private fun resolvedStyle(
+    role: TextRole,
+    emphasis: Boolean,
+    strikethrough: Boolean,
+): TextStyle {
+    val base = textStyleOf(role)
+    return when {
+        !emphasis && !strikethrough -> {
+            base
+        }
+
+        else -> {
+            base.copy(
+                fontWeight = if (emphasis) emphasisWeight else base.fontWeight,
+                textDecoration = if (strikethrough) TextDecoration.LineThrough else base.textDecoration,
+            )
+        }
+    }
+}

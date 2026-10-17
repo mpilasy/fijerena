@@ -1215,6 +1215,8 @@
     <string name="theme_pure_black">Mainty tanteraka</string>
     <string name="theme_amethyst">Ametista</string>
     <string name="theme_teal">Manga maitso</string>
+    <string name="theme_forest">Ala</string>
+    <string name="theme_daylight">Antoandro</string>
     <string name="source_badge_description">Loharano: %1$s</string>
     <!-- Badge on a live channel that only carries live events ("[LIVE-EVENT]") -->
     <string name="title_badge_events">Hetsika</string>

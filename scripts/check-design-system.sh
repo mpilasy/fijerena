@@ -10,6 +10,8 @@
 #   - MaterialTheme.colorScheme read directly, an ad-hoc text style (typography.x.copy(…))
 #   - a raw Material control (Button, TextButton, OutlinedButton, TextField, OutlinedTextField,
 #     Switch, Checkbox, RadioButton, FilterChip, AlertDialog, Card, Divider, HorizontalDivider)
+#   - a raw Text( — text is CinemaText(role, tone)
+#   - a palette colour read directly (CinemaTextSecondary, CinemaAccent, …) — use a role
 #
 # Each file's count must equal its entry in scripts/check-design-system-allowlist.txt (0 when
 # absent). More fails: use a component or a CinemaTheme role. Fewer also fails until the entry is
@@ -26,7 +28,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-design-system-allowlist.txt"
-PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)\b|\b[0-9]+(\.[0-9]+)?f?\.(dp|sp)\b|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider)\('
+PATTERN='Color\(0x|Color\.(White|Black|Red|Gray|Grey|Yellow|Green|Blue|Transparent|Cyan|Magenta|DarkGray|LightGray)\b|\b[0-9]+(\.[0-9]+)?f?\.(dp|sp)\b|FontWeight\.|RoundedCornerShape\(|CircleShape|MaterialTheme\.colorScheme|typography\.[a-zA-Z]+\.copy\(|(^|[^A-Za-z0-9_.])(Button|TextButton|OutlinedButton|TextField|OutlinedTextField|Switch|Checkbox|RadioButton|FilterChip|AlertDialog|Card|Divider|HorizontalDivider|Text)\(|(^|[^A-Za-z0-9_])Cinema(Accent|AccentDark|AccentLight|TextPrimary|TextSecondary|TextTertiary|TextDisabled|Surface|SurfaceVariant|SurfaceLight|Background|Error|Success|Warning|Orange|OrangeLight|OrangeDark|Live|GlassBackground|GlassBorder)([^A-Za-z0-9_]|$)'
 
 count_file() {
     awk -v pat="$PATTERN" '

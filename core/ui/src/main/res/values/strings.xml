@@ -1221,6 +1221,8 @@
     <string name="theme_pure_black">Pure black</string>
     <string name="theme_amethyst">Amethyst</string>
     <string name="theme_teal">Teal</string>
+    <string name="theme_forest">Forest</string>
+    <string name="theme_daylight">Daylight</string>
     <string name="source_badge_description">Source: %1$s</string>
     <!-- Badge on a live channel that only carries live events ("[LIVE-EVENT]") -->
     <string name="title_badge_events">Events</string>

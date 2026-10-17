@@ -1,10 +1,13 @@
 package org.njarasoa.fijerena.ui.theme
 
+import android.app.Activity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
@@ -44,6 +47,19 @@ fun FirstVideoPlayerTheme(
     SideEffect {
         CinemaThemeHolder.current = palette
         UiStyleHolder.current = style
+    }
+    // System-bar icons follow the app's theme, not the system's dark mode: dark icons on a light
+    // theme, light icons on a dark one.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            (view.context as? Activity)?.window?.let { window ->
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = palette.isLight
+                    isAppearanceLightNavigationBars = palette.isLight
+                }
+            }
+        }
     }
 
     val typography = remember(style) { cinemaTypography(style.type) }

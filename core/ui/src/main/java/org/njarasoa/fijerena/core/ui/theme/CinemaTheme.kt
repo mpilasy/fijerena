@@ -74,6 +74,12 @@ data class CinemaColorRoles(
     val focusRing: Color,
     val glass: Color,
     val glassBorder: Color,
+    /** Text and icons over video or artwork, which stay white whatever the theme. */
+    val onMedia: Color,
+    /** Darkens video or artwork behind text (gradients, chips over posters). */
+    val mediaScrim: Color,
+    /** Nothing: a container that shows what is behind it. */
+    val clear: Color,
 ) {
     companion object {
         fun from(palette: CinemaThemePalette): CinemaColorRoles =
@@ -102,6 +108,9 @@ data class CinemaColorRoles(
                 focusRing = palette.textPrimary,
                 glass = palette.glassBackground,
                 glassBorder = palette.glassBorder,
+                onMedia = Color.White,
+                mediaScrim = Color.Black,
+                clear = Color.Transparent,
             )
     }
 }

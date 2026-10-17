@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.luminance
  * scheme (white dialogs with a purple button on TV).
  */
 fun cinemaMaterialColorScheme(colors: CinemaColorRoles): ColorScheme =
+    // Every role is set from the theme, so the dark base's defaults never show — a light theme
+    // works through the same call.
     darkColorScheme(
         primary = colors.accent,
         onPrimary = colors.onAccent,
@@ -45,6 +47,8 @@ fun cinemaMaterialColorScheme(colors: CinemaColorRoles): ColorScheme =
         surfaceContainer = colors.surface,
         surfaceContainerHigh = colors.surface,
         surfaceContainerHighest = colors.surfaceRaised,
+        surfaceBright = colors.surfaceHigh,
+        surfaceDim = colors.background,
         outline = colors.surfaceHigh,
         outlineVariant = colors.surfaceRaised,
         surfaceTint = colors.accent,

@@ -15,6 +15,8 @@ data class CinemaThemePalette(
     val id: String,
     /** The name shown in Settings, localised (U-M4). */
     @param:StringRes val nameRes: Int,
+    /** A light theme: dark text on light surfaces, dark system-bar icons. */
+    val isLight: Boolean,
     // Primary accent
     val accent: Color,
     val accentDark: Color,
@@ -57,6 +59,7 @@ val DeepNightPalette =
     CinemaThemePalette(
         id = "deep_night",
         nameRes = R.string.theme_deep_night,
+        isLight = false,
         accent = Color(0xFF2979FF),
         accentDark = Color(0xFF1565C0),
         accentLight = Color(0xFF82B1FF),
@@ -84,6 +87,7 @@ val AmoledBlackPalette =
     CinemaThemePalette(
         id = "amoled_black",
         nameRes = R.string.theme_pure_black,
+        isLight = false,
         accent = Color(0xFFE0E0E0),
         accentDark = Color(0xFFB0B0B0),
         accentLight = Color(0xFFFFFFFF),
@@ -111,6 +115,7 @@ val AmethystPalette =
     CinemaThemePalette(
         id = "amethyst",
         nameRes = R.string.theme_amethyst,
+        isLight = false,
         accent = Color(0xFF9C6BFF),
         accentDark = Color(0xFF6A3FD6),
         accentLight = Color(0xFFC7A8FF),
@@ -138,6 +143,7 @@ val TealPalette =
     CinemaThemePalette(
         id = "teal",
         nameRes = R.string.theme_teal,
+        isLight = false,
         accent = Color(0xFF26C6DA),
         accentDark = Color(0xFF00838F),
         accentLight = Color(0xFF80DEEA),
@@ -161,12 +167,75 @@ val TealPalette =
         scrim = Color(0x80000000),
     )
 
+val ForestPalette =
+    CinemaThemePalette(
+        id = "forest",
+        nameRes = R.string.theme_forest,
+        isLight = false,
+        accent = Color(0xFF2EBD85),
+        accentDark = Color(0xFF1E8A5F),
+        accentLight = Color(0xFF7FE0B8),
+        orange = Color(0xFFFF6D00),
+        orangeDark = Color(0xFFE65100),
+        orangeLight = Color(0xFFFFAB40),
+        background = Color(0xFF0E1311),
+        surface = Color(0xFF141B18),
+        surfaceVariant = Color(0xFF1B2420),
+        surfaceLight = Color(0xFF26322D),
+        glassBackground = Color(0xBF0E1311),
+        glassBorder = Color(0x142EBD85),
+        success = Color(0xFF4CAF50),
+        warning = Color(0xFFFFC107),
+        error = Color(0xFFF44336),
+        live = Color(0xFFFF6D00),
+        textPrimary = Color(0xFFFFFFFF),
+        textSecondary = Color(0xFFB0B8B4),
+        textTertiary = Color(0xFF808A85),
+        textDisabled = Color(0xFF5E6762),
+        scrim = Color(0x80000000),
+    )
+
+/**
+ * The light theme: dark text on near-white surfaces. Status colours are darker than the dark
+ * themes' so they read on white; [surfaceLight] (focus and press) is a step darker than
+ * [surfaceVariant], since on a light theme lifting toward the viewer reads as more contrast.
+ */
+val DaylightPalette =
+    CinemaThemePalette(
+        id = "daylight",
+        nameRes = R.string.theme_daylight,
+        isLight = true,
+        accent = Color(0xFF1565C0),
+        accentDark = Color(0xFF0D47A1),
+        accentLight = Color(0xFF42A5F5),
+        orange = Color(0xFFE65100),
+        orangeDark = Color(0xFFBF360C),
+        orangeLight = Color(0xFFFF8F00),
+        background = Color(0xFFF4F6F9),
+        surface = Color(0xFFFFFFFF),
+        surfaceVariant = Color(0xFFECEFF3),
+        surfaceLight = Color(0xFFDDE2E9),
+        glassBackground = Color(0xE6FFFFFF),
+        glassBorder = Color(0x1F1565C0),
+        success = Color(0xFF2E7D32),
+        warning = Color(0xFFB26A00),
+        error = Color(0xFFC62828),
+        live = Color(0xFFD84315),
+        textPrimary = Color(0xFF14171C),
+        textSecondary = Color(0xFF4A5260),
+        textTertiary = Color(0xFF6B7380),
+        textDisabled = Color(0xFFA0A6B0),
+        scrim = Color(0x66000000),
+    )
+
 val AllPalettes: List<CinemaThemePalette> =
     listOf(
         DeepNightPalette,
         AmoledBlackPalette,
         AmethystPalette,
         TealPalette,
+        ForestPalette,
+        DaylightPalette,
     )
 
 fun paletteById(id: String): CinemaThemePalette = AllPalettes.firstOrNull { it.id == id } ?: DeepNightPalette
