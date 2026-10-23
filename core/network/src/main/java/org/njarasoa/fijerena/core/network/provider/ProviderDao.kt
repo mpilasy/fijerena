@@ -1,0 +1,88 @@
+package org.njarasoa.fijerena.core.network.provider
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+import org.njarasoa.fijerena.core.network.sync.SyncKind
+
+@Dao
+interface ProviderDao {
+    @Query("SELECT * FROM providers ORDER BY name COLLATE NOCASE ASC")
+    fun getAllProviders(): Flow<List<ProviderEntity>>
+
+    @Query("SELECT * FROM providers ORDER BY name COLLATE NOCASE ASC")
+    suspend fun getAllProvidersList(): List<ProviderEntity>
+
+    /**
+     * The source an older build had this device on (`isActive`, unused since multi-source Phase 6),
+     * for the one-time upgrade to per-profile sources only.
+     */
+    @Query("SELECT providerKey FROM providers WHERE isActive = 1 LIMIT 1")
+    suspend fun legacyActiveProviderKey(): String?
+
+    @Query("SELECT * FROM providers WHERE id = :id")
+    suspend fun getProviderById(id: Long): ProviderEntity?
+
+    @Query("SELECT COUNT(*) FROM providers")
+    suspend fun getProviderCount(): Int
+
+    @Insert
+    suspend fun insertProvider(provider: ProviderEntity): Long
+
+    @Update
+    suspend fun updateProvider(provider: ProviderEntity)
+
+    @Delete
+    suspend fun deleteProvider(provider: ProviderEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTombstone(tombstone: SettingsTombstoneEntity)
+
+    /**
+     * Deletes the provider and records it for live sync, in one transaction — see
+     * [SettingsTombstoneEntity]. [deletedAt] 0 (the default) means "now on the sync clock",
+     * stamped by [SettingsSyncTriggers].
+     */
+    @Transaction
+    suspend fun deleteProviderRecordingTombstone(
+        provider: ProviderEntity,
+        deletedAt: Long = 0,
+    ) {
+        deleteProvider(provider)
+        insertTombstone(SettingsTombstoneEntity(SyncKind.PROVIDER, provider.providerKey, deletedAt))
+    }
+
+    /** Drops deletions older than [cutoff] — see [SyncKind.TOMBSTONE_RETENTION_MS]. */
+    @Query("DELETE FROM sync_tombstone WHERE deletedAt < :cutoff")
+    suspend fun pruneTombstones(cutoff: Long)
+
+    @Query("SELECT * FROM sync_tombstone")
+    suspend fun getAllTombstones(): List<SettingsTombstoneEntity>
+
+    // inserted/updated/deleted are nullable and COALESCE onto the existing value when null: a
+    // failed sync (delta unknown) must leave the last real delta in place rather than overwrite
+    // it with zeros, which would read identically to a sync that genuinely found no changes.
+    @Query(
+        """
+        UPDATE providers SET lastSyncedAtMs = :timestamp, lastSyncDurationMs = :durationMs, lastSyncError = :error,
+            lastSyncInserted = COALESCE(:inserted, lastSyncInserted),
+            lastSyncUpdated = COALESCE(:updated, lastSyncUpdated),
+            lastSyncDeleted = COALESCE(:deleted, lastSyncDeleted)
+        WHERE id = :id
+        """,
+    )
+    suspend fun updateSyncStats(
+        id: Long,
+        timestamp: Long,
+        durationMs: Long,
+        error: String?,
+        inserted: Int? = null,
+        updated: Int? = null,
+        deleted: Int? = null,
+    )
+}

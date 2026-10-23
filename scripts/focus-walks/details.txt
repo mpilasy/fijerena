@@ -1,0 +1,46 @@
+# Phase 6 — Movie details and Episodes (MovieDetailsScreen, EpisodeSelectionScreen), TV
+# emulator, source jellyxtream. Two walks in one file, joined by a pause.
+# Walk 1 start: Movies → a movie never played (no Resume, no trailer) → OK. Focus is on Play.
+# Walk 2 start: during the WAIT, open a TV show with several seasons and a continue-watching
+# episode past the first few (Home → TV Shows → the show → OK). Focus is on that episode.
+# Written 2026-10-03 from the plan. Walk 1 checked 2026-10-08 (jellyxtream, 2001: A Space Odyssey):
+# 9 steps, 0 mismatches (tab lines changed 2026-10-15: Details first; not rechecked). Walk 2 not yet run: jellyxtream has no show with a continue-watching
+# episode past the first few.
+# Lines marked (-r) depend on the title's data (which tabs it has, the episode's place in the
+# list) and are left unchecked or checked loosely until recorded.
+#
+# Walk 1 — Movie details: labelled actions, Up from the tabs → Play (F-MD-2, F-MD-3); Left from
+# Play and from the first tab opens the navigation rail on Movies, Right comes back (rail Phase 3,
+# not yet recorded).
+@start ▶ Play Movie
+LEFT	Movies
+RIGHT	▶ Play Movie
+RIGHT	Favourite
+RIGHT	Watched
+# No Wishlist icon: a source has the film, and it is not on the Wishlist (2026-10-22).
+# Refresh info is no longer in the row: More is the last button (a trailer icon would sit before it).
+RIGHT	More
+LEFT	Watched
+# Down from any action → the selected tab: the first one, Details (tabs: Details, Cast when the
+# film lists its cast, More Like This last when it has related titles).
+DOWN	Details
+LEFT	Movies
+RIGHT	Details
+# Up from a tab → Play, not the button above the tab.
+UP	▶ Play Movie
+DOWN	Details
+# The next tab, then Up again → Play (-r for the tab name: Cast, or More like this without a cast).
+RIGHT	Cast
+UP	▶ Play Movie
+# Leave the movie for walk 2.
+BACK	Anatomy of a Fall / ★ 7.6 / Hold OK or press Menu for actions
+WAIT 15	E03 / By the Pricking of My Thumbs / Miss Marple joins forces with Tommy and Tuppence Beresford to find the murderer of Tommy's Aunt Ada. / 01:32:59
+#
+# Walk 2 — Episodes: focus on the continue-watching episode. Left → the navigation rail on TV
+# Shows, Right → back on the same episode (rail Phase 3; Left went to the season tabs before,
+# F-E-2 — Up from the first episode still does). Not walked here: the show's hero row (Play, Start
+# from beginning, Favourite, trailer, Mark show watched, More) and hold OK / Menu on a season tab
+# (its Mark season watched menu; closing it returns to the tab).
+@start E03 / By the Pricking of My Thumbs / Miss Marple joins forces with Tommy and Tuppence Beresford to find the murderer of Tommy's Aunt Ada. / 01:32:59
+LEFT	TV Shows
+RIGHT	E03 / By the Pricking of My Thumbs

@@ -1,0 +1,2458 @@
+package org.njarasoa.fijerena.feature.category
+
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DateRange
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LeadingIconTab
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableChipColors
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberTooltipState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.categoryKey
+import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
+import org.njarasoa.fijerena.core.player.domain.isLastPlayed
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.showSeriesId
+import org.njarasoa.fijerena.core.player.domain.sourceKey
+import org.njarasoa.fijerena.core.player.domain.sourceOr
+import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.elapsedFraction
+import org.njarasoa.fijerena.core.player.model.extractYear
+import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatRating
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
+import org.njarasoa.fijerena.core.ui.components.CatchupBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDivider
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
+import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
+import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
+import org.njarasoa.fijerena.core.ui.viewmodels.isSameChannel
+import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
+import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
+import org.njarasoa.fijerena.core.ui.wanted.LocalOpenWanted
+import org.njarasoa.fijerena.feature.player.MobilePlayerContent
+import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
+import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.CinemaIconTab
+import org.njarasoa.fijerena.ui.components.CinemaIconTabRow
+import org.njarasoa.fijerena.ui.components.CinemaSearchField
+import org.njarasoa.fijerena.ui.components.CinemaTabRow
+import org.njarasoa.fijerena.ui.components.ItemActionsDialog
+import org.njarasoa.fijerena.ui.components.ItemMenuAction
+import org.njarasoa.fijerena.ui.components.MobileEmptyState
+import org.njarasoa.fijerena.ui.components.RequestOrientation
+import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
+import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
+import kotlin.math.roundToInt
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MobileCategoryListScreen(
+    contentType: String,
+    initialCategoryId: String? = null,
+    initialStreamId: String? = null,
+    onStreamSelected: (
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String,
+        target: BrowseTarget,
+        // The row's source (a merged Recent / Favourites row, or another source's category); 0
+        // for the list's own.
+        providerId: Long,
+    ) -> Unit,
+    /** The TV Guide of a category, on its own source ([providerId]). */
+    onEpgClick: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
+    /** Live TV full screen: Start over, the programme on air from the channel's archive (catch-up). */
+    onStartOver: ((program: EpgProgram, channel: MediaItem) -> Unit)? = null,
+    onBack: () -> Unit,
+    /** Leaves for the Live TV tab's root — after a remote Stop of the Live TV dock. */
+    onHome: () -> Unit = {},
+    /**
+     * Reports the Live TV dock to the phone's bottom bar: [stopDock] stops it (null while nothing is
+     * docked), [coversScreen] is true while the video takes the screen (full screen,
+     * picture-in-picture, the landscape split).
+     */
+    onDockChanged: (stopDock: (() -> Unit)?, coversScreen: Boolean) -> Unit = { _, _ -> },
+    /**
+     * Set on a bottom-bar tab's root: its top bar (the source's, see `MobileSourceTopBar`) in place
+     * of the section title, back arrow and TV Guide, given this section's Search.
+     */
+    sourceTopBar: (@Composable (onSearch: (() -> Unit)?) -> Unit)? = null,
+    /** The source's first catalogue sync is running: an empty list says the library is still loading. */
+    libraryLoading: Boolean = false,
+    /** The source the list was opened on; 0 = a section's list (every source's categories either way). */
+    providerId: Long = 0L,
+    viewModel: CategoryViewModel =
+        viewModel(
+            factory =
+                CategoryViewModelFactory(
+                    context = LocalContext.current.applicationContext,
+                    contentType = contentType,
+                    initialCategoryId = initialCategoryId,
+                    providerId = providerId,
+                ),
+        ),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val nowPlayingMap by viewModel.nowPlaying.collectAsStateWithLifecycle()
+    val nowPlaying = remember(nowPlayingMap) { ImmutableNowPlaying(nowPlayingMap) }
+    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsStateWithLifecycle()
+    val watchedIdsSet by viewModel.watchedIds.collectAsStateWithLifecycle()
+    val watchedIds = remember(watchedIdsSet) { ImmutableStringSet(watchedIdsSet) }
+    val favoriteIdsSet by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val favoriteIds = remember(favoriteIdsSet) { ImmutableStringSet(favoriteIdsSet) }
+    val watchProgressMap by viewModel.watchProgress.collectAsStateWithLifecycle()
+    val watchProgress = remember(watchProgressMap) { ImmutableWatchProgress(watchProgressMap) }
+    val favoriteCategoryIdsSet by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
+    val favoriteCategoryIds = remember(favoriteCategoryIdsSet) { ImmutableStringSet(favoriteCategoryIdsSet) }
+    // Each source's name while Recent and Favourites mix several: a badge on their rows.
+    val sourceNames by viewModel.sourceNames.collectAsStateWithLifecycle()
+    val categoryNames by viewModel.categoryNames.collectAsStateWithLifecycle()
+    val rowStatus by viewModel.rowStatus.collectAsStateWithLifecycle()
+    val openWanted = LocalOpenWanted.current
+    val resources = LocalResources.current
+    // A favourite its source no longer lists, opened (wanted titles plan → Favourites gone from
+    // their source): with another copy, a menu moves it there; without, a message says so.
+    var goneMenu by remember { mutableStateOf<Pair<MediaItem, GoneFavorite>?>(null) }
+    goneMenu?.let { (item, gone) ->
+        ItemActionsDialog(
+            title = stringResource(R.string.favorite_gone_message, parseDisplayTitle(item.name).title.ifBlank { item.name }),
+            isFavorite = true,
+            onToggleFavorite = null,
+            onDismiss = { goneMenu = null },
+            actions =
+                listOf(
+                    ItemMenuAction(CinemaIcons.SwapHoriz, stringResource(R.string.favorite_move_to_copy)) {
+                        viewModel.moveToCopy(item, gone)
+                    },
+                ),
+        )
+    }
+    val context = LocalContext.current
+    // Null-safe instead of a hard `context as ComponentActivity` cast (F-37).
+    val activity = LocalActivity.current as? ComponentActivity
+    val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
+    val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
+    // The TV Guide needs a guide: the source's own EPG or an indexed XMLTV file.
+    val hasEpgData = supportsNativeEpg || epgIndexState is EpgIndexState.Indexed
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        // The first RESUMED is this screen's own initial composition, which just ran the load
+        // that populates uiState/favoriteIds/watchProgress/watchedIds from scratch — re-running
+        // the same per-item refresh here duplicates that work (confirmed via logcat, TV side: two
+        // full refreshPerItemData passes back to back on every entry). Only a *later* RESUMED means
+        // an actual return from elsewhere, which is what this refresh exists for.
+        var isFirstResume = true
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (!isFirstResume) {
+                viewModel.refreshLastPlayedItem()
+                // A watched/favorite mark made on a screen this ViewModel doesn't own (movie details,
+                // an episode list, search) has no way back to this instance's cache otherwise.
+                viewModel.refreshWatchStateOnResume()
+            }
+            isFirstResume = false
+        }
+    }
+
+    // Tap-driven equivalent of TV's preview pane (tv/.../LiveTvSplitLayout.kt): a
+    // small always-playing mini-player docked above the channel list, promotable to full screen
+    // in place (same engine, same ViewModel pair — never a second connection). Unlike TV, mobile
+    // commits immediately on tap (no "light" preview step — a tap is already a
+    // deliberate choice to watch) and does not auto-seed from the app-wide last-played channel on
+    // a bare entry (no passive "focus" state to preview from on touch).
+    val isLiveTv = contentType == ContentType.LIVE_TV
+    var dockTarget by remember { mutableStateOf<MediaItem?>(null) }
+    // Activity-scoped, not the default nav-scoped viewModel(): MainActivity's
+    // onPictureInPictureModeChanged()/onUserLeaveHint() resolve PlaybackViewModel via
+    // ViewModelProvider(this) (Activity-scoped) to decide whether to auto-enter PiP. A
+    // default-scoped viewModel() here resolved to a *different* instance tied to this
+    // destination's back-stack entry, so MainActivity was always checking a viewmodel that
+    // never actually played anything — PiP could never trigger.
+    val dockPlayback: PlaybackViewModel? =
+        if (isLiveTv && dockTarget != null && activity != null) viewModel(viewModelStoreOwner = activity) else null
+    var fullScreen by remember { mutableStateOf(false) }
+    var hasSeededDock by remember { mutableStateOf(false) }
+    // Orientation-driven, not a width threshold — a screenWidthDp cutoff happens to catch most
+    // phones once rotated (landscape width is usually well over 600dp) but doesn't express intent
+    // and misbehaves on small phones/foldables. LocalConfiguration is read live, so this flips as
+    // the device rotates.
+    val isLandscape =
+        LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }
+
+    BackHandler(enabled = isLiveTv && fullScreen) { fullScreen = false }
+    // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
+    // straight past the bare category screen and out of Live TV — mirrors TV's silent bare
+    // CategoryList push in TvNavHost.kt that guarantees the same stopover.
+    BackHandler(enabled = isLiveTv && !fullScreen && dockTarget != null) {
+        // Stop first, same as the dock's close button: clearing dockTarget alone unmounts the
+        // dock (and its lifecycle observer with it) but left the stream playing, with nothing
+        // left to ever stop it — even after leaving the app. dockPlayback, never a fresh
+        // ViewModelProvider lookup: that would create a PlaybackViewModel (and start the
+        // playback service) just to stop it.
+        dockPlayback?.stop()
+        dockTarget = null
+    }
+    // The toolbar's Back, Search and TV Guide leave this screen without going through the
+    // BackHandler above. The dock's engine is Activity-scoped, so leaving it playing kept the
+    // stream's audio going behind the next screen — and, its ON_STOP observer gone with this
+    // screen, even after the app was backgrounded. Stop it on the way out, not on dispose: the
+    // player screen shares the same engine and may already be starting its own stream by then.
+    // See the rock solid stability resilience plan → F-17.
+    val stopDockThen: (() -> Unit) -> Unit = { leave ->
+        if (isLiveTv && dockTarget != null) {
+            dockPlayback?.stop()
+        }
+        leave()
+    }
+
+    // Auto-seed the dock so entry never lands on a bare list — mirrors TV's
+    // LiveTvSplitLayout: an explicit initialStreamId (search/EPG deep link) wins, otherwise
+    // fall back to the last channel watched — the newest of the profile's sources' own, on its
+    // source (multi-source plan, Phase 5) — so a bare "Live TV" tap from the main menu still lands
+    // on something.
+    if (isLiveTv && !hasSeededDock) {
+        val seedState = uiState
+        LaunchedEffect(seedState) {
+            if (seedState is CategoryViewModel.UiState.Success) {
+                val last = if (initialStreamId == null) viewModel.lastWatchedChannel() else null
+                val seedId = initialStreamId ?: seedState.lastPlayedItemId
+                // Never a provider's separator row: a heading has nothing to play.
+                seedState.streams
+                    ?.firstOrNull { item ->
+                        !item.isSeparatorRow && if (last != null) item.isSameChannel(last, viewModel.sourceId) else item.id == seedId
+                    }?.let { seed ->
+                        hasSeededDock = true
+                        dockTarget = seed
+                    }
+            }
+        }
+    }
+
+    val target = dockTarget
+
+    // Auto-enter PiP (Android 12+) is off until set here: MainActivity.onUserLeaveHint()'s
+    // manual fallback only runs below SDK 31, so leaving the app (Home, app-switch) while the
+    // mini-player plays enters PiP only through these params.
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
+        LaunchedEffect(dockPlaybackState) {
+            val isPlaying = dockPlaybackState is PlaybackState.Playing || dockPlaybackState is PlaybackState.Buffering
+            activity?.setPictureInPictureParams(
+                android.app.PictureInPictureParams
+                    .Builder()
+                    .setAutoEnterEnabled(isPlaying)
+                    .build(),
+            )
+        }
+        // The params are the Activity's, not this screen's: leaving Live TV (Back, a tab, Search
+        // the guide) stops the dock after this screen has gone, so the effect above never sees
+        // it stop and auto-enter stayed on — the next Home press put Search the guide or a list
+        // into PiP with nothing playing. Off when the screen leaves, as MobilePlayerScreen does.
+        DisposableEffect(Unit) {
+            onDispose {
+                if (dockPlayback?.isInPictureInPictureMode?.value == true) return@onDispose
+                activity?.setPictureInPictureParams(
+                    android.app.PictureInPictureParams
+                        .Builder()
+                        .setAutoEnterEnabled(false)
+                        .build(),
+                )
+            }
+        }
+    }
+
+    // While a preview is docked, the list below defaults to the shared Recent list — regardless
+    // of which category/tab (if any) was actually browsed to get here — with the currently
+    // previewed channel included and highlighted. Independent of the CategoryViewModel's own
+    // selectedCategoryId/streams so normal category/tab browsing is untouched when nothing's
+    // docked, and mirrors TV's LiveTvSplitLayout for the same reason. Not used for Movies/TV
+    // Shows (target is always null there). The Recent | Favorites tabs above the list (see
+    // DockListTabs) switch it over to Favorites instead.
+    var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
+    // Bumped by pull-to-refresh on the docked panel — the viewer asking for current truth, and so
+    // the one place the frozen order below is allowed to re-sort.
+    var recentOrderResetTick by remember { mutableStateOf(0) }
+    val publishedRecentStreams by viewModel.recentItems.collectAsStateWithLifecycle()
+    // Held in display order: a channel previewed past the watch delay is recorded while this
+    // panel is on screen, and promoting it to the top live would shift the rows under the
+    // viewer's thumb.
+    val recentStreams =
+        rememberStableRecentOrder(publishedRecentStreams.orEmpty(), resetKey = recentOrderResetTick)
+    var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var favoriteStreamsLoading by remember { mutableStateOf(true) }
+    val composableScope = rememberCoroutineScope()
+    if (target != null) {
+        LaunchedEffect(Unit) {
+            favoriteStreams = viewModel.getFavoritesSnapshot()
+            favoriteStreamsLoading = false
+        }
+    }
+
+    // The docked channel plays from its own source (multi-source plan, Phase 5): Recent and
+    // Favourites mix the profile's sources, and a channel of another one gets that source's loader.
+    // A swipe in full screen zaps within the loader's own source.
+    val dockLoader: StreamLoaderViewModel? =
+        if (isLiveTv && target != null) {
+            val dockSource = target.sourceOr(viewModel.sourceId)
+            viewModel(
+                key = "dockLoader:$dockSource",
+                factory =
+                    StreamLoaderViewModelFactory(
+                        context = context,
+                        initialStreamId = target.id,
+                        initialStreamName = target.name,
+                        categoryId = target.categoryId,
+                        contentType = contentType,
+                        providerId = dockSource,
+                    ),
+            )
+        } else {
+            null
+        }
+    // The loader a channel of another source took over from: nothing of it may land any more (its
+    // delayed Recent write would record a channel no longer playing).
+    var activeDockLoader by remember { mutableStateOf<StreamLoaderViewModel?>(null) }
+    LaunchedEffect(dockLoader) {
+        if (dockLoader != null) {
+            activeDockLoader?.takeIf { it !== dockLoader }?.abandon()
+            activeDockLoader = dockLoader
+        }
+    }
+    val dockLoaderState = dockLoader?.state?.collectAsStateWithLifecycle()?.value
+    val dockSuccess = dockLoaderState as? StreamLoaderViewModel.StreamState.Success
+    // Mirrors TV's previewPlaybackState (LiveTvSplitLayout.kt) — used by the landscape split to
+    // show a loading spinner over the video box while a channel is still resolving/buffering.
+    val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
+
+    if (target != null && dockLoader != null) {
+        LaunchedEffect(target.sourceKey) {
+            // Skip re-resolving if this is already the loaded stream (e.g. promoting an
+            // already-docked channel to full screen) — same call-site guard TV's
+            // LiveTvSplitLayout.onStreamPromote uses instead of a VM/service-level dedup guard.
+            if (dockSuccess?.streamId != target.id) {
+                dockLoader.loadStream(target)
+            }
+        }
+    }
+
+    // Actually start playback for the resolved stream — without this the shared engine never
+    // gets a media source while docked (MobilePlayerContent's own playStream() call only runs
+    // once promoted to full screen), so the dock's EmbeddedPlayerSurface just shows black.
+    if (dockPlayback != null) {
+        LaunchedEffect(dockSuccess?.streamId) {
+            val s = dockSuccess
+            // Mirrors TV's LiveTvSplitLayout guard: skip if the engine is already playing this
+            // exact URL, so a redundant re-resolve of the same channel can't restart the stream.
+            val alreadyPlayingThis =
+                s != null &&
+                    dockPlayback.currentMetadata.value.streamUrl == s.streamUrl &&
+                    dockPlayback.playbackState.value !is PlaybackState.Idle &&
+                    dockPlayback.playbackState.value !is PlaybackState.Error
+            if (s != null && !alreadyPlayingThis) {
+                dockPlayback.playStream(
+                    PlayerMetadata(
+                        title = s.streamName,
+                        channelName = s.streamName,
+                        description = s.description,
+                        streamUrl = s.streamUrl,
+                        isLive = s.isLive,
+                        headers = s.streamHeaders,
+                        logoUrl = s.logoUrl,
+                        programTitle = s.currentEpgProgram?.title,
+                        sourceName = s.sourceName,
+                    ),
+                    s.resumePosition,
+                )
+            }
+        }
+
+        // The guide lookup lands after playback started, and the programme rolls over while it
+        // plays: patch it into what is playing, for live sync's "now playing"; the channel icon likewise.
+        LaunchedEffect(dockSuccess?.streamUrl, dockSuccess?.currentEpgProgram?.title, dockSuccess?.logoUrl) {
+            val s = dockSuccess ?: return@LaunchedEffect
+            dockPlayback.updateMetadata(s.streamUrl) { it.copy(programTitle = s.currentEpgProgram?.title, logoUrl = s.logoUrl) }
+        }
+
+        // Another device of the sync group stopped this playback — docked or promoted to full
+        // screen alike: finalise, stop the dock as its close button does, then go to the Live TV
+        // tab's root. See the live sync now playing plan → Remote Stop.
+        if (dockLoader != null) {
+            RemoteStopEffect {
+                finalizeSessionAndAwait(dockPlayback.playbackState.value, dockLoader)
+                stopDockThen(onHome)
+            }
+        }
+
+        // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the
+        // background indefinitely — mirrors TV's LiveTvSplitLayout watchdog.
+        LaunchedEffect(dockSuccess?.streamId) {
+            val s = dockSuccess ?: return@LaunchedEffect
+            val reachedPlaying =
+                withTimeoutOrNull(8_000) {
+                    // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
+                    // in snapshotFlow{} never registers an observable read, so it emits once and
+                    // never again, making first{} hang the full timeout regardless of whether
+                    // playback actually started. first{} on the StateFlow directly works correctly.
+                    dockPlayback.playbackState.first { it is PlaybackState.Playing }
+                }
+            if (reachedPlaying == null && dockSuccess.streamId == s.streamId && !fullScreen) {
+                dockPlayback.stop()
+            }
+        }
+
+        // Stop when the app isn't visible (backgrounded, PiP dismissed); restart on return — a
+        // docked preview has no business burning battery/data while the app isn't visible.
+        // ON_STOP, not ON_PAUSE, so going into PiP keeps it playing — see onAppStopped's kdoc.
+        DisposableEffect(lifecycleOwner) {
+            val observer =
+                LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_STOP -> {
+                            dockPlayback.onAppStopped()
+                        }
+
+                        Lifecycle.Event.ON_RESUME -> {
+                            dockPlayback.onAppResumed()
+                        }
+
+                        else -> {}
+                    }
+                }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+    }
+
+    // Rotation follows the phone's physical orientation automatically only while the preview is
+    // docked — the rest of the app is portrait-locked (AndroidManifest.xml). Placed before the
+    // fullScreen early-return below so it stays mounted across promote/demote, not just while the
+    // small dock is on screen. SENSOR (not USER) so it rotates on physical movement even if the
+    // OS auto-rotate toggle is off — same reasoning as the full-screen player's
+    // SENSOR_LANDSCAPE override in MobilePlayerScreen.kt, just not landscape-only here since the
+    // dock has a real portrait layout too.
+    if (isLiveTv && target != null) {
+        val activity = context as? Activity
+        RequestOrientation(activity, ActivityInfo.SCREEN_ORIENTATION_SENSOR)
+    }
+
+    val isInPip = dockPlayback?.isInPictureInPictureMode?.collectAsStateWithLifecycle()?.value == true
+    // Before the full-screen return below, so the bar hears about full screen too. The bar stops
+    // the dock when it leaves the Live TV tab, as the toolbar's Back does (stopDockThen above),
+    // and hides where the top bar does too: the landscape split gives the video the full height.
+    val dockCoversScreen = fullScreen || isInPip || (target != null && isLandscape)
+    DisposableEffect(dockPlayback, dockCoversScreen) {
+        onDockChanged(dockPlayback?.let { playback -> { playback.stop() } }, dockCoversScreen)
+        onDispose { onDockChanged(null, false) }
+    }
+
+    if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
+        // Refresh the favorites list on demote (fullScreen leaving composition) so it reflects
+        // what was just (un)favorited — promoting/demoting never leaves this screen, so nothing
+        // else would re-fetch it. The Recent list needs no equivalent: the player's own delayed
+        // history write republishes the shared list this screen collects. Mirrors TV's
+        // LiveTvSplitLayout for the same reason.
+        DisposableEffect(Unit) {
+            onDispose {
+                viewModel.viewModelScope.launch {
+                    favoriteStreams = viewModel.getFavoritesSnapshot()
+                }
+            }
+        }
+        val dockSuccess = dockLoader.state.collectAsStateWithLifecycle().value as? StreamLoaderViewModel.StreamState.Success
+        // Start over handed the player to the catch-up screen: leaving must not pause or stop it.
+        var handedOff by remember { mutableStateOf(false) }
+        MobilePlayerContent(
+            viewModel = dockPlayback,
+            loaderViewModel = dockLoader,
+            contentType = contentType,
+            onBack = { fullScreen = false },
+            handedOff = { handedOff },
+            // Start over: the programme on air, from the channel's archive. The dock stops first;
+            // the catch-up player starts its own stream.
+            onStartOver =
+                onStartOver?.let { start ->
+                    dockSuccess
+                        ?.currentEpgProgram
+                        ?.takeIf { CatchupAvailability.isPlayable(dockSuccess.archiveDays, it, System.currentTimeMillis() / 1000) }
+                        ?.let { program ->
+                            val startOver: () -> Unit = {
+                                // Now, not through the view model's coroutine, which could land
+                                // after the catch-up has started on the same player.
+                                StreamingPlaybackService.getInstance()?.stop()
+                                handedOff = true
+                                start(program, target.copy(providerId = target.sourceOr(viewModel.sourceId)))
+                            }
+                            startOver
+                        }
+                },
+        )
+        return
+    }
+
+    // PiP entered from the dock: the window is just the video. Without this the whole dock
+    // screen (preview card, Recent list) got squeezed into the PiP window. The promoted
+    // full-screen branch above needs no equivalent — MobilePlayerContent already hides its own
+    // chrome in PiP.
+    if (isInPip) {
+        Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.mediaScrim)) {
+            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
+        }
+        return
+    }
+
+    // Undo of a removal from Recent, Favourites or the Wishlist (wishlist UX plan, U-D4).
+    val undo = rememberUndoSnackbar()
+    Box(modifier = Modifier.fillMaxSize()) {
+        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
+        Scaffold(
+            containerColor = CinemaTheme.colors.clear,
+            snackbarHost = { UndoSnackbarHost(undo) },
+            topBar = {
+                // Hidden in the landscape split — the title/EPG/search row eats vertical space the
+                // video pane needs, and none of its actions (EPG, search, category nav) apply while
+                // docked anyway (category chips are hidden here too, see below).
+                if (!(isLiveTv && target != null && isLandscape)) {
+                    val sectionActions: @Composable RowScope.() -> Unit = {
+                        if (contentType == ContentType.LIVE_TV) {
+                            val state = uiState
+                            if (state is CategoryViewModel.UiState.Success) {
+                                val selectedCat = remember(state.categories, state.selectedCategoryKey) { state.selectedCategory }
+                                val selectedCatId = selectedCat?.id
+                                val selectedCatName = selectedCat?.name
+                                if (selectedCatId != null && selectedCatName != null && hasEpgData) {
+                                    // Names the category it opens (G-M4): the selected chip may
+                                    // sit under the dock, out of sight. Long-press shows it.
+                                    val guideLabel = stringResource(R.string.epg_guide_header_title_format, selectedCatName)
+                                    TooltipBox(
+                                        positionProvider =
+                                            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                                        tooltip = {
+                                            PlainTooltip {
+                                                CinemaText(
+                                                    guideLabel,
+                                                    role = TextRole.BodySmall,
+                                                    tone = TextTone.Inherit,
+                                                )
+                                            }
+                                        },
+                                        state = rememberTooltipState(),
+                                    ) {
+                                        CinemaIconButton(
+                                            onClick = {
+                                                stopDockThen {
+                                                    onEpgClick(
+                                                        selectedCatId,
+                                                        selectedCatName,
+                                                        selectedCat.providerId.takeIf { it != 0L } ?: viewModel.sourceId,
+                                                    )
+                                                }
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    CinemaIcons.DateRange,
+                                                    guideLabel,
+                                                    tint = CinemaTheme.colors.textPrimary,
+                                                )
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (sourceTopBar != null) {
+                        // The nav host gives a section tab its Search.
+                        sourceTopBar(null)
+                    } else {
+                        TopAppBar(
+                            title = {
+                                CinemaText(
+                                    when (contentType) {
+                                        ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+                                        ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+                                        ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+                                        else -> contentType.replace("_", " ")
+                                    },
+                                    role = TextRole.Title,
+                                    tone = TextTone.Inherit,
+                                )
+                            },
+                            navigationIcon = {
+                                CinemaIconButton(
+                                    onClick = { stopDockThen(onBack) },
+                                    icon = {
+                                        Icon(
+                                            CinemaIcons.ArrowBack,
+                                            stringResource(R.string.player_back),
+                                            tint = CinemaTheme.colors.textPrimary,
+                                        )
+                                    },
+                                )
+                            },
+                            actions = sectionActions,
+                        )
+                    }
+                }
+            },
+        ) { paddingValues ->
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+            ) {
+                AnimatedContent(
+                    targetState = uiState,
+                    // Keyed on the sealed subtype, not the state instance — Success carries fresh
+                    // data (stream lists, docked preview target) on nearly every emission, and a
+                    // plain targetState comparison would refire the crossfade on every one of those
+                    // instead of only on Loading/Success/Error swaps.
+                    contentKey = { it::class },
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
+                            fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    },
+                    label = "category_state_crossfade",
+                ) { state ->
+                    when (state) {
+                        is CategoryViewModel.UiState.Loading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize().padding(Spacing.sm),
+                            ) {
+                                SkeletonList(
+                                    rowCount = 8,
+                                    rowHeight = StreamCardMinHeight,
+                                    thumbnailWidth = StreamThumbnailWidth,
+                                    thumbnailHeight = StreamThumbnailHeight,
+                                    verticalSpacing = LocalUiStyle.current.grid.spacing,
+                                )
+                            }
+                        }
+
+                        is CategoryViewModel.UiState.Success -> {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                // A source expiring within a week, or expired; hidden with the chips
+                                // while a preview is docked, so the video stays under the top bar.
+                                if (!(isLiveTv && target != null)) {
+                                    SourceExpiryBanner()
+                                }
+
+                                if (contentType == ContentType.LIVE_TV) {
+                                    val epgMessage =
+                                        when (epgIndexState) {
+                                            is EpgIndexState.Failed -> {
+                                                stringResource(R.string.epg_indexing_failed)
+                                            }
+
+                                            is EpgIndexState.Indexing -> {
+                                                stringResource(
+                                                    R.string.epg_indexing_progress,
+                                                    (epgIndexState as EpgIndexState.Indexing).progressPercent,
+                                                )
+                                            }
+
+                                            else -> {
+                                                null
+                                            }
+                                        }
+                                    if (epgMessage != null) {
+                                        CinemaText(
+                                            text = epgMessage,
+                                            role = TextRole.BodySmall,
+                                            tone =
+                                                if (epgIndexState is EpgIndexState.Indexing) {
+                                                    TextTone.Secondary
+                                                } else {
+                                                    TextTone.Danger
+                                                },
+                                            modifier =
+                                                Modifier.padding(
+                                                    horizontal = CinemaSpacing.md,
+                                                    vertical = CinemaSpacing.xs,
+                                                ),
+                                        )
+                                    }
+                                }
+
+                                // Horizontal category chips — hidden while a preview is docked so the
+                                // video sits right below the top bar instead of being pushed down by
+                                // navigation chrome the user isn't using in that moment.
+                                if (!(isLiveTv && target != null)) {
+                                    // The Live TV tab's root has no section top bar, so its TV Guide
+                                    // sits at the end of the chips; a pushed list keeps it in its bar.
+                                    val guideCategory = remember(state.categories, state.selectedCategoryKey) { state.selectedCategory }
+                                    val guideCategoryId = guideCategory?.id
+                                    val guideCategoryName = guideCategory?.name
+                                    CategoryChipRow(
+                                        categories = state.categories,
+                                        selectedCategoryKey = state.selectedCategoryKey,
+                                        contentType = contentType,
+                                        favoriteCategoryIds = favoriteCategoryIds,
+                                        sourceNames = sourceNames,
+                                        categoryViewModel = viewModel,
+                                        onCategorySelected = { categoryId, source ->
+                                            viewModel.loadStreams(categoryId, source)
+                                        },
+                                        onGuideClick =
+                                            if (isLiveTv && sourceTopBar != null && hasEpgData &&
+                                                guideCategoryId != null && guideCategoryName != null
+                                            ) {
+                                                {
+                                                    stopDockThen {
+                                                        onEpgClick(
+                                                            guideCategoryId,
+                                                            guideCategoryName,
+                                                            guideCategory.providerId.takeIf { it != 0L } ?: viewModel.sourceId,
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                    )
+
+                                    CinemaDivider()
+                                }
+
+                                // Streams list with pull-to-refresh — while a preview is docked, always
+                                // Recent or favorites (see listSource above), regardless of the real
+                                // selected category/tab. INCLUDE keeps the docked channel in the list
+                                // even before its delayed history write lands.
+                                val displayedStreams =
+                                    if (target == null) {
+                                        state.streams
+                                    } else if (listSource == PreviewListSource.FAVORITES) {
+                                        favoriteStreams
+                                    } else {
+                                        recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE, viewModel.sourceId)
+                                    }
+                                val displayedStreamsLoading =
+                                    if (target == null) {
+                                        state.streamsLoading
+                                    } else if (listSource == PreviewListSource.FAVORITES) {
+                                        favoriteStreamsLoading
+                                    } else {
+                                        publishedRecentStreams == null
+                                    }
+                                val displayedCategoryId =
+                                    when {
+                                        target == null -> state.selectedCategoryId
+                                        listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
+                                        else -> CategoryViewModel.RECENT_CATEGORY_ID
+                                    }
+                                // The list's identity across sources: the same category id on two of them
+                                // is two lists (multi-source plan, Phase 6).
+                                val displayedCategoryKey = if (target == null) state.selectedCategoryKey else displayedCategoryId
+                                val streamsList: @Composable () -> Unit = {
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        if (target != null) {
+                                            DockListTabs(selected = listSource, onSelect = { listSource = it })
+                                        }
+                                        PullToRefreshBox(
+                                            isRefreshing = displayedStreamsLoading,
+                                            onRefresh = {
+                                                if (target == null) {
+                                                    state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
+                                                } else if (listSource == PreviewListSource.FAVORITES) {
+                                                    composableScope.launch {
+                                                        favoriteStreamsLoading = true
+                                                        favoriteStreams = viewModel.getFavoritesSnapshot()
+                                                        favoriteStreamsLoading = false
+                                                    }
+                                                } else {
+                                                    composableScope.launch { viewModel.refreshRecentItems() }
+                                                    recentOrderResetTick++
+                                                }
+                                            },
+                                            modifier = Modifier.fillMaxWidth().weight(1f),
+                                        ) {
+                                            val toggleFavorite: (MediaItem) -> Unit = { toggled ->
+                                                viewModel.toggleFavoriteStream(
+                                                    itemId = toggled.id,
+                                                    itemName = toggled.name,
+                                                    categoryId = toggled.categoryId,
+                                                    contentType = contentType,
+                                                    rowSource = toggled.providerId,
+                                                )
+                                                if (target == null) {
+                                                    // Only reload when Favorites is what's on screen (so an
+                                                    // unfavorited row drops out) — refreshStreams selects the
+                                                    // category it loads, so calling it from any other category
+                                                    // yanked the view over to Favorites.
+                                                    if (state.selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
+                                                        viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                                                    }
+                                                } else {
+                                                    composableScope.launch {
+                                                        favoriteStreams = viewModel.getFavoritesSnapshot()
+                                                    }
+                                                }
+                                            }
+                                            // Channels whose source keeps an archive get a catch-up badge.
+                                            val catchupDays by produceState(ImmutableCatchupDays(), displayedStreams) {
+                                                value = ImmutableCatchupDays(displayedStreams?.let { viewModel.catchupDays(it) }.orEmpty())
+                                            }
+                                            // Keyed on docking: the docked list and the one left when the
+                                            // dock closes may both be Recent, and a row left revealed
+                                            // (its delete showing) must not carry over (phone UI audit #12).
+                                            key(target == null) {
+                                                StreamsList(
+                                                    items = displayedStreams,
+                                                    streamsLoading = displayedStreamsLoading,
+                                                    libraryLoading = libraryLoading,
+                                                    selectedCategoryId = displayedCategoryId,
+                                                    selectedCategoryKey = displayedCategoryKey,
+                                                    lastPlayedItemId = state.lastPlayedItemId,
+                                                    lastPlayedSource = state.lastPlayedSource,
+                                                    nowPlaying = nowPlaying,
+                                                    catchupDays = catchupDays,
+                                                    watchedIds = watchedIds,
+                                                    watchProgress = watchProgress,
+                                                    currentlyPlayingId = target?.id,
+                                                    sourceNames = sourceNames,
+                                                    categoryNames = categoryNames,
+                                                    onItemSelected = { item ->
+                                                        val selected = item.browseTarget(contentType)
+                                                        val wantedCard = viewModel.wantedCardOf(item)
+                                                        val gone = viewModel.goneOf(item)
+                                                        when {
+                                                            gone?.copy != null -> {
+                                                                goneMenu = item to gone
+                                                            }
+
+                                                            gone != null -> {
+                                                                val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
+                                                                Toast
+                                                                    .makeText(
+                                                                        context,
+                                                                        resources.getString(R.string.favorite_gone_message, name),
+                                                                        Toast.LENGTH_LONG,
+                                                                    ).show()
+                                                            }
+
+                                                            // A Wanted row: its source copy, else its TMDB page.
+                                                            wantedCard != null -> {
+                                                                viewModel.openingWanted(wantedCard)
+                                                                openWanted(wantedCard.route)
+                                                            }
+
+                                                            // A row from "Recent Categories"/"Favorite Categories" browses, it
+                                                            // doesn't play, on its source; one of a source this list doesn't
+                                                            // hold opens there.
+                                                            selected is BrowseTarget.CategoryRef &&
+                                                                !viewModel.isOtherSource(item.providerId) -> {
+                                                                viewModel.loadStreams(selected.categoryId, item.providerId)
+                                                            }
+
+                                                            isLiveTv && selected !is BrowseTarget.CategoryRef -> {
+                                                                // Dock locally instead of navigating away — mirrors
+                                                                // TV's LiveTvChannelList.onStreamPromote interception.
+                                                                dockTarget = item
+                                                            }
+
+                                                            else -> {
+                                                                onStreamSelected(
+                                                                    item.id,
+                                                                    item.name,
+                                                                    item.categoryId,
+                                                                    contentType,
+                                                                    selected,
+                                                                    item.sourceOr(viewModel.sourceId),
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    contentType = contentType,
+                                                    favoriteIds = favoriteIds,
+                                                    onToggleFavorite = toggleFavorite,
+                                                    onToggleWatched = { toggled ->
+                                                        viewModel.toggleWatchedStream(toggled.id, contentType, toggled.providerId)
+                                                    },
+                                                    showWatchedMark = viewModel.supportsWatchedMark,
+                                                    showWatchState = viewModel::showWatchState,
+                                                    onSetShowWatched = { seriesId, watched, rowSource ->
+                                                        viewModel.setShowWatched(seriesId, watched, rowSource) { message ->
+                                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                                        }
+                                                    },
+                                                    onRemoveItem =
+                                                        if (viewModel.supportsRemoveFromRecent) {
+                                                            { item ->
+                                                                val undoRemoval =
+                                                                    viewModel.removeFromRecent(
+                                                                        item.id,
+                                                                        contentType,
+                                                                        item.seriesId,
+                                                                        item.providerId,
+                                                                    )
+                                                                undo.show(item.name, undoRemoval)
+                                                            }
+                                                        } else {
+                                                            null
+                                                        },
+                                                    onRemoveFavorite = { item ->
+                                                        toggleFavorite(item)
+                                                        undo.show(item.name) { toggleFavorite(item) }
+                                                    },
+                                                    rowStatus = rowStatus,
+                                                    onRemoveWanted =
+                                                        if (displayedCategoryId == CategoryViewModel.WANTED_CATEGORY_ID) {
+                                                            { item ->
+                                                                viewModel
+                                                                    .wantedCardOf(
+                                                                        item,
+                                                                    )?.let { undo.show(item.name, viewModel.removeWanted(it)) }
+                                                            }
+                                                        } else {
+                                                            null
+                                                        },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (isLiveTv && target != null && isLandscape) {
+                                    // Landscape split — mirrors tv/.../LiveTvSplitLayout.kt's side-by-side
+                                    // layout as closely as possible: video+EPG pane left (0.66), channel
+                                    // list right (0.34).
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                                    ) {
+                                        Column(
+                                            modifier =
+                                                Modifier
+                                                    .weight(0.66f)
+                                                    .fillMaxHeight()
+                                                    .padding(horizontal = CinemaSpacing.md),
+                                        ) {
+                                            // True 16:9 without Modifier.aspectRatio(16f / 9f): the latter
+                                            // mis-positions its content in this specific spot (a Row placed
+                                            // after other siblings in the parent Column, each weighted+
+                                            // fillMaxHeight child measured with a reduced-but-bounded height
+                                            // constraint) — reproduced with a bare colored Box, confirmed
+                                            // it's not related to EmbeddedPlayerSurface. TV's
+                                            // LiveTvSplitLayout doesn't hit this because its Row has no
+                                            // preceding siblings to reduce the incoming constraint.
+                                            // BoxWithConstraints sidesteps it: it reads the actual measured
+                                            // width and derives a plain .height() from it, the same
+                                            // primitive, computed instead of hardcoded — coerced against maxHeight
+                                            // too, so it never overflows the column on unusually short screens.
+                                            BoxWithConstraints(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(CinemaTheme.shapes.card)
+                                                        .background(CinemaTheme.colors.surface)
+                                                        .clickable(onClick = { fullScreen = true }),
+                                            ) {
+                                                val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
+                                                Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
+                                                    // TextureView (not the default SurfaceView): this box
+                                                    // sits next to the scrolling/recomposing channel list,
+                                                    // and SurfaceView there stalls the main thread and
+                                                    // ANRs. Full-screen playback (MobilePlayerContent) uses
+                                                    // its own default surface instead of sharing this one —
+                                                    // promoting/demoting does a real detach/reattach (one
+                                                    // frame's glitch) rather than relocating this node, but
+                                                    // it stops every OSD/flyout interaction in full-screen
+                                                    // from janking the video for the rest of the session.
+                                                    // Mirrors TV's LiveTvSplitLayout.
+                                                    EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
+
+                                                    // The preview surface has no controls/error UI of its
+                                                    // own, so a stalled or watchdog-killed stream would
+                                                    // otherwise look identical to a live frozen frame —
+                                                    // mirrors TV's LiveTvSplitLayout.
+                                                    if (dockPlaybackState !is PlaybackState.Playing) {
+                                                        CinemaSpinner(modifier = Modifier.align(Alignment.Center))
+                                                    }
+
+                                                    IconButton(
+                                                        onClick = {
+                                                            dockPlayback?.stop()
+                                                            dockTarget = null
+                                                        },
+                                                        modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
+                                                    ) {
+                                                        Icon(
+                                                            CinemaIcons.Close,
+                                                            contentDescription = stringResource(R.string.common_close),
+                                                            tint = CinemaTheme.colors.textPrimary,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                                            // The clean name with its badges, as in the player.
+                                            BadgedTitle(
+                                                raw = dockSuccess?.streamName ?: target.name,
+                                                role = TextRole.Title,
+                                                tone = TextTone.Primary,
+                                            )
+                                            val nowProg = dockSuccess?.currentEpgProgram
+                                            if (nowProg != null) {
+                                                CinemaText(
+                                                    text = stringResource(R.string.epg_now_prefix, nowProg.title),
+                                                    maxLines = 2,
+                                                    role = TextRole.Heading,
+                                                    tone = TextTone.Primary,
+                                                )
+                                                val fraction = nowProg.elapsedFraction()
+                                                CinemaProgressBar(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                                            }
+                                            val nextProg = dockSuccess?.nextEpgProgram
+                                            if (nextProg != null) {
+                                                CinemaText(
+                                                    text = stringResource(R.string.category_up_next_format, nextProg.title),
+                                                    maxLines = 1,
+                                                    role = TextRole.Body,
+                                                    tone = TextTone.Secondary,
+                                                )
+                                            }
+                                        }
+                                        Column(modifier = Modifier.weight(0.34f).fillMaxHeight()) {
+                                            streamsList()
+                                        }
+                                    }
+                                } else {
+                                    // Portrait: same video+EPG / list split as landscape, just stacked
+                                    // top/bottom instead of side-by-side (a plain Column weight split —
+                                    // no Row-after-siblings + aspectRatio() involved, so none of the
+                                    // mis-positioning above applies here).
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        if (isLiveTv && target != null) {
+                                            Box(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .weight(0.5f)
+                                                        // Unlike TV, the dock here already did a full
+                                                        // loadStream() (see the top-of-function comment on
+                                                        // why mobile commits immediately on tap) — real
+                                                        // category/last-watched data and watch-history
+                                                        // recording already happened at dock time, so
+                                                        // promoting needs no extra reload.
+                                                        .clickable(onClick = { fullScreen = true }),
+                                            ) {
+                                                // TextureView — see the landscape dock box above.
+                                                EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
+
+                                                IconButton(
+                                                    onClick = {
+                                                        dockPlayback?.stop()
+                                                        dockTarget = null
+                                                    },
+                                                    modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
+                                                ) {
+                                                    Icon(
+                                                        CinemaIcons.Close,
+                                                        contentDescription = stringResource(R.string.common_close),
+                                                        tint = CinemaTheme.colors.textPrimary,
+                                                    )
+                                                }
+
+                                                val colors = CinemaTheme.colors
+                                                // Memoize brush to avoid allocating new Brush + listOf on
+                                                // every recomposition — mirrors GradientOverlay.kt.
+                                                val scrimBrush =
+                                                    remember(colors.background) {
+                                                        Brush.verticalGradient(
+                                                            listOf(
+                                                                colors.clear,
+                                                                colors.background.copy(alpha = CinemaAlpha.imageOverlay),
+                                                            ),
+                                                        )
+                                                    }
+                                                Column(
+                                                    modifier =
+                                                        Modifier
+                                                            .align(Alignment.BottomStart)
+                                                            .fillMaxWidth()
+                                                            .background(scrimBrush)
+                                                            .padding(CinemaSpacing.sm),
+                                                ) {
+                                                    // The clean name with its badges, as in the player.
+                                                    BadgedTitle(
+                                                        raw = dockSuccess?.streamName ?: target.name,
+                                                        role = TextRole.Title,
+                                                        tone = TextTone.Primary,
+                                                    )
+                                                    val nowProg = dockSuccess?.currentEpgProgram
+                                                    if (nowProg != null) {
+                                                        CinemaText(
+                                                            text = stringResource(R.string.epg_now_prefix, nowProg.title),
+                                                            maxLines = 1,
+                                                            role = TextRole.Body,
+                                                            tone = TextTone.Primary,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                            streamsList()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        is CategoryViewModel.UiState.Error -> {
+                            RetryWhenOnline { viewModel.retry() }
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                                    modifier = Modifier.padding(Spacing.xl),
+                                ) {
+                                    CinemaText(
+                                        text = stringResource(R.string.common_error),
+                                        role = TextRole.Display,
+                                        tone = TextTone.Danger,
+                                    )
+                                    CinemaText(
+                                        text = state.message,
+                                        role = TextRole.Body,
+                                        tone = TextTone.Inherit,
+                                    )
+                                    CinemaButton(onClick = { viewModel.retry() }) {
+                                        CinemaText(
+                                            stringResource(R.string.common_retry),
+                                            role = TextRole.Label,
+                                            tone = TextTone.Inherit,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Which list the docked Live TV preview's channel panel is showing, picked with [DockListTabs]. */
+private enum class PreviewListSource { RECENT, FAVORITES }
+
+/**
+ * The docked preview's Recent | Favorites tabs (phone UI audit #12): a sideways swipe used to
+ * switch the list, and fought the rows' own swipe actions. A sideways swipe on a row is its row
+ * actions now; the tabs are the way to switch.
+ */
+@Composable
+private fun DockListTabs(
+    selected: PreviewListSource,
+    onSelect: (PreviewListSource) -> Unit,
+) {
+    CinemaTabRow(
+        selectedIndex = selected.ordinal,
+        labels =
+            PreviewListSource.entries.map { source ->
+                stringResource(
+                    when (source) {
+                        PreviewListSource.RECENT -> R.string.category_recent_label
+                        PreviewListSource.FAVORITES -> R.string.settings_import_favorites_label
+                    },
+                )
+            },
+        onSelect = { onSelect(PreviewListSource.entries[it]) },
+        transparent = true,
+    )
+}
+
+/** Anchor values for a stream row's swipe-reveal action strip (see [StreamsList]). */
+private enum class SwipeReveal { CLOSED, FAVORITE_ACTIONS, DELETE_ACTION }
+
+/** A single circular icon button inside a swipe-reveal action strip. */
+@Composable
+private fun SwipeActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(MobileDimensions.swipeActionCircleSize)
+                .clip(CinemaTheme.shapes.control)
+                .background(tint)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            // Contrasts against the tinted circle behind it — `tint` here would put a same-hue icon
+            // on a same-hue background, all but invisible.
+            tint = CinemaTheme.colors.textPrimary,
+            modifier = Modifier.size(MobileDimensions.iconDefault),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryChipRow(
+    categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
+    /** The selection as a category key: every source's categories are listed, the same id on two (Phase 6). */
+    selectedCategoryKey: String?,
+    contentType: String,
+    /** Favourite categories by key. */
+    favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
+    /** Each source's name while the list mixes several: a badge on its chips. */
+    sourceNames: Map<Long, String> = emptyMap(),
+    categoryViewModel: CategoryViewModel,
+    onCategorySelected: (categoryId: String, source: Long) -> Unit,
+    /** Opens the selected category's TV Guide from the row's end; null shows no button. */
+    onGuideClick: (() -> Unit)? = null,
+) {
+    val (virtualCategories, regularCategories) =
+        remember(categories) {
+            categories.partitionVirtual()
+        }
+
+    val listState = rememberLazyListState()
+    val chipColors =
+        FilterChipDefaults.filterChipColors(
+            selectedContainerColor = CinemaTheme.colors.accent,
+            selectedLabelColor = CinemaTheme.colors.onAccent,
+        )
+
+    // Entrance animation plays once per item: LazyRow recycles item composition off the ends
+    // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
+    // Keyed to categories so it resets (bounded) on category-list change instead of growing
+    // unbounded for the composable's whole lifetime.
+    val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
+    var showingAll by remember { mutableStateOf(false) }
+    if (showingAll) {
+        AllCategoriesDialog(
+            categories = regularCategories,
+            selectedCategoryKey = selectedCategoryKey,
+            sourceNames = sourceNames,
+            onPick = { category ->
+                showingAll = false
+                onCategorySelected(category.id, category.providerId)
+            },
+            onDismiss = { showingAll = false },
+        )
+    }
+
+    LaunchedEffect(selectedCategoryKey) {
+        if (selectedCategoryKey != null && selectedCategoryKey !in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
+            val index = regularCategories.indexOfFirst { it.key == selectedCategoryKey }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
+        }
+    }
+
+    Column {
+        // The modes of browsing (Recent, Favorites, Favorite / Recent Categories) as icon tabs, so
+        // they read apart from the category chips below (phone UI audit #1). No tab is marked
+        // while a real category is picked.
+        if (virtualCategories.isNotEmpty()) {
+            val selectedModeIndex = virtualCategories.indexOfFirst { it.key == selectedCategoryKey }
+            CinemaIconTabRow(
+                selectedIndex = selectedModeIndex,
+                tabs = virtualCategories.map { CinemaIconTab(virtualCategoryName(it), virtualCategoryIcon(it.id)) },
+                onSelect = { index -> virtualCategories[index].let { onCategorySelected(it.id, it.providerId) } },
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = CinemaSpacing.xxs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Hundreds of categories go one swipe at a time in the row: this lists them all, with
+            // a filter (household UX plan, P4).
+            if (regularCategories.size > 1) {
+                IconAction(
+                    onClick = { showingAll = true },
+                    icon = CinemaIcons.List,
+                    label = stringResource(R.string.category_all_title),
+                    tint = CinemaTheme.colors.textSecondary,
+                )
+            }
+            LazyRow(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+            ) {
+                itemsIndexed(
+                    regularCategories,
+                    key = { _, category -> category.key },
+                    contentType = { _, _ -> "category" },
+                ) { index, category ->
+                    CategoryChip(
+                        name = category.name,
+                        sourceName = sourceNames[category.providerId],
+                        selected = category.key == selectedCategoryKey,
+                        isFavorite = category.key in favoriteCategoryIds,
+                        onClick = { onCategorySelected(category.id, category.providerId) },
+                        onToggleFavorite = {
+                            // On the category's own source.
+                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType, category.providerId)
+                        },
+                        colors = chipColors,
+                        modifier =
+                            // remember-scoped: bare add() returns false on the first recomposition
+                            // of an already-visible chip, dropping staggeredEntrance mid-animation.
+                            if (remember(category.key) { enteredCategoryIds.add(category.key) }) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            },
+                    )
+                }
+            }
+            if (onGuideClick != null) {
+                IconAction(
+                    onClick = onGuideClick,
+                    icon = CinemaIcons.DateRange,
+                    label = stringResource(R.string.common_tv_guide),
+                    tint = CinemaTheme.colors.textSecondary,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Every category of the section in one list, narrowed by what is typed in its field (household UX
+ * plan, P4); a tap picks one, as its chip would. With several sources each row names its source.
+ */
+@Composable
+private fun AllCategoriesDialog(
+    categories: List<MediaCategory>,
+    selectedCategoryKey: String?,
+    sourceNames: Map<Long, String>,
+    onPick: (MediaCategory) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var filter by remember { mutableStateOf("") }
+    val shown =
+        remember(categories, filter) {
+            val words = filter.trim()
+            if (words.isEmpty()) categories else categories.filter { it.name.contains(words, ignoreCase = true) }
+        }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { CinemaText(stringResource(R.string.category_all_title), role = TextRole.Title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                CinemaSearchField(
+                    value = filter,
+                    onValueChange = { filter = it },
+                    placeholder = stringResource(R.string.category_all_filter),
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(CinemaIcons.Search, contentDescription = null) },
+                )
+                if (shown.isEmpty()) {
+                    CinemaText(stringResource(R.string.category_all_none), tone = TextTone.Secondary)
+                }
+                LazyColumn {
+                    items(shown, key = { it.key }) { category ->
+                        SettingsListRow(
+                            title = category.name,
+                            // The source's badge, as on the chips (Expert mode only).
+                            leading = sourceNames[category.providerId]?.let { name -> { SourceBadge(name) } },
+                            trailing =
+                                if (category.key == selectedCategoryKey) {
+                                    { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) }
+                                } else {
+                                    {}
+                                },
+                            onClick = { onPick(category) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            CinemaDialogActionButton(onClick = onDismiss, kind = ButtonKind.Other) {
+                CinemaText(stringResource(R.string.common_close), role = TextRole.Label, tone = TextTone.Inherit)
+            }
+        },
+    )
+}
+
+/**
+ * A virtual category's name in the app's current language. The ViewModel names them when the list
+ * loads and keeps them, so after a language change in Settings they stayed in the old one.
+ */
+@Composable
+private fun virtualCategoryName(category: MediaCategory): String =
+    when (category.id) {
+        CategoryViewModel.RECENT_CATEGORY_ID -> stringResource(R.string.category_recent_label)
+
+        CategoryViewModel.FAVORITES_CATEGORY_ID -> stringResource(R.string.settings_import_favorites_label)
+
+        CategoryViewModel.FAVORITE_CATEGORIES_ID -> stringResource(R.string.category_favorite_categories_label)
+
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID -> stringResource(R.string.category_recent_categories_label)
+
+        // A tab: its plain name; the rows carry the Available / Gone marks.
+        CategoryViewModel.WANTED_CATEGORY_ID -> stringResource(R.string.wanted_title)
+
+        else -> category.name
+    }
+
+/** The icon that marks a virtual category as a mode of browsing — the same ones as on the TV. */
+@Composable
+private fun virtualCategoryIcon(categoryId: String): ImageVector =
+    when (categoryId) {
+        CategoryViewModel.RECENT_CATEGORY_ID -> CinemaIcons.Replay
+        CategoryViewModel.FAVORITES_CATEGORY_ID -> CinemaIcons.Star
+        CategoryViewModel.FAVORITE_CATEGORIES_ID -> CinemaIcons.StarBorder
+        CategoryViewModel.WANTED_CATEGORY_ID -> CinemaIcons.Bookmark
+        else -> CinemaIcons.Folder
+    }
+
+/**
+ * A category chip. A long-press opens a one-item menu to add the category to Favorite Categories
+ * or take it off (phone UI audit P3) — it replaced a ☆ on every chip.
+ *
+ * FilterChip has no long-click of its own, so the hold is timed from its press interactions: a
+ * press held past the long-press timeout opens the menu, and the click its release then sends is
+ * dropped. A sideways drag cancels the press (the row scrolls), as it would any long-press.
+ */
+@Composable
+private fun CategoryChip(
+    name: String,
+    /** The category's source while the list mixes several (a badge); null with one. */
+    sourceName: String?,
+    selected: Boolean,
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    colors: SelectableChipColors,
+    modifier: Modifier = Modifier,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    var longPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val haptics = LocalHapticFeedback.current
+    val longPressTimeoutMs = LocalViewConfiguration.current.longPressTimeoutMillis
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collectLatest { interaction ->
+            if (interaction is PressInteraction.Press) {
+                longPressed = false
+                delay(longPressTimeoutMs)
+                longPressed = true
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                menuOpen = true
+            }
+        }
+    }
+    val favoriteLabel = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add)
+    Box(modifier = modifier) {
+        CinemaFilterChip(
+            selected = selected,
+            onClick = {
+                if (longPressed) longPressed = false else onClick()
+            },
+            label = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                ) {
+                    sourceName?.let { SourceBadge(it) }
+                    CinemaText(
+                        text = name,
+                        role = TextRole.Label,
+                        keepCase = true,
+                        tone = TextTone.Inherit,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        // Marquee only on the selected chip. Touch has no focus, so gating on
+                        // selection is the nearest equivalent — otherwise every overflowing chip
+                        // runs its own per-frame invalidateDraw loop for as long as it's visible.
+                        modifier = if (selected) Modifier.bounceMarquee() else Modifier,
+                    )
+                }
+            },
+            colors = colors,
+            interactionSource = interactionSource,
+            // The menu's action for TalkBack, which has no long-press of its own here.
+            modifier =
+                Modifier.semantics {
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(favoriteLabel) {
+                                onToggleFavorite()
+                                true
+                            },
+                        )
+                },
+        )
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = {
+                    CinemaText(
+                        favoriteLabel,
+                        role = TextRole.Label,
+                        tone = TextTone.Inherit,
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    menuOpen = false
+                    onToggleFavorite()
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StreamsList(
+    items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
+    streamsLoading: Boolean,
+    selectedCategoryId: String?,
+    /** The list's identity across sources (a category's key); per-list state is keyed on it. */
+    selectedCategoryKey: String? = selectedCategoryId,
+    libraryLoading: Boolean = false,
+    lastPlayedItemId: String? = null,
+    // [lastPlayedItemId]'s source (0: any): the same id on another source isn't current (Phase 6).
+    lastPlayedSource: Long = 0L,
+    nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
+    catchupDays: ImmutableCatchupDays = ImmutableCatchupDays(),
+    watchedIds: ImmutableStringSet = ImmutableStringSet(),
+    watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
+    currentlyPlayingId: String? = null,
+    contentType: String,
+    favoriteIds: ImmutableStringSet = ImmutableStringSet(),
+    // Each source's name while the list mixes several (Recent, Favourites): a badge on its rows.
+    sourceNames: Map<Long, String> = emptyMap(),
+    // Each category's name by its key: named after the source on a mixed list's rows.
+    categoryNames: Map<String, String> = emptyMap(),
+    onItemSelected: (MediaItem) -> Unit,
+    onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    // The swipe's "Mark watched / unwatched", absent when this is false (a source that keeps
+    // watched state on its server). A show row's is "Mark show watched / unwatched" for all its
+    // episodes (the season show watched plan Phase 3), worded from
+    // showWatchState when revealed.
+    showWatchedMark: Boolean = false,
+    // A row's own source answers for it (a merged list's row; 0: the list's).
+    showWatchState: suspend (seriesId: String, providerId: Long) -> Boolean? = { _, _ -> null },
+    onSetShowWatched: (seriesId: String, watched: Boolean, providerId: Long) -> Unit = { _, _, _ -> },
+    onRemoveItem: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
+    onRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
+    // A short state per row (by sourceKey), first on its second line: Available / Not available on a
+    // Wanted row, Gone from source on a favourite (wanted titles plan, Phase 5).
+    rowStatus: Map<String, String> = emptyMap(),
+    // Removes a Wanted row (its long-press menu's one action); null on every other list.
+    onRemoveWanted: ((MediaItem) -> Unit)? = null,
+) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
+
+    // Built once per list composition rather than once per row. CardDefaults.cardColors is
+    // @Composable, so it can't be wrapped in remember — hoisting the call out of the item body
+    // is what stops a CardColors being allocated per visible row per recomposition.
+    val streamCardColors = CardDefaults.cardColors(containerColor = CinemaTheme.colors.surface)
+
+    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
+    // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
+    // Keyed to items so it resets (bounded) on category switch instead of growing unbounded
+    // across every stream id seen this session.
+    val enteredStreamIds = remember(items) { mutableSetOf<String>() }
+
+    // A provider's separator rows ("####### ETHIOPIA VIP #######") are headings: never played,
+    // swiped or counted (as on the TV, TV UI audit #24).
+    val itemCount = remember(items) { items?.count { !it.isSeparatorRow } ?: 0 }
+
+    // One revealed row at a time (phone UI audit #12): swiping a row closes the one left open.
+    // A new list starts with none.
+    var openRowId by remember(selectedCategoryKey) { mutableStateOf<String?>(null) }
+
+    // The row whose long-press menu is open: the swipe's actions (watched follow-ups plan Phase 3).
+    // A show's waits for its "Mark show watched / unwatched" wording, as in Search.
+    var rowMenu by remember(selectedCategoryKey) { mutableStateOf<RowMenu?>(null) }
+    val openRowMenu: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = { item ->
+        val seriesId = item.showSeriesId(contentType)
+        if (seriesId != null && showWatchedMark) {
+            scope.launch { rowMenu = RowMenu(item, showWatchState(seriesId, item.providerId)) }
+        } else {
+            rowMenu = RowMenu(item, isShowWatched = null)
+        }
+    }
+
+    // A list opens at its top, never scrolled to the section's last played item (it opened mid-list,
+    // Recent's newest rows out of sight); Back finds it where it was left (the saved list state).
+    when {
+        selectedCategoryId == null -> {
+            MobileEmptyState(message = selectCategoryText(contentType), icon = sectionIcon(contentType))
+        }
+
+        streamsLoading -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+            ) {
+                CinemaText(
+                    text = stringResource(R.string.category_loading_streams),
+                    modifier = Modifier.padding(bottom = Spacing.xs),
+                    role = TextRole.Caption,
+                    tone = TextTone.Secondary,
+                )
+                SkeletonList(
+                    rowCount = 8,
+                    rowHeight = StreamCardMinHeight,
+                    thumbnailWidth = StreamThumbnailWidth,
+                    thumbnailHeight = StreamThumbnailHeight,
+                    verticalSpacing = LocalUiStyle.current.grid.spacing,
+                )
+            }
+        }
+
+        items.isNullOrEmpty() -> {
+            // An empty Recent or Favourites says what fills it (household UX plan, P6).
+            val message =
+                when {
+                    libraryLoading -> stringResource(R.string.home_library_still_loading)
+                    selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID -> stringResource(R.string.browse_recent_empty)
+                    selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID -> stringResource(R.string.browse_favorites_empty_phone)
+                    else -> noItemsText(contentType)
+                }
+            MobileEmptyState(message = message, icon = sectionIcon(contentType))
+        }
+
+        else -> {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Pinned, not a LazyColumn item, so it doesn't scroll away with the list. In the
+                // section's words (phone UI audit P2); a list of categories counts categories.
+                val isCategoryList =
+                    selectedCategoryId == CategoryViewModel.FAVORITE_CATEGORIES_ID ||
+                        selectedCategoryId == CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
+                CinemaText(
+                    text =
+                        if (isCategoryList) {
+                            stringResource(R.string.category_count_format, itemCount)
+                        } else {
+                            itemCountText(contentType, itemCount)
+                        },
+                    modifier = Modifier.padding(horizontal = Spacing.sm).padding(top = Spacing.xs, bottom = Spacing.xxs),
+                    role = TextRole.Caption,
+                    tone = TextTone.Secondary,
+                )
+                val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
+                val isFavoritesList = selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f),
+                    contentPadding =
+                        PaddingValues(
+                            start = Spacing.sm,
+                            top = Spacing.xs,
+                            end = Spacing.sm,
+                            bottom =
+                                Spacing.xs + LocalDockInset.current,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
+                ) {
+                    itemsIndexed(
+                        items,
+                        // By source and id: Recent and Favourites mix the profile's sources, and the
+                        // same id on two of them is two rows (multi-source plan, Phase 4).
+                        key = { _, item -> item.sourceKey },
+                        contentType = { _, item -> if (item.isSeparatorRow) "separator" else "stream" },
+                    ) { index, item ->
+                        if (item.isSeparatorRow) {
+                            SeparatorRow(name = item.name)
+                            return@itemsIndexed
+                        }
+                        val cardModifier =
+                            if (remember(item.sourceKey) { enteredStreamIds.add(item.sourceKey) }) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            }
+
+                        val streamCard = @Composable { modifier: Modifier ->
+                            StreamCard(
+                                item = item,
+                                // Only where the list mixes sources: an ordinary category is one source's.
+                                sourceName = sourceNames[item.providerId].takeIf { CategoryViewModel.mixesSources(selectedCategoryId) },
+                                categoryName = categoryNames[categoryKey(item.categoryId, item.providerId)],
+                                status = rowStatus[item.sourceKey],
+                                // Per-row state by the row's sourceKey (Phase 6).
+                                nowPlayingProgram = nowPlaying[item.sourceKey],
+                                catchupDays = catchupDays[item.sourceKey] ?: 0,
+                                isCurrentlyPlaying = item.id == currentlyPlayingId,
+                                isCurrent =
+                                    if (currentlyPlayingId != null) {
+                                        item.id == currentlyPlayingId
+                                    } else {
+                                        item.isLastPlayed(lastPlayedItemId, lastPlayedSource)
+                                    },
+                                isWatched = item.sourceKey in watchedIds,
+                                watchProgress = watchProgress[item.sourceKey] ?: 0f,
+                                cardColors = streamCardColors,
+                                onClick = {
+                                    onItemSelected(item)
+                                },
+                                onLongClick = { openRowMenu(item) },
+                                onLongClickLabel = stringResource(R.string.row_more_actions),
+                                modifier = modifier,
+                            )
+                        }
+
+                        val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRemoveFavorite != null)
+                        val isFavorite = item.sourceKey in favoriteIds
+                        val isWatchedItem = item.sourceKey in watchedIds
+                        val showSeriesId = item.showSeriesId(contentType)
+                        val hasWatchedAction = showWatchedMark && (showSeriesId != null || isWatchable)
+                        val density = LocalDensity.current
+                        val greenIconCount = if (hasWatchedAction) 2 else 1
+                        val favoriteRevealWidth =
+                            CinemaSpacing.sm * 2 +
+                                MobileDimensions.swipeActionCircleSize * greenIconCount +
+                                CinemaSpacing.sm * (greenIconCount - 1)
+                        val deleteRevealWidth = CinemaSpacing.sm * 2 + MobileDimensions.swipeActionCircleSize
+                        val revealState =
+                            remember(canSwipeDismiss, favoriteRevealWidth, deleteRevealWidth, selectedCategoryKey) {
+                                val anchors =
+                                    with(density) {
+                                        DraggableAnchors {
+                                            SwipeReveal.CLOSED at 0f
+                                            SwipeReveal.FAVORITE_ACTIONS at favoriteRevealWidth.toPx()
+                                            if (canSwipeDismiss) {
+                                                SwipeReveal.DELETE_ACTION at -deleteRevealWidth.toPx()
+                                            }
+                                        }
+                                    }
+                                AnchoredDraggableState(initialValue = SwipeReveal.CLOSED, anchors = anchors)
+                            }
+                        LaunchedEffect(revealState) {
+                            snapshotFlow { revealState.targetValue }.collect { value ->
+                                if (value != SwipeReveal.CLOSED) openRowId = item.sourceKey
+                            }
+                        }
+                        LaunchedEffect(openRowId, revealState) {
+                            if (openRowId != item.sourceKey && revealState.currentValue != SwipeReveal.CLOSED) {
+                                revealState.animateTo(SwipeReveal.CLOSED)
+                            }
+                        }
+
+                        Box(modifier = cardModifier) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.CenterStart)
+                                        .width(favoriteRevealWidth)
+                                        .fillMaxHeight()
+                                        .clip(CinemaTheme.shapes.card)
+                                        .background(CinemaTheme.colors.surface)
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                        ) {
+                                            scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                        },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                                    SwipeActionButton(
+                                        icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                        contentDescription =
+                                            stringResource(
+                                                if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
+                                            ),
+                                        tint = CinemaTheme.colors.success,
+                                        onClick = {
+                                            onToggleFavorite(item)
+                                            scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                        },
+                                    )
+                                    if (showSeriesId != null && showWatchedMark) {
+                                        val revealed = revealState.targetValue == SwipeReveal.FAVORITE_ACTIONS
+                                        val isShowWatched by produceState<Boolean?>(null, revealed, showSeriesId) {
+                                            if (revealed) value = showWatchState(showSeriesId, item.providerId)
+                                        }
+                                        SwipeActionButton(
+                                            icon = if (isShowWatched == true) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                            contentDescription =
+                                                stringResource(
+                                                    if (isShowWatched ==
+                                                        true
+                                                    ) {
+                                                        R.string.watched_unmark_show
+                                                    } else {
+                                                        R.string.watched_mark_show
+                                                    },
+                                                ),
+                                            tint = CinemaTheme.colors.accent,
+                                            onClick = {
+                                                onSetShowWatched(showSeriesId, isShowWatched != true, item.providerId)
+                                                scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                            },
+                                        )
+                                    } else if (showSeriesId == null && isWatchable && showWatchedMark) {
+                                        SwipeActionButton(
+                                            icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                            contentDescription =
+                                                stringResource(
+                                                    if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
+                                                ),
+                                            tint = CinemaTheme.colors.accent,
+                                            onClick = {
+                                                onToggleWatched(item)
+                                                scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (canSwipeDismiss) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .width(deleteRevealWidth)
+                                            .fillMaxHeight()
+                                            .clip(CinemaTheme.shapes.card)
+                                            .background(CinemaTheme.colors.surface)
+                                            .clickable(
+                                                indication = null,
+                                                interactionSource = remember { MutableInteractionSource() },
+                                            ) {
+                                                scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                            },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    SwipeActionButton(
+                                        icon = CinemaIcons.Delete,
+                                        contentDescription =
+                                            stringResource(
+                                                if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
+                                            ),
+                                        tint = CinemaTheme.colors.danger,
+                                        onClick = {
+                                            if (isRecentList) onRemoveItem?.invoke(item) else onRemoveFavorite?.invoke(item)
+                                            scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                        },
+                                    )
+                                }
+                            }
+
+                            streamCard(
+                                Modifier
+                                    .offset { IntOffset(revealState.requireOffset().roundToInt(), 0) }
+                                    .anchoredDraggable(revealState, Orientation.Horizontal),
+                            )
+                        }
+                    }
+                }
+                rowMenu?.takeIf { onRemoveWanted != null }?.let { menu ->
+                    ItemActionsDialog(
+                        title = menu.item.name,
+                        isFavorite = false,
+                        onToggleFavorite = null,
+                        onDismiss = { rowMenu = null },
+                        actions =
+                            listOf(
+                                ItemMenuAction(CinemaIcons.Delete, stringResource(R.string.wanted_remove)) {
+                                    onRemoveWanted?.invoke(menu.item)
+                                },
+                            ),
+                    )
+                }
+                rowMenu?.takeIf { onRemoveWanted == null }?.let { menu ->
+                    val item = menu.item
+                    val showSeriesId = item.showSeriesId(contentType)
+                    val isWatchedItem = item.sourceKey in watchedIds
+                    val isShowWatched = menu.isShowWatched == true
+                    val actions =
+                        rowMenuActions(
+                            isShowRow = showSeriesId != null,
+                            isWatchable = isWatchable,
+                            showWatchedMark = showWatchedMark,
+                            canRemoveFromRecent = isRecentList && onRemoveItem != null,
+                        ).map { action ->
+                            when (action) {
+                                RowMenuAction.MARK_WATCHED -> {
+                                    ItemMenuAction(
+                                        icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                        label = stringResource(if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark),
+                                        onClick = { onToggleWatched(item) },
+                                    )
+                                }
+
+                                RowMenuAction.MARK_SHOW_WATCHED -> {
+                                    ItemMenuAction(
+                                        icon = if (isShowWatched) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                        label =
+                                            stringResource(
+                                                if (isShowWatched) R.string.watched_unmark_show else R.string.watched_mark_show,
+                                            ),
+                                        onClick = { showSeriesId?.let { onSetShowWatched(it, !isShowWatched, item.providerId) } },
+                                    )
+                                }
+
+                                RowMenuAction.REMOVE_FROM_RECENT -> {
+                                    ItemMenuAction(
+                                        icon = CinemaIcons.Delete,
+                                        label = stringResource(R.string.recent_remove),
+                                        onClick = { onRemoveItem?.invoke(item) },
+                                    )
+                                }
+                            }
+                        }
+                    ItemActionsDialog(
+                        title = parseDisplayTitle(item.name).title.ifBlank { item.name },
+                        isFavorite = item.sourceKey in favoriteIds,
+                        onToggleFavorite = { onToggleFavorite(item) },
+                        onDismiss = { rowMenu = null },
+                        actions = actions,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** A row whose long-press menu is open; [isShowWatched] words a show row's mark (null: not known). */
+private class RowMenu(
+    val item: MediaItem,
+    val isShowWatched: Boolean?,
+)
+
+/** A row menu's actions besides Add to / Remove from Favourites, which every row has. */
+internal enum class RowMenuAction { MARK_WATCHED, MARK_SHOW_WATCHED, REMOVE_FROM_RECENT }
+
+/**
+ * The long-press menu's actions, the same as the row's swipe offers: a show row's "Mark show
+ * watched", a film's or an episode's "Mark watched" (neither where the source keeps watched state
+ * on its server), and "Remove from Recent" on the Recent list. A Favourites row's "Remove from
+ * Favourites" is the menu's favourite button.
+ */
+internal fun rowMenuActions(
+    isShowRow: Boolean,
+    isWatchable: Boolean,
+    showWatchedMark: Boolean,
+    canRemoveFromRecent: Boolean,
+): List<RowMenuAction> =
+    buildList {
+        if (showWatchedMark && isShowRow) {
+            add(RowMenuAction.MARK_SHOW_WATCHED)
+        } else if (showWatchedMark && isWatchable) {
+            add(RowMenuAction.MARK_WATCHED)
+        }
+        if (canRemoveFromRecent) add(RowMenuAction.REMOVE_FROM_RECENT)
+    }
+
+/** A row's thumbnail: 16:9 (phone UI audit P1), sized so the row holds a title and one more line. */
+private val StreamThumbnailWidth = MobileDimensions.streamThumbnailWidth
+private val StreamThumbnailHeight = MobileDimensions.streamThumbnailHeight
+
+/** A row's height when its text fits beside the thumbnail; a longer title makes it taller. */
+private val StreamCardMinHeight = StreamThumbnailHeight + CinemaSpacing.xs * 2
+
+/**
+ * A provider's separator row in a channel list ("####### ETHIOPIA VIP #######"): a heading, never
+ * played, swiped or counted. The TV's rule (its `isSeparatorRow`, which lives in the tv module).
+ */
+private val MediaItem.isSeparatorRow: Boolean
+    get() = mediaType == MediaType.LIVE_CHANNEL && isCategoryMarker
+
+/** A separator row as what it is: a heading over the channels that follow, text only, not tappable. */
+@Composable
+private fun SeparatorRow(name: String) {
+    CinemaText(
+        text =
+            name
+                .trim()
+                .trim('#')
+                .trim()
+                .ifEmpty { name.trim() },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = Spacing.xs, end = Spacing.xs, top = Spacing.sm),
+        role = TextRole.Label,
+        keepCase = true,
+        tone = TextTone.Secondary,
+    )
+}
+
+/** The section's icon, over its empty states. */
+@Composable
+private fun sectionIcon(contentType: String): ImageVector =
+    when (contentType) {
+        ContentType.MOVIES -> CinemaIcons.Movie
+        ContentType.TV_SHOWS -> CinemaIcons.Tv
+        else -> CinemaIcons.LiveTv
+    }
+
+/** "12 channels", "12 films" or "12 shows" — the section's own word, not "streams" (as on the TV). */
+@Composable
+private fun itemCountText(
+    contentType: String,
+    count: Int,
+): String =
+    when (contentType) {
+        ContentType.MOVIES -> pluralStringResource(R.plurals.browse_film_count, count, count)
+        ContentType.TV_SHOWS -> pluralStringResource(R.plurals.browse_show_count, count, count)
+        else -> pluralStringResource(R.plurals.browse_channel_count, count, count)
+    }
+
+/** An empty list, in the section's words. */
+@Composable
+private fun noItemsText(contentType: String): String =
+    when (contentType) {
+        ContentType.MOVIES -> stringResource(R.string.browse_no_films)
+        ContentType.TV_SHOWS -> stringResource(R.string.browse_no_shows)
+        else -> stringResource(R.string.category_no_channels)
+    }
+
+/** No category picked yet, in the section's words. */
+@Composable
+private fun selectCategoryText(contentType: String): String =
+    when (contentType) {
+        ContentType.MOVIES -> stringResource(R.string.browse_select_to_view_films)
+        ContentType.TV_SHOWS -> stringResource(R.string.browse_select_to_view_shows)
+        else -> stringResource(R.string.category_select_to_view_channels)
+    }
+
+@OptIn(ExperimentalFoundationApi::class)
+// internal, not private: StreamCardTest (Robolectric) checks the row's one accessibility node.
+@Composable
+internal fun StreamCard(
+    item: org.njarasoa.fijerena.core.player.domain.MediaItem,
+    /**
+     * The row's source, where the list mixes several (Recent, Favourites): a badge opening its
+     * second line, before [categoryName] (films, shows, and a channel without a Now line) or the Now line.
+     */
+    sourceName: String? = null,
+    categoryName: String? = null,
+    /** A short state shown first on the second line: Available / Not available, Gone from source. */
+    status: String? = null,
+    nowPlayingProgram: EpgProgram? = null,
+    /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
+    catchupDays: Int = 0,
+    isCurrentlyPlaying: Boolean = false,
+    /** The channel playing, else the last played item: its title in the accent colour. */
+    isCurrent: Boolean = false,
+    isWatched: Boolean = false,
+    watchProgress: Float = 0f,
+    cardColors: CardColors,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    onLongClickLabel: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    CinemaCard(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = StreamCardMinHeight)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    onLongClickLabel = onLongClickLabel,
+                ),
+        colors = cardColors,
+        border =
+            if (isCurrentlyPlaying) {
+                androidx.compose.foundation.BorderStroke(MobileDimensions.strokeWidth, CinemaTheme.colors.accent)
+            } else {
+                cinemaCardHairlineBorder()
+            },
+    ) {
+        // Its code is left out when the category already opens with it.
+        val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
+        // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
+        // between the dashes) — an empty row reads as broken, not a catalogue gap.
+        // The year goes to the line under it, with the length and rating.
+        val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
+        val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
+        // Films and shows: year · length · rating, from what the row already carries (as on
+        // the TV). The rating is a plain "8.2/10": a star means favourite.
+        val rating =
+            item.metadata.rating
+                ?.trim()
+                ?.takeIf { !isChannel && it.isNotEmpty() && it.toDoubleOrNull() != 0.0 }
+        val ratingText =
+            rating?.let {
+                if (it.toDoubleOrNull() != null) {
+                    stringResource(R.string.details_rating_out_of_ten, formatRating(it))
+                } else {
+                    it
+                }
+            }
+        val metaLine =
+            remember(item.metadata, parsedTitle.year, ratingText, isChannel, status) {
+                if (isChannel) {
+                    status.orEmpty()
+                } else {
+                    listOfNotNull(
+                        status,
+                        (extractYear(item.metadata.year, item.metadata.releaseDate, null) ?: parsedTitle.year)?.toString(),
+                        item.metadata.duration
+                            ?.takeIf(::hasMeaningfulDuration)
+                            ?.let(::formatDuration),
+                        ratingText,
+                    ).joinToString(" · ")
+                }
+            }
+        val nowPlayingText = stringResource(R.string.category_now_playing_badge).takeIf { isCurrentlyPlaying }
+        val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // Badges show in Expert mode only (SourceBadge).
+        val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
+        val sourceLineText =
+            when {
+                sourceLine == null -> null
+
+                isChannel -> listOfNotNull(status, nowLine ?: categoryName).joinToString(" · ").ifEmpty { null }
+
+                // The year first, so a long category can't push it off the line.
+                else -> listOfNotNull(metaLine.ifEmpty { null }, categoryName).joinToString(" · ").ifEmpty { null }
+            }
+        // One accessibility node for the row's content, read as its parts were: with an
+        // accessibility service on (a screen reader, a password manager, an automation app),
+        // Compose walks and diffs every semantics node on scroll, and a node per text and badge
+        // made that the biggest cost of a frame on the TV
+        // (docs/plans/20260914_codebase-robustness-plan.md, Phase 4). The card keeps its click
+        // and long-click actions.
+        val description =
+            listOfNotNull(
+                stringResource(R.string.content_watched_badge).takeIf { isWatched },
+                if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
+                displayTitle,
+                nowPlayingText,
+                sourceLine?.let { stringResource(R.string.source_badge_description, it) },
+                titleBadgesDescription(parsedTitle),
+                if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
+                nowLine.takeIf { sourceLine == null },
+            ).joinToString(", ")
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics { contentDescription = description }
+                    .padding(CinemaSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        ) {
+            // 16:9, with the resume bar on the thumbnail's bottom edge rather than along the whole
+            // card (phone UI audit P1, as on the TV).
+            val thumbnailShape = CinemaTheme.shapes.card
+            Box(
+                modifier =
+                    Modifier
+                        .size(width = StreamThumbnailWidth, height = StreamThumbnailHeight)
+                        .clip(thumbnailShape),
+            ) {
+                CinemaThumbnail(
+                    url = item.thumbnailUrl,
+                    // The clean title's first letter or digit, so a name that opens with a tag,
+                    // a space or a symbol still gets its letter tile.
+                    fallbackLetter = displayTitle.firstOrNull { it.isLetterOrDigit() } ?: displayTitle.firstOrNull(),
+                    // A channel's logo is drawn whole on a neutral tile; the shading under
+                    // artwork would only dim it.
+                    contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
+                    overlayGradient = !isChannel,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (watchProgress > 0f) {
+                    CinemaProgressBar(
+                        progress = { watchProgress.coerceIn(0f, 1f) },
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(MobileDimensions.resumeBarHeight),
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                ) {
+                    if (isWatched) {
+                        Icon(
+                            imageVector = CinemaIcons.CheckCircle,
+                            contentDescription = stringResource(R.string.content_watched_badge),
+                            tint = CinemaTheme.colors.success,
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
+                    if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
+                    CinemaText(
+                        text = displayTitle,
+                        role = TextRole.Body,
+                        // The primary text colour; the accent only marks what's current
+                        // (phone UI audit P1).
+                        tone = if (isCurrent) TextTone.Accent else TextTone.Primary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        // Only the row that's actually playing scrolls its title.
+                        modifier = Modifier.weight(1f).then(if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier),
+                    )
+                    // The source (Expert mode) ends the first line, in the same place on every row.
+                    sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
+                }
+                nowPlayingText?.let { text ->
+                    CinemaText(
+                        text = text,
+                        maxLines = 1,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.Accent,
+                    )
+                }
+                // The second line: the title's badges, then the category,
+                // year · length · rating or the Now line.
+                val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
+                if (sourceLine != null || lineText != null || parsedTitle.hasBadges) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TitleBadges(parsedTitle)
+                        lineText?.let { text ->
+                            CinemaText(
+                                text = text,
+                                role = TextRole.BodySmall,
+                                tone =
+                                    if (text ==
+                                        nowLine
+                                    ) {
+                                        TextTone.AccentSoft
+                                    } else {
+                                        TextTone.Secondary
+                                    },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier =
+                                    if (isCurrentlyPlaying &&
+                                        text == nowLine
+                                    ) {
+                                        Modifier.bounceMarquee()
+                                    } else {
+                                        Modifier
+                                    },
+                            )
+                        }
+                    }
+                }
+                // A film's year line keeps a Now line, if it has one, under it.
+                nowLine?.takeIf { sourceLine == null && metaLine.isNotEmpty() }?.let { line ->
+                    CinemaText(
+                        text = line,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
+                        role = TextRole.BodySmall,
+                        tone = TextTone.AccentSoft,
+                    )
+                }
+            }
+        }
+    }
+}

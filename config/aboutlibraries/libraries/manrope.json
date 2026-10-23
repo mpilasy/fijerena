@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:manrope",
+  "name": "Manrope (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://github.com/sharanda/manrope",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-manrope"
+  ],
+  "tag": "font"
+}

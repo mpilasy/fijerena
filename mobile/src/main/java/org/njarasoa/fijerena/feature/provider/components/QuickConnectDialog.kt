@@ -1,0 +1,151 @@
+package org.njarasoa.fijerena.feature.provider.components
+
+import android.content.Context
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+
+@Composable
+fun QuickConnectDialog(
+    showQuickConnectDialog: Boolean,
+    // The provider being edited, or null when adding one — see ProviderViewModel.quickConnectSave.
+    editId: Long?,
+    qcCode: String,
+    qcSecret: String,
+    qcError: String?,
+    url: String,
+    name: String,
+    username: String,
+    context: Context,
+    viewModel: ProviderViewModel,
+    onQcCodeChange: (String) -> Unit,
+    onQcSecretChange: (String) -> Unit,
+    onQcErrorChange: (String?) -> Unit,
+    onShowQuickConnectDialogChange: (Boolean) -> Unit,
+    onSuccess: () -> Unit,
+) {
+    if (showQuickConnectDialog) {
+        val appSettings = remember { AppSettings(context) }
+        LaunchedEffect(Unit) {
+            onQcCodeChange("")
+            onQcSecretChange("")
+            onQcErrorChange(null)
+            val deviceId =
+                android.provider.Settings.Secure.getString(
+                    context.contentResolver,
+                    android.provider.Settings.Secure.ANDROID_ID,
+                ) ?: "fijerena"
+            val api = JellyfinApiService(url.trimEnd('/'), deviceId)
+            val initResult = api.initiateQuickConnect()
+            if (initResult.isFailure) {
+                val e = initResult.exceptionOrNull()
+                onQcErrorChange(
+                    e?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                        ?: context.getString(R.string.provider_qc_init_failed),
+                )
+                return@LaunchedEffect
+            }
+            val init = initResult.getOrThrow()
+            onQcCodeChange(init.code)
+            onQcSecretChange(init.secret)
+            // Poll every 3 s for up to 2 minutes
+            repeat(40) {
+                delay(3_000)
+                val poll = api.pollQuickConnect(init.secret)
+                if (poll.isFailure) {
+                    val pollError = poll.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                    onQcErrorChange(context.getString(R.string.provider_qc_poll_failed, pollError))
+                    return@LaunchedEffect
+                }
+                if (poll.getOrThrow().authenticated) {
+                    val authResult = api.authenticateWithQuickConnect(init.secret)
+                    if (authResult.isFailure) {
+                        val authError = authResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                        onQcErrorChange(context.getString(R.string.provider_qc_auth_failed, authError))
+                        return@LaunchedEffect
+                    }
+                    val auth = authResult.getOrThrow()
+                    onShowQuickConnectDialogChange(false)
+                    viewModel.quickConnectSave(
+                        id = editId,
+                        name = name.ifBlank { auth.user.name },
+                        url = url.trimEnd('/'),
+                        // Editing signs this profile in as whoever Jellyfin says it is.
+                        username = if (editId != null) auth.user.name else username.ifBlank { auth.user.name },
+                        token = auth.accessToken,
+                        userId = auth.user.id,
+                        onComplete = onSuccess,
+                    )
+                    return@LaunchedEffect
+                }
+            }
+            onQcErrorChange(context.getString(R.string.provider_qc_timeout))
+        }
+
+        CinemaAlertDialog(
+            onDismissRequest = { onShowQuickConnectDialogChange(false) },
+            title = { CinemaText(stringResource(R.string.provider_quick_connect_title), role = TextRole.Title) },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    when {
+                        qcError != null -> {
+                            CinemaText(qcError, tone = TextTone.Danger)
+                        }
+
+                        qcCode.isEmpty() -> {
+                            CinemaSpinner()
+                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                            CinemaText(stringResource(R.string.provider_connecting_server))
+                        }
+
+                        else -> {
+                            CinemaText(stringResource(R.string.provider_qc_enter_code))
+                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                            CinemaText(qcCode, role = TextRole.Display, tone = TextTone.Accent)
+                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                            CinemaText(
+                                stringResource(R.string.provider_qc_instructions),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                            )
+                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                            CinemaSpinner()
+                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                            CinemaText(stringResource(R.string.provider_qc_waiting), role = TextRole.BodySmall, tone = TextTone.Secondary)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                CinemaOutlinedButton(onClick = { onShowQuickConnectDialogChange(false) }) {
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                }
+            },
+        )
+    }
+}

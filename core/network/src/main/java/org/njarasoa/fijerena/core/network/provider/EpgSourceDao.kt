@@ -1,0 +1,121 @@
+package org.njarasoa.fijerena.core.network.provider
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface EpgSourceDao {
+    @Query("SELECT * FROM epg_source ORDER BY added_at_ms ASC")
+    fun getAllSources(): Flow<List<EpgSourceEntity>>
+
+    @Query("SELECT * FROM epg_source ORDER BY added_at_ms ASC")
+    suspend fun getAllSourcesOnce(): List<EpgSourceEntity>
+
+    @Query("SELECT * FROM epg_source WHERE id = :id")
+    suspend fun getSourceById(id: Long): EpgSourceEntity?
+
+    @Query("SELECT * FROM epg_source WHERE url = :url AND provider_id = :providerId LIMIT 1")
+    suspend fun getSourceByUrl(
+        url: String,
+        providerId: Long,
+    ): EpgSourceEntity?
+
+    @Query("SELECT * FROM epg_source WHERE provider_id = :providerId ORDER BY added_at_ms ASC")
+    fun getSourcesForProvider(providerId: Long): Flow<List<EpgSourceEntity>>
+
+    @Query("SELECT id FROM epg_source WHERE provider_id = :providerId")
+    suspend fun getSourceIdsForProvider(providerId: Long): List<Long>
+
+    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId ORDER BY added_at_ms ASC")
+    suspend fun getEnabledSourcesForProvider(providerId: Long): List<EpgSourceEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSource(source: EpgSourceEntity): Long
+
+    @Update
+    suspend fun updateSource(source: EpgSourceEntity)
+
+    @Query("DELETE FROM epg_source WHERE id = :id")
+    suspend fun deleteSource(id: Long)
+
+    @Query("DELETE FROM epg_source WHERE id IN (:ids)")
+    suspend fun deleteSources(ids: List<Long>)
+
+    @Query("DELETE FROM epg_source WHERE provider_id = :providerId")
+    suspend fun deleteSourcesForProvider(providerId: Long)
+
+    @Query("DELETE FROM epg_source")
+    suspend fun deleteAllSources()
+
+    @Query(
+        """
+        UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels,
+            last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod,
+            last_ingestion_duration_ms = :ingestionDurationMs, last_download_duration_ms = :downloadDurationMs,
+            last_content_sha256 = :contentSha256, etag = :etag, last_modified_header = :lastModifiedHeader
+        WHERE id = :id
+        """,
+    )
+    suspend fun markIngested(
+        id: Long,
+        timestamp: Long,
+        channels: Int,
+        programmes: Int,
+        downloadBytes: Long,
+        ingestMethod: String = "DOWNLOADED",
+        ingestionDurationMs: Long = 0,
+        downloadDurationMs: Long = 0,
+        contentSha256: String? = null,
+        etag: String? = null,
+        lastModifiedHeader: String? = null,
+    )
+
+    /**
+     * A refresh confirmed the source is unchanged (304, or a matching content hash) — bump the
+     * timestamp and clear any prior error, but leave the channel/programme counts and validators
+     * as they were. Reusing [markIngested] here would zero the counts, making a genuinely
+     * unchanged source look like one that suddenly lost its whole guide.
+     */
+    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL WHERE id = :id")
+    suspend fun markUnchanged(
+        id: Long,
+        timestamp: Long,
+    )
+
+    @Query("UPDATE epg_source SET last_error = :error WHERE id = :id")
+    suspend fun markError(
+        id: Long,
+        error: String,
+    )
+
+    @Query(
+        "SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId AND last_error IS NOT NULL ORDER BY added_at_ms ASC",
+    )
+    suspend fun getFailedSources(providerId: Long): List<EpgSourceEntity>
+
+    @Query("UPDATE epg_source SET refresh_interval_hours = :hours WHERE id = :id")
+    suspend fun setRefreshInterval(
+        id: Long,
+        hours: Int,
+    )
+
+    /** Only rows without an interval of their own — see `EpgRefreshSchedule.copyLegacyIntervalOnce`. */
+    @Query("UPDATE epg_source SET refresh_interval_hours = :hours WHERE refresh_interval_hours IS NULL")
+    suspend fun fillUnsetRefreshIntervals(hours: Int)
+
+    @Query("SELECT COUNT(*) FROM epg_source")
+    suspend fun getSourceCount(): Int
+
+    @Query(
+        """
+        UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0,
+            last_error = NULL, last_ingestion_duration_ms = 0, last_download_duration_ms = 0,
+            last_content_sha256 = NULL, etag = NULL, last_modified_header = NULL
+        """,
+    )
+    suspend fun resetAllIngestionState()
+}

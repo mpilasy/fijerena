@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:lexend",
+  "name": "Lexend (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://www.lexend.com",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-lexend"
+  ],
+  "tag": "font"
+}

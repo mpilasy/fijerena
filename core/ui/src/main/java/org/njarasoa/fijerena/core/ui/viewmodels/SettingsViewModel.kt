@@ -1,0 +1,221 @@
+package org.njarasoa.fijerena.core.ui.viewmodels
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.SettingsExportManager
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+
+data class SettingsUiState(
+    /**
+     * The profile in use's sources (id to name), in its order — Manage sources' value, and what the
+     * phone's Edit Source row chooses from. There is no source in use (multi-source plan, Phase 6).
+     */
+    val profileSources: List<Pair<Long, String>> = emptyList(),
+    /** Those of [profileSources] with live channels: the ones that can have guide sources. */
+    val guideSources: List<Pair<Long, String>> = emptyList(),
+    /** Each of [profileSources] with its URL and subscription, in the same order. */
+    val themeId: String = "deep_night",
+    val uiStyleId: String = "modern",
+    val isDevMode: Boolean = false,
+    val language: String = "en",
+    val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
+    val recentRowSize: Int = AppSettings.DEFAULT_WATCH_HISTORY_SIZE,
+    /** TV's Text & grid size as picked; null: Auto. */
+    val uiScale: Float? = null,
+    val exportImportMessage: String? = null,
+    val isPruningDatabase: Boolean = false,
+    val databaseMaintenanceMessage: String? = null,
+    val lastShrinkAtMs: Long = 0L,
+    val lastShrinkDurationMs: Long = 0L,
+    val lastShrinkRowsRemoved: Long = 0L,
+    val lastShrinkBytesReclaimed: Long = 0L,
+)
+
+class SettingsViewModel(
+    private val context: Context,
+    private val appSettings: AppSettings,
+    private val providerRepo: ProviderRepository,
+    private val exportManager: SettingsExportManager,
+) : ViewModel() {
+    private val _uiState =
+        MutableStateFlow(
+            SettingsUiState(
+                themeId = appSettings.themeId,
+                uiStyleId = appSettings.uiStyleId,
+                isDevMode = appSettings.isDevMode,
+                language = appSettings.language,
+                watchDelaySeconds = appSettings.watchDelaySeconds,
+                recentRowSize = appSettings.recentRowSize,
+                uiScale = appSettings.uiScaleChoice,
+                lastShrinkAtMs = appSettings.lastShrinkAtMs,
+                lastShrinkDurationMs = appSettings.lastShrinkDurationMs,
+                lastShrinkRowsRemoved = appSettings.lastShrinkRowsRemoved,
+                lastShrinkBytesReclaimed = appSettings.lastShrinkBytesReclaimed,
+            ),
+        )
+    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    init {
+        // Read again whenever the profile's sources change (one turned on or off on its page, added
+        // or deleted), so Manage sources and Edit Source follow without reopening Settings.
+        viewModelScope.launchGuarded("SettingsViewModel.followProfileSources") {
+            providerRepo.profileSourceSet(appSettings.activeProfileId).collect { refreshProviderInfo() }
+        }
+        // The profile's colour theme and Look and Feel, also when another device changes them.
+        viewModelScope.launchGuarded("SettingsViewModel.followLook") {
+            appSettings.observeLook().collect { (themeId, uiStyleId) ->
+                _uiState.value = _uiState.value.copy(themeId = themeId, uiStyleId = uiStyleId)
+            }
+        }
+        // Sync EPG indexer state to ensure status card is accurate
+        viewModelScope.launch {
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+                .getInstance(context)
+                .initialize()
+        }
+    }
+
+    fun refreshProviderInfo() {
+        viewModelScope.launchGuarded("SettingsViewModel.refreshProviderInfo") {
+            val entities = providerRepo.profileSourcesList()
+            _uiState.value =
+                _uiState.value.copy(
+                    profileSources = entities.map { it.id to it.name },
+                    guideSources =
+                        entities
+                            .filter {
+                                org.njarasoa.fijerena.core.network.MediaProviderFactory
+                                    .hasLiveTv(it)
+                            }.map { it.id to it.name },
+                )
+        }
+    }
+
+    /** Re-reads the active profile's developer mode, which its profile page may have changed. */
+    fun refreshDevMode() {
+        _uiState.value = _uiState.value.copy(isDevMode = appSettings.isDevMode)
+    }
+
+    /** The 7th tap on the version row: developer mode on for the profile in use. */
+    fun enableDevMode() {
+        // A child profile is never Expert (docs/plans/20261019_tv-household-ux-plan.md).
+        if (appSettings.isChildProfile(appSettings.activeProfileId)) return
+        appSettings.isDevMode = true
+        refreshDevMode()
+    }
+
+    fun updateLanguage(language: String) {
+        org.njarasoa.fijerena.core.ui.utils.LocaleManager
+            .updateLocale(context, language)
+        _uiState.value = _uiState.value.copy(language = language)
+    }
+
+    fun updateWatchDelay(seconds: Int) {
+        appSettings.watchDelaySeconds = seconds
+        _uiState.value = _uiState.value.copy(watchDelaySeconds = seconds)
+    }
+
+    fun updateRecentRowSize(size: Int) {
+        appSettings.recentRowSize = size
+        _uiState.value = _uiState.value.copy(recentRowSize = appSettings.recentRowSize)
+    }
+
+    fun updateUiScale(scale: Float?) {
+        // uiScale is typically handled via a global callback in the screens,
+        // but we keep it here for state consistency.
+        _uiState.value = _uiState.value.copy(uiScale = scale)
+    }
+
+    fun clearMessage() {
+        _uiState.value = _uiState.value.copy(exportImportMessage = null)
+    }
+
+    fun doImport(
+        parsed: SettingsExportManager.ParsedImport,
+        resolution: SettingsExportManager.ConflictResolution,
+        options: SettingsExportManager.ImportOptions,
+    ) {
+        viewModelScope.launch {
+            val result = exportManager.importFromParsed(parsed, resolution, options)
+
+            val message = result.toSummary(context)
+
+            if (result.isSuccess) {
+                // Refresh global settings from AppSettings (they were updated inside exportManager.importFromJson)
+                if (options.importGlobalSettings) {
+                    _uiState.value =
+                        _uiState.value.copy(
+                            themeId = appSettings.themeId,
+                            uiStyleId = appSettings.uiStyleId,
+                            isDevMode = appSettings.isDevMode,
+                            language = appSettings.language,
+                            watchDelaySeconds = appSettings.watchDelaySeconds,
+                            recentRowSize = appSettings.recentRowSize,
+                            uiScale = appSettings.uiScaleChoice,
+                        )
+                }
+
+                refreshProviderInfo()
+                _uiState.value = _uiState.value.copy(exportImportMessage = message)
+            } else {
+                _uiState.value = _uiState.value.copy(exportImportMessage = message)
+            }
+        }
+    }
+
+    fun setExportImportMessage(message: String?) {
+        _uiState.value = _uiState.value.copy(exportImportMessage = message)
+    }
+
+    fun clearDatabaseMaintenanceMessage() {
+        _uiState.value = _uiState.value.copy(databaseMaintenanceMessage = null)
+    }
+
+    /** Settings → "Shrink Database" — see [ProviderRepository.pruneOrphanedCatalogData]. */
+    fun pruneDatabase() {
+        // A failed shrink (full disk, locked database) ends the spinner with the reason instead of crashing.
+        viewModelScope.launchGuarded(
+            "SettingsViewModel.pruneDatabase",
+            onError = { e ->
+                _uiState.value =
+                    _uiState.value.copy(
+                        isPruningDatabase = false,
+                        databaseMaintenanceMessage = friendlyErrorMessage(e, context, appSettings.isDevMode),
+                    )
+            },
+        ) {
+            _uiState.value = _uiState.value.copy(isPruningDatabase = true, databaseMaintenanceMessage = null)
+            val result = providerRepo.pruneOrphanedCatalogData(userRequested = true)
+            val message =
+                if (result.rowsRemoved == 0L) {
+                    context.getString(R.string.settings_shrink_database_nothing_to_clean)
+                } else {
+                    context.getString(
+                        R.string.settings_shrink_database_result_format,
+                        result.rowsRemoved,
+                        NumberUtils.formatBytes(result.bytesReclaimed),
+                    )
+                }
+            _uiState.value =
+                _uiState.value.copy(
+                    isPruningDatabase = false,
+                    databaseMaintenanceMessage = message,
+                    lastShrinkAtMs = appSettings.lastShrinkAtMs,
+                    lastShrinkDurationMs = appSettings.lastShrinkDurationMs,
+                    lastShrinkRowsRemoved = appSettings.lastShrinkRowsRemoved,
+                    lastShrinkBytesReclaimed = appSettings.lastShrinkBytesReclaimed,
+                )
+        }
+    }
+}

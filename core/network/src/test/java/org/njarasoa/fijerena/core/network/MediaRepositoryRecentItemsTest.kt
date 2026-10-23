@@ -1,0 +1,340 @@
+package org.njarasoa.fijerena.core.network
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.anonymousEpisode
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.channel
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.episode
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.movie
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.seriesUnknownEpisode
+import org.njarasoa.fijerena.core.network.fixtures.toWatchStateEntity
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.SeriesId
+
+/**
+ * Ordering, filtering and dedup rules of the merged "Recent" list — the single row that
+ * shows what was watched, newest first.
+ *
+ * Reads `watch_state` (via [FakeWatchStateDao]). [repositoryWith] seeds rows with decreasing
+ * `lastPlayedAt` in argument order, so relative order across fixture calls is explicit rather than
+ * incidental — recency comes from a clock, not a list position.
+ */
+class MediaRepositoryRecentItemsTest {
+    private lateinit var context: Context
+    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var watchStateDao: FakeWatchStateDao
+
+    @Before
+    fun setup() {
+        clearAllMocks()
+        mockkStatic(Looper::class)
+        every { Looper.getMainLooper() } returns mockk(relaxed = true)
+
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().postDelayed(any(), any()) } returns true
+        every { anyConstructed<Handler>().removeCallbacks(any()) } returns Unit
+        every { anyConstructed<Handler>().post(any()) } returns true
+
+        context = mockk(relaxed = true)
+        sharedPreferences = mockk(relaxed = true)
+        every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
+        every { sharedPreferences.edit() } returns mockk(relaxed = true)
+        // Settings answer their defaults (Recent rows: 25 cards), not the relaxed mock's 0.
+        every { sharedPreferences.getInt(any(), any()) } answers { secondArg() }
+        every { sharedPreferences.getBoolean(any(), any()) } answers { secondArg() }
+
+        watchStateDao = FakeWatchStateDao()
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    /** First argument is newest: seeded with the largest `lastPlayedAt`, decreasing from there. */
+    private fun repositoryWith(vararg history: WatchedItem): MediaRepository {
+        val base = 1_000_000L
+        history.forEachIndexed { index, item ->
+            watchStateDao.seed(item.toWatchStateEntity(providerId = 1L, at = base - index))
+        }
+        return MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao, categoryDao = mockk(relaxed = true))
+    }
+
+    private fun MediaRepository.fetchRecent(contentType: String): List<MediaItem> =
+        runBlocking { getRecentItemsFromWatchState(contentType) }
+
+    @Test
+    fun itemsInCategoriesTheFiltersHideDropOut() {
+        val categories = mockk<org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryDao>()
+        every { categories.getExcludedCategoryIds(1L, "VOD") } returns listOf("adult")
+        every { categories.getAllowedItemIds(1L, "VOD") } returns emptyList()
+        val repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao, categoryDao = categories)
+        val kept = MediaItem(id = "1", name = "Cartoon", mediaType = MediaType.MOVIE, categoryId = "kids")
+        val hidden = MediaItem(id = "2", name = "Other", mediaType = MediaType.MOVIE, categoryId = "adult")
+
+        assertEquals(listOf(kept), runBlocking { repository.withoutHiddenCategories(listOf(kept, hidden), ContentType.MOVIES) })
+    }
+
+    @Test
+    fun itemsAParentalExceptionAllowsStayInAHiddenCategory() {
+        val categories = mockk<org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryDao>()
+        every { categories.getExcludedCategoryIds(1L, "SERIES") } returns listOf("anime")
+        every { categories.getAllowedItemIds(1L, "SERIES") } returns listOf("7")
+        val repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao, categoryDao = categories)
+        val allowed = MediaItem(id = "7", name = "Naruto", mediaType = MediaType.SERIES, categoryId = "anime")
+        val hidden = MediaItem(id = "8", name = "Bleach", mediaType = MediaType.SERIES, categoryId = "anime")
+
+        assertEquals(listOf(allowed), runBlocking { repository.withoutHiddenCategories(listOf(allowed, hidden), ContentType.TV_SHOWS) })
+    }
+
+    @Test
+    fun ordersNewestFirstWhateverTheProgress() {
+        val repository =
+            repositoryWith(
+                movie("finished", position = 100L, duration = 100L, isCompleted = true),
+                movie("half", position = 50L, duration = 100L),
+                movie("untouched"),
+                movie("started", position = 10L, duration = 100L),
+            )
+
+        assertEquals(
+            listOf("finished", "half", "untouched", "started"),
+            repository.fetchRecent(ContentType.MOVIES).map { it.id },
+        )
+    }
+
+    @Test
+    fun liveTvIsPureRecency() {
+        val repository = repositoryWith(channel("bbc"), channel("cnn"), channel("arte"))
+
+        assertEquals(
+            listOf("bbc", "cnn", "arte"),
+            repository.fetchRecent(ContentType.LIVE_TV).map { it.id },
+        )
+    }
+
+    @Test
+    fun tvShowsCollapseToOneCardPerSeries() {
+        val repository =
+            repositoryWith(
+                episode("s1e3", seriesId = "s1", position = 30L, duration = 100L),
+                episode("s1e2", seriesId = "s1", position = 100L, duration = 100L, isCompleted = true),
+                episode("s1e1", seriesId = "s1", position = 100L, duration = 100L, isCompleted = true),
+                episode("s2e1", seriesId = "s2", position = 100L, duration = 100L, isCompleted = true),
+            )
+
+        val recent = repository.fetchRecent(ContentType.TV_SHOWS)
+
+        assertEquals(listOf("s1", "s2"), recent.map { it.id })
+        assertEquals(BrowseTarget.Series(SeriesId("s1"), resumeEpisodeId = EpisodeId("s1e3")), recent.first().target)
+    }
+
+    @Test
+    fun tvShowsSeriesCardCarriesResumeMetadata() {
+        val repository = repositoryWith(episode("s1e3", seriesId = "s1", position = 30L, duration = 100L))
+
+        val card = repository.fetchRecent(ContentType.TV_SHOWS).single()
+
+        assertEquals("s1", card.id)
+        assertEquals("Series s1", card.name)
+        assertEquals(BrowseTarget.Series(SeriesId("s1"), resumeEpisodeId = EpisodeId("s1e3")), card.target)
+    }
+
+    @Test
+    fun anEpisodeThatKnowsItselfButNotItsShowStaysAnEpisodeCard() {
+        val repository = repositoryWith(seriesUnknownEpisode("orphan", position = 30L, duration = 100L))
+
+        val card = repository.fetchRecent(ContentType.TV_SHOWS).single()
+
+        assertEquals("orphan", card.id)
+        assertEquals(BrowseTarget.Episode(episodeId = EpisodeId("orphan")), card.target)
+    }
+
+    @Test
+    fun aRowWithNoIdentityAtAllStillPlaysAsAnEpisode() {
+        // Six rows on the test phone are in this shape. itemId is the episode's stream id — the
+        // player is the only thing that writes these — so the card must route there, not to a
+        // series the provider has no such id for.
+        val repository = repositoryWith(anonymousEpisode("242136", position = 30L, duration = 100L))
+
+        val card = repository.fetchRecent(ContentType.TV_SHOWS).single()
+
+        assertEquals("242136", card.id)
+        assertEquals(BrowseTarget.Episode(episodeId = EpisodeId("242136")), card.target)
+    }
+
+    @Test
+    fun excludesOtherContentTypes() {
+        val repository =
+            repositoryWith(
+                movie("film", position = 50L, duration = 100L),
+                episode("s1e1", seriesId = "s1"),
+                channel("bbc"),
+            )
+
+        assertEquals(listOf("film"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+        assertEquals(listOf("s1"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+        assertEquals(listOf("bbc"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+    }
+
+    @Test
+    fun removeFromRecentClearsItemFromRecentList() {
+        val repository =
+            repositoryWith(
+                movie("film1", position = 50L, duration = 100L),
+                movie("film2", position = 60L, duration = 100L),
+            )
+
+        assertEquals(listOf("film1", "film2"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+
+        runBlocking {
+            repository.removeFromRecent("film2", ContentType.MOVIES)
+        }
+
+        assertEquals(listOf("film1"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+    }
+
+    @Test
+    fun removeFromRecentClearsSeriesEpisodesFromRecentList() {
+        val repository =
+            repositoryWith(
+                episode("s1e1", seriesId = "s1"),
+                episode("s1e2", seriesId = "s1"),
+                episode("s2e1", seriesId = "s2"),
+            )
+
+        assertEquals(listOf("s1", "s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+
+        runBlocking {
+            repository.removeFromRecent("s1", ContentType.TV_SHOWS, seriesId = "s1")
+        }
+
+        assertEquals(listOf("s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+    }
+
+    @Test
+    fun rowsCarryWhatMergesThemAcrossSources() {
+        // docs/plans/20261012_multi-source-search-history-plan.md → Phase 4: the source and the
+        // last play.
+        val repository = repositoryWith(movie("half", position = 50L, duration = 100L), movie("untouched"))
+
+        val recent = repository.fetchRecent(ContentType.MOVIES)
+
+        assertEquals(listOf(1L, 1L), recent.map { it.providerId })
+        assertEquals(listOf(1_000_000L, 999_999L), recent.map { it.lastPlayedAt })
+    }
+
+    @Test
+    fun aRemovalNamesItsSource() {
+        val repository = repositoryWith(channel("bbc"))
+
+        val removal = runBlocking { repository.removeFromRecent("bbc", ContentType.LIVE_TV) }
+
+        assertEquals(1L, removal?.providerId)
+    }
+
+    @Test
+    fun restoreRecentPutsAnItemBackInItsPlace() {
+        val repository = repositoryWith(channel("bbc"), channel("cnn"), channel("arte"))
+
+        val removal = runBlocking { repository.removeFromRecent("cnn", ContentType.LIVE_TV) }
+        assertEquals(listOf("bbc", "arte"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+
+        runBlocking { repository.restoreRecent(checkNotNull(removal)) }
+
+        assertEquals(listOf("bbc", "cnn", "arte"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+        // Synced like the removal: updatedAt moved on, lastPlayedAt is the old one.
+        val row = watchStateDao.all().single { it.itemId == "cnn" }
+        assertEquals(999_999L, row.lastPlayedAt)
+        assertTrue(row.updatedAt > 1_000_000L)
+    }
+
+    @Test
+    fun restoreRecentPutsEverySeriesEpisodeBack() {
+        val repository =
+            repositoryWith(
+                episode("s1e2", seriesId = "s1"),
+                episode("s2e1", seriesId = "s2"),
+                episode("s1e1", seriesId = "s1"),
+            )
+
+        val removal = runBlocking { repository.removeFromRecent("s1", ContentType.TV_SHOWS, seriesId = "s1") }
+        assertEquals(listOf("s1e1", "s1e2"), checkNotNull(removal).plays.map { it.itemId }.sorted())
+
+        runBlocking { repository.restoreRecent(removal) }
+
+        assertEquals(listOf("s1", "s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+        assertEquals(
+            mapOf("s1e2" to 1_000_000L, "s2e1" to 999_999L, "s1e1" to 999_998L),
+            watchStateDao.all().associate { it.itemId to it.lastPlayedAt },
+        )
+    }
+
+    @Test
+    fun restoreRecentKeepsANewerPlay() {
+        val repository = repositoryWith(channel("bbc"), channel("cnn"))
+
+        val removal = runBlocking { repository.removeFromRecent("cnn", ContentType.LIVE_TV) }
+        // Played again before the Undo: that play is the newer truth.
+        watchStateDao.upsertRecency(
+            1L,
+            ProfileEntity.DEFAULT_ID,
+            "cnn",
+            ContentType.LIVE_TV,
+            null,
+            null,
+            2_000_000L,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+        )
+
+        runBlocking { repository.restoreRecent(checkNotNull(removal)) }
+
+        assertEquals(2_000_000L, watchStateDao.all().single { it.itemId == "cnn" }.lastPlayedAt)
+        assertEquals(listOf("cnn", "bbc"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+    }
+
+    @Test
+    fun clearRecentEmptiesOneSectionAndKeepsProgress() {
+        val repository =
+            repositoryWith(
+                movie("film", position = 50L, duration = 100L),
+                channel("bbc"),
+                channel("cnn"),
+            )
+
+        val cleared = runBlocking { repository.clearRecent(ContentType.LIVE_TV) }
+
+        assertTrue(cleared)
+        assertEquals(emptyList<String>(), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
+        assertEquals(listOf("film"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+        assertEquals(emptyList<MediaItem>(), runBlocking { repository.recentItems(ContentType.LIVE_TV).first() })
+        // The rows stay: only their place in Recent goes.
+        assertEquals(3, watchStateDao.all().size)
+    }
+}

@@ -1,0 +1,839 @@
+@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+
+package org.njarasoa.fijerena.ui.player.components.overlays
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomCenter
+import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.C
+import androidx.tv.material3.Border
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
+import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.formatEpochTime
+import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
+import org.njarasoa.fijerena.core.ui.components.BadgeKind
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
+import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaLive
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import java.util.Date
+
+// Frame-count budget for the OSD's initial-focus retry loop — see its LaunchedEffect below.
+private const val FOCUS_REQUEST_MAX_ATTEMPTS = 5
+
+@Composable
+fun TvPlayerControlsOverlay(
+    playbackState: PlaybackState,
+    metadata: PlayerMetadata,
+    viewModel: PlaybackViewModel,
+    livePosition: Long,
+    liveDuration: Long,
+    currentEpgProgram: EpgProgram?,
+    nextEpgProgram: EpgProgram?,
+    isFavorite: Boolean,
+    onToggleFavorite: (() -> Unit)?,
+    showFullControls: Boolean,
+    hideTopBars: Boolean = false,
+    // The resolution/codec line is for developers only (AppSettings.isDevMode, via PlayerScreenState).
+    isDeveloperMode: Boolean = false,
+    // Live TV in full screen: opens the channel panel (LT4). Null (VOD, the standalone route)
+    // leaves the Channels button out.
+    onShowChannels: (() -> Unit)? = null,
+    // Live TV with a guide: opens the TV Guide on the playing channel (GD5). Null leaves Guide out.
+    onShowGuide: (() -> Unit)? = null,
+    // Catch-up: Watch live, first in the row. Null leaves it out.
+    onWatchLive: (() -> Unit)? = null,
+    // Live TV: Start over, the programme on air from its start (catch-up). Null leaves it out.
+    onStartOver: (() -> Unit)? = null,
+    onShowAudioTrackSelector: () -> Unit,
+    onShowSubtitleSelector: () -> Unit,
+    onShowQualitySelector: () -> Unit,
+    onShowChapterSelector: () -> Unit,
+    onShowStats: () -> Unit,
+    pickerOpen: Boolean = false,
+    scrubPositionMs: Long? = null,
+    onScrubStep: (nativeEvent: android.view.KeyEvent, forward: Boolean) -> Unit = { _, _ -> },
+    onCommitScrub: () -> Unit = {},
+    nextEpisode: EpisodeItem? = null,
+    onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
+    // The bottom panel's height in px, for the player to lift the subtitles above it.
+    onPanelHeightChanged: (Int) -> Unit = {},
+) {
+    val isPaused = playbackState is PlaybackState.Paused
+    val isLive = metadata.isLive
+    // The logo at the top left. While it shows, a film's or a series' title row stays empty: the
+    // logo names it, as before 9f351e2d.
+    val logoUrl = metadata.logoUrl
+    var logoFailed by remember(logoUrl) { mutableStateOf(false) }
+    val logoShown = !hideTopBars && logoUrl != null && !logoFailed
+    // Memoize track counts keyed on metadata to avoid O(N) track iteration every recomposition (1 Hz clock tick)
+    // Keyed on tracksVersion, not just metadata: metadata is set once at playStream() time,
+    // before ExoPlayer typically resolves tracks, and (for Live TV especially) may never change
+    // again for the rest of the session — leaving these counts permanently 0 and hiding the
+    // audio/subtitle/quality buttons even once tracks actually loaded.
+    val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
+    val audioTrackCount = remember(metadata, tracksVersion) { viewModel.getAudioTracks().size }
+    val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
+    val qualityCount = remember(metadata, tracksVersion) { viewModel.getVideoQualities().size }
+
+    var videoCodec by remember { mutableStateOf<String?>(null) }
+    var videoResolution by remember { mutableStateOf<String?>(null) }
+
+    // Extract resolution and codec periodically — developer mode only, the only time it is shown.
+    LaunchedEffect(playbackState, metadata.streamUrl, isDeveloperMode) {
+        if (isDeveloperMode && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
+            // Keep checking every second as tracks might take time to load
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+                    val tracks = p.currentTracks
+                    for (i in 0 until tracks.groups.size) {
+                        val group = tracks.groups[i]
+                        if (group.isSelected && group.type == C.TRACK_TYPE_VIDEO) {
+                            for (j in 0 until group.length) {
+                                if (group.isTrackSelected(j)) {
+                                    val format = group.getTrackFormat(j)
+                                    videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase()
+                                    videoResolution =
+                                        if (format.width > 0 && format.height > 0) "${format.width}x${format.height}" else null
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+                if (videoCodec != null && videoResolution != null) break
+                delay(1000)
+            }
+        } else {
+            videoCodec = null
+            videoResolution = null
+        }
+    }
+
+    // [controlsFocusRequester] is attached to Play/Pause, the first button of the row on VOD (none
+    // on live: nothing to pause), where the controls open, so OK right after opening pauses. It
+    // stays in the row while buffering, so the row never shifts under focus; nothing sits over
+    // the picture (the centre button went 2026-10-19).
+    val controlsFocusRequester = remember { FocusRequester() }
+    val iconRowFocusRequester = remember { FocusRequester() }
+    var isProgressBarFocused by remember { mutableStateOf(false) }
+    val canFocusPlayPause = !isLive
+    val showsPlayPause = showFullControls && canFocusPlayPause
+    // VOD's D-pad column: the seek bar ↔ (Down / Up) the row, landing on Play/Pause. Set
+    // explicitly: geometric search from the full-width seek bar picked the button nearest the
+    // screen's centre, not the first.
+    val seekBarFocusRequester = remember { FocusRequester() }
+    val hasSeekBar = !isLive && liveDuration > 0
+
+    // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
+    // implicit first child — whichever button happens to be first for this stream. Live opens on
+    // Channels (LT4): a stray second OK opens the channel panel, never favourites the channel.
+    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on Stats (Expert
+    // mode), else Guide — never on Favourite or a track picker. With none of them it leaves focus
+    // where it is (the player), where OK does no harm.
+    val channelsFocusRequester = remember { FocusRequester() }
+    val guideFocusRequester = remember { FocusRequester() }
+    val statsFocusRequester = remember { FocusRequester() }
+    val safeIconFocusRequester =
+        when {
+            onShowChannels != null -> channelsFocusRequester
+            isDeveloperMode -> statsFocusRequester
+            onShowGuide != null -> guideFocusRequester
+            else -> null
+        }
+
+    // When a track picker closes (Back or a choice), focus goes back to the button that opened it,
+    // instead of being left on nothing once the picker's rows leave composition.
+    val chapterFocusRequester = remember { FocusRequester() }
+    val audioFocusRequester = remember { FocusRequester() }
+    val subtitleFocusRequester = remember { FocusRequester() }
+    val qualityFocusRequester = remember { FocusRequester() }
+    var pickerOpener by remember { mutableStateOf<FocusRequester?>(null) }
+    LaunchedEffect(pickerOpen) {
+        val opener = pickerOpener
+        if (!pickerOpen && opener != null) {
+            pickerOpener = null
+            opener.requestFocusWithRetry(fallback = safeIconFocusRequester ?: iconRowFocusRequester)
+        }
+    }
+
+    // One-shot per OSD session: once focus has landed on Play/Pause, later
+    // Playing<->Paused/Buffering flicker must not keep yanking focus away from wherever the
+    // user has since navigated.
+    var reachedPlayPauseFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(showFullControls) {
+        if (showFullControls) reachedPlayPauseFocus = false
+    }
+
+    // Live: re-keyed on the stream too — Up/Down zap with the OSD up (LT4), and the new channel's
+    // track buttons can come and go under focus, so focus goes back to Channels on each zap.
+    LaunchedEffect(showFullControls, isLive, canFocusPlayPause, metadata.streamUrl.takeIf { isLive }) {
+        if (showFullControls && !reachedPlayPauseFocus) {
+            val requester = (if (isLive) safeIconFocusRequester else controlsFocusRequester) ?: return@LaunchedEffect
+            // requestFocus() fails (returns false) if its target isn't composed/laid out yet: the
+            // row composes with the controls, so one frame's delay wasn't always enough, and a
+            // single fixed retry left focus wherever it was before the OSD opened — a following
+            // OK then hit that instead of pausing. Retry across frames; the cap guards against a
+            // target that never composes at all.
+            androidx.compose.runtime.withFrameMillis {}
+            if (requester.requestFocusWithRetry(maxFrames = FOCUS_REQUEST_MAX_ATTEMPTS)) {
+                if (canFocusPlayPause) reachedPlayPauseFocus = true
+            } else {
+                android.util.Log.e("TvPlayerControlsOverlay", "Failed to focus the controls after $FOCUS_REQUEST_MAX_ATTEMPTS frames")
+            }
+        }
+    }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.osdScrim)),
+    ) {
+        // Top: the clock, and at the left the title's logo art (a film or a series) or the channel's
+        // logo (Live TV) with the developer-mode resolution/codec line under it, on a soft gradient
+        // rather than a band. Hidden while a side panel is open since they would collide with the
+        // panel's own tab row.
+        if (!hideTopBars) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(CinemaTheme.colors.background.copy(alpha = CinemaAlpha.textMedium), CinemaTheme.colors.clear),
+                            ),
+                        ).padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+            ) {
+                // Self-ticking so only this leaf recomposes each second.
+                ClockDisplay(modifier = Modifier.align(Alignment.TopEnd))
+
+                Column(
+                    modifier = Modifier.align(Alignment.TopStart),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    // Nothing when there is no logo or it does not load: the title row names it.
+                    if (logoUrl != null && !logoFailed) {
+                        val name = if (isLive) metadata.channelName else metadata.showTitle ?: metadata.title
+                        AdaptiveLogoImage(
+                            logoUrl = logoUrl,
+                            contentDescription = parseDisplayTitle(name).title,
+                            modifier = Modifier.height(TvDimensions.osdLogoHeight),
+                            onError = { logoFailed = true },
+                        )
+                        // An episode: its number and name under the show's logo.
+                        val episodeLine =
+                            metadata.showTitle?.let {
+                                val episodeName = playerEpisodeName(metadata.title).takeIf { episode -> episode.isNotBlank() }
+                                listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" · ")
+                            }
+                        if (!episodeLine.isNullOrBlank()) {
+                            CinemaText(
+                                text = episodeLine,
+                                role = TextRole.Title,
+                                tone = TextTone.Secondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+
+                    // Resolution and codec — developer mode only (the polling above is gated too).
+                    if (isDeveloperMode && (videoResolution != null || videoCodec != null)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (videoResolution != null) {
+                                CinemaText(text = videoResolution!!, role = TextRole.Label, tone = TextTone.Accent, emphasis = true)
+                            }
+                            if (videoCodec != null) {
+                                CinemaBadge(
+                                    text = videoCodec!!,
+                                    kind = BadgeKind.OnMedia,
+                                    role = TextRole.Caption,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Center: Play/Pause (VOD only, hidden for live). Also gated to Playing/Paused —
+        // showFullControls is driven purely by the OK-key toggle, with no gate on playback state,
+        // so pressing OK during Buffering/Error/Ended/Idle used to land this button directly on
+        // top of PlayerScreen's own centered content for that state (BufferingContent(),
+        // ErrorContent(), ...). An allowlist closes all of them at once. Mobile's equivalent overlay uses the same allowlist for the same reason.
+        // The rest of this panel (title, description, audio/subtitle/quality selectors) stays
+        // visible regardless — only this button collides with another state's centered content.
+        // Bottom section: title, progress/EPG info + icon controls. Spans full width, so when a
+        // side panel is open this needs to be opaque enough to fully mask its channel list rather
+        // than letting it ghost through at the usual, lighter glass alpha. Its height goes to the
+        // player, which lifts the subtitles above it.
+        TvGlassPanel(
+            modifier =
+                Modifier
+                    .align(BottomCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { onPanelHeightChanged(it.height) },
+            backgroundAlpha = if (hideTopBars) 0.92f else CinemaAlpha.osdPanel,
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.xl, vertical = Spacing.md),
+            ) {
+                // The title, the same size on VOD and live. VOD: the film, or "Show · S01E02 ·
+                // Episode". Live (LT4): LIVE · the channel name, the one title — this banner, not a
+                // top bar, so it is still there when hideTopBars is set.
+                // TODO: the channel number goes before the name once one reaches the player.
+                Row(
+                    verticalAlignment = CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    if (isLive) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.statsDotSize)
+                                    .background(CinemaTheme.colors.live, shape = CinemaTheme.shapes.identity),
+                        )
+                        CinemaText(text = stringResource(R.string.player_live), role = TextRole.Label)
+                        BadgedTitle(
+                            raw = metadata.channelName,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
+                            modifier = Modifier.padding(start = Spacing.xs),
+                            textModifier = Modifier.bounceMarquee(),
+                        )
+                    } else if (metadata.catchupLabel != null) {
+                        // Catch-up: CATCH-UP · the programme · its channel and day, time.
+                        Icon(
+                            imageVector = CinemaIcons.Replay,
+                            contentDescription = null,
+                            tint = CinemaTheme.colors.accentSoft,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                        )
+                        CinemaText(text = stringResource(R.string.player_catchup), role = TextRole.Label)
+                        BadgedTitle(
+                            raw = metadata.title,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
+                            modifier = Modifier.weight(1f, fill = false).padding(start = Spacing.xs),
+                            textModifier = Modifier.bounceMarquee(),
+                        )
+                        CinemaText(
+                            text = "· ${metadata.catchupLabel}",
+                            role = TextRole.Title,
+                            tone = TextTone.Secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    } else if (!logoShown) {
+                        // Some providers' episode titles already embed the show name and number
+                        // ("EN - Show - S01E22 - Pilot"): only the episode's own name is shown, and
+                        // none when the title is just the show and the number.
+                        val episodeLine =
+                            metadata.showTitle?.let {
+                                val episodeName = playerEpisodeName(metadata.title).takeIf { name -> name.isNotBlank() }
+                                listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" · ")
+                            }
+                        BadgedTitle(
+                            raw = metadata.showTitle ?: metadata.title,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
+                            modifier = Modifier.weight(1f, fill = false),
+                            textModifier = Modifier.bounceMarquee(),
+                        )
+                        if (!episodeLine.isNullOrBlank()) {
+                            CinemaText(
+                                text = "· $episodeLine",
+                                role = TextRole.Title,
+                                tone = TextTone.Secondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
+                    }
+                }
+
+                // The plot (or the channel's description), secondary and short: two lines at most.
+                val description = metadata.description
+                if (!description.isNullOrBlank()) {
+                    CinemaText(
+                        text = description,
+                        tone = TextTone.Secondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = Spacing.xxs),
+                    )
+                }
+                Spacer(modifier = Modifier.height(Spacing.sm))
+
+                if (!isLive) {
+                    val position = livePosition
+                    val duration = liveDuration
+
+                    if (duration > 0) {
+                        val isScrubbing = scrubPositionMs != null
+                        val displayPosition = scrubPositionMs ?: position
+                        val seekBarLit = isProgressBarFocused || isScrubbing
+                        // The seek bar: a focus stop between Play/Pause and the buttons. Focused,
+                        // it is outlined and thicker, like a focused row; the box keeps one height
+                        // so the rows below never shift.
+                        Box(
+                            contentAlignment = Center,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(seekBarFocusRequester)
+                                    // Before focusable(): after it, onFocusChanged only hears the
+                                    // children's focus, so the bar never lit up when focused.
+                                    .onFocusChanged { isProgressBarFocused = it.isFocused }
+                                    .focusable(enabled = showFullControls)
+                                    .onKeyEvent { event ->
+                                        if (event.type == KeyEventType.KeyDown) {
+                                            when (event.key) {
+                                                // Same cursor as the hidden-OSD D-pad scrub: Left/Right
+                                                // move it, their release or OK commits, Back cancels.
+                                                Key.DirectionLeft -> {
+                                                    onScrubStep(event.nativeKeyEvent, false)
+                                                    true
+                                                }
+
+                                                Key.DirectionRight -> {
+                                                    onScrubStep(event.nativeKeyEvent, true)
+                                                    true
+                                                }
+
+                                                Key.DirectionCenter, Key.Enter -> {
+                                                    if (scrubPositionMs != null) {
+                                                        onCommitScrub()
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                }
+
+                                                // The top of the column: Up stays put.
+                                                Key.DirectionUp -> {
+                                                    true
+                                                }
+
+                                                Key.DirectionDown -> {
+                                                    (if (showsPlayPause) controlsFocusRequester else iconRowFocusRequester).requestFocus()
+                                                }
+
+                                                else -> {
+                                                    false
+                                                }
+                                            }
+                                        } else if (event.type == KeyEventType.KeyUp &&
+                                            (event.key == Key.DirectionLeft || event.key == Key.DirectionRight) &&
+                                            scrubPositionMs != null
+                                        ) {
+                                            // A tap jumps 10 s; a hold scrubs and seeks on release.
+                                            onCommitScrub()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }.border(
+                                        width = TvFocusTokens.focusBorderWidth,
+                                        color = if (seekBarLit) TvFocusTokens.focusedRowOutline else CinemaTheme.colors.clear,
+                                        shape = CinemaTheme.shapes.chip,
+                                    ).padding(Spacing.xs),
+                        ) {
+                            CinemaProgressBar(
+                                progress = { displayPosition.toFloat() / duration.toFloat() },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(if (seekBarLit) Spacing.xs else TvDimensions.progressBar),
+                                highlighted = seekBarLit,
+                            )
+                        }
+
+                        // Position · remaining and end time (the seek hint while scrubbing) · duration.
+                        val remainingTime = duration - displayPosition
+                        val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.xs),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                            verticalAlignment = CenterVertically,
+                        ) {
+                            CinemaText(
+                                text = formatTime(displayPosition),
+                                tone = if (isScrubbing) TextTone.AccentSoft else TextTone.Primary,
+                                emphasis = isScrubbing,
+                            )
+                            CinemaText(
+                                text =
+                                    if (isScrubbing) {
+                                        stringResource(R.string.player_seek_hint)
+                                    } else {
+                                        stringResource(
+                                            R.string.player_remaining_ends_at_format,
+                                            formatTime(remainingTime),
+                                            TimeFormat.formatClockTime(Date(estimatedEndTimeMillis)),
+                                        )
+                                    },
+                                tone = TextTone.Secondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.weight(1f),
+                            )
+                            CinemaText(text = formatTime(duration))
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                    }
+                } else if (currentEpgProgram != null) {
+                    // Live: Now with its times and the programme's progress, then Next.
+                    val epgContext = LocalContext.current
+                    CinemaText(
+                        text =
+                            stringResource(
+                                R.string.player_now_playing_format,
+                                currentEpgProgram.title,
+                                formatEpochTime(epgContext, currentEpgProgram.startTime),
+                                formatEpochTime(epgContext, currentEpgProgram.endTime),
+                            ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
+                    val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
+                    val epgProgress =
+                        if (currentEpgProgram.duration > 0) {
+                            ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
+                        } else {
+                            0f
+                        }
+                    CinemaProgressBar(
+                        progress = { epgProgress },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = Spacing.xs)
+                                .height(TvDimensions.progressBar),
+                    )
+                    if (nextEpgProgram != null) {
+                        CinemaText(
+                            text =
+                                stringResource(
+                                    R.string.player_osd_next_format,
+                                    nextEpgProgram.title,
+                                    formatEpochTime(epgContext, nextEpgProgram.startTime),
+                                ),
+                            tone = TextTone.Secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+                }
+
+                // Button row (only when full controls are visible). Icon buttons, each naming itself
+                // while focused. Live: Channels, Guide, ★, Subtitles, Audio, Quality, Stats (Expert mode);
+                // VOD the same without Channels, with Play/Pause then Chapters first and Next episode
+                // before Stats. Left/Right move along it and stop at its ends; Up/Down zap on live
+                // (PlayerKeyHandler); on VOD Up goes to the seek bar.
+                if (showFullControls) {
+                    val rowUp = if (!isLive && hasSeekBar) seekBarFocusRequester else null
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .moveFocusOn(Key.DirectionUp, rowUp)
+                                .focusRequester(iconRowFocusRequester)
+                                // Left/Right past either end stay on the row instead of dropping
+                                // focus (L-6). Directly before focusGroup, so the exit is the group's.
+                                .focusProperties {
+                                    onExit = {
+                                        if (requestedFocusDirection == FocusDirection.Left ||
+                                            requestedFocusDirection == FocusDirection.Right
+                                        ) {
+                                            cancelFocusChange()
+                                        }
+                                    }
+                                }.focusGroup(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalAlignment = CenterVertically,
+                    ) {
+                        if (showsPlayPause) {
+                            OsdButton(
+                                icon = if (isPaused) CinemaIcons.PlayArrow else CinemaIcons.Pause,
+                                label = stringResource(if (isPaused) R.string.player_resume else R.string.player_pause),
+                                onClick = { if (isPaused) viewModel.resume() else viewModel.pause() },
+                                modifier = Modifier.focusRequester(controlsFocusRequester),
+                            )
+                        }
+
+                        if (onWatchLive != null) {
+                            OsdButton(
+                                icon = CinemaIcons.LiveTv,
+                                label = stringResource(R.string.player_osd_watch_live),
+                                onClick = onWatchLive,
+                            )
+                        }
+
+                        if (onShowChannels != null) {
+                            OsdButton(
+                                icon = CinemaIcons.LiveTv,
+                                label = stringResource(R.string.player_osd_channels),
+                                onClick = onShowChannels,
+                                modifier = Modifier.focusRequester(channelsFocusRequester),
+                            )
+                        }
+
+                        // Guide (GD5): after Channels, only when the source has a guide.
+                        if (onShowGuide != null) {
+                            OsdButton(
+                                icon = CinemaIcons.DateRange,
+                                label = stringResource(R.string.player_osd_guide),
+                                onClick = onShowGuide,
+                                modifier = Modifier.focusRequester(guideFocusRequester),
+                            )
+                        }
+
+                        // Start over: after Guide, when the channel's archive holds the programme on air.
+                        if (onStartOver != null) {
+                            OsdButton(
+                                icon = CinemaIcons.Replay,
+                                label = stringResource(R.string.player_osd_start_over),
+                                onClick = onStartOver,
+                            )
+                        }
+
+                        val chapters = remember(metadata) { viewModel.getChapters() }
+                        if (chapters.isNotEmpty()) {
+                            OsdButton(
+                                icon = CinemaIcons.List,
+                                label = stringResource(R.string.player_chapters),
+                                onClick = {
+                                    pickerOpener = chapterFocusRequester
+                                    onShowChapterSelector()
+                                },
+                                modifier = Modifier.focusRequester(chapterFocusRequester),
+                            )
+                        }
+
+                        if (onToggleFavorite != null) {
+                            OsdButton(
+                                icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                label = stringResource(if (isFavorite) R.string.player_favorited else R.string.player_favorite),
+                                onClick = onToggleFavorite,
+                                iconTint = if (isFavorite) CinemaTheme.colors.accent else null,
+                            )
+                        }
+
+                        if (subtitleTrackCount > 0) {
+                            OsdButton(
+                                icon = CinemaIcons.Subtitles,
+                                label = stringResource(R.string.player_subtitles),
+                                onClick = {
+                                    pickerOpener = subtitleFocusRequester
+                                    onShowSubtitleSelector()
+                                },
+                                modifier = Modifier.focusRequester(subtitleFocusRequester),
+                            )
+                        }
+
+                        if (audioTrackCount > 1) {
+                            OsdButton(
+                                icon = CinemaIcons.VolumeUp,
+                                label = stringResource(R.string.player_audio),
+                                onClick = {
+                                    pickerOpener = audioFocusRequester
+                                    onShowAudioTrackSelector()
+                                },
+                                modifier = Modifier.focusRequester(audioFocusRequester),
+                            )
+                        }
+
+                        if (qualityCount > 1) {
+                            OsdButton(
+                                icon = CinemaIcons.Tune,
+                                label = stringResource(R.string.player_quality),
+                                onClick = {
+                                    pickerOpener = qualityFocusRequester
+                                    onShowQualitySelector()
+                                },
+                                modifier = Modifier.focusRequester(qualityFocusRequester),
+                            )
+                        }
+
+                        // Next episode button (only for TV show episodes when progress >= 80% and a next episode exists)
+                        val progressRatio = if (liveDuration > 0) livePosition.toFloat() / liveDuration.toFloat() else 0f
+                        val isOver80Percent = progressRatio >= 0.80f
+                        if (isOver80Percent && nextEpisode != null && onPlayNextEpisode != null) {
+                            OsdButton(
+                                icon = CinemaIcons.SkipNext,
+                                label = stringResource(R.string.player_osd_next_episode),
+                                onClick = { onPlayNextEpisode(nextEpisode) },
+                            )
+                        }
+
+                        // Stats: a diagnostic, so Expert mode only.
+                        if (isDeveloperMode) {
+                            OsdButton(
+                                icon = CinemaIcons.BarChart,
+                                label = stringResource(R.string.player_stats),
+                                onClick = onShowStats,
+                                modifier = Modifier.focusRequester(statsFocusRequester),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One OSD button: [TvIconAction], the icon button used on details and across the app — its label
+ * shows beside the icon while focused. [iconTint] marks a state (a favourite).
+ */
+@Composable
+private fun OsdButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconTint: Color? = null,
+) {
+    TvIconAction(onClick = onClick, icon = icon, label = label, modifier = modifier, iconTint = iconTint)
+}
+
+/** [key] (on KeyDown) moves focus to [target]; no-op when [target] is null or can't take focus. */
+private fun Modifier.moveFocusOn(
+    key: Key,
+    target: FocusRequester?,
+): Modifier =
+    if (target == null) {
+        this
+    } else {
+        onPreviewKeyEvent { event -> event.type == KeyEventType.KeyDown && event.key == key && target.requestFocus() }
+    }
+
+@Composable
+private fun ClockDisplay(modifier: Modifier = Modifier) {
+    var tick by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            tick = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
+    @Suppress("UNUSED_VARIABLE")
+    val ignored = tick // Read to trigger recomposition
+    CinemaText(text = TimeFormat.formatClockTime(Date(tick)), role = TextRole.Heading, modifier = modifier)
+}

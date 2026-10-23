@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:inter",
+  "name": "Inter (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://rsms.me/inter/",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-inter"
+  ],
+  "tag": "font"
+}

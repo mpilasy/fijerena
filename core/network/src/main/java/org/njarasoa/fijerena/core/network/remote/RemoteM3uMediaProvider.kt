@@ -1,0 +1,186 @@
+package org.njarasoa.fijerena.core.network.remote
+
+import android.content.Context
+import android.util.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
+import org.njarasoa.fijerena.core.network.HttpStatusException
+import org.njarasoa.fijerena.core.network.InvalidPlaylistException
+import org.njarasoa.fijerena.core.network.local.M3uParser
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+
+class RemoteM3uMediaProvider(
+    override val providerId: Long,
+    private val m3uUrl: String,
+    private val context: Context,
+) : BaseM3uMediaProvider() {
+    companion object {
+        private const val TAG = "RemoteM3uProvider"
+        private const val ID_PREFIX = "rm3u"
+        private const val CACHE_TTL_MS = 6L * 60 * 60 * 1000
+        private const val CONNECT_TIMEOUT_MS = 30_000
+        private const val READ_TIMEOUT_MS = 60_000
+        private const val BUFFER_SIZE = 65536
+        private const val MAX_RETRIES = 3
+        private const val RETRY_BASE_DELAY_MS = 1000L
+    }
+
+    override val capabilities =
+        ProviderCapabilities(
+            supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES),
+            supportsEpg = false,
+            supportsSearch = true,
+            supportsAuthentication = false,
+            supportsProgressSync = false,
+        )
+
+    // Named after the URL too: a source whose URL changed (edited here or on another device) must
+    // not keep serving the old playlist for the rest of CACHE_TTL_MS.
+    private val cacheFile = File(context.cacheDir, "remote_m3u_${providerId}_${m3uUrl.hashCode()}.m3u")
+
+    // Callers (e.g. CategoryViewModel.init via viewModelScope.launch, no dispatcher of its own)
+    // don't reliably run this on a background thread, and the raw HttpURLConnection I/O below
+    // would otherwise throw NetworkOnMainThreadException on Main.
+    override suspend fun connect(): Result<Unit> = load(forceDownload = false)
+
+    /** Refresh: download the playlist again even when the cached copy is fresh. */
+    override suspend fun refreshCatalog(): Result<Unit> = load(forceDownload = true)
+
+    private suspend fun load(forceDownload: Boolean): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val file =
+                    if (forceDownload) {
+                        downloadWithRetries()
+                        cacheFile
+                    } else {
+                        loadM3uContent()
+                    }
+                val (cats, its) =
+                    file.bufferedReader().use { reader ->
+                        M3uParser.processEntries(reader, ID_PREFIX)
+                    }
+                if (its.isEmpty()) {
+                    Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
+                } else {
+                    categories = cats
+                    items = its
+                    connected = true
+                    Result.success(Unit)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    private suspend fun loadM3uContent(): File {
+        if (cacheFile.exists()) {
+            val age = System.currentTimeMillis() - cacheFile.lastModified()
+            if (age < CACHE_TTL_MS) {
+                return cacheFile
+            }
+        }
+
+        downloadWithRetries()
+        return cacheFile
+    }
+
+    private suspend fun downloadWithRetries() {
+        var lastError: Exception? = null
+
+        for (attempt in 1..MAX_RETRIES) {
+            var connection: HttpURLConnection? = null
+            try {
+                connection =
+                    (URL(m3uUrl).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = CONNECT_TIMEOUT_MS
+                        readTimeout = READ_TIMEOUT_MS
+                        instanceFollowRedirects = true
+                        setRequestProperty("Accept-Encoding", "identity")
+                    }
+
+                val statusCode = connection.responseCode
+                if (statusCode !in 200..299) {
+                    lastError = HttpStatusException(statusCode)
+                    if (statusCode in 400..499) break // Client errors won't recover
+                    if (attempt < MAX_RETRIES) {
+                        delay(RETRY_BASE_DELAY_MS * attempt)
+                        continue
+                    }
+                    break
+                }
+
+                // A unique name per download: two connect()s at once would otherwise write into
+                // the same file and publish each other's half-written playlist.
+                val tmpFile = File.createTempFile("remote_m3u_${providerId}_", ".tmp", context.cacheDir)
+                try {
+                    connection.inputStream.buffered(BUFFER_SIZE).use { input ->
+                        tmpFile.outputStream().buffered(BUFFER_SIZE).use { output ->
+                            input.copyTo(output, BUFFER_SIZE)
+                            output.flush()
+                        }
+                    }
+
+                    val header =
+                        tmpFile.bufferedReader().use { reader ->
+                            val buf = CharArray(256)
+                            val read = reader.read(buf)
+                            if (read > 0) String(buf, 0, read) else ""
+                        }
+                    if (!header.trimStart().startsWith("#EXTM3U")) {
+                        throw InvalidPlaylistException()
+                    }
+
+                    if (cacheFile.exists()) {
+                        cacheFile.delete()
+                    }
+                    if (!tmpFile.renameTo(cacheFile)) {
+                        tmpFile.copyTo(cacheFile, overwrite = true)
+                        tmpFile.delete()
+                    }
+                    deleteOtherCachedPlaylists()
+                    return
+                } finally {
+                    if (tmpFile.exists()) tmpFile.delete()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                Log.w(TAG, "M3U download error (attempt $attempt): ${e.message}")
+                if (attempt < MAX_RETRIES) {
+                    delay(RETRY_BASE_DELAY_MS * attempt)
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        // All retries exhausted — fall back to stale cache if available
+        if (cacheFile.exists()) {
+            Log.w(TAG, "Download failed, using stale cache: ${lastError?.message}")
+            return
+        }
+
+        throw lastError ?: Exception("Failed to download M3U playlist")
+    }
+
+    /** This source's playlists cached under an earlier URL, and the pre-URL-keyed name. */
+    private fun deleteOtherCachedPlaylists() {
+        val legacy = "remote_m3u_$providerId.m3u"
+        val sameSource = "remote_m3u_${providerId}_"
+        context.cacheDir
+            .listFiles { file ->
+                file != cacheFile && file.name.endsWith(".m3u") && (file.name == legacy || file.name.startsWith(sameSource))
+            }?.forEach { it.delete() }
+    }
+}

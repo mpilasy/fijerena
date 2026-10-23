@@ -1,0 +1,59 @@
+# Settings › Parental controls (docs/plans/20261020_parental-controls-plan.md, Phase 5), TV
+# emulator, the profiles of settings.txt: atr in use (the only Expert, no PIN), Kid (the child
+# profile) with Xtream sources. The lists hold the app's words (no admin change yet).
+# Recorded on the TV emulator 2026-10-20: the first child profile's first source is "panel-a".
+# Start: Settings just opened, focus on the rail row "Profiles".
+# The group (Expert only): its description, one row per list ("N words"), then Check a source.
+# OK on a list opens its pane in place of the rows, focus on the Add a word field; Down walks the
+# words (each says what it matches, the focused one ends in ✕ "Remove"), then Reset to the app's
+# list (never pressed). OK on a word removes it, focus on the next word, and Menu puts it back
+# (focus on it again). Left or Back leaves a pane with focus back on the row that opened it.
+# Check a source: with several sources, the sources first; OK on one shows its row (focus), then
+# Shown (n) and Hidden (n) with each category and its type. Left goes back to the sources (focus
+# on the one checked), Left again to the Check a source row.
+@start Profiles
+DOWN	Parental controls
+RIGHT	Kids' categories / A category shows to a child when its name has one of these words.
+DOWN	Kids' film categories / These also show, for film categories only.
+DOWN	Adult categories / A category with one of these words never shows to a child.
+DOWN	Hidden titles / A title with one of these words never shows to a child, also in a kids' category.
+DOWN	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
+DOWN	Check a source
+# Down at the end of the pane stays put.
+DOWN	Check a source
+UP	Exceptions
+CENTER	Add a word
+DOWN	pokemon
+REMOVE	doraemon
+MENU	pokemon
+DOWN	doraemon
+UP	pokemon
+UP	Add a word
+# Left leaves the list, focus back on its row.
+LEFT	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
+CENTER	Add a word
+# Down to the end: the ten words, then Reset to the app's list, where Down stays.
+DOWN	pokemon
+DOWN	doraemon
+DOWN	one piece
+DOWN	naruto
+DOWN	boruto
+DOWN	dragon ball
+DOWN	detective conan
+DOWN	sailor moon
+DOWN	yu-gi-oh
+DOWN	yugioh
+DOWN	Reset to the app's list
+DOWN	Reset to the app's list
+BACK	Exceptions
+DOWN	Check a source
+# The first child profile's first Xtream source (Kid: panel-a, then panel-d).
+CENTER	
+CENTER	The categories a child sees on this source with the lists now.
+# The first category under Shown (n).
+DOWN	AL| FEMIJË / Live TV
+LEFT	
+LEFT	Check a source
+# Back in the group's pane returns to the rail row.
+BACK	Parental controls
+UP	Profiles

@@ -1,0 +1,20 @@
+# Wishlist row on Home (the wanted titles plan, Phase 5), TV emulator, profile atr.
+# Start: Home just opened, no banner, the Wishlist holds Arrival (available) and The Malagasy Way (not
+# available), so Home's Wishlist row, the last row, has Arrival only (W-D22). Down from the entry card
+# reaches it; Right stays; Menu opens Remove from Wishlist (focused), Back closes it on the card; Left
+# from the card goes to the rail.
+DOWN	CA FR: FRANCE 24 / Hold OK or press Menu for actions / Last watched • Now: Envoyé spécial
+DOWN	AL JAZEERA / Hold OK or press Menu for actions / AU
+DOWN	Κ / ΚΥΠΡΙΑΚΑ/CYPRUS / Hold OK or press Menu for actions
+DOWN	Arrival / Hold OK or press Menu for actions / Source: jellyxtream
+DOWN	Б / БЪЛГАРИЯ ДЕЦА / Hold OK or press Menu for actions
+DOWN	Silo (2023) / Hold OK or press Menu for actions / A+
+DOWN	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+DOWN	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+DOWN	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+DOWN	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+DOWN	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+RIGHT	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+MENU	Remove from Wishlist
+BACK	A / Arrival / Hold OK or press Menu for actions / Available • 2016
+LEFT	Home

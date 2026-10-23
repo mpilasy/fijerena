@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- EPG sync foreground-service notifications -->
+    <string name="epg_sync_notification_channel">Fanavaozana ny fandaharana</string>
+    <string name="epg_sync_notification_title">Manavao ny fandaharana</string>
+    <string name="epg_fts_rebuild_notification_title">Manangana indray ny fikarohan\'ny fandaharana</string>
+
+    <!-- Xtream catalog sync foreground-service notifications -->
+    <string name="xtream_sync_notification_channel">Fanavaozana ny katalaogy</string>
+    <string name="xtream_sync_notification_title">Manavao ny fantsona sy ny votoaty</string>
+
+    <!-- Friendly error messages -->
+    <string name="error_no_internet">Tsy tratra ny mpizara. Jereo ny fifandraisanao amin\'ny internet.</string>
+    <string name="error_timeout">Ela loatra ny valin\'ny mpizara. Andramo indray.</string>
+    <string name="error_ssl">Tsy nahomby ny fifandraisana voaaro. Jereo ny adiresin\'ny mpizara.</string>
+    <string name="error_network">Nisy olana tamin\'ny tambajotra. Jereo ny fifandraisanao ary andramo indray.</string>
+    <string name="error_unauthorized">Tsy nahomby ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
+    <string name="error_generic">Nisy olana. Andramo indray.</string>
+    <string name="error_not_found">Tsy nisy hita tamin\'io adiresy io. Jereo ny URL.</string>
+    <string name="error_server">Nisy olana tamin\'ny mpizara. Andramo indray rehefa afaka kelikely.</string>
+    <string name="error_invalid_playlist">Tsy lisitra M3U no hita amin\'io adiresy io. Jereo ny URL.</string>
+    <string name="error_catalog_sync_failed">Tsy nahomby ny fanavaozana ny lisitra. %1$s</string>
+    <string name="sync_error_download_failed">Tsy nahomby ny fakana</string>
+    <string name="sync_error_upload_failed">Tsy nahomby ny fandefasana</string>
+
+    <!-- Settings export/import -->
+    <string name="settings_export_error_read_file">Tsy afaka namaky ny rakitra</string>
+    <string name="settings_export_error_import_failed">Tsy nahomby ny fampidirana</string>
+    <string name="settings_export_error_invalid_format">Diso ny endriky ny rakitra</string>
+    <string name="settings_export_summary_import_failed_format">Tsy nahomby ny fampidirana: %1$s</string>
+    <string name="settings_export_summary_providers_format">Loharano: %1$s</string>
+    <string name="settings_export_item_added_format">%1$d nampidirina</string>
+    <string name="settings_export_item_overwritten_format">%1$d nosoloana</string>
+    <string name="settings_export_item_skipped_format">%1$d nihoarana</string>
+    <string name="settings_export_summary_epg_sources_format">Loharanon\'ny fitarihana: %1$s</string>
+    <string name="settings_export_summary_favorites_format">%1$d tiana indrindra naverina</string>
+    <string name="settings_export_summary_watch_state_format">%1$d tantara fijerena naverina</string>
+    <string name="settings_export_summary_updated">Voavaozina ny fandrindrana</string>
+    <string name="settings_export_summary_passwords_reentry_format">%1$s (tsy maintsy asiana indray ny tenimiafina)</string>
+
+    <!-- Provider copy/duplicate (ProviderCopyManager) -->
+    <string name="provider_copy_result_connection">Voadika ny fifandraisana</string>
+    <string name="provider_copy_result_settings">Voadika ny fandrindrana</string>
+    <string name="provider_copy_result_favorites_format">%1$d tiana voadika</string>
+    <string name="provider_copy_result_watch_state_format">%1$d tantaram-pijerena voadika</string>
+    <string name="provider_copy_result_nothing">Tsy misy azo adika</string>
+
+    <!-- EPG freshness label -->
+    <string name="epg_freshness_no_sources">Tsy misy loharanon\'ny fitarihana</string>
+    <string name="epg_freshness_all_off">Tsy mandeha ny fitarihana: alefaso ao amin\'ny Loharanon\'ny fitarihana</string>
+    <string name="epg_freshness_never_refreshed">Mbola tsy navaozina</string>
+    <string name="epg_freshness_just_now">vao haingana</string>
+    <string name="epg_freshness_minutes_ago_format">%1$dm lasa</string>
+    <string name="epg_freshness_hours_ago_format">%1$do lasa</string>
+    <string name="epg_freshness_days_ago_format">%1$dandro lasa</string>
+    <string name="epg_freshness_stale_suffix_format"> • %1$d lany andro</string>
+    <string name="epg_freshness_never_run_suffix_format"> • %1$d tsy mbola nandeha</string>
+    <string name="epg_freshness_updated_format">Navaozina %1$s</string>
+
+    <!-- EpgFileManager error fallbacks -->
+    <string name="epg_error_task_failed_retries_format">Tsy nahomby aorian\'ny fanandramana %1$d</string>
+    <string name="epg_error_no_sources">Tsy misy loharanon\'ny fitarihana hodinihina</string>
+    <string name="epg_error_came_back_empty">Foana ny fitarihana azo (tsy misy fantsona). Hamerina indray ny fanavaozana manaraka.</string>
+    <string name="epg_error_source_not_found">Tsy hita ny loharanon\'ny fitarihana</string>
+    <!-- Translations backfill 2026-10-03 -->
+    <string name="error_saved_login_lost">Very ny fidirana voatahiry tamin\'ity fitaovana ity (naverina tamin\'ny voalohany ny fitehirizana ny fanalahidiny miafina). Ovay ny loharano ary ampidiro indray ny tenimiafina.</string>
+    <string name="error_guide_login_missing">Ny fidiran\'ny loharano no ilaina hakana ity fitarihana ity, nefa tsy misy ny tenimiafiny amin\'ity fitaovana ity. Ovay ny loharano ary ampidiro ny tenimiafina.</string>
+</resources>

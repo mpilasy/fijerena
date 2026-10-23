@@ -1,0 +1,43 @@
+name: Static checks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # the rock solid stability resilience plan → F-20, F-33.
+      - name: User-data databases have no blanket destructive fallback
+        run: |
+          if grep -rnE 'fallbackToDestructiveMigration(OnDowngrade)?\(' --include='*.kt' core/network/src/main | grep -v 'EpgIndexDatabase'; then
+            echo "xtream_v2.db / providers.db hold user data: use fallbackToDestructiveMigrationFrom(<pre-user-data versions>) only."
+            exit 1
+          fi
+
+      # the rock solid stability resilience plan → F-27.
+      - name: Suspend code does not swallow cancellation
+        run: scripts/check-cancellation.sh
+
+      # the next level rock solid resilience plan → R-09.
+      - name: ViewModel coroutines have an exception boundary
+        run: scripts/check-viewmodel-launch.sh
+
+      # the next level rock solid resilience plan → R-05.
+      - name: TV focus requests retry on the result, not an exception
+        run: scripts/check-focus-retry.sh
+
+      # docs/plans/20261016_design-system-plan.md.
+      - name: Looks come from the theme and Look and Feel
+        run: scripts/check-design-system.sh

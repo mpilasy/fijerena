@@ -1,0 +1,37 @@
+# Search's type pills and filter (the search decade genre filter plan;
+# replaces the source row of the search source filter plan), TV emulator.
+# Start: Home → Search, run a query with films, shows and channels ("night" here: the field shows
+# the query), All content chosen, then move focus to the field. The pills and the filter icon sit
+# under it. Checked on the TV emulator 2026-10-23 (profile atr, "night"). The pills between the
+# first ones and the icon depend on the results, so those lines are unchecked; the dialog's first
+# row depends on the profile, so it is unchecked too.
+@start night
+# Down from the field → the chosen pill.
+DOWN	All content
+# Left → the rail; Right → back.
+LEFT	Search
+RIGHT	All content
+# OK on a pill chooses it and keeps focus on it; Up → the field, Down → back on it.
+RIGHT	Live TV
+CENTER	Live TV
+WAIT 2	
+UP	night
+DOWN	Live TV
+# Down → the results; Up from their top → the chosen pill, not the field.
+DOWN	results
+UP	Live TV
+# OK on the chosen pill again goes back to All content.
+CENTER	
+WAIT 2	
+LEFT	All content
+# Right along the pills to the filter icon (its label shows on focus).
+RIGHT	
+RIGHT	
+RIGHT	
+RIGHT	
+RIGHT	Filter
+# OK opens the dialog on the first choice; Back closes it, focus back on the icon.
+CENTER	
+WAIT 1	
+BACK	Filter
+UP	night

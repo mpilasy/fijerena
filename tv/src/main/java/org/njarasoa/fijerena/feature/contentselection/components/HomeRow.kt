@@ -1,0 +1,90 @@
+@file:OptIn(ExperimentalTvMaterial3Api::class)
+
+package org.njarasoa.fijerena.feature.contentselection.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.rail.leftToRail
+import org.njarasoa.fijerena.ui.theme.Spacing
+
+/**
+ * One titled row of cards on Home (TV home overhaul plan, Phase 3). Focus coming in from above or
+ * below lands on the card this row had last ([focusRestorer]), else on its first card
+ * ([firstItemFocus]); Left on the first card goes to the navigation rail and Right on the last
+ * stays put, so the search never falls out of the row onto the header or another row.
+ */
+@Composable
+fun <T> HomeRow(
+    title: String,
+    items: List<T>,
+    key: (T) -> String,
+    listState: LazyListState,
+    firstItemFocus: FocusRequester,
+    modifier: Modifier = Modifier,
+    itemContent: @Composable (item: T, modifier: Modifier) -> Unit,
+) {
+    if (items.isEmpty()) return
+    Column(modifier = modifier) {
+        CinemaText(
+            text = title,
+            // The TV section-title style (TV UI audit #2): the same on every Home row and on Search's groups.
+            role = TextRole.Title,
+            tone = TextTone.Primary,
+            modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
+        )
+        LazyRow(
+            state = listState,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            contentPadding = PaddingValues(horizontal = Spacing.xxs),
+            modifier = Modifier.focusRestorer(firstItemFocus),
+        ) {
+            itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
+                itemContent(
+                    item,
+                    Modifier
+                        .then(if (index == 0) Modifier.focusRequester(firstItemFocus).leftToRail() else Modifier)
+                        // leftToRail is outside these, so it wins while the rail shows; without
+                        // one, Left on the first card stays put.
+                        .focusProperties {
+                            if (index == 0) left = FocusRequester.Cancel
+                            if (index == items.lastIndex) right = FocusRequester.Cancel
+                        },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The Menu key on a Home card opens its actions, as long-press OK does (row actions, CONTRIBUTING.md →
+ * D-Pad & Focus). While an Undo bar shows, the screen's `undoOnRemoteKeys` takes Menu and a held OK first.
+ */
+internal fun Modifier.openActionsOnMenuKey(onOpenActions: () -> Unit): Modifier =
+    onKeyEvent { event ->
+        val opens = event.type == KeyEventType.KeyDown && event.key == Key.Menu
+        if (opens) onOpenActions()
+        opens
+    }

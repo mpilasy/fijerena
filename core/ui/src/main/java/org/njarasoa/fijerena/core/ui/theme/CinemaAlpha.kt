@@ -1,0 +1,47 @@
+package org.njarasoa.fijerena.core.ui.theme
+
+/**
+ * Centralizes all alpha values used across the app for consistent transparency.
+ */
+object CinemaAlpha {
+    // Text
+    const val textHigh = 0.87f // Primary readable text
+    const val textMedium = 0.7f // Secondary labels
+    const val textLow = 0.6f // Descriptions, metadata
+    const val textDisabled = 0.5f // Disabled/placeholder text
+    const val textFaint = 0.4f // Disabled content
+
+    // Surfaces & Overlays
+    const val overlayHeavy = 0.85f // Stats overlay, dialogs
+    const val overlayMedium = 0.8f
+    const val glass = 0.75f // Glassmorphism background
+    const val scrim = 0.5f // Standard scrim
+    const val tint = 0.3f // Progress track, selected items
+    const val focusedTint = 0.2f // Focused container background
+    const val glassBorder = 0.15f
+    const val divider = 0.1f
+    const val cardHairline = 0.12f // Faint top-highlight border on list-row cards
+    const val ghost = 0.05f // Barely visible tints
+
+    // Player controls over the video (user, 2026-10-21: a lot lighter than 0.6 and 1)
+    const val osdPanel = 0.3f // The controls panel: a share of the theme's glass colour
+    const val osdScrim = 0.1f // The tint over the whole video while the controls show
+
+    // Image overlays
+    const val imageOverlay = 0.8f // Gradient over poster for text legibility
+    const val imageOverlayLight = 0.4f // Lighter partial overlay
+    const val cardElevationShadow = 0.3f // Shadow around focused cards
+
+    // Focus/Interaction
+    const val focusedGlow = 0.4f // Glow elevation color
+
+    // Hero cards (Content Type Selection)
+    const val heroChipBackground = 0.18f // Frosted chip behind a hero card's icon or count
+
+    // TV detail hero backdrop (the tv detail hero ui plan)
+    // Horizontal scrim over the backdrop: opaque at the left edge (0f), fading to fully
+    // transparent by this fraction of the hero's width, so the text column always sits on solid
+    // ground regardless of what the image behind it looks like.
+    const val heroScrimFadeStop = 0.6f
+    const val detailScoreChipBackground = 0.7f // Dark rounded container behind a ScoreChip
+}

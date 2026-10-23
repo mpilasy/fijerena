@@ -1,0 +1,83 @@
+package org.njarasoa.fijerena.core.ui.components
+
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.flow.first
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
+import org.njarasoa.fijerena.core.player.domain.watchedTailMs
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+
+// Autoplay next episode ("Play next episode automatically", per profile). Near the end of an
+// episode an "Up next" card is offered over the playing video; when the episode ends with the
+// card not cancelled, the next one plays at once. The card's countdown is the playback time left,
+// so it stops with the video (paused, buffering, app in the background).
+
+/**
+ * How much playback is left when the card appears: where the episode becomes watched
+ * ([watchedTailMs]) — 5 min 38 s for a 47-minute episode, 90 s for a 5-minute one. 0 for an
+ * unknown duration: no card before the end.
+ */
+fun upNextLeadMs(durationMs: Long): Long = watchedTailMs(durationMs)
+
+/**
+ * Whether the "Up next" card shows: the setting is on, the provider allows it
+ * ([providerSupportsAutoplay] — Xtream and Jellyfin), the player knows a next episode (the one
+ * its Next button plays — movies and Live TV never have one), the viewer hasn't cancelled it for
+ * this episode ([dismissed]), the duration is known, and at most [upNextLeadMs] of playback is
+ * left.
+ */
+fun showUpNext(
+    autoplayEnabled: Boolean,
+    providerSupportsAutoplay: Boolean,
+    nextEpisode: EpisodeItem?,
+    positionMs: Long,
+    durationMs: Long,
+    dismissed: Boolean,
+): Boolean =
+    autoplayEnabled &&
+        providerSupportsAutoplay &&
+        nextEpisode != null &&
+        !dismissed &&
+        durationMs > 0L &&
+        durationMs - positionMs <= upNextLeadMs(durationMs)
+
+/** Whole seconds of playback left, rounded up — the card's countdown ([upNextCountdown]). */
+fun upNextSecondsLeft(
+    positionMs: Long,
+    durationMs: Long,
+): Int {
+    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
+    return ((remainingMs + CinemaAnimation.countdownTickMs - 1) / CinemaAnimation.countdownTickMs).toInt()
+}
+
+/** [secondsLeft] as the card shows it, minutes and seconds: "5:38", "0:09". */
+fun upNextCountdown(secondsLeft: Int): String = "%d:%02d".format(secondsLeft / 60, secondsLeft % 60)
+
+/**
+ * The episode to play when one ends on its own, or null to leave the player as before (back to
+ * the episode list): the setting is on, the provider allows it, there is a next episode, and the
+ * card wasn't cancelled.
+ */
+fun upNextOnEnd(
+    autoplayEnabled: Boolean,
+    providerSupportsAutoplay: Boolean,
+    nextEpisode: EpisodeItem?,
+    dismissed: Boolean,
+): EpisodeItem? = if (autoplayEnabled && providerSupportsAutoplay && !dismissed) nextEpisode else null
+
+/** "S2:E3" for the compact up-next card; "E3" when the season is unknown. */
+fun upNextCode(episode: EpisodeItem): String = episode.seasonNumber?.let { "S$it:E${episode.episodeNumber}" } ?: "E${episode.episodeNumber}"
+
+/** The episode's own title for the card's details panel ([playerEpisodeName]); null when it has none. */
+fun upNextTitle(episode: EpisodeItem): String? = playerEpisodeName(episode.title).takeIf { it.isNotBlank() }
+
+/** The episode's synopsis for the card's details panel; null when the provider gave none. */
+fun upNextPlot(episode: EpisodeItem): String? =
+    episode.metadata.plot
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+/** Suspends until the screen is at least STARTED — the next episode never starts unseen. */
+suspend fun Lifecycle.awaitStarted() {
+    currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
+}

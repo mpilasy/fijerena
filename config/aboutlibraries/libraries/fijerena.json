@@ -1,0 +1,16 @@
+{
+  "uniqueId": "app:fijerena",
+  "name": "Fijerena",
+  "artifactVersion": "",
+  "description": "This app. © 2026 Orinasa Njarasoa. Free software with no warranty.",
+  "website": "https://github.com/mpilasy/fijerena",
+  "developers": [
+    {
+      "name": "Orinasa Njarasoa"
+    }
+  ],
+  "licenses": [
+    "GPL-3.0-or-later"
+  ],
+  "tag": "app"
+}

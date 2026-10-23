@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:ibmplexsans",
+  "name": "IBM Plex Sans (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://github.com/IBM/plex",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-ibmplexsans"
+  ],
+  "tag": "font"
+}

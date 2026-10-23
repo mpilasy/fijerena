@@ -1,0 +1,341 @@
+package org.njarasoa.fijerena.core.ui.components
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
+
+/**
+ * Content type hint for choosing fallback gradient colors.
+ */
+enum class ThumbnailContentType {
+    LIVE_TV,
+    MOVIE,
+    TV_SHOW,
+    DEFAULT,
+}
+
+/**
+ * Image loading composable with gradient fallback and shimmer placeholder.
+ *
+ * - Non-null URL: Coil AsyncImage with crossfade. Posters fill the frame (cropped);
+ *   [ThumbnailContentType.LIVE_TV] logos are drawn whole, fitted with a little padding on a
+ *   neutral dark tile, so neither a wide logo nor a white one on a transparent background is lost.
+ * - Null/blank/error: Large letter over content-type gradient background
+ * - Shimmer placeholder while loading
+ */
+@Composable
+fun CinemaThumbnail(
+    url: String?,
+    modifier: Modifier = Modifier,
+    fallbackLetter: Char? = null,
+    contentType: ThumbnailContentType = ThumbnailContentType.DEFAULT,
+    overlayGradient: Boolean = false,
+    contentDescription: String? = null,
+) {
+    val radius = CinemaCornerRadius.medium
+    val shape = cornerShape(radius)
+    val context = LocalContext.current
+    val isLogo = contentType == ThumbnailContentType.LIVE_TV
+    val palette = CinemaTheme.colors
+
+    // Track measured size so Coil decodes at display resolution, not full source resolution
+    Box(
+        modifier =
+            modifier
+                .clip(shape)
+                .then(if (isLogo) Modifier.background(palette.surfaceRaised) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!url.isNullOrBlank()) {
+            // Key on url so shimmer/fallback state resets when the image URL changes
+            var showShimmer by remember(url) { mutableStateOf(true) }
+            var showFallback by remember(url) { mutableStateOf(false) }
+
+            val model =
+                remember(context, url) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(url)
+                        .crossfade(CinemaAnimation.imageLoadCrossfadeMs)
+                        .build()
+                }
+
+            if (!showFallback) {
+                AsyncImage(
+                    model = model,
+                    contentDescription = contentDescription,
+                    contentScale = if (isLogo) ContentScale.Fit else ContentScale.Crop,
+                    modifier = if (isLogo) Modifier.fillMaxSize().padding(CinemaSpacing.xxs) else Modifier.fillMaxSize(),
+                    onSuccess = { showShimmer = false },
+                    onError = {
+                        showShimmer = false
+                        showFallback = true
+                    },
+                )
+            }
+
+            if (showShimmer && !showFallback && !isLogo) {
+                ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+            }
+
+            // A channel's logo host often never answers: its letter shows until the logo arrives.
+            if (showFallback || (isLogo && showShimmer)) {
+                TypographyFallback(
+                    letter = fallbackLetter,
+                    contentType = contentType,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        } else {
+            TypographyFallback(
+                letter = fallbackLetter,
+                contentType = contentType,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        if (overlayGradient) {
+            GradientOverlay(modifier = Modifier.fillMaxSize())
+        }
+    }
+}
+
+/**
+ * Typography fallback: large letter centered over a content-type gradient.
+ */
+@Composable
+fun TypographyFallback(
+    letter: Char?,
+    contentType: ThumbnailContentType,
+    modifier: Modifier = Modifier,
+) {
+    val palette = CinemaTheme.colors
+    val gradient =
+        remember(contentType, palette) {
+            when (contentType) {
+                ThumbnailContentType.LIVE_TV -> {
+                    Brush.verticalGradient(
+                        colors = listOf(palette.highlight, palette.highlight),
+                    )
+                }
+
+                ThumbnailContentType.MOVIE -> {
+                    Brush.verticalGradient(
+                        colors = listOf(palette.accent, palette.accentStrong),
+                    )
+                }
+
+                ThumbnailContentType.TV_SHOW -> {
+                    Brush.verticalGradient(
+                        colors = listOf(palette.accentSoft, palette.accent),
+                    )
+                }
+
+                ThumbnailContentType.DEFAULT -> {
+                    Brush.verticalGradient(
+                        colors = listOf(palette.surfaceRaised, palette.surface),
+                    )
+                }
+            }
+        }
+
+    Box(
+        modifier = modifier.background(gradient),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (letter != null) {
+            val uiStyle = LocalUiStyle.current
+            val textStyle =
+                remember(palette, uiStyle) {
+                    androidx.compose.ui.text.TextStyle(
+                        color = palette.textPrimary,
+                        fontSize = 28.sp, // look-ok: the placeholder letter is sized to the poster
+                        fontWeight = FontWeight(uiStyle.type.weightEmphasis), // look-ok: same letter
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            androidx.compose.foundation.text.BasicText(
+                text = letter.uppercase(),
+                style = textStyle,
+            )
+        }
+    }
+}
+
+/**
+ * Shimmer placeholder effect while images load.
+ *
+ * Uses a static full-width gradient shifted via graphicsLayer.translationX,
+ * so no Brush allocation occurs per animation frame.
+ */
+@Composable
+fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
+    val palette = CinemaTheme.colors
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateX by transition.animateFloat(
+        initialValue = -300f,
+        targetValue = 300f,
+        animationSpec =
+            infiniteRepeatable(
+                animation =
+                    tween(
+                        durationMillis = CinemaAnimation.shimmerDurationMs,
+                        easing = LinearEasing,
+                    ),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "shimmer_translate",
+    )
+
+    // Memoize gradient brush — only palette changes between themes, not every animation frame
+    val shimmerBrush =
+        remember(palette) {
+            Brush.linearGradient(
+                colors =
+                    listOf(
+                        palette.surface,
+                        palette.surfaceHigh.copy(alpha = CinemaAlpha.imageOverlayLight),
+                        palette.surface,
+                    ),
+                start = Offset(0f, 0f),
+                end = Offset(300f, 0f),
+            )
+        }
+
+    Box(
+        modifier =
+            modifier
+                .background(shimmerBrush)
+                .graphicsLayer { translationX = translateX },
+    )
+}
+
+/**
+ * Skeleton placeholder shaped like a media list row (thumbnail + 2 text lines).
+ */
+@Composable
+fun SkeletonRow(
+    modifier: Modifier = Modifier,
+    thumbnailWidth: Dp = CinemaSpacing.xxl + CinemaSpacing.lg,
+    thumbnailHeight: Dp = CinemaSpacing.xl + CinemaSpacing.xs,
+) {
+    val cardRadius = CinemaCornerRadius.medium
+    val chipRadius = CinemaCornerRadius.small
+    val palette = CinemaTheme.colors
+
+    Box(
+        modifier =
+            modifier
+                .clip(cornerShape(cardRadius))
+                .background(palette.surfaceRaised.copy(alpha = CinemaAlpha.tint)),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(CinemaSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(width = thumbnailWidth, height = thumbnailHeight)
+                        .clip(cornerShape(chipRadius)),
+            ) {
+                ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(CinemaSpacing.md)
+                            .clip(cornerShape(chipRadius)),
+                ) {
+                    ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+                }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.4f)
+                            .height(CinemaSpacing.sm)
+                            .clip(cornerShape(chipRadius)),
+                ) {
+                    ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SkeletonList(
+    modifier: Modifier = Modifier,
+    rowCount: Int = 6,
+    rowHeight: Dp = CinemaSpacing.xxl + CinemaSpacing.md,
+    thumbnailWidth: Dp = CinemaSpacing.xxl + CinemaSpacing.lg,
+    thumbnailHeight: Dp = CinemaSpacing.xl + CinemaSpacing.xs,
+    verticalSpacing: Dp = CinemaSpacing.xs,
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+    ) {
+        for (i in 0 until rowCount) {
+            SkeletonRow(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight),
+                thumbnailWidth = thumbnailWidth,
+                thumbnailHeight = thumbnailHeight,
+            )
+        }
+    }
+}

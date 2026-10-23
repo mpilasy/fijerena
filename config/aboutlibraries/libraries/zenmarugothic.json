@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:zenmarugothic",
+  "name": "Zen Maru Gothic (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel. Cut to Latin characters (a Modified Version under the OFL).",
+  "website": "https://github.com/googlefonts/zen-marugothic",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-zenmarugothic"
+  ],
+  "tag": "font"
+}

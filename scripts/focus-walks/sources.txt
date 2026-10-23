@@ -1,0 +1,22 @@
+# T4 — Sources (ProviderSelectionScreen), TV emulator, two or more sources.
+# Start: Sources just opened from Settings → Sources & guide → Manage sources,
+# focus on the first row (T-8; the row shows name / URL / username, so its text depends on the
+# device — unasserted). Rows are ordered by name.
+# Each row: the row itself (OK = Edit), then fixed slots Guide (empty on a source without live
+# channels: Jellyfin, SMB) and ⋮ ("More actions for <name>"). Right walks the slots, Left walks
+# back, Up/Down keep the column, Up from the first row lands on the header "+" (Add Source).
+# Expectations assume the first row is iptv (M3U, so it has a Guide slot) and the next panel-a
+# (Xtream: Guide, ⋮) — the TV AVD on 2026-10-03.
+# Written 2026-10-03 from the plan, re-recorded 2026-10-04. Multi-source Phase 6 (part 2): the
+# Use slot and the Active label are gone (there is no source in use); edited by hand 2026-10-12,
+# not re-recorded.
+@start iptv / https://iptv-org.github.io/iptv/index.m3u
+RIGHT	Guide
+RIGHT	More actions for iptv
+# Down from ⋮ lands on the ⋮ of the next row.
+DOWN	More actions for panel-a
+LEFT	Guide
+LEFT	panel-a / http://panel-a.example / user1
+UP	iptv / https://iptv-org.github.io/iptv/index.m3u
+# Up from the first row lands on the header "+".
+UP	Add Source

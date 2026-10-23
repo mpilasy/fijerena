@@ -1,0 +1,351 @@
+package org.njarasoa.fijerena.core.network.xmltv.epgindex
+
+import androidx.paging.PagingSource
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+
+@Dao
+interface EpgIndexDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChannels(channels: List<EpgChannelEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChannelsIgnore(channels: List<EpgChannelEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChannelsStagingIgnore(channels: List<EpgChannelStagingEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProgrammes(programmes: List<EpgProgrammeEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProgrammesStaging(programmes: List<EpgProgrammeStagingEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMetadata(metadata: EpgIndexMetadata)
+
+    @Query("DELETE FROM epg_programme_staging")
+    suspend fun clearStagingProgrammes()
+
+    @Query("DELETE FROM epg_channel_staging")
+    suspend fun clearStagingChannels()
+
+    @Transaction
+    suspend fun clearStaging() {
+        clearStagingProgrammes()
+        clearStagingChannels()
+    }
+
+    @Query("DELETE FROM epg_programme_staging WHERE source_id IN (:sourceIds)")
+    suspend fun clearStagingProgrammesForSources(sourceIds: List<Long>)
+
+    @Query("DELETE FROM epg_channel_staging WHERE source_id IN (:sourceIds)")
+    suspend fun clearStagingChannelsForSources(sourceIds: List<Long>)
+
+    // Scoped variant of clearStaging(): a blanket DELETE would also wipe staging rows for any
+    // other source concurrently being parsed by a separate refresh, or a still-pending retry.
+    @Transaction
+    suspend fun clearStagingForSources(sourceIds: List<Long>) {
+        clearStagingProgrammesForSources(sourceIds)
+        clearStagingChannelsForSources(sourceIds)
+    }
+
+    // Scoped to :sourceIds, not a blanket copy: staging can hold rows for a source that isn't in
+    // this swap at all — e.g. one source of a multi-source sync failed partway and left its own
+    // partial rows behind while others succeeded. An unfiltered SELECT would carry that source's
+    // incomplete guide into primary even though deleteBySourceIds() below never touched its
+    // (untouched, still-good) existing primary rows.
+    @Query(
+        "INSERT INTO epg_channel (xmltv_id, display_name, icon_url, source_id) " +
+            "SELECT xmltv_id, display_name, icon_url, source_id FROM epg_channel_staging WHERE source_id IN (:sourceIds)",
+    )
+    suspend fun transferChannelsFromStaging(sourceIds: List<Long>)
+
+    @Query(
+        "INSERT INTO epg_programme (channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id) " +
+            "SELECT channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id " +
+            "FROM epg_programme_staging WHERE source_id IN (:sourceIds)",
+    )
+    suspend fun transferProgrammesFromStaging(sourceIds: List<Long>)
+
+    /**
+     * Performs the atomic swap:
+     * 1. Deletes existing data for the specified sources in the primary tables.
+     * 2. Moves staging rows for those same sources to primary.
+     * 3. Clears staging.
+     */
+    @Transaction
+    suspend fun executeSwap(sourceIds: List<Long>) {
+        deleteBySourceIds(sourceIds)
+        transferChannelsFromStaging(sourceIds)
+        transferProgrammesFromStaging(sourceIds)
+        clearStagingForSources(sourceIds)
+    }
+
+    // --------------- Stale data cleanup (Clear and Load strategy) ---------------
+
+    @Query("DELETE FROM epg_programme WHERE end_epoch < :cutoffEpoch")
+    suspend fun deleteStaleProgrammes(cutoffEpoch: Long)
+
+    @Query("SELECT COUNT(*) FROM epg_programme WHERE end_epoch < :cutoffEpoch")
+    suspend fun countStaleProgrammes(cutoffEpoch: Long): Int
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM (
+            SELECT p2.*
+            FROM epg_programme p2
+            INNER JOIN epg_programme_fts fts ON fts.rowid = p2.id
+            WHERE epg_programme_fts MATCH :query
+              AND p2.source_id IN (:sourceIds)
+              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
+            ORDER BY p2.start_epoch ASC
+            LIMIT :maxResults
+        ) p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        ORDER BY p.start_epoch ASC
+        """,
+    )
+    suspend fun searchByTitleFts(
+        query: String,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+        maxResults: Int = 500,
+    ): List<EpgSearchResultRow>
+
+    /**
+     * Title-only substring search that doesn't touch FTS, for when the FTS index is stale (a
+     * low-storage refresh writing straight into epg_programme, or an interrupted rebuild).
+     * A full scan — seconds, not milliseconds, on 2M+ rows. [pattern] must already be lowercased
+     * and have `\`, `%` and `_` escaped with `\`.
+     */
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM (
+            SELECT p2.*
+            FROM epg_programme p2
+            WHERE p2.title_lowercase LIKE '%' || :pattern || '%' ESCAPE '\'
+              AND p2.source_id IN (:sourceIds)
+              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
+            ORDER BY p2.start_epoch ASC
+            LIMIT :maxResults
+        ) p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        ORDER BY p.start_epoch ASC
+        """,
+    )
+    suspend fun searchByTitleLike(
+        pattern: String,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+        maxResults: Int = 500,
+    ): List<EpgSearchResultRow>
+
+    // --------------- Paged queries for large datasets (2M+ rows) ---------------
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM epg_programme p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        WHERE p.source_id IN (:sourceIds)
+          AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
+        ORDER BY c.display_name ASC
+        """,
+    )
+    fun getPagedNowPlaying(
+        nowEpoch: Long,
+        sourceIds: List<Long>,
+    ): PagingSource<Int, EpgSearchResultRow>
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM epg_programme p
+        INNER JOIN epg_programme_fts fts ON fts.rowid = p.id
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        WHERE epg_programme_fts MATCH :query
+          AND p.source_id IN (:sourceIds)
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
+        ORDER BY p.start_epoch ASC
+        """,
+    )
+    fun searchByTitleFtsPaged(
+        query: String,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+    ): PagingSource<Int, EpgSearchResultRow>
+
+    @Query("SELECT * FROM epg_channel WHERE source_id IN (:sourceIds)")
+    suspend fun getChannelsForSources(sourceIds: List<Long>): List<EpgChannelEntity>
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM epg_programme p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        WHERE p.channel_id IN (:channelIds)
+          AND p.source_id IN (:sourceIds)
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
+        ORDER BY p.start_epoch ASC
+        """,
+    )
+    suspend fun getProgrammesForChannels(
+        channelIds: List<String>,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+    ): List<EpgSearchResultRow>
+
+    /**
+     * The TV Guide's page query (GD4): the programmes of [channelIds] that overlap
+     * [windowStart]..[windowEnd) — a programme straddling either edge is in, one ending exactly at
+     * the start or starting exactly at the end is out. No join, only the columns the grid draws.
+     * Plan: `SEARCH epg_programme USING INDEX idx_programme_dedup (channel_id=? AND source_id=? AND
+     * start_epoch<?)`, so no new index.
+     */
+    @Query(
+        """
+        SELECT channel_id AS channelId, title, description, start_epoch AS startEpoch, end_epoch AS endEpoch
+        FROM epg_programme
+        WHERE channel_id IN (:channelIds)
+          AND source_id IN (:sourceIds)
+          AND end_epoch > :windowStart AND start_epoch < :windowEnd
+        ORDER BY channel_id, start_epoch
+        """,
+    )
+    suspend fun getProgrammesInWindow(
+        channelIds: List<String>,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+    ): List<EpgWindowRow>
+
+    /** The last end time [channelIds] have in the index at all; null when they have no programme. */
+    @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE channel_id IN (:channelIds) AND source_id IN (:sourceIds)")
+    suspend fun getLatestEndForChannels(
+        channelIds: List<String>,
+        sourceIds: List<Long>,
+    ): Long?
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM epg_programme p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        WHERE p.channel_id IN (:channelIds)
+          AND p.source_id IN (:sourceIds)
+          AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
+        """,
+    )
+    suspend fun getNowPlayingForChannels(
+        channelIds: List<String>,
+        sourceIds: List<Long>,
+        nowEpoch: Long,
+    ): List<EpgSearchResultRow>
+
+    @Query("DELETE FROM epg_programme WHERE source_id = :sourceId")
+    suspend fun deleteProgrammesBySourceId(sourceId: Long)
+
+    @Query("DELETE FROM epg_programme WHERE source_id IN (:sourceIds)")
+    suspend fun deleteProgrammesBySourceIds(sourceIds: List<Long>)
+
+    /**
+     * [sourceId]'s programmes that run past the next start on their channel end there instead —
+     * guides list a live event until a fixed cut-off on top of the normal schedule (panel-a: 27 h NFL
+     * games). Programmes sharing a start both end at the next later one. Uses the dedup index.
+     */
+    @Query(
+        """
+        UPDATE epg_programme SET end_epoch = (
+            SELECT MIN(n.start_epoch) FROM epg_programme n
+            WHERE n.channel_id = epg_programme.channel_id AND n.source_id = epg_programme.source_id
+              AND n.start_epoch > epg_programme.start_epoch
+        )
+        WHERE source_id = :sourceId AND end_epoch > (
+            SELECT MIN(n.start_epoch) FROM epg_programme n
+            WHERE n.channel_id = epg_programme.channel_id AND n.source_id = epg_programme.source_id
+              AND n.start_epoch > epg_programme.start_epoch
+        )
+        """,
+    )
+    suspend fun clipOverlaps(sourceId: Long): Int
+
+    /** [clipOverlaps] on the staging table, before the swap. */
+    @Query(
+        """
+        UPDATE epg_programme_staging SET end_epoch = (
+            SELECT MIN(n.start_epoch) FROM epg_programme_staging n
+            WHERE n.channel_id = epg_programme_staging.channel_id AND n.source_id = epg_programme_staging.source_id
+              AND n.start_epoch > epg_programme_staging.start_epoch
+        )
+        WHERE source_id = :sourceId AND end_epoch > (
+            SELECT MIN(n.start_epoch) FROM epg_programme_staging n
+            WHERE n.channel_id = epg_programme_staging.channel_id AND n.source_id = epg_programme_staging.source_id
+              AND n.start_epoch > epg_programme_staging.start_epoch
+        )
+        """,
+    )
+    suspend fun clipOverlapsStaging(sourceId: Long): Int
+
+    @Query("SELECT COALESCE(MAX(id), 0) FROM epg_programme")
+    suspend fun getMaxProgrammeId(): Long
+
+    /**
+     * [sourceId]'s programmes with an id up to [maxId]: after a direct ingest that took
+     * [getMaxProgrammeId] first, the ones the new guide did not write again (REPLACE gives every
+     * rewritten row a new, higher id).
+     */
+    @Query("DELETE FROM epg_programme WHERE source_id = :sourceId AND id <= :maxId")
+    suspend fun deleteProgrammesOfSourceUpTo(
+        sourceId: Long,
+        maxId: Long,
+    ): Int
+
+    @Query("DELETE FROM epg_channel WHERE source_id = :sourceId")
+    suspend fun deleteChannelsBySourceId(sourceId: Long)
+
+    @Query("DELETE FROM epg_channel WHERE source_id IN (:sourceIds)")
+    suspend fun deleteChannelsBySourceIds(sourceIds: List<Long>)
+
+    @Transaction
+    suspend fun deleteBySourceId(sourceId: Long) {
+        deleteProgrammesBySourceId(sourceId)
+        deleteChannelsBySourceId(sourceId)
+    }
+
+    @Transaction
+    suspend fun deleteBySourceIds(sourceIds: List<Long>) {
+        deleteProgrammesBySourceIds(sourceIds)
+        deleteChannelsBySourceIds(sourceIds)
+    }
+
+    @Query("SELECT * FROM epg_index_metadata WHERE id = 1")
+    suspend fun getMetadata(): EpgIndexMetadata?
+
+    @Query("SELECT COUNT(*) FROM epg_programme")
+    suspend fun getProgrammeCount(): Int
+
+    @Query("SELECT COUNT(*) FROM epg_channel")
+    suspend fun getChannelCount(): Int
+
+    @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId")
+    suspend fun getLatestProgrammeEndTimeForSource(sourceId: Long): Long?
+}
+
+/** One programme of [EpgIndexDao.getProgrammesInWindow]: what a guide cell draws. */
+data class EpgWindowRow(
+    val channelId: String,
+    val title: String,
+    val description: String?,
+    val startEpoch: Long,
+    val endEpoch: Long,
+)

@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:antonio",
+  "name": "Antonio (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://github.com/googlefonts/antonioFont",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-antonio"
+  ],
+  "tag": "font"
+}

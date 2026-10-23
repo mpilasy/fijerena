@@ -1,0 +1,8 @@
+# F-27 cancellation gate allow-list (scripts/check-cancellation.sh).
+# One path per line, then "# reason". Whole files are skipped, so keep this list shrinking:
+# a file leaves the list once its catch sites rethrow CancellationException (or carry
+# `// cancellation-ok: <reason>`). Single deliberate sites use that marker, not this list.
+#
+# Not in F-27's first-pass list (the rock solid stability resilience plan):
+core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt # blocking smbj calls and close(); SMB out of scope (20260922 plan)
+core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbMediaProvider.kt # directory scans; SMB out of scope (20260922 plan)

@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:dmserifdisplay",
+  "name": "DM Serif Display (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://github.com/googlefonts/dm-fonts",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-dmserifdisplay"
+  ],
+  "tag": "font"
+}

@@ -1,0 +1,537 @@
+package org.njarasoa.fijerena.core.ui.viewmodels
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.queue.RefreshQueue
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import kotlin.coroutines.resume
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class EpgManagementViewModel(
+    private val context: Context,
+    // EPG is a provider-level concern: this screen manages one provider's sources only.
+    private val providerId: Long,
+) : ViewModel() {
+    private val epgFileManager = EpgFileManager.getInstance(context)
+    private val indexer = EpgIndexer.getInstance(context)
+    private val appSettings = AppSettings(context)
+
+    private fun indexDb() = EpgIndexDatabase.getInstance(context)
+
+    private fun settingsDb() = SettingsDatabase.getInstance(context)
+
+    // Generation counter for index DB
+    private val _dbGeneration = MutableStateFlow(0)
+
+    // Sources are in the persistent SettingsDatabase, scoped to this provider
+    val sources: Flow<List<EpgSourceEntity>> =
+        settingsDb().epgSourceDao().getSourcesForProvider(providerId).distinctUntilChanged()
+
+    val staleSourceCount: StateFlow<Int> =
+        sources
+            .map { list ->
+                val now = System.currentTimeMillis()
+                val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+                list.count { it.enabled && EpgRefreshSchedule.isStale(it, now, unsetHours) }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val failedSourceCount: StateFlow<Int> =
+        sources
+            .map { list -> list.count { it.enabled && it.lastError != null } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val processingState: StateFlow<EpgFileManager.MultiSourceState> =
+        epgFileManager
+            .stateFor(providerId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EpgFileManager.MultiSourceState.Idle)
+
+    val indexState: StateFlow<EpgIndexState> = indexer.state
+
+    val queuedTaskIds: StateFlow<Set<String>> = RefreshQueue.queuedTaskIds
+
+    val activeTaskIds: StateFlow<Set<String>> = RefreshQueue.activeTaskIds
+
+    val lastPipelineStats: StateFlow<org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?> =
+        settingsDb()
+            .epgPipelineStatsDao()
+            .getLatestStats()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // Flow that emits latest programme end times for all sources. Keyed off the set of source
+    // IDs, not the full `sources` list: during an active sync, `sources` re-emits on every
+    // progress field update (lastIngestedAtMs, lastError, ...), which used to restart this
+    // flatMapLatest and re-run a MAX(end_epoch) full scan per source on every one of those
+    // emissions. `_dbGeneration` (bumped below on sync completion, and on a full DB wipe) is
+    // what actually signals new data to query for.
+    val latestProgrammeTimes: StateFlow<Map<Long, Long>> =
+        sources
+            .distinctUntilChangedBy { list -> list.map { it.id } }
+            .flatMapLatest { list ->
+                _dbGeneration.map { gen ->
+                    withContext(Dispatchers.IO) {
+                        list.associate { source ->
+                            source.id to (indexDb().epgIndexDao().getLatestProgrammeEndTimeForSource(source.id) ?: 0L)
+                        }
+                    }
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    private val _taskSourceIds = MutableStateFlow<Map<String, Set<Long>>>(emptyMap())
+    val taskSourceIds: StateFlow<Map<String, Set<Long>>> = _taskSourceIds.asStateFlow()
+
+    val isDevMode: Boolean get() = appSettings.isDevMode
+
+    /** How old [source] may get before its status reads stale — see [EpgRefreshSchedule.staleAfterMs]. */
+    fun staleThresholdMs(source: EpgSourceEntity): Long = EpgRefreshSchedule.staleAfterMs(refreshIntervalHours(source))
+
+    /** [source]'s auto-refresh interval in hours, [EpgSourceEntity.REFRESH_OFF] = off; its row shows it. */
+    fun refreshIntervalHours(source: EpgSourceEntity): Int =
+        EpgRefreshSchedule.intervalHours(source, EpgRefreshSchedule.legacyIntervalHours(appSettings))
+
+    /**
+     * The card's on/off switch. A source's own guide ([AutoXmltvSources.isAutoXmltvSource]) follows
+     * "Provides a guide", so the switch sets that, as the viewer's choice, exactly as Edit Source
+     * does; any other guide source is turned on or off by itself.
+     */
+    fun setSourceEnabled(
+        source: EpgSourceEntity,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.setSourceEnabled") {
+            withContext(Dispatchers.IO) {
+                val repository = ProviderRepository(context)
+                val provider = repository.getProviderById(source.providerId)
+                if (provider != null && AutoXmltvSources.isAutoXmltvSource(source, provider.url)) {
+                    repository.setProvidesGuide(provider.id, enabled, byUser = true)
+                    AutoXmltvSources.reconcileStored(context, provider.id)
+                } else {
+                    settingsDb().epgSourceDao().updateSource(source.copy(enabled = enabled))
+                }
+            }
+        }
+    }
+
+    /**
+     * Sets one guide source's auto-refresh, from its row's picker ([refreshIntervalOptions]); the
+     * row and the periodic work follow from the database (the sources guide profiles plan → P5b).
+     */
+    fun setRefreshInterval(
+        sourceId: Long,
+        hours: Int,
+    ) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.setRefreshInterval") {
+            withContext(Dispatchers.IO) { epgFileManager.setRefreshInterval(sourceId, hours) }
+        }
+    }
+
+    data class DbStats(
+        val channelCount: Int = 0,
+        val programmeCount: Int = 0,
+    )
+
+    private val _dbStats = MutableStateFlow(DbStats())
+    val dbStats: StateFlow<DbStats> = _dbStats.asStateFlow()
+
+    sealed interface CellularConfirmDialog {
+        data object Hidden : CellularConfirmDialog
+
+        data class RefreshStale(
+            val onConfirm: suspend () -> Unit,
+            val onDismiss: () -> Unit,
+        ) : CellularConfirmDialog
+
+        data class RefreshSource(
+            val sourceId: Long,
+            val onConfirm: suspend () -> Unit,
+            val onDismiss: () -> Unit,
+        ) : CellularConfirmDialog
+    }
+
+    private val _cellularDialog = MutableStateFlow<CellularConfirmDialog>(CellularConfirmDialog.Hidden)
+    val cellularDialog: StateFlow<CellularConfirmDialog> = _cellularDialog.asStateFlow()
+
+    private val _toastMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()
+
+    private val _hasStrayFiles = MutableStateFlow(false)
+    val hasStrayFiles: StateFlow<Boolean> = _hasStrayFiles.asStateFlow()
+
+    private val _staleProgrammeCount = MutableStateFlow(0)
+    val staleProgrammeCount: StateFlow<Int> = _staleProgrammeCount.asStateFlow()
+
+    init {
+        refreshDbStats()
+        refreshMaintenanceState()
+        viewModelScope.launchGuarded("EpgManagementViewModel.init") {
+            processingState.collect { state ->
+                if (state is EpgFileManager.MultiSourceState.Completed) {
+                    _dbGeneration.value++
+                }
+            }
+        }
+    }
+
+    fun refreshMaintenanceState() {
+        viewModelScope.launchGuarded("EpgManagementViewModel.refreshMaintenanceState") {
+            withContext(Dispatchers.IO) {
+                _hasStrayFiles.value = epgFileManager.getStrayFiles().isNotEmpty()
+                val twoDaysAgo = (System.currentTimeMillis() / 1000) - (2 * 24 * 3600)
+                _staleProgrammeCount.value = indexer.countStaleProgrammes(twoDaysAgo)
+            }
+        }
+    }
+
+    fun refreshDbStats() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    val dao = indexDb().epgIndexDao()
+                    val channelCount = dao.getChannelCount()
+                    val programmeCount = dao.getProgrammeCount()
+
+                    _dbStats.value =
+                        DbStats(
+                            channelCount = channelCount,
+                            programmeCount = programmeCount,
+                        )
+
+                    // If we have data but indexer state is NotIndexed, force an initialization to sync up
+                    if (programmeCount > 0 && indexer.state.value is EpgIndexState.NotIndexed) {
+                        indexer.initialize()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    _dbStats.value = DbStats()
+                }
+            }
+        }
+    }
+
+    suspend fun getLatestProgrammeTime(sourceId: Long): Long? =
+        withContext(Dispatchers.IO) {
+            indexDb().epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
+        }
+
+    fun addSource(
+        url: String,
+        label: String,
+        timezoneOffsetHours: Int,
+        ingestMethod: String = "DOWNLOADED",
+        enabled: Boolean = true,
+    ) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.addSource") {
+            withContext(Dispatchers.IO) {
+                val urls =
+                    url
+                        .split("\n", ",", " ")
+                        .map { it.trim() }
+                        .filter { it.startsWith("http://") || it.startsWith("https://") }
+
+                for (u in urls) {
+                    val finalLabel =
+                        if (urls.size == 1) {
+                            label.ifBlank { EpgFileManager.extractLabel(u) }
+                        } else {
+                            EpgFileManager.extractLabel(u)
+                        }
+                    settingsDb().epgSourceDao().insertSource(
+                        EpgSourceEntity(
+                            url = u,
+                            label = finalLabel,
+                            timezoneOffsetHours = timezoneOffsetHours,
+                            ingestMethod = ingestMethod,
+                            enabled = enabled,
+                            providerId = providerId,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateSource(source: EpgSourceEntity) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.updateSource") {
+            withContext(Dispatchers.IO) {
+                settingsDb().epgSourceDao().updateSource(source)
+            }
+        }
+    }
+
+    fun deleteSource(id: Long) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.deleteSource") {
+            withContext(Dispatchers.IO) {
+                settingsDb().epgSourceDao().deleteSource(id)
+                // Also delete its transient data from the index (manual cascade)
+                indexDb().epgIndexDao().deleteBySourceId(id)
+                refreshDbStats()
+            }
+        }
+    }
+
+    fun refreshStale() {
+        val taskId = EpgFileManager.refreshStaleTaskId(providerId)
+        val queued = RefreshQueue.queuedTaskIds.value
+        if (queued.contains(taskId)) {
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+            return
+        }
+
+        viewModelScope.launchGuarded("EpgManagementViewModel.refreshStale") {
+            // Instant feedback: calculate which IDs will be refreshed and put them in the map
+            val now = System.currentTimeMillis()
+            val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+            val sourcesToRefresh =
+                withContext(Dispatchers.IO) {
+                    settingsDb().epgSourceDao().getEnabledSourcesForProvider(providerId)
+                }.filter { EpgRefreshSchedule.isStale(it, now, unsetHours) && !queued.contains("epg_refresh_source_${it.id}") }
+
+            if (sourcesToRefresh.isEmpty()) {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stale_sources))
+                return@launchGuarded
+            }
+
+            _taskSourceIds.value += (taskId to sourcesToRefresh.map { it.id }.toSet())
+
+            epgFileManager.launchRefreshStale(
+                providerId = providerId,
+                onComplete = {
+                    refreshDbStats()
+                    _taskSourceIds.value -= taskId
+                },
+                onCellularConfirm = {
+                    suspendCancellableCoroutine { cont ->
+                        _cellularDialog.value =
+                            CellularConfirmDialog.RefreshStale(
+                                onConfirm = {
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                    if (cont.isActive) cont.resume(true)
+                                },
+                                onDismiss = {
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                    _taskSourceIds.value -= taskId
+                                    if (cont.isActive) cont.resume(false)
+                                },
+                            )
+                    }
+                },
+            )
+        }
+    }
+
+    fun refreshFailed() {
+        val taskId = EpgFileManager.refreshFailedTaskId(providerId)
+        val queued = RefreshQueue.queuedTaskIds.value
+        if (queued.contains(taskId)) {
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+            return
+        }
+
+        viewModelScope.launchGuarded("EpgManagementViewModel.refreshFailed") {
+            val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources(providerId) }
+            if (sources.isEmpty()) {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
+                return@launchGuarded
+            }
+
+            _taskSourceIds.value += (taskId to sources.map { it.id }.toSet())
+
+            epgFileManager.launchRefreshFailed(
+                providerId = providerId,
+                onComplete = {
+                    refreshDbStats()
+                    _taskSourceIds.value -= taskId
+                },
+                onCellularConfirm = {
+                    suspendCancellableCoroutine { cont ->
+                        _cellularDialog.value =
+                            CellularConfirmDialog.RefreshStale(
+                                onConfirm = {
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                    if (cont.isActive) cont.resume(true)
+                                },
+                                onDismiss = {
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                    _taskSourceIds.value -= taskId
+                                    if (cont.isActive) cont.resume(false)
+                                },
+                            )
+                    }
+                },
+            )
+        }
+    }
+
+    fun refreshSource(sourceId: Long) {
+        val taskId = "epg_refresh_source_$sourceId"
+        val queued = RefreshQueue.queuedTaskIds.value
+        if (queued.contains(taskId)) {
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+            return
+        }
+
+        _taskSourceIds.value += (taskId to setOf(sourceId))
+
+        epgFileManager.launchProcessSingleSource(
+            providerId = providerId,
+            sourceId = sourceId,
+            onComplete = {
+                refreshDbStats()
+                _taskSourceIds.value -= taskId
+            },
+            onCellularConfirm = {
+                suspendCancellableCoroutine { cont ->
+                    _cellularDialog.value =
+                        CellularConfirmDialog.RefreshSource(
+                            sourceId = sourceId,
+                            onConfirm = {
+                                _cellularDialog.value = CellularConfirmDialog.Hidden
+                                if (cont.isActive) cont.resume(true)
+                            },
+                            onDismiss = {
+                                _cellularDialog.value = CellularConfirmDialog.Hidden
+                                _taskSourceIds.value -= taskId
+                                if (cont.isActive) cont.resume(false)
+                            },
+                        )
+                }
+            },
+        )
+    }
+
+    fun cleanupFiles() {
+        viewModelScope.launchGuarded("EpgManagementViewModel.cleanupFiles") {
+            val result =
+                withContext(Dispatchers.IO) {
+                    epgFileManager.cleanupStrayFiles()
+                }
+            _hasStrayFiles.value = false
+            if (result.filesDeleted > 0) {
+                _toastMessage.tryEmit(
+                    UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, NumberUtils.formatBytes(result.bytesFreed)),
+                )
+            } else {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
+            }
+        }
+    }
+
+    fun clearDatabase() {
+        epgFileManager.launchClearAllData {
+            // DB was destroyed and recreated
+            _dbGeneration.value++
+            val dao = indexDb().epgIndexDao()
+            _dbStats.value =
+                DbStats(
+                    channelCount = dao.getChannelCount(),
+                    programmeCount = dao.getProgrammeCount(),
+                )
+            _staleProgrammeCount.value = 0
+            _hasStrayFiles.value = false
+            _taskSourceIds.value = emptyMap()
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_data_cleared))
+        }
+    }
+
+    fun purgeOldProgrammes() {
+        viewModelScope.launchGuarded("EpgManagementViewModel.purgeOldProgrammes") {
+            val deleted =
+                withContext(Dispatchers.IO) {
+                    val twoDaysAgo = (System.currentTimeMillis() / 1000) - (2 * 24 * 3600)
+                    indexer.purgeOldProgrammes(twoDaysAgo)
+                }
+            refreshDbStats()
+            refreshMaintenanceState()
+            if (deleted > 0) {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_purged_programmes, deleted))
+            } else {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_old_programmes))
+            }
+        }
+    }
+
+    companion object {
+        private const val DAILY_HOURS = 24
+        private const val WEEKLY_HOURS = 168
+
+        /** A guide source's auto-refresh choices (D2): off, every 6 h, 12 h, daily, weekly. */
+        val REFRESH_INTERVAL_CHOICES = listOf(EpgSourceEntity.REFRESH_OFF, 6, 12, DAILY_HOURS, WEEKLY_HOURS)
+
+        /**
+         * The picker's options for a source refreshing every [currentHours]: the choices, plus the
+         * current value in its place when it is another one (4, 8 or 48 h, copied from the
+         * retired device-wide setting), so opening the picker doesn't lose it.
+         */
+        fun refreshIntervalOptions(currentHours: Int): List<Int> =
+            if (currentHours in REFRESH_INTERVAL_CHOICES) {
+                REFRESH_INTERVAL_CHOICES
+            } else {
+                (REFRESH_INTERVAL_CHOICES + currentHours).sortedBy { if (it == EpgSourceEntity.REFRESH_OFF) Int.MIN_VALUE else it }
+            }
+
+        /** An option's label in the picker: "Off", "Every 6 hours", "Daily", "Weekly". */
+        fun refreshIntervalLabel(hours: Int): UiText =
+            when (hours) {
+                EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.common_off)
+                DAILY_HOURS -> UiText.StringResource(R.string.epg_automation_freq_daily)
+                WEEKLY_HOURS -> UiText.StringResource(R.string.epg_automation_freq_weekly)
+                else -> UiText.StringResource(R.string.epg_automation_freq_hours, hours)
+            }
+
+        /** The interval as a source's row shows it: "Refreshes daily", "Auto-refresh off". */
+
+        /** A guide source's refresh line: "Off" while it is switched off, whatever its interval, as nothing refreshes it then. */
+        fun refreshSummary(
+            enabled: Boolean,
+            hours: Int,
+        ): UiText = if (enabled) refreshIntervalSummary(hours) else UiText.StringResource(R.string.epg_source_off_summary)
+
+        fun refreshIntervalSummary(hours: Int): UiText =
+            when (hours) {
+                EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.epg_source_refresh_off)
+                DAILY_HOURS -> UiText.StringResource(R.string.epg_source_refresh_daily)
+                WEEKLY_HOURS -> UiText.StringResource(R.string.epg_source_refresh_weekly)
+                else -> UiText.StringResource(R.string.epg_source_refresh_hours, hours)
+            }
+
+        private fun formatCount(count: Int): String =
+            when {
+                count >= 1_000_000 -> String.format(java.util.Locale.US, "%.1fM", count / 1_000_000.0)
+                count >= 1_000 -> String.format(java.util.Locale.US, "%.1fK", count / 1_000.0)
+                else -> count.toString()
+            }
+    }
+}

@@ -1,0 +1,1156 @@
+package org.njarasoa.fijerena.core.network
+
+import android.util.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
+import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
+import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
+import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
+import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
+import org.njarasoa.fijerena.core.network.xtream.CatalogSyncException
+import org.njarasoa.fijerena.core.network.xtream.SyncDelta
+import org.njarasoa.fijerena.core.network.xtream.XtreamLoginPicker
+import org.njarasoa.fijerena.core.network.xtream.awaitCatalogTasks
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.api.XtreamResponse
+import org.njarasoa.fijerena.core.player.api.asThrowable
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.domain.PlayableStream
+import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import java.util.concurrent.ConcurrentHashMap
+
+class XtreamMediaProvider(
+    override val providerId: Long,
+    private val repository: XtreamRepository,
+    private val tmdb: TmdbApiService,
+) : MediaProvider {
+    // ConcurrentHashMap: this provider instance is shared across background sync workers,
+    // catalog search coroutines, and UI viewmodels, all of which can read/write these
+    // concurrently on different dispatchers.
+    private val searchDataSizes = ConcurrentHashMap<String, Long>()
+
+    // Cache: (tmdbSeriesId, season) -> (season, episodeNumber) -> overview.
+    // Keeps reopens cheap without hitting TMDB again this session.
+    private val tmdbOverviewCache = ConcurrentHashMap<Pair<Int, Int>, Map<Pair<Int, Int>, String>>()
+
+    // Full movie/series detail (plot, cast, genre, rating, contentRating, episodes, etc.) rarely
+    // changes, but assembling it costs a live Xtream call plus TMDB enrichment — cache the fully
+    // assembled result so reopening the same title doesn't repeat that work.
+    private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
+    private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
+
+    // getTmdbLogoUrl and getTmdbBackdropUrl both read `/images`, which returns both in one
+    // response — cache it so a caller that wants both (the TV detail hero) makes one network
+    // round trip instead of two.
+    private val tmdbImagesCache = TtlCache<Pair<Int, String>, TmdbImagesResponse>(DETAIL_CACHE_TTL_MS)
+
+    override val capabilities =
+        ProviderCapabilities(
+            supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
+            supportsEpg = true,
+            supportsSearch = true,
+            supportsAuthentication = true,
+            supportsProgressSync = false,
+            supportsAutoplayNextEpisode = true,
+            supportsCatchup = true,
+            searchesLocally = true,
+        )
+
+    override suspend fun connect(): kotlin.Result<Unit> =
+        when (val result = repository.restoreSession()) {
+            is Result.Success -> {
+                kotlin.Result.success(Unit)
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(
+                    Exception("Failed to connect to Xtream provider: ${result.exception.message}", result.exception),
+                )
+            }
+        }
+
+    override suspend fun disconnect() {
+        trimMemory()
+        repository.disconnect()
+    }
+
+    override fun isConnected(): Boolean = repository.isAuthenticated()
+
+    override suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
+        val result =
+            when (contentType) {
+                ContentType.LIVE_TV -> repository.getCategories()
+                ContentType.MOVIES -> repository.getVodCategories()
+                ContentType.TV_SHOWS -> repository.getSeriesCategories()
+                else -> repository.getCategories()
+            }
+        return when (result) {
+            is Result.Success -> {
+                kotlin.Result.success(result.data.map { it.toDomain() })
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    private fun getMediaType(contentType: String): MediaType =
+        when (contentType) {
+            ContentType.LIVE_TV, "LIVE_TV" -> MediaType.LIVE_CHANNEL
+            ContentType.MOVIES, "MOVIES" -> MediaType.MOVIE
+            ContentType.TV_SHOWS, "TV_SHOWS" -> MediaType.SERIES
+            else -> MediaType.LIVE_CHANNEL
+        }
+
+    override suspend fun getItems(
+        categoryId: String,
+        contentType: String,
+    ): kotlin.Result<List<MediaItem>> {
+        val mediaType = getMediaType(contentType)
+        val result =
+            when (contentType) {
+                ContentType.LIVE_TV -> repository.getStreams(categoryId)
+                ContentType.MOVIES -> repository.getVodStreams(categoryId)
+                ContentType.TV_SHOWS -> repository.getSeries(categoryId)
+                else -> repository.getStreams(categoryId)
+            }
+        return when (result) {
+            is Result.Success -> {
+                // Callers run on Dispatchers.Main.immediate, and each toDomain allocates a
+                // MediaItem, a providerData map and a MediaMetadata. On the largest category
+                // (9,480 items) that measured 50ms of main-thread work at the moment of the tap.
+                kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
+        val mediaType = getMediaType(contentType)
+        val result = repository.getAllStreams(contentType)
+        return when (result) {
+            is Result.Success -> {
+                kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
+
+    /**
+     * One line whenever a lookup ends as an error on screen. Without it a call that never
+     * completed left no trace at all, so in a log capture "the user never opened anything" and
+     * "the provider was unreachable" looked exactly the same.
+     */
+    private fun XtreamResponse<*>.logAsFailure(
+        action: String,
+        id: String,
+    ) {
+        when (this) {
+            is XtreamResponse.Ok -> {}
+
+            is XtreamResponse.Unavailable -> {
+                Log.w("XtreamMediaProvider", "$action $id: provider has nothing for it")
+            }
+
+            is XtreamResponse.Malformed -> {
+                Log.w("XtreamMediaProvider", "$action $id: response could not be read", cause)
+            }
+
+            is XtreamResponse.Failed -> {
+                Log.w("XtreamMediaProvider", "$action $id: call did not complete", cause)
+            }
+        }
+    }
+
+    /**
+     * Fetches the series info, applying the two recoveries worth trying when the provider answers
+     * with nothing usable — [XtreamResponse] having already decided that it did.
+     *
+     * One retry, because these proxies blip: a second ask often returns the episode list the first
+     * one omitted. Then a re-resolve by name, because a catalogue id the provider has stopped
+     * recognising is the other reason for a permanent nothing — every later visit would show an
+     * empty show forever otherwise.
+     */
+    private suspend fun resolveSeriesInfo(id: Int): XtreamResponse<SeriesInfo> {
+        val first = repository.getSeriesInfo(id)
+        if (first is XtreamResponse.Ok || first is XtreamResponse.Failed) return first
+
+        val retry = repository.getSeriesInfo(id)
+        if (retry is XtreamResponse.Ok) return retry
+        Log.w("XtreamMediaProvider", "Series $id gave nothing usable twice")
+
+        val name = repository.getCachedSeriesEntity(id)?.name
+        val currentId = name?.let { repository.resolveSeriesIdByName(it) }
+        return if (currentId == null || currentId == id) {
+            retry
+        } else {
+            Log.i("XtreamMediaProvider", "Series $id is gone; provider now lists \"$name\" as $currentId")
+            repository.getSeriesInfo(currentId)
+        }
+    }
+
+    override suspend fun invalidateCachedDetail(itemId: String) {
+        seriesDetailCache.remove(itemId)
+        movieDetailCache.remove(itemId)
+        // Also expire the persisted TMDB-derived row, otherwise a refresh still gets the stored
+        // content rating (and, for a movie, the whole stored detail) for the rest of its 7 days.
+        itemId.toIntOrNull()?.let { id ->
+            repository.getCachedMovieDetail(id)?.let {
+                repository.saveMovieDetailCache(id, it.contentRating, it.tmdbId, it.containerExtension, 0L)
+            }
+            repository.getCachedSeriesEntity(id)?.let {
+                repository.saveSeriesDetailCache(id, it.contentRating, it.tmdbId, 0L)
+            }
+            // And the persisted episode-list cache (EPISODE_LIST_CACHE_TTL_MS) — without this a
+            // manual refresh (TV's header Refresh button, Mobile's pull-to-refresh) would still
+            // serve the on-disk episode list for the rest of its window, making the refresh
+            // action look like it did nothing.
+            repository.expireEpisodeListCache(id)
+        }
+    }
+
+    override suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? {
+        seriesDetailCache.get(seriesId.raw)?.let { return it }
+        val id = seriesId.raw.toIntOrNull() ?: return null
+        return repository.getCachedSeriesDetail(id)
+    }
+
+    override suspend fun getCatalogueTmdbId(
+        itemId: String,
+        contentType: String,
+    ): String? {
+        val id = itemId.toIntOrNull() ?: return null
+        return when (contentType) {
+            ContentType.TV_SHOWS -> repository.getCachedSeriesEntity(id)?.tmdbId
+            ContentType.MOVIES -> repository.getCachedMovieDetail(id)?.tmdbId
+            else -> null
+        }?.takeIf { it.isNotBlank() }
+    }
+
+    override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> {
+        // Xtream numbers its catalogue; unwrap once here and keep the rest raw.
+        val rawSeriesId = seriesId.raw
+        val id =
+            rawSeriesId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid series ID: $rawSeriesId"),
+            )
+
+        // Persisted episode-list freshness (see EPISODE_LIST_CACHE_TTL_MS): re-hitting Xtream for the
+        // whole episode list on every open meant calls several times a minute while browsing seasons
+        // back and forth, and a show the size of Law & Order returns several hundred episodes each time.
+        // [getCachedSeriesDetail] already rebuilds a full SeriesDetail from disk with no network call;
+        // this just decides when that's trustworthy enough to use instead of asking Xtream again.
+        //
+        // New episodes are noticed through the catalogue sync instead: a series whose catalogue
+        // entry changed (panel-a bumps `last_modified` when episodes are added) gets its
+        // episodesFetchedAt cleared, so the next open lands here as not fresh.
+        val cachedEntity = repository.getCachedSeriesEntity(id)
+        val episodesFresh =
+            cachedEntity?.episodesFetchedAt != null &&
+                System.currentTimeMillis() - cachedEntity.episodesFetchedAt < EPISODE_LIST_CACHE_TTL_MS
+        if (episodesFresh) {
+            // The in-memory copy is only trusted while the stored list is: the sync that clears
+            // the stamp runs on another provider instance and can't reach this cache.
+            seriesDetailCache.get(rawSeriesId)?.let { return kotlin.Result.success(it) }
+            val cached = repository.getCachedSeriesDetail(id)
+            if (cached != null) {
+                seriesDetailCache.put(rawSeriesId, cached)
+                return kotlin.Result.success(cached)
+            }
+        }
+
+        // Xtream re-sends the episode list on every fetch, and it rarely carries synopses — so fill
+        // in the ones TMDB gave us last time before deciding whether to ask TMDB again. Without
+        // this the season fetches below repeat on every fetch, since their in-memory cache dies
+        // with the process. Read before resolveSeriesInfo: storing the new episode list replaces
+        // the episode rows, and the stored plots with them.
+        val storedPlots = repository.getPersistedEpisodePlots(id)
+        return when (val result = resolveSeriesInfo(id)) {
+            is XtreamResponse.Ok -> {
+                val detail = result.value.toDomain(rawSeriesId).withPlots(storedPlots)
+                val tmdbSeriesId =
+                    resolveSeriesTmdbId(
+                        result.value.info
+                            ?.tmdb
+                            .asString(),
+                        cachedEntity?.tmdbId,
+                    )
+                var enriched = detail
+                if (tmdb.hasApiKey() && tmdbSeriesId != null) {
+                    if (detail.hasEpisodeWithoutPlot()) {
+                        enriched = enrichWithTmdbOverviews(enriched, tmdbSeriesId)
+                    }
+
+                    val cachedSeries = repository.getCachedSeriesEntity(id)
+                    val cachedRating = cachedSeries?.contentRating
+                    val cachedRatingFresh =
+                        cachedRating != null &&
+                            cachedSeries.detailFetchedAt != null &&
+                            System.currentTimeMillis() - cachedSeries.detailFetchedAt < DETAIL_CACHE_TTL_MS
+                    val certification = if (cachedRatingFresh) cachedRating else fetchTvCertification(tmdbSeriesId)
+                    if (certification != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
+                    }
+                    // Only fills release date, year and plot when Xtream left them out, so skip it
+                    // while the stored TMDB details are fresh and Xtream sent a date and a plot.
+                    // Year alone doesn't count: Xtream never sends one, and a series rebuilt from
+                    // disk (buildCachedSeriesDetail) goes without it too.
+                    val needsTmdbDetails =
+                        !cachedRatingFresh ||
+                            enriched.metadata.releaseDate == null ||
+                            enriched.metadata.plot.isNullOrBlank()
+                    val tmdbDetails =
+                        if (needsTmdbDetails) suspendRunCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull() else null
+                    if (tmdbDetails != null) {
+                        val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.firstAirDate
+                        val newYear = enriched.metadata.year ?: tmdbDetails.year
+                        val newPlot = enriched.metadata.plot?.takeIf { it.isNotBlank() } ?: tmdbDetails.overview
+                        enriched =
+                            enriched.copy(
+                                metadata =
+                                    enriched.metadata.copy(
+                                        releaseDate = newReleaseDate,
+                                        year = newYear,
+                                        plot = newPlot,
+                                    ),
+                            )
+                    }
+                    if (!cachedRatingFresh) {
+                        val tmdbPosterPath = tmdbDetails?.posterPath
+                        repository.saveSeriesDetailCache(
+                            id,
+                            certification,
+                            tmdbSeriesId.toString(),
+                            System.currentTimeMillis(),
+                            tmdbPosterPath,
+                        )
+                    }
+                }
+                if (enriched.metadata.year == null) {
+                    val extractedYear = Regex("""\b(19\d\d|20\d\d)\b""").find(enriched.name)?.value?.toIntOrNull()
+                    if (extractedYear != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(year = extractedYear))
+                    }
+                }
+                repository.persistEpisodeOverviews(enriched.episodes)
+                // A series with no episodes is never a legitimate answer — it means the provider
+                // returned nothing useful this time. Caching it would serve the empty screen for
+                // the cache's whole lifetime, which no amount of clearing the provider's stored
+                // catalogue would fix, since this cache lives in memory.
+                if (enriched.episodes.values.any { it.isNotEmpty() }) {
+                    seriesDetailCache.put(rawSeriesId, enriched)
+                }
+                kotlin.Result.success(enriched)
+            }
+
+            // The episode list an earlier visit stored, however old, rather than an error: the page
+            // says it is the saved copy and offers Retry. A show never opened has none to show.
+            else -> {
+                result.logAsFailure("get_series_info", rawSeriesId)
+                repository
+                    .getCachedSeriesDetail(id)
+                    ?.takeIf { cached -> cached.episodes.values.any { it.isNotEmpty() } }
+                    ?.let { kotlin.Result.success(it.copy(isSavedCopy = true)) }
+                    ?: kotlin.Result.failure(result.asThrowable())
+            }
+        }
+    }
+
+    /**
+     * The synopsis of [episode], or null when TMDB has none (or can't be asked). Playback calls this
+     * for an episode that has no plot yet — one the series screen never enriched, because its
+     * season list came from the cache or its info carried no TMDB id. It is the same season
+     * lookup [getSeriesDetail] runs, narrowed to the episode's season, and the result is persisted
+     * the same way so the next visit has it.
+     */
+    override suspend fun fetchEpisodePlot(
+        seriesId: SeriesId,
+        episode: EpisodeItem,
+    ): String? {
+        val id = seriesId.raw.toIntOrNull()
+        val season = episode.seasonNumber
+        val tmdbSeriesId = id?.let { resolveSeriesTmdbId(null, repository.getCachedSeriesEntity(it)?.tmdbId) }
+        val overview =
+            if (tmdb.hasApiKey() && season != null && tmdbSeriesId != null) {
+                fetchTmdbOverviews(tmdbSeriesId, setOf(season))[season to episode.episodeNumber]
+            } else {
+                null
+            }
+        if (overview != null) {
+            repository.persistEpisodeOverviews(mapOf(episode.id to listOf(episode.copy(metadata = episode.metadata.copy(plot = overview)))))
+            seriesDetailCache.remove(seriesId.raw)
+        }
+        return overview
+    }
+
+    private suspend fun fetchTvCertification(tmdbSeriesId: Int): String? =
+        suspendRunCatching { tmdb.getTvContentRatings(tmdbSeriesId) }
+            .onFailure { Log.w("XtreamMediaProvider", "TMDB content rating fetch failed for series $tmdbSeriesId", it) }
+            .getOrNull()
+            ?.let { extractCertification(it.results.map { r -> r.country to r.rating }) }
+
+    private suspend fun fetchMovieCertification(tmdbMovieId: Int): String? =
+        suspendRunCatching { tmdb.getMovieReleaseDates(tmdbMovieId) }
+            .onFailure { Log.w("XtreamMediaProvider", "TMDB release dates fetch failed for movie $tmdbMovieId", it) }
+            .getOrNull()
+            ?.let { response ->
+                extractCertification(
+                    response.results.map {
+                        it.country to
+                            it.releaseDates.firstNotNullOfOrNull { d -> d.certification?.takeIf { c -> c.isNotBlank() } }
+                    },
+                )
+            }
+
+    /** Prefers the US entry (TMDB's most reliably populated region), else the first non-blank one. */
+    private fun extractCertification(byCountry: List<Pair<String, String?>>): String? =
+        byCountry.firstOrNull { it.first == "US" }?.second?.takeIf { it.isNotBlank() }
+            ?: byCountry.firstNotNullOfOrNull { it.second?.takeIf { c -> c.isNotBlank() } }
+
+    /**
+     * Fetches per-episode overviews from TMDB (one call per season) and injects them
+     * into each episode's metadata.plot. Xtream providers typically don't return
+     * episode synopses, so this fills that gap.
+     */
+    private suspend fun enrichWithTmdbOverviews(
+        detail: SeriesDetail,
+        tmdbSeriesId: Int,
+    ): SeriesDetail {
+        // Only the seasons that still have an episode without a synopsis: on a long show most
+        // seasons are already filled in from earlier visits.
+        val seasonNumbers = mutableSetOf<Int>()
+        detail.episodes.values.forEach { episodesList ->
+            episodesList.forEach { ep ->
+                if (ep.metadata.plot.isNullOrBlank()) ep.seasonNumber?.let { seasonNumbers.add(it) }
+            }
+        }
+
+        val missing = seasonNumbers.filterNot { tmdbOverviewCache.containsKey(tmdbSeriesId to it) }.toSet()
+        if (missing.isNotEmpty()) {
+            val fetched = fetchTmdbOverviews(tmdbSeriesId, missing)
+            missing.forEach { season ->
+                tmdbOverviewCache[tmdbSeriesId to season] = fetched.filterKeys { it.first == season }
+            }
+        }
+        val overviews = seasonNumbers.flatMap { tmdbOverviewCache[tmdbSeriesId to it].orEmpty().entries }.associate { it.toPair() }
+
+        if (overviews.isEmpty()) return detail
+
+        val enrichedEpisodes =
+            detail.episodes.mapValues { (_, list) ->
+                list.map { ep ->
+                    val season = ep.seasonNumber ?: return@map ep
+                    val overview = overviews[season to ep.episodeNumber] ?: return@map ep
+                    if (ep.metadata.plot.isNullOrBlank()) {
+                        ep.copy(metadata = ep.metadata.copy(plot = overview))
+                    } else {
+                        ep
+                    }
+                }
+            }
+        return detail.copy(episodes = enrichedEpisodes)
+    }
+
+    /** This detail with [plots] (keyed by episode id) filling in any episode that has none. */
+    private fun SeriesDetail.withPlots(plots: Map<String, String>): SeriesDetail =
+        if (plots.isEmpty()) {
+            this
+        } else {
+            copy(
+                episodes =
+                    episodes.mapValues { (_, list) ->
+                        list.map { ep ->
+                            val stored = plots[ep.id]
+                            if (ep.metadata.plot.isNullOrBlank() && !stored.isNullOrBlank()) {
+                                ep.copy(metadata = ep.metadata.copy(plot = stored))
+                            } else {
+                                ep
+                            }
+                        }
+                    },
+            )
+        }
+
+    /** Whether any episode still lacks a synopsis — the only reason to spend TMDB season calls. */
+    private fun SeriesDetail.hasEpisodeWithoutPlot(): Boolean =
+        episodes.values.any { list ->
+            list.any { it.metadata.plot.isNullOrBlank() }
+        }
+
+    private suspend fun fetchTmdbOverviews(
+        tmdbSeriesId: Int,
+        seasons: Set<Int>,
+    ): Map<Pair<Int, Int>, String> =
+        coroutineScope {
+            // A long-running show would otherwise fan out one request per season at once, which is
+            // the shape most likely to get throttled at the other end.
+            val inFlight = Semaphore(MAX_CONCURRENT_TMDB_REQUESTS)
+            seasons
+                .map { season ->
+                    async {
+                        suspendRunCatching { inFlight.withPermit { tmdb.getSeason(tmdbSeriesId, season) } }
+                            .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
+                            .getOrNull()
+                            ?.episodes
+                            ?.mapNotNull { ep ->
+                                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                                val s = ep.seasonNumber ?: season
+                                (s to ep.episodeNumber) to overview
+                            }.orEmpty()
+                    }
+                }.flatMap { it.await() }
+                .toMap()
+        }
+
+    override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
+        movieDetailCache.get(movieId)?.let { return kotlin.Result.success(it) }
+        val id =
+            movieId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid movie ID: $movieId"),
+            )
+
+        // A movie's own metadata never changes after release (unlike a series' episode list), so a
+        // fresh persisted cache row is served with no Xtream or TMDB call at all, surviving restarts.
+        repository.getCachedMovieDetail(id)?.let { cached ->
+            if (cached.detailFetchedAt != null && System.currentTimeMillis() - cached.detailFetchedAt < DETAIL_CACHE_TTL_MS) {
+                val detail = cached.toMovieDetail(movieId)
+                movieDetailCache.put(movieId, detail)
+                return kotlin.Result.success(detail)
+            }
+        }
+
+        return when (val result = repository.getVodInfo(id)) {
+            is XtreamResponse.Ok -> {
+                val detail = result.value.toDomain(movieId)
+                val tmdbMovieId = detail.metadata.tmdbId?.toIntOrNull()
+                var enriched = detail
+                var tmdbPosterPath: String? = null
+                if (tmdb.hasApiKey() && tmdbMovieId != null) {
+                    // Independent TMDB calls (neither reads the other's result) — run them
+                    // concurrently instead of stacking two full network round-trips on top of
+                    // get_vod_info. Sequential timeouts here were traced to a real ~60s UI
+                    // freeze on Shield when switching between a movie's alternate stream
+                    // versions, which always misses movieDetailCache/the persisted cache.
+                    val (certification, tmdbDetails) =
+                        coroutineScope {
+                            val certificationDeferred = async { fetchMovieCertification(tmdbMovieId) }
+                            val detailsDeferred = async { suspendRunCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull() }
+                            certificationDeferred.await() to detailsDeferred.await()
+                        }
+                    if (certification != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
+                    }
+                    tmdbPosterPath = tmdbDetails?.posterPath
+                    if (tmdbDetails != null) {
+                        val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.releaseDate
+                        val newYear = enriched.metadata.year ?: tmdbDetails.year
+                        val newPlot = enriched.metadata.plot?.takeIf { it.isNotBlank() } ?: tmdbDetails.overview
+                        enriched =
+                            enriched.copy(
+                                metadata =
+                                    enriched.metadata.copy(
+                                        releaseDate = newReleaseDate,
+                                        year = newYear,
+                                        plot = newPlot,
+                                    ),
+                            )
+                    }
+                }
+                // Stream title fallback for year (e.g. "The Godfather (1972)")
+                if (enriched.metadata.year == null) {
+                    val extractedYear = Regex("""\b(19\d\d|20\d\d)\b""").find(enriched.name)?.value?.toIntOrNull()
+                    if (extractedYear != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(year = extractedYear))
+                    }
+                }
+                movieDetailCache.put(movieId, enriched)
+                repository.saveMovieDetailCache(
+                    vodId = id,
+                    contentRating = enriched.metadata.contentRating,
+                    tmdbId = enriched.metadata.tmdbId,
+                    containerExtension = enriched.extension,
+                    fetchedAt = System.currentTimeMillis(),
+                    posterPath = tmdbPosterPath,
+                )
+                kotlin.Result.success(enriched)
+            }
+
+            // The provider answered and had nothing to say about this movie. Its own catalogue
+            // row is still local, and a movie needs no more than that to play — the stream URL is
+            // built from the id, with the extension defaulting to mp4. Failing here would refuse
+            // to open a film whose only problem is missing metadata.
+            is XtreamResponse.Unavailable, is XtreamResponse.Malformed -> {
+                result.logAsFailure("get_vod_info", movieId)
+                val cached =
+                    repository.getCachedMovieDetail(id)
+                        ?: return kotlin.Result.failure(result.asThrowable())
+                // Deliberately not cached: this is the degraded answer, and the next visit should
+                // ask the provider again rather than replay it.
+                kotlin.Result.success(cached.toMovieDetail(movieId))
+            }
+
+            // The call never completed (no session, a timeout, no connection). Often one slow call
+            // rather than an outage, so the film's own catalogue row, with whatever an earlier visit
+            // stored, still shows the page and builds the stream URL; the page says it is the
+            // saved copy and offers Retry. Not cached, like the degraded answer above.
+            is XtreamResponse.Failed -> {
+                result.logAsFailure("get_vod_info", movieId)
+                val cached =
+                    repository.getCachedMovieDetail(id)
+                        ?: return kotlin.Result.failure(result.asThrowable())
+                kotlin.Result.success(cached.toMovieDetail(movieId).copy(isSavedCopy = true))
+            }
+        }
+    }
+
+    override suspend fun resolvePlayableStream(
+        itemId: String,
+        contentType: String,
+        episodeId: String?,
+        extension: String?,
+    ): kotlin.Result<PlayableStream> {
+        val isLive = contentType == ContentType.LIVE_TV
+
+        if (episodeId != null && extension != null) {
+            return when (val result = repository.buildEpisodeStreamUrl(episodeId, extension)) {
+                is Result.Success -> {
+                    kotlin.Result.success(
+                        PlayableStream(
+                            uri = XtreamLoginPicker.forPlayback(providerId, result.data),
+                            isLive = false,
+                            title = "",
+                        ),
+                    )
+                }
+
+                is Result.Error -> {
+                    kotlin.Result.failure(result.exception)
+                }
+            }
+        }
+
+        val streamId =
+            itemId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid stream ID: $itemId"),
+            )
+        val streamName = repository.getStreamName(streamId, contentType) ?: ""
+        return when (val result = repository.buildStreamUrl(streamId, contentType, extension)) {
+            is Result.Success -> {
+                kotlin.Result.success(
+                    PlayableStream(
+                        uri = XtreamLoginPicker.forPlayback(providerId, result.data),
+                        isLive = isLive,
+                        title = streamName,
+                    ),
+                )
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun resolveCatchupStream(
+        itemId: String,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): kotlin.Result<PlayableStream> {
+        val streamId =
+            itemId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid stream ID: $itemId"),
+            )
+        val streamName = repository.getStreamName(streamId, ContentType.LIVE_TV) ?: ""
+        return when (val result = repository.buildTimeshiftUrl(streamId, startEpochSec, durationSec)) {
+            is Result.Success -> {
+                kotlin.Result.success(
+                    PlayableStream(
+                        uri = XtreamLoginPicker.forPlayback(providerId, result.data),
+                        isLive = false,
+                        title = streamName,
+                    ),
+                )
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> =
+        repository
+            .getArchiveDays(itemIds.mapNotNull { it.toIntOrNull() })
+            .mapKeys { (streamId, _) -> streamId.toString() }
+
+    override fun getItemsIfCached(
+        categoryId: String,
+        contentType: String,
+    ): List<MediaItem>? {
+        val mediaType = getMediaType(contentType)
+        val cached =
+            when (contentType) {
+                ContentType.LIVE_TV -> repository.getStreamsCached(categoryId)
+                ContentType.MOVIES -> repository.getVodStreamsCached(categoryId)
+                ContentType.TV_SHOWS -> repository.getSeriesCached(categoryId)
+                else -> repository.getStreamsCached(categoryId)
+            }
+        return cached?.map { it.toDomain(mediaType) }
+    }
+
+    /**
+     * Builds the FTS MATCH expression for [query], or null when nothing searchable remains. A word
+     * matches as a prefix ("har pot" finds Harry Potter); words in double or single quotes match whole
+     * and in that order ("\"la\" land" or "'la' land" doesn't find TV LAND, which "la" would as a
+     * prefix of "land"). A single quote inside a word is an apostrophe ("don't", "ocean's").
+     */
+    private fun buildFtsQuery(query: String): String? {
+        // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
+        fun clean(word: String) = word.replace(FTS_SPECIAL, "")
+        val terms =
+            QUERY_TERM.findAll(query.trim()).mapNotNull { term ->
+                val quoted = term.groups[1]?.value ?: term.groups[2]?.value
+                if (quoted != null) {
+                    quoted
+                        .split(WHITESPACE)
+                        .map(::clean)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                        .ifBlank { null }
+                        ?.let { "\"$it\"" }
+                } else {
+                    term.value
+                        .takeUnless { it.startsWith("-") }
+                        ?.let(::clean)
+                        ?.ifBlank { null }
+                        ?.let { "$it*" }
+                }
+            }
+        return terms.joinToString(" ").ifBlank { null }
+    }
+
+    override suspend fun search(
+        query: String,
+        contentType: String,
+        includeExcluded: Boolean,
+    ): kotlin.Result<List<MediaItem>>? {
+        val ftsQuery = buildFtsQuery(query) ?: return null
+        val mediaType = getMediaType(contentType)
+        return try {
+            // A number is also a TMDB id: its titles lead, then the name matches ("1917" stays findable).
+            val tmdbId = query.trim().takeIf { it.all(Char::isDigit) }.normalizeTmdbId()
+            val byTmdbId = tmdbId?.let { repository.getAlternateStreams(contentType, it, excludeId = -1) }.orEmpty()
+            val results = (byTmdbId + repository.searchByFts(contentType, ftsQuery, includeExcluded)).map { it.toDomain(mediaType) }
+            kotlin.Result.success(results.distinctBy { it.id })
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun getRelatedTitles(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): RelatedTitles {
+        if (!tmdb.hasApiKey()) return RelatedTitles()
+        val id = tmdbId?.toIntOrNull() ?: return RelatedTitles()
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return RelatedTitles()
+
+        // Recommendations and the collection are independent endpoints, so ask for both at once
+        // rather than paying the round trips one after the other. Collections are a movie-only
+        // TMDB concept. Similar titles are only ever a fallback for a thin recommendations list
+        // (see below), so that call is not fired here — paying for it when it will not be used
+        // would be wasted.
+        val (recommended, collectionFetch) =
+            coroutineScope {
+                val recommendedCall = async { fetchRelated(id, contentType, similar = false) }
+                val collectionCall = async { if (contentType == ContentType.MOVIES) fetchCollection(id) else CollectionFetch() }
+                Pair(recommendedCall.await(), collectionCall.await())
+            }
+
+        val mediaType = getMediaType(contentType)
+        val taken = mutableSetOf<String>()
+        // Runs first, so a title belonging to the same collection as this one is always credited
+        // there even when TMDB also lists it under recommendations/similar — and the collection
+        // itself, being explicit rather than algorithmic, gets a row even with just one match.
+        // TMDB's collection always includes the movie being viewed itself; matchToCatalogue's own
+        // itemId check only catches that exact catalogue row, not the provider's other stream
+        // entries for the same film (multiple qualities/languages are common), so drop it by TMDB
+        // id first.
+        val collectionParts = collectionFetch.parts.filter { it.id != id }
+        val collectionMatches = matchToCatalogue(collectionParts, itemId, contentType, mediaType, taken, minCount = 1)
+
+        // "More Like This" is recommendations first, similar titles only topping up the rest —
+        // recommendations are the stronger signal, and a similar list that always fills a page
+        // regardless of genuine closeness must never bump a recommended title out of the cap.
+        val recommendedMatches = matchToCatalogue(recommended, itemId, contentType, mediaType, taken, minCount = 0)
+        val moreLikeThis =
+            if (recommendedMatches.size >= RelatedTitles.MAX_MORE_LIKE_THIS) {
+                recommendedMatches.take(RelatedTitles.MAX_MORE_LIKE_THIS)
+            } else {
+                val similar = fetchRelated(id, contentType, similar = true)
+                // Shares [taken], so a title TMDB returns from both endpoints is only ever
+                // credited once, under recommendations.
+                val similarMatches = matchToCatalogue(similar, itemId, contentType, mediaType, taken, minCount = 0)
+                (recommendedMatches + similarMatches).take(RelatedTitles.MAX_MORE_LIKE_THIS)
+            }
+
+        // TMDB's titles no source has (wishlist UX plan, Phase 4): after each row's own, each opening
+        // its TMDB page, so the next part of a collection can go on the Wishlist. Shares [taken].
+        fun notInSources(results: List<TmdbRecommendation>): List<MediaItem> =
+            results
+                .filter { result ->
+                    val key = result.displayTitle?.let { TitleMatcher.normalize(it).text }
+                    result.id != id && !key.isNullOrBlank() && key !in taken
+                }.distinctBy { it.id }
+                .take(RelatedTitles.MAX_NOT_IN_SOURCES)
+                .onEach { result -> result.displayTitle?.let { taken += TitleMatcher.normalize(it).text } }
+                .map { TmdbOnlyItem.of(it, mediaType) }
+        val collection = collectionMatches + notInSources(collectionParts)
+        val catalogueMoreLikeThis = if (moreLikeThis.size < MIN_RELATED_TITLES) emptyList() else moreLikeThis
+        return RelatedTitles(
+            collection = collection,
+            collectionName = collectionFetch.name.takeIf { collection.isNotEmpty() },
+            moreLikeThis = catalogueMoreLikeThis + notInSources(recommended),
+        )
+    }
+
+    override suspend fun getTmdbTitle(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        if (!tmdb.hasApiKey()) return null
+        val id = tmdbId?.toIntOrNull() ?: return null
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
+
+        return try {
+            val details = if (contentType == ContentType.MOVIES) tmdb.getMovieDetails(id) else tmdb.getTvDetails(id)
+            details.originalDisplayTitle
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB title for $contentType $id: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun getTmdbLogoUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        val images = getTmdbImages(tmdbId, contentType) ?: return null
+        return TmdbApiService.bestLogoUrl(images.logos)
+    }
+
+    override suspend fun getTmdbBackdropUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        val images = getTmdbImages(tmdbId, contentType) ?: return null
+        return TmdbApiService.bestBackdropUrl(images.backdrops)
+    }
+
+    /** Shared by [getTmdbLogoUrl] and [getTmdbBackdropUrl] — both read the same `/images`
+     * response, cached so asking for both costs one network round trip, not two. */
+    private suspend fun getTmdbImages(
+        tmdbId: String?,
+        contentType: String,
+    ): TmdbImagesResponse? {
+        if (!tmdb.hasApiKey()) return null
+        val id = tmdbId?.toIntOrNull() ?: return null
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
+
+        val cacheKey = id to contentType
+        tmdbImagesCache.get(cacheKey)?.let { return it }
+
+        return try {
+            val images = if (contentType == ContentType.MOVIES) tmdb.getMovieImages(id) else tmdb.getTvImages(id)
+            tmdbImagesCache.put(cacheKey, images)
+            images
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB images for $contentType $id: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun getAlternateStreams(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): List<MediaItem> {
+        if (tmdbId.isNullOrBlank()) return emptyList()
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return emptyList()
+        // Blank: another source's copies, where the same id is another entry, so none is left out.
+        val excludeId = if (itemId.isBlank()) NO_STREAM_ID else itemId.toIntOrNull() ?: return emptyList()
+
+        return try {
+            repository.getAlternateStreams(contentType, tmdbId, excludeId).map { it.toDomain(getMediaType(contentType)) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "Alternate streams for $contentType tmdb $tmdbId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private suspend fun fetchRelated(
+        tmdbId: Int,
+        contentType: String,
+        similar: Boolean,
+    ): List<TmdbRecommendation> =
+        try {
+            when {
+                contentType == ContentType.MOVIES && similar -> tmdb.getMovieSimilar(tmdbId)
+                contentType == ContentType.MOVIES -> tmdb.getMovieRecommendations(tmdbId)
+                similar -> tmdb.getTvSimilar(tmdbId)
+                else -> tmdb.getTvRecommendations(tmdbId)
+            }.results
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A title filed under the wrong type 404s here. The rows are a bonus, never an error,
+            // and one endpoint failing must not cost the other its row.
+            Log.w("XtreamMediaProvider", "TMDB ${if (similar) "similar" else "recommendations"} for $contentType $tmdbId: ${e.message}")
+            emptyList()
+        }
+
+    private data class CollectionFetch(
+        val name: String? = null,
+        val parts: List<TmdbRecommendation> = emptyList(),
+    )
+
+    /** The other movies in [movieId]'s TMDB collection, if it belongs to one. */
+    private suspend fun fetchCollection(movieId: Int): CollectionFetch =
+        try {
+            val collectionId = tmdb.getMovieDetails(movieId).belongsToCollection?.id ?: return CollectionFetch()
+            val collection = tmdb.getCollection(collectionId)
+            CollectionFetch(name = collection.name, parts = collection.parts)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB collection for movie $movieId: ${e.message}")
+            CollectionFetch()
+        }
+
+    /**
+     * Keeps the TMDB titles this provider can actually play, in the order TMDB ranked them.
+     * [taken] carries normalized titles already claimed — by an earlier row, or by an earlier
+     * entry in this one — so nothing is listed twice.
+     */
+    private suspend fun matchToCatalogue(
+        results: List<TmdbRecommendation>,
+        itemId: String,
+        contentType: String,
+        mediaType: MediaType,
+        taken: MutableSet<String>,
+        minCount: Int = MIN_RELATED_TITLES,
+    ): List<MediaItem> {
+        // The lookup per title is independent and read-only — dispatched concurrently
+        // (index-aligned with `results`) so up to ~40 TMDB titles cost one round trip's worth of
+        // wall-clock time instead of N sequential ones. Only the accept/reject decision below
+        // depends on `taken`, which is built up as matches are accepted — fetching ahead of that
+        // can waste a query on a title that turns out to already be claimed (by an earlier entry
+        // in this same list, or an earlier matchToCatalogue call), never on correctness.
+        // By TMDB id first; by title only among rows without one, so a row with another id (a
+        // remake with the same name) never matches.
+        val candidatesByIndex =
+            coroutineScope {
+                results
+                    .map { result ->
+                        async {
+                            try {
+                                val byId = repository.getAlternateStreams(contentType, result.id.toString(), excludeId = -1)
+                                if (byId.isNotEmpty()) return@async byId
+                                val title = result.displayTitle ?: return@async null
+                                val ftsQuery = buildFtsQuery(title) ?: return@async null
+                                repository
+                                    .searchByFts(contentType, ftsQuery, includeExcluded = false)
+                                    .filter { it.tmdb.asString().normalizeTmdbId() == null }
+                                    .filter { candidate ->
+                                        TitleMatcher.matches(
+                                            catalogueTitle = candidate.name,
+                                            catalogueYear = candidate.releaseDate?.take(4)?.toIntOrNull(),
+                                            tmdbTitle = title,
+                                            tmdbYear = result.year,
+                                        )
+                                    }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+                    }.awaitAll()
+            }
+
+        val matches = mutableListOf<MediaItem>()
+        for ((index, result) in results.withIndex()) {
+            val title = result.displayTitle ?: continue
+            val key = TitleMatcher.normalize(title).text
+            // Providers list the same film in several categories and qualities; one row each.
+            if (key.isBlank() || key in taken) continue
+
+            val hit = candidatesByIndex[index]?.firstOrNull { it.streamId.toString() != itemId } ?: continue
+            taken += key
+            // The card shows this name and the screen it opens is titled with it, so the provider's
+            // "NF - " / "4K-AMZ - " tags come off here rather than at either call site.
+            matches += hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
+        }
+        return if (matches.size < minCount) emptyList() else matches
+    }
+
+    override suspend fun countExcludedSearchMatches(
+        query: String,
+        contentType: String,
+    ): Int {
+        val ftsQuery = buildFtsQuery(query) ?: return 0
+        return try {
+            repository.countExcludedByFts(contentType, ftsQuery)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    override fun getLastSearchDataSize(contentType: String): Long? = searchDataSizes[contentType]
+
+    override fun trimMemory() {
+        movieDetailCache.clear()
+        seriesDetailCache.clear()
+        tmdbOverviewCache.clear()
+        tmdbImagesCache.clear()
+        searchDataSizes.clear()
+    }
+
+    override suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? {
+        val id =
+            streamId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid stream ID for EPG: $streamId"),
+            )
+        return when (val result = repository.getEpgForStream(id)) {
+            is Result.Success -> {
+                kotlin.Result.success(result.data)
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun getEpgBulk(streamIds: List<String>): kotlin.Result<Map<String, EpgResponse>>? {
+        val intIds = streamIds.mapNotNull { it.toIntOrNull() }
+        if (intIds.isEmpty()) return kotlin.Result.success(emptyMap())
+        return when (val result = repository.getEpgForStreams(intIds)) {
+            is Result.Success -> {
+                kotlin.Result.success(result.data.mapKeys { it.key.toString() })
+            }
+
+            is Result.Error -> {
+                kotlin.Result.failure(result.exception)
+            }
+        }
+    }
+
+    override suspend fun clearEpgCache() {
+        repository.clearAllEpgCache()
+    }
+
+    /**
+     * Triggers a full sync of categories and streams/series. Returns how many rows actually changed,
+     * summed across all six sync tasks — all-zero means the provider's catalog didn't change since the last sync.
+     *
+     * Throws [CatalogSyncException] if any task failed. The tasks that succeeded have committed
+     * their rows by then; the delta is dropped, since Settings shows the error instead of it.
+     */
+    suspend fun syncAll(): SyncDelta {
+        val jobs =
+            listOf(
+                repository.syncCategories(XtreamCategoryEntity.TYPE_LIVE),
+                repository.syncCategories(XtreamCategoryEntity.TYPE_VOD),
+                repository.syncCategories(XtreamCategoryEntity.TYPE_SERIES),
+                repository.syncStreams(XtreamStreamEntity.TYPE_LIVE),
+                repository.syncStreams(XtreamStreamEntity.TYPE_VOD),
+                repository.syncSeries(),
+            )
+        val failures = awaitCatalogTasks(jobs)
+        repository.recomputeExclusions()
+        val delta = repository.consumeSyncDelta()
+        if (failures.isNotEmpty()) throw CatalogSyncException(failures)
+        return delta
+    }
+
+    /** Total category count for [contentType], including any excluded by category filters — for "X of Y" UI counts. */
+    suspend fun getCategoryTotalCount(contentType: String): Int = repository.getCategoryTotalCount(contentType)
+
+    companion object {
+        // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
+        // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
+        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
+
+        // Separate stamp from DETAIL_CACHE_TTL_MS: this one guards the episode list itself, not
+        // the TMDB-derived enrichment fields. Only a safety net: new episodes normally show up
+        // because the catalogue sync clears the stamp when a series changes, but a provider that
+        // never updates `last_modified` (the jellyxtream bridge, for one) would otherwise never
+        // be asked again. See the catalog sync cache churn plan, Phase 2.
+        private const val EPISODE_LIST_CACHE_TTL_MS = 30 * 24 * 3600 * 1000L
+        private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
+
+        // Below this a row reads as an accident rather than a suggestion, so it is not shown.
+        private const val MIN_RELATED_TITLES = 3
+
+        // No stream or series has it: an exclusion that leaves every entry in.
+        private const val NO_STREAM_ID = -1
+    }
+}
+
+/**
+ * The TMDB id to enrich a series with: the one `get_series_info` carries, else the one the series
+ * listing stored. Some panels leave it out of the info block while the listing has it; without the
+ * fallback the whole TMDB enrichment — no episode synopses, certification or details — is skipped.
+ */
+internal fun resolveSeriesTmdbId(
+    infoTmdb: String?,
+    storedTmdb: String?,
+): Int? = infoTmdb.normalizeTmdbId()?.toIntOrNull() ?: storedTmdb.normalizeTmdbId()?.toIntOrNull()
+
+// A group in double quotes ("la la"), one in single quotes that open and close at a word's edge
+// ('la la', not the apostrophes of "don't"), or a word; an unclosed quote reads as words.
+private val QUERY_TERM = Regex(""""([^"]*)"|(?<!\S)'([^']*)'(?!\S)|[^\s"]+""")
+private val WHITESPACE = Regex("\\s+")
+private val FTS_SPECIAL = Regex("""[*"'()^]""")

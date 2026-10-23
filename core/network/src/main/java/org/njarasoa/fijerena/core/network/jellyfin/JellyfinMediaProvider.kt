@@ -1,0 +1,768 @@
+package org.njarasoa.fijerena.core.network.jellyfin
+
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.njarasoa.fijerena.core.network.TtlCache
+import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaMetadata
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.domain.PlayableStream
+import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
+import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
+import org.njarasoa.fijerena.core.player.domain.SeasonInfo
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
+import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
+import org.njarasoa.fijerena.core.player.domain.trailerUrl
+import java.util.concurrent.ConcurrentHashMap
+
+class JellyfinMediaProvider(
+    override val providerId: Long,
+    private val serverUrl: String,
+    private val username: String,
+    private val password: String,
+    private val deviceId: String,
+    savedToken: String? = null,
+    savedUserId: String? = null,
+    private val onSessionSaved: ((token: String, userId: String) -> Unit)? = null,
+    private val onSessionCleared: (() -> Unit)? = null,
+    injectedApi: JellyfinApiService? = null,
+    private val now: () -> Long = System::currentTimeMillis,
+) : MediaProvider {
+    private val api =
+        injectedApi ?: JellyfinApiService(serverUrl, deviceId).also {
+            if (savedToken != null && savedUserId != null) {
+                it.restoreSession(savedToken, savedUserId)
+            }
+        }
+
+    private val SUPPORTED_CONTAINERS = arrayOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
+
+    // PlaySessionId per item, used for transcoding session reporting. ConcurrentHashMap: written
+    // during playback setup, read during periodic progress reports, and removed on stop, each
+    // potentially on a different coroutine.
+    private val playSessionIds = ConcurrentHashMap<String, String>()
+    private val mediaSourceIds = ConcurrentHashMap<String, String>()
+    private val playMethods = ConcurrentHashMap<String, String>()
+
+    // Movie/series detail (plot, cast, genre, rating, contentRating, episodes) rarely changes —
+    // cache the assembled result so reopening the same title doesn't re-hit the server.
+    private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
+    private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
+
+    override val capabilities =
+        ProviderCapabilities(
+            supportedContentTypes = setOf(ContentType.MOVIES, ContentType.TV_SHOWS),
+            supportsEpg = false,
+            supportsSearch = true,
+            supportsAuthentication = true,
+            supportsProgressSync = true,
+            supportsServerUserData = true,
+            supportsAutoplayNextEpisode = true,
+        )
+
+    // One sign-in at a time: every request that finds the session gone calls connect(), and a
+    // screen starts several at once — five logins in half a second on a OnePlus (2026-10-09),
+    // all refused, a burst that also counts toward the server's failed-login lockout.
+    private val connectMutex = Mutex()
+
+    // A refused login is the answer for [REJECTED_LOGIN_RETRY_MS]: the requests waiting behind it,
+    // and any that come right after, fail at once instead of sending the same username and
+    // password again. Editing the source builds a new provider, so a corrected login is tried
+    // straight away.
+    private var rejectedAtMs: Long? = null
+    private var rejection: Throwable? = null
+
+    override suspend fun connect(): Result<Unit> =
+        connectMutex.withLock {
+            if (isConnected()) return@withLock Result.success(Unit)
+            val rejectedAt = rejectedAtMs
+            val lastRejection = rejection
+            if (rejectedAt != null && lastRejection != null && now() - rejectedAt < REJECTED_LOGIN_RETRY_MS) {
+                return@withLock Result.failure(lastRejection)
+            }
+            api
+                .authenticate(username, password)
+                .also { result ->
+                    result.onSuccess {
+                        rejectedAtMs = null
+                        rejection = null
+                        val token = api.getAccessToken()
+                        val uid = api.getUserId()
+                        if (token != null && uid != null) onSessionSaved?.invoke(token, uid)
+                    }
+                    result.onFailure { e ->
+                        if (e is JellyfinLoginRejectedException) {
+                            rejectedAtMs = now()
+                            rejection = e
+                        }
+                    }
+                }.map { }
+        }
+
+    override suspend fun disconnect() {
+        api.disconnect()
+    }
+
+    override fun isConnected(): Boolean = api.isAuthenticated()
+
+    override suspend fun getCategories(contentType: String): Result<List<MediaCategory>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return withAutoReconnect {
+            api.getLibraries().map { libraries ->
+                libraries
+                    .filter { library ->
+                        when (jellyfinType) {
+                            "Movie" -> library.collectionType == "movies"
+                            "Series" -> library.collectionType == "tvshows"
+                            else -> true
+                        }
+                    }.map { library ->
+                        MediaCategory(
+                            id = library.id,
+                            name = library.name,
+                        )
+                    }
+            }
+        }
+    }
+
+    override suspend fun getItems(
+        categoryId: String,
+        contentType: String,
+    ): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        val includeTypes = contentTypeToJellyfinType(contentType)
+
+        return withAutoReconnect {
+            api.getItems(parentId = categoryId, includeItemTypes = includeTypes).map { items ->
+                items.map { item -> item.toDomainItem(categoryId, contentType) }
+            }
+        }
+    }
+
+    override suspend fun getAllItems(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        // Fetch categories (Libraries) to know the valid roots
+        val categoriesResult = getCategories(contentType)
+        if (categoriesResult.isFailure) return Result.failure(categoriesResult.exceptionOrNull()!!)
+        val categories = categoriesResult.getOrThrow()
+        val categoryIds = categories.map { it.id }.toSet()
+
+        // Fetch all items recursively from root, including Folders/BoxSets for tree traversal
+        val baseType = contentTypeToJellyfinType(contentType)
+        val includeTypes = baseType?.let { "$it,Folder,BoxSet" }
+
+        return withAutoReconnect {
+            api.getItems(parentId = null, includeItemTypes = includeTypes).map { items ->
+                val parentMap = items.associate { it.id to it.parentId }
+
+                val targetType = contentTypeToJellyfinType(contentType) ?: ""
+                val contentItems = items.filter { it.type == targetType }
+
+                // Map items to their Library ID
+                val resultItems = mutableListOf<MediaItem>()
+
+                for (item in contentItems) {
+                    var currentParentId = item.parentId
+                    var libraryId: String? = null
+
+                    // Traverse up until we find a category ID or hit root (null)
+                    var depth = 0
+                    while (currentParentId != null && depth < 10) {
+                        if (categoryIds.contains(currentParentId)) {
+                            libraryId = currentParentId
+                            break
+                        }
+                        currentParentId = parentMap[currentParentId]
+                        depth++
+                    }
+
+                    if (libraryId != null) {
+                        resultItems.add(item.toDomainItem(categoryId = libraryId, contentType = contentType))
+                    }
+                }
+                resultItems
+            }
+        }
+    }
+
+    override suspend fun search(
+        query: String,
+        contentType: String,
+        includeExcluded: Boolean,
+    ): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        val includeTypes = contentTypeToJellyfinType(contentType)
+
+        return withAutoReconnect {
+            api.searchItems(query = query, includeItemTypes = includeTypes).map { items ->
+                items.map { item -> item.toDomainItem(categoryId = "", contentType = contentType) }
+            }
+        }
+    }
+
+    override suspend fun getSeriesDetail(seriesId: SeriesId): Result<SeriesDetail> {
+        // Jellyfin's own ids are opaque strings; unwrap once here and keep the rest raw.
+        val id = seriesId.raw
+        seriesDetailCache.get(id)?.let { return Result.success(it) }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        return withAutoReconnect { fetchSeriesDetail(id) }
+            .also { result -> result.getOrNull()?.let { seriesDetailCache.put(id, it) } }
+    }
+
+    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
+        // Launch all three independent API calls in parallel.
+        // None depend on each other — they all only need seriesId — so running
+        // them concurrently reduces wall-clock time from ~3x to ~1x network latency.
+        return coroutineScope {
+            val seriesDeferred = async { api.getItemById(seriesId) }
+            val seasonsDeferred = async { api.getSeasons(seriesId) }
+            val episodesDeferred =
+                async {
+                    api.getItems(parentId = seriesId, includeItemTypes = "Episode")
+                }
+
+            val seriesResult = seriesDeferred.await()
+            if (seriesResult.isFailure) return@coroutineScope Result.failure(seriesResult.exceptionOrNull()!!)
+            val seriesItem = seriesResult.getOrThrow()
+
+            val seasonsResult = seasonsDeferred.await()
+            if (seasonsResult.isFailure) return@coroutineScope Result.failure(seasonsResult.exceptionOrNull()!!)
+            val seasons = seasonsResult.getOrThrow()
+
+            val episodesMap = mutableMapOf<String, List<EpisodeItem>>()
+            val allEpisodesResult = episodesDeferred.await()
+
+            if (allEpisodesResult.isSuccess) {
+                val allEpisodes = allEpisodesResult.getOrThrow()
+                val grouped = allEpisodes.groupBy { it.parentIndexNumber ?: 0 }
+
+                grouped.forEach { (seasonNum, episodes) ->
+                    val mappedEpisodes =
+                        episodes
+                            .map { ep ->
+                                EpisodeItem(
+                                    id = ep.id,
+                                    episodeNumber = ep.indexNumber ?: 0,
+                                    title = ep.name,
+                                    seasonNumber = ep.parentIndexNumber,
+                                    metadata =
+                                        MediaMetadata(
+                                            plot = ep.overview,
+                                            duration = ep.runTimeTicks?.let { formatTicks(it) },
+                                        ),
+                                    thumbnailUrl =
+                                        if (ep.imageTags.containsKey("Primary")) {
+                                            api.buildImageUrl(ep.id, "Primary")
+                                        } else {
+                                            null
+                                        },
+                                )
+                            }.sortedBy { it.episodeNumber }
+
+                    episodesMap[seasonNum.toString()] = mappedEpisodes
+                }
+            }
+
+            Result.success(
+                SeriesDetail(
+                    id = seriesId,
+                    name = seriesItem.name,
+                    metadata =
+                        MediaMetadata(
+                            plot = seriesItem.overview,
+                            year = seriesItem.productionYear,
+                            genre = seriesItem.genres.joinToString(", ").ifEmpty { null },
+                            rating = seriesItem.communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
+                            contentRating = seriesItem.officialRating,
+                            tmdbId = seriesItem.tmdbId(),
+                            trailerUrl = seriesItem.firstTrailerUrl(),
+                        ),
+                    coverUrl =
+                        if (seriesItem.imageTags.containsKey("Primary")) {
+                            api.buildImageUrl(seriesId, "Primary")
+                        } else {
+                            null
+                        },
+                    backdropUrl =
+                        if (seriesItem.backdropImageTags.isNotEmpty()) {
+                            api.buildImageUrl(seriesId, "Backdrop")
+                        } else {
+                            null
+                        },
+                    seasons =
+                        seasons.map { season ->
+                            SeasonInfo(
+                                seasonNumber = season.indexNumber ?: 0,
+                                name = season.name,
+                                coverUrl =
+                                    if (season.imageTags.containsKey("Primary")) {
+                                        api.buildImageUrl(season.id, "Primary")
+                                    } else {
+                                        null
+                                    },
+                            )
+                        },
+                    episodes = episodesMap,
+                ),
+            )
+        }
+    }
+
+    override suspend fun getMovieDetail(movieId: String): Result<MovieDetail> {
+        movieDetailCache.get(movieId)?.let { return Result.success(it) }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        return withAutoReconnect {
+            api.getItemById(movieId).map { item -> itemToMovieDetail(item) }
+        }.also { result -> result.getOrNull()?.let { movieDetailCache.put(movieId, it) } }
+    }
+
+    override suspend fun resolvePlayableStream(
+        itemId: String,
+        contentType: String,
+        episodeId: String?,
+        extension: String?,
+    ): Result<PlayableStream> =
+        coroutineScope {
+            if (!ensureConnected()) return@coroutineScope Result.failure(Exception("Not connected"))
+
+            val streamItemId = episodeId ?: itemId
+            val userId = api.getUserId() ?: return@coroutineScope Result.failure(Exception("Not authenticated"))
+            val token = api.getAccessToken()
+            val headers = if (token != null) mapOf("X-Emby-Token" to token) else emptyMap()
+
+            // Fetched as a unit so a 401 on either call triggers a single reconnect+retry of
+            // both, instead of each call independently reconnecting (which would race).
+            val fetched =
+                withAutoReconnect {
+                    coroutineScope {
+                        val playbackInfoDeferred = async { api.getPlaybackInfo(streamItemId, userId) }
+                        val itemDeferred = async { api.getItemById(streamItemId) }
+                        val playbackInfoResult = playbackInfoDeferred.await()
+                        val itemResult = itemDeferred.await()
+                        val unauthorized =
+                            listOf(playbackInfoResult, itemResult).firstNotNullOfOrNull { result ->
+                                (result.exceptionOrNull() as? ClientRequestException)
+                                    ?.takeIf { it.response.status == HttpStatusCode.Unauthorized }
+                            }
+                        if (unauthorized != null) {
+                            Result.failure(unauthorized)
+                        } else {
+                            Result.success(playbackInfoResult to itemResult)
+                        }
+                    }
+                }
+            if (fetched.isFailure) {
+                return@coroutineScope Result.failure(fetched.exceptionOrNull() ?: Exception("Authentication failed"))
+            }
+
+            // Ask Jellyfin whether to direct-play or transcode based on our DeviceProfile
+            val (playbackInfo, itemResult) = fetched.getOrThrow()
+            val item = itemResult.getOrNull()
+            val itemTitle = item?.name ?: ""
+
+            if (playbackInfo.isSuccess) {
+                val info = playbackInfo.getOrThrow()
+                val source = info.mediaSources.firstOrNull()
+
+                // Store session IDs for accurate progress reporting
+                info.playSessionId?.let { playSessionIds[streamItemId] = it }
+                source?.id?.let { mediaSourceIds[streamItemId] = it }
+
+                val playMethod =
+                    when {
+                        source == null -> "DirectPlay"
+                        source.supportsDirectPlay -> "DirectPlay"
+                        source.transcodingUrl != null -> "Transcode"
+                        source.supportsDirectStream -> "DirectStream"
+                        else -> "DirectPlay"
+                    }
+                playMethods[streamItemId] = playMethod
+
+                val streamUrl =
+                    when {
+                        source == null -> {
+                            // No source in response — fall back to static direct play
+                            api.buildStreamUrl(streamItemId)
+                        }
+
+                        source.supportsDirectPlay -> {
+                            // Jellyfin confirms the device can decode this file natively
+                            val container =
+                                source.container
+                                    ?.split(",")
+                                    ?.firstOrNull()
+                                    ?.trim()
+                            api.buildStreamUrl(streamItemId, container, source.id)
+                        }
+
+                        source.transcodingUrl != null -> {
+                            // Jellyfin will transcode to HLS; the URL includes all params + api_key
+                            "$serverUrl${source.transcodingUrl}"
+                        }
+
+                        source.supportsDirectStream -> {
+                            // Server streams the file without re-encoding (seeking handled by server)
+                            val container =
+                                source.container
+                                    ?.split(",")
+                                    ?.firstOrNull()
+                                    ?.trim()
+                            api.buildStreamUrl(streamItemId, container, source.id)
+                        }
+
+                        else -> {
+                            api.buildStreamUrl(streamItemId)
+                        }
+                    }
+
+                return@coroutineScope Result.success(
+                    PlayableStream(uri = streamUrl, headers = headers, isLive = false, title = itemTitle),
+                )
+            }
+
+            // PlaybackInfo failed — fall back to legacy static direct play
+            playMethods[streamItemId] = "DirectPlay"
+            val rawContainer = extension ?: item?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
+            val container =
+                rawContainer
+                    ?.split(",")
+                    ?.firstOrNull { ext ->
+                        val trimmed = ext.trim()
+                        // Zero-allocation file extension matching to avoid lowercase string and set allocation
+                        SUPPORTED_CONTAINERS.any {
+                            it.length == trimmed.length &&
+                                trimmed.regionMatches(0, it, 0, trimmed.length, ignoreCase = true)
+                        }
+                    }?.trim() ?: rawContainer?.split(",")?.firstOrNull()?.trim()
+
+            return@coroutineScope Result.success(
+                PlayableStream(
+                    uri = api.buildStreamUrl(streamItemId, container),
+                    headers = headers,
+                    isLive = false,
+                    title = itemTitle,
+                ),
+            )
+        }
+
+    override suspend fun onPlaybackProgress(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+        isPaused: Boolean,
+    ) {
+        if (!isConnected()) return
+        api.reportPlaybackProgress(
+            itemId = itemId,
+            positionTicks = positionMs * 10_000,
+            isPaused = isPaused,
+            playSessionId = playSessionIds[itemId],
+            mediaSourceId = mediaSourceIds[itemId],
+            playMethod = playMethods[itemId],
+        )
+    }
+
+    override suspend fun setFavorite(
+        itemId: String,
+        isFavorite: Boolean,
+    ): Result<Unit> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        return if (isFavorite) api.addFavorite(itemId) else api.removeFavorite(itemId)
+    }
+
+    override suspend fun isFavorite(itemId: String): Boolean {
+        if (!ensureConnected()) return false
+        val item = api.getItemById(itemId).getOrNull() ?: return false
+        return item.userData?.isFavorite == true
+    }
+
+    override suspend fun getFavoriteItems(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return api.getFavoriteItems(includeItemTypes = jellyfinType).map { items ->
+            items.map { it.toDomainItem(categoryId = "", contentType = contentType) }
+        }
+    }
+
+    override suspend fun getResumeItems(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return api.getResumableItems(includeItemTypes = jellyfinType).map { items ->
+            items.map { it.toDomainItem(categoryId = "", contentType = contentType) }
+        }
+    }
+
+    override suspend fun getRecentlyPlayed(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return api.getRecentlyPlayed(includeItemTypes = jellyfinType).map { items ->
+            items.map { it.toDomainItem(categoryId = "", contentType = contentType) }
+        }
+    }
+
+    override suspend fun getPlaybackPosition(itemId: String): PlaybackStatus? {
+        if (!ensureConnected()) return null
+        val item = api.getItemById(itemId).getOrNull() ?: return null
+        val ud = item.userData ?: return null
+        val posMs = ud.playbackPositionTicks / 10_000
+        val durMs = (item.runTimeTicks ?: 0L) / 10_000
+        return PlaybackStatus(
+            positionMs = posMs,
+            durationMs = durMs,
+            isCompleted = ud.played,
+            itemName = item.name,
+            categoryId = item.parentId,
+        )
+    }
+
+    override suspend fun getPlaybackPositions(itemIds: List<String>): Result<Map<String, PlaybackStatus>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        if (itemIds.isEmpty()) return Result.success(emptyMap())
+
+        return withAutoReconnect {
+            api.getItems(ids = itemIds.joinToString(",")).map { items ->
+                items.associate { item ->
+                    val ud = item.userData
+                    val posMs = (ud?.playbackPositionTicks ?: 0L) / 10_000
+                    val durMs = (item.runTimeTicks ?: 0L) / 10_000
+                    item.id to
+                        PlaybackStatus(
+                            positionMs = posMs,
+                            durationMs = durMs,
+                            isCompleted = ud?.played ?: false,
+                            itemName = item.name,
+                            categoryId = item.parentId,
+                        )
+                }
+            }
+        }
+    }
+
+    override suspend fun onPlaybackStarted(itemId: String) {
+        if (!isConnected()) return
+        api.reportPlaybackStart(
+            itemId = itemId,
+            playSessionId = playSessionIds[itemId],
+            mediaSourceId = mediaSourceIds[itemId],
+            playMethod = playMethods[itemId],
+        )
+    }
+
+    override suspend fun onPlaybackStopped(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        if (!isConnected()) return
+        api.reportPlaybackStopped(
+            itemId = itemId,
+            positionTicks = positionMs * 10_000,
+            playSessionId = playSessionIds[itemId],
+            mediaSourceId = mediaSourceIds[itemId],
+            playMethod = playMethods[itemId],
+        )
+        playSessionIds.remove(itemId)
+        mediaSourceIds.remove(itemId)
+        playMethods.remove(itemId)
+    }
+
+    private suspend fun ensureConnected(): Boolean {
+        if (isConnected()) return true
+        return connect().isSuccess
+    }
+
+    private suspend fun <T> withAutoReconnect(block: suspend () -> Result<T>): Result<T> {
+        val tokenUsed = api.getAccessToken()
+        val result = block()
+        if (result.isFailure) {
+            val cause = result.exceptionOrNull()
+            if (cause is ClientRequestException && cause.response.status == HttpStatusCode.Unauthorized) {
+                // Token is invalid — clear persisted session and re-authenticate. Only the first
+                // request to find it so clears it: the others, refused with the same token, find a
+                // fresh one (or none) by the time they get the lock, and keep it.
+                connectMutex.withLock {
+                    if (api.getAccessToken() == tokenUsed) {
+                        onSessionCleared?.invoke()
+                        api.disconnect()
+                    }
+                }
+                val reconnect = connect()
+                if (reconnect.isSuccess) {
+                    return block()
+                }
+                return Result.failure(Exception("Authentication failed"))
+            }
+        }
+        return result
+    }
+
+    private fun contentTypeToJellyfinType(contentType: String): String? =
+        when (contentType) {
+            ContentType.MOVIES -> "Movie"
+            ContentType.TV_SHOWS -> "Series"
+            else -> null
+        }
+
+    private fun JellyfinItem.toDomainItem(
+        categoryId: String,
+        contentType: String,
+    ): MediaItem {
+        val mediaType =
+            when (type) {
+                "Movie" -> MediaType.MOVIE
+                "Series" -> MediaType.SERIES
+                "Episode" -> MediaType.EPISODE
+                else -> if (contentType == ContentType.TV_SHOWS) MediaType.SERIES else MediaType.MOVIE
+            }
+
+        return MediaItem(
+            id = id,
+            name = name,
+            mediaType = mediaType,
+            categoryId = categoryId,
+            thumbnailUrl =
+                if (imageTags.containsKey("Primary")) {
+                    api.buildImageUrl(id, "Primary")
+                } else {
+                    null
+                },
+            metadata =
+                MediaMetadata(
+                    plot = overview,
+                    year = productionYear,
+                    genre = genres.joinToString(", ").ifEmpty { null },
+                    rating = communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
+                    contentRating = officialRating,
+                    duration = runTimeTicks?.let { formatTicks(it) },
+                ),
+            lastPlayedAt =
+                userData?.lastPlayedDate?.let {
+                    runCatching {
+                        java.time.Instant
+                            .parse(it)
+                            .toEpochMilli()
+                    }.getOrNull()
+                } ?: 0L,
+        )
+    }
+
+    private fun itemToMovieDetail(item: JellyfinItem): MovieDetail {
+        val director = item.people.firstOrNull { it.type == "Director" }?.name
+        val cast =
+            item.people
+                .filter { it.type == "Actor" }
+                .joinToString(", ") { it.name }
+                .ifEmpty { null }
+
+        val mediaSource = item.mediaSources.firstOrNull()
+        val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == "Video" }
+        val audioStreams = mediaSource?.mediaStreams?.filter { it.type == "Audio" } ?: emptyList()
+        val subtitleStreams = mediaSource?.mediaStreams?.filter { it.type == "Subtitle" } ?: emptyList()
+
+        return MovieDetail(
+            id = item.id,
+            name = item.name,
+            metadata =
+                MediaMetadata(
+                    plot = item.overview,
+                    year = item.productionYear,
+                    genre = item.genres.joinToString(", ").ifEmpty { null },
+                    rating = item.communityRating?.let { String.format(java.util.Locale.US, "%.1f", it) },
+                    contentRating = item.officialRating,
+                    director = director,
+                    cast = cast,
+                    duration = item.runTimeTicks?.let { formatTicks(it) },
+                    tmdbId = item.tmdbId(),
+                    trailerUrl = item.firstTrailerUrl(),
+                ),
+            coverUrl =
+                if (item.imageTags.containsKey("Primary")) {
+                    api.buildImageUrl(item.id, "Primary")
+                } else {
+                    null
+                },
+            extension = item.container ?: mediaSource?.container,
+            videoInfo =
+                videoStream?.let { vs ->
+                    VideoTechInfo(
+                        width = vs.width,
+                        height = vs.height,
+                        codecName = vs.codec,
+                        bitrate = vs.bitRate,
+                        videoRange = vs.videoDoViTitle ?: vs.videoRange,
+                        displayTitle = vs.displayTitle,
+                    )
+                },
+            audioTracks =
+                audioStreams.map { as_ ->
+                    AudioTechInfo(
+                        codecName = as_.codec,
+                        language = as_.language,
+                        channels = as_.channels,
+                        sampleRate = as_.sampleRate,
+                        displayTitle = as_.displayTitle,
+                        isDefault = as_.isDefault,
+                    )
+                },
+            subtitleTracks =
+                subtitleStreams.map { ss ->
+                    SubtitleTechInfo(
+                        codecName = ss.codec,
+                        language = ss.language,
+                        displayTitle = ss.displayTitle,
+                        isDefault = ss.isDefault,
+                    )
+                },
+        )
+    }
+
+    /** Jellyfin keys its external ids case-inconsistently across versions; match either spelling. */
+    private fun JellyfinItem.tmdbId(): String? =
+        providerIds.entries
+            .firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }
+            ?.value
+            ?.ifBlank { null }
+
+    private fun JellyfinItem.firstTrailerUrl(): String? = remoteTrailers.firstNotNullOfOrNull { trailerUrl(it.url) }
+
+    private fun formatTicks(ticks: Long): String {
+        val totalSeconds = ticks / 10_000_000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%d:%02d", minutes, seconds)
+        }
+    }
+
+    companion object {
+        // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
+        // long TTL avoids re-hitting the server every time a detail screen is reopened.
+        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
+    }
+}
+
+/** How long a refused login is the answer before connect() tries the server again. */
+internal const val REJECTED_LOGIN_RETRY_MS = 30_000L

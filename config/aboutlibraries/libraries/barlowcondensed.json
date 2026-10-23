@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:barlowcondensed",
+  "name": "Barlow Condensed (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://github.com/jpt/barlow",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-barlowcondensed"
+  ],
+  "tag": "font"
+}

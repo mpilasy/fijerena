@@ -1,0 +1,990 @@
+package org.njarasoa.fijerena.feature.epgbrowser
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
+import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
+import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
+import org.njarasoa.fijerena.core.network.xmltv.formatCount
+import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
+import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgeKind
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
+import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
+import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaTextField
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.home.SourceChoice
+import org.njarasoa.fijerena.core.ui.theme.ButtonKind
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.message
+import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
+import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
+import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
+import org.njarasoa.fijerena.navigation.LocalDockInset
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
+
+/**
+ * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
+ * checkbox — on by default — keeps the results on that guide's channels. One search, programme
+ * titles (D7). When the profile has a source with live channels the top bar has TV Guide (the
+ * grid for Recent on the first of them, [onTvGuide]) and Guide sources (a source's,
+ * [onGuideSources] — which source, asked first when there are several, O4) beside Refresh.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MobileEpgBrowserScreen(
+    onBack: () -> Unit,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
+    categoryId: String? = null,
+    categoryName: String? = null,
+    providerId: Long = 0L,
+    onGuideSources: (providerId: Long) -> Unit = {},
+    onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
+) {
+    val context = LocalContext.current
+    val viewModel: EpgBrowserViewModel =
+        viewModel(
+            factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId, providerId) },
+        )
+    val contextName = categoryName?.takeIf { categoryId != null }
+    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
+    val guideSourceOwners by viewModel.guideSourceOwners.collectAsStateWithLifecycle()
+    var choosingGuideSources by remember { mutableStateOf(false) }
+    if (choosingGuideSources) {
+        MobileSourceChooserDialog(
+            sources = guideSourceOwners,
+            onChosen = { id ->
+                choosingGuideSources = false
+                onGuideSources(id)
+            },
+            onDismiss = { choosingGuideSources = false },
+        )
+    }
+    var searchQuery by remember { mutableStateOf("") }
+    val recentLabel = stringResource(R.string.category_recent_label)
+
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+    }
+
+    val isRefreshing =
+        processingState is EpgFileManager.MultiSourceState.Pending ||
+            processingState is EpgFileManager.MultiSourceState.Processing ||
+            processingState is EpgFileManager.MultiSourceState.Finalizing ||
+            indexState is EpgIndexState.Indexing ||
+            indexState is EpgIndexState.Optimizing
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                // No source subtitle: the search covers every source of the profile. The guide's
+                // status goes below the bar.
+                title = {
+                    CinemaText(
+                        stringResource(R.string.epg_browser_title),
+                        role = TextRole.Title,
+                        tone = TextTone.Inherit,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
+                    }
+                },
+                actions = {
+                    // The grid for Recent (D7); Back from it returns here.
+                    guideSourceOwners.firstOrNull()?.let { (firstLiveSource, _) ->
+                        IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel, firstLiveSource) }) {
+                            Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide))
+                        }
+                    }
+                    IconButton(
+                        onClick = { viewModel.refreshStale() },
+                        enabled = !isRefreshing,
+                    ) {
+                        if (isRefreshing) {
+                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
+                        } else {
+                            Icon(
+                                imageVector = CinemaIcons.Refresh,
+                                contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
+                                tint =
+                                    if (staleSourceCount > 0) {
+                                        CinemaTheme.colors.warning
+                                    } else {
+                                        CinemaTheme.colors.textPrimary
+                                    },
+                            )
+                        }
+                    }
+                    // The guides this search runs over, of a source that can have them.
+                    if (guideSourceOwners.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                when (val choice = SourceChoice.of(guideSourceOwners)) {
+                                    is SourceChoice.One -> onGuideSources(choice.source.first)
+                                    is SourceChoice.Ask -> choosingGuideSources = true
+                                    SourceChoice.None -> Unit
+                                }
+                            },
+                        ) {
+                            Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
+                        }
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { paddingValues ->
+        MobileGuideSearchPane(
+            viewModel = viewModel,
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            onNavigateToPlayer = onNavigateToPlayer,
+            contextName = contextName,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+        )
+    }
+}
+
+/**
+ * The body of "Search the guide" under its top bar: the guide's status, the field, the
+ * "In <category> only" checkbox ([contextName] set), the index progress, recent searches and
+ * results. The host owns the field's text ([query], [onQueryChange]) and the snackbar for the
+ * view model's messages.
+ */
+@Composable
+internal fun MobileGuideSearchPane(
+    viewModel: EpgBrowserViewModel,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit,
+    modifier: Modifier = Modifier,
+    contextName: String? = null,
+) {
+    val context = LocalContext.current
+    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
+    // Opened from a TV Guide: its channels only, until unticked (GD5).
+    var inContextOnly by rememberSaveable { mutableStateOf(true) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
+    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val isDevMode = viewModel.isDevMode
+    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
+    val neverRunSourceCount by viewModel.neverRunSourceCount.collectAsStateWithLifecycle()
+    val hasOffSources by viewModel.hasOffSources.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val epgDbStats =
+        when (val idx = indexState) {
+            is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
+            else -> null
+        }
+
+    // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone
+    // until a later change gives it a home.
+    val matchedOnly = true
+
+    val nowEpoch = rememberNowEpochSeconds()
+
+    Column(modifier = modifier) {
+        // The guide's status, one line; the index counters only in developer mode.
+        val freshnessText =
+            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount, hasOffSources)
+        val freshnessColor =
+            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L ||
+                (oldestIngestedAtMs == null && hasOffSources)
+            ) {
+                TextTone.Warning
+            } else {
+                TextTone.Secondary
+            }
+        CinemaText(
+            text = freshnessText,
+            role = TextRole.BodySmall,
+            tone = freshnessColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = Spacing.md),
+        )
+        if (isDevMode && epgDbStats != null) {
+            CinemaText(
+                text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = Spacing.md),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
+            )
+        }
+
+        val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
+        CinemaTextField(
+            value = query,
+            onValueChange = { onQueryChange(it) },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
+            placeholder = placeholderText,
+            leadingIcon = {
+                Icon(
+                    imageVector = CinemaIcons.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(MobileDimensions.iconSmall),
+                )
+            },
+            trailingIcon = {
+                val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
+                if (query.isNotEmpty() || hasResults) {
+                    IconButton(onClick = {
+                        onQueryChange("")
+                        viewModel.clearSearch()
+                    }) {
+                        Icon(
+                            imageVector = CinemaIcons.Close,
+                            contentDescription = stringResource(R.string.provider_clear_button),
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions =
+                KeyboardActions(
+                    onSearch = {
+                        if (query.isNotBlank()) {
+                            viewModel.performSearch(query)
+                            keyboardController?.hide()
+                        }
+                    },
+                ),
+        )
+
+        // "In <category> only" (GD5).
+        if (contextName != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .padding(horizontal = Spacing.md)
+                        .clickable { inContextOnly = !inContextOnly },
+            ) {
+                CinemaCheckbox(
+                    checked = inContextOnly,
+                    onCheckedChange = { inContextOnly = it },
+                    modifier = Modifier.size(MobileDimensions.iconLarge),
+                )
+                CinemaText(
+                    text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    role = TextRole.Caption,
+                    tone = TextTone.Inherit,
+                )
+            }
+        }
+
+        val currentIndexState = indexState
+        if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
+            val idx = currentIndexState
+            val progressText =
+                if (idx is EpgIndexState.Indexing) {
+                    stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
+                } else {
+                    stringResource(
+                        R.string.epg_browser_finalizing_format,
+                        formatCount((idx as EpgIndexState.Optimizing).programmeCount),
+                    )
+                }
+            val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
+
+            Column(
+                modifier =
+                    Modifier.padding(
+                        horizontal = Spacing.md,
+                        vertical = CinemaSpacing.xxs,
+                    ),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    CinemaText(
+                        text =
+                            if (idx is EpgIndexState.Indexing) {
+                                stringResource(
+                                    R.string.epg_browser_indexing_label,
+                                )
+                            } else {
+                                stringResource(R.string.epg_browser_optimizing_label)
+                            },
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
+                    )
+                    CinemaText(
+                        text = progressText,
+                        role = TextRole.Caption,
+                        tone = TextTone.Secondary,
+                    )
+                }
+                CinemaProgressBar(
+                    progress = { progressValue },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(MobileDimensions.strokeWidth)
+                            .padding(top = CinemaSpacing.xxxs),
+                )
+            }
+        }
+
+        when (val state = uiState) {
+            is EpgBrowserViewModel.UiState.Idle -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    if (epgSearchHistory.isNotEmpty()) {
+                        MobileEpgSearchHistorySection(
+                            history = epgSearchHistory,
+                            onItemClick = { term ->
+                                onQueryChange(term)
+                                viewModel.performSearch(term)
+                                keyboardController?.hide()
+                            },
+                            onItemRemove = { viewModel.removeEpgSearchHistoryEntry(it) },
+                            onClearAll = { viewModel.clearEpgSearchHistory() },
+                        )
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val hintText = stringResource(R.string.epg_browser_hint_search_titles)
+                        CinemaText(
+                            text = hintText,
+                            role = TextRole.Body,
+                            tone = TextTone.Secondary,
+                        )
+                    }
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.IndexBusy -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CinemaText(
+                        text = state.message(),
+                        textAlign = TextAlign.Center,
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
+                    )
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.NoEpgFile -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CinemaText(
+                        text = stringResource(R.string.epg_browser_no_file_message),
+                        role = TextRole.Body,
+                        tone = TextTone.Secondary,
+                    )
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.Searching -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MitadyLoading(
+                        role = TextRole.Title,
+                        tone = TextTone.Accent,
+                    )
+                }
+            }
+
+            is EpgBrowserViewModel.UiState.Results -> {
+                MobileResultsContent(
+                    results = state,
+                    nowEpoch = nowEpoch,
+                    matchedOnly = matchedOnly,
+                    onNavigateToPlayer = onNavigateToPlayer,
+                    contextName = contextName.takeIf { inContextOnly },
+                    contextChannels = contextChannels,
+                )
+            }
+
+            is EpgBrowserViewModel.UiState.Error -> {
+                RetryWhenOnline { viewModel.performSearch(query) }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CinemaText(
+                        text = state.message,
+                        role = TextRole.Body,
+                        tone = TextTone.Danger,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MobileResultsContent(
+    results: EpgBrowserViewModel.UiState.Results,
+    nowEpoch: Long,
+    matchedOnly: Boolean = true,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
+    // The TV Guide list the results are limited to (GD5), and its channels once loaded.
+    contextName: String? = null,
+    contextChannels: List<GuideChannels>? = null,
+) {
+    // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
+    val contextFilter = contextChannels?.takeIf { contextName != null }
+    val displayDateGroups =
+        remember(results.dateGroups, matchedOnly, contextFilter) {
+            val matched = if (matchedOnly) filterMatchedOnly(results.dateGroups) else results.dateGroups
+            contextFilter?.let { filterToStreams(matched, it) } ?: matched
+        }
+
+    Column {
+        CinemaText(
+            text = results.statsLine(),
+            modifier =
+                Modifier.padding(
+                    horizontal = Spacing.md,
+                    vertical = CinemaSpacing.xxs,
+                ),
+            role = TextRole.Body,
+            tone = TextTone.Secondary,
+        )
+        if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
+            CinemaText(
+                text = stringResource(R.string.epg_browser_partial_results_note),
+                modifier = Modifier.padding(horizontal = Spacing.md, vertical = CinemaSpacing.xxs),
+                role = TextRole.BodySmall,
+                tone = TextTone.Warning,
+            )
+        }
+
+        if (displayDateGroups.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CinemaText(
+                    text = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
+                    role = TextRole.Body,
+                    tone = TextTone.Secondary,
+                )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = Spacing.md),
+                contentPadding = PaddingValues(bottom = LocalDockInset.current),
+            ) {
+                displayDateGroups.forEach { dateGroup ->
+                    stickyHeader(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
+                        MobileDateHeader(dateLabel = dateGroup.dateLabel)
+                    }
+                    items(
+                        dateGroup.programs,
+                        key = { it.id },
+                        contentType = { "program" },
+                    ) { program ->
+                        MobileProgramCard(
+                            program = program,
+                            nowEpoch = nowEpoch,
+                            onNavigateToPlayer = onNavigateToPlayer,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileDateHeader(dateLabel: String) {
+    CinemaText(
+        text = dateLabel,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(CinemaTheme.colors.surface)
+                .padding(vertical = CinemaSpacing.sm),
+        role = TextRole.Label,
+        tone = TextTone.Accent,
+    )
+}
+
+@Composable
+private fun MobileProgramCard(
+    program: EpgBrowserProgram,
+    nowEpoch: Long,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val showExpander = program.airings.size > 3
+    var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
+
+    CinemaCard(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(CinemaSpacing.md),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CinemaText(
+                    text = program.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).bounceMarquee(),
+                    role = TextRole.Heading,
+                    tone = TextTone.Inherit,
+                )
+                val category = program.category
+                if (category != null) {
+                    CinemaText(
+                        text = category,
+                        modifier = Modifier.padding(start = CinemaSpacing.sm),
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
+                    )
+                }
+            }
+
+            val description = program.description
+            if (!description.isNullOrBlank()) {
+                CinemaText(
+                    text = description,
+                    maxLines = if (expanded) Int.MAX_VALUE else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = CinemaSpacing.xs),
+                    role = TextRole.BodySmall,
+                    tone = TextTone.Secondary,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            val visibleAirings =
+                if (expanded || !showExpander) {
+                    program.airings
+                } else {
+                    program.airings.take(3)
+                }
+            visibleAirings.forEach { airing ->
+                MobileAiringRow(
+                    airing = airing,
+                    nowEpoch = nowEpoch,
+                    onNavigateToPlayer = onNavigateToPlayer,
+                    onRequestConfirmation = { pendingConfirmAiring = it },
+                )
+            }
+
+            val pending = pendingConfirmAiring
+            val matched = pending?.matchedStream
+            if (pending != null && matched != null) {
+                val airingContext = LocalContext.current
+                CinemaAlertDialog(
+                    onDismissRequest = { pendingConfirmAiring = null },
+                    title = {
+                        CinemaText(
+                            stringResource(R.string.epg_browser_watch_confirm_title),
+                            role = TextRole.Title,
+                            tone = TextTone.Inherit,
+                        )
+                    },
+                    text = {
+                        CinemaText(
+                            stringResource(
+                                R.string.epg_browser_watch_confirm_message,
+                                formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
+                                pending.channelName,
+                            ),
+                            role = TextRole.Body,
+                            tone = TextTone.Inherit,
+                        )
+                    },
+                    confirmButton = {
+                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                            CinemaDialogActionButton(
+                                onClick = {
+                                    // A second click before the dialog leaves doesn't open the player twice (R-20).
+                                    if (pendingConfirmAiring != null) {
+                                        pendingConfirmAiring = null
+                                        onNavigateToPlayer(matched)
+                                    }
+                                },
+                                kind = ButtonKind.Other,
+                            ) {
+                                CinemaText(
+                                    stringResource(R.string.epg_browser_watch_now_btn),
+                                    role = TextRole.Label,
+                                    tone = TextTone.Inherit,
+                                )
+                            }
+
+                            if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
+                                CinemaDialogActionButton(
+                                    onClick = {
+                                        pendingConfirmAiring = null
+                                        openAddToCalendarEvent(
+                                            context = airingContext,
+                                            title = program.title,
+                                            description = program.description,
+                                            location = pending.channelName,
+                                            startEpochSeconds = pending.startEpoch,
+                                            endEpochSeconds = pending.endEpoch,
+                                        )
+                                    },
+                                    kind = ButtonKind.Other,
+                                ) {
+                                    CinemaText(
+                                        stringResource(R.string.epg_browser_add_calendar_btn),
+                                        role = TextRole.Label,
+                                        tone = TextTone.Inherit,
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        CinemaDialogActionButton(onClick = {
+                            pendingConfirmAiring = null
+                        }, kind = ButtonKind.Other) {
+                            CinemaText(
+                                stringResource(R.string.common_cancel),
+                                role = TextRole.Label,
+                                tone = TextTone.Inherit,
+                            )
+                        }
+                    },
+                )
+            }
+
+            if (showExpander) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { expanded = !expanded }
+                            .padding(top = CinemaSpacing.xs),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
+                        contentDescription =
+                            if (expanded) {
+                                stringResource(
+                                    R.string.epg_browser_show_less,
+                                )
+                            } else {
+                                stringResource(R.string.epg_browser_show_more)
+                            },
+                        modifier = Modifier.size(CinemaSpacing.lg),
+                        tint = CinemaTheme.colors.accent,
+                    )
+                    CinemaText(
+                        text =
+                            if (expanded) {
+                                stringResource(R.string.epg_browser_show_less)
+                            } else {
+                                stringResource(
+                                    R.string.epg_browser_show_more_count,
+                                    program.airings.size - 3,
+                                )
+                            },
+                        role = TextRole.Caption,
+                        tone = TextTone.Accent,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileAiringRow(
+    airing: EpgBrowserAiring,
+    nowEpoch: Long,
+    onNavigateToPlayer: (EpgBrowserMatchedStream) -> Unit = {},
+    onRequestConfirmation: (EpgBrowserAiring) -> Unit = {},
+) {
+    val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
+    val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
+    val matched = airing.matchedStream
+    val isMatched = matched != null
+
+    val onClick =
+        remember(matched, isOnAir, airing, onNavigateToPlayer, onRequestConfirmation) {
+            if (matched == null) {
+                null
+            } else {
+                {
+                    if (isOnAir) {
+                        onNavigateToPlayer(matched)
+                    } else {
+                        onRequestConfirmation(airing)
+                    }
+                }
+            }
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
+                ).alpha(if (isMatched) 1f else 0.5f)
+                .padding(vertical = CinemaSpacing.xxs),
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (isMatched) {
+            Icon(
+                imageVector = CinemaIcons.PlayArrow,
+                contentDescription = stringResource(R.string.epg_browser_watch_description),
+                modifier = Modifier.size(CinemaSpacing.lg),
+                tint = if (isOnAir) CinemaTheme.colors.success else CinemaTheme.colors.accent,
+            )
+        }
+        CinemaText(
+            text = airing.channelName,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).bounceMarquee(),
+            role = TextRole.BodySmall,
+            tone = TextTone.Accent,
+        )
+        // After the name, as on every other row; lighter than the card it sits on.
+        airing.sourceName?.let { SourceBadge(it, kind = BadgeKind.OnCard) }
+        if (isOnAir || isSoon) {
+            val badgeLabel =
+                if (isOnAir) {
+                    stringResource(
+                        R.string.epg_browser_on_air_badge,
+                    )
+                } else {
+                    stringResource(R.string.epg_browser_soon_badge)
+                }
+            CinemaBadge(
+                text = badgeLabel,
+                kind = if (isOnAir) BadgeKind.Success else BadgeKind.Warning,
+            )
+        }
+        val airingContext = LocalContext.current
+        CinemaText(
+            text = formatAiringTime(airingContext, airing.startEpoch, airing.endEpoch),
+            role = TextRole.BodySmall,
+            tone =
+                if (isOnAir) {
+                    TextTone.Success
+                } else if (isSoon) {
+                    TextTone.Warning
+                } else {
+                    TextTone.Secondary
+                },
+        )
+    }
+}
+
+@Composable
+private fun MobileEpgSearchHistorySection(
+    history: List<String>,
+    onItemClick: (String) -> Unit,
+    onItemRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CinemaText(
+                text = stringResource(R.string.epg_browser_recent_searches),
+                role = TextRole.Label,
+                tone = TextTone.Secondary,
+            )
+            IconButton(onClick = onClearAll) {
+                Icon(
+                    imageVector = CinemaIcons.Delete,
+                    contentDescription = stringResource(R.string.epg_browser_clear_all_description),
+                    tint = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textLow),
+                    modifier = Modifier.size(MobileDimensions.iconSmall),
+                )
+            }
+        }
+        // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            history.forEach { term ->
+                CinemaAssistChip(
+                    onClick = { onItemClick(term) },
+                    label = {
+                        CinemaText(
+                            term,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            role = TextRole.Label,
+                            keepCase = true,
+                            tone = TextTone.Inherit,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = CinemaIcons.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(AssistChipDefaults.IconSize),
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { onItemRemove(term) },
+                            modifier = Modifier.size(AssistChipDefaults.IconSize),
+                        ) {
+                            Icon(
+                                imageVector = CinemaIcons.Close,
+                                contentDescription = stringResource(R.string.epg_browser_remove_description),
+                                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}

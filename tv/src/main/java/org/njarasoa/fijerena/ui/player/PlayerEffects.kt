@@ -1,0 +1,111 @@
+package org.njarasoa.fijerena.ui.player
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import java.util.Calendar
+
+@Composable
+fun PlayerEffects(
+    state: PlayerScreenState,
+    playbackState: PlaybackState,
+    currentMetadata: PlayerMetadata,
+    viewModel: PlaybackViewModel? = null,
+    onNextChannel: () -> Unit = {},
+    onPreviousChannel: () -> Unit = {},
+) {
+    // Live position polling for smooth VOD timer updates
+    LaunchedEffect(playbackState::class) {
+        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
+                    state.livePosition = player.currentPosition
+                    state.liveDuration = player.duration.coerceAtLeast(0L)
+                }
+                delay(500L)
+            }
+        }
+    }
+
+    // Auto-hide overlays. Re-keyed on scrubPositionMs so each scrub step resets the timer
+    // and the cursor stays visible while the user is still moving it, and on controlsKeyTick so
+    // any key pressed while the OSD is up restarts its 5 s.
+    LaunchedEffect(state.showControls, state.showStreamInfo, state.scrubPositionMs, state.showStreamInfoTick, state.controlsKeyTick) {
+        if (state.scrubPositionMs != null) {
+            // Hold the OSD open while scrubbing; each step restarts the timer
+            delay(CinemaAnimation.controlsAutoHideTvMs)
+            state.scrubPositionMs = null
+            state.showStreamInfo = false
+        } else if (state.showControls && state.showStreamInfo) {
+            // Both visible (OK press) - hide 5 seconds after the last key
+            delay(CinemaAnimation.controlsAutoHideTvMs)
+            state.showControls = false
+            state.showStreamInfo = false
+        } else if (state.showStreamInfo) {
+            // Stream info alone (channel switch or menu) - hide after 3 seconds
+            delay(CinemaAnimation.toastDismissMs)
+            state.showStreamInfo = false
+        } else if (state.showControls) {
+            // Controls alone (shouldn't happen but handle it) - hide after 5 seconds
+            delay(CinemaAnimation.controlsAutoHideTvMs)
+            state.showControls = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        state.focusRequester.requestFocus()
+    }
+
+    // Top-of-hour clock: show 30s before the hour, hide 90s after
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = Calendar.getInstance()
+            val totalSecondsIntoHour = now.get(Calendar.MINUTE) * 60 + now.get(Calendar.SECOND)
+            val showAtSecond = 59 * 60 + 30 // 3570s into the hour
+            state.showTopOfHourClock = totalSecondsIntoHour >= showAtSecond || totalSecondsIntoHour < 90
+            delay(1000L)
+        }
+    }
+
+    // Update displayed metadata when stream actually starts playing
+    LaunchedEffect(currentMetadata.title, playbackState::class) {
+        if (currentMetadata.title.isNotEmpty() &&
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
+        ) {
+            state.displayedMetadata = currentMetadata
+        }
+    }
+
+    // Show only stream info when stream starts from menu
+    LaunchedEffect(currentMetadata.title, playbackState::class) {
+        if (currentMetadata.title.isNotEmpty() &&
+            currentMetadata.title != state.previousMetadataTitle &&
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
+        ) {
+            if (state.isInitialLoad) {
+                state.showStreamInfo = true
+                state.isInitialLoad = false
+            }
+            // Note: Channel switching sets showStreamInfo directly in key handler
+            state.previousMetadataTitle = currentMetadata.title
+        }
+    }
+
+    // Coalesce auto-repeat D-pad zap ticks (repeatCount >= 1) accumulated while the key was
+    // held. The first tap/tick of every press already fired immediately in PlayerKeyHandler
+    // (repeatCount == 0); this only ever applies the *extra* hops beyond that first one.
+    LaunchedEffect(state.pendingChannelDelta) {
+        if (state.pendingChannelDelta == 0) return@LaunchedEffect
+        delay(300)
+        val delta = state.pendingChannelDelta
+        state.pendingChannelDelta = 0
+        repeat(kotlin.math.abs(delta)) {
+            if (delta > 0) onNextChannel() else onPreviousChannel()
+        }
+    }
+}

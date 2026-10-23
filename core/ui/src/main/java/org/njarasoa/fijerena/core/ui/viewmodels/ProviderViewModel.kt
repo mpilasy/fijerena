@@ -1,0 +1,594 @@
+package org.njarasoa.fijerena.core.ui.viewmodels
+import android.content.Context
+import androidx.core.net.toUri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.HttpStatusException
+import org.njarasoa.fijerena.core.network.InvalidPlaylistException
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
+import org.njarasoa.fijerena.core.player.api.XtreamApiService
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+
+data class ParsedUrlCredentials(
+    val baseUrl: String,
+    val username: String?,
+    val password: String?,
+    val streamOutputFormat: String? = null,
+    val playlistType: String? = null,
+)
+
+/**
+ * Parses a URL that may contain username/password query parameters.
+ * Extracts credentials from recognized parameter names and returns
+ * the base URL stripped of query parameters (and known API paths like .php endpoints).
+ * Returns null if no credentials were found in the URL.
+ */
+fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
+    val parsed =
+        if ('?' !in input) {
+            null
+        } else {
+            try {
+                val uri = input.toUri()
+                val username =
+                    (
+                        uri.getQueryParameter("username")
+                            ?: uri.getQueryParameter("user")
+                    )?.takeIf { it.isNotEmpty() }
+                val password =
+                    (
+                        uri.getQueryParameter("password")
+                            ?: uri.getQueryParameter("pass")
+                    )?.takeIf { it.isNotEmpty() }
+
+                if (uri.queryParameterNames.isNullOrEmpty() || (username == null && password == null)) {
+                    null
+                } else {
+                    val streamOutputFormat = uri.getQueryParameter("output")?.takeIf { it.isNotEmpty() }
+                    val playlistType = uri.getQueryParameter("type")?.takeIf { it.isNotEmpty() }
+
+                    val builder = uri.buildUpon().clearQuery().fragment(null)
+
+                    // Strip known API endpoint paths (e.g., /get.php, /player_api.php)
+                    val path = uri.path
+                    if (path != null && path.endsWith(".php")) {
+                        val lastSlash = path.lastIndexOf('/')
+                        val strippedPath = if (lastSlash > 0) path.substring(0, lastSlash) else ""
+                        builder.path(strippedPath)
+                    }
+
+                    val baseUrl = builder.build().toString().trimEnd('/')
+
+                    ParsedUrlCredentials(baseUrl, username, password, streamOutputFormat, playlistType)
+                }
+            } catch (_: Exception) {
+                // cancellation-ok: non-suspend URL parsing
+                null
+            }
+        }
+    return parsed
+}
+
+sealed interface ProviderUiState {
+    data object Loading : ProviderUiState
+
+    data object NoProviders : ProviderUiState
+
+    data class SingleProvider(
+        val provider: ProviderEntity,
+    ) : ProviderUiState
+
+    data class MultipleProviders(
+        val providers: List<ProviderEntity>,
+    ) : ProviderUiState
+
+    data class Error(
+        val message: String,
+    ) : ProviderUiState
+}
+
+sealed interface SaveState {
+    data object Idle : SaveState
+
+    data object Validating : SaveState
+
+    data class ValidationFailed(
+        val errorMessage: String,
+    ) : SaveState
+
+    data object Saving : SaveState
+}
+
+sealed interface SyncState {
+    data object Idle : SyncState
+
+    data object Syncing : SyncState
+
+    data object Success : SyncState
+
+    data class Error(
+        val message: String,
+    ) : SyncState
+}
+
+class ProviderViewModel(
+    private val providerRepository: ProviderRepository,
+    private val accountManager: AccountManager,
+    private val appSettings: AppSettings,
+    private val context: Context,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow<ProviderUiState>(ProviderUiState.Loading)
+    val uiState: StateFlow<ProviderUiState> = _uiState.asStateFlow()
+
+    private val _providers = MutableStateFlow<List<ProviderEntity>>(emptyList())
+    val providers: StateFlow<List<ProviderEntity>> = _providers.asStateFlow()
+
+    private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
+    val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
+
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
+    private val copyManager = ProviderCopyManager(context)
+
+    private val _copyResultMessage = MutableStateFlow<String?>(null)
+    val copyResultMessage: StateFlow<String?> = _copyResultMessage.asStateFlow()
+
+    fun clearCopyResultMessage() {
+        _copyResultMessage.value = null
+    }
+
+    fun resetSaveState() {
+        _saveState.value = SaveState.Idle
+    }
+
+    init {
+        viewModelScope.launch {
+            migrateIfNeeded()
+            loadProviders()
+        }
+    }
+
+    /** Each source's kind, subscription and whether the profile in use has it: the Sources list's line. */
+    private val _sourceStatuses = MutableStateFlow<Map<Long, SourceStatus>>(emptyMap())
+    val sourceStatuses: StateFlow<Map<Long, SourceStatus>> = _sourceStatuses.asStateFlow()
+
+    fun loadProviders() {
+        viewModelScope.launch {
+            providerRepository.getAllProviders().collect { providersList ->
+                _providers.value = providersList
+                _sourceStatuses.value =
+                    withContext(Dispatchers.IO) {
+                        val inProfile = providerRepository.profileSourcesList().map { it.id }.toSet()
+                        providersList.associate { it.id to sourceStatus(context, it, it.id in inProfile) }
+                    }
+
+                _uiState.value =
+                    when {
+                        providersList.isEmpty() -> ProviderUiState.NoProviders
+                        providersList.size == 1 -> ProviderUiState.SingleProvider(providersList.first())
+                        else -> ProviderUiState.MultipleProviders(providersList)
+                    }
+            }
+        }
+    }
+
+    /**
+     * One-time migration from single-provider AccountManager to Room.
+     * Only runs if no providers exist in Room but legacy credentials are stored.
+     */
+    suspend fun migrateIfNeeded() {
+        val alreadyMigrated = providerRepository.getProviderCount() > 0
+        val legacyCreds = if (alreadyMigrated) null else accountManager.exportForMigration()
+        if (legacyCreds != null) {
+            val (url, username, password) = legacyCreds
+            val name = appSettings.providerName
+            providerRepository.addProvider(name, url, username, password)
+
+            loadProviders()
+        }
+    }
+
+    fun addProvider(
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String = "XTREAM",
+        config: String = "",
+        onComplete: () -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            try {
+                providerRepository.addProvider(name, url, username, password, type, config)
+                loadProviders()
+                onComplete()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            }
+        }
+    }
+
+    fun deleteProvider(id: Long) {
+        viewModelScope.launch {
+            try {
+                providerRepository.deleteProvider(id)
+                loadProviders()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            }
+        }
+    }
+
+    fun duplicateProvider(
+        sourceId: Long,
+        newName: String,
+    ) {
+        viewModelScope.launch {
+            try {
+                copyManager.duplicateProvider(sourceId, newName)
+                loadProviders()
+                _copyResultMessage.value = context.getString(R.string.provider_duplicate_result_format, newName)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            }
+        }
+    }
+
+    fun copyProviderData(
+        sourceId: Long,
+        targetId: Long,
+        options: ProviderCopyManager.CopyOptions,
+    ) {
+        viewModelScope.launch {
+            try {
+                val result = copyManager.copyProviderData(sourceId, targetId, options)
+                loadProviders()
+                _copyResultMessage.value = result.toSummary(context)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            }
+        }
+    }
+
+    fun updateProvider(
+        id: Long,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String? = null,
+        config: String? = null,
+        onComplete: () -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            try {
+                providerRepository.updateProvider(id, name, url, username, password, type, config)
+                loadProviders()
+                onComplete()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            }
+        }
+    }
+
+    fun getPassword(providerId: Long): String? = providerRepository.getPassword(providerId)
+
+    /**
+     * The viewer flips "Provides a guide" (Edit Source, Xtream): stored as their choice, then the
+     * source's automatic guide source follows it ([AutoXmltvSources.reconcileStored]).
+     */
+    fun setProvidesGuide(
+        providerId: Long,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launchGuarded("setProvidesGuide") {
+            providerRepository.setProvidesGuide(providerId, enabled, byUser = true)
+            AutoXmltvSources.reconcileStored(context, providerId)
+        }
+    }
+
+    fun validateAndSave(
+        id: Long?,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String,
+        config: String,
+        onComplete: () -> Unit,
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    ) {
+        viewModelScope.launch {
+            if (type == "LOCAL") {
+                performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
+                return@launch
+            }
+            _saveState.value = SaveState.Validating
+            val result = testConnection(type, url, username, password, config)
+            if (result.isSuccess) {
+                performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
+            } else {
+                _saveState.value =
+                    SaveState.ValidationFailed(
+                        result.exceptionOrNull()?.message ?: context.getString(R.string.provider_error_connection_failed),
+                    )
+            }
+        }
+    }
+
+    fun forceSave(
+        id: Long?,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String,
+        config: String,
+        onComplete: () -> Unit,
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    ) {
+        viewModelScope.launch {
+            performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
+        }
+    }
+
+    /**
+     * Save a Jellyfin provider authenticated via Quick Connect.
+     * Stores the access token directly so no password-based re-auth is ever needed.
+     *
+     * With [id], this signs this device's profile in to that existing provider instead of adding a
+     * new one, so Quick Connect from the edit screen doesn't add a duplicate provider.
+     */
+    fun quickConnectSave(
+        id: Long? = null,
+        name: String,
+        url: String,
+        username: String,
+        token: String,
+        userId: String,
+        onComplete: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            _saveState.value = SaveState.Saving
+            try {
+                if (id != null) {
+                    providerRepository.saveQuickConnectLogin(id, username, token, userId)
+                    AppContainer.getInstance(context).onProvidersChanged(setOf(id))
+                } else {
+                    val newId = providerRepository.addProvider(name, url, username, "", "JELLYFIN", "")
+                    providerRepository.saveJellyfinSession(newId, token, userId)
+                }
+                loadProviders()
+                _saveState.value = SaveState.Idle
+                onComplete()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _saveState.value = SaveState.Idle
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+            }
+        }
+    }
+
+    fun syncProvider(providerId: Long) {
+        // Delegate to ProviderSyncManager so the sync itself persists outside the ViewModel
+        // scope — only the await below is scoped to this ViewModel, which is fine: if this
+        // screen closes mid-sync the sync keeps running, this just stops watching it.
+        awaitSync(
+            org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+                .getInstance(context)
+                .startManualSync(providerId),
+        )
+    }
+
+    /**
+     * Re-attach to a sync already running for [providerId]. A ViewModel is recreated whenever the
+     * provider screen is reopened, so without this the button would look idle — and start a second
+     * sync — while the first one is still running.
+     */
+    fun observeRunningSync(providerId: Long) {
+        val deferred =
+            if (_syncState.value is SyncState.Syncing) {
+                null
+            } else {
+                org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+                    .getInstance(context)
+                    .inFlightSync(providerId)
+            }
+        if (deferred != null) {
+            awaitSync(deferred)
+        }
+    }
+
+    private fun awaitSync(deferred: kotlinx.coroutines.Deferred<org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult>) {
+        _syncState.value = SyncState.Syncing
+        viewModelScope.launch {
+            _syncState.value =
+                when (val result = deferred.await()) {
+                    is org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult.Success -> SyncState.Success
+                    is org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult.Failed -> SyncState.Error(result.message)
+                }
+            // No explicit reload needed: updateSyncStats() already wrote to the providers table,
+            // and the Flow collector from loadProviders() at init picks that up on its own.
+        }
+    }
+
+    private suspend fun performSave(
+        id: Long?,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String,
+        config: String,
+        onComplete: () -> Unit,
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    ) {
+        _saveState.value = SaveState.Saving
+        try {
+            if (id != null) {
+                providerRepository.updateProvider(id, name, url, username, password, type, config)
+                // Credentials may have changed — evict the cached MediaRepository now, before
+                // onComplete, so the next getMediaRepository() call rebuilds it instead of
+                // reusing one built from the old URL/username/password.
+                AppContainer.getInstance(context).onProvidersChanged(setOf(id))
+            } else {
+                val newId = providerRepository.addProvider(name, url, username, password, type, config, initialSettings)
+                // A new source loads its whole catalogue now, not at the next scheduled sync (up to
+                // 4 h away). Runs in ProviderSyncManager's own scope, so leaving the form doesn't stop it.
+                if (type == "XTREAM") ProviderSyncManager.getInstance(context).startManualSync(newId)
+            }
+            loadProviders()
+            _saveState.value = SaveState.Idle
+            onComplete()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _saveState.value = SaveState.Idle
+            _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+        }
+    }
+
+    private suspend fun testConnection(
+        type: String,
+        url: String,
+        username: String,
+        password: String,
+        config: String,
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            when (type) {
+                "XTREAM" -> {
+                    val service = XtreamApiService(url, username, password)
+                    try {
+                        val response = service.authenticate()
+                        if (response.userInfo.auth != 1) {
+                            Result.failure(Exception(context.getString(R.string.provider_error_invalid_credentials)))
+                        } else if (response.userInfo.status != "Active") {
+                            Result.failure(
+                                Exception(context.getString(R.string.provider_error_account_inactive_format, response.userInfo.status)),
+                            )
+                        } else {
+                            Result.success(Unit)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                    } finally {
+                        service.close()
+                    }
+                }
+
+                "REMOTE_M3U" -> {
+                    try {
+                        val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                        connection.connectTimeout = 15_000
+                        connection.readTimeout = 15_000
+                        connection.instanceFollowRedirects = true
+                        connection.setRequestProperty("Accept-Encoding", "identity")
+                        try {
+                            val statusCode = connection.responseCode
+                            if (statusCode !in 200..299) {
+                                Result.failure(
+                                    Exception(friendlyErrorMessage(HttpStatusException(statusCode), context, appSettings.isDevMode)),
+                                )
+                            } else {
+                                val header =
+                                    connection.inputStream.bufferedReader().use { reader ->
+                                        val buf = CharArray(256)
+                                        val read = reader.read(buf)
+                                        if (read > 0) String(buf, 0, read) else ""
+                                    }
+                                if (header.trimStart().startsWith("#EXTM3U")) {
+                                    Result.success(Unit)
+                                } else {
+                                    val message = friendlyErrorMessage(InvalidPlaylistException(), context, appSettings.isDevMode)
+                                    Result.failure(Exception(message))
+                                }
+                            }
+                        } finally {
+                            connection.disconnect()
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                    }
+                }
+
+                "JELLYFIN", "SMB" -> {
+                    val tempEntity =
+                        ProviderEntity(
+                            id = 0L,
+                            name = "validation",
+                            url = url,
+                            username = username,
+                            type = type,
+                            config = config,
+                        )
+                    try {
+                        // create() caches by provider id, and every validation shares id 0: without
+                        // evicting first, a retry after a wrong password reused the provider built
+                        // with it and kept failing until the app restarted.
+                        MediaProviderFactory.clearCache(tempEntity.id)
+                        val provider = MediaProviderFactory.create(tempEntity, context, password)
+                        val result = provider.connect()
+                        try {
+                            provider.disconnect()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
+                        }
+                        MediaProviderFactory.clearCache(tempEntity.id)
+                        val error = result.exceptionOrNull()
+                        if (error == null) {
+                            result
+                        } else {
+                            Result.failure(Exception(friendlyErrorMessage(error, context, appSettings.isDevMode), error))
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        MediaProviderFactory.clearCache(tempEntity.id)
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                    }
+                }
+
+                else -> {
+                    Result.success(Unit)
+                }
+            }
+        }
+}

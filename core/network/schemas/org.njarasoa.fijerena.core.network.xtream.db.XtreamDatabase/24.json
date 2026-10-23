@@ -1,0 +1,1096 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 24,
+    "identityHash": "15cd3bea5a6032d9fde646c06bcfef6d",
+    "entities": [
+      {
+        "tableName": "xtream_categories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`categoryId` TEXT NOT NULL, `providerId` INTEGER NOT NULL, `categoryName` TEXT NOT NULL, `parentId` INTEGER NOT NULL, `type` TEXT NOT NULL, `contentHash` INTEGER NOT NULL, `excluded` INTEGER NOT NULL, PRIMARY KEY(`categoryId`, `providerId`, `type`))",
+        "fields": [
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryName",
+            "columnName": "categoryName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentId",
+            "columnName": "parentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentHash",
+            "columnName": "contentHash",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "excluded",
+            "columnName": "excluded",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "categoryId",
+            "providerId",
+            "type"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_xtream_categories_providerId_type",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "type"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_categories_providerId_type` ON `${TABLE_NAME}` (`providerId`, `type`)"
+          },
+          {
+            "name": "index_xtream_categories_providerId_type_excluded",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "type",
+              "excluded"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_categories_providerId_type_excluded` ON `${TABLE_NAME}` (`providerId`, `type`, `excluded`)"
+          }
+        ]
+      },
+      {
+        "tableName": "xtream_streams",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`streamId` INTEGER NOT NULL, `providerId` INTEGER NOT NULL, `type` TEXT NOT NULL, `num` INTEGER NOT NULL, `name` TEXT NOT NULL, `streamType` TEXT NOT NULL, `streamIcon` TEXT, `epgChannelId` TEXT, `added` TEXT, `categoryId` TEXT NOT NULL, `customSid` TEXT, `tvArchive` INTEGER NOT NULL, `directSource` TEXT, `tvArchiveDuration` INTEGER NOT NULL, `contentHash` INTEGER NOT NULL, `description` TEXT, `cast` TEXT, `director` TEXT, `genre` TEXT, `releaseDate` TEXT, `rating` TEXT, `duration` TEXT, `youtubeTrailer` TEXT, `excluded` INTEGER NOT NULL, `contentRating` TEXT, `tmdbId` TEXT, `containerExtension` TEXT, `detailFetchedAt` INTEGER, `posterPath` TEXT, PRIMARY KEY(`streamId`, `providerId`, `type`))",
+        "fields": [
+          {
+            "fieldPath": "streamId",
+            "columnName": "streamId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "num",
+            "columnName": "num",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streamType",
+            "columnName": "streamType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streamIcon",
+            "columnName": "streamIcon",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "epgChannelId",
+            "columnName": "epgChannelId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "added",
+            "columnName": "added",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customSid",
+            "columnName": "customSid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tvArchive",
+            "columnName": "tvArchive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "directSource",
+            "columnName": "directSource",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tvArchiveDuration",
+            "columnName": "tvArchiveDuration",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentHash",
+            "columnName": "contentHash",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cast",
+            "columnName": "cast",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "director",
+            "columnName": "director",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "genre",
+            "columnName": "genre",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "releaseDate",
+            "columnName": "releaseDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "duration",
+            "columnName": "duration",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "youtubeTrailer",
+            "columnName": "youtubeTrailer",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "excluded",
+            "columnName": "excluded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentRating",
+            "columnName": "contentRating",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tmdbId",
+            "columnName": "tmdbId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "containerExtension",
+            "columnName": "containerExtension",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "detailFetchedAt",
+            "columnName": "detailFetchedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "posterPath",
+            "columnName": "posterPath",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "streamId",
+            "providerId",
+            "type"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_xtream_streams_providerId_type",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "type"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_type` ON `${TABLE_NAME}` (`providerId`, `type`)"
+          },
+          {
+            "name": "index_xtream_streams_categoryId_providerId",
+            "unique": false,
+            "columnNames": [
+              "categoryId",
+              "providerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_streams_categoryId_providerId` ON `${TABLE_NAME}` (`categoryId`, `providerId`)"
+          },
+          {
+            "name": "index_xtream_streams_providerId_type_categoryId",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "type",
+              "categoryId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_type_categoryId` ON `${TABLE_NAME}` (`providerId`, `type`, `categoryId`)"
+          },
+          {
+            "name": "index_xtream_streams_providerId_tmdbId",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "tmdbId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_tmdbId` ON `${TABLE_NAME}` (`providerId`, `tmdbId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "xtream_series",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`seriesId` INTEGER NOT NULL, `providerId` INTEGER NOT NULL, `num` INTEGER, `name` TEXT NOT NULL, `cover` TEXT, `plot` TEXT, `cast` TEXT, `director` TEXT, `genre` TEXT, `releaseDate` TEXT, `lastModified` TEXT, `rating` TEXT, `rating5based` REAL, `youtubeTrailer` TEXT, `episodeRunTime` TEXT, `categoryId` TEXT NOT NULL, `backdropPath` TEXT, `contentHash` INTEGER NOT NULL, `excluded` INTEGER NOT NULL, `contentRating` TEXT, `tmdbId` TEXT, `detailFetchedAt` INTEGER, `posterPath` TEXT, `episodesFetchedAt` INTEGER, PRIMARY KEY(`seriesId`, `providerId`))",
+        "fields": [
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "num",
+            "columnName": "num",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cover",
+            "columnName": "cover",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "plot",
+            "columnName": "plot",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cast",
+            "columnName": "cast",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "director",
+            "columnName": "director",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "genre",
+            "columnName": "genre",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "releaseDate",
+            "columnName": "releaseDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastModified",
+            "columnName": "lastModified",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating5based",
+            "columnName": "rating5based",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "youtubeTrailer",
+            "columnName": "youtubeTrailer",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "episodeRunTime",
+            "columnName": "episodeRunTime",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "backdropPath",
+            "columnName": "backdropPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contentHash",
+            "columnName": "contentHash",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "excluded",
+            "columnName": "excluded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentRating",
+            "columnName": "contentRating",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tmdbId",
+            "columnName": "tmdbId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "detailFetchedAt",
+            "columnName": "detailFetchedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "posterPath",
+            "columnName": "posterPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "episodesFetchedAt",
+            "columnName": "episodesFetchedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "seriesId",
+            "providerId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_xtream_series_providerId",
+            "unique": false,
+            "columnNames": [
+              "providerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_series_providerId` ON `${TABLE_NAME}` (`providerId`)"
+          },
+          {
+            "name": "index_xtream_series_categoryId_providerId",
+            "unique": false,
+            "columnNames": [
+              "categoryId",
+              "providerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_series_categoryId_providerId` ON `${TABLE_NAME}` (`categoryId`, `providerId`)"
+          },
+          {
+            "name": "index_xtream_series_providerId_tmdbId",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "tmdbId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_series_providerId_tmdbId` ON `${TABLE_NAME}` (`providerId`, `tmdbId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "xtream_episodes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `seriesId` INTEGER NOT NULL, `providerId` INTEGER NOT NULL, `season` INTEGER, `episodeNum` INTEGER NOT NULL, `title` TEXT NOT NULL, `containerExtension` TEXT NOT NULL, `overview` TEXT, `plot` TEXT, `airDate` TEXT, `duration` TEXT, `durationSecs` INTEGER, `bitrate` INTEGER, `rating` TEXT, `movieImage` TEXT, `tmdbId` TEXT, `plotFetchedAt` INTEGER, `contentHash` INTEGER NOT NULL, PRIMARY KEY(`id`, `providerId`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "season",
+            "columnName": "season",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "episodeNum",
+            "columnName": "episodeNum",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "containerExtension",
+            "columnName": "containerExtension",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "overview",
+            "columnName": "overview",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "plot",
+            "columnName": "plot",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "airDate",
+            "columnName": "airDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "duration",
+            "columnName": "duration",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "durationSecs",
+            "columnName": "durationSecs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "bitrate",
+            "columnName": "bitrate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "movieImage",
+            "columnName": "movieImage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tmdbId",
+            "columnName": "tmdbId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "plotFetchedAt",
+            "columnName": "plotFetchedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "contentHash",
+            "columnName": "contentHash",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id",
+            "providerId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_xtream_episodes_seriesId_providerId",
+            "unique": false,
+            "columnNames": [
+              "seriesId",
+              "providerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_episodes_seriesId_providerId` ON `${TABLE_NAME}` (`seriesId`, `providerId`)"
+          },
+          {
+            "name": "index_xtream_episodes_providerId",
+            "unique": false,
+            "columnNames": [
+              "providerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_episodes_providerId` ON `${TABLE_NAME}` (`providerId`)"
+          },
+          {
+            "name": "index_xtream_episodes_providerId_season_episodeNum",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "season",
+              "episodeNum"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_xtream_episodes_providerId_season_episodeNum` ON `${TABLE_NAME}` (`providerId`, `season`, `episodeNum`)"
+          }
+        ]
+      },
+      {
+        "tableName": "xtream_streams_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, tokenize=unicode61, content=`xtream_streams`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "unicode61",
+          "tokenizerArgs": [],
+          "contentTable": "xtream_streams",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_streams_fts_BEFORE_UPDATE BEFORE UPDATE ON `xtream_streams` BEGIN DELETE FROM `xtream_streams_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_streams_fts_BEFORE_DELETE BEFORE DELETE ON `xtream_streams` BEGIN DELETE FROM `xtream_streams_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_streams_fts_AFTER_UPDATE AFTER UPDATE ON `xtream_streams` BEGIN INSERT INTO `xtream_streams_fts`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_streams_fts_AFTER_INSERT AFTER INSERT ON `xtream_streams` BEGIN INSERT INTO `xtream_streams_fts`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END"
+        ]
+      },
+      {
+        "tableName": "xtream_series_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, tokenize=unicode61, content=`xtream_series`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "unicode61",
+          "tokenizerArgs": [],
+          "contentTable": "xtream_series",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_series_fts_BEFORE_UPDATE BEFORE UPDATE ON `xtream_series` BEGIN DELETE FROM `xtream_series_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_series_fts_BEFORE_DELETE BEFORE DELETE ON `xtream_series` BEGIN DELETE FROM `xtream_series_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_series_fts_AFTER_UPDATE AFTER UPDATE ON `xtream_series` BEGIN INSERT INTO `xtream_series_fts`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_xtream_series_fts_AFTER_INSERT AFTER INSERT ON `xtream_series` BEGIN INSERT INTO `xtream_series_fts`(`docid`, `name`) VALUES (NEW.`rowid`, NEW.`name`); END"
+        ]
+      },
+      {
+        "tableName": "xtream_epg_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`providerId` INTEGER NOT NULL, `streamId` INTEGER NOT NULL, `payload` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`providerId`, `streamId`))",
+        "fields": [
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streamId",
+            "columnName": "streamId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payload",
+            "columnName": "payload",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "providerId",
+            "streamId"
+          ]
+        }
+      },
+      {
+        "tableName": "watch_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, `itemName` TEXT NOT NULL, `categoryId` TEXT NOT NULL, `positionMs` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `isCompleted` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastPlayedAt` INTEGER, `seriesId` TEXT, `episodeId` TEXT, `seriesName` TEXT, `episodeExtension` TEXT, `audioTrackIndex` INTEGER, `subtitleTrackIndex` INTEGER, PRIMARY KEY(`providerId`, `profileId`, `itemId`, `contentType`))",
+        "fields": [
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemName",
+            "columnName": "itemName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "positionMs",
+            "columnName": "positionMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isCompleted",
+            "columnName": "isCompleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPlayedAt",
+            "columnName": "lastPlayedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "episodeId",
+            "columnName": "episodeId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "seriesName",
+            "columnName": "seriesName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "episodeExtension",
+            "columnName": "episodeExtension",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "audioTrackIndex",
+            "columnName": "audioTrackIndex",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "subtitleTrackIndex",
+            "columnName": "subtitleTrackIndex",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "providerId",
+            "profileId",
+            "itemId",
+            "contentType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_watch_state_providerId_profileId_contentType_lastPlayedAt",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "profileId",
+              "contentType",
+              "lastPlayedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_profileId_contentType_lastPlayedAt` ON `${TABLE_NAME}` (`providerId`, `profileId`, `contentType`, `lastPlayedAt`)"
+          },
+          {
+            "name": "index_watch_state_providerId_profileId_seriesId",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "profileId",
+              "seriesId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_profileId_seriesId` ON `${TABLE_NAME}` (`providerId`, `profileId`, `seriesId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "favorite_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, `kind` TEXT NOT NULL, `name` TEXT NOT NULL, `parentCategoryId` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`providerId`, `profileId`, `itemId`, `contentType`, `kind`))",
+        "fields": [
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentCategoryId",
+            "columnName": "parentCategoryId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "providerId",
+            "profileId",
+            "itemId",
+            "contentType",
+            "kind"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_favorite_state_providerId_profileId_kind_contentType_createdAt",
+            "unique": false,
+            "columnNames": [
+              "providerId",
+              "profileId",
+              "kind",
+              "contentType",
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_favorite_state_providerId_profileId_kind_contentType_createdAt` ON `${TABLE_NAME}` (`providerId`, `profileId`, `kind`, `contentType`, `createdAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "sync_tombstone",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`providerId`, `profileId`, `kind`, `itemId`, `contentType`))",
+        "fields": [
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deletedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "providerId",
+            "profileId",
+            "kind",
+            "itemId",
+            "contentType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sync_tombstone_deletedAt",
+            "unique": false,
+            "columnNames": [
+              "deletedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_tombstone_deletedAt` ON `${TABLE_NAME}` (`deletedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "sync_version",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, `hlc` INTEGER NOT NULL, `pending` INTEGER NOT NULL, PRIMARY KEY(`providerId`, `profileId`, `kind`, `itemId`, `contentType`))",
+        "fields": [
+          {
+            "fieldPath": "providerId",
+            "columnName": "providerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hlc",
+            "columnName": "hlc",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pending",
+            "columnName": "pending",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "providerId",
+            "profileId",
+            "kind",
+            "itemId",
+            "contentType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sync_version_pending_hlc",
+            "unique": false,
+            "columnNames": [
+              "pending",
+              "hlc"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sync_version_pending_hlc` ON `${TABLE_NAME}` (`pending`, `hlc`)"
+          }
+        ]
+      },
+      {
+        "tableName": "sync_clock",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `hlc` INTEGER NOT NULL, `applying` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hlc",
+            "columnName": "hlc",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "applying",
+            "columnName": "applying",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '15cd3bea5a6032d9fde646c06bcfef6d')"
+    ]
+  }
+}

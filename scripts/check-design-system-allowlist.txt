@@ -1,0 +1,6 @@
+# Design-system gate allow-list (scripts/check-design-system.sh).
+# One "path count" per line: how many look values (colour, size, weight, shape literals; raw
+# Material controls; direct colorScheme reads) the file may still decide itself. Counts only go
+# down: move a site to a component or a CinemaTheme role and lower the count in the same change; a
+# file at 0 leaves the list. A file not listed may have none.
+# See docs/plans/20261016_design-system-plan.md.

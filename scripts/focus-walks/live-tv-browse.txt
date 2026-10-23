@@ -1,0 +1,36 @@
+# Live TV browse (TwoColumnLayout + StreamList), TV emulator, source iptv, no guide indexed.
+# Start: Home → Live TV, then Back from the preview it opens on the last channel (LT1; the
+# preview is a layer on this same entry since LT7 — with no last channel, Home → Live TV lands
+# here directly). Focus is on a stream row: the channel the preview was playing when it is in the
+# list, else the first (F-C-1, P2, LT6); the row's text varies, so there is no @start.
+# Covers F-C-2..F-C-6 (R1, R2, R3, R5). Expectations are Part II Phase 2 behaviour (tvPane):
+# the two columns are panes, Left/Right move between them, Up/Down stay in a column — and
+# Phase 3 (P3): rows have no hidden trailing buttons; long-press OK / Menu opens a row's menu.
+# Updated 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Updated 2026-10-08 (TV navigation rail, Phases 3 + 4): the header's Search is gone (the rail has
+# it); Left from a category goes to the rail, and Right comes back to that category.
+# Up from the first stream reaches the header (the browse header keeps TV Guide, shown only with a
+# guide, and Refresh: here Refresh alone). Nothing is above the header.
+UP	Refresh
+UP	Refresh
+# Down from the header returns to the item pane's first row; Left from there lands on the
+# selected category ("Recent" is selected when the screen opened on it).
+DOWN	Arena Sport 1
+LEFT	Recent
+# Right from a category enters the item pane on the remembered row. Text varies, so not asserted.
+# Phase 3: a regular category has no ★ stop any more either; Right goes straight to the items.
+RIGHT	A / Arena Sport 1 / Hold OK or press Menu for actions
+# Changed in Phase 3 (F-C-5, R3): the hidden "Add to Favorites" star is gone. Right from a
+# stream goes nowhere (the item pane has no right neighbour); focus stays on the row.
+RIGHT	A / Arena Sport 1 / Hold OK or press Menu for actions
+# Down goes to the next row.
+DOWN	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
+# Changed (F-C-3, R1/R2): Left from an item lands on the selected category, not the one level
+# with it ("Recent Categories" before).
+LEFT	Recent
+# Changed (rail, Phase 3): Left from a category goes to the rail, on the current section
+# (it went nowhere before, F-C-4); Right returns to the category it came from.
+LEFT	Live TV
+RIGHT	Recent
+# F-C-2 (Down at the end of the item list stays on the last row) is not walked: the list
+# length varies per source.

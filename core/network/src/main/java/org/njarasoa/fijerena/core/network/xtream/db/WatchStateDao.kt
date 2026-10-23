@@ -1,0 +1,417 @@
+package org.njarasoa.fijerena.core.network.xtream.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import org.njarasoa.fijerena.core.network.sync.SyncKind
+import org.njarasoa.fijerena.core.player.domain.RESUMABLE_SQL
+
+/**
+ * See the watch state durable storage plan. Statements mirror the plan's Write path /
+ * read-query sections exactly rather than re-deriving SQL at each call site.
+ */
+@Dao
+interface WatchStateDao {
+    /**
+     * Playback progress upsert. Owns position, duration, completion and `lastPlayedAt`; leaves
+     * metadata columns alone when this call doesn't carry them via `COALESCE`.
+     *
+     * `isCompleted` is sticky: `MAX` can only raise it, never lower it, so playing two minutes of a
+     * film already marked watched can't silently clear the check — only `setWatched(false)` does that.
+     */
+    @Query(
+        "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
+            "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId, seriesName, " +
+            "episodeExtension, audioTrackIndex, subtitleTrackIndex) " +
+            "VALUES (:providerId, :profileId, :itemId, :contentType, :itemName, :categoryId, :positionMs, :durationMs, " +
+            ":isCompleted, :now, :now, :seriesId, :episodeId, :seriesName, :episodeExtension, " +
+            ":audioTrackIndex, :subtitleTrackIndex) " +
+            "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
+            "positionMs = excluded.positionMs, " +
+            "durationMs = excluded.durationMs, " +
+            "isCompleted = MAX(watch_state.isCompleted, excluded.isCompleted), " +
+            "updatedAt = excluded.updatedAt, " +
+            "lastPlayedAt = excluded.lastPlayedAt, " +
+            "itemName = COALESCE(excluded.itemName, watch_state.itemName), " +
+            "seriesId = COALESCE(excluded.seriesId, watch_state.seriesId), " +
+            "episodeId = COALESCE(excluded.episodeId, watch_state.episodeId), " +
+            "seriesName = COALESCE(excluded.seriesName, watch_state.seriesName), " +
+            "episodeExtension = COALESCE(excluded.episodeExtension, watch_state.episodeExtension), " +
+            "audioTrackIndex = COALESCE(excluded.audioTrackIndex, watch_state.audioTrackIndex), " +
+            "subtitleTrackIndex = COALESCE(excluded.subtitleTrackIndex, watch_state.subtitleTrackIndex)",
+    )
+    fun upsertProgress(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        itemName: String?,
+        categoryId: String?,
+        positionMs: Long,
+        durationMs: Long,
+        isCompleted: Boolean,
+        now: Long,
+        seriesId: String?,
+        episodeId: String?,
+        seriesName: String?,
+        episodeExtension: String?,
+        audioTrackIndex: Int?,
+        subtitleTrackIndex: Int?,
+    )
+
+    /**
+     * Playback-start upsert. Owns recency and metadata; must not touch `positionMs`, `durationMs`
+     * or `isCompleted` on conflict, so starting playback never erases progress already stored.
+     */
+    @Query(
+        "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
+            "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId, seriesName, " +
+            "episodeExtension, audioTrackIndex, subtitleTrackIndex) " +
+            "VALUES (:providerId, :profileId, :itemId, :contentType, :itemName, :categoryId, 0, 0, 0, :now, :now, " +
+            ":seriesId, :episodeId, :seriesName, :episodeExtension, :audioTrackIndex, :subtitleTrackIndex) " +
+            "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
+            "updatedAt = excluded.updatedAt, " +
+            "lastPlayedAt = excluded.lastPlayedAt, " +
+            "itemName = COALESCE(excluded.itemName, watch_state.itemName), " +
+            "seriesId = COALESCE(excluded.seriesId, watch_state.seriesId), " +
+            "episodeId = COALESCE(excluded.episodeId, watch_state.episodeId), " +
+            "seriesName = COALESCE(excluded.seriesName, watch_state.seriesName), " +
+            "episodeExtension = COALESCE(excluded.episodeExtension, watch_state.episodeExtension), " +
+            "audioTrackIndex = COALESCE(excluded.audioTrackIndex, watch_state.audioTrackIndex), " +
+            "subtitleTrackIndex = COALESCE(excluded.subtitleTrackIndex, watch_state.subtitleTrackIndex)",
+    )
+    fun upsertRecency(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        itemName: String?,
+        categoryId: String?,
+        now: Long,
+        seriesId: String?,
+        episodeId: String?,
+        seriesName: String?,
+        episodeExtension: String?,
+        audioTrackIndex: Int?,
+        subtitleTrackIndex: Int?,
+    )
+
+    /**
+     * Manual mark watched (Phase 6). Insert path supplies `positionMs`/`durationMs` = 0 and
+     * `lastPlayedAt` = NULL, same discipline as [upsertRecency] — a manual mark is not a play, so
+     * it must not enter the Recent row (filtered on `lastPlayedAt IS NOT NULL`). Update path
+     * touches only `isCompleted`/`updatedAt`, leaving position, duration, `lastPlayedAt` and
+     * metadata exactly as playback left them, so a later `setWatched(false)` brings the resume bar
+     * back where it was rather than erasing it.
+     *
+     * [seriesId]/[episodeId] are insert-only, same as everything else here — an episode with no
+     * existing row has none to carry forward on conflict. `MediaRepository.setWatched` resolves
+     * [seriesId] from the catalogue before calling this for a TV Shows mark; without it, a
+     * never-played episode marked watched directly would silently drop out of
+     * [getSeriesCompletedCounts]'s `seriesId IS NOT NULL` rollup.
+     */
+    @Query(
+        "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
+            "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId) " +
+            "VALUES (:providerId, :profileId, :itemId, :contentType, '', '', 0, 0, 1, :now, NULL, :seriesId, :episodeId) " +
+            "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
+            "isCompleted = 1, updatedAt = excluded.updatedAt",
+    )
+    suspend fun markWatched(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        now: Long,
+        seriesId: String? = null,
+        episodeId: String? = null,
+    )
+
+    /**
+     * Manual mark unwatched for this one row (Phase 6). A no-op if the row doesn't exist — nothing
+     * to unmark. Spreading this across a completed TMDB sibling group (Phase 5) is a separate,
+     * Xtream-specific call from [MediaRepository.setWatched]; this DAO has no catalogue to join.
+     */
+    @Query(
+        "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType",
+    )
+    suspend fun markUnwatched(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        now: Long,
+    )
+
+    /**
+     * Clear lastPlayedAt, removing a row from the Recent list — an individual item (movie, live
+     * channel, or a lone episode) when [seriesId] is its own itemId, or every episode of a series
+     * at once when it's a real series id. `seriesId` is null on every non-series row, so the OR
+     * already collapses to plain `itemId = :seriesId` for those; one query serves both callers.
+     */
+    @Query(
+        "UPDATE watch_state SET lastPlayedAt = NULL, updatedAt = :now " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND (seriesId = :seriesId OR itemId = :seriesId) AND contentType = :contentType",
+    )
+    suspend fun clearRecentSeries(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+        now: Long,
+    )
+
+    /** The rows [clearRecentSeries] takes out of Recent, each with the `lastPlayedAt` it had. */
+    @Query(
+        "SELECT itemId, lastPlayedAt FROM watch_state " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND (seriesId = :seriesId OR itemId = :seriesId) " +
+            "AND contentType = :contentType AND lastPlayedAt IS NOT NULL",
+    )
+    suspend fun getRecentSeriesPlays(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+    ): List<RecentPlay>
+
+    /**
+     * [clearRecentSeries], returning what it cleared, so an Undo can put it back with
+     * [restoreRecentPlays] (the tv recents favorites plan → A).
+     */
+    @Transaction
+    suspend fun takeRecentSeries(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+        now: Long,
+    ): List<RecentPlay> {
+        val plays = getRecentSeriesPlays(providerId, profileId, seriesId, contentType)
+        clearRecentSeries(providerId, profileId, seriesId, contentType, now)
+        return plays
+    }
+
+    /**
+     * Puts one row back in Recent at the time it was last played. A row played again since its
+     * removal keeps its newer time. `updatedAt` moves to [now] so live sync carries the change.
+     */
+    @Query(
+        "UPDATE watch_state SET lastPlayedAt = :lastPlayedAt, updatedAt = :now " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType " +
+            "AND lastPlayedAt IS NULL",
+    )
+    suspend fun restoreLastPlayedAt(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        lastPlayedAt: Long,
+        now: Long,
+    )
+
+    /** Undo of [takeRecentSeries]: every row it cleared, in one transaction. */
+    @Transaction
+    suspend fun restoreRecentPlays(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        plays: List<RecentPlay>,
+        now: Long,
+    ) {
+        plays.forEach { restoreLastPlayedAt(providerId, profileId, it.itemId, contentType, it.lastPlayedAt, now) }
+    }
+
+    /** Clear Recent for one content type: every row leaves the Recent list, progress and completion stay. */
+    @Query(
+        "UPDATE watch_state SET lastPlayedAt = NULL, updatedAt = :now " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType AND lastPlayedAt IS NOT NULL",
+    )
+    suspend fun clearRecent(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        now: Long,
+    )
+
+    /** Tier 2: every row for the content type, uncapped. Position/completion are stream attributes, not history. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType")
+    suspend fun getByContentType(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+    ): List<WatchStateEntity>
+
+    /** Tier 1: Recent row for Movies/Live TV — plain recency, capped. */
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
+            "AND lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT :limit",
+    )
+    suspend fun getRecent(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity>
+
+    /** Tier 1: Recent row for TV Shows — one card per series, collapsed before the limit. */
+    @androidx.room.RewriteQueriesToDropUnusedColumns
+    @Query(
+        "SELECT * FROM (" +
+            "SELECT *, ROW_NUMBER() OVER (" +
+            "PARTITION BY COALESCE(seriesId, itemId) ORDER BY lastPlayedAt DESC, itemId DESC" +
+            ") AS rn FROM watch_state " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType AND lastPlayedAt IS NOT NULL" +
+            ") WHERE rn = 1 ORDER BY lastPlayedAt DESC LIMIT :limit",
+    )
+    suspend fun getRecentSeriesCollapsed(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity>
+
+    /**
+     * "Jump Back In" shelf, Movies half — genuinely in-progress rows only: the same rule as
+     * `WatchedItem.resumeProgress` ([RESUMABLE_SQL]), computed here in SQL so the LIMIT lands on the right rows
+     * instead of over-fetching and filtering in Kotlin.
+     */
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
+            "AND lastPlayedAt IS NOT NULL AND isCompleted = 0 AND " + RESUMABLE_SQL + " " +
+            "ORDER BY lastPlayedAt DESC LIMIT :limit",
+    )
+    suspend fun getResumable(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity>
+
+    /**
+     * "Jump Back In" shelf, TV Shows half — same series-collapse as [getRecentSeriesCollapsed],
+     * but the resumable-band filter applies before partitioning: a series whose most recently
+     * played episode was already finished (and no other episode is mid-watch) has nothing to
+     * resume, so it doesn't appear here even though it would in the plain Recent row.
+     */
+    @androidx.room.RewriteQueriesToDropUnusedColumns
+    @Query(
+        "SELECT * FROM (" +
+            "SELECT *, ROW_NUMBER() OVER (" +
+            "PARTITION BY COALESCE(seriesId, itemId) ORDER BY lastPlayedAt DESC, itemId DESC" +
+            ") AS rn FROM watch_state " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType AND lastPlayedAt IS NOT NULL " +
+            "AND isCompleted = 0 AND " + RESUMABLE_SQL +
+            ") WHERE rn = 1 ORDER BY lastPlayedAt DESC LIMIT :limit",
+    )
+    suspend fun getResumableSeriesCollapsed(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity>
+
+    @Query(
+        "SELECT seriesId, COUNT(DISTINCT COALESCE(episodeId, itemId)) AS completed " +
+            "FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
+            "AND isCompleted = 1 AND seriesId IS NOT NULL GROUP BY seriesId",
+    )
+    suspend fun getSeriesCompletedCounts(
+        providerId: Long,
+        profileId: String,
+        contentType: String,
+    ): List<SeriesCompletedCount>
+
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType",
+    )
+    suspend fun getItem(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+    ): WatchStateEntity?
+
+    /**
+     * Track-setting fallback for an episode with no saved choice of its own: the series' most
+     * recently touched row that actually carries a track choice. Uses the
+     * `(providerId, profileId, seriesId)` index. Excludes rows with both indices null so a series where nobody has ever picked a
+     * track doesn't return an arbitrary row that has nothing to offer.
+     */
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND seriesId = :seriesId AND " +
+            "contentType = :contentType AND (audioTrackIndex IS NOT NULL OR subtitleTrackIndex IS NOT NULL) " +
+            "ORDER BY updatedAt DESC LIMIT 1",
+    )
+    suspend fun getLatestSeriesTrackPrefs(
+        providerId: Long,
+        profileId: String,
+        seriesId: String,
+        contentType: String,
+    ): WatchStateEntity?
+
+    /** Every row for this provider and profile, all content types, unbounded. See `getWatchHistory` in MediaRepository. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId")
+    suspend fun getAll(
+        providerId: Long,
+        profileId: String,
+    ): List<WatchStateEntity>
+
+    /** Every row for this provider across every profile — copying a provider copies everyone's history. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId")
+    suspend fun getAllProfiles(providerId: Long): List<WatchStateEntity>
+
+    /** Backs "Clear watch history", which clears only the profile using the app. */
+    @Query("DELETE FROM watch_state WHERE providerId = :providerId AND profileId = :profileId")
+    suspend fun deleteAll(
+        providerId: Long,
+        profileId: String,
+    )
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTombstone(tombstone: SyncTombstoneEntity)
+
+    /**
+     * [deleteAll], recording a `watch_clear` marker for live sync: every watch row for this
+     * provider and profile older than [clearedAt] is dropped on the other devices too. 0 (the
+     * default) means "now on the sync clock", stamped by [XtreamSyncTriggers].
+     */
+    @Transaction
+    suspend fun deleteAllRecordingClear(
+        providerId: Long,
+        profileId: String,
+        clearedAt: Long = 0,
+    ) {
+        deleteAll(providerId, profileId)
+        insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.WATCH_CLEAR, "", "", clearedAt))
+    }
+
+    /** Profile deletion: that profile's rows across every provider. */
+    @Query("DELETE FROM watch_state WHERE profileId = :profileId")
+    suspend fun deleteProfile(profileId: String)
+
+    /** Provider deletion: every profile's rows go with it. */
+    @Query("DELETE FROM watch_state WHERE providerId = :providerId")
+    suspend fun deleteAllProfiles(providerId: Long)
+
+    /**
+     * Bulk restore from a settings-export import: the whole row is known and authoritative, so a
+     * straight replace is correct here — unlike the production writers, which only ever know part
+     * of a row and use the field-targeted upserts above instead.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun restoreAll(entities: List<WatchStateEntity>)
+}
+
+/** A row's place in Recent: what [WatchStateDao.takeRecentSeries] clears and an Undo restores. */
+data class RecentPlay(
+    val itemId: String,
+    val lastPlayedAt: Long,
+)
+
+data class SeriesCompletedCount(
+    val seriesId: String,
+    val completed: Int,
+)

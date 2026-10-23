@@ -1,0 +1,86 @@
+name: Android Build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'server/**'
+      - 'scripts/focus-walks/**'
+      - '.github/workflows/checks.yml'
+      - '.github/workflows/server.yml'
+      - '.github/workflows/instrumented-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # gradle/gradle-daemon-jvm.properties asks for a JDK 21 daemon, and auto-download is off.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Remove local Java home from gradle.properties
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Lint
+        run: ./gradlew ktlintCheck
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      # Existing warnings live in each module's lint-baseline.xml; only new issues fail the build.
+      - name: Android Lint
+        run: ./gradlew lintDebug
+
+      - name: Room schemas are committed and current
+        run: |
+          if [ -n "$(git status --porcelain -- core/network/schemas)" ]; then
+            git status --porcelain -- core/network/schemas
+            echo "The build changed a Room schema: bump the database version, add its Migration, and commit core/network/schemas/."
+            exit 1
+          fi
+
+      - name: Build debug APKs
+        run: ./gradlew assembleDebug
+
+      # The tests themselves run nightly (instrumented-tests.yml); this keeps them compiling.
+      - name: Compile instrumented tests
+        run: ./gradlew assembleDebugAndroidTest
+
+      - name: Upload mobile APK
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-debug-apk
+          path: mobile/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Upload TV APK
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tv-debug-apk
+          path: tv/build/outputs/apk/debug/*.apk
+          retention-days: 14

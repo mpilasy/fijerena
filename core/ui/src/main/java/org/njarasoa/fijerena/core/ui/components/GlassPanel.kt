@@ -1,0 +1,88 @@
+package org.njarasoa.fijerena.core.ui.components
+
+import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.cornerShape
+
+/**
+ * Frosted glass surface composable.
+ *
+ * - API 31+: Blurred backdrop layer underneath sharp content
+ * - API < 31: Solid semi-transparent background (75% opacity)
+ * - Always applies shape + subtle gradient border
+ *
+ * The blur is applied ONLY to the background layer, not to content.
+ */
+@Composable
+fun GlassPanel(
+    modifier: Modifier = Modifier,
+    blurRadius: Float = 20f,
+    backgroundAlpha: Float = 1f,
+    panelShape: Shape = cornerShape(CinemaCornerRadius.large),
+    content: @Composable () -> Unit,
+) {
+    val palette = CinemaTheme.colors
+    val shape = panelShape
+    val bg =
+        remember(palette.glass, backgroundAlpha) {
+            if (backgroundAlpha < 1f) {
+                palette.glass.copy(alpha = palette.glass.alpha * backgroundAlpha)
+            } else {
+                palette.glass
+            }
+        }
+
+    val composeRenderEffect =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            remember(blurRadius) {
+                @Suppress("NewApi")
+                android.graphics.RenderEffect
+                    .createBlurEffect(
+                        blurRadius,
+                        blurRadius,
+                        android.graphics.Shader.TileMode.CLAMP,
+                    ).asComposeRenderEffect()
+            }
+        } else {
+            null
+        }
+
+    Box(
+        modifier =
+            modifier
+                .clip(shape)
+                .border(
+                    width = CinemaSpacing.xxxs / 2,
+                    color = palette.glassBorder,
+                    shape = shape,
+                ),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .then(
+                        if (composeRenderEffect != null) {
+                            Modifier.graphicsLayer {
+                                renderEffect = composeRenderEffect
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ).background(bg),
+        )
+        content()
+    }
+}

@@ -1,0 +1,642 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.1)" variant="all" version="9.4.1">
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                        String.format(&quot;%d:%02d:%02d&quot;, hours, minutes, seconds)"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="303"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                        String.format(&quot;%d:%02d&quot;, minutes, seconds)"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="305"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        errorLine1="        targetSdk = 35"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="28"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of `compileSdk` than 36 is available: 37"
+        errorLine1="    compileSdk = 36"
+        errorLine2="    ~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="23"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenHeightDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="            val screenHeight = Dp(LocalConfiguration.current.screenHeightDp.toFloat())"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/PlayerScreen.kt"
+            line="430"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenHeightDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="    val screenHeight = Dp(LocalConfiguration.current.screenHeightDp.toFloat())"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/dialogs/TvSelectorDialog.kt"
+            line="80"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="    val overlayWidth = Dp(configuration.screenWidthDp * 0.5f)"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="334"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryList.kt"
+            line="98"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryList.kt"
+            line="379"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt"
+            line="617"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/epg/EpgGridLayout.kt"
+            line="378"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be named modifier"
+        errorLine1="    topFocusModifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="1358"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="1500"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="2123"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/search/SearchScreen.kt"
+            line="921"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/StreamList.kt"
+            line="177"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/StreamList.kt"
+            line="498"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/epgbrowser/TvEpgBrowserScreen.kt"
+            line="868"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ChromeOsAbiSupport"
+        message="Missing x86_64 ABI support for ChromeOS"
+        errorLine1="            abiFilters += listOf(&quot;arm64-v8a&quot;, &quot;armeabi-v7a&quot;)"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="34"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="HardwareIds"
+        message="Using `getString` to get device identifiers is not recommended"
+        errorLine1="            android.provider.Settings.Secure.getString("
+        errorLine2="            ^">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/provider/components/ProviderDialogs.kt"
+            line="440"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ExportedReceiver"
+        message="Exported receiver does not require permission"
+        errorLine1="        &lt;receiver"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="53"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        message="The attribute `android:allowBackup` is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute `android:dataExtractionRules` specifying an `@xml` resource which configures cloud backups and device transfers on Android 12 and higher."
+        errorLine1="        android:allowBackup=&quot;false&quot;"
+        errorLine2="                             ~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="34"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var targetRotation by remember { mutableStateOf(0f) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/CategoryList.kt"
+            line="135"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="    var activeProviderId by remember { mutableStateOf(0L) }"
+        errorLine2="                                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt"
+            line="155"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var refreshTrigger by remember { mutableStateOf(0) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt"
+            line="159"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt"
+            line="301"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="            var sourceCount by remember { mutableStateOf(0) }"
+        errorLine2="                                          ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/settings/components/EpgSettingsCard.kt"
+            line="52"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="183"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var targetRotation by remember { mutableStateOf(0f) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="384"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedTabIndex by rememberSaveable { mutableStateOf(tabs.indexOf(SeriesDetailTab.EPISODES).coerceAtLeast(0)) }"
+        errorLine2="                                               ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="439"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }"
+        errorLine2="                                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="490"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="    var resumePositionMs by remember(episode.id) { mutableStateOf(0L) }"
+        errorLine2="                                                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt"
+            line="1618"
+            column="52"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var recentOrderResetTick by remember { mutableStateOf(0) }"
+        errorLine2="                                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/LiveTvSplitLayout.kt"
+            line="243"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="        var uiScale by mutableStateOf(appSettings.uiScale)"
+        errorLine2="                       ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/MainActivity.kt"
+            line="53"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt"
+            line="134"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }"
+        errorLine2="                                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt"
+            line="263"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }"
+        errorLine2="                                               ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt"
+            line="305"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var targetRotation by remember { mutableStateOf(0f) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt"
+            line="342"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt"
+            line="83"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/search/SearchScreen.kt"
+            line="157"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var targetRotation by remember { mutableStateOf(0f) }"
+        errorLine2="                                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/category/components/StreamList.kt"
+            line="182"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/provider/TvAddProviderScreen.kt"
+            line="92"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    val uiScale by remember { mutableStateOf(appSettings.uiScale) }"
+        errorLine2="                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/epg/TvEpgGuideScreen.kt"
+            line="63"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var hour by remember { mutableStateOf(parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0) }"
+        errorLine2="                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/epg/TvEpgManagementScreen.kt"
+            line="1044"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        mutableStateOf("
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/feature/epg/TvEpgManagementScreen.kt"
+            line="1046"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0L) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="127"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0L) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="129"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="133"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0L) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="135"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="137"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0L) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="139"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0L) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="141"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="143"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0f) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="145"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0f) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="147"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="        ?: remember { mutableStateOf(0f) }"
+        errorLine2="                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/components/overlays/TvStatsOverlay.kt"
+            line="159"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().putBoolean(&quot;hints_dismissed&quot;, true).apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/ui/player/PlayerScreenState.kt"
+            line="104"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.compose.material:material-icons-extended&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="118"
+            column="20"/>
+    </issue>
+
+</issues>

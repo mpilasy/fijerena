@@ -1,0 +1,2420 @@
+package org.njarasoa.fijerena.core.network
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
+import androidx.core.content.edit
+import androidx.room.withTransaction
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.ParentalRules
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.RecentPlay
+import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
+import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryDao
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.domain.PlayableStream
+import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
+import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
+import org.njarasoa.fijerena.core.player.domain.isResumableAt
+import org.njarasoa.fijerena.core.player.domain.isWatchedAt
+import org.njarasoa.fijerena.core.player.domain.nextUnwatchedEpisodeId
+import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.EpgResponse
+import java.io.Closeable
+import java.util.concurrent.ConcurrentHashMap
+
+@Serializable
+data class WatchedItem(
+    val itemId: String,
+    val itemName: String,
+    val categoryId: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val playbackPosition: Long = 0L,
+    val duration: Long = 0L,
+    val isCompleted: Boolean = false,
+    val episodeId: EpisodeId? = null,
+    val episodeExtension: String? = null,
+    val seriesId: SeriesId? = null,
+    val seriesName: String? = null,
+    val audioTrackIndex: Int? = null,
+    val subtitleTrackIndex: Int? = null,
+)
+
+/**
+ * Fraction watched (0..1) when this item is far enough in to be worth resuming but not yet
+ * watched ([isResumableAt]), else null — so anything that draws a progress bar is exactly what the
+ * detail screen offers a Resume button for.
+ */
+fun WatchedItem.resumeProgress(): Float? =
+    if (isCompleted || !isResumableAt(playbackPosition, duration)) null else playbackPosition.toFloat() / duration.toFloat()
+
+/**
+ * `watch_state` row as a [WatchedItem], for callers that still speak the blob-era shape.
+ * `timestamp` becomes `lastPlayedAt` — the value [EpisodeSelectionScreen]'s "most recently played"
+ * lookup and the Recent row both actually mean — or 0 when the row has none: one only marked
+ * watched ([markWatched][org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao.markWatched]'s
+ * insert), since a mark is not a play and must not become the series screen's "last played"
+ * (the watched followups plan → Phase 1), and one `removeFromRecent` cleared,
+ * whose `updatedAt` is just "removed just now" and must not outrank a genuinely recently-played row.
+ */
+private fun WatchStateEntity.toWatchedItem(): WatchedItem =
+    WatchedItem(
+        itemId = itemId,
+        itemName = itemName,
+        categoryId = categoryId,
+        contentType = contentType,
+        timestamp = lastPlayedAt ?: 0L,
+        playbackPosition = positionMs,
+        duration = durationMs,
+        isCompleted = isCompleted,
+        episodeId = episodeId?.let { EpisodeId(it) },
+        episodeExtension = episodeExtension,
+        seriesId = seriesId?.let { SeriesId(it) },
+        seriesName = seriesName,
+        audioTrackIndex = audioTrackIndex,
+        subtitleTrackIndex = subtitleTrackIndex,
+    )
+
+/**
+ * What [MediaRepository.removeFromRecent] took out of Recent, for [MediaRepository.restoreRecent]
+ * — on [providerId]'s source, which a merged list's Undo goes back to.
+ */
+data class RecentRemoval(
+    val contentType: String,
+    val plays: List<RecentPlay>,
+    val providerId: Long = 0L,
+)
+
+@Serializable
+data class FavoriteItem(
+    val itemId: String,
+    val itemName: String,
+    val categoryId: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
+@Serializable
+data class FavoriteCategoryItem(
+    val categoryId: String,
+    val categoryName: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
+/** A favourited stream as a `favorite_state` row. */
+private fun FavoriteItem.toEntity(
+    providerId: Long,
+    profileId: String,
+): FavoriteStateEntity =
+    FavoriteStateEntity(
+        providerId = providerId,
+        profileId = profileId,
+        itemId = itemId,
+        contentType = contentType,
+        kind = FavoriteKind.STREAM,
+        name = itemName,
+        parentCategoryId = categoryId,
+        createdAt = timestamp,
+    )
+
+/** A favourited category as a `favorite_state` row: the category id *is* the item id. */
+private fun FavoriteCategoryItem.toEntity(
+    providerId: Long,
+    profileId: String,
+): FavoriteStateEntity =
+    FavoriteStateEntity(
+        providerId = providerId,
+        profileId = profileId,
+        itemId = categoryId,
+        contentType = contentType,
+        kind = FavoriteKind.CATEGORY,
+        name = categoryName,
+        parentCategoryId = null,
+        createdAt = timestamp,
+    )
+
+@Serializable
+data class RecentCategory(
+    val categoryId: String,
+    val categoryName: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
+/** Which layer answered [MediaRepository.getGuideForItems]. */
+enum class GuideSource {
+    /** The XMLTV index built from the guide sources. */
+    XMLTV,
+
+    /** The source's own EPG (Xtream `get_simple_data_table`). */
+    NATIVE,
+}
+
+/**
+ * A guide answer with its provenance. [updatedAtMs] is when the index was built or when the
+ * newest native payload behind it was fetched; null when nothing says.
+ */
+data class GuideData(
+    val epg: Map<String, EpgResponse>,
+    val source: GuideSource,
+    val updatedAtMs: Long?,
+    /**
+     * Windowed answers only ([MediaRepository.getGuideForItemsInWindow]): the last listing end these
+     * channels have anywhere, in or out of the window — what tells "the data stops before this day"
+     * from "no data". Null when they have none, or when nothing says.
+     */
+    val latestEndSec: Long? = null,
+)
+
+/**
+ * [listings] that overlap [windowStartSec]..[windowEndSec): a programme straddling either edge is
+ * kept, one ending exactly at the start or starting exactly at the end is not — the predicate of
+ * [org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDao.getProgrammesInWindow], applied to
+ * the source's own EPG, which comes back whole.
+ */
+internal fun windowListings(
+    listings: List<EpgProgram>,
+    windowStartSec: Long,
+    windowEndSec: Long,
+): List<EpgProgram> = listings.filter { it.endTime > windowStartSec && it.startTime < windowEndSec }
+
+/**
+ * [index]'s window listings per channel, with [native]'s programmes in the window ahead of them: for
+ * each channel [native] answers, the ones that end by the index's first programme in the window
+ * (all of them when the index has none), then the index's. Ending, not starting: the two guides can
+ * place one programme twenty minutes apart, and both copies would overlap in the grid.
+ */
+internal fun archivePast(
+    index: Map<String, EpgResponse>,
+    native: Map<String, EpgResponse>,
+    windowStartSec: Long,
+    windowEndSec: Long,
+): Map<String, EpgResponse> {
+    val merged = HashMap(index)
+    for ((id, response) in native) {
+        val indexed = index[id]?.listings.orEmpty()
+        val indexStart = indexed.minOfOrNull { it.startTime } ?: Long.MAX_VALUE
+        val before = windowListings(response.listings, windowStartSec, windowEndSec).filter { it.endTime <= indexStart }
+        if (before.isNotEmpty()) merged[id] = EpgResponse((before + indexed).sortedBy { it.startTime })
+    }
+    return merged
+}
+
+/**
+ * Whether a source can have a guide: its own EPG ([supportsNativeEpg]; null while the source is not
+ * loaded, which never claims "no guide"), or at least one enabled guide source attached to it.
+ */
+internal fun hasGuide(
+    supportsNativeEpg: Boolean?,
+    enabledGuideSources: Int,
+): Boolean = supportsNativeEpg != false || enabledGuideSources > 0
+
+class MediaRepository(
+    private val context: Context,
+    private val providerId: Long,
+    // Whose favourites, watch state, Recent Categories and last-position bookmarks this instance
+    // reads and writes — see the live sync plan → User profiles. Fixed for the
+    // instance's lifetime: switching profile means a new MediaRepository, not a mutable field, so
+    // no in-memory snapshot can ever hold one profile's data under another's id.
+    private val profileId: String,
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    private val watchStateDao: WatchStateDao = XtreamDatabase.getInstance(context).watchStateDao(),
+    // Injectable for the same reason as watchStateDao: setWatched/getSiblingCompleted* touch the
+    // Xtream catalogue directly, and this module's unit tests have no Robolectric/Room to back a
+    // real XtreamDatabase.getInstance(context) call under a plain mockk Context.
+    private val streamDao: XtreamStreamDao = XtreamDatabase.getInstance(context).streamDao(),
+    private val episodeDao: XtreamEpisodeDao = XtreamDatabase.getInstance(context).episodeDao(),
+    private val favoriteStateDao: FavoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao(),
+    private val categoryDao: XtreamCategoryDao = XtreamDatabase.getInstance(context).categoryDao(),
+    // Only for transactions spanning several DAOs (setEpisodesWatched). Lazy so the plain-JVM
+    // tests above, which never reach it, don't need a real database.
+    private val xtreamDb: Lazy<XtreamDatabase> = lazy { XtreamDatabase.getInstance(context) },
+) : Closeable {
+    @Volatile
+    private var provider: MediaProvider? = null
+
+    private val cacheName = "media_cache_$providerId"
+    private val cache: SharedPreferences by lazy {
+        context.getSharedPreferences(
+            cacheName,
+            Context.MODE_PRIVATE,
+        )
+    }
+
+    // Recent Categories and the last-position bookmarks are per person. The Default profile keeps
+    // them in media_cache_<providerId>, where they already live, so nothing moves on upgrade; any
+    // other profile gets its own file. The legacy blobs and their migration flags stay in [cache].
+    private val profileCache: SharedPreferences by lazy {
+        if (profileId == ProfileEntity.DEFAULT_ID) {
+            cache
+        } else {
+            context.getSharedPreferences(profileCacheName(providerId, profileId), Context.MODE_PRIVATE)
+        }
+    }
+    private val appSettings = AppSettings(context)
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
+
+    private val xmltvEpgService: XmltvEpgService by lazy {
+        XmltvEpgService(context, providerId)
+    }
+
+    private val payloadSizes = ConcurrentHashMap<String, Long>()
+    private val fetchTimes = ConcurrentHashMap<String, Long>()
+
+    // Keyed by content type; see recentItems().
+    private val recentItemsFlows = ConcurrentHashMap<String, MutableStateFlow<List<MediaItem>?>>()
+
+    // In-memory caches to avoid repeated JSON deserialization from SharedPreferences
+    private var cachedWatchHistory: List<WatchedItem>? = null
+
+    private var cachedFavorites: List<FavoriteItem>? = null
+    private var cachedFavoriteCategories: List<FavoriteCategoryItem>? = null
+
+    // O(1) lookup sets for isFavorite/isFavoriteCategory — rebuilt when lists change
+    private var favoriteIdSet: Set<Pair<String, String>>? = null
+    private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
+    private val favoriteLock = Any()
+    private val watchHistoryLock = Any()
+
+    // Dedicated single-thread dispatcher for prefs writes below. commit() (not apply()) blocks
+    // only this background thread until its own write finishes, so it never leaves anything
+    // pending in the process-wide QueuedWork backlog. apply() returns immediately but registers
+    // the write there; a later, unrelated Service dispatch (startService() -> ActivityThread.
+    // handleServiceArgs) synchronously drains that whole backlog on the MAIN thread before
+    // running — a well-known ANR trap when writes pile up faster than they drain. In-memory
+    // caches are updated synchronously on the caller's thread before the write is dispatched,
+    // so reads stay consistent regardless of when the background commit actually lands.
+    //
+    // watch_state is the one exception: savePlaybackPosition/saveLastPlayedItem have no
+    // synchronous in-memory mirror of their own, so a read immediately following a write on another
+    // thread can race the upsert. Neither writer is debounced, so the window is however long one
+    // Room upsert takes — narrow, but real. Named as its own property
+    // (rather than inlined into writeScope's constructor) so [awaitPendingWrites] can queue onto
+    // the exact same serialized dispatcher without going through writeScope's Job.
+    private val writeDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val writeScope = AppScopes.create("MediaRepository.write", writeDispatcher)
+
+    private fun SharedPreferences.commitAsync(action: SharedPreferences.Editor.() -> Unit) {
+        val prefs = this
+        writeScope.launch { prefs.edit(commit = true, action = action) }
+    }
+
+    /**
+     * Test-only synchronization point: suspends until every write already queued on
+     * [writeScope] — specifically the fire-and-forget `watch_state` upserts from
+     * [savePlaybackPosition]/[saveLastPlayedItem] — has finished. [writeDispatcher] runs at most
+     * one task at a time, so an empty task queued here can only run once every earlier one has.
+     */
+    internal suspend fun awaitPendingWrites() {
+        withContext(writeDispatcher) {}
+    }
+
+    companion object {
+        private const val GUIDE_TAG = "GuidePage"
+
+        /** How long Continue Watching waits for one show's episode list from the provider. */
+        private const val UP_NEXT_FETCH_TIMEOUT_MS = 5_000L
+
+        private const val KEY_WATCH_HISTORY = "watch_history_v3"
+        private const val KEY_WATCH_HISTORY_V2 = "watch_history_v2"
+        private const val KEY_WATCH_STATE_MIGRATED = "watch_state_migrated_v1"
+        private const val KEY_FAVORITES_MIGRATED = "favorites_migrated_v1"
+        private const val KEY_FAVORITES = "favorites_v2"
+        private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
+        private const val KEY_RECENT_CATEGORIES = "recent_categories"
+        private const val MAX_RECENT_CATEGORIES = 20
+
+        /**
+         * A non-Default profile's own prefs file for [providerId]. Named off `media_cache_<id>` so
+         * [org.njarasoa.fijerena.core.network.provider.ProviderRepository]'s provider-delete and
+         * orphan sweeps find it by the same prefix.
+         */
+        fun profileCacheName(
+            providerId: Long,
+            profileId: String,
+        ): String = "media_cache_${providerId}_profile_$profileId"
+
+        /** The Default profile's own keys in the shared `media_cache_<id>`: Recent Categories and bookmarks. */
+        internal fun isDefaultProfileKey(key: String): Boolean = key.startsWith(KEY_RECENT_CATEGORIES) || key.startsWith("last_")
+
+        /**
+         * Deleting the Default profile: removes what is its own from a provider's shared
+         * `media_cache_<id>` — Recent Categories and bookmarks — and its legacy pre-profile blobs,
+         * marking them migrated so [backfillAndPurgeWatchState]/[backfillAndPurgeFavorites] never
+         * copy them into a profile that no longer exists.
+         */
+        fun clearDefaultProfile(prefs: SharedPreferences) {
+            prefs.edit(commit = true) {
+                prefs.all.keys
+                    .filter(::isDefaultProfileKey)
+                    .forEach(::remove)
+                remove(KEY_WATCH_HISTORY)
+                remove(KEY_WATCH_HISTORY_V2)
+                remove(KEY_FAVORITES)
+                remove(KEY_FAVORITE_CATEGORIES)
+                putBoolean(KEY_WATCH_STATE_MIGRATED, true)
+                putBoolean(KEY_FAVORITES_MIGRATED, true)
+            }
+        }
+
+        private const val KEY_LAST_LIVE_CATEGORY = "last_live_category"
+        private const val KEY_LAST_LIVE_ITEM = "last_live_item"
+        private const val KEY_LAST_MOVIES_CATEGORY = "last_movies_category"
+        private const val KEY_LAST_MOVIES_ITEM = "last_movies_item"
+        private const val KEY_LAST_TVSHOWS_CATEGORY = "last_tvshows_category"
+        private const val KEY_LAST_TVSHOWS_ITEM = "last_tvshows_item"
+        private const val KEY_LAST_CONTENT_TYPE = "last_content_type"
+    }
+
+    private val usesServerUserData: Boolean
+        get() = provider?.capabilities?.supportsServerUserData == true
+
+    val supportsRemoveFromRecent: Boolean
+        get() = !usesServerUserData
+
+    /**
+     * Whether anything can be marked watched or unwatched here — a film or an episode ([setWatched]),
+     * a season or a whole show ([setEpisodesWatched]): false when the source keeps watched state on
+     * its server (Jellyfin), which the app can't write.
+     */
+    val supportsMarkWatched: Boolean
+        get() = !usesServerUserData
+
+    /** Whether this provider's episodes may roll on to the next one — see ProviderCapabilities. */
+    val supportsAutoplayNextEpisode: Boolean
+        get() = provider?.capabilities?.supportsAutoplayNextEpisode == true
+
+    fun setProvider(mediaProvider: MediaProvider) {
+        provider = mediaProvider
+        backfillAndPurgeWatchState()
+        backfillAndPurgeFavorites()
+    }
+
+    /**
+     * One-time per-provider copy of `watch_history_v3` into `watch_state`, followed by purging
+     * the blob — Phase 2 and Phase 4 of the watch state durable storage plan, combined into
+     * one hook because Phase 4 depends on Phase 2 having actually run for *this* provider.
+     *
+     * Phases 2 and 4 are separate releases, so a provider nobody has opened since Phase 2 shipped
+     * can reach a Phase 4 install still carrying an un-migrated blob — the flag gates on a
+     * per-provider basis (never a single global flag) for exactly that reason. Guarded like
+     * [org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager]'s
+     * `purgeLegacyPrefsCache`, and hooked off [setProvider] rather than the constructor — a
+     * provider-less repository (a unit test, or the brief window in [org.njarasoa.fijerena.core
+     * .network.provider] wiring before a provider is attached) is not a real "use" yet.
+     *
+     * Backfill runs first when the flag is unset, purge always runs after: skipping straight to
+     * purge on an unset flag would delete history that was never copied anywhere, silently and
+     * unrecoverably, on a provider the user simply hasn't gotten around to opening. Backfill
+     * itself is replay-safe — a crash between "rows written" and the flag commit just re-runs
+     * this and re-upserts the same values, because every row goes through the same progress
+     * upsert [savePlaybackPosition] uses rather than a raw insert.
+     */
+    private fun backfillAndPurgeWatchState() {
+        val alreadyMigrated = cache.getBoolean(KEY_WATCH_STATE_MIGRATED, false)
+        writeScope.launch {
+            if (!alreadyMigrated) {
+                // Reads the blob directly, not the public getWatchHistory() — that reads
+                // watch_state since Phase 3, and would make this loop copy the table into itself.
+                val blobHistory = synchronized(watchHistoryLock) { getWatchHistoryLocked() }
+                for (item in blobHistory) {
+                    watchStateDao.upsertProgress(
+                        providerId = providerId,
+                        // The blob predates profiles, so it is the Default profile's history,
+                        // whichever profile happens to open this provider first.
+                        profileId = ProfileEntity.DEFAULT_ID,
+                        itemId = item.itemId,
+                        contentType = item.contentType,
+                        itemName = item.itemName,
+                        categoryId = item.categoryId,
+                        positionMs = item.playbackPosition,
+                        durationMs = item.duration,
+                        isCompleted = item.isCompleted,
+                        now = item.timestamp,
+                        seriesId = item.seriesId?.raw,
+                        episodeId = item.episodeId?.raw,
+                        seriesName = item.seriesName,
+                        episodeExtension = item.episodeExtension,
+                        audioTrackIndex = item.audioTrackIndex,
+                        subtitleTrackIndex = item.subtitleTrackIndex,
+                    )
+                }
+                cache.edit(commit = true) { putBoolean(KEY_WATCH_STATE_MIGRATED, true) }
+            }
+            // The blob is guaranteed copied by this point — either just now, or on an earlier
+            // release that already set the flag — so purging it here is always safe.
+            cache.edit(commit = true) {
+                remove(KEY_WATCH_HISTORY)
+                remove(KEY_WATCH_HISTORY_V2)
+            }
+            synchronized(watchHistoryLock) {
+                cachedWatchHistory = emptyList()
+            }
+        }
+    }
+
+    /**
+     * One-time per-provider copy of the `favorites_v2` and `favorite_categories` blobs into
+     * `favorite_state`, then purging both keys — see
+     * the favorites durable storage plan.
+     *
+     * Per-provider rather than a single global flag, for the reason the watch-state plan sets out:
+     * a provider nobody has opened since this shipped must not have its blob purged before it was
+     * copied. Backfill and purge ship together here, so the "flag set, blob never copied" window
+     * that plan worries about cannot open — the flag is still per-provider because the *hook* is
+     * per-provider, and a second provider added later starts from its own unset flag.
+     *
+     * Runs before the snapshot is first read: [loadFavoriteSnapshotLocked] fills from the table, so
+     * a snapshot taken before this finished would look empty. Reading the blobs here goes straight
+     * to prefs rather than through the public getters, which now read the table and would copy it
+     * into itself. Replay-safe: every row goes through the same upsert a normal favourite does.
+     */
+    private fun backfillAndPurgeFavorites() {
+        if (cache.getBoolean(KEY_FAVORITES_MIGRATED, false)) {
+            synchronized(favoriteLock) { loadFavoriteSnapshotLocked() }
+            return
+        }
+        val blobFavorites = decodeBlob<FavoriteItem>(KEY_FAVORITES)
+        val blobCategories = decodeBlob<FavoriteCategoryItem>(KEY_FAVORITE_CATEGORIES)
+        // The blobs predate profiles, so they are the Default profile's favourites, whichever
+        // profile happens to open this provider first.
+        for (item in blobFavorites) {
+            favoriteStateDao.upsert(item.toEntity(providerId, ProfileEntity.DEFAULT_ID))
+        }
+        for (item in blobCategories) {
+            favoriteStateDao.upsert(item.toEntity(providerId, ProfileEntity.DEFAULT_ID))
+        }
+        cache.edit(commit = true) {
+            putBoolean(KEY_FAVORITES_MIGRATED, true)
+            remove(KEY_FAVORITES)
+            remove(KEY_FAVORITE_CATEGORIES)
+        }
+        synchronized(favoriteLock) {
+            cachedFavorites = null
+            cachedFavoriteCategories = null
+            favoriteIdSet = null
+            favoriteCategoryIdSet = null
+            // Refill immediately rather than leaving it to whoever reads first: setProvider runs on
+            // Dispatchers.IO, and the first reader is often on Main.
+            loadFavoriteSnapshotLocked()
+        }
+    }
+
+    /**
+     * A legacy favourites blob, or an empty list if it is absent or unreadable. The
+     * `catch { emptyList() }` that made a malformed blob indistinguishable from "no favourites"
+     * only survives here, on the one-shot migration read, where there is genuinely nothing better
+     * to do with a corrupt value that is about to be deleted.
+     */
+    private inline fun <reified T> decodeBlob(key: String): List<T> {
+        val raw = cache.getString(key, null) ?: return emptyList()
+        return try {
+            json.decodeFromString<List<T>>(raw)
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
+            emptyList()
+        }
+    }
+
+    fun getProvider(): MediaProvider? = provider
+
+    fun getCapabilities(): ProviderCapabilities? = provider?.capabilities
+
+    fun getProviderSettings(): ProviderSettings = providerSettings
+
+    fun getCategoryFilters(): CategoryFilters = providerSettings.categoryFilters
+
+    fun getProviderId(): Long = providerId
+
+    // --- Provider-delegated operations ---
+
+    suspend fun connect(): kotlin.Result<Unit> = provider?.connect() ?: kotlin.Result.failure(Exception("No provider set"))
+
+    suspend fun disconnect() {
+        provider?.disconnect()
+    }
+
+    fun isConnected(): Boolean = provider?.isConnected() == true
+
+    suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> =
+        provider?.getCategories(contentType)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /**
+     * If no filters are set, returns all categories.
+     */
+    suspend fun getFilteredCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
+        val result = getCategories(contentType)
+        if (result.isFailure) return result
+
+        val filters = providerSettings.categoryFilters
+        if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) return result
+
+        // ScriptDetector.detectScript allocates a map and walks Character.UnicodeBlock per
+        // category. With ~870 categories that is tens of milliseconds, and callers run on
+        // Dispatchers.Main.immediate, so it landed on the UI thread at screen entry.
+        // A hidden category with a film or series that a Parental controls exception allows shows
+        // with only those (Xtream: XtreamCategoryExclusionSync).
+        val allowed = if (filters.child == null) emptySet() else allowedCategoryIds(contentType)
+        return withContext(Dispatchers.Default) {
+            result.map { categories ->
+                categories.filter { category ->
+                    filters.shouldShowCategory(category.name, films = contentType == ContentType.MOVIES) || category.id in allowed
+                }
+            }
+        }
+    }
+
+    suspend fun getItems(
+        categoryId: String,
+        contentType: String,
+    ): kotlin.Result<List<MediaItem>> =
+        provider?.getItems(categoryId, contentType)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    fun getItemsIfCached(
+        categoryId: String,
+        contentType: String,
+    ): List<MediaItem>? = provider?.getItemsIfCached(categoryId, contentType)
+
+    suspend fun getItemsForSearch(
+        categoryId: String,
+        contentType: String,
+    ): kotlin.Result<List<MediaItem>> =
+        provider?.getItems(categoryId, contentType)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> =
+        provider?.getAllItems(contentType)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /** Re-fetches a catalogue the provider loads in one piece (remote M3U) — see MediaProvider. */
+    suspend fun refreshCatalog(): kotlin.Result<Unit> = provider?.refreshCatalog() ?: kotlin.Result.success(Unit)
+
+    /** Forces the next detail read for [itemId] to go back to the provider — see MediaProvider. */
+    suspend fun invalidateCachedDetail(itemId: String) {
+        provider?.invalidateCachedDetail(itemId)
+    }
+
+    /** See [MediaProvider.getCachedSeriesDetail]. */
+    suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? = provider?.getCachedSeriesDetail(seriesId)
+
+    /** See [MediaProvider.getCatalogueTmdbId]. */
+    suspend fun getCatalogueTmdbId(
+        itemId: String,
+        contentType: String,
+    ): String? = provider?.getCatalogueTmdbId(itemId, contentType)
+
+    suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
+        provider?.getSeriesDetail(seriesId)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /** See [MediaProvider.fetchEpisodePlot]. */
+    suspend fun fetchEpisodePlot(
+        seriesId: SeriesId,
+        episode: EpisodeItem,
+    ): String? = provider?.fetchEpisodePlot(seriesId, episode)
+
+    suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> =
+        provider?.getMovieDetail(movieId)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    suspend fun resolvePlayableStream(
+        itemId: String,
+        contentType: String,
+        episodeId: String? = null,
+        extension: String? = null,
+    ): kotlin.Result<PlayableStream> =
+        provider?.resolvePlayableStream(itemId, contentType, episodeId, extension)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /** See [MediaProvider.resolveCatchupStream]. */
+    suspend fun resolveCatchupStream(
+        itemId: String,
+        startEpochSec: Long,
+        durationSec: Long,
+    ): kotlin.Result<PlayableStream> =
+        provider?.resolveCatchupStream(itemId, startEpochSec, durationSec)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /** See [MediaProvider.getCatchupDays]. Empty when the source has no catch-up. */
+    suspend fun getCatchupDays(itemIds: Collection<String>): Map<String, Int> =
+        provider?.takeIf { it.capabilities.supportsCatchup }?.getCatchupDays(itemIds).orEmpty()
+
+    /**
+     * Archive days of the channels among a list's [items] that keep one, for the lists' catch-up
+     * badge: category rows and `####` separators are left out. Empty when the lookup fails — a
+     * missing badge is the whole cost.
+     */
+    suspend fun getCatchupDaysForRows(items: List<MediaItem>): Map<String, Int> {
+        val channelIds =
+            items
+                .filter { it.target !is BrowseTarget.CategoryRef && !it.isCategoryMarker }
+                .map { it.id }
+        val days =
+            if (channelIds.isEmpty()) {
+                emptyMap()
+            } else {
+                suspendRunCatching { getCatchupDays(channelIds) }.getOrDefault(emptyMap())
+            }
+        return days
+    }
+
+    suspend fun search(
+        query: String,
+        contentType: String,
+        includeExcluded: Boolean = false,
+    ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType, includeExcluded)
+
+    /** See [MediaProvider.getRelatedTitles]. Either list is empty when its row should not appear. */
+    suspend fun getRelatedTitles(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): RelatedTitles = provider?.getRelatedTitles(itemId, tmdbId, contentType) ?: RelatedTitles()
+
+    /** See [MediaProvider.getTmdbTitle]. */
+    suspend fun getTmdbTitle(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbTitle(tmdbId, contentType)
+
+    /** See [MediaProvider.getTmdbLogoUrl]. */
+    suspend fun getTmdbLogoUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbLogoUrl(tmdbId, contentType)
+
+    /** See [MediaProvider.getTmdbBackdropUrl]. */
+    suspend fun getTmdbBackdropUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbBackdropUrl(tmdbId, contentType)
+
+    /** See [MediaProvider.getAlternateStreams]. */
+    suspend fun getAlternateStreams(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): List<MediaItem> = provider?.getAlternateStreams(itemId, tmdbId, contentType) ?: emptyList()
+
+    /** Matches for [query] that search skipped because their category is hidden by category filters. */
+    suspend fun countExcludedSearchMatches(
+        query: String,
+        contentType: String,
+    ): Int = provider?.countExcludedSearchMatches(query, contentType) ?: 0
+
+    fun getLastSearchDataSize(contentType: String): Long? = provider?.getLastSearchDataSize(contentType)
+
+    suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? = provider?.getEpg(streamId)
+
+    suspend fun getEpgBulk(streamIds: List<String>): kotlin.Result<Map<String, EpgResponse>>? = provider?.getEpgBulk(streamIds)
+
+    suspend fun clearEpgCache() {
+        provider?.clearEpgCache()
+    }
+
+    suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> = getGuideForItems(items).map { it.epg }
+
+    /**
+     * [getEpgBulkForItems] with its provenance: the XMLTV index answers when it holds listings for
+     * at least one requested item (not just cached leftovers), the source's native EPG otherwise.
+     */
+    suspend fun getGuideForItems(items: List<MediaItem>): kotlin.Result<GuideData> {
+        try {
+            val xmltvResult = xmltvEpgService.getEpgForChannels(items)
+            if (items.any { xmltvResult.containsKey(it.id) }) {
+                val indexedAtMs =
+                    (EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed)?.indexedAtMs
+                return kotlin.Result.success(GuideData(xmltvResult, GuideSource.XMLTV, indexedAtMs))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Fall through to provider EPG
+        }
+        val streamIds = items.map { it.id }
+        val native = provider?.getEpgBulk(streamIds) ?: return kotlin.Result.success(GuideData(emptyMap(), GuideSource.NATIVE, null))
+        return native.map { epg ->
+            GuideData(epg, GuideSource.NATIVE, if (epg.isEmpty()) null else nativeEpgUpdatedAtMs(streamIds))
+        }
+    }
+
+    /**
+     * One page of the TV Guide (GD4): [items]' listings overlapping [windowStartSec]..[windowEndSec)
+     * — one index query for the page ([XmltvEpgService.getEpgForChannelsInWindow]) when the index
+     * knows these channels, else the source's own EPG (fetched whole, as before, and cut to the
+     * window here). Debug builds log the page's time and which path answered.
+     */
+    suspend fun getGuideForItemsInWindow(
+        items: List<MediaItem>,
+        windowStartSec: Long,
+        windowEndSec: Long,
+    ): kotlin.Result<GuideData> {
+        val startNs = System.nanoTime()
+
+        fun logPage(path: String) {
+            if (BuildConfig.DEBUG) {
+                Log.d(GUIDE_TAG, "guide page: ${items.size} channels from $path in ${(System.nanoTime() - startNs) / 1_000_000} ms")
+            }
+        }
+        try {
+            val window = xmltvEpgService.getEpgForChannelsInWindow(items, windowStartSec, windowEndSec)
+            if (window != null) {
+                val indexedAtMs = (EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed)?.indexedAtMs
+                val epg = withArchivePast(items, window.epg, windowStartSec, windowEndSec)
+                logPage("the index")
+                return kotlin.Result.success(GuideData(epg, GuideSource.XMLTV, indexedAtMs, window.latestEndSec))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(GUIDE_TAG, "Index query for a guide page failed; asking the source", e)
+        }
+        val streamIds = items.map { it.id }
+        val native =
+            provider?.getEpgBulk(streamIds)
+                ?: return kotlin.Result.success(GuideData(emptyMap(), GuideSource.NATIVE, null)).also { logPage("nowhere (no source EPG)") }
+        return native
+            .map { epg ->
+                val latestEnd = epg.values.maxOfOrNull { response -> response.listings.maxOfOrNull { it.endTime } ?: Long.MIN_VALUE }
+                GuideData(
+                    epg = epg.mapValues { (_, response) -> EpgResponse(windowListings(response.listings, windowStartSec, windowEndSec)) },
+                    source = GuideSource.NATIVE,
+                    updatedAtMs = if (epg.isEmpty()) null else nativeEpgUpdatedAtMs(streamIds),
+                    latestEndSec = latestEnd?.takeIf { it != Long.MIN_VALUE },
+                )
+            }.also { logPage("the source EPG") }
+    }
+
+    /**
+     * A past day's page from the index ([index]), with the hours before its first programme (the
+     * guide file starts where it starts) filled in from the source's own guide, for the channels
+     * whose archive reaches them — the programmes catch-up can replay. Only for a window that is
+     * entirely past: today's page asks nothing more.
+     * See the catchup plan → "Decided while building" 4.
+     */
+    private suspend fun withArchivePast(
+        items: List<MediaItem>,
+        index: Map<String, EpgResponse>,
+        windowStartSec: Long,
+        windowEndSec: Long,
+    ): Map<String, EpgResponse> {
+        val nowSec = System.currentTimeMillis() / 1000
+        val archived =
+            if (windowEndSec <= nowSec) {
+                getCatchupDays(items.map { it.id }).keys
+            } else {
+                emptySet()
+            }
+        val native =
+            if (archived.isEmpty()) {
+                null
+            } else {
+                try {
+                    provider?.getEpgBulk(archived.toList())?.getOrNull()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(GUIDE_TAG, "The source's guide for the archive's past failed; the index alone", e)
+                    null
+                }
+            }
+        return if (native.isNullOrEmpty()) index else archivePast(index, native, windowStartSec, windowEndSec)
+    }
+
+    /**
+     * Whether this source can have a guide at all — its own EPG, or an enabled guide source attached
+     * to it — decided per source, not from the shared index's state (another source's guide being
+     * indexed says nothing about this one).
+     */
+    suspend fun hasGuideForSource(): Boolean {
+        val supportsNativeEpg = provider?.capabilities?.supportsEpg
+        if (hasGuide(supportsNativeEpg, enabledGuideSources = 0)) return true
+        val enabledGuideSources =
+            if (providerId <= 0L) {
+                0
+            } else {
+                withContext(Dispatchers.IO) {
+                    SettingsDatabase
+                        .getInstance(context)
+                        .epgSourceDao()
+                        .getEnabledSourcesForProvider(providerId)
+                        .size
+                }
+            }
+        return hasGuide(supportsNativeEpg, enabledGuideSources)
+    }
+
+    /** Newest `xtream_epg_cache` row behind a native answer — the fetch time the guide shows as "updated". */
+    private suspend fun nativeEpgUpdatedAtMs(streamIds: List<String>): Long? {
+        val intIds = streamIds.mapNotNull { it.toIntOrNull() }
+        if (intIds.isEmpty()) return null
+        return withContext(Dispatchers.IO) {
+            XtreamDatabase
+                .getInstance(context)
+                .epgCacheDao()
+                .getFresh(providerId, intIds, 0L)
+                .maxOfOrNull { it.updatedAt }
+        }
+    }
+
+    fun clearXmltvCache() {
+        xmltvEpgService.clearCache()
+    }
+
+    /** Item id → the guide channel (xmltv id) the guide grid shows for it; empty when there is no index. */
+    suspend fun matchGuideChannels(items: List<MediaItem>): Map<String, String> =
+        try {
+            xmltvEpgService.matchGuideChannels(items)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
+    suspend fun getNowPlayingFromIndex(items: List<MediaItem>): Map<String, EpgProgram> =
+        try {
+            xmltvEpgService.getNowPlayingForItems(items)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
+    fun hasIndexedEpgData(): Boolean {
+        val state =
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+                .getInstance(context)
+                .state.value
+        return state !is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.NotIndexed
+    }
+
+    suspend fun onPlaybackStarted(itemId: String) {
+        provider?.onPlaybackStarted(itemId)
+    }
+
+    suspend fun onPlaybackProgress(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+        isPaused: Boolean = false,
+    ) {
+        provider?.onPlaybackProgress(itemId, positionMs, durationMs, isPaused)
+    }
+
+    suspend fun onPlaybackStopped(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        provider?.onPlaybackStopped(itemId, positionMs, durationMs)
+    }
+
+    // --- Local-only operations (favorites, watch history, playback progress) ---
+
+    fun saveLastPlayedItem(
+        categoryId: String,
+        itemId: String,
+        itemName: String,
+        contentType: String,
+        episodeId: EpisodeId? = null,
+        episodeExtension: String? = null,
+        seriesId: SeriesId? = null,
+        seriesName: String? = null,
+    ) {
+        profileCache.commitAsync {
+            when (contentType) {
+                ContentType.LIVE_TV -> {
+                    putString(KEY_LAST_LIVE_CATEGORY, categoryId)
+                    putString(KEY_LAST_LIVE_ITEM, itemId)
+                }
+
+                ContentType.MOVIES -> {
+                    putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
+                    putString(KEY_LAST_MOVIES_ITEM, itemId)
+                }
+
+                ContentType.TV_SHOWS -> {
+                    putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
+                    putString(KEY_LAST_TVSHOWS_ITEM, itemId)
+                }
+            }
+            putString(KEY_LAST_CONTENT_TYPE, contentType)
+        }
+
+        // Owns recency and metadata only (Phase 4, the watch state durable storage plan).
+        // Must not name positionMs/durationMs/isCompleted, so a start write can never erase
+        // progress a later progress write already stored.
+        val recencyNow = System.currentTimeMillis()
+        writeScope.launch {
+            watchStateDao.upsertRecency(
+                providerId = providerId,
+                profileId = profileId,
+                itemId = itemId,
+                contentType = contentType,
+                itemName = itemName,
+                categoryId = categoryId,
+                now = recencyNow,
+                seriesId = seriesId?.raw,
+                episodeId = episodeId?.raw,
+                seriesName = seriesName,
+                episodeExtension = episodeExtension,
+                audioTrackIndex = null,
+                subtitleTrackIndex = null,
+            )
+        }
+    }
+
+    fun getLastCategoryId(contentType: String): String? =
+        when (contentType) {
+            ContentType.LIVE_TV -> profileCache.getString(KEY_LAST_LIVE_CATEGORY, null)
+            ContentType.MOVIES -> profileCache.getString(KEY_LAST_MOVIES_CATEGORY, null)
+            ContentType.TV_SHOWS -> profileCache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
+            else -> null
+        }
+
+    fun getLastItemId(contentType: String): String? =
+        when (contentType) {
+            ContentType.LIVE_TV -> profileCache.getString(KEY_LAST_LIVE_ITEM, null)
+            ContentType.MOVIES -> profileCache.getString(KEY_LAST_MOVIES_ITEM, null)
+            ContentType.TV_SHOWS -> profileCache.getString(KEY_LAST_TVSHOWS_ITEM, null)
+            else -> null
+        }
+
+    fun getLastContentType(): String? = profileCache.getString(KEY_LAST_CONTENT_TYPE, null)
+
+    // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences
+    // on every call. ConcurrentHashMap: addToCategoryHistory() writes from Dispatchers.IO while
+    // getRecentlyViewedCategories() reads synchronously from the UI thread, and clearCache() can
+    // clear it from either.
+    private val cachedRecentCategories: MutableMap<String, List<RecentCategory>> = ConcurrentHashMap()
+
+    fun addToCategoryHistory(
+        categoryId: String,
+        categoryName: String,
+        contentType: String,
+    ) {
+        val key = KEY_RECENT_CATEGORIES + "_" + contentType
+        val existing = getRecentCategoryList(key)
+        val updated = existing.filter { it.categoryId != categoryId }.toMutableList()
+        updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
+        val trimmed = updated.take(MAX_RECENT_CATEGORIES)
+        profileCache.commitAsync { putString(key, json.encodeToString(trimmed)) }
+        cachedRecentCategories[contentType] = trimmed
+    }
+
+    fun getRecentlyViewedCategories(contentType: String): List<RecentCategory> {
+        cachedRecentCategories[contentType]?.let { return it }
+        val key = KEY_RECENT_CATEGORIES + "_" + contentType
+        return getRecentCategoryList(key).also { cachedRecentCategories[contentType] = it }
+    }
+
+    private fun getRecentCategoryList(key: String): List<RecentCategory> {
+        val raw = profileCache.getString(key, null) ?: return emptyList()
+        return try {
+            json.decodeFromString(raw)
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
+            emptyList()
+        }
+    }
+
+    /**
+     * Every watch-state row for this provider, across every content type, unbounded —
+     * `watch_state`-backed since Phase 3 of the watch state durable storage plan. No
+     * production caller as of Phase 3 (the old sync `getRecentItems` was the one caller, and it
+     * folded into [getRecentItemsFromWatchState], which reads the capped/collapsed queries
+     * directly instead); kept for callers that want the whole history, such as a future export.
+     */
+    suspend fun getWatchHistory(): List<WatchedItem> = watchStateDao.getAll(providerId, profileId).map { it.toWatchedItem() }
+
+    /**
+     * The `watch_history_v3`/`v2` blob, decoded and cached. No writer reads this for an "existing
+     * entry" any more — the table's own `COALESCE` upserts do that now — and nothing writes the
+     * blob either (Phase 4). What's left: [backfillAndPurgeWatchState] copies whatever a
+     * pre-Phase-4 install already wrote here into `watch_state` before purging it, and
+     * [clearWatchHistory] can still touch the same keys directly.
+     * `internal` rather than `private` only so tests can assert against the blob directly, now
+     * that [getWatchHistory] no longer does; callers outside a `synchronized(watchHistoryLock)`
+     * block (as every production caller already is) get an unsynchronized read.
+     */
+    internal fun getWatchHistoryLocked(): List<WatchedItem> {
+        val currentCache = cachedWatchHistory
+        val history =
+            if (currentCache != null) {
+                currentCache
+            } else {
+                val v3Json = cache.getString(KEY_WATCH_HISTORY, null)
+                val loaded =
+                    if (v3Json != null) {
+                        try {
+                            json.decodeFromString<List<WatchedItem>>(v3Json)
+                        } catch (e: Exception) {
+                            // cancellation-ok: non-suspend
+                            emptyList()
+                        }
+                    } else {
+                        val v2Json = cache.getString(KEY_WATCH_HISTORY_V2, null)
+                        if (v2Json != null) {
+                            try {
+                                val v2Items = json.decodeFromString<List<WatchedItem>>(v2Json)
+                                val normalized =
+                                    v2Items.map { item ->
+                                        if (item.contentType == ContentType.TV_SHOWS && item.episodeId == null) {
+                                            item.copy(episodeId = EpisodeId(item.itemId))
+                                        } else {
+                                            item
+                                        }
+                                    }
+                                cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(normalized)) }
+                                normalized
+                            } catch (e: Exception) {
+                                // cancellation-ok: non-suspend
+                                emptyList()
+                            }
+                        } else {
+                            emptyList()
+                        }
+                    }
+                cachedWatchHistory = loaded
+                loaded
+            }
+        return history
+    }
+
+    /**
+     * No-op since Phase 4 (the watch state durable storage plan): there is no longer a
+     * debounced blob write to force out early, and the table upserts were never debounced in the
+     * first place — each dispatches to [writeScope] immediately. Kept, rather than deleted, so
+     * its callers (a pause/stop hook expecting "make sure the last position landed") don't need
+     * their own change; there is nothing left for it to flush.
+     */
+    fun flushWatchHistory() {
+        // Intentionally empty.
+    }
+
+    /**
+     * Wipes this provider's watch progress: the `watch_state` rows, the retired blob keys a
+     * pre-Phase-4 install may still carry, and the in-memory views of both.
+     *
+     * Suspending because the rows are the real storage.
+     * Published Recent lists are emptied too, or every surface showing one keeps rendering entries
+     * whose rows are gone.
+     */
+    suspend fun clearWatchHistory() {
+        // Recorded for live sync unless the provider keeps history itself (Jellyfin) — see
+        // the live sync plan → Jellyfin.
+        if (usesServerUserData) {
+            watchStateDao.deleteAll(providerId, profileId)
+        } else {
+            watchStateDao.deleteAllRecordingClear(providerId, profileId)
+        }
+        synchronized(watchHistoryLock) {
+            cachedWatchHistory = emptyList()
+            cache.commitAsync {
+                remove(KEY_WATCH_HISTORY)
+                remove(KEY_WATCH_HISTORY_V2)
+            }
+        }
+        recentItemsFlows.values.forEach { it.value = emptyList() }
+    }
+
+    fun addFavorite(
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String,
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteItems().toMutableList()
+            val alreadyFavorite = favorites.any { it.itemId == itemId && it.contentType == contentType }
+            if (!alreadyFavorite) {
+                val item = FavoriteItem(itemId, itemName, categoryId, contentType)
+                // No cap: it would silently evict the oldest favourite once the list filled up. Rows
+                // are unbounded — see the favorites durable storage plan.
+                favorites.add(0, item)
+                cachedFavorites = favorites
+                favoriteIdSet = null
+                writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
+            }
+            return !alreadyFavorite
+        }
+
+    fun removeFavorite(
+        itemId: String,
+        contentType: String,
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteItems().toMutableList()
+            val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
+            if (removed) {
+                cachedFavorites = favorites
+                favoriteIdSet = null
+                writeScope.launch {
+                    favoriteStateDao.deleteRecordingTombstone(providerId, profileId, itemId, contentType, FavoriteKind.STREAM)
+                }
+            }
+            return removed
+        }
+
+    /**
+     * Fills both favourite snapshots from `favorite_state` in one read.
+     *
+     * Blocking rather than suspending because Compose asks [isFavorite] synchronously while
+     * composing a row, and `CategoryViewModel.rebuildVirtualCategories` asks
+     * [getFavoriteCategoriesForContentType] from `Dispatchers.Main.immediate` — there is no
+     * coroutine to suspend in at either call site.
+     *
+     * The `runBlocking(Dispatchers.IO)` is load-bearing, not decoration. Room asserts against
+     * blocking queries on the main thread and throws `IllegalStateException`: [setProvider] only
+     * invalidates the snapshot, so the first read after a backfill would run cold on Main and kill the
+     * app on launch. Warming in
+     * [setProvider] (below, on IO) makes that the rare path; this makes it survivable when it is
+     * hit anyway. The stall it can cost is one indexed read of a small table — the blob it replaced
+     * did a prefs read plus a JSON parse on the same thread.
+     *
+     * Caller must hold [favoriteLock].
+     */
+    private fun loadFavoriteSnapshotLocked() {
+        if (cachedFavorites != null && cachedFavoriteCategories != null) return
+        val rows = runBlocking(Dispatchers.IO) { favoriteStateDao.getAll(providerId, profileId) }
+        cachedFavorites =
+            rows
+                .asSequence()
+                .filter { it.kind == FavoriteKind.STREAM }
+                .map { FavoriteItem(it.itemId, it.name, it.parentCategoryId ?: "", it.contentType, it.createdAt) }
+                .toList()
+        cachedFavoriteCategories =
+            rows
+                .asSequence()
+                .filter { it.kind == FavoriteKind.CATEGORY }
+                .map { FavoriteCategoryItem(it.itemId, it.name, it.contentType, it.createdAt) }
+                .toList()
+    }
+
+    private fun getFavoriteItems(): List<FavoriteItem> =
+        synchronized(favoriteLock) {
+            loadFavoriteSnapshotLocked()
+            return cachedFavorites.orEmpty()
+        }
+
+    fun getFavoritesForContentType(contentType: String): List<MediaItem> =
+        synchronized(favoriteLock) {
+            val mediaType = contentTypeToMediaType(contentType)
+            return getFavoriteItems()
+                .asSequence()
+                .filter { it.contentType == contentType }
+                .map { fav ->
+                    MediaItem(
+                        id = fav.itemId,
+                        name = fav.itemName,
+                        mediaType = mediaType,
+                        categoryId = fav.categoryId,
+                        providerId = providerId,
+                    )
+                }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+                .toList()
+        }
+
+    fun isFavorite(
+        itemId: String,
+        contentType: String,
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteIdSet ?: getFavoriteItems()
+                    .mapTo(HashSet()) { it.itemId to it.contentType }
+                    .also { favoriteIdSet = it }
+            return (itemId to contentType) in set
+        }
+
+    fun getFavoriteItemIds(contentType: String): Set<String> =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteIdSet ?: getFavoriteItems()
+                    .mapTo(HashSet()) { it.itemId to it.contentType }
+                    .also { favoriteIdSet = it }
+            val matching = HashSet<String>(set.size)
+            for ((id, type) in set) {
+                if (type == contentType) {
+                    matching.add(id)
+                }
+            }
+            matching
+        }
+
+    /** Streams only — both "Clear All Favorites" dialogs say "favorited streams". */
+    fun clearFavorites() =
+        synchronized(favoriteLock) {
+            cachedFavorites = emptyList()
+            favoriteIdSet = null
+            writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.STREAM) }
+        }
+
+    fun addFavoriteCategory(
+        categoryId: String,
+        categoryName: String,
+        contentType: String,
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteCategoryItems().toMutableList()
+            if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
+                return false
+            }
+            val item = FavoriteCategoryItem(categoryId, categoryName, contentType)
+            favorites.add(0, item)
+            cachedFavoriteCategories = favorites
+            favoriteCategoryIdSet = null
+            writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
+            return true
+        }
+
+    fun removeFavoriteCategory(
+        categoryId: String,
+        contentType: String,
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteCategoryItems().toMutableList()
+            val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
+            if (!removed) return false
+            cachedFavoriteCategories = favorites
+            favoriteCategoryIdSet = null
+            writeScope.launch {
+                favoriteStateDao.deleteRecordingTombstone(providerId, profileId, categoryId, contentType, FavoriteKind.CATEGORY)
+            }
+            return true
+        }
+
+    fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> =
+        synchronized(favoriteLock) {
+            loadFavoriteSnapshotLocked()
+            return cachedFavoriteCategories.orEmpty()
+        }
+
+    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> =
+        synchronized(favoriteLock) {
+            return@synchronized getFavoriteCategoryItems()
+                .asSequence()
+                .filter { it.contentType == contentType }
+                .map { fav ->
+                    MediaCategory(
+                        id = fav.categoryId,
+                        name = fav.categoryName,
+                        isVirtual = false,
+                    )
+                }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+                .toList()
+        }
+
+    fun isFavoriteCategory(
+        categoryId: String,
+        contentType: String,
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+                    .mapTo(HashSet()) { it.categoryId to it.contentType }
+                    .also { favoriteCategoryIdSet = it }
+            return (categoryId to contentType) in set
+        }
+
+    fun getFavoriteCategoryIds(contentType: String): Set<String> =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+                    .mapTo(HashSet()) { it.categoryId to it.contentType }
+                    .also { favoriteCategoryIdSet = it }
+            val matching = HashSet<String>(set.size)
+            for ((id, type) in set) {
+                if (type == contentType) {
+                    matching.add(id)
+                }
+            }
+            matching
+        }
+
+    fun clearFavoriteCategories() =
+        synchronized(favoriteLock) {
+            cachedFavoriteCategories = emptyList()
+            favoriteCategoryIdSet = null
+            writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.CATEGORY) }
+        }
+
+    /**
+     * Records a resume point, and with it the identity of what was played.
+     *
+     * The episode/series fields matter because this is the write that *creates* the row for a
+     * short session: [saveLastPlayedItem] only runs once a couple of percent has been watched, so
+     * sampling an episode and leaving would mint a history row carrying a position and nothing
+     * that says which episode of which show it was, and Recent would have only the id to go on and read
+     * an episode as a series. Callers that know the metadata must pass it; what they omit falls
+     * back to whatever the existing row already had.
+     */
+    fun savePlaybackPosition(
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String,
+        position: Long,
+        duration: Long,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null,
+        episodeId: EpisodeId? = null,
+        episodeExtension: String? = null,
+        seriesId: SeriesId? = null,
+        seriesName: String? = null,
+    ) {
+        // Live TV never gets a resume point, server-backed providers own this state themselves,
+        // and an empty session (left while idle or still buffering) carries no information —
+        // writing it would overwrite a real resume point, and any completed mark, with zeroes.
+        val shouldRecord =
+            contentType != ContentType.LIVE_TV && !usesServerUserData && !(position <= 0L && duration <= 0L)
+        if (shouldRecord) {
+            val isCompleted = isWatchedAt(position, duration)
+            // Owns position, duration, completion and lastPlayedAt (Phase 4,
+            // the watch state durable storage plan). No blob read-modify-write to preserve
+            // metadata this call doesn't carry any more — the upsert's own `COALESCE` against
+            // `watch_state`'s existing row does that for real, in SQL, instead of the app fetching
+            // an "existing" entry first to pass back in.
+            val progressNow = System.currentTimeMillis()
+            writeScope.launch {
+                watchStateDao.upsertProgress(
+                    providerId = providerId,
+                    profileId = profileId,
+                    itemId = itemId,
+                    contentType = contentType,
+                    itemName = itemName,
+                    categoryId = categoryId,
+                    positionMs = position,
+                    durationMs = duration,
+                    isCompleted = isCompleted,
+                    now = progressNow,
+                    seriesId = seriesId?.raw,
+                    episodeId = episodeId?.raw,
+                    seriesName = seriesName,
+                    episodeExtension = episodeExtension,
+                    audioTrackIndex = audioTrackIndex,
+                    subtitleTrackIndex = subtitleTrackIndex,
+                )
+            }
+        }
+    }
+
+    /**
+     * Bulk lookup for a category page: every stored position/completion for [contentType],
+     * filtered down to [itemIds]. Fetches the whole content type rather than an `IN (…)` query —
+     * deliberate, see "Fetching the whole content type…" in the plan — so this is one indexed
+     * query plus an in-memory filter instead of a bind-variable list sized to the category.
+     */
+    suspend fun getPlaybackPositions(
+        itemIds: List<String>,
+        contentType: String,
+    ): Map<String, WatchedItem> {
+        val idSet = itemIds.toHashSet()
+        val rows = watchStateDao.getByContentType(providerId, profileId, contentType)
+        val result = HashMap<String, WatchedItem>()
+        for (row in rows) {
+            if (row.itemId in idSet) {
+                result[row.itemId] = row.toWatchedItem()
+            }
+        }
+        return result
+    }
+
+    /**
+     * Per-series watch rollup for the TV Shows list: fraction of a series' episodes that are
+     * completed, keyed by series id.
+     *
+     * Series rows can't use [getPlaybackPositions] directly — watch history is keyed by episode
+     * id, with the series id only carried alongside — so this is a real aggregate over
+     * `watch_state`, divided by the provider's cached episode count. Series the provider can't
+     * count locally are absent, and show no progress rather than a wrong one.
+     *
+     * The numerator applies Phase 5 TMDB dedup, so a series watched through one language variant
+     * reports progress on every variant. Without it this aggregate disagreed with the episode list
+     * directly beneath it: [getSiblingCompletedEpisodeIds] spreads completion across sibling series
+     * for the per-episode check, so the episodes showed checked while the row above them read 0%.
+     */
+    suspend fun getSeriesWatchProgress(): Map<String, Float> {
+        val totals = provider?.getEpisodeCountsBySeries()
+        val result = HashMap<String, Float>()
+        if (totals != null && totals.isNotEmpty()) {
+            val completedPerSeries = watchStateDao.getSeriesCompletedCounts(providerId, profileId, ContentType.TV_SHOWS)
+            val deduped = episodeDao.getSiblingCompletedCountsBySeries(providerId, profileId)
+            val completed = HashMap<String, Int>(completedPerSeries.size + deduped.size)
+            for (row in completedPerSeries) {
+                completed[row.seriesId] = row.completed
+            }
+            // Union, not replace. The dedup query reaches only series carrying a `tmdbId` and only
+            // episodes still in the catalogue cache, while the direct count reaches any series with
+            // a `watch_state` row. Taking the larger keeps both: a sibling-completed series gains
+            // the spread, and a series the dedup query cannot see keeps the count it always had.
+            // They overlap rather than sum — the same episode is counted by both — so max, not plus.
+            for ((seriesId, count) in deduped) {
+                val key = seriesId.toString()
+                if (count > (completed[key] ?: 0)) {
+                    completed[key] = count
+                }
+            }
+            for ((seriesId, count) in completed) {
+                val total = totals[seriesId]
+                if (total != null && total > 0) {
+                    result[seriesId] = (count.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                }
+            }
+        }
+        return result
+    }
+
+    /**
+     * TMDB dedup (Phase 5, the watch state durable storage plan): movie ids completed by a
+     * different catalogue entry for the same title — a second language track, a 4K re-rip — under
+     * its own id rather than this one. Xtream-only by construction: SMB, Local and Remote M3U have
+     * no catalogue rows to join `watch_state` against, so the query simply returns nothing for
+     * their `providerId` rather than needing a provider-type branch here. Movies only for now —
+     * episode dedup needs its own call scoped to one series, from wherever an episode list reads
+     * watched state, not this whole-content-type one.
+     */
+    suspend fun getSiblingCompletedMovieIds(): Set<String> =
+        streamDao
+            .getSiblingCompletedStreamIds(providerId, profileId, ContentType.MOVIES, XtreamStreamEntity.TYPE_VOD)
+            .toSet()
+
+    /**
+     * TMDB dedup (Phase 5, the watch state durable storage plan), episode form: episode ids
+     * of [seriesId] completed by a sibling in a *different* series row that shares this series'
+     * `tmdb_id` — a language/quality variant of the same show is a separate `xtream_series` row
+     * with its own complete episode list, not a duplicate row within this one, so this is not the
+     * same shape as [getSiblingCompletedMovieIds]. Call from wherever an episode list reads watched
+     * state for that series. `seriesId` is a raw Xtream series id everywhere except a non-Xtream
+     * provider, which has none — degrades to no dedup rather than a crash.
+     */
+    suspend fun getSiblingCompletedEpisodeIds(seriesId: String): Set<String> {
+        val numericSeriesId = seriesId.toIntOrNull()
+        val result =
+            if (numericSeriesId != null) {
+                episodeDao.getSiblingCompletedEpisodeIds(providerId, profileId, numericSeriesId).toSet()
+            } else {
+                emptySet()
+            }
+        return result
+    }
+
+    /**
+     * Shared per-content-type Recent list. One list feeding every surface that shows it — the
+     * browse row, the Live TV preview panel and the player's channel flyout — so they cannot
+     * disagree after a write. null means "not loaded yet", which is what callers render a
+     * spinner for; an empty list means loaded and genuinely empty.
+     */
+    fun recentItems(contentType: String): StateFlow<List<MediaItem>?> = recentItemsFlow(contentType).asStateFlow()
+
+    /** Re-reads the Recent list and publishes it to every [recentItems] collector. */
+    suspend fun refreshRecentItems(contentType: String): List<MediaItem> {
+        val items = getRecentItemsSuspend(contentType)
+        recentItemsFlow(contentType).value = items
+        return items
+    }
+
+    private fun recentItemsFlow(contentType: String): MutableStateFlow<List<MediaItem>?> =
+        recentItemsFlows.getOrPut(contentType) { MutableStateFlow(null) }
+
+    /**
+     * The single "Recent" list: everything watched for [contentType], newest first (in-progress
+     * titles are Continue watching's). Storage in `watch_state` is
+     * unbounded (see the watch state durable storage plan); `AppSettings.recentRowSize` is now a
+     * display cap taken by the query itself, not a retention policy — [getPlaybackPositions] and
+     * [getSeriesWatchProgress] are unaffected by it, since a watched check or a resume bar is an
+     * attribute of a stream, not a history entry.
+     *
+     * The cap is per content type: an in-progress movie can
+     * not be pushed out of its own Recent row by heavy channel surfing on Live TV.
+     */
+    internal suspend fun getRecentItemsFromWatchState(contentType: String): List<MediaItem> {
+        val mediaType = contentTypeToMediaType(contentType)
+        // One size for every source on this device (Settings reorg, D4).
+        val limit = appSettings.recentRowSize
+        // TV Shows: one card per series rather than one per episode, collapsed in SQL before the
+        // LIMIT — collapsing after would yield fewer cards than asked for. See "Series collapse
+        // before the limit, not after" in the plan.
+        val rows =
+            if (contentType == ContentType.TV_SHOWS) {
+                watchStateDao.getRecentSeriesCollapsed(providerId, profileId, contentType, limit)
+            } else {
+                watchStateDao.getRecent(providerId, profileId, contentType, limit)
+            }
+        return rows.map { it.toWatchedItem().toRecentMediaItem(mediaType) }
+    }
+
+    /**
+     * A history entry as a Recent row card. A TV Shows entry that knows its series becomes a card
+     * for the show, carrying the episode to resume; one that does not stays a card for the episode
+     * itself, which plays. Both say so in [MediaItem.target] rather than leaving the nav hosts to
+     * infer it, which would send an episode id to the series screen.
+     */
+    private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
+        val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
+        return MediaItem(
+            id = seriesCardId?.raw ?: itemId,
+            name = if (seriesCardId != null) seriesName ?: itemName else itemName,
+            mediaType = mediaType,
+            categoryId = categoryId,
+            target = recentTarget(seriesCardId),
+            providerId = this@MediaRepository.providerId,
+            lastPlayedAt = timestamp,
+        )
+    }
+
+    /**
+     * A TV Shows history entry is always written from the player, whose stream id is the
+     * episode's — so [WatchedItem.itemId] names the episode even on entries too old to carry an
+     * explicit `episodeId`, and an entry with no series id is still safe to play.
+     */
+    private fun WatchedItem.recentTarget(seriesCardId: SeriesId?): BrowseTarget =
+        when {
+            seriesCardId != null -> {
+                BrowseTarget.Series(seriesId = seriesCardId, resumeEpisodeId = episodeId ?: EpisodeId(itemId))
+            }
+
+            contentType == ContentType.TV_SHOWS -> {
+                BrowseTarget.Episode(
+                    episodeId = episodeId ?: EpisodeId(itemId),
+                    seriesId = seriesId,
+                    seriesName = seriesName,
+                    extension = episodeExtension,
+                )
+            }
+
+            contentType == ContentType.MOVIES -> {
+                BrowseTarget.Movie(itemId)
+            }
+
+            else -> {
+                BrowseTarget.Channel(itemId)
+            }
+        }
+
+    /**
+     * Cross-content-type "Jump Back In" shelf (the ui ux transitions flow uplift plan,
+     * Phase 3), Movies and TV Shows merged and sorted by recency, newest first.
+     *
+     * Movies: only genuinely in-progress ones — see [WatchedItem.resumeProgress]'s band ([isResumableAt]),
+     * enforced in SQL by [WatchStateDao.getResumable]. A finished movie has nothing to continue.
+     *
+     * TV Shows: one card per show, from its most recently played episode. Mid-watch, the card
+     * resumes it. Finished, the card offers the first unwatched episode after it ("Up next"), else
+     * the first unwatched one from the start, else (every episode watched) the first episode — the
+     * series screen's rule, [nextUnwatchedEpisodeId]. A show whose episode list is known nowhere
+     * leaves the shelf once finished. Barely started (under 2%), the card offers that episode itself
+     * as up next. See [upNextForShows].
+     *
+     * Live TV never appears:
+     * [savePlaybackPosition] never records a position for a live stream, so no live entry can fall
+     * in the resumable band, same reasoning as [getRecentItemsFromWatchState].
+     *
+     * Server-backed providers (Jellyfin) return empty — they own resume/recency server-side
+     * ([getRecentItemsSuspend]'s `usesServerUserData` branch), and this feature is scoped to
+     * Xtream/local storage only.
+     */
+    suspend fun getContinueWatchingItems(limit: Int = 10): List<ContinueWatchingItem> {
+        val result =
+            if (usesServerUserData) {
+                emptyList()
+            } else {
+                // Titles in categories the content filters hide stay out, as in Recent and Favourites,
+                // unless a Parental controls exception allows them.
+                val hiddenMovies = hiddenCategoryIds(ContentType.MOVIES)
+                val allowedMovies = allowedItemIds(ContentType.MOVIES, hiddenMovies)
+                val childRules = childRules()
+                val hiddenShows = hiddenCategoryIds(ContentType.TV_SHOWS)
+                val allowedShows = allowedItemIds(ContentType.TV_SHOWS, hiddenShows)
+                val movieRows =
+                    watchStateDao
+                        .getResumable(providerId, profileId, ContentType.MOVIES, limit)
+                        .filterNot {
+                            (it.categoryId in hiddenMovies && it.itemId !in allowedMovies) ||
+                                childRules?.hidesTitle(it.itemName) == true
+                        }
+                // Over-fetched: a finished show whose episodes are unknown drops out below.
+                val latestPerShow =
+                    watchStateDao
+                        .getRecentSeriesCollapsed(providerId, profileId, ContentType.TV_SHOWS, limit * 3)
+                        .filterNot {
+                            (it.categoryId in hiddenShows && it.seriesId !in allowedShows) ||
+                                childRules?.hidesTitle(it.seriesName ?: it.itemName) == true
+                        }
+                val upNext = upNextForShows(latestPerShow, limit)
+                val seriesRows = latestPerShow.filter { it.isResumable() || upNext[it] != null }.take(limit)
+
+                // rehydrateThumbnails/zip/sortedByDescending all no-op cleanly on empty input, so
+                // there is no dedicated empty-rows branch here — just the one shape below.
+                val movieItems =
+                    rehydrateThumbnails(
+                        movieRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.MOVIE) },
+                        ContentType.MOVIES,
+                    )
+                val seriesItems =
+                    rehydrateThumbnails(
+                        seriesRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.SERIES) },
+                        ContentType.TV_SHOWS,
+                    )
+
+                val entries =
+                    movieRows.zip(movieItems) { row, item -> row.toContinueWatchingItem(item, ContentType.MOVIES) } +
+                        seriesRows.zip(seriesItems) { row, item ->
+                            val next = upNext[row]
+                            if (next == null) {
+                                row.toContinueWatchingItem(item, ContentType.TV_SHOWS)
+                            } else {
+                                row.toUpNextItem(item, next)
+                            }
+                        }
+
+                entries.sortedByDescending { it.second }.map { it.first }.take(limit)
+            }
+        return result
+    }
+
+    private fun WatchStateEntity.isResumable(): Boolean = !isCompleted && isResumableAt(positionMs, durationMs)
+
+    /** An episode to offer as "Up next": its id and title. */
+    private data class UpNextEpisode(
+        val episodeId: String,
+        val title: String,
+    )
+
+    /**
+     * The "Up next" episode of each show in [latestPerShow] (its most recently played episode per
+     * show) that isn't mid-watch: once it is finished, the first unwatched episode by
+     * [nextUnwatchedEpisodeId] (the watched followups plan → Phase 1) — watched
+     * meaning a completed row, or the same episode completed in a TMDB sibling, as in
+     * [episodesWatchState]; the episode itself when barely started. Absent from the map: shows to
+     * resume, and shows whose episode list is known nowhere.
+     *
+     * The episodes come from this device's stored episode list. A show whose list this device
+     * has never stored — typically one watched on another device, its history arriving by sync —
+     * has its list fetched from the provider (stored as a side effect, so once per show), for the
+     * first [limit] shows only, in parallel and at most [UP_NEXT_FETCH_TIMEOUT_MS] each.
+     */
+    private suspend fun upNextForShows(
+        latestPerShow: List<WatchStateEntity>,
+        limit: Int,
+    ): Map<WatchStateEntity, UpNextEpisode> {
+        val found = mutableMapOf<WatchStateEntity, UpNextEpisode>()
+        val unknown = mutableListOf<WatchStateEntity>()
+        // Read once for every show, and only when some show is finished.
+        var completedRows: Set<String>? = null
+        for (row in latestPerShow) {
+            if (row.isResumable() || row.seriesId?.toIntOrNull() == null) continue
+            val episodeId = row.episodeId ?: row.itemId
+            if (!row.isFinished()) {
+                found[row] = UpNextEpisode(episodeId, row.itemName)
+                continue
+            }
+            val completed = completedRows ?: completedEpisodeRows().also { completedRows = it }
+            val current = episodeDao.getEpisode(providerId, episodeId)
+            if (current == null) {
+                unknown += row
+                continue
+            }
+            val episodes = withContext(Dispatchers.IO) { episodeDao.getEpisodes(providerId, current.seriesId) }
+            firstUnwatched(row, episodes.map { UpNextEpisode(it.id, it.title) }, completed)?.let { found[row] = it }
+        }
+        val toFetch = unknown.filter { latestPerShow.indexOf(it) < limit }
+        if (toFetch.isNotEmpty()) {
+            val completed = completedRows.orEmpty()
+            coroutineScope {
+                toFetch
+                    .map { row -> async { row to withTimeoutOrNull(UP_NEXT_FETCH_TIMEOUT_MS) { nextFromProvider(row, completed) } } }
+                    .awaitAll()
+            }.forEach { (row, next) -> if (next != null) found[row] = next }
+        }
+        return found
+    }
+
+    /** [upNextForShows] from the show's episode list as the provider gives it: season, then episode order. */
+    private suspend fun nextFromProvider(
+        row: WatchStateEntity,
+        completedRows: Set<String>,
+    ): UpNextEpisode? {
+        val seriesId = row.seriesId ?: return null
+        val detail = provider?.getSeriesDetail(SeriesId(seriesId))?.getOrNull() ?: return null
+        val ordered =
+            detail.episodes
+                .flatMap { (seasonKey, episodes) -> episodes.map { (it.seasonNumber ?: seasonKey.toIntOrNull() ?: 0) to it } }
+                .sortedWith(compareBy({ it.first }, { it.second.episodeNumber }))
+                .map { UpNextEpisode(it.second.id, it.second.title) }
+        return firstUnwatched(row, ordered, completedRows)
+    }
+
+    /** Ids of every completed TV Shows row, for [upNextForShows]. */
+    private suspend fun completedEpisodeRows(): Set<String> =
+        watchStateDao
+            .getByContentType(providerId, profileId, ContentType.TV_SHOWS)
+            .filter { it.isCompleted }
+            .mapTo(HashSet()) { it.itemId }
+
+    /**
+     * The episode of [ordered] (show order) to offer after [row]'s finished one, by
+     * [nextUnwatchedEpisodeId]; null when [row]'s episode isn't in the list.
+     */
+    private suspend fun firstUnwatched(
+        row: WatchStateEntity,
+        ordered: List<UpNextEpisode>,
+        completedRows: Set<String>,
+    ): UpNextEpisode? {
+        val siblingCompleted = row.seriesId?.let { getSiblingCompletedEpisodeIds(it) }.orEmpty()
+        val nextId =
+            nextUnwatchedEpisodeId(ordered.map { it.episodeId }, row.episodeId ?: row.itemId) { id ->
+                id in completedRows || id in siblingCompleted
+            }
+        return nextId?.let { id -> ordered.first { it.episodeId == id } }
+    }
+
+    private fun WatchStateEntity.isFinished(): Boolean = isCompleted || isWatchedAt(positionMs, durationMs)
+
+    /** A show's card offering [next] to start: no progress, opening the show on that episode. */
+    private fun WatchStateEntity.toUpNextItem(
+        item: MediaItem,
+        next: UpNextEpisode,
+    ): Pair<ContinueWatchingItem, Long> {
+        val seriesTarget = item.target as? BrowseTarget.Series
+        val upNextItem =
+            ContinueWatchingItem(
+                id = item.id,
+                name = item.name,
+                subtitle = next.title,
+                contentType = ContentType.TV_SHOWS,
+                categoryId = item.categoryId,
+                thumbnailUrl = item.thumbnailUrl,
+                progress = 0f,
+                remainingMs = 0L,
+                target = seriesTarget?.copy(resumeEpisodeId = EpisodeId(next.episodeId)) ?: requireNotNull(item.target),
+                upNext = true,
+                providerId = providerId,
+                lastPlayedAt = lastPlayedAt ?: 0L,
+            )
+        return upNextItem to (lastPlayedAt ?: 0L)
+    }
+
+    /**
+     * Paired with its sort key ([WatchStateEntity.lastPlayedAt]) rather than embedding recency
+     * into [ContinueWatchingItem] itself — the shelf card has no use for it once merged and sorted.
+     */
+    private fun WatchStateEntity.toContinueWatchingItem(
+        item: MediaItem,
+        contentType: String,
+    ): Pair<ContinueWatchingItem, Long> {
+        val continueWatchingItem =
+            ContinueWatchingItem(
+                id = item.id,
+                name = item.name,
+                subtitle = if (contentType == ContentType.TV_SHOWS) itemName else null,
+                contentType = contentType,
+                categoryId = item.categoryId,
+                thumbnailUrl = item.thumbnailUrl,
+                progress = (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f),
+                remainingMs = (durationMs - positionMs).coerceAtLeast(0L),
+                target = requireNotNull(item.target) { "toRecentMediaItem always sets target" },
+                providerId = providerId,
+                lastPlayedAt = lastPlayedAt ?: 0L,
+            )
+        return continueWatchingItem to (lastPlayedAt ?: 0L)
+    }
+
+    // --- Server-aware suspend methods (branch on supportsServerUserData) ---
+
+    suspend fun isFavoriteSuspend(
+        itemId: String,
+        contentType: String,
+    ): Boolean {
+        val result =
+            if (usesServerUserData) {
+                provider?.isFavorite(itemId) ?: false
+            } else {
+                isFavorite(itemId, contentType)
+            }
+        return result
+    }
+
+    suspend fun addFavoriteSuspend(
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String,
+    ): Boolean {
+        val result =
+            if (usesServerUserData) {
+                provider?.setFavorite(itemId, true)?.isSuccess ?: false
+            } else {
+                addFavorite(itemId, itemName, categoryId, contentType)
+            }
+        return result
+    }
+
+    suspend fun removeFavoriteSuspend(
+        itemId: String,
+        contentType: String,
+    ): Boolean {
+        val result =
+            if (usesServerUserData) {
+                provider?.setFavorite(itemId, false)?.isSuccess ?: false
+            } else {
+                removeFavorite(itemId, contentType)
+            }
+        return result
+    }
+
+    suspend fun getFavoritesForContentTypeSuspend(contentType: String): List<MediaItem> {
+        val result =
+            if (usesServerUserData) {
+                provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
+            } else {
+                // Already name-sorted by getFavoritesForContentType — sorted again below anyway,
+                // since a server-backed provider's own order needs it too and both paths should
+                // read the same regardless of which one served them.
+                rehydrateThumbnails(withoutHiddenCategories(getFavoritesForContentType(contentType), contentType), contentType)
+            }
+        return result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    }
+
+    /**
+     * Server-backed providers own the resume/recency semantics themselves, so the two endpoints
+     * are merged rather than re-filtered: resume items first, then recently-played minus
+     * anything already shown. Providers implementing only one endpoint degrade to just that one.
+     */
+    suspend fun getRecentItemsSuspend(contentType: String): List<MediaItem> {
+        val items =
+            if (usesServerUserData) {
+                val mediaProvider = provider
+                if (mediaProvider == null) {
+                    emptyList()
+                } else {
+                    coroutineScope {
+                        val resumeItems = async { mediaProvider.getResumeItems(contentType)?.getOrNull().orEmpty() }
+                        val recentlyPlayed = async { mediaProvider.getRecentlyPlayed(contentType)?.getOrNull().orEmpty() }
+                        val resume = resumeItems.await()
+                        val shown = resume.mapTo(HashSet()) { it.id }
+                        // Newest first, as every Recent: the two lists are each the server's newest first.
+                        (resume + recentlyPlayed.await().filter { it.id !in shown }).sortedByDescending { it.lastPlayedAt }
+                    }
+                }
+            } else {
+                rehydrateThumbnails(withoutHiddenCategories(getRecentItemsFromWatchState(contentType), contentType), contentType)
+            }
+        return items
+    }
+
+    /**
+     * [items] without those in a category the profile in use's content filters hide on this
+     * source: a filter hides a title from Recent, Favourites and Continue watching too, not only
+     * from the catalogue (docs/plans/20261019_tv-household-ux-plan.md, Phase 2). The entries stay
+     * stored, so removing the filter brings them back. A title that a Parental controls exception
+     * allows stays, as in the catalogue.
+     */
+    internal suspend fun withoutHiddenCategories(
+        items: List<MediaItem>,
+        contentType: String,
+    ): List<MediaItem> {
+        val hidden = hiddenCategoryIds(contentType)
+        val child = childRules()
+        return if (hidden.isEmpty() && child == null) {
+            items
+        } else {
+            val allowed = allowedItemIds(contentType, hidden)
+            items.filterNot { (it.categoryId in hidden && it.id !in allowed) || child?.hidesTitle(it.name) == true }
+        }
+    }
+
+    /** The profile in use's Parental controls rules when it is a child's: its hidden titles stay out too. */
+    private fun childRules(): ParentalRules? = if (appSettings.isChildProfile(profileId)) appSettings.parentalRules() else null
+
+    /** The categories of [contentType] the content filters hide on this source; empty for any but Xtream's. */
+    private suspend fun hiddenCategoryIds(contentType: String): Set<String> {
+        val type =
+            when (contentType) {
+                ContentType.MOVIES -> XtreamCategoryEntity.TYPE_VOD
+                ContentType.LIVE_TV -> XtreamCategoryEntity.TYPE_LIVE
+                ContentType.TV_SHOWS -> XtreamCategoryEntity.TYPE_SERIES
+                else -> null
+            }
+        return if (type == null) {
+            emptySet()
+        } else {
+            withContext(Dispatchers.IO) { categoryDao.getExcludedCategoryIds(providerId, type).toHashSet() }
+        }
+    }
+
+    /** The categories of [contentType] that show only for the items a Parental controls exception allows. */
+    private suspend fun allowedCategoryIds(contentType: String): Set<String> {
+        val type =
+            when (contentType) {
+                ContentType.MOVIES -> XtreamCategoryEntity.TYPE_VOD
+                ContentType.TV_SHOWS -> XtreamCategoryEntity.TYPE_SERIES
+                else -> return emptySet()
+            }
+        return withContext(Dispatchers.IO) { categoryDao.getAllowedCategoryIds(providerId, type).toHashSet() }
+    }
+
+    /**
+     * The films or series of [contentType] that a Parental controls exception shows although their
+     * category is hidden (the `allowed` flag, set for the profile in use). Not read when nothing is [hidden].
+     */
+    private suspend fun allowedItemIds(
+        contentType: String,
+        hidden: Set<String>,
+    ): Set<String> {
+        val type =
+            when (contentType) {
+                ContentType.MOVIES -> XtreamCategoryEntity.TYPE_VOD
+                ContentType.TV_SHOWS -> XtreamCategoryEntity.TYPE_SERIES
+                else -> null
+            }
+        return if (type == null || hidden.isEmpty()) {
+            emptySet()
+        } else {
+            withContext(Dispatchers.IO) { categoryDao.getAllowedItemIds(providerId, type).toHashSet() }
+        }
+    }
+
+    /**
+     * Locally-stored favorites / watch-history keep only id+name+category, not the poster URL.
+     * Look the image back up from the synced Xtream DB (the same source the browse grid uses:
+     * `streamIcon` for movies/live, `cover` for series) so these tiles show art instead of the
+     * letter fallback. Items not yet in the cache are left with a null thumbnail, as before.
+     */
+    private suspend fun rehydrateThumbnails(
+        items: List<MediaItem>,
+        contentType: String,
+    ): List<MediaItem> {
+        val missing = items.filter { it.thumbnailUrl.isNullOrBlank() }
+        val ids = missing.mapNotNull { it.id.toIntOrNull() }
+        val result =
+            if (missing.isEmpty() || ids.isEmpty()) {
+                items
+            } else {
+                val icons: Map<Int, String?> =
+                    withContext(Dispatchers.IO) {
+                        val db = XtreamDatabase.getInstance(context)
+                        when (contentType) {
+                            ContentType.MOVIES -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_VOD, ids)
+                            ContentType.LIVE_TV -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_LIVE, ids)
+                            ContentType.TV_SHOWS -> db.seriesDao().getCoversByIds(providerId, ids)
+                            else -> emptyMap()
+                        }
+                    }
+                if (icons.isEmpty()) {
+                    items
+                } else {
+                    items.map { item ->
+                        val url = if (item.thumbnailUrl.isNullOrBlank()) item.id.toIntOrNull()?.let { icons[it] } else null
+                        if (url.isNullOrBlank()) item else item.copy(thumbnailUrl = url)
+                    }
+                }
+            }
+        return result
+    }
+
+    suspend fun getPlaybackPositionSuspend(
+        itemId: String,
+        contentType: String,
+    ): WatchedItem? {
+        val result =
+            if (usesServerUserData) {
+                provider?.getPlaybackPosition(itemId)?.let { status ->
+                    WatchedItem(
+                        itemId = itemId,
+                        itemName = status.itemName ?: "",
+                        categoryId = status.categoryId ?: "",
+                        contentType = contentType,
+                        playbackPosition = status.positionMs,
+                        duration = status.durationMs,
+                        isCompleted = status.isCompleted,
+                    )
+                }
+            } else {
+                watchStateDao.getItem(providerId, profileId, itemId, contentType)?.toWatchedItem()
+            }
+        return result
+    }
+
+    /**
+     * Track-setting fallback for an episode with no saved audio/subtitle choice of its own — the
+     * series' most recently touched choice, if any. Callers only use this when the episode's own
+     * row has neither index set; an episode that already has one sticks with it, no fallback.
+     * Xtream-only by construction, like the sibling dedup queries: server-backed providers own
+     * this state themselves (see [getPlaybackPositionSuspend]).
+     */
+    suspend fun getSeriesTrackPrefs(
+        seriesId: SeriesId,
+        contentType: String,
+    ): Pair<Int?, Int?>? {
+        val row =
+            if (usesServerUserData) {
+                null
+            } else {
+                watchStateDao.getLatestSeriesTrackPrefs(providerId, profileId, seriesId.raw, contentType)
+            }
+        return row?.let { it.audioTrackIndex to it.subtitleTrackIndex }
+    }
+
+    suspend fun getPlaybackPositionsSuspend(
+        itemIds: List<String>,
+        contentType: String,
+    ): Map<String, WatchedItem> {
+        val result =
+            if (usesServerUserData) {
+                val positions = provider?.getPlaybackPositions(itemIds)?.getOrNull()
+                if (positions != null) {
+                    positions.mapValues { (id, status) ->
+                        WatchedItem(
+                            itemId = id,
+                            itemName = status.itemName ?: "",
+                            categoryId = status.categoryId ?: "",
+                            contentType = contentType,
+                            playbackPosition = status.positionMs,
+                            duration = status.durationMs,
+                            isCompleted = status.isCompleted,
+                        )
+                    }
+                } else {
+                    emptyMap()
+                }
+            } else {
+                getPlaybackPositions(itemIds, contentType)
+            }
+        return result
+    }
+
+    /**
+     * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan).
+     * Not routed through [savePlaybackPosition]: that method early-returns on
+     * `position <= 0 && duration <= 0`, exactly what a manual mark looks like, so it needs its own
+     * path rather than being mistaken for an empty session.
+     *
+     * `watched = true` writes one row; the sibling read query (Phase 5) spreads it across the
+     * TMDB group on its own. `watched = false` has to clear the group itself here — a sibling's
+     * completion would otherwise keep driving the check right back on, making the toggle look
+     * like it did nothing. Xtream-only for the group clear, same as Phase 5: SMB, Local and Remote
+     * M3U have no catalogue to find a group in, so only this one row changes for them.
+     */
+    suspend fun setWatched(
+        itemId: String,
+        contentType: String,
+        watched: Boolean,
+    ) {
+        // Jellyfin owns this state server-side and has no MediaProvider capability to accept a
+        // manual mark through this app — writing to the local watch_state table for it would be
+        // dead data, since getPlaybackPositionSuspend's usesServerUserData branch never reads
+        // local state back for these providers. No-op rather than write something nothing shows.
+        if (!usesServerUserData) {
+            val now = System.currentTimeMillis()
+            if (watched) {
+                // A never-played episode has no existing row to carry a seriesId forward from, and
+                // this method's own signature has no seriesId parameter to accept one — resolve it
+                // from the catalogue instead, or getSeriesCompletedCounts silently drops the row.
+                val seriesId =
+                    if (contentType == ContentType.TV_SHOWS) {
+                        episodeDao.getSeriesIdForEpisode(providerId, itemId)?.toString()
+                    } else {
+                        null
+                    }
+                watchStateDao.markWatched(
+                    providerId,
+                    profileId,
+                    itemId,
+                    contentType,
+                    now,
+                    seriesId = seriesId,
+                    episodeId = if (seriesId != null) itemId else null,
+                )
+            } else {
+                watchStateDao.markUnwatched(providerId, profileId, itemId, contentType, now)
+                when (contentType) {
+                    ContentType.MOVIES -> {
+                        streamDao.clearGroupCompletion(providerId, profileId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
+                    }
+
+                    ContentType.TV_SHOWS -> {
+                        episodeDao.clearGroupCompletion(providerId, profileId, itemId, now)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * [setWatched] for every episode of a season ([season]) or of the whole show ([season] null),
+     * in one transaction (the season show watched plan). The mark stays per
+     * episode: one `watch_state` row for each episode that exists now, so an episode the provider
+     * adds later has no row and shows unwatched. Watched leaves `lastPlayedAt` alone (nothing joins
+     * Recent); unwatched clears only the flag, plus the TMDB sibling group, keeping positions.
+     *
+     * The episode list comes from [getSeriesDetail], which fetches it when the provider's cached
+     * list is missing or stale, so a show never opened here works too. Fails only when that load
+     * fails. Does nothing for a source that keeps watched state on its server (Jellyfin).
+     */
+    suspend fun setEpisodesWatched(
+        seriesId: String,
+        season: Int?,
+        watched: Boolean,
+    ): kotlin.Result<Unit> {
+        val result =
+            if (usesServerUserData) {
+                kotlin.Result.success(Unit)
+            } else {
+                getSeriesDetail(SeriesId(seriesId)).map { detail ->
+                    val episodeIds = detail.episodeIdsIn(season)
+                    val now = System.currentTimeMillis()
+                    xtreamDb.value.withTransaction {
+                        for (episodeId in episodeIds) {
+                            if (watched) {
+                                watchStateDao.markWatched(
+                                    providerId,
+                                    profileId,
+                                    episodeId,
+                                    ContentType.TV_SHOWS,
+                                    now,
+                                    seriesId = seriesId,
+                                    episodeId = episodeId,
+                                )
+                            } else {
+                                watchStateDao.markUnwatched(providerId, profileId, episodeId, ContentType.TV_SHOWS, now)
+                                episodeDao.clearGroupCompletion(providerId, profileId, episodeId, now)
+                            }
+                        }
+                        // The show's own row, from the old one-toggle mark on a show row, would keep
+                        // the show's check on after every episode is unmarked.
+                        if (!watched && season == null) {
+                            watchStateDao.markUnwatched(providerId, profileId, seriesId, ContentType.TV_SHOWS, now)
+                        }
+                    }
+                }
+            }
+        return result
+    }
+
+    /**
+     * Whether every episode of a season ([season]) or of the whole show ([season] null) is
+     * watched, for the wording of [setEpisodesWatched]'s toggle: true when all are, false when any
+     * isn't, null when no episodes are known here or the source keeps watched state on its server.
+     * Watched means what the episode list shows: the episode's own row completed, or the same
+     * episode completed in a TMDB sibling ([getSiblingCompletedEpisodeIds]). Reads only the cached
+     * episode list ([getCachedSeriesDetail]), never the network.
+     */
+    suspend fun episodesWatchState(
+        seriesId: String,
+        season: Int?,
+    ): Boolean? {
+        val episodeIds =
+            if (usesServerUserData) {
+                emptyList()
+            } else {
+                getCachedSeriesDetail(SeriesId(seriesId))?.episodeIdsIn(season).orEmpty()
+            }
+        val result =
+            if (episodeIds.isEmpty()) {
+                null
+            } else {
+                val completed = getPlaybackPositions(episodeIds, ContentType.TV_SHOWS)
+                val siblingCompleted = getSiblingCompletedEpisodeIds(seriesId)
+                episodeIds.all { id -> completed[id]?.isCompleted == true || id in siblingCompleted }
+            }
+        return result
+    }
+
+    /** Episode ids of [season], or of every season when null — keyed as the episode screens key them. */
+    private fun SeriesDetail.episodeIdsIn(season: Int?): List<String> {
+        val lists = if (season == null) episodes.values else listOfNotNull(episodes[season.toString()])
+        return lists.flatMap { list -> list.map { it.id } }.distinct()
+    }
+
+    /**
+     * Removes an item (or all episodes of a series) from the Recent list by clearing its
+     * [WatchStateEntity.lastPlayedAt] timestamp in `watch_state`, preserving any saved position
+     * and completion status. Refreshes the published [recentItems] StateFlow upon completion.
+     *
+     * Returns what it cleared, for [restoreRecent] (the Undo after a removal, docs/plans/
+     * 20261009_tv-recents-favorites-plan.md → A).
+     *
+     * Server-backed providers own their own recency list and don't support removal — see
+     * [supportsRemoveFromRecent]. Callers must check that before offering this action; this
+     * returns null without touching anything if they don't.
+     */
+    suspend fun removeFromRecent(
+        itemId: String,
+        contentType: String,
+        seriesId: String? = null,
+    ): RecentRemoval? {
+        if (usesServerUserData) return null
+        val now = System.currentTimeMillis()
+        val plays = watchStateDao.takeRecentSeries(providerId, profileId, seriesId ?: itemId, contentType, now)
+        refreshRecentItems(contentType)
+        return RecentRemoval(contentType, plays, providerId)
+    }
+
+    /**
+     * Undoes [removeFromRecent]: each row it cleared gets its previous `lastPlayedAt` back, so the
+     * entry returns to its place in Recent. A row played again in between keeps its newer time.
+     * Synced like the removal: `updatedAt` moves on.
+     */
+    suspend fun restoreRecent(removal: RecentRemoval) {
+        watchStateDao.restoreRecentPlays(providerId, profileId, removal.contentType, removal.plays, System.currentTimeMillis())
+        refreshRecentItems(removal.contentType)
+    }
+
+    /**
+     * Clear Recent for one section: every [contentType] row leaves the Recent list, keeping its
+     * position and completion, for this source and profile — unlike [clearWatchHistory], which
+     * wipes every section's progress. Synced like [removeFromRecent]. False (nothing done) for a
+     * source that keeps its own history ([supportsRemoveFromRecent]).
+     */
+    suspend fun clearRecent(contentType: String): Boolean {
+        if (usesServerUserData) return false
+        watchStateDao.clearRecent(providerId, profileId, contentType, System.currentTimeMillis())
+        refreshRecentItems(contentType)
+        return true
+    }
+
+    fun getAppSettings(): AppSettings = appSettings
+
+    fun getPayloadSize(key: String): String? {
+        if (!appSettings.isDevMode) return null
+        val sizeInBytes = payloadSizes[key] ?: return null
+        return formatBytes(sizeInBytes)
+    }
+
+    fun getFetchTimeFormatted(key: String): String? {
+        if (!appSettings.isDevMode) return null
+        val timeMs = fetchTimes[key] ?: return null
+        return "$timeMs ms"
+    }
+
+    /**
+     * Changes received from another device rewrote this provider's favourites or history rows
+     * behind the in-memory views: refill them and re-publish every Recent list, so the UI shows the
+     * new state without a restart. See the live sync plan → Applying remote
+     * records.
+     */
+    suspend fun reloadAfterRemoteChange() {
+        synchronized(favoriteLock) {
+            cachedFavorites = null
+            cachedFavoriteCategories = null
+            favoriteIdSet = null
+            favoriteCategoryIdSet = null
+            getFavoriteItems()
+            getFavoriteCategoryItems()
+        }
+        synchronized(watchHistoryLock) {
+            cachedWatchHistory = null
+        }
+        recentItemsFlows.keys.toList().forEach { refreshRecentItems(it) }
+    }
+
+    fun clearCache() {
+        // Only this profile's file: for Default that is media_cache_<providerId> itself, exactly
+        // as before profiles; for anyone else, clearing that shared file would also wipe the
+        // Default profile's Recent Categories and bookmarks.
+        profileCache.commitAsync { clear() }
+        payloadSizes.clear()
+        fetchTimes.clear()
+        cachedFavorites = null
+        cachedFavoriteCategories = null
+        cachedRecentCategories.clear()
+        synchronized(watchHistoryLock) {
+            cachedWatchHistory = null
+        }
+    }
+
+    fun getCacheSize(): Long {
+        var totalSize = 0L
+        val entries = if (profileCache === cache) cache.all.values else cache.all.values + profileCache.all.values
+        entries.forEach { value ->
+            when (value) {
+                // Estimate UTF-8 size without allocating byte arrays (worst-case 3 bytes per char)
+                is String -> totalSize += value.length.toLong() * 3
+
+                is Long -> totalSize += 8
+
+                is Int -> totalSize += 4
+
+                is Boolean -> totalSize += 1
+            }
+        }
+        return totalSize
+    }
+
+    private fun formatBytes(bytes: Long): String =
+        when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> String.format(java.util.Locale.US, "%.2f KB", bytes / 1024.0)
+            bytes < 1024 * 1024 * 1024 -> String.format(java.util.Locale.US, "%.2f MB", bytes / (1024.0 * 1024.0))
+            else -> String.format(java.util.Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        }
+
+    private fun contentTypeToMediaType(contentType: String): MediaType =
+        when (contentType) {
+            ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
+            ContentType.MOVIES -> MediaType.MOVIE
+            ContentType.TV_SHOWS -> MediaType.SERIES
+            else -> MediaType.LIVE_CHANNEL
+        }
+
+    /**
+     * Deliberately leaves the write queue running. Everything on [writeScope] is a short one-shot
+     * write keyed by this repository's provider and profile, so letting it finish is always right —
+     * and a profile or provider switch closes every cached repository while screens may still hold
+     * one: cancelling here dropped whatever was still queued (a favourite toggled, the last progress
+     * save of the stream just left) and silently discarded every later write from those screens.
+     * See the rock solid stability resilience plan → F-15.
+     */
+    override fun close() = Unit
+}

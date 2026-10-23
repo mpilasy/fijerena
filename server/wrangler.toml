@@ -1,0 +1,22 @@
+# Cloudflare deployment of the Fijerena sync server. Set a setup secret with
+#   npx wrangler secret put SETUP_SECRET
+# See the live sync plan → Server.
+name = "fijerena-sync"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "ACCOUNT"
+class_name = "Account"
+
+[[durable_objects.bindings]]
+name = "HANDOFF"
+class_name = "Handoff"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Account"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Handoff"]

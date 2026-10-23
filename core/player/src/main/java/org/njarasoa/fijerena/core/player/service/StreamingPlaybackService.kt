@@ -1,0 +1,2215 @@
+package org.njarasoa.fijerena.core.player.service
+
+import android.content.Context
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.PowerManager
+import android.os.SystemClock
+import android.util.Log
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.Tracks
+import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
+import androidx.media3.exoplayer.util.EventLogger
+import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaSessionService
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.player.R
+import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
+import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
+import org.njarasoa.fijerena.core.player.config.NetworkType
+import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.player.model.BufferingInfo
+import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.PositionSave
+import org.njarasoa.fijerena.core.player.model.SlowConnection
+import org.njarasoa.fijerena.core.player.network.BufferingTracker
+import org.njarasoa.fijerena.core.player.network.NetworkModule
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import org.njarasoa.fijerena.core.player.network.SlowConnectionDetector
+import org.njarasoa.fijerena.core.player.network.StallWatchdog
+import org.njarasoa.fijerena.core.player.network.ThroughputMeter
+import org.njarasoa.fijerena.core.player.network.loadErrorLabel
+import org.njarasoa.fijerena.core.player.source.AccountBusy
+import org.njarasoa.fijerena.core.player.source.AccountBusyWait
+import org.njarasoa.fijerena.core.player.source.AlternateLogin
+import org.njarasoa.fijerena.core.player.source.LoginSwitch
+import org.njarasoa.fijerena.core.player.source.ServerDown
+import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
+import java.io.IOException
+import java.util.UUID
+
+/**
+ * Thrown by [StreamingPlaybackService.awaitInstance] when the service was torn down while a
+ * caller was waiting on it. Deliberately not a [kotlinx.coroutines.CancellationException]: it
+ * represents a real playback failure a caller should react to (e.g. show an error), not a
+ * structured-concurrency cancellation that should silently propagate and skip error handling.
+ */
+class ServiceDestroyedException(
+    message: String,
+) : Exception(message)
+
+@androidx.media3.common.util.UnstableApi
+class StreamingPlaybackService : MediaSessionService() {
+    // internal, not private (with mediaSourceFactory, mainHandler, performSeamlessRecycle and
+    // handleStreamEndedOrError): StreamingPlaybackServiceRecoveryTest drives the retry/recycle
+    // state machine directly, with a fake player.
+    internal var mediaSession: MediaSession? = null
+
+    // internal for tests. Held while something plays; released by pause, stop, teardown — and when
+    // playback ends by itself (Ended, a final error), or it kept the CPU awake with nothing playing.
+    internal var wakeLock: PowerManager.WakeLock? = null
+    private var playerListener: PlayerListener? = null
+    private var analyticsListener: PerformanceAnalyticsListener? = null
+    internal var mediaSourceFactory: StreamingMediaSourceFactory? = null
+
+    // Guards releasePlayerAndSession() against running twice on the same instance —
+    // stopAndRelease() calls it directly, then onDestroy() (fired later by stopSelf(), or by the
+    // system independently) calls it again. See releasePlayerAndSession()'s kdoc for why a second
+    // run is more than just redundant cleanup.
+    private var isReleased = false
+
+    // Set by pause() (the app's own pause button, and TV's onFocusLost) and cleared as soon as
+    // playback is requested again — lets the live-pause guard in onCreate() tell those apart from
+    // pauses arriving via the media session (PiP window, notification, Bluetooth), headphone
+    // unplug, or audio-focus loss.
+    private var pausedInApp = false
+
+    private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
+    val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
+
+    private val _currentMetadata = MutableStateFlow(PlayerMetadata())
+    val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    // A random id per playStream() — see NowPlayingSnapshot.sessionId. Empty until the first one.
+    private val playSessionId = MutableStateFlow("")
+
+    private val _droppedFrames = MutableStateFlow(0L)
+    val droppedFrames: StateFlow<Long> = _droppedFrames.asStateFlow()
+
+    private val _totalFrames = MutableStateFlow(0L)
+    val totalFrames: StateFlow<Long> = _totalFrames.asStateFlow()
+
+    private val _streamRetryCount = MutableStateFlow(0)
+    val streamRetryCount: StateFlow<Int> = _streamRetryCount.asStateFlow()
+
+    private val _streamStartTimeMs = MutableStateFlow(0L)
+    val streamStartTimeMs: StateFlow<Long> = _streamStartTimeMs.asStateFlow()
+
+    private val _rebufferCount = MutableStateFlow(0)
+    val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
+
+    // P4 (the playback capability errors plan): the slow-connection banner,
+    // and the 60 s limit on buffering with no data arriving.
+    private val _slowConnection = MutableStateFlow<SlowConnection?>(null)
+    val slowConnection: StateFlow<SlowConnection?> = _slowConnection.asStateFlow()
+    private val slowConnectionDetector = SlowConnectionDetector()
+    private val stallWatchdog = StallWatchdog()
+    private val throughputMeter = ThroughputMeter()
+    private val bufferingTracker = BufferingTracker()
+
+    private val _totalRebufferTimeMs = MutableStateFlow(0L)
+    val totalRebufferTimeMs: StateFlow<Long> = _totalRebufferTimeMs.asStateFlow()
+
+    private val _bandwidthEstimate = MutableStateFlow(0L)
+    val bandwidthEstimate: StateFlow<Long> = _bandwidthEstimate.asStateFlow()
+
+    private val _qualitySwitchCount = MutableStateFlow(0)
+    val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
+
+    private val _measuredFps = MutableStateFlow(0f)
+    val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
+
+    private val _measuredDroppedFps = MutableStateFlow(0f)
+    val measuredDroppedFps: StateFlow<Float> = _measuredDroppedFps.asStateFlow()
+
+    // Percentage of frames dropped over the last ~10s. The cumulative rate averages a bad burst
+    // away against however long the stream has been clean — half an hour of perfect playback
+    // makes a 15-second stall look like a rounding error.
+    private val _recentDropRate = MutableStateFlow(0f)
+    val recentDropRate: StateFlow<Float> = _recentDropRate.asStateFlow()
+
+    private val _streamHealthState =
+        MutableStateFlow(
+            org.njarasoa.fijerena.core.player.network
+                .StreamHealthState(),
+        )
+    val streamHealthState: StateFlow<org.njarasoa.fijerena.core.player.network.StreamHealthState> = _streamHealthState.asStateFlow()
+
+    private var retryCount = 0
+    private var autoRetryAttempted = false
+    private var lastErrorMessage: String? = null
+
+    // Position to resume at on a VOD retry/reconnect — captured the moment a fault is first
+    // observed, since the player's position is still valid then even though playback state is
+    // about to flip to Error/Idle. Live retries reconnect to the live edge instead, so they
+    // never read this.
+    private var pendingResumePositionMs: Long = 0L
+    internal var mainHandler = Handler(Looper.getMainLooper())
+    private var pendingRetry: Runnable? = null
+
+    // A film paused this long gives its connection back (shown as still Paused there); the next
+    // Play reopens it where it was (docs/plans/20261017_xtream-stream-release-plan.md → Phase 5).
+    private var freedWhilePaused: PlaybackState.Paused? = null
+
+    // A retry that came due while paused: reopening the stream then would play it (and take an
+    // Xtream connection) against the pause. The next Play runs it
+    // (docs/plans/20261017_xtream-stream-release-plan.md → Phase 2).
+    private var heldRetry: Runnable? = null
+    private val accountBusyWait = AccountBusyWait()
+
+    private var adaptiveLoadControl: AdaptiveLoadControl? = null
+    private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
+
+    // The bandwidth meter, behind a note of what data arrives when (stallWatchdog, throughputMeter).
+    private var dataTransferListener: androidx.media3.datasource.TransferListener? = null
+    private var serviceScope: CoroutineScope? = null
+    private var healthMonitor: org.njarasoa.fijerena.core.player.network.StreamHealthMonitor? = null
+    private var lastHealthCheckPosition: Long = -1L
+
+    private val _isRecycling = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
+
+    private var recycleStartTimeMs: Long = 0L
+
+    // A seek (esp. VOD scrubbing into an unbuffered region) briefly looks identical to real
+    // degradation (low buffered margin) to the health monitor. This grace window suppresses
+    // health-metric feeding right after a seek so scrubbing never triggers a spurious recycle.
+    // Live streams don't seek, so this is a no-op for them.
+    private var lastSeekTimeMs: Long = 0L
+
+    private fun isWithinSeekGrace(): Boolean = (SystemClock.elapsedRealtime() - lastSeekTimeMs) < SEEK_HEALTH_GRACE_MS
+
+    fun isRecycling(): Boolean = _isRecycling.value
+
+    // While a recycle is in flight, non-Playing states are suppressed to keep it seamless.
+    // On a healthy connection that gap is a few seconds; on a degraded one it can run much
+    // longer, so the suppression only holds for this long before a real Buffering state is
+    // allowed through instead of leaving the screen black with no indicator.
+    private fun isWithinSeamlessGrace(): Boolean =
+        isRecycling() && (SystemClock.elapsedRealtime() - recycleStartTimeMs) < SEAMLESS_RECYCLE_GRACE_MS
+
+    private fun setRecycling(recycling: Boolean) {
+        _isRecycling.value = recycling
+        if (recycling) {
+            recycleStartTimeMs = SystemClock.elapsedRealtime()
+        }
+    }
+
+    private val recycleHandler =
+        Runnable {
+            val metadata = _currentMetadata.value
+            val player = getPlayer()
+            if (player != null) {
+                val currentPos = player.currentPosition
+                Log.i(TAG, "Executing silent stream recycle at position: $currentPos (isLive=${metadata.isLive})")
+
+                // 1. Evict network connection pool to bypass ISP/CDN shaping.
+                // Closing pooled connections can block on socket I/O, so this must not run on
+                // the main thread (recycleHandler is posted via mainHandler.post).
+                serviceScope?.launch(Dispatchers.IO) {
+                    org.njarasoa.fijerena.core.player.network.NetworkModule
+                        .evictConnectionPool()
+                }
+
+                // 2. Restart stream seamlessly without clearing the screen
+                performSeamlessRecycle(metadata, currentPos)
+
+                // 3. Reset monitor for the fresh connection
+                healthMonitor?.reset()
+            }
+        }
+
+    // Named so stop() can remove it: posted just before a stop, it ran after and left the closed
+    // stream in Error, which the auto-retry below then reopened when the network came back
+    // (docs/plans/20261017_xtream-stream-release-plan.md → Phase 1).
+    internal val recoveryExhaustedHandler =
+        Runnable {
+            val isLive = _currentMetadata.value.isLive
+            Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts (isLive=$isLive).")
+            stop()
+            // The screen is still on this stream: it gets its one retry when the network is back.
+            autoRetryAttempted = false
+            val label =
+                if (isLive) {
+                    getString(
+                        R.string.player_error_stream_type_live,
+                    )
+                } else {
+                    getString(R.string.player_error_stream_type_video)
+                }
+            _playbackState.value =
+                PlaybackState.Error(
+                    getString(R.string.player_error_recovery_exhausted_format, label),
+                )
+        }
+
+    internal fun performSeamlessRecycle(
+        metadata: PlayerMetadata,
+        currentPos: Long,
+    ) {
+        val player =
+            mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+                ?: run {
+                    Log.w(TAG, "performSeamlessRecycle: no-op, mediaSession/player unavailable.")
+                    return
+                }
+
+        // A hard retry scheduled for the same underlying error must not be allowed to fire
+        // later with a screen-clearing setMediaSource() call on top of this seamless swap.
+        cancelPendingRetry()
+
+        // Temporarily increase buffer requirement for recycling to ensure a 100% smooth handover
+        setRecycling(true)
+
+        val mediaSource =
+            mediaSourceFactory?.createMediaSource(
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers,
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.update { it + 1 } },
+                transferListener = dataTransferListener,
+                metadata = metadata,
+            ) ?: run {
+                Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
+                // setRecycling(true) above already fired — without resetting it here, isRecycling()
+                // stays true until some later Playing state, and the recycle-grace suppression keeps
+                // hiding every non-Playing state meanwhile.
+                setRecycling(false)
+                return
+            }
+
+        // setMediaSource(source, resetPosition=false) keeps the current frame on screen
+        // while the new source prepares in the background.
+        player.setMediaSource(mediaSource, false)
+        player.prepare()
+        player.playWhenReady = true
+    }
+
+    // In the app's language, not the device's: the error messages are built here. A language
+    // changed while the service is alive applies from its next start.
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(PlaybackServiceLocale.wrap(base))
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        NetworkMonitor.init(this)
+        mediaSourceFactory = StreamingMediaSourceFactory(this)
+
+        healthMonitor =
+            org.njarasoa.fijerena.core.player.network.StreamHealthMonitor(
+                onStreamRecycleRequired = {
+                    mainHandler.post(recycleHandler)
+                },
+                onRecoveryExhausted = {
+                    mainHandler.post(recoveryExhaustedHandler)
+                },
+            )
+
+        initializePlayer()
+        // Only publish the instance after initializePlayer() so getInstance()/awaitInstance()
+        // callers (e.g. PlaybackViewModel.playStream(), and TvPlayerScreen's setContentType()
+        // call fired from a LaunchedEffect right as the player screen mounts) can't resolve to a
+        // service whose mediaSession/adaptiveLoadControl is still null. Those callers silently
+        // no-op on null (`?: return`, `?.`) with no log, so the previous early-publish made
+        // failures invisible — playStream()'s case produced a black screen stuck in Idle
+        // forever, with no diagnostic trail.
+        publishInstance()
+        // Not acquired here: the service can be created well before any stream is requested
+        // (e.g. StreamingPlaybackService.awaitInstance() callers racing service startup), and a
+        // PARTIAL_WAKE_LOCK held during that idle stretch outlasts nothing useful. PlayerListener
+        // already acquires it itself the moment playback actually goes active — see
+        // onWakeLockRequired below, fired from onIsPlayingChanged/onPlayWhenReadyChanged.
+        observeNetworkChanges()
+        serviceScope?.let(::publishNowPlaying)
+    }
+
+    /** Makes this instance the one [getInstance]/[awaitInstance] return. */
+    internal fun publishInstance() {
+        synchronized(instanceLock) {
+            instance = this
+            instanceReady.complete(this)
+        }
+    }
+
+    /** Publishes a position (and a track choice) for the player screen to save — see [positionSaves]. */
+    private fun savePosition(
+        position: Long,
+        duration: Long,
+        isPaused: Boolean,
+        audioIndex: Int? = null,
+        subtitleIndex: Int? = null,
+    ) {
+        _positionSaves.tryEmit(PositionSave(position, duration, isPaused, audioIndex, subtitleIndex))
+    }
+
+    /** Feeds [nowPlaying] from this instance's metadata and state until it is released. */
+    private fun publishNowPlaying(scope: CoroutineScope) {
+        scope.launch {
+            combine(_currentMetadata, _playbackState, playSessionId) { metadata, state, session -> Triple(metadata, state, session) }
+                .collect { (metadata, state, session) ->
+                    _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it, session.ifEmpty { null }) }
+                }
+        }
+    }
+
+    private fun observeNetworkChanges() {
+        val scope = AppScopes.create("StreamingPlaybackService", Dispatchers.Main)
+        serviceScope = scope
+        scope.launch {
+            _playbackState.collect { state ->
+                bufferingTracker.onStateChanged(
+                    buffering = state is PlaybackState.Buffering,
+                    playing = state is PlaybackState.Playing,
+                    nowMs = SystemClock.elapsedRealtime(),
+                    afterSeek = isWithinSeekGrace(),
+                )
+            }
+        }
+        scope.launch {
+            healthMonitor?.state?.collect {
+                _streamHealthState.value = it
+            }
+        }
+        scope.launch {
+            var previousNetworkType = NetworkMonitor.currentNetworkType
+            NetworkMonitor.networkType.collect { networkType ->
+                adaptiveLoadControl?.updateForNetwork(networkType)
+
+                val connectivityRestored =
+                    previousNetworkType == NetworkType.UNKNOWN && networkType != NetworkType.UNKNOWN
+                previousNetworkType = networkType
+
+                if (connectivityRestored && wantsRetryOnReconnect()) {
+                    autoRetryAttempted = true
+                    val metadata = _currentMetadata.value
+                    val resumePosition = if (metadata.isLive) 0L else pendingResumePositionMs
+                    Log.i(TAG, "Connectivity restored after recovery exhaustion — auto-retrying once (isLive=${metadata.isLive}).")
+                    playStream(metadata, resumePosition)
+                }
+            }
+        }
+        startHealthMonitorLoop(scope)
+        startPositionSaveLoop(scope)
+    }
+
+    /** A stream that failed while a screen still showed it: retried once when connectivity returns. */
+    internal fun wantsRetryOnReconnect(): Boolean =
+        !autoRetryAttempted && _currentMetadata.value.streamUrl.isNotEmpty() && _playbackState.value is PlaybackState.Error
+
+    // Wall-clock-driven, unlike PlayerListener's save-on-state-change: a long stretch of
+    // smooth, uninterrupted playback fires none of onPlaybackStateChanged/onIsPlayingChanged/
+    // onPlayWhenReadyChanged, so without this loop nothing gets saved for as long as that
+    // stretch lasts — resume position can end up stale by however long since the last real
+    // event (pause/seek/rebuffer/track-change). This guarantees a save at least every
+    // POSITION_SAVE_INTERVAL_MS regardless of whether any such event ever fires.
+    private fun startPositionSaveLoop(scope: CoroutineScope) {
+        scope.launch {
+            while (isActive) {
+                delay(POSITION_SAVE_INTERVAL_MS)
+                val player = getPlayer() ?: continue
+                if (player.isPlaying && player.playbackState == Player.STATE_READY) {
+                    savePosition(player.currentPosition, player.duration, isPaused = false)
+                    // Live sync's "now playing": the position as of now, not the last state change.
+                    val position = player.currentPosition
+                    val duration = player.duration.coerceAtLeast(0L)
+                    _nowPlaying.update { snapshot ->
+                        if (snapshot == null || snapshot.isLive) {
+                            snapshot
+                        } else {
+                            snapshot.copy(positionMs = position, durationMs = duration, positionAtMs = System.currentTimeMillis())
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startHealthMonitorLoop(scope: CoroutineScope) {
+        scope.launch {
+            while (isActive) {
+                delay(healthMonitor?.config?.evaluationIntervalMs ?: 5000L)
+                val player = getPlayer()
+                val metadata = _currentMetadata.value
+                val now = SystemClock.elapsedRealtime()
+                _slowConnection.value = slowConnectionDetector.onTick(now)
+                val isBuffering = player?.playbackState == Player.STATE_BUFFERING && player.playWhenReady
+                if (stallWatchdog.isStalled(isBuffering, now)) {
+                    handleStall()
+                    continue
+                }
+                if (player != null && metadata.streamUrl.isNotEmpty() && metadata.isLive && !isWithinSeekGrace()) {
+                    val state = player.playbackState
+                    if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
+                        val position = player.currentPosition
+                        // Position not moving while ExoPlayer claims READY+playing isn't caught by
+                        // the buffered-margin check below: bufferedPosition stalls right alongside
+                        // currentPosition, so their difference still looks like a healthy buffer.
+                        val isStalled =
+                            state == Player.STATE_READY &&
+                                player.isPlaying &&
+                                lastHealthCheckPosition == position
+                        lastHealthCheckPosition = position
+                        healthMonitor?.updateMetrics(
+                            bufferedDurationMs = player.bufferedPosition - player.currentPosition,
+                            droppedFramesPerSecond = _measuredDroppedFps.value,
+                            hasReadTimeout = isStalled,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
+        val ffmpegAvailable = FfmpegLibrary.isAvailable()
+        Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
+
+        val renderersFactory =
+            DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+
+        // Cellular buffers always use the profile's own sizes (1.0×): the multiplier setting is gone
+        // (UX overhaul A-W5), and a value saved by an older build must not keep applying unseen.
+        val loadControl =
+            AdaptiveLoadControl(
+                contentType = contentType,
+                vodTargetBufferBytes =
+                    org.njarasoa.fijerena.core.player.config.NetworkBufferProfile.vodTargetBufferBytes(
+                        (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).largeMemoryClass,
+                    ),
+            )
+        adaptiveLoadControl = loadControl
+
+        val bm =
+            androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+                .getSingletonInstance(this)
+        bandwidthMeter = bm
+        dataTransferListener =
+            DataArrivalTransferListener(bm) { bytes ->
+                val now = SystemClock.elapsedRealtime()
+                stallWatchdog.onData(now)
+                throughputMeter.onBytes(now, bytes)
+                bufferingTracker.onBytes(bytes)
+            }
+
+        val playerBuilder =
+            androidx.media3.exoplayer.ExoPlayer
+                .Builder(this)
+                .setRenderersFactory(renderersFactory)
+                .setLoadControl(loadControl)
+                .setBandwidthMeter(bm)
+                .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .setUsage(C.USAGE_MEDIA)
+                        .build(),
+                    true,
+                    // Without this, unplugging headphones (or the Shield remote's headphone jack)
+                    // mid-playback left audio blasting out of the device speaker instead of
+                    // auto-pausing — ExoPlayer's built-in ACTION_AUDIO_BECOMING_NOISY handling, off
+                    // by default.
+                ).setHandleAudioBecomingNoisy(true)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
+
+        val player = playerBuilder.build()
+
+        mediaSession = MediaSession.Builder(this, player).build()
+
+        playerListener =
+            PlayerListener(
+                context = this,
+                onStateChanged = { newState ->
+                    val isRecycling = isRecycling()
+                    Log.d(TAG, "onStateChanged: newState=$newState, isRecycling=$isRecycling")
+
+                    if (newState is PlaybackState.Playing) {
+                        retryCount = 0
+                        // Recycle backoff is cleared by StreamHealthMonitor itself once metrics
+                        // stay healthy for a full sustainedDegradationWindowMs — NOT here. A
+                        // single Playing state fires right after every recycle too, so resetting
+                        // eagerly on it wiped recycleAttempts before it could ever escalate to
+                        // the degraded/give-up tier (see StreamHealthMonitor.updateMetrics()).
+                        if (isRecycling) {
+                            Log.i(TAG, "Successfully resumed after recycle. Resetting recycling flag.")
+                            setRecycling(false)
+                        }
+                    }
+
+                    // Suppress any non-final state during a silent recycle to keep it seamless.
+                    // The player can pass through Buffering/Paused/Idle with not-yet-valid
+                    // (e.g. negative) position data while the new source's timeline resolves;
+                    // only a confirmed Playing or a terminal Error should reach the UI. This
+                    // only holds for SEAMLESS_RECYCLE_GRACE_MS — past that, let the real state
+                    // (almost always Buffering) through so a slow recovery shows a spinner
+                    // instead of leaving the screen black with no indicator at all.
+                    if (isWithinSeamlessGrace() && newState !is PlaybackState.Playing && newState !is PlaybackState.Error) {
+                        Log.d(TAG, "Suppressing $newState during silent recycle.")
+                        return@PlayerListener
+                    }
+
+                    // A film freed while paused stays Paused on screen through the player's Idle.
+                    _playbackState.value = freedWhilePaused?.takeIf { newState is PlaybackState.Idle } ?: newState
+                },
+                onWakeLockRequired = {
+                    acquireWakeLock()
+                },
+                player = player,
+                onPositionSave = ::savePosition,
+                onStreamEndedOrError = { errorMessage, httpStatus ->
+                    handleStreamEndedOrError(errorMessage, httpStatus)
+                },
+                onFinalError = ::handleFinalError,
+                onAccountBusy = ::handleAccountBusy,
+                isCatchup = { _currentMetadata.value.catchupLabel != null },
+                streamStartTimeMs = { _streamStartTimeMs.value },
+            )
+        player.addListener(playerListener!!)
+
+        // Live TV has no use for a paused stream: resuming it plays stale buffered content that's
+        // behind the broadcast. Any pause the app didn't ask for itself stops it instead.
+        player.addListener(
+            object : Player.Listener {
+                override fun onPlayWhenReadyChanged(
+                    playWhenReady: Boolean,
+                    reason: Int,
+                ) {
+                    if (playWhenReady) {
+                        pausedInApp = false
+                        mainHandler.removeCallbacks(freePausedHandler)
+                        // Posted: the retry calls back into the player, which is mid-callback here.
+                        runHeldRetry()
+                        return
+                    }
+                    if (!_currentMetadata.value.isLive) {
+                        mainHandler.removeCallbacks(freePausedHandler)
+                        mainHandler.postDelayed(freePausedHandler, PAUSED_RELEASE_MS)
+                    }
+                    val isExternalPause =
+                        reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST ||
+                            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ||
+                            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
+                    if (isExternalPause && !pausedInApp && _currentMetadata.value.isLive) {
+                        Log.i(TAG, "External pause on live stream (reason=$reason) — stopping instead.")
+                        // Posted: stop() calls back into the player, which is mid-callback here.
+                        mainHandler.post { if (mediaSession?.player?.playWhenReady == false) stop() }
+                    }
+                }
+            },
+        )
+
+        analyticsListener =
+            PerformanceAnalyticsListener(
+                onMetricsUpdate = { dropped, total ->
+                    _droppedFrames.value = dropped
+                    _totalFrames.value = total
+                },
+                onRebuffer = { count, totalTimeMs ->
+                    _rebufferCount.value = count
+                    _totalRebufferTimeMs.value = totalTimeMs
+                },
+                onExhaustionRebuffer = {
+                    val bitrate = (getPlayer() as? androidx.media3.exoplayer.ExoPlayer)?.videoFormat?.bitrate ?: Format.NO_VALUE
+                    val now = SystemClock.elapsedRealtime()
+                    val measured = throughputMeter.bitsPerSecond(now)
+                    _slowConnection.value = slowConnectionDetector.onRebuffer(now, bitrate, measured)
+                    Log.i(TAG, "Rebuffer: stream $bitrate bps, receiving $measured bps — slow connection: ${_slowConnection.value}")
+                },
+                onBandwidthUpdate = { bitrateEstimate ->
+                    _bandwidthEstimate.value = bitrateEstimate
+                },
+                onQualitySwitch = { count ->
+                    _qualitySwitchCount.value = count
+                },
+                onFpsUpdate = { fps ->
+                    _measuredFps.value = fps
+                },
+                onDroppedFpsUpdate = { droppedFps ->
+                    _measuredDroppedFps.value = droppedFps
+                },
+                onRecentDropRateUpdate = { dropRatePercent ->
+                    _recentDropRate.value = dropRatePercent
+                },
+            )
+        player.addAnalyticsListener(analyticsListener!!)
+        // The Expert-mode buffering line's error count: ExoPlayer retries a failed load itself, so
+        // these are the tries a wait went through, fatal or not.
+        player.addAnalyticsListener(
+            object : AnalyticsListener {
+                override fun onLoadError(
+                    eventTime: AnalyticsListener.EventTime,
+                    loadEventInfo: LoadEventInfo,
+                    mediaLoadData: MediaLoadData,
+                    error: IOException,
+                    wasCanceled: Boolean,
+                ) {
+                    if (!wasCanceled) bufferingTracker.onLoadError(loadErrorLabel(error))
+                }
+            },
+        )
+        // Debug builds log every track's codecs string, format support and chosen decoder
+        // (logcat tag "EventLogger") — how codec fallback, e.g. Dolby Vision → HEVC, is diagnosed.
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            player.addAnalyticsListener(EventLogger())
+        }
+    }
+
+    /**
+     * Patches the currently-playing metadata in place — e.g. once the series/episode/TMDB-logo
+     * lookup [playStream] kicked off resolves asynchronously, after the OSD is already showing
+     * it. A no-op when [streamUrl] no longer matches what's actually playing (a stale async
+     * result for content that's since been swapped out or stopped).
+     */
+    fun updateMetadata(
+        streamUrl: String,
+        update: (PlayerMetadata) -> PlayerMetadata,
+    ) {
+        val current = _currentMetadata.value
+        // Same stream even after a refusal moved it to another login (shared logins).
+        if (XtreamStreamUrl.sameStream(current.streamUrl, streamUrl)) {
+            _currentMetadata.value = update(current)
+        }
+    }
+
+    fun setContentType(contentType: PlayerConfigFactory.ContentType) {
+        adaptiveLoadControl?.updateContentType(contentType)
+    }
+
+    fun playStream(
+        metadata: PlayerMetadata,
+        startPositionMs: Long = 0L,
+    ) {
+        val player =
+            mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+                ?: run {
+                    Log.w(TAG, "playStream: no-op, mediaSession/player unavailable.")
+                    return
+                }
+        cancelPendingRetry()
+        playerListener?.resetErrorState()
+        playerListener?.resetStartupTiming()
+        retryCount = 0
+        autoRetryAttempted = false
+        accountBusyWait.reset()
+        lastErrorMessage = null
+        pendingResumePositionMs = 0L
+        healthMonitor?.notifyStablePlayback()
+        healthMonitor?.reset()
+        // A new stream has no position history yet — without this, the stall check in
+        // startHealthMonitorLoop() compares the new stream's first sampled position against
+        // whatever the PREVIOUS stream's position happened to be, and a coincidental match
+        // false-positives an immediate recycle.
+        lastHealthCheckPosition = -1L
+        _streamRetryCount.value = 0
+        _rebufferCount.value = 0
+        resetNetworkWatch()
+        _totalRebufferTimeMs.value = 0L
+        _bandwidthEstimate.value = 0L
+        _qualitySwitchCount.value = 0
+        analyticsListener?.reset()
+        _streamStartTimeMs.value = SystemClock.elapsedRealtime()
+        // A new playback: a remote Stop sent for the previous one must never stop this one.
+        playSessionId.value = UUID.randomUUID().toString()
+        _currentMetadata.value = metadata
+
+        // Ensure we are in fast-startup mode and buffer profile matches stream type
+        setRecycling(false)
+        val expectedContentType =
+            if (metadata.isLive) {
+                PlayerConfigFactory.ContentType.LIVE_TV
+            } else {
+                PlayerConfigFactory.ContentType.VOD
+            }
+        adaptiveLoadControl?.updateContentType(expectedContentType)
+
+        // DIAGNOSTIC (temporary): split startup latency into
+        // request-init -> first-byte -> STATE_READY so a slow provider/DNS can be told
+        // apart from a slow buffer gate. Remove once the 30s VOD startup is root-caused.
+        val startupTiming = StartupTimingTransferListener(dataTransferListener, _streamStartTimeMs.value)
+
+        val mediaSource =
+            mediaSourceFactory?.createMediaSource(
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers,
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.update { it + 1 } },
+                transferListener = startupTiming,
+                metadata = metadata,
+            ) ?: run {
+                Log.w(TAG, "playStream: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
+                return
+            }
+
+        // Fully release the outgoing renderer/decoder session before starting the next one.
+        // setMediaSource() alone replaces the playlist but can reuse the existing renderer
+        // rather than releasing it, which on this emulator's decoder leaves the old codec
+        // session still delivering in-flight frames to its Surface after the new one starts —
+        // rendering two channels overlapping. An explicit stop() forces a clean teardown first.
+        player.stop()
+        // The outgoing stream's socket closes now, not at its read timeout (Xtream counts it).
+        NetworkModule.streamCalls.cancelAll()
+        player.setMediaSource(mediaSource)
+        if (startPositionMs > 0) {
+            player.seekTo(startPositionMs)
+        }
+        player.playWhenReady = true
+        player.prepare()
+    }
+
+    // DIAGNOSTIC (temporary): delegates to the real bandwidth meter so measurement/ABR is
+    // unaffected, but logs the first onTransferInitializing (request sent) and first
+    // onTransferStart (response headers back, i.e. first byte) relative to startTimeMs.
+    // Guarded so only the very first segment/manifest transfer of a playStream() call is
+    // logged — later transfers (subsequent segments) would otherwise spam this every few
+    // seconds for the life of the stream.
+
+    /** Passes transfers to [delegate] (the bandwidth meter) and calls [onData] whenever bytes arrive. */
+    private class DataArrivalTransferListener(
+        private val delegate: androidx.media3.datasource.TransferListener,
+        private val onData: (bytes: Int) -> Unit,
+    ) : androidx.media3.datasource.TransferListener by delegate {
+        override fun onBytesTransferred(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+            bytesTransferred: Int,
+        ) {
+            delegate.onBytesTransferred(source, dataSpec, isNetwork, bytesTransferred)
+            if (isNetwork && bytesTransferred > 0) onData(bytesTransferred)
+        }
+    }
+
+    private class StartupTimingTransferListener(
+        private val delegate: androidx.media3.datasource.TransferListener?,
+        private val startTimeMs: Long,
+    ) : androidx.media3.datasource.TransferListener {
+        private var loggedInit = false
+        private var loggedFirstByte = false
+
+        override fun onTransferInitializing(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+        ) {
+            if (!loggedInit) {
+                loggedInit = true
+                val uri = Redact.text(dataSpec.uri.toString())
+                Log.i(TAG, "StartupTiming: request initiated at +${SystemClock.elapsedRealtime() - startTimeMs}ms ($uri)")
+            }
+            delegate?.onTransferInitializing(source, dataSpec, isNetwork)
+        }
+
+        override fun onTransferStart(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+        ) {
+            if (!loggedFirstByte) {
+                loggedFirstByte = true
+                val uri = Redact.text(dataSpec.uri.toString())
+                Log.i(TAG, "StartupTiming: first byte at +${SystemClock.elapsedRealtime() - startTimeMs}ms ($uri)")
+            }
+            delegate?.onTransferStart(source, dataSpec, isNetwork)
+        }
+
+        override fun onBytesTransferred(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+            bytesTransferred: Int,
+        ) {
+            delegate?.onBytesTransferred(source, dataSpec, isNetwork, bytesTransferred)
+        }
+
+        override fun onTransferEnd(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+        ) {
+            delegate?.onTransferEnd(source, dataSpec, isNetwork)
+        }
+    }
+
+    /** [serverDownStatus]: the attempt failed with a [ServerDown] status, said on screen through the retry. */
+    private fun attemptStreamRetry(
+        metadata: PlayerMetadata,
+        serverDownStatus: Int? = null,
+    ) {
+        val maxRetries = if (metadata.isLive) MAX_LIVE_RETRIES else MAX_VOD_RETRIES
+        if (retryCount >= maxRetries) {
+            val detail =
+                lastErrorMessage
+                    ?: if (metadata.isLive) {
+                        getString(
+                            R.string.player_error_channel_offline,
+                        )
+                    } else {
+                        getString(R.string.player_error_check_connection)
+                    }
+            val label =
+                if (metadata.isLive) {
+                    getString(
+                        R.string.player_error_stream_type_live,
+                    )
+                } else {
+                    getString(R.string.player_error_stream_type_video)
+                }
+            _playbackState.value =
+                PlaybackState.Error(
+                    getString(R.string.player_error_retry_exhausted_format, label, maxRetries, detail),
+                )
+            releaseWakeLock()
+            return
+        }
+
+        // No "seamless recycle in progress, skip" guard here: this only runs once the player has
+        // reported an error (or a live stream ended), so a recycle in flight is one that just
+        // failed. Skipping left isRecycling stuck true forever — nothing else clears it short of
+        // reaching Playing — so no retry ever ran again: a frozen frame, no spinner, no error.
+        // See the rock solid stability resilience plan → F-01.
+        // Hard retry should use fast-startup settings
+        setRecycling(false)
+
+        retryCount++
+        _streamRetryCount.update { it + 1 }
+        val baseDelay = if (metadata.isLive) LIVE_RETRY_BASE_DELAY_MS else VOD_RETRY_BASE_DELAY_MS
+        val delayMs = baseDelay * retryCount
+        Log.i(TAG, "Stream retry $retryCount/$maxRetries in ${delayMs}ms (isLive=${metadata.isLive})")
+
+        // updatePlaybackState() already pushed the player's raw STATE_IDLE through before
+        // onPlayerError ran, so without this the screen goes silently blank for the whole
+        // retry delay — indistinguishable from a dead app. Show buffering instead, or, when the
+        // provider's server is down, say so: the message stays up through the attempt, as the
+        // account-busy one does, and only playing replaces it.
+        _playbackState.value =
+            if (serverDownStatus != null) {
+                PlaybackState.Error(getString(R.string.player_error_server_down_retrying_format, serverDownStatus))
+            } else {
+                PlaybackState.Buffering
+            }
+
+        // Captured now, not read from the field inside the closure — a later fault (before this
+        // delayed retry fires) could overwrite pendingResumePositionMs with a different value.
+        val resumePosition = pendingResumePositionMs
+
+        val retryRunnable =
+            Runnable {
+                retryNowOrOnPlay {
+                    if (serverDownStatus != null) playerListener?.holdErrorUntilReady() else playerListener?.resetErrorState()
+                    reprepare(metadata, resumePosition)
+                }
+            }
+        pendingRetry = retryRunnable
+        mainHandler.postDelayed(retryRunnable, delayMs)
+    }
+
+    private fun reprepare(
+        metadata: PlayerMetadata,
+        resumePosition: Long,
+    ) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        healthMonitor?.reset()
+
+        val mediaSource =
+            mediaSourceFactory?.createMediaSource(
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers,
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.update { it + 1 } },
+                transferListener = dataTransferListener,
+                metadata = metadata,
+            ) ?: return
+
+        player.setMediaSource(mediaSource)
+        // Live reconnects at the live edge; VOD must resume where it failed.
+        if (!metadata.isLive && resumePosition > 0L) {
+            player.seekTo(resumePosition)
+        }
+        player.playWhenReady = true
+        player.prepare()
+    }
+
+    /**
+     * The provider refused the stream because the account is streaming elsewhere ([AccountBusy]).
+     * A source with several logins plays the same stream on a free one at once ([AlternateLogin]).
+     * Otherwise retrying at once can't help, so the message stays up — saying playback starts by
+     * itself — while the stream is tried again every [AccountBusy.RETRY_INTERVAL_MS], for longer
+     * than the ~5 minutes some providers keep a stopped stream counted. Retry and Back work as usual.
+     */
+    private fun handleAccountBusy(httpStatus: Int) {
+        val metadata = _currentMetadata.value
+        cancelPendingRetry()
+        pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
+        val alternate = AlternateLogin.installed
+        val scope = serviceScope
+        if (alternate == null || scope == null) {
+            waitForAccount(metadata, httpStatus)
+            return
+        }
+        // Not over the busy message a wait already shows: only the first refusal's blank IDLE.
+        if (_playbackState.value !is PlaybackState.Error) _playbackState.value = PlaybackState.Buffering
+        val session = playSessionId.value
+        val resumePosition = pendingResumePositionMs
+        scope.launch {
+            val nextUrl =
+                try {
+                    withContext(Dispatchers.IO) { alternate.next(metadata.streamUrl) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Another login failed: ${Redact.text(e.toString())}")
+                    null
+                }
+            val current = _currentMetadata.value
+            when (
+                val decision =
+                    LoginSwitch.decide(nextUrl, session, playSessionId.value, metadata.streamUrl, current.streamUrl, isReleased)
+            ) {
+                LoginSwitch.Decision.Drop -> {
+                    Unit
+                }
+
+                LoginSwitch.Decision.Wait -> {
+                    waitForAccount(current, httpStatus)
+                }
+
+                is LoginSwitch.Decision.Switch -> {
+                    Log.i(TAG, "Account busy (HTTP $httpStatus): playing on another login.")
+                    // Later reconnects and position saves use the new login.
+                    val switched = current.copy(streamUrl = decision.url)
+                    _currentMetadata.value = switched
+                    retryNowOrOnPlay {
+                        _playbackState.value = PlaybackState.Buffering
+                        playerListener?.resetErrorState()
+                        reprepare(switched, resumePosition)
+                    }
+                }
+            }
+        }
+    }
+
+    /** All logins busy: the message, and the refused stream tried again later (see [handleAccountBusy]). */
+    private fun waitForAccount(
+        metadata: PlayerMetadata,
+        httpStatus: Int,
+    ) {
+        val logins = AlternateLogin.installed?.loginCount(metadata.streamUrl) ?: 1
+        if (accountBusyWait.next(SystemClock.elapsedRealtime()) == AccountBusyWait.Decision.GiveUp) {
+            _playbackState.value =
+                PlaybackState.Error(
+                    if (logins > 1) {
+                        getString(R.string.player_error_account_busy_all_logins_gave_up_format, logins, httpStatus)
+                    } else {
+                        getString(R.string.player_error_account_busy_gave_up_format, httpStatus)
+                    },
+                )
+            releaseWakeLock()
+            return
+        }
+        _playbackState.value =
+            PlaybackState.Error(
+                if (logins > 1) {
+                    getString(R.string.player_error_account_busy_all_logins_waiting_format, logins, httpStatus)
+                } else {
+                    getString(R.string.player_error_account_busy_waiting_format, httpStatus)
+                },
+            )
+        val resumePosition = pendingResumePositionMs
+        val retryRunnable =
+            Runnable {
+                retryNowOrOnPlay {
+                    // The message stays up through the attempt; only playing again replaces it.
+                    playerListener?.holdErrorUntilReady()
+                    reprepare(metadata, resumePosition)
+                }
+            }
+        pendingRetry = retryRunnable
+        mainHandler.postDelayed(retryRunnable, AccountBusy.RETRY_INTERVAL_MS)
+    }
+
+    private fun cancelPendingRetry() {
+        pendingRetry?.let { mainHandler.removeCallbacks(it) }
+        pendingRetry = null
+        heldRetry = null
+        mainHandler.removeCallbacks(freePausedHandler)
+        freedWhilePaused = null
+    }
+
+    /** A film still paused [PAUSED_RELEASE_MS] after its pause: stopped, its Play held to reopen it there. */
+    internal val freePausedHandler =
+        Runnable {
+            val player = getPlayer() ?: return@Runnable
+            val state = player.playbackState
+            if (player.playWhenReady || _currentMetadata.value.isLive) return@Runnable
+            if (state != Player.STATE_READY && state != Player.STATE_BUFFERING) return@Runnable
+            val paused = PlaybackState.Paused(position = player.currentPosition, duration = player.duration.coerceAtLeast(0L))
+            Log.i(TAG, "Paused for ${PAUSED_RELEASE_MS / 60_000} min: stream stopped to free its connection.")
+            freedWhilePaused = paused
+            player.stop()
+            NetworkModule.streamCalls.cancelAll()
+            heldRetry =
+                Runnable {
+                    val position = getPlayer()?.currentPosition ?: paused.position
+                    freedWhilePaused = null
+                    reprepare(_currentMetadata.value, position)
+                }
+            _playbackState.value = paused
+        }
+
+    /** Runs [retry] now, or — paused — holds it, showing Paused, until the next Play ([runHeldRetry]). */
+    private fun retryNowOrOnPlay(retry: Runnable) {
+        val player = getPlayer()
+        if (player == null || player.playWhenReady) {
+            retry.run()
+            return
+        }
+        Log.i(TAG, "Retry due while paused: held until Play.")
+        heldRetry = retry
+        _playbackState.value = PlaybackState.Paused(position = pendingResumePositionMs, duration = player.duration.coerceAtLeast(0L))
+    }
+
+    /** Play pressed (in the app or through the session): the retry held while paused runs now. */
+    internal fun runHeldRetry() {
+        val retry = heldRetry ?: return
+        heldRetry = null
+        pendingRetry = retry
+        mainHandler.post(retry)
+    }
+
+    internal fun handleStreamEndedOrError(
+        errorMessage: String?,
+        httpStatus: Int? = null,
+    ) {
+        val metadata = _currentMetadata.value
+        val endedEmpty = (getPlayer()?.duration ?: C.TIME_UNSET).let { it == C.TIME_UNSET || it <= 0L }
+        if (errorMessage == null && metadata.catchupLabel != null && endedEmpty) {
+            // A catch-up answer with nothing in it (panel-a: a channel without an archive answers
+            // 200 with an empty body) is not a programme that ended.
+            handleFinalError(getString(R.string.player_error_catchup_unavailable))
+            return
+        }
+        if (errorMessage == null && !metadata.isLive) {
+            // Natural end of VOD content — not a fault, never retried. Grab the duration while
+            // the player still has it: finalizeSession runs after teardown, when it reads 0.
+            _playbackState.value = PlaybackState.Ended(getPlayer()?.duration?.coerceAtLeast(0L) ?: 0L)
+            releaseWakeLock()
+            return
+        }
+        lastErrorMessage = errorMessage
+        pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
+        attemptStreamRetry(metadata, httpStatus?.takeIf(ServerDown::isServerDown))
+    }
+
+    /**
+     * A fault no retry can fix — the device can't decode the stream: shown at once, never retried.
+     * See the playback capability errors plan.
+     */
+    internal fun handleFinalError(
+        message: String,
+        exception: Exception? = null,
+    ) {
+        cancelPendingRetry()
+        lastErrorMessage = message
+        _playbackState.value = PlaybackState.Error(message, exception)
+        releaseWakeLock()
+        // Posted: this runs inside a player callback, and stop() calls back into the player.
+        mainHandler.post { getPlayer()?.stop() }
+    }
+
+    /** Buffering with no data for [StallWatchdog.LIMIT_MS]: stop with Retry, no automatic retry. → P4. */
+    private fun handleStall() {
+        Log.w(TAG, "No data for ${StallWatchdog.LIMIT_MS} ms while buffering — giving up.")
+        mainHandler.removeCallbacks(recycleHandler)
+        setRecycling(false)
+        healthMonitor?.reset()
+        resetNetworkWatch()
+        playerListener?.enterErrorState()
+        handleFinalError(getString(R.string.player_error_connection_lost))
+    }
+
+    /**
+     * The wait in progress, for the Expert-mode lines under "Buffering…"; null with no player.
+     * Main thread (it reads the player).
+     */
+    fun bufferingInfo(): BufferingInfo? {
+        val player = getPlayer() as? androidx.media3.exoplayer.ExoPlayer ?: return null
+        val now = SystemClock.elapsedRealtime()
+        return BufferingInfo(
+            bufferedMs = player.totalBufferedDuration,
+            neededMs = adaptiveLoadControl?.startThresholdMs(bufferingTracker.isRebuffering)?.toLong() ?: 0L,
+            waitingMs = bufferingTracker.waitingMs(now),
+            receivingBps = throughputMeter.bitsPerSecond(now),
+            streamBps =
+                player.videoFormat
+                    ?.bitrate
+                    ?.takeIf { it > 0 }
+                    ?.toLong(),
+            host = Uri.parse(_currentMetadata.value.streamUrl).host,
+            errors = bufferingTracker.errorsThisWait(),
+            lastError = bufferingTracker.lastErrorThisWait(),
+            bytesReceived = bufferingTracker.bytesThisWait(),
+        )
+    }
+
+    private fun resetNetworkWatch() {
+        bufferingTracker.onNewStream()
+        stallWatchdog.reset()
+        throughputMeter.reset()
+        slowConnectionDetector.reset()
+        _slowConnection.value = null
+    }
+
+    fun pause() {
+        pausedInApp = true
+        mediaSession?.player?.pause()
+        releaseWakeLock()
+    }
+
+    fun resume() {
+        mediaSession?.player?.play()
+        acquireWakeLock()
+    }
+
+    /**
+     * TV-only: stop playback and fully tear down the player (decoder, renderer buffers) via
+     * [releasePlayerAndSession] — called directly, not via [stopSelf], because
+     * [androidx.media3.session.MediaSessionService] does not reliably call [onDestroy] just
+     * because [stopSelf] was requested (verified on-device: service stayed resident with zero
+     * active binds). Unlike [stop], nothing survives this call. TV has no background-playback/PiP
+     * feature (see `c4c337bc`), so once the user leaves the player there's no reason to keep the
+     * native player resources resident — on a 512MB heap ceiling they were competing with
+     * subsequent category browsing for memory, causing GC/swap pressure and multi-second UI
+     * freezes. Mobile must keep using [stop] to preserve PiP/background-audio resume.
+     */
+    fun stopAndRelease() {
+        releasePlayerAndSession()
+        stopSelf()
+    }
+
+    fun stop() {
+        cancelPendingRetry()
+        // A pending autonomous recycle (StreamHealthMonitor) must not be allowed to silently
+        // resurrect playback right after a deliberate stop.
+        mainHandler.removeCallbacks(recycleHandler)
+        mainHandler.removeCallbacks(recoveryExhaustedHandler)
+        // A stopped stream is nobody's: connectivity coming back must not reopen it. playStream() re-arms.
+        autoRetryAttempted = true
+        setRecycling(false)
+        healthMonitor?.reset()
+        resetNetworkWatch()
+        mediaSession?.player?.stop()
+        // After the stop, so the player drops the cancelled load rather than reporting it.
+        NetworkModule.streamCalls.cancelAll()
+        // Nothing may reopen a stopped stream from the session — a headset or car Play, the
+        // shade's controls — with no screen, holding an Xtream connection: the app restarts
+        // through playStream(), never this item (docs/plans/20261017_xtream-stream-release-plan.md → Phase 4).
+        mediaSession?.player?.clearMediaItems()
+        _playbackState.value = PlaybackState.Idle
+        // A remote Stop sent for the playback just stopped must not reach the next one. Idle
+        // publishes nothing, so the new id is not shown until something plays.
+        playSessionId.value = UUID.randomUUID().toString()
+        releaseWakeLock()
+    }
+
+    fun seekTo(position: Long) {
+        lastSeekTimeMs = SystemClock.elapsedRealtime()
+        mediaSession?.player?.seekTo(position)
+        freedWhilePaused?.let { freed ->
+            val moved = freed.copy(position = position)
+            freedWhilePaused = moved
+            _playbackState.value = moved
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        mediaSession?.player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed)
+    }
+
+    fun getAudioTracks(): List<org.njarasoa.fijerena.core.player.model.AudioTrackInfo> {
+        val p = mediaSession?.player ?: return emptyList()
+        val tracks = p.currentTracks
+        val audioTracks = mutableListOf<org.njarasoa.fijerena.core.player.model.AudioTrackInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    audioTracks.add(
+                        org.njarasoa.fijerena.core.player.model.AudioTrackInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            language = format.language ?: getString(R.string.player_track_language_unknown),
+                            label =
+                                format.label
+                                    ?: getString(
+                                        R.string.player_track_audio_fallback_label_format,
+                                        format.language ?: getString(R.string.player_track_generic_label),
+                                        format.channelCount,
+                                    ),
+                            channelCount = format.channelCount,
+                            sampleRate = format.sampleRate,
+                            bitrate = format.bitrate,
+                            isSelected = isSelected,
+                        ),
+                    )
+                }
+            }
+        }
+        return audioTracks
+    }
+
+    fun selectAudioTrack(consolidatedIndex: Int) {
+        val tracks = getAudioTracks()
+        if (consolidatedIndex >= 0 && consolidatedIndex < tracks.size) {
+            val track = tracks[consolidatedIndex]
+            selectAudioTrack(track.groupIndex, track.trackIndex)
+        }
+    }
+
+    fun getSubtitleTracks(): List<org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo> {
+        val p = mediaSession?.player ?: return emptyList()
+        val tracks = p.currentTracks
+        val subtitleTracks = mutableListOf<org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_TEXT) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    subtitleTracks.add(
+                        org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            language = format.language ?: getString(R.string.player_track_language_unknown),
+                            label =
+                                format.label ?: format.language
+                                    ?: getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
+                            mimeType = format.sampleMimeType ?: "unknown",
+                            isSelected = isSelected,
+                        ),
+                    )
+                }
+            }
+        }
+        return subtitleTracks
+    }
+
+    fun selectSubtitleTrack(consolidatedIndex: Int) {
+        if (consolidatedIndex == -1) {
+            disableSubtitles()
+            return
+        }
+        val tracks = getSubtitleTracks()
+        if (consolidatedIndex >= 0 && consolidatedIndex < tracks.size) {
+            val track = tracks[consolidatedIndex]
+            selectSubtitleTrack(track.groupIndex, track.trackIndex)
+        }
+    }
+
+    fun selectAudioTrack(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val currentTracks = player.currentTracks
+        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+
+        val trackGroup = currentTracks.groups[groupIndex]
+        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
+
+        val trackSelectionOverride =
+            androidx.media3.common.TrackSelectionOverride(
+                trackGroup.mediaTrackGroup,
+                listOf(trackIndex),
+            )
+
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setOverrideForType(trackSelectionOverride)
+                .build()
+
+        trackSelector.parameters = parameters
+
+        // Save choice immediately. Persist the consolidated (flattened, cross-group) index —
+        // not the raw in-group trackIndex — since selectAudioTrack(consolidatedIndex) is what
+        // resumes it on restore, and that overload indexes into getAudioTracks()'s flattened
+        // list, not per-group.
+        val consolidatedIndex = getAudioTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
+        savePosition(
+            player.currentPosition,
+            player.duration,
+            !player.isPlaying,
+            audioIndex = consolidatedIndex.takeIf { it >= 0 },
+        )
+    }
+
+    fun selectSubtitleTrack(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val currentTracks = player.currentTracks
+        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+
+        val trackGroup = currentTracks.groups[groupIndex]
+        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
+
+        val trackSelectionOverride =
+            androidx.media3.common.TrackSelectionOverride(
+                trackGroup.mediaTrackGroup,
+                listOf(trackIndex),
+            )
+
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                // A prior disableSubtitles() (explicit "Off", or restoring a saved -1
+                // preference at episode start) leaves TRACK_TYPE_TEXT disabled on this
+                // trackSelector. That flag wins over any override, so picking a language
+                // here would otherwise silently do nothing until it's cleared too.
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
+                .setOverrideForType(trackSelectionOverride)
+                .build()
+
+        trackSelector.parameters = parameters
+
+        // Save choice immediately. Persist the consolidated (flattened, cross-group) index —
+        // not the raw in-group trackIndex — since selectSubtitleTrack(consolidatedIndex) is
+        // what resumes it on restore, and that overload indexes into getSubtitleTracks()'s
+        // flattened list, not per-group.
+        val consolidatedIndex = getSubtitleTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
+        savePosition(
+            player.currentPosition,
+            player.duration,
+            !player.isPlaying,
+            subtitleIndex = consolidatedIndex.takeIf { it >= 0 },
+        )
+    }
+
+    fun disableSubtitles() {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+                .build()
+
+        trackSelector.parameters = parameters
+
+        // Save choice immediately (-1 for disabled)
+        savePosition(player.currentPosition, player.duration, !player.isPlaying, subtitleIndex = -1)
+    }
+
+    fun selectVideoQuality(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val currentTracks = player.currentTracks
+        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+
+        val trackGroup = currentTracks.groups[groupIndex]
+        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
+
+        val trackSelectionOverride =
+            androidx.media3.common.TrackSelectionOverride(
+                trackGroup.mediaTrackGroup,
+                listOf(trackIndex),
+            )
+
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setOverrideForType(trackSelectionOverride)
+                .build()
+
+        trackSelector.parameters = parameters
+    }
+
+    fun enableAutoQuality() {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO)
+                .build()
+
+        trackSelector.parameters = parameters
+    }
+
+    fun getPlayer(): androidx.media3.common.Player? = mediaSession?.player
+
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            wakeLock =
+                powerManager
+                    .newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK,
+                        "StreamingPlayback:WakeLock",
+                    ).apply {
+                        setReferenceCounted(false)
+                    }
+        }
+        if (wakeLock?.isHeld == false) {
+            wakeLock?.acquire()
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+    }
+
+    /**
+     * The actual resource teardown — player, session, wake lock, scopes — factored out of
+     * [onDestroy] so [stopAndRelease] can run it directly. [stopSelf] alone does not reliably
+     * trigger [onDestroy] on a [androidx.media3.session.MediaSessionService]: the framework has
+     * its own session-lifecycle bookkeeping (independent of ordinary bindService connections —
+     * confirmed on-device with zero active binds yet the service still resident) that can keep
+     * treating the service as "needed" until the session itself is released, so waiting for
+     * onDestroy to do the release is a chicken-and-egg deadlock. Calling this directly frees the
+     * native decoder/renderer memory immediately and deterministically either way.
+     *
+     * Safe to call twice (from here and then again if onDestroy does eventually fire): [isReleased]
+     * makes the second call a no-op outright, rather than relying on mediaSession already being
+     * null — that null check alone let a second call still reach the companion `instance`/
+     * `instanceReady` mutation below and, if a newer instance had since started and published
+     * itself, null out and fail *that* instance's deferred, permanently orphaning every future
+     * awaitInstance() caller even though playback was alive and well. The `instance === this`
+     * check there is the other half of that same fix, for the case where a *different* stale
+     * instance (not this one) races a teardown against a newer one.
+     */
+    private fun releasePlayerAndSession() {
+        if (isReleased) return
+        isReleased = true
+        // Each stage runs in its own try: one that throws (the native player.release(), say) is
+        // recorded and the rest still run, so the wake lock, the scope and the singleton below are
+        // never left behind and a teardown never crashes the app on exit. See
+        // the next level rock solid resilience plan → R-12.
+        releaseStage("cancelRetries") {
+            cancelPendingRetry()
+            mainHandler.removeCallbacks(recycleHandler)
+            mainHandler.removeCallbacks(recoveryExhaustedHandler)
+            _playbackState.value = PlaybackState.Idle
+        }
+        val session = mediaSession
+        releaseStage("finalSave") {
+            session?.player?.let {
+                if (it.isPlaying || it.playbackState == Player.STATE_READY) {
+                    savePosition(it.currentPosition, it.duration, !it.isPlaying)
+                }
+            }
+        }
+        // mediaSession is assigned before playerListener/analyticsListener in initializePlayer(),
+        // so a re-entrant/concurrent releasePlayerAndSession() landing in that window sees a
+        // non-null mediaSession but a still-null listener — hence the ?.let on each.
+        releaseStage("removeListeners") {
+            session?.player?.let { player ->
+                playerListener?.let { player.removeListener(it) }
+                analyticsListener?.let { (player as? androidx.media3.exoplayer.ExoPlayer)?.removeAnalyticsListener(it) }
+            }
+        }
+        releaseStage("releasePlayer") { session?.player?.release() }
+        releaseStage("cancelStreamCalls") {
+            NetworkModule.streamCalls.cancelAll()
+        }
+        releaseStage("releaseSession") { session?.release() }
+        mediaSession = null
+        releaseStage("releaseWakeLock") { releaseWakeLock() }
+        wakeLock = null
+        playerListener = null
+        analyticsListener = null
+        releaseStage("cancelScope") { serviceScope?.cancel() }
+        serviceScope = null
+        adaptiveLoadControl = null
+        // NetworkMonitor.release() used to run here, but it's a process-wide singleton other
+        // components (EPG sync, provider loading) depend on for live connectivity callbacks —
+        // tearing it down on every playback stop cut those off until the next playback started.
+        // The whole publication step is synchronized on instanceLock (see its kdoc) so a
+        // concurrent awaitInstance() can never snapshot a mid-teardown state: it sees either
+        // the pre-teardown instance/deferred or the fully-reset post-teardown ones, never both
+        // halves mixed.
+        synchronized(instanceLock) {
+            if (instance === this) {
+                serviceStartRequested.set(false)
+                instance = null
+                // The collector feeding it died with serviceScope above, before it could see Idle.
+                _nowPlaying.value = null
+                // Any caller already suspended in awaitInstance() holds a reference to *this*
+                // deferred, not the field below — reassigning the field alone leaves them awaiting
+                // an object nobody will ever complete again if the service doesn't restart.
+                // completeExceptionally is a no-op if something already completed it normally, so
+                // this is safe either way. ServiceDestroyedException, not CancellationException —
+                // see its kdoc: this needs to reach callers as a catchable failure, not vanish into
+                // structured-concurrency cancellation handling.
+                instanceReady.completeExceptionally(ServiceDestroyedException("StreamingPlaybackService destroyed"))
+                // If Android recreates this service later in the same process (e.g. after
+                // reclaiming it during long standby), the next onCreate() needs a fresh,
+                // not-yet-completed deferred to publish into — instanceReady.complete() is a
+                // silent no-op once already completed, so without this reset awaitInstance()
+                // would hand out this now-destroyed instance forever.
+                instanceReady = kotlinx.coroutines.CompletableDeferred()
+            }
+            // else: a newer instance has already published itself — this stale teardown must not
+            // touch its instance/instanceReady (see this function's kdoc).
+        }
+    }
+
+    /** One step of [releasePlayerAndSession]: a failure is logged and recorded, never thrown. */
+    private inline fun releaseStage(
+        stage: String,
+        block: () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: Exception) {
+            // cancellation-ok: not suspend code, runs on the main thread
+            Log.e(TAG, "Teardown stage $stage failed", e)
+            CrashLog.record("StreamingPlaybackService.release.$stage", e)
+        }
+    }
+
+    override fun onDestroy() {
+        releasePlayerAndSession()
+        super.onDestroy()
+    }
+
+    private class PlayerListener(
+        private val context: Context,
+        private val onStateChanged: (PlaybackState) -> Unit,
+        private val onWakeLockRequired: () -> Unit,
+        private val player: Player,
+        private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
+        private val onStreamEndedOrError: (errorMessage: String?, httpStatus: Int?) -> Unit = { _, _ -> },
+        private val onFinalError: (message: String, exception: Exception?) -> Unit = { _, _ -> },
+        private val onAccountBusy: (httpStatus: Int) -> Unit = {},
+        private val isCatchup: () -> Boolean = { false },
+        // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
+        // after a new stream can log total prepare-to-ready latency.
+        private val streamStartTimeMs: () -> Long = { 0L },
+    ) : Player.Listener {
+        private var isInErrorState = false
+        private var errorHeldUntilReady = false
+        private var renderedFirstFrame = false
+        private val saveIntervalMs = POSITION_SAVE_INTERVAL_MS
+        private var lastSavedPosition = -saveIntervalMs
+        private var loggedFirstReady = false
+
+        fun resetErrorState() {
+            isInErrorState = false
+            errorHeldUntilReady = false
+            renderedFirstFrame = false
+        }
+
+        /** Holds an error the service set itself, so the player's IDLE after the stop doesn't replace it. */
+        fun enterErrorState() {
+            isInErrorState = true
+            errorHeldUntilReady = false
+        }
+
+        /** Keeps the error on screen through a retry until the stream actually plays. */
+        fun holdErrorUntilReady() {
+            errorHeldUntilReady = true
+        }
+
+        // DIAGNOSTIC (temporary): rearm the STATE_READY timing log for the next stream.
+        fun resetStartupTiming() {
+            loggedFirstReady = false
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_READY) {
+                if (!loggedFirstReady) {
+                    loggedFirstReady = true
+                    Log.i(TAG, "StartupTiming: STATE_READY at +${SystemClock.elapsedRealtime() - streamStartTimeMs()}ms")
+                }
+                val currentPosition = player.currentPosition
+                val duration = player.duration
+                val isPaused = !player.isPlaying
+
+                // Periodic save while playing or immediate save on state change (including pause)
+                if (kotlin.math.abs(currentPosition - lastSavedPosition) >= saveIntervalMs || isPaused) {
+                    onPositionSave?.invoke(currentPosition, duration, isPaused, null, null)
+                    lastSavedPosition = currentPosition
+                }
+            }
+
+            updatePlaybackState()
+        }
+
+        override fun onPlayWhenReadyChanged(
+            playWhenReady: Boolean,
+            reason: Int,
+        ) {
+            super.onPlayWhenReadyChanged(playWhenReady, reason)
+            if (playWhenReady) {
+                onWakeLockRequired()
+            }
+            if (player.playbackState == Player.STATE_READY) {
+                onPositionSave?.invoke(player.currentPosition, player.duration, !playWhenReady, null, null)
+            }
+            updatePlaybackState()
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) {
+                onWakeLockRequired()
+            }
+            if (player.playbackState == Player.STATE_READY) {
+                onPositionSave?.invoke(player.currentPosition, player.duration, !isPlaying, null, null)
+            }
+            updatePlaybackState()
+        }
+
+        override fun onRenderedFirstFrame() {
+            renderedFirstFrame = true
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            val format = unplayableVideoFormat(tracks) ?: return
+            Log.w(TAG, "No decoder for any video track (${format.codecs ?: format.sampleMimeType}) — stopping.")
+            // Held like any error, so the player's IDLE after the stop doesn't replace it.
+            isInErrorState = true
+            errorHeldUntilReady = false
+            onFinalError(context.getString(R.string.player_error_codec_unsupported_format, formatLabel(format)), null)
+        }
+
+        /** "Dolby Vision profile 5", or the codec and resolution ("HEVC 7680×4320"). */
+        private fun formatLabel(format: Format): String =
+            dolbyVisionProfile(format.codecs)?.let { context.getString(R.string.player_format_dolby_vision_profile, it) }
+                ?: codecLabel(format)
+
+        override fun onPlayerError(error: PlaybackException) {
+            isInErrorState = true
+            errorHeldUntilReady = false
+            val httpStatus =
+                if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) extractHttpStatusCode(error) else null
+            if (httpStatus != null && AccountBusy.isAccountBusy(httpStatus)) {
+                onAccountBusy(httpStatus)
+                return
+            }
+            // Catch-up the panel can't serve (outside the archive, a channel without one): no retry
+            // will change that. See the catchup plan → "Facts measured".
+            if (isCatchup() && !renderedFirstFrame && isMissingArchive(error.errorCode, httpStatus)) {
+                Log.w(TAG, "Catch-up unavailable (${error.errorCodeName}, HTTP $httpStatus) — not retrying.")
+                onFinalError(context.getString(R.string.player_error_catchup_unavailable), error)
+                return
+            }
+            val errorMessage = parsePlaybackError(error)
+            val formatSupport = (error as? ExoPlaybackException)?.rendererFormatSupport ?: C.FORMAT_HANDLED
+            if (isFinalCodecError(error.errorCode, formatSupport, renderedFirstFrame)) {
+                Log.w(TAG, "${error.errorCodeName} before the first frame, format support $formatSupport — not retrying.")
+                onFinalError(errorMessage, error)
+                return
+            }
+            onStreamEndedOrError(errorMessage, httpStatus)
+        }
+
+        private fun isMissingArchive(
+            errorCode: Int,
+            httpStatus: Int?,
+        ): Boolean =
+            (httpStatus != null && httpStatus in 400..499) ||
+                errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+                errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED
+
+        private fun parsePlaybackError(error: PlaybackException): String =
+            when (error.errorCode) {
+                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                PlaybackException.ERROR_CODE_DECODING_FAILED,
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+                -> {
+                    val format = (error as? ExoPlaybackException)?.rendererFormat
+                    if (format != null) {
+                        context.getString(R.string.player_error_codec_unsupported_format, formatLabel(format))
+                    } else {
+                        context.getString(R.string.player_error_format_unsupported)
+                    }
+                }
+
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                -> {
+                    context.getString(R.string.player_error_network_failed)
+                }
+
+                PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
+                    val code = extractHttpStatusCode(error)
+                    when (code) {
+                        401 -> {
+                            context.getString(R.string.player_error_http_401)
+                        }
+
+                        403 -> {
+                            context.getString(R.string.player_error_http_403)
+                        }
+
+                        404 -> {
+                            context.getString(R.string.player_error_http_404)
+                        }
+
+                        456, 458 -> {
+                            context.getString(R.string.player_error_http_connection_limit_format, code)
+                        }
+
+                        502, 503, 504, in 520..527 -> {
+                            context.getString(R.string.player_error_http_server_unavailable_format, code)
+                        }
+
+                        in 500..599 -> {
+                            context.getString(R.string.player_error_http_server_error_format, code)
+                        }
+
+                        in 400..499 -> {
+                            context.getString(R.string.player_error_http_access_denied_format, code)
+                        }
+
+                        else -> {
+                            if (code !=
+                                null
+                            ) {
+                                context.getString(R.string.player_error_http_unavailable_format, code)
+                            } else {
+                                context.getString(R.string.player_error_stream_unavailable)
+                            }
+                        }
+                    }
+                }
+
+                PlaybackException.ERROR_CODE_TIMEOUT -> {
+                    context.getString(R.string.player_error_playback_timeout)
+                }
+
+                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+                PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
+                -> {
+                    context.getString(R.string.player_error_stream_not_found)
+                }
+
+                PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+                PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                -> {
+                    context.getString(R.string.player_error_invalid_stream_format)
+                }
+
+                else -> {
+                    context.getString(R.string.player_error_generic_format, error.errorCodeName)
+                }
+            }
+
+        private fun extractHttpStatusCode(error: PlaybackException): Int? {
+            var cause: Throwable? = error.cause
+            while (cause != null) {
+                val match = HTTP_STATUS_REGEX.find(cause.message ?: "")
+                if (match != null) return match.groupValues[1].toIntOrNull()
+                cause = cause.cause
+            }
+            return null
+        }
+
+        companion object {
+            // Pre-compiled regexes — avoid recompiling on every error event
+            private val HTTP_STATUS_REGEX = Regex("Response code: (\\d{3})")
+        }
+
+        private fun updatePlaybackState() {
+            if (isInErrorState) {
+                if (!errorHeldUntilReady || player.playbackState != Player.STATE_READY) return
+                isInErrorState = false
+                errorHeldUntilReady = false
+            }
+
+            val state =
+                when (player.playbackState) {
+                    Player.STATE_IDLE -> {
+                        PlaybackState.Idle
+                    }
+
+                    Player.STATE_BUFFERING -> {
+                        PlaybackState.Buffering
+                    }
+
+                    Player.STATE_READY -> {
+                        if (player.playWhenReady) {
+                            PlaybackState.Playing(
+                                position = player.currentPosition,
+                                duration = player.duration.coerceAtLeast(0L),
+                            )
+                        } else {
+                            PlaybackState.Paused(
+                                position = player.currentPosition,
+                                duration = player.duration.coerceAtLeast(0L),
+                            )
+                        }
+                    }
+
+                    Player.STATE_ENDED -> {
+                        onStreamEndedOrError(null, null)
+                        return
+                    }
+
+                    else -> {
+                        PlaybackState.Idle
+                    }
+                }
+            onStateChanged(state)
+        }
+    }
+
+    private class PerformanceAnalyticsListener(
+        private val onMetricsUpdate: (droppedFrames: Long, totalFrames: Long) -> Unit,
+        private val onRebuffer: (count: Int, totalTimeMs: Long) -> Unit,
+        private val onExhaustionRebuffer: (count: Int) -> Unit,
+        private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
+        private val onQualitySwitch: (count: Int) -> Unit,
+        private val onFpsUpdate: (fps: Float) -> Unit,
+        private val onDroppedFpsUpdate: (droppedFps: Float) -> Unit,
+        private val onRecentDropRateUpdate: (dropRatePercent: Float) -> Unit,
+    ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
+        private var droppedFrames = 0L
+        private var totalFrames = 0L
+        private var rebufferCount = 0
+        private var exhaustionRebufferCount = 0
+        private var totalRebufferTimeMs = 0L
+        private var rebufferStartTimeMs = 0L
+        private var wasPlaying = false
+        private var seekPending = false
+        private var qualitySwitchCount = 0
+        private var lastVideoHeight = -1
+
+        private var fpsLastTimeMs = 0L
+        private var fpsLastFrameCount = 0L
+        private var fpsLastDroppedFrameCount = 0L
+
+        /** Per-second (rendered, dropped) samples, trimmed to the last [RECENT_WINDOW_SAMPLES]. */
+        private val recentSamples = ArrayDeque<Pair<Long, Long>>()
+
+        // playStream() zeroes the published StateFlow counters on every channel switch, but this
+        // listener instance lives for the whole service lifetime — without resetting these too,
+        // the next real rebuffer republishes a stale, session-wide count in one jump instead of
+        // a small per-stream delta, which used to trip the exhaustion-toast threshold instantly.
+        fun reset() {
+            droppedFrames = 0L
+            totalFrames = 0L
+            rebufferCount = 0
+            exhaustionRebufferCount = 0
+            totalRebufferTimeMs = 0L
+            rebufferStartTimeMs = 0L
+            wasPlaying = false
+            seekPending = false
+            qualitySwitchCount = 0
+            lastVideoHeight = -1
+            fpsLastTimeMs = 0L
+            fpsLastFrameCount = 0L
+            fpsLastDroppedFrameCount = 0L
+            recentSamples.clear()
+            onRecentDropRateUpdate(0f)
+        }
+
+        override fun onVideoFrameProcessingOffset(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            totalProcessingOffsetUs: Long,
+            frameCount: Int,
+        ) {
+            totalFrames += frameCount
+            val currentTime = SystemClock.elapsedRealtime()
+            if (fpsLastTimeMs == 0L) {
+                fpsLastTimeMs = currentTime
+                fpsLastFrameCount = totalFrames
+                fpsLastDroppedFrameCount = droppedFrames
+            } else {
+                val delta = currentTime - fpsLastTimeMs
+                if (delta >= 1000) {
+                    val frames = totalFrames - fpsLastFrameCount
+                    val fps = (frames * 1000f) / delta
+                    onFpsUpdate(fps)
+
+                    val dropped = droppedFrames - fpsLastDroppedFrameCount
+                    val droppedFps = (dropped * 1000f) / delta
+                    onDroppedFpsUpdate(droppedFps)
+
+                    recentSamples.addLast(frames to dropped)
+                    while (recentSamples.size > RECENT_WINDOW_SAMPLES) recentSamples.removeFirst()
+                    val windowFrames = recentSamples.sumOf { it.first }
+                    val windowDropped = recentSamples.sumOf { it.second }
+                    onRecentDropRateUpdate(
+                        if (windowFrames > 0) (windowDropped * 100f) / windowFrames else 0f,
+                    )
+
+                    fpsLastTimeMs = currentTime
+                    fpsLastFrameCount = totalFrames
+                    fpsLastDroppedFrameCount = droppedFrames
+                }
+            }
+        }
+
+        override fun onDroppedVideoFrames(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            droppedFrames: Int,
+            elapsedMs: Long,
+        ) {
+            this.droppedFrames += droppedFrames
+            onMetricsUpdate(this.droppedFrames, totalFrames)
+        }
+
+        override fun onPositionDiscontinuity(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                seekPending = true
+            }
+        }
+
+        override fun onPlaybackStateChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            state: Int,
+        ) {
+            when (state) {
+                Player.STATE_BUFFERING -> {
+                    if (wasPlaying) {
+                        rebufferCount++
+                        rebufferStartTimeMs = SystemClock.elapsedRealtime()
+                        if (!seekPending) {
+                            exhaustionRebufferCount++
+                            onExhaustionRebuffer(exhaustionRebufferCount)
+                        }
+                    }
+                    seekPending = false
+                }
+
+                Player.STATE_READY -> {
+                    seekPending = false
+                    if (rebufferStartTimeMs > 0) {
+                        totalRebufferTimeMs += SystemClock.elapsedRealtime() - rebufferStartTimeMs
+                        rebufferStartTimeMs = 0L
+                        onRebuffer(rebufferCount, totalRebufferTimeMs)
+                    }
+                    wasPlaying = true
+                }
+
+                Player.STATE_IDLE, Player.STATE_ENDED -> {
+                    wasPlaying = false
+                    seekPending = false
+                    rebufferStartTimeMs = 0L
+                }
+            }
+
+            // Feed health monitor on every state change for Live TV streams. Skipped for VOD
+            // and right after a seek.
+            val service = instance
+            val player = service?.getPlayer()
+            val isLive = service?._currentMetadata?.value?.isLive == true
+            if (service != null && player != null && isLive && !service.isWithinSeekGrace()) {
+                service.healthMonitor?.updateMetrics(
+                    bufferedDurationMs = player.bufferedPosition - player.currentPosition,
+                    droppedFramesPerSecond = service._measuredDroppedFps.value,
+                    hasReadTimeout = false, // ExoPlayer reports timeouts via exceptions
+                )
+            }
+        }
+
+        override fun onBandwidthEstimate(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            totalLoadTimeMs: Int,
+            totalBytesLoaded: Long,
+            bitrateEstimate: Long,
+        ) {
+            onBandwidthUpdate(bitrateEstimate)
+        }
+
+        override fun onDownstreamFormatChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
+        ) {
+            if (mediaLoadData.trackType == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                val newHeight = mediaLoadData.trackFormat?.height ?: return
+                if (lastVideoHeight > 0 && newHeight != lastVideoHeight) {
+                    qualitySwitchCount++
+                    onQualitySwitch(qualitySwitchCount)
+                }
+                lastVideoHeight = newHeight
+            }
+        }
+
+        private companion object {
+            /** One sample per second, so this is a ~10s trailing window. */
+            const val RECENT_WINDOW_SAMPLES = 10
+        }
+    }
+
+    companion object {
+        private const val TAG = "StreamingPlaybackService"
+        private const val MAX_LIVE_RETRIES = 3
+        private const val LIVE_RETRY_BASE_DELAY_MS = 2000L
+        private const val MAX_VOD_RETRIES = 3
+        private const val VOD_RETRY_BASE_DELAY_MS = 3000L
+        private const val SEEK_HEALTH_GRACE_MS = 6000L
+
+        /** How long a paused film keeps its connection: Xtream counts it as a stream meanwhile. */
+        private const val PAUSED_RELEASE_MS = 5 * 60_000L
+        private const val SEAMLESS_RECYCLE_GRACE_MS = 7000L
+        private const val POSITION_SAVE_INTERVAL_MS = 10_000L
+        private const val AWAIT_INSTANCE_TIMEOUT_MS = 10_000L
+        private const val POSITION_SAVE_BUFFER = 16
+
+        // Guards `instance`/`instanceReady` publication as one atomic unit. Every current call
+        // site happens to run on Main (Service lifecycle callbacks, viewModelScope's default
+        // Main.immediate), which alone would already serialize these reads/writes — but that's
+        // an implicit invariant nothing enforces, and violating it (e.g. a future caller awaiting
+        // the instance from a Dispatchers.IO coroutine) would open a real window: a reader could
+        // capture the old, about-to-fail `instanceReady` right as teardown swaps it out, failing
+        // with a stale ServiceDestroyedException instead of awaiting the fresh deferred a
+        // concurrent restart is about to complete. Synchronizing removes the dependency on that
+        // invariant instead of relying on it silently holding forever.
+        private val instanceLock = Any()
+
+        @Volatile
+        private var instance: StreamingPlaybackService? = null
+
+        @Volatile
+        private var instanceReady = kotlinx.coroutines.CompletableDeferred<StreamingPlaybackService>()
+
+        // Guards startService() against being called more than once for the same "generation"
+        // of the service. Owned here, not by callers: getInstance() == null is ambiguous
+        // between "never started", "starting" (Android's startService() -> onCreate() gap is
+        // real, tens to hundreds of ms), and "just died" — a caller resetting this flag on its
+        // own observation of getInstance() == null can't tell those apart, and a caller doing so
+        // during the starting gap re-arms the claim for a second, redundant startService() call
+        // racing the first. Only this class knows the true moment a start-claim should be
+        // released: exactly when releasePlayerAndSession() tears the instance down.
+        private val serviceStartRequested =
+            java.util.concurrent.atomic
+                .AtomicBoolean(false)
+
+        fun getInstance(): StreamingPlaybackService? = instance
+
+        /**
+         * Loads the FFmpeg native library, which [initializePlayer] checks on the main thread from
+         * onCreate. Call it off the main thread at app start: loading it reads disk, and once loaded
+         * the check is a cached answer. See
+         * the next level rock solid resilience plan → R-28.
+         */
+        fun warmUp() {
+            Log.i(TAG, "FFmpeg library warmed up: ${FfmpegLibrary.isAvailable()}")
+        }
+
+        private val _nowPlaying = MutableStateFlow<NowPlayingSnapshot?>(null)
+
+        /**
+         * What is playing on this device, null when nothing is — process-wide, so it outlives
+         * service instances. Live sync's "now playing" publisher (core:ui) collects it: this
+         * module can't depend on sync. See the live sync now playing plan.
+         */
+        val nowPlaying: StateFlow<NowPlayingSnapshot?> = _nowPlaying.asStateFlow()
+
+        // No replay: a save nobody collects (no player screen on screen) is dropped, never handed
+        // to the next screen. DROP_OLDEST so the main-thread tryEmit never fails or blocks.
+        private val _positionSaves =
+            MutableSharedFlow<PositionSave>(extraBufferCapacity = POSITION_SAVE_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+        /**
+         * Positions and track choices the playing session wants saved — process-wide, so the
+         * player screen keeps receiving them after the service is destroyed and started again
+         * (TV Home → return, or the first playback after a cold start, when the screen composes
+         * before the service exists). The player screen collects it for as long as it's composed.
+         * See the next level rock solid resilience plan → R-04.
+         */
+        val positionSaves: SharedFlow<PositionSave> = _positionSaves.asSharedFlow()
+
+        /** Atomically claims the right to call startService(). Returns false if already claimed. */
+        fun tryClaimStart(): Boolean = serviceStartRequested.compareAndSet(false, true)
+
+        // Bounded so a caller can never suspend forever if the service fails to start
+        // (e.g. startService() silently refused, or Android never gets around to onCreate()).
+        // The deferred is snapshotted under instanceLock before awaiting outside it — a lock
+        // can't be held across a suspension point — so this always awaits either the deferred
+        // that's about to complete normally or the fresh one a concurrent restart just created,
+        // never a stale one caught mid-teardown-swap.
+        suspend fun awaitInstance(): StreamingPlaybackService {
+            val deferred = synchronized(instanceLock) { instanceReady }
+            return kotlinx.coroutines.withTimeout(AWAIT_INSTANCE_TIMEOUT_MS) { deferred.await() }
+        }
+
+        /**
+         * [awaitInstance], or null when the service never came up in time or was torn down while
+         * waiting — for callers with nothing to do in either case. Composition-scoped effects must
+         * use this: a [ServiceDestroyedException] escaping a `LaunchedEffect` crashes the app.
+         * Genuine cancellation still propagates. See
+         * the rock solid stability resilience plan → F-03.
+         */
+        suspend fun awaitInstanceOrNull(): StreamingPlaybackService? =
+            try {
+                awaitInstance()
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                null
+            } catch (e: ServiceDestroyedException) {
+                null
+            }
+
+        fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> = service.playbackState
+
+        fun getCurrentMetadata(service: StreamingPlaybackService): StateFlow<PlayerMetadata> = service.currentMetadata
+    }
+}

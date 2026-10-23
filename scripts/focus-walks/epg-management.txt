@@ -1,0 +1,37 @@
+# T6 — EPG Management per source (TvEpgManagementScreen), TV emulator, source panel-b (Xtream; on
+# the emulator it has one guide source, a weekly "Bulk" one; iptv has none, so it cannot be used).
+# Start: Settings → Sources & guide → Manage sources → OK on panel-b's row (Edit Source) → Guide
+# sources; title "Guide sources · panel-b". The title row has no buttons (the section-root button
+# went with the TV navigation rail, 2026-10-08), so the walk's last UP stays on Add.
+# Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
+# source it is "Add Guide Source" under "No guide sources configured". No System Status or
+# Maintenance here (they are in Settings). Each row: the switch, then Refresh / Edit /
+# Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
+# the third its auto-refresh ("Refreshes daily", "Auto-refresh off").
+# Never press OK on Delete.
+# Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b), re-recorded 2026-10-04;
+# selection toggle replaced by the on/off switch 2026-10-06 (guide on/off clarity, Phase 2).
+@start Use this guide
+# Up from the first row reaches Add and the stale/failed refresh buttons above the list.
+UP	Add Guide Source
+DOWN	Use this guide
+DOWN	Refresh
+RIGHT	Edit
+RIGHT	Auto-refresh
+RIGHT	Delete
+LEFT	Auto-refresh
+# Auto-refresh drills into its picker in place of the list, focus on the current interval (this
+# guide source refreshes weekly); Left closes it unchanged, focus back on Auto-refresh.
+CENTER	Weekly
+LEFT	Auto-refresh
+LEFT	Edit
+LEFT	Refresh
+# One guide source only: Down from its last row stays put, Up goes back to its switch, then Add.
+DOWN	Refresh
+UP	Use this guide
+# Up from Add: nothing above it, focus stays.
+UP	Add Guide Source
+UP	Add Guide Source
+# Back leaves to Edit Source, focus back on the Guide sources row.
+BACK	Guide Sources
+

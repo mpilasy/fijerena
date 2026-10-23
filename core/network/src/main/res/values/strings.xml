@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- EPG sync foreground-service notifications -->
+    <string name="epg_sync_notification_channel">TV guide updates</string>
+    <string name="epg_sync_notification_title">Refreshing TV guide</string>
+    <string name="epg_fts_rebuild_notification_title">Rebuilding TV guide index</string>
+
+    <!-- Xtream catalog sync foreground-service notifications -->
+    <string name="xtream_sync_notification_channel">Catalogue updates</string>
+    <string name="xtream_sync_notification_title">Syncing channels &amp; content</string>
+
+    <!-- Friendly error messages (FriendlyError.kt) -->
+    <string name="error_no_internet">Can\'t reach the server. Check your internet connection.</string>
+    <string name="error_timeout">The server took too long to respond. Please try again.</string>
+    <string name="error_ssl">Secure connection failed. Check the server address.</string>
+    <string name="error_network">Network error. Check your connection and try again.</string>
+    <string name="error_unauthorized">Login failed. Check your username and password.</string>
+    <string name="error_saved_login_lost">This device lost a saved login (its secure key store was reset). Edit the source and enter the password again.</string>
+    <string name="error_guide_login_missing">This guide is downloaded with the source\'s login, and this device has no password for it. Edit the source and enter the password.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_not_found">Nothing was found at this address. Check the URL.</string>
+    <string name="error_server">The server ran into a problem. Please try again later.</string>
+    <string name="error_invalid_playlist">This address doesn\'t lead to an M3U playlist. Check the URL.</string>
+    <string name="error_catalog_sync_failed">Catalogue sync failed. %1$s</string>
+    <string name="sync_error_download_failed">Download failed</string>
+    <string name="sync_error_upload_failed">Upload failed</string>
+
+    <!-- Settings export/import (SettingsExportManager) -->
+    <string name="settings_export_error_read_file">Could not read file</string>
+    <string name="settings_export_error_import_failed">Import failed</string>
+    <string name="settings_export_error_invalid_format">Invalid settings file format</string>
+    <string name="settings_export_summary_import_failed_format">Import failed: %1$s</string>
+    <string name="settings_export_summary_providers_format">Sources: %1$s</string>
+    <string name="settings_export_item_added_format">%1$d added</string>
+    <string name="settings_export_item_overwritten_format">%1$d overwritten</string>
+    <string name="settings_export_item_skipped_format">%1$d skipped</string>
+    <string name="settings_export_summary_epg_sources_format">Guide sources: %1$s</string>
+    <string name="settings_export_summary_favorites_format">%1$d favourite(s) restored</string>
+    <string name="settings_export_summary_watch_state_format">%1$d watch history item(s) restored</string>
+    <string name="settings_export_summary_updated">Settings updated</string>
+    <string name="settings_export_summary_passwords_reentry_format">%1$s (Passwords must be re-entered)</string>
+
+    <!-- Provider copy/duplicate (ProviderCopyManager) -->
+    <string name="provider_copy_result_connection">Connection copied</string>
+    <string name="provider_copy_result_settings">Settings copied</string>
+    <string name="provider_copy_result_favorites_format">%1$d favourite(s) copied</string>
+    <string name="provider_copy_result_watch_state_format">%1$d watch history item(s) copied</string>
+    <string name="provider_copy_result_nothing">Nothing to copy</string>
+
+    <!-- EPG freshness label (EpgBrowserModels) -->
+    <string name="epg_freshness_no_sources">No guide sources</string>
+    <string name="epg_freshness_all_off">Guide off: turn it on in Guide sources</string>
+    <string name="epg_freshness_never_refreshed">Never refreshed</string>
+    <string name="epg_freshness_just_now">just now</string>
+    <string name="epg_freshness_minutes_ago_format">%1$dm ago</string>
+    <string name="epg_freshness_hours_ago_format">%1$dh ago</string>
+    <string name="epg_freshness_days_ago_format">%1$dd ago</string>
+    <string name="epg_freshness_stale_suffix_format"> • %1$d stale</string>
+    <string name="epg_freshness_never_run_suffix_format"> • %1$d never run</string>
+    <string name="epg_freshness_updated_format">Updated %1$s</string>
+
+    <!-- EpgFileManager error fallbacks -->
+    <string name="epg_error_task_failed_retries_format">Task failed after %1$d retries</string>
+    <string name="epg_error_no_sources">No guide sources to process</string>
+    <string name="epg_error_came_back_empty">The guide came back empty (no channels). The next refresh tries again.</string>
+    <string name="epg_error_source_not_found">Guide source not found</string>
+</resources>

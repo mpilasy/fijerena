@@ -1,0 +1,113 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+}
+
+// Room schema history for the databases that hold user data (xtream_v2.db, providers.db): one JSON
+// per version under schemas/, committed. CI fails when a build regenerates one that wasn't committed.
+// See the rock solid stability resilience plan → F-33.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+android {
+    namespace = "org.njarasoa.fijerena.core.network"
+    compileSdk = 36
+    defaultConfig {
+        minSdk = 30
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // No TMDB key is built in: the user enters their own in Settings (D4,
+        // the public release plan). Debug builds only seed it from
+        // the gitignored local.properties (TMDB_API_KEY), so a developer's devices need no typing.
+    }
+    buildTypes {
+        debug {
+            val tmdbApiKey =
+                runCatching {
+                    val props = Properties()
+                    rootProject.file("local.properties").inputStream().use { props.load(it) }
+                    props.getProperty("TMDB_API_KEY") ?: ""
+                }.getOrDefault("")
+            buildConfigField("String", "DEBUG_TMDB_API_KEY", "\"$tmdbApiKey\"")
+        }
+        release {
+            buildConfigField("String", "DEBUG_TMDB_API_KEY", "\"\"")
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
+    testOptions {
+        unitTests {
+            // MediaRepository starts a HandlerThread; without this the android.jar stubs throw
+            // "Method getLooper in android.os.HandlerThread not mocked" and every test in
+            // MediaRepositoryTest fails before reaching its assertions.
+            isReturnDefaultValues = true
+            // Robolectric tests (SettingsDatabaseMigration15To16Test) read the schemas below as assets.
+            isIncludeAndroidResources = true
+        }
+    }
+    // MigrationTestHelper (XtreamDatabaseUpgradeTest, and SettingsDatabaseMigration15To16Test under
+    // Robolectric) reads the exported schemas from the test APK's assets.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("test").assets.srcDir("$projectDir/schemas")
+    }
+}
+
+dependencies {
+    api(project(":core:player"))
+    implementation("androidx.security:security-crypto:1.1.0")
+    implementation(libs.androidx.core.ktx)
+    api(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
+
+    // DocumentFile for local media scanning (SAF)
+    implementation("androidx.documentfile:documentfile:1.1.0")
+
+    // SMB2/3 client for network share access
+    implementation("com.hierynomus:smbj:0.15.0")
+
+    // Ktor HTTP client for Jellyfin API
+    implementation(libs.bundles.networking)
+
+    implementation(libs.work.runtime.ktx)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    implementation(libs.room.paging)
+    ksp(libs.room.compiler)
+
+    // Bundled SQLite with FTS5 support (system SQLite may lack FTS5 on some OEM builds)
+    implementation(libs.sqlite.android)
+
+    api(libs.paging.runtime)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    // Room migrations on the JVM: Robolectric runs MigrationTestHelper against its own SQLite
+    // (SettingsDatabaseMigration15To16Test), no device needed.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.junit)
+    testImplementation(libs.room.testing)
+
+    // Instrumented: the older Room migration tests (XtreamDatabaseUpgradeTest,
+    // SettingsDatabaseMigrationTest) run on a device.
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.room.testing)
+}

@@ -1,0 +1,30 @@
+pluginManagement {
+    repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // JitPack for community builds
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+
+rootProject.name = "fijerena"
+include(":mobile")
+include(":tv")
+include(":core:player")
+include(":core:navigation")
+include(":core:network")
+include(":core:ui")

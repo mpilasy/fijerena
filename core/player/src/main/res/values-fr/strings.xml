@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Playback error messages -->
+    <string name="player_error_stream_type_live">Le direct</string>
+    <string name="player_error_stream_type_video">La vidéo</string>
+    <string name="player_error_recovery_exhausted_format">%1$s indisponible après plusieurs tentatives de récupération. Vérifiez votre connexion et réessayez.</string>
+    <string name="player_error_retry_exhausted_format">%1$s indisponible après %2$d tentatives. %3$s</string>
+    <string name="player_error_channel_offline">La chaîne est peut-être hors ligne.</string>
+    <string name="player_error_check_connection">Vérifiez votre connexion et réessayez.</string>
+    <string name="player_error_codec_unsupported_format">Codec vidéo non pris en charge sur cet appareil : %1$s</string>
+    <string name="player_format_dolby_vision_profile">Dolby Vision profil %1$d</string>
+    <string name="player_error_format_unsupported">Format vidéo non pris en charge sur cet appareil</string>
+    <string name="player_error_network_failed">Échec de la connexion réseau. Vérifiez votre connexion internet.</string>
+    <string name="player_error_connection_lost">Connexion perdue : aucune donnée depuis une minute. Vérifiez votre connexion et réessayez.</string>
+    <string name="player_error_http_401">La source a refusé la connexion. Vérifiez le nom d\'utilisateur et le mot de passe.</string>
+    <string name="player_error_http_403">Accès refusé. Votre abonnement a peut-être expiré.</string>
+    <string name="player_error_http_404">Flux introuvable. La chaîne est peut-être hors ligne.</string>
+    <string name="player_error_catchup_unavailable">Ce programme n\'est pas disponible en replay.</string>
+    <string name="player_error_http_connection_limit_format">HTTP %1$d — Limite de connexions atteinte. Fermez les autres flux actifs sur ce compte.</string>
+    <string name="player_error_account_busy_waiting_format">Ce compte diffuse déjà sur un autre appareil (HTTP %1$d). Après l\'arrêt d\'un flux, le fournisseur peut le compter encore quelques minutes. Nouvel essai toutes les 20 secondes — la lecture démarre d\'elle-même.</string>
+    <string name="player_error_account_busy_gave_up_format">Ce compte diffuse toujours sur un autre appareil (HTTP %1$d). Arrêtez la lecture là-bas, patientez quelques minutes, puis appuyez sur Réessayer.</string>
+    <string name="player_error_account_busy_all_logins_waiting_format">Les %1$d identifiants de cette source diffusent déjà sur d\'autres appareils (HTTP %2$d). Après l\'arrêt d\'un flux, le fournisseur peut le compter encore quelques minutes. Nouvel essai toutes les 20 secondes — la lecture démarre d\'elle-même.</string>
+    <string name="player_error_account_busy_all_logins_gave_up_format">Les %1$d identifiants de cette source diffusent toujours sur d\'autres appareils (HTTP %2$d). Arrêtez la lecture sur l\'un d\'eux, patientez quelques minutes, puis appuyez sur Réessayer.</string>
+    <string name="player_error_http_server_unavailable_format">HTTP %1$d — Serveur indisponible. Réessayez sous peu.</string>
+    <string name="player_error_http_server_error_format">HTTP %1$d — Erreur serveur. Réessayez plus tard.</string>
+    <string name="player_error_server_down_retrying_format">Le serveur du fournisseur ne répond pas (HTTP %1$d). Nouvel essai en cours — la lecture démarre d\'elle-même.</string>
+    <string name="player_error_http_access_denied_format">HTTP %1$d — Accès au flux refusé.</string>
+    <string name="player_error_http_unavailable_format">HTTP %1$d — Flux indisponible.</string>
+    <string name="player_error_stream_unavailable">Flux indisponible.</string>
+    <string name="player_error_playback_timeout">Délai de lecture dépassé. Le flux est peut-être trop lent ou indisponible.</string>
+    <string name="player_error_stream_not_found">Flux introuvable ou accès refusé.</string>
+    <string name="player_error_invalid_stream_format">Format de flux invalide. Le flux est peut-être corrompu.</string>
+    <string name="player_error_generic_format">Erreur de lecture : %1$s</string>
+
+    <!-- Track selection labels -->
+    <string name="player_track_language_unknown">Inconnu</string>
+    <string name="player_track_audio_fallback_label_format">%1$s - %2$dch</string>
+    <string name="player_track_generic_label">Piste</string>
+    <string name="player_track_subtitle_fallback_label_format">Sous-titre %1$d</string>
+    <string name="player_error_occurred">Une erreur de lecture s\'est produite</string>
+    <string name="player_chapter_fallback_format">Chapitre %1$d</string>
+</resources>

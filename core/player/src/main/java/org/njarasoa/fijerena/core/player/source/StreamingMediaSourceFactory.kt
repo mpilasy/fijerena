@@ -1,0 +1,83 @@
+package org.njarasoa.fijerena.core.player.source
+
+import android.content.Context
+import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.network.NetworkModule
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+
+/**
+ * Reuses an internal [DefaultMediaSourceFactory] to avoid memory churn and binder exhaustion
+ * during rapid channel switching. The HTTP data source is backed by OkHttp (via
+ * [NetworkModule.streamingClientFor]) so streaming shares the same connection pool and
+ * DNS-retry resilience as the rest of the app's networking.
+ */
+@OptIn(UnstableApi::class)
+class StreamingMediaSourceFactory(
+    private val context: Context,
+) {
+    private val userAgent = "MediaPlayer/1.0 (Linux; Android)"
+
+    private val mediaSourceFactory = DefaultMediaSourceFactory(context)
+
+    @Synchronized
+    fun createMediaSource(
+        streamUrl: String,
+        headers: Map<String, String> = emptyMap(),
+        isLive: Boolean = false,
+        onRetry: (() -> Unit)? = null,
+        transferListener: androidx.media3.datasource.TransferListener? = null,
+        metadata: PlayerMetadata? = null,
+    ): MediaSource {
+        val mediaItem =
+            MediaItem
+                .Builder()
+                .setUri(streamUrl)
+                .apply { if (metadata != null) setMediaMetadata(metadata.toMediaMetadata()) }
+                .build()
+
+        val allHeaders =
+            buildMap {
+                put("User-Agent", userAgent)
+                putAll(headers)
+            }
+
+        val callFactory = NetworkModule.streamCalls.wrap(NetworkModule.streamingClientFor(NetworkMonitor.currentNetworkType))
+        val httpDataSourceFactory =
+            OkHttpDataSource
+                .Factory(callFactory)
+                .setUserAgent(userAgent)
+                .setDefaultRequestProperties(allHeaders)
+                .setTransferListener(transferListener)
+
+        // OkHttpDataSource only understands http(s):// — set directly as the root factory, it
+        // threw "Expected HTTP scheme" for every file:// (LOCAL provider) or content:// URI.
+        // DefaultDataSource.Factory dispatches by scheme, routing http(s) to httpDataSourceFactory
+        // and file/content/asset to Media3's own local-file data sources.
+        mediaSourceFactory.setDataSourceFactory(DefaultDataSource.Factory(context, httpDataSourceFactory))
+
+        val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
+
+        return mediaSourceFactory
+            .setLoadErrorHandlingPolicy(errorPolicy)
+            .createMediaSource(mediaItem)
+    }
+
+    private fun PlayerMetadata.toMediaMetadata(): MediaMetadata =
+        MediaMetadata
+            .Builder()
+            .setTitle(title)
+            .setDisplayTitle(showTitle ?: title)
+            .setAlbumTitle(showTitle)
+            .setSubtitle(episodeLabel)
+            .setStation(channelName.ifEmpty { null })
+            .setDescription(description)
+            .build()
+}

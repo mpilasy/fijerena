@@ -1,0 +1,477 @@
+package org.njarasoa.fijerena.core.ui.sync
+
+import android.app.Activity
+import android.app.Application
+import android.os.Bundle
+import android.util.Log
+import androidx.media3.common.util.UnstableApi
+import androidx.room.InvalidationTracker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
+import org.njarasoa.fijerena.core.network.sync.SyncApi
+import org.njarasoa.fijerena.core.network.sync.SyncApiException
+import org.njarasoa.fijerena.core.network.sync.SyncEngine
+import org.njarasoa.fijerena.core.network.sync.SyncWire
+import org.njarasoa.fijerena.core.network.wanted.WantedTitles
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.ui.di.AppContainer
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * Runs live sync while the app is in use — see the live sync plan → Flow.
+ *
+ * - **Foreground**: a WebSocket to the server; its `{"head": n}` messages trigger a pull. A text
+ *   `ping` every 30 s keeps reverse proxies from dropping the idle connection (the server answers
+ *   without waking up).
+ * - **Local changes**: any write to either `sync_version` table schedules a push a few seconds
+ *   later, so a burst (a batch of favourites) goes in one request. Watch progress saved while
+ *   something plays (every 10 s) is pushed at most once a minute instead, and promptly once
+ *   playback pauses or stops.
+ * - **Start and stop**: a full pass when the app comes to the foreground (catch-up) and when it
+ *   leaves it (flush what is pending). No background work: a closed app catches up when opened.
+ * - Failures retry with backoff while in the foreground. A refused token (revoked) stops retrying.
+ */
+class SyncManager internal constructor(
+    private val app: Application,
+    // Parameters, internal, only so SyncManagerSocketTest can run the socket lifecycle on a test
+    // dispatcher against a fake socket factory ([SyncApi.openSocket]); the app uses the defaults.
+    private val scope: CoroutineScope = AppScopes.create("SyncManager", Dispatchers.IO),
+    private val store: SyncAccountStore = SyncAccountStore(app),
+    private val engine: SyncEngine = SyncEngine(app, store = store),
+    private val api: SyncApi = SyncApi(),
+    private val nowPlaying: StateFlow<NowPlayingSnapshot?> = playerNowPlaying(),
+    private val pendingPush: suspend () -> PendingPush = { pendingPushIn(app) },
+) {
+    /** What a push would send: nothing, only watch progress, or anything else (perhaps with progress). */
+    internal enum class PendingPush { NONE, WATCH_ONLY, OTHER }
+
+    private val startedActivities = AtomicInteger(0)
+
+    /** What the sync settings screen shows. */
+    data class Status(
+        val linked: Boolean = false,
+        val serverUrl: String? = null,
+        val syncing: Boolean = false,
+        val lastSyncAt: Long = 0,
+        val lastError: String? = null,
+    )
+
+    private val _status = MutableStateFlow(Status())
+    val status: StateFlow<Status> = _status.asStateFlow()
+
+    private fun refreshStatus(syncing: Boolean = false) {
+        val link = store.link
+        _status.value = Status(link != null, link?.serverUrl, syncing, store.lastSyncAt, store.lastError?.let(Redact::text))
+    }
+
+    @Volatile private var foreground = false
+
+    @Volatile private var socket: WebSocket? = null
+    private var socketJob: Job? = null
+
+    /** A pass waiting for its delay; replaced by each new request. Never the pass that is running. */
+    private var scheduled: Job? = null
+    private val passRunning = AtomicBoolean(false)
+
+    /** Something asked for a pass while one was running: run another when it ends. */
+    @Volatile private var passAgain = false
+    private var retryDelayMs = INITIAL_RETRY_MS
+
+    private val listener =
+        object : SyncEngine.Listener {
+            override fun onUserDataChanged(providerIds: Set<Long>) {
+                scope.launch { AppContainer.getInstance(app).reloadAfterRemoteChange(providerIds) }
+                // A favourite received from another device may be one whose item is gone here.
+                scope.launch { WantedTitles.getInstance(app).refresh() }
+            }
+
+            override fun onWantedChanged() {
+                scope.launch { WantedTitles.getInstance(app).refresh() }
+            }
+
+            override fun onProvidersChanged(providerIds: Set<Long>) {
+                // A password, URL, login or filter changed on another device: the next screen to
+                // ask gets a repository built with it. See R-06 step 2 of
+                // the next level rock solid resilience plan.
+                scope.launch { AppContainer.getInstance(app).onProvidersChanged(providerIds) }
+            }
+
+            override fun onProviderDeleted() {
+                // A source of the profile in use deleted on another device: send the screens home,
+                // as a profile switch does (once nothing plays).
+                scope.launch { AppContainer.getInstance(app).providerDeletedExternally() }
+            }
+
+            override fun onActiveProfileDeleted() {
+                scope.launch {
+                    // Another device deleted the profile this one is using: move to another, then
+                    // sync again so the deletion can land.
+                    val active = AppSettings(app).activeProfileId
+                    val other =
+                        SettingsDatabase
+                            .getInstance(app)
+                            .profileDao()
+                            .getAll()
+                            .firstOrNull { it.id != active } ?: return@launch
+                    Log.i(TAG, "Active profile deleted on another device; switching to ${other.id}")
+                    AppContainer.getInstance(app).switchProfileExternally(other.id)
+                    requestSync(0)
+                }
+            }
+        }
+
+    fun start() {
+        // The store is encrypted prefs: read it off the main thread.
+        scope.launch { refreshStatus() }
+        app.registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityStarted(activity: Activity) {
+                    if (startedActivities.incrementAndGet() == 1) onForeground()
+                }
+
+                override fun onActivityStopped(activity: Activity) {
+                    if (startedActivities.decrementAndGet() == 0) onBackground()
+                }
+
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) = Unit
+
+                override fun onActivityResumed(activity: Activity) = Unit
+
+                override fun onActivityPaused(activity: Activity) = Unit
+
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: Bundle,
+                ) = Unit
+
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            },
+        )
+        scope.launch {
+            val observer =
+                object : InvalidationTracker.Observer(arrayOf("sync_version")) {
+                    override fun onInvalidated(tables: Set<String>) = onLocalChange()
+                }
+            SettingsDatabase.getInstance(app).invalidationTracker.addObserver(observer)
+            XtreamDatabase.getInstance(app).invalidationTracker.addObserver(observer)
+        }
+        watchPlayback()
+    }
+
+    /**
+     * Playback paused, stopped or ended: progress held back while it played goes now. The last
+     * position save can land before or after this; either way it is pushed within the debounce.
+     */
+    internal fun watchPlayback() {
+        scope.launch {
+            nowPlaying
+                .map { it.isPlaying() }
+                .distinctUntilChanged()
+                .filter { playing -> !playing }
+                .collect { onLocalChange() }
+        }
+    }
+
+    /** Linked or unlinked just now (settings, or the debug receiver): reconnect accordingly. */
+    fun onLinkChanged() {
+        scope.launch { refreshStatus() }
+        closeSocket()
+        if (foreground && engine.isLinked) {
+            openSocket()
+            requestSync(0)
+        }
+    }
+
+    /**
+     * A sync pass as soon as possible — or after [delayMs], merging with any request still waiting.
+     * A pass already running is never cancelled (its own writes count as local changes); it runs
+     * once more when it ends instead.
+     */
+    fun requestSync(delayMs: Long = 0) {
+        if (!engine.isLinked) return
+        synchronized(this) {
+            scheduled?.cancel()
+            scheduled =
+                scope.launch {
+                    delay(delayMs)
+                    // Its own job, so that cancelling the next schedule can't reach it.
+                    scope.launch { runPasses() }
+                }
+        }
+    }
+
+    /**
+     * One pass now, waited for — a last push before unlinking. Best effort: a failure is only
+     * logged, since nothing must stop the device leaving.
+     */
+    suspend fun flush() {
+        try {
+            engine.syncNow(listener)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Last sync pass failed: ${e.message}")
+        }
+    }
+
+    private suspend fun runPasses() {
+        if (!passRunning.compareAndSet(false, true)) {
+            passAgain = true
+            return
+        }
+        try {
+            do {
+                passAgain = false
+                runSync()
+            } while (passAgain)
+        } finally {
+            passRunning.set(false)
+        }
+    }
+
+    private suspend fun runSync() {
+        refreshStatus(syncing = true)
+        try {
+            val outcome = engine.syncNow(listener) ?: return
+            retryDelayMs = INITIAL_RETRY_MS
+            if (outcome.pulled + outcome.pushed >
+                0
+            ) {
+                Log.i(TAG, "Synced: pulled ${outcome.pulled}, pushed ${outcome.pushed}, waiting ${outcome.deferred}")
+            }
+        } catch (e: SyncApiException) {
+            Log.w(TAG, "Sync failed: ${e.message}")
+            CrashLog.note("live sync failed", "HTTP ${e.status}: ${e.message}")
+            if (e.status == 401) {
+                closeSocket()
+                return
+            }
+            retryLater()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Not only logged: shown on the settings screen and retried, or sync silently stops
+            // until the app next comes to the foreground. See
+            // the rock solid stability resilience plan → F-23.
+            Log.e(TAG, "Sync pass crashed", e)
+            CrashLog.record("live sync failed", e)
+            store.lastError = "${e.javaClass.simpleName}: ${e.message}"
+            retryLater()
+        } finally {
+            refreshStatus()
+        }
+    }
+
+    private fun retryLater() {
+        if (foreground) {
+            val wait = retryDelayMs
+            retryDelayMs = (retryDelayMs * 2).coerceAtMost(MAX_RETRY_MS)
+            requestSync(wait)
+        }
+    }
+
+    internal fun onForeground() {
+        foreground = true
+        if (!engine.isLinked) return
+        openSocket()
+        requestSync(0)
+    }
+
+    internal fun onBackground() {
+        foreground = false
+        closeSocket()
+        requestSync(0) // flush what is pending while the process is still alive
+    }
+
+    /**
+     * Watch progress written while something plays is held for up to a minute — a save every 10 s
+     * used to push every ~13 s, and every other linked device then pulled and reloaded its Recent
+     * rows. Anything else goes after the usual debounce. See
+     * the next level rock solid resilience plan → R-18.
+     */
+    internal fun onLocalChange() {
+        if (!foreground || !engine.isLinked) return
+        scope.launch {
+            val pending = pendingPush()
+            if (pending == PendingPush.WATCH_ONLY && nowPlaying.value.isPlaying()) {
+                requestSyncUnlessScheduled(WATCH_PUSH_INTERVAL_MS)
+            } else if (pending != PendingPush.NONE) {
+                requestSync(PUSH_DEBOUNCE_MS)
+            }
+        }
+    }
+
+    /**
+     * A pass after [delayMs] unless one is already waiting, which carries this change too.
+     * [requestSync] would put a waiting pass back each time, so saves every 10 s would never push.
+     */
+    private fun requestSyncUnlessScheduled(delayMs: Long) {
+        synchronized(this) {
+            if (scheduled?.isActive != true) requestSync(delayMs)
+        }
+    }
+
+    private fun NowPlayingSnapshot?.isPlaying(): Boolean = this?.paused == false
+
+    /**
+     * Socket lifecycle runs on several threads (main for foreground/background, OkHttp's for its
+     * callbacks, IO for the reconnect delay): every read-modify-write of [socket], [socketJob] and
+     * [socketRetryDelayMs] holds this lock, so two sockets can never be open at once.
+     */
+    private val socketLock = Any()
+
+    /**
+     * Reconnect delay, separate from [retryDelayMs]: a server whose HTTP API works but whose
+     * WebSocket doesn't (a reverse proxy that doesn't upgrade) used to reconnect every 5 s forever,
+     * with a full sync pass each time — the pass succeeded, so the shared delay kept resetting.
+     * Doubles per failed attempt; resets only once a socket actually opens. See
+     * the rock solid stability resilience plan → F-12.
+     */
+    private var socketRetryDelayMs = INITIAL_RETRY_MS
+
+    private fun openSocket() {
+        val link = store.link ?: return
+        synchronized(socketLock) {
+            if (socket == null) {
+                socket = api.openSocket(link.serverUrl, link.deviceToken, socketListener)
+            }
+        }
+    }
+
+    private val socketListener =
+        object : WebSocketListener() {
+            override fun onOpen(
+                webSocket: WebSocket,
+                response: Response,
+            ) {
+                synchronized(socketLock) {
+                    if (socket === webSocket) {
+                        socketRetryDelayMs = INITIAL_RETRY_MS
+                        socketJob?.cancel()
+                        // A text ping, not only OkHttp's protocol pings: the server answers it
+                        // without waking up and keeps its time as this device's "last seen".
+                        socketJob =
+                            scope.launch {
+                                while (isActive) {
+                                    delay(PING_INTERVAL_MS)
+                                    webSocket.send("ping")
+                                }
+                            }
+                    }
+                }
+            }
+
+            override fun onMessage(
+                webSocket: WebSocket,
+                text: String,
+            ) {
+                if (text == "pong") return
+                // The server sends its head as soon as a socket opens, so this is also what
+                // catches up on anything announced while disconnected.
+                val head = SyncWire.parseHead(text) ?: return
+                if (head > store.cursor) requestSync(0)
+            }
+
+            override fun onClosed(
+                webSocket: WebSocket,
+                code: Int,
+                reason: String,
+            ) = onSocketGone(webSocket, code)
+
+            override fun onFailure(
+                webSocket: WebSocket,
+                t: Throwable,
+                response: Response?,
+            ) {
+                Log.w(TAG, "Sync socket failed: ${t.message}")
+                onSocketGone(webSocket, response?.code ?: 0)
+            }
+        }
+
+    private fun onSocketGone(
+        webSocket: WebSocket,
+        code: Int,
+    ) {
+        val wait =
+            synchronized(socketLock) {
+                if (socket !== webSocket) return
+                socket = null
+                socketJob?.cancel()
+                socketJob = null
+                socketRetryDelayMs.also { socketRetryDelayMs = (it * 2).coerceAtMost(MAX_RETRY_MS) }
+            }
+        // Revoked (4001) or refused (401): don't hammer the server.
+        if (!foreground || code == REVOKED || code == 401) return
+        scope.launch {
+            delay(wait)
+            if (foreground) openSocket()
+        }
+    }
+
+    private fun closeSocket() {
+        synchronized(socketLock) {
+            socketJob?.cancel()
+            socketJob = null
+            socket?.close(1000, "background")
+            socket = null
+            socketRetryDelayMs = INITIAL_RETRY_MS
+        }
+    }
+
+    companion object {
+        private const val TAG = "SyncManager"
+        private const val PUSH_DEBOUNCE_MS = 3_000L
+        private const val WATCH_PUSH_INTERVAL_MS = 60_000L
+        private const val PING_INTERVAL_MS = 30_000L
+        private const val INITIAL_RETRY_MS = 5_000L
+        private const val MAX_RETRY_MS = 5 * 60_000L
+        private const val REVOKED = 4001
+
+        @Volatile private var instance: SyncManager? = null
+
+        private suspend fun pendingPushIn(app: Application): PendingPush {
+            val versions = XtreamDatabase.getInstance(app).syncVersionDao()
+            val beyondWatch = SettingsDatabase.getInstance(app).settingsSyncDao().hasPending() || versions.hasPendingBeyondWatch()
+            return when {
+                beyondWatch -> PendingPush.OTHER
+                versions.hasPending() -> PendingPush.WATCH_ONLY
+                else -> PendingPush.NONE
+            }
+        }
+
+        fun getInstance(app: Application): SyncManager =
+            instance ?: synchronized(this) {
+                instance ?: SyncManager(app).also { instance = it }
+            }
+    }
+}
+
+/** What this device plays, from the player service (a Media3 class: hence the opt-in). */
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun playerNowPlaying(): StateFlow<NowPlayingSnapshot?> = StreamingPlaybackService.nowPlaying

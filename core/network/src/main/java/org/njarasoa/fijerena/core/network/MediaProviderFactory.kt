@@ -1,0 +1,339 @@
+@file:Suppress("DEPRECATION")
+
+package org.njarasoa.fijerena.core.network
+
+import android.content.Context
+import android.provider.Settings
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.njarasoa.fijerena.core.network.jellyfin.JellyfinMediaProvider
+import org.njarasoa.fijerena.core.network.local.LocalMediaProvider
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.remote.RemoteM3uMediaProvider
+import org.njarasoa.fijerena.core.network.smb.SmbClient
+import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
+import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Resolves the correct [MediaProvider] implementation based on the provider entity type.
+ *
+ * Caches provider instances by ID to ensure the same authenticated provider is reused
+ * across all screens, preventing session conflicts (especially for Jellyfin).
+ */
+object MediaProviderFactory {
+    private val json = Json { ignoreUnknownKeys = true }
+
+    // Prevents multiple auth sessions that can invalidate each other
+    // ConcurrentHashMap: create() is called from background workers, IO dispatchers, and
+    // composables, while trimMemory()/clearCache() mutate/iterate it from other threads.
+    private val providerCache = ConcurrentHashMap<Long, MediaProvider>()
+
+    // Disconnects of evicted providers run here, off the caller's thread.
+    private val disconnectScope = AppScopes.create("MediaProviderFactory.disconnect", kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * Reuses cached instances to avoid creating duplicate auth sessions.
+     *
+     * @param password The decrypted password from ProviderRepository
+     */
+    fun create(
+        entity: ProviderEntity,
+        context: Context,
+        password: String,
+    ): MediaProvider =
+        // computeIfAbsent is atomic per key on ConcurrentHashMap: only one caller's block ever
+        // runs for a given provider id, even under concurrent access. A check-then-act (get,
+        // build, putIfAbsent) would let two racing callers each build a full provider — including
+        // a real authenticated session — before only one got cached and the other silently
+        // discarded.
+        providerCache.computeIfAbsent(entity.id) {
+            when (entity.type) {
+                "XTREAM" -> createXtream(entity, context, password)
+                "JELLYFIN" -> createJellyfin(entity, password, context)
+                "SMB" -> createSmb(entity, password)
+                "LOCAL" -> createLocal(entity, context)
+                "REMOTE_M3U" -> createRemoteM3u(entity, context)
+                else -> createXtream(entity, context, password)
+            }
+        }
+
+    /**
+     * Whether a provider carries live TV channels, and can therefore have an XMLTV EPG
+     * attached to it. EPG is a live-TV concept: Jellyfin and SMB serve on-demand media only,
+     * and a local folder only has channels when an M3U playlist is configured.
+     *
+     * Derived from type + config alone - no credentials, no network, no provider instance - so
+     * it is safe to call for every row of a provider list. Mirrors the `supportedContentTypes`
+     * declared by each provider's `capabilities`; keep it in sync with [create] above.
+     *
+     * Note this is deliberately NOT `capabilities.supportsEpg`, which means *native* EPG
+     * (Xtream's get_short_epg). A REMOTE_M3U provider has no native EPG but is exactly the
+     * case that needs an external XMLTV source.
+     */
+    fun hasLiveTv(entity: ProviderEntity): Boolean =
+        when (entity.type) {
+            "XTREAM", "REMOTE_M3U" -> true
+            "LOCAL" -> parseConfig(entity.config)["m3uPath"]?.isNotEmpty() == true
+            "JELLYFIN", "SMB" -> false
+            else -> true // unknown types fall back to Xtream in create()
+        }
+
+    fun clearCache(providerId: Long) {
+        val removed = providerCache.remove(providerId)
+        EpgChannelMatcher.clearCache()
+        if (removed != null) {
+            disconnectScope.launch {
+                try {
+                    removed.disconnect()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+
+    /**
+     * Told the id of each provider whose settings or login changed in the app ([providerChanged]).
+     * `AppContainer` sets it to drop its cached `MediaRepository` along with the provider, which
+     * would otherwise keep the old, disconnected instance and reconnect it with the old login. See
+     * the next level rock solid resilience plan → R-06 step 2.
+     */
+    @Volatile
+    var providerChangedListener: ((Long) -> Unit)? = null
+
+    /** A provider's settings or login changed: [clearCache], then tell [providerChangedListener]. */
+    fun providerChanged(providerId: Long) {
+        clearCache(providerId)
+        providerChangedListener?.invoke(providerId)
+    }
+
+    /**
+     * Drops the cached providers whose session belongs to one profile — Jellyfin, whose login is
+     * per profile — so the next [create] signs in as the newly active profile. Everything else is
+     * shared by all profiles and keeps its session. Called on profile switch.
+     */
+    fun clearProfileScopedProviders() {
+        val removed = providerCache.entries.filter { it.value is JellyfinMediaProvider }
+        removed.forEach { providerCache.remove(it.key, it.value) }
+        if (removed.isNotEmpty()) {
+            disconnectScope.launch {
+                removed.forEach { entry ->
+                    try {
+                        entry.value.disconnect()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearAllCaches() {
+        val removed = providerCache.values.toList()
+        providerCache.clear()
+        EpgChannelMatcher.clearCache()
+        if (removed.isNotEmpty()) {
+            disconnectScope.launch {
+                removed.forEach { provider ->
+                    try {
+                        provider.disconnect()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Tells every cached provider to drop its in-memory detail/search caches, without evicting
+     * the provider instances themselves (that would force a re-auth). Called on system memory
+     * pressure — see [org.njarasoa.fijerena.core.ui.FijerenaApplication.onTrimMemory].
+     *
+     * Also drops EpgChannelMatcher's cached lookup maps (30-60MB for large providers) — it has
+     * no other eviction hook, so it would stay pinned for the life of the process.
+     */
+    fun trimMemory() {
+        providerCache.values.forEach { it.trimMemory() }
+        EpgChannelMatcher.clearCache()
+    }
+
+    private fun createXtream(
+        entity: ProviderEntity,
+        context: Context,
+        password: String,
+    ): MediaProvider {
+        val accountManager = AccountManager(context.applicationContext, entity.id)
+        val providerSettings = parseProviderSettings(entity.providerSettings)
+
+        // Store credentials so XtreamRepository.restoreSession() can find them
+        accountManager.storeBasicCredentials(entity.url, entity.username, password)
+
+        val xtreamRepository =
+            XtreamRepository(
+                accountManager,
+                context.applicationContext,
+                entity.id,
+                providerSettings,
+            )
+        return XtreamMediaProvider(entity.id, xtreamRepository, TmdbApiService.getInstance(context.applicationContext))
+    }
+
+    private fun createJellyfin(
+        entity: ProviderEntity,
+        password: String,
+        context: Context,
+    ): MediaProvider {
+        val deviceId =
+            Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ANDROID_ID,
+            ) ?: "fijerena-${entity.id}"
+
+        val prefs = getJellyfinSessionPrefs(context, entity.id)
+        val savedToken = prefs?.getString("jellyfin_token", null)
+        val savedUserId = prefs?.getString("jellyfin_user_id", null)
+
+        return JellyfinMediaProvider(
+            providerId = entity.id,
+            serverUrl = entity.url.trimEnd('/'),
+            username = entity.username,
+            password = password,
+            deviceId = deviceId,
+            savedToken = savedToken,
+            savedUserId = savedUserId,
+            onSessionSaved = { token, userId ->
+                prefs
+                    ?.edit()
+                    ?.putString("jellyfin_token", token)
+                    ?.putString("jellyfin_user_id", userId)
+                    ?.apply()
+            },
+            onSessionCleared = {
+                prefs
+                    ?.edit()
+                    ?.remove("jellyfin_token")
+                    ?.remove("jellyfin_user_id")
+                    ?.apply()
+            },
+        )
+    }
+
+    // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
+    // credential store; replacing it is tracked in docs/plans/20260828_secret-store-migration-plan.md.
+    @Suppress("DEPRECATION")
+    private fun getJellyfinSessionPrefs(
+        context: Context,
+        providerId: Long,
+    ): android.content.SharedPreferences? {
+        // This profile's session: each profile signs in to Jellyfin as its own user.
+        val fileName =
+            org.njarasoa.fijerena.core.network.provider.ProviderRepository
+                .credsFileName(providerId, AppSettings(context).activeProfileId)
+        val prefs =
+            try {
+                val masterKey =
+                    MasterKey
+                        .Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+                EncryptedSharedPreferences.create(
+                    context,
+                    fileName,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+            } catch (e: Exception) {
+                // cancellation-ok: non-suspend
+                CredentialStoreHealth.markLost(context, fileName, e)
+                context.deleteSharedPreferences(fileName)
+                null
+            }
+        return prefs
+    }
+
+    private fun createSmb(
+        entity: ProviderEntity,
+        password: String,
+    ): MediaProvider {
+        val config = parseConfig(entity.config)
+        val host = config["host"] ?: ""
+        val share = config["share"] ?: ""
+        val domain = config["domain"] ?: "WORKGROUP"
+
+        val smbClient =
+            SmbClient(
+                host = host,
+                shareName = share,
+                domain = domain,
+                username = entity.username.ifEmpty { null },
+                password = password.ifEmpty { null },
+            )
+        return SmbMediaProvider(entity.id, smbClient)
+    }
+
+    private fun createLocal(
+        entity: ProviderEntity,
+        context: Context,
+    ): MediaProvider {
+        val config = parseConfig(entity.config)
+        val rootPaths = config["rootPaths"]?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        val m3uPath = config["m3uPath"]?.ifEmpty { null }
+
+        return LocalMediaProvider(
+            providerId = entity.id,
+            context = context.applicationContext,
+            config =
+                LocalMediaProvider.LocalProviderConfig(
+                    rootPaths = rootPaths,
+                    m3uPath = m3uPath,
+                ),
+        )
+    }
+
+    private fun createRemoteM3u(
+        entity: ProviderEntity,
+        context: Context,
+    ): MediaProvider =
+        RemoteM3uMediaProvider(
+            providerId = entity.id,
+            m3uUrl = entity.url,
+            context = context.applicationContext,
+        )
+
+    private fun parseConfig(configStr: String): Map<String, String> {
+        if (configStr.isBlank()) return emptyMap()
+        return try {
+            val jsonObj = json.parseToJsonElement(configStr).jsonObject
+            jsonObj.mapValues { it.value.jsonPrimitive.content }
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
+            emptyMap()
+        }
+    }
+
+    private fun parseProviderSettings(settingsJson: String): ProviderSettings {
+        if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
+        return try {
+            json.decodeFromString<ProviderSettings>(settingsJson)
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
+            ProviderSettings.DEFAULT
+        }
+    }
+}

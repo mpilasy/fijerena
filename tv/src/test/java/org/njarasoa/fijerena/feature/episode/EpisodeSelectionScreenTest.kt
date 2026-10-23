@@ -1,0 +1,335 @@
+package org.njarasoa.fijerena.feature.episode
+
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
+import org.njarasoa.fijerena.core.player.domain.SeasonInfo
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.feature.episode.fixtures.FakeWatchStateDao
+import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
+import org.robolectric.RobolectricTestRunner
+
+/**
+ * Regression test for the episode selection fragility plan: playing an episode from a
+ * season other than the first, then navigating back, used to silently reset the season tab (and
+ * scroll position) to season 1 — twice, both times only caught by a live device repro + logcat,
+ * never by a test. [StateRestorationTester] reproduces the exact mechanism (this composable
+ * disposed when the player is pushed on top of it, recomposed fresh from the same saved-state
+ * registry on return) without needing real navigation or a player.
+ */
+@OptIn(ExperimentalTestApi::class)
+@RunWith(RobolectricTestRunner::class)
+class EpisodeSelectionScreenTest {
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private val seriesDetail =
+        SeriesDetail(
+            id = "series-1",
+            name = "Test Series",
+            seasons = listOf(SeasonInfo(1, "Season 1"), SeasonInfo(2, "Season 2")),
+            episodes =
+                mapOf(
+                    "1" to
+                        listOf(
+                            EpisodeItem(id = "s1e1", episodeNumber = 1, title = "S1 Episode 1", seasonNumber = 1),
+                            EpisodeItem(id = "s1e2", episodeNumber = 2, title = "S1 Episode 2", seasonNumber = 1),
+                        ),
+                    "2" to
+                        listOf(
+                            EpisodeItem(id = "s2e1", episodeNumber = 1, title = "S2 Episode 1", seasonNumber = 2),
+                            EpisodeItem(id = "s2e2", episodeNumber = 2, title = "S2 Episode 2", seasonNumber = 2),
+                        ),
+                ),
+        )
+
+    @Test
+    fun seasonSelectionSurvivesSimulatedNavigationDisposal() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mediaRepository =
+            MediaRepository(
+                context = context,
+                providerId = 999L,
+                profileId = ProfileEntity.DEFAULT_ID,
+                watchStateDao = FakeWatchStateDao(),
+                episodeDao = FakeXtreamEpisodeDao(),
+            )
+
+        restorationTester.setContent {
+            EpisodeListContent(
+                seriesDetail = seriesDetail,
+                relatedTitles = RelatedTitles(),
+                tmdbTitle = null,
+                logoUrl = null,
+                backdropUrl = null,
+                alternateStreams = emptyList(),
+                seriesName = "Test Series",
+                categoryId = "cat1",
+                mediaRepository = mediaRepository,
+                initialEpisodeId = null,
+                isFavorite = false,
+                categoryName = null,
+                isRefreshing = false,
+                onToggleFavorite = {},
+                onEpisodeSelected = { _, _, _, _ -> },
+                onCategorySelected = {},
+                onRefresh = {},
+                onBack = {},
+                onRelatedTitleSelected = {},
+                onAlternateStreamSelected = {},
+            )
+        }
+
+        // Manually pick season 2 and play one of its episodes — the exact interaction that broke:
+        // a season the user picked in-session, not one named by a route argument. The season tab
+        // row sits below the hero (the tv detail hero ui plan Phase 5) and the episode
+        // card below that, both off-screen until scrolled — LazyColumn only composes what's near
+        // the viewport, so each has to be scrolled to before it can be clicked.
+        val season2Label = context.getString(R.string.series_season_label, 2)
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasText(season2Label))
+        composeTestRule.onNodeWithText(season2Label).performClick()
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasTestTag("episode_s2e2"))
+
+        // androidx.tv.material3.Card is D-pad-first: it fires onClick on a focused DirectionCenter
+        // press, not on a raw touch tap the way a plain Modifier.clickable does (performClick()
+        // worked fine on the season tab above, which is a plain clickable) — so drive it the same
+        // way a real remote does, not with performClick().
+        composeTestRule.onNodeWithTag("episode_s2e2").requestFocus()
+        composeTestRule.onNodeWithTag("episode_s2e2").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        val playLabel = context.getString(R.string.series_play_episode_action)
+        composeTestRule.onNodeWithText(playLabel, substring = true).requestFocus()
+        composeTestRule.onNodeWithText(playLabel, substring = true).performKeyInput { pressKey(Key.DirectionCenter) }
+
+        // Simulates exactly what navigating to the player and coming back does: this composable
+        // disposed, then recomposed fresh from the same saved-state registry.
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        // Bug behavior: season silently reset to 1, so neither of these would be on screen.
+        val continueWatchingLabel = context.getString(R.string.series_continue_watching_badge)
+        composeTestRule.onNodeWithText(continueWatchingLabel).assertExists()
+        composeTestRule.onNodeWithText("S2 Episode 2").assertExists()
+    }
+
+    /**
+     * Regression test for the streamSwitchSignal fix: switching to
+     * an alternate stream source intentionally moves focus off Play/the resume card and onto the
+     * stream-name row, and that must survive the same nav-disposal round trip as the resume
+     * anchor above — a plain `remember` forgot the switch across it and let the resumeEpisodeId
+     * effect steal focus back to Play the moment the composable was restored.
+     */
+    @Test
+    fun alternateStreamFocusSurvivesSimulatedNavigationDisposal() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mediaRepository =
+            MediaRepository(
+                context = context,
+                providerId = 999L,
+                profileId = ProfileEntity.DEFAULT_ID,
+                watchStateDao = FakeWatchStateDao(),
+                episodeDao = FakeXtreamEpisodeDao(),
+            )
+        val alternate = MediaItem(id = "alt-1", name = "Alt Stream", mediaType = MediaType.SERIES, categoryId = "cat1")
+
+        restorationTester.setContent {
+            EpisodeListContent(
+                seriesDetail = seriesDetail,
+                relatedTitles = RelatedTitles(),
+                tmdbTitle = null,
+                logoUrl = null,
+                backdropUrl = null,
+                alternateStreams = listOf(alternate),
+                seriesName = "Test Series",
+                categoryId = "cat1",
+                mediaRepository = mediaRepository,
+                initialEpisodeId = null,
+                isFavorite = false,
+                categoryName = null,
+                isRefreshing = false,
+                onToggleFavorite = {},
+                onEpisodeSelected = { _, _, _, _ -> },
+                onCategorySelected = {},
+                onRefresh = {},
+                onBack = {},
+                onRelatedTitleSelected = {},
+                onAlternateStreamSelected = {},
+            )
+        }
+
+        // The stream-name row moved into the Details tab (the tv detail hero ui plan
+        // Phase 5) — it's not on the Episodes tab shown by default, and the tab row itself is
+        // below the hero, off-screen (fixed test viewport) until scrolled into view.
+        val detailsTabLabel = context.getString(R.string.details_tab_details)
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasText(detailsTabLabel))
+        composeTestRule.onNodeWithText(detailsTabLabel).performClick()
+
+        // Off-screen until scrolled, same reasoning as the episode card in the test above.
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasTestTag("stream_name_picker"))
+
+        // Open the stream-name dropdown and pick the alternate — same interaction as switching
+        // sources on a real device. Plain Modifier.clickable, so a raw touch tap (performClick)
+        // is enough, same as the season tab above.
+        composeTestRule.onNodeWithTag("stream_name_picker").performClick()
+        composeTestRule.onNodeWithText(alternate.name).performClick()
+
+        // The switch claims focus for the stream-name row, not Play — that's the whole point of
+        // streamSwitchSignal.
+        composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
+
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        // Bug behavior: streamSwitchSignal reset to 0, so the resumeEpisodeId effect saw "no
+        // switch happened" and stole focus back to Play.
+        composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
+        composeTestRule.onNodeWithTag("hero_play_button").assertIsNotFocused()
+    }
+
+    /** Twelve episodes in each of four seasons: enough that season 3's tenth is far below the hero. */
+    private val longSeries =
+        SeriesDetail(
+            id = "series-long",
+            name = "Long Series",
+            seasons = (1..4).map { SeasonInfo(it, "Season $it") },
+            episodes =
+                (1..4).associate { season ->
+                    season.toString() to
+                        (1..12).map { n ->
+                            EpisodeItem(id = "s${season}e$n", episodeNumber = n, title = "S$season Episode $n", seasonNumber = season)
+                        }
+                },
+        )
+
+    private fun setLongSeries(
+        initialEpisodeId: String?,
+        onBack: () -> Unit = {},
+        series: SeriesDetail = longSeries,
+    ) {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mediaRepository =
+            MediaRepository(
+                context = context,
+                providerId = 999L,
+                profileId = ProfileEntity.DEFAULT_ID,
+                watchStateDao = FakeWatchStateDao(),
+                episodeDao = FakeXtreamEpisodeDao(),
+            )
+        composeTestRule.setContent {
+            EpisodeListContent(
+                seriesDetail = series,
+                relatedTitles = RelatedTitles(),
+                tmdbTitle = null,
+                logoUrl = null,
+                backdropUrl = null,
+                alternateStreams = emptyList(),
+                seriesName = "Long Series",
+                categoryId = "cat1",
+                mediaRepository = mediaRepository,
+                initialEpisodeId = initialEpisodeId,
+                isFavorite = false,
+                categoryName = null,
+                isRefreshing = false,
+                onToggleFavorite = {},
+                onEpisodeSelected = { _, _, _, _ -> },
+                onCategorySelected = {},
+                onRefresh = {},
+                onBack = onBack,
+                onRelatedTitleSelected = {},
+                onAlternateStreamSelected = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    /**
+     * Opened from Continue Watching on an episode far down a later season (not a return from the
+     * player, so no scroll position to restore): it must land on that season with the episode's
+     * card focused. It used to land on season 1 — the card wasn't composed yet when focus was
+     * requested, focus fell to the first season tab, and a focused season tab selects itself.
+     */
+    @Test
+    fun openingOnALaterSeasonEpisodeLandsOnItsCard() {
+        setLongSeries(initialEpisodeId = "s3e10")
+
+        composeTestRule.onNodeWithTag("episode_s3e10").assertIsFocused()
+        composeTestRule.onNodeWithText("S1 Episode 1").assertDoesNotExist()
+    }
+
+    /**
+     * Back from deep in the episode list goes to the section tabs, then out — it used to be
+     * swallowed for good: the tab row had scrolled out of composition, so focusing it did
+     * nothing while the key still counted as handled.
+     */
+    @Test
+    fun backFromDeepInTheListIsNeverSwallowed() {
+        var backs = 0
+        setLongSeries(initialEpisodeId = "s3e10", onBack = { backs++ })
+
+        repeat(2) {
+            composeTestRule.onRoot().performKeyInput { pressKey(Key.Back) }
+            composeTestRule.waitForIdle()
+        }
+        assertEquals(1, backs)
+    }
+
+    /**
+     * A show with many seasons: the tab row scrolls rather than squeezing its last tabs (seen on a
+     * Shield: "Season 12" drawn one letter per line), and opening on a late season shows its tab.
+     */
+    @Test
+    fun manySeasonsScrollTheirTabsIntoView() {
+        val manySeasons =
+            SeriesDetail(
+                id = "series-many",
+                name = "Many Seasons",
+                seasons = (1..14).map { SeasonInfo(it, "Season $it") },
+                episodes =
+                    (1..14).associate {
+                        it.toString() to
+                            listOf(EpisodeItem(id = "s${it}e1", episodeNumber = 1, title = "S$it Episode 1", seasonNumber = it))
+                    },
+            )
+        setLongSeries(initialEpisodeId = "s14e1", series = manySeasons)
+
+        val season14 = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.series_season_label, 14)
+        composeTestRule.onNodeWithText(season14).assertIsDisplayed()
+        val bounds = composeTestRule.onNodeWithText(season14).fetchSemanticsNode().boundsInRoot
+        assertTrue("Season 14 tab squeezed: ${bounds.width} x ${bounds.height}", bounds.width > bounds.height)
+    }
+}

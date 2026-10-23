@@ -1,0 +1,12 @@
+{
+  "uniqueId": "font:spacegrotesk",
+  "name": "Space Grotesk (font)",
+  "artifactVersion": "",
+  "description": "A typeface bundled with the app for a Look and Feel.",
+  "website": "https://github.com/floriankarsten/space-grotesk",
+  "developers": [],
+  "licenses": [
+    "OFL-1.1-spacegrotesk"
+  ],
+  "tag": "font"
+}

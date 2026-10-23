@@ -1,0 +1,99 @@
+package org.njarasoa.fijerena.ui.theme
+
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+/**
+ * TV-Specific Dimensions
+ * Component sizes optimized for 10-foot viewing distance.
+ */
+object TvDimensions {
+    val safeMarginHorizontal: Dp = 56.dp
+    val safeMarginVertical: Dp = 32.dp
+
+    val formFieldWidth: Dp = 600.dp
+    val dialogWidth: Dp = 600.dp
+    val dialogWidthLarge: Dp = 700.dp
+    val selectionListWidth: Dp = 200.dp
+    val channelOverlayWidth: Dp = 320.dp
+    val audioTrackSelectorWidth: Dp = 140.dp
+    val settingsInputWidth: Dp = 200.dp
+
+    val buttonHeight: Dp = 64.dp
+    val cardHeight: Dp = 80.dp
+
+    /**
+     * Episode rows are taller than [cardHeight]: they carry a [posterHeight] thumbnail plus the
+     * continue-watching badge, the title and a plot line. At 80.dp the poster was squeezed and the
+     * plot was clipped mid-sentence on exactly the row the viewer is most likely reading.
+     */
+    val episodeCardHeight: Dp = 122.dp
+    val trackItemHeight: Dp = 56.dp
+    val moviePosterHeight: Dp = 60.dp
+    val statsOverlayPanelHeight: Dp = 200.dp
+
+    val iconSmall: Dp = 20.dp
+    val iconMedium: Dp = 28.dp
+    val iconLarge: Dp = 48.dp
+    val iconXLarge: Dp = 64.dp
+
+    // Icon button containers (for player controls)
+    val iconButtonSize: Dp = 72.dp
+
+    /** An avatar on "Who's watching?": the screen's only content, so sized to be read across the room. */
+    val profilePickerAvatarSize: Dp = 160.dp
+
+    // Height of the TMDB logo art rendered in place of the OSD's big title text.
+    val osdLogoHeight: Dp = 56.dp
+
+    // Detail hero (the tv detail hero ui plan). The reference logo art reads much
+    // larger than the OSD's — a plain title-logo swap at osdLogoHeight looked undersized here.
+    val heroLogoHeight: Dp = 96.dp
+
+    // Fraction of the hero's width the text column occupies, left-aligned — stays inside the
+    // scrim's opaque region (see CinemaAlpha.heroScrimFadeStop) instead of running under the
+    // backdrop image, where legibility depends on what that frame happens to show.
+    const val heroContentWidthFraction: Float = 0.55f
+
+    // Height of the hero band as a fraction of its width (Modifier.aspectRatio) — the TV screen's
+    // own aspect ratio, so the "full-bleed" reference look reads as filling the viewport rather
+    // than a bounded strip above a visible page break.
+    const val heroBackdropAspect: Float = 16f / 9f
+
+    // Width of the hero's sideSlot (the series "Next Up" card) — wide enough for a thumbnail plus
+    // two lines of plot text without crowding the backdrop's opaque-to-transparent scrim.
+    val heroSideSlotWidth: Dp = 340.dp
+
+    val progressIndicator: Dp = 48.dp
+    val progressBar: Dp = 6.dp
+
+    val epgTimeSlotWidth: Dp = 120.dp
+    val epgRowHeight: Dp = 80.dp
+    val epgChannelColumnWidth: Dp = 200.dp
+
+    val liveDotSize: Dp = 12.dp
+    val liveDotSmall: Dp = 10.dp
+    val statsDotSize: Dp = 12.dp
+
+    val posterWidth: Dp = 160.dp
+    val posterHeight: Dp = 90.dp
+    val posterHeightLarge: Dp = 240.dp
+    val contentTypeCardWidth: Dp = 340.dp
+
+    /** "Jump Back In" shelf card — wide enough for a legible 16:9 thumbnail at 10-foot viewing. */
+    val continueWatchingCardWidth: Dp = 280.dp
+
+    /** A child profile's Home rows, cards and text, against the rest of the app (kids' Home plan). */
+    const val kidsHomeScale: Float = 1.3f
+
+    val borderDefault: Dp = 1.dp
+    val borderFocused: Dp = 2.dp
+
+    /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */
+    val resumeBarHeight: Dp = 5.dp
+    val borderFocusedStats: Dp = 3.dp
+    val borderThin: Dp = 0.5.dp
+
+    // Design system: sizes that were literals in component code.
+    val detailLabelWidth: Dp = 180.dp
+}

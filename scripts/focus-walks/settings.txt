@@ -1,0 +1,116 @@
+# T3 — Settings (SettingsScreen) as two panes, TV emulator, profiles (since 2026-10-19): atr (in
+# use, the only Expert, no PIN), Kid (child profile), Teen (child profile), Leroy (grown-up, not
+# Expert); Xtream sources, so a profile's page has its Content filters row.
+# Start: Settings just opened, focus on the rail row "Profiles" (the first of the groups,
+# the settings reorg plan).
+# Rail: Up/Down swap the pane live and never leave the rail; Right (or OK) enters the pane on
+# the group's first row; Left (or Back) from anywhere in the pane returns to the rail row of
+# the group; Back on the rail leaves Settings. A picker opens in the pane on the current value;
+# Left or Back closes it with focus back on its row.
+# Needs Expert mode on for atr: without it the Profiles pane is atr's own page, not the list of
+# profiles, and Parental controls / Sources & guide / Sync & backup are not listed.
+# Re-recorded 2026-10-17 after the Settings reorganisation. Parental controls added to the rail
+# 2026-10-20 (its own walk: parental-controls.txt); those two lines are not yet run.
+@start Profiles
+DOWN	Parental controls
+DOWN	Playback
+DOWN	Display
+DOWN	Sources & guide
+DOWN	Sync & backup
+DOWN	About & advanced
+# Down at the end of the rail stays put.
+DOWN	About & advanced
+# About & advanced: the About card (version, build), Device info, Diagnostics, Shrink database
+# (Expert mode; never pressed), then the TMDB attribution (one focusable row, OK does nothing).
+RIGHT	Fijerena v0.1.0
+DOWN	Device info / This app and device: versions, memory, storage, screen, media decoders, network and background state / ›
+DOWN	Open-source licences / The libraries and fonts the app is built with, and their licences / ›
+DOWN	Diagnostics / Crashes and errors recorded on this device, and why the app last closed / ›
+DOWN	Shrink database
+DOWN	Film and series data / TMDB logo / This product uses the TMDB API but is not endorsed or certified by TMDB.
+LEFT	About & advanced
+# Sync & backup: Live sync, then the backups.
+UP	Sync & backup
+# Restore from Downloads shows only while a backup waits there.
+RIGHT	Live sync
+DOWN	Back up to a file / ›
+DOWN	Restore from a file / From a backup file: you choose what to restore / ›
+DOWN	Restore from a file / From a backup file: you choose what to restore / ›
+LEFT	Sync & backup
+# Sources & guide: Manage sources, Guide sources, Guide data maintenance, the TMDB key.
+UP	Sources & guide
+RIGHT	Manage sources
+DOWN	Guide sources / The guides for each source’s channels / ›
+DOWN	Guide data maintenance / The guide's downloads and programmes kept on this device
+DOWN	Film and series details (TMDB) / Fills in missing plots, episode summaries and age ratings, and adds title art and More Like This, with your own free TMDB key. Without a key, nothing is sent to TMDB. / On ›
+DOWN	Film and series details (TMDB) / Fills in missing plots, episode summaries and age ratings, and adds title art and More Like This, with your own free TMDB key. Without a key, nothing is sent to TMDB. / On ›
+LEFT	Sources & guide
+# Display (this device's): Text & grid size, Items in Recent, Language. The theme and Look and
+# Feel are on the profile's page.
+UP	Display
+RIGHT	Text & grid size / Size of text and everything on screen, on every screen / Auto (HD) ›
+DOWN	Items in Recent / How many films, episodes or channels Recent shows / 25 ›
+DOWN	Language / Language for menus and messages / English ›
+LEFT	Display
+UP	Playback
+# Playback: the watch delay, its only row.
+RIGHT	Add a channel to Last watched after / So a channel you only zap past isn't added / 10 s ›
+DOWN	Add a channel to Last watched after / So a channel you only zap past isn't added / 10 s ›
+# OK opens the picker in the pane, focus on the current value (10 s by default); Left closes it,
+# focus back on the row.
+CENTER	10 s
+LEFT	Add a channel to Last watched after / So a channel you only zap past isn't added / 10 s ›
+LEFT	Playback
+UP	Parental controls
+UP	Profiles
+# Up at the top of the rail stays put (the header has nothing to focus).
+UP	Profiles
+# With a child profile and no Expert PIN, the pane opens on "Set a PIN for Settings" (never
+# pressed here), then the profiles. OK on a profile opens its page in place of the rows, focus
+# on the name's Edit button; Down walks its rows to the end: Colour, PIN, Look (UI theme, Theme,
+# Look and Feel, Poster in the background), Playback (Play next episode), Admin (Child profile, Expert mode — not on a child — Sources,
+# Content filters), then Switch to this profile and Delete profile on another profile's page.
+# Every change applies at once; Left leaves, focus back on the profile's row. Nothing below is
+# pressed except the OKs that open a page.
+RIGHT	Set a PIN for Settings / There is a child profile but no PIN: anyone can open Settings, change the content filters, or turn on Expert mode with 7 taps. / ›
+DOWN	A / atr / Using on this device / ›
+CENTER	Edit Name / Name / atr
+DOWN	Colour / ›
+DOWN	PIN / Asked in Settings before sources, backups and profiles / Off ›
+DOWN	UI theme / Sets the theme and the Look and Feel together
+DOWN	Theme / Select a colour theme for the app / Graphite ›
+DOWN	Look and Feel / Select a platform-inspired look and feel / Modern ›
+DOWN	Poster in the background / Shows the focused title
+DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
+DOWN	Child profile / The only profile with Expert mode can't be a child's: give Expert mode to another profile first.
+DOWN	Expert mode / The only profile with Expert mode keeps it: give Expert mode to another profile first.
+DOWN	Sources / 4 of 6 ›
+DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
+DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
+LEFT	A / atr / Using on this device / ›
+# Kid's page (a child profile, not in use): no Expert mode row; Favourites (kids' Home) after
+# Child profile.
+DOWN	K / Kid / ›
+CENTER	Edit Name / Name / Kid
+DOWN	Colour / ›
+DOWN	PIN / Asked in Settings before sources, backups and profiles / On ›
+DOWN	UI theme / Sets the theme and the Look and Feel together
+DOWN	Theme / Select a colour theme for the app / Deep night ›
+DOWN	Look and Feel / Select a platform-inspired look and feel / Standard ›
+DOWN	Poster in the background / Shows the focused title
+DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
+DOWN	Child profile / On TV, Home shows only the favourites a grown-up adds here
+DOWN	Favourites / What this child sees on Home
+DOWN	Sources / 2 of 6 ›
+DOWN	Content filters / Hide categories by prefix (e.g., 'Adult', 'XXX')
+DOWN	Switch to this profile
+DOWN	Delete profile
+DOWN	Delete profile
+DOWN	Delete profile
+LEFT	K / Kid / ›
+DOWN	T / Teen / ›
+DOWN	L / Leroy / ›
+DOWN	Add profile
+DOWN	Add profile
+# Back in the pane returns to the rail row, not out of Settings.
+BACK	Profiles

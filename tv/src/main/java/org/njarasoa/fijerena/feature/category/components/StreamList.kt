@@ -1,0 +1,983 @@
+package org.njarasoa.fijerena.feature.category.components
+
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardBorder
+import androidx.tv.material3.CardColors
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.categoryKey
+import org.njarasoa.fijerena.core.player.domain.isLastPlayed
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.showSeriesId
+import org.njarasoa.fijerena.core.player.domain.sourceKey
+import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.extractYear
+import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatRating
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CatchupBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
+import org.njarasoa.fijerena.core.ui.components.SourceBadge
+import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
+import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.wanted.LocalOpenWanted
+import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.TvEmptyState
+import org.njarasoa.fijerena.ui.components.UndoBarState
+import org.njarasoa.fijerena.ui.components.cards.TvCard
+import org.njarasoa.fijerena.ui.components.cards.TvCardLook
+import org.njarasoa.fijerena.ui.components.cards.TvCardLooks
+import org.njarasoa.fijerena.ui.components.cards.TvListRowDefaults
+import org.njarasoa.fijerena.ui.components.cards.TvRowTitle
+import org.njarasoa.fijerena.ui.components.input.PaneFocusState
+import org.njarasoa.fijerena.ui.components.input.currentIndicator
+import org.njarasoa.fijerena.ui.components.input.paneItem
+import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
+import org.njarasoa.fijerena.ui.components.input.tvPane
+import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
+import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+
+/** A stream row's look (a content list row), built once per list instead of once per row. */
+@Composable
+internal fun streamCardStyle(): TvCardLook = TvCardLooks.listRow()
+
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+internal fun StreamList(
+    streams: ImmutableMediaList?,
+    streamsLoading: Boolean,
+    selectedCategoryId: String?,
+    selectedCategoryName: String?,
+    lastPlayedItemId: String?,
+    // [lastPlayedItemId]'s source (0: any), so the same id on another source isn't current (Phase 6).
+    lastPlayedSource: Long = 0L,
+    nowPlaying: ImmutableNowPlaying,
+    contentType: String,
+    categoryViewModel: CategoryViewModel,
+    isDevMode: Boolean,
+    /**
+     * The list's identity across sources (the category's key): per-list state (the row last opened,
+     * the empty state's focus) is keyed on it, so the same category id on another source is
+     * another list. Defaults to [selectedCategoryId] (a virtual list, or the panel's tabs).
+     */
+    selectedCategoryKey: String? = selectedCategoryId,
+    // Per-row state, keyed by the row's sourceKey (multi-source plan, Phase 6).
+    favoriteIds: ImmutableStringSet = ImmutableStringSet(),
+    watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
+    watchedIds: ImmutableStringSet = ImmutableStringSet(),
+    /** [providerId]: the row's source (a merged Recent / Favourites row), 0 for the list's own. */
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
+    onRefreshStreams: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnailScale: Float = 1f,
+    /**
+     * This column's pane in a two-pane screen (see `Modifier.tvPane`): Left leaves it for
+     * [categoriesPane], and the list takes entry focus once loaded (F-C-1). Null keeps the list
+     * a plain column that only follows [lastPlayedItemId].
+     */
+    paneFocus: PaneFocusState? = null,
+    categoriesPane: PaneFocusState? = null,
+    /**
+     * False when focus belongs to the other pane on this open: the list takes neither entry focus
+     * nor the target row's, now or later (Back from the Live TV preview when this list lacks the
+     * channel that was playing, LT6). D-pad entry still lands on the remembered row.
+     */
+    takeEntryFocus: Boolean = true,
+    /** The title and count above the rows. The Live TV preview panel draws its tab row instead (LT2). */
+    showHeader: Boolean = true,
+    /** False: Hold OK / Menu on a row opens nothing (a child profile's, kids' Home plan Phase 2). */
+    rowActions: Boolean = true,
+    /**
+     * An empty list shows this text alone — no Refresh button, nothing focusable — so focus
+     * stays where it was (the preview panel's tab row, L-10). Null keeps the focusable Refresh.
+     */
+    emptyMessage: String? = null,
+    /** Shows the Undo of a removal made here; the screen or panel holding the list draws it. */
+    undoBar: UndoBarState,
+    /**
+     * Edit mode of the Recent / Favourites list (browse only): OK on a row removes it at once, a
+     * ✕ on the focused row in place of the ⋮ (the tv recents favorites plan → A).
+     */
+    editMode: Boolean = false,
+) {
+    val listState = rememberLazyListState()
+
+    val cardStyle = streamCardStyle()
+    val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
+    val isFavoritesList =
+        selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID || selectedCategoryId == CategoryViewModel.FAVORITE_CATEGORIES_ID
+    val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
+    val canRemoveFromRecent = isRecentList && categoryViewModel.supportsRemoveFromRecent
+    // The section's Wanted list (wanted titles plan, Phase 5): a row opens its source copy or its
+    // TMDB page; its menu and edit mode remove it from the list.
+    val isWantedList = selectedCategoryId == CategoryViewModel.WANTED_CATEGORY_ID
+    val openWanted = LocalOpenWanted.current
+    val rowStatus by categoryViewModel.rowStatus.collectAsStateWithLifecycle()
+    val goneLabel = stringResource(R.string.favorite_gone_from_source)
+
+    // Separator rows from the provider ("####### ETHIOPIA VIP #######", TV UI audit #24) are
+    // headings, not channels: drawn as non-focusable section headers, never a focus or play
+    // target. Up/Down pass over them, as over any non-focusable item.
+    // Rows are keyed by source and id (sourceKey): Recent and Favourites mix the profile's sources,
+    // and the same id on two of them is two rows (multi-source plan, Phase 4).
+    val markerIds =
+        remember(streams) {
+            streams?.filter { it.isSeparatorRow }?.mapTo(HashSet()) { it.sourceKey }.orEmpty()
+        }
+    // Each source's name while the list mixes several: a badge on its rows.
+    val sourceNames by categoryViewModel.sourceNames.collectAsStateWithLifecycle()
+    val categoryNames by categoryViewModel.categoryNames.collectAsStateWithLifecycle()
+
+    // Channels whose source keeps an archive get a catch-up badge. Asked per list, so the Live TV
+    // panel's Recent and Favourites tabs, which the browse list doesn't cover, get it too.
+    val catchupDays by produceState(emptyMap<String, Int>(), streams) {
+        value = streams?.let { categoryViewModel.catchupDays(it) }.orEmpty()
+    }
+
+    // A removal (the tv recents favorites plan → A): done at once, with an Undo
+    // bar instead of a confirmation. When the row leaves this list, focus goes to the row that took
+    // its place once the new list is on screen (rowFocusAfterChange below); the Undo brings the
+    // row back in its place and focus to it.
+    val currentStreams by rememberUpdatedState(streams)
+    var rowFocusAfterChange by remember { mutableStateOf<RowFocusAfterChange?>(null) }
+    val rowKeys: (ImmutableMediaList?) -> List<String> = { list ->
+        list?.mapNotNull { it.sourceKey.takeUnless(markerIds::contains) }.orEmpty()
+    }
+    val showUndo: (MediaItem, () -> Unit, Boolean) -> Unit = { item, undo, rowLeaves ->
+        if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(streams, item.sourceKey, rowKeys(streams))
+        undoBar.show(parseDisplayTitle(item.name).title.ifBlank { item.name }) {
+            undo()
+            if (rowLeaves) rowFocusAfterChange = RowFocusAfterChange(currentStreams, item.sourceKey, rowKeys(currentStreams))
+        }
+    }
+    val removeFromRecent: (MediaItem) -> Unit = { item ->
+        showUndo(item, categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId, item.providerId), true)
+    }
+    val removeFavorite: (MediaItem) -> Unit = { item ->
+        showUndo(item, categoryViewModel.removeFavorite(item, contentType), isFavoritesList)
+    }
+    val removeWanted: (MediaItem) -> Unit = { item ->
+        categoryViewModel.wantedCardOf(item)?.let { showUndo(item, categoryViewModel.removeWanted(it), true) }
+    }
+    var wantedMenuItem by remember { mutableStateOf<MediaItem?>(null) }
+    // A favourite its source no longer lists, opened (wanted titles plan → Favourites gone from
+    // their source): with another copy, a menu moves it there; without, a message says so.
+    var goneMenu by remember { mutableStateOf<Pair<MediaItem, GoneFavorite>?>(null) }
+    goneMenu?.let { (item, gone) ->
+        DetailsMoreMenu(
+            title = stringResource(R.string.favorite_gone_message, parseDisplayTitle(item.name).title.ifBlank { item.name }),
+            refreshLabel = stringResource(R.string.favorite_move_to_copy),
+            icon = CinemaIcons.SwapHoriz,
+            onRefresh = { categoryViewModel.moveToCopy(item, gone) },
+            onDismiss = { goneMenu = null },
+        )
+    }
+    val goneContext = LocalContext.current
+    val goneResources = LocalResources.current
+    wantedMenuItem?.let { item ->
+        DetailsMoreMenu(
+            title = item.name,
+            refreshLabel = stringResource(R.string.wanted_remove),
+            icon = CinemaIcons.Delete,
+            onRefresh = { removeWanted(item) },
+            onDismiss = { wantedMenuItem = null },
+        )
+    }
+
+    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a row opens this
+    // menu for it, in place of the hidden trailing ★/✓/🗑 buttons that used to be extra Right
+    // stops. The target is rebuilt from the live sets so the menu shows the row's current state.
+    var actionsItem by remember { mutableStateOf<MediaItem?>(null) }
+    actionsItem?.let { item ->
+        // On the Favourites list every row is one; elsewhere (the Live TV panel's tabs, whose rows
+        // the browse list's favoriteIds may not cover) the repository says.
+        val isFavorite =
+            isFavoritesList || item.sourceKey in favoriteIds || categoryViewModel.isFavorite(item.id, contentType, item.providerId)
+        // A show row (the season show watched plan Phase 3) offers "Mark show
+        // watched / unwatched" for all its episodes instead of the one-item toggle, except where
+        // the source keeps watched state on its server. The menu opens once its wording is known.
+        val showSeriesId = item.showSeriesId(contentType)
+        val showMarkId = showSeriesId?.takeIf { categoryViewModel.supportsWatchedMark }
+        val canMarkItem = isWatchable && showSeriesId == null && categoryViewModel.supportsWatchedMark
+        var isShowWatched by remember(item) { mutableStateOf<Boolean?>(null) }
+        var showStateKnown by remember(item) { mutableStateOf(showMarkId == null) }
+        LaunchedEffect(item) {
+            if (showMarkId != null) {
+                isShowWatched = categoryViewModel.showWatchState(showMarkId, item.providerId)
+                showStateKnown = true
+            }
+        }
+        val context = LocalContext.current
+        if (showStateKnown) {
+            FavoriteContextMenuDialog(
+                target =
+                    FavoriteMenuTarget.Stream(
+                        itemId = item.id,
+                        itemName = item.name,
+                        categoryId = item.categoryId,
+                        contentType = contentType,
+                        isFavorite = isFavorite,
+                        isWatched = if (canMarkItem) item.sourceKey in watchedIds else null,
+                        isInRecent = canRemoveFromRecent,
+                        seriesId = item.seriesId,
+                        isShowWatched = isShowWatched,
+                    ),
+                onConfirm = {
+                    if (isFavorite) {
+                        removeFavorite(item)
+                    } else {
+                        categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType, item.providerId)
+                    }
+                },
+                onDismiss = { actionsItem = null },
+                onToggleWatched =
+                    if (canMarkItem) ({ categoryViewModel.toggleWatchedStream(item.id, contentType, item.providerId) }) else null,
+                onToggleShowWatched =
+                    showMarkId?.let { seriesId ->
+                        {
+                            categoryViewModel.setShowWatched(seriesId, isShowWatched != true, item.providerId) { message ->
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                onRemoveFromRecent = if (canRemoveFromRecent) ({ removeFromRecent(item) }) else null,
+                list =
+                    when {
+                        isRecentList -> RowMenuList.RECENT
+                        isFavoritesList -> RowMenuList.FAVORITES
+                        else -> RowMenuList.OTHER
+                    },
+            )
+        }
+    }
+
+    // Auto-scroll and focus on the opened or last played item (on initial load and when returning
+    // from details/player).
+    // Without a pane, keyed to selectedCategoryId so a list switch resets it — otherwise, when
+    // lastPlayedItemId stays the same across the switch, the guard below would treat a *second*
+    // visit to an already-visited list as already handled and skip re-focusing, leaving focus
+    // wherever it landed after the previously-focused Card was disposed by the switch away. In a
+    // pane, not keyed: OK on a category keeps focus on the category, and Right enters the list on
+    // its remembered row (F-C-5); the Live TV preview panel's tabs switch its list without
+    // taking focus off the tab row (LT2).
+    var lastFocusedItemId by remember(if (paneFocus == null) selectedCategoryKey else null) { mutableStateOf<String?>(null) }
+
+    // Movie/series row last opened from this list. Opening details doesn't play anything, so
+    // lastPlayedItemId never points at it, and on Back the whole destination recomposes from
+    // scratch — CategoryList's own "focus the selected category" effect then won and focus landed
+    // in the left pane. Saveable so it survives the nav round-trip (NavHost keeps each back-stack
+    // entry's saved state); keyed to the category so another list doesn't inherit it. Movies and
+    // series only: Live TV keeps following lastPlayedItemId, which tracks channel zapping in the
+    // player.
+    var openedItemId by rememberSaveable(selectedCategoryKey) { mutableStateOf<String?>(null) }
+    // A separator is never a focus target, even when it was once played (before #24). The last
+    // played item is an id: its row's key is the first row with that id.
+    val lastPlayedKey =
+        remember(streams, lastPlayedItemId, lastPlayedSource) {
+            streams?.firstOrNull { it.isLastPlayed(lastPlayedItemId, lastPlayedSource) }?.sourceKey
+        }
+    // Films and shows: the last played item as the list first had it this visit, so only one played
+    // since is a target — a first entry opens at the top, not mid-list on whatever was played last
+    // in the section (Recent's newest rows were out of sight). Live TV keeps following the playing
+    // channel: Back from the preview hands focus to this list for it (the categories pane stays
+    // out of the way), and a list rebuilt on that return took it for the entry value — nothing had
+    // focus until Back.
+    val listReady = !streamsLoading && !streams.isNullOrEmpty()
+    val entryLastPlayedKey by rememberSaveable(selectedCategoryKey, listReady) { mutableStateOf(if (listReady) lastPlayedKey else null) }
+    val playedThisVisit =
+        if (contentType == ContentType.LIVE_TV) lastPlayedKey else lastPlayedKey?.takeIf { listReady && it != entryLastPlayedKey }
+    val focusTargetId = (openedItemId ?: playedThisVisit)?.takeUnless { it in markerIds }
+
+    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
+    // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
+    // guard the fade/slide replays on every focus move instead of just on first appearance.
+    // Keyed to streams so it resets (bounded) on category switch instead of growing unbounded
+    // across every stream id seen this session.
+    val enteredStreamIds = remember(streams) { mutableSetOf<String>() }
+
+    // Keyed on the target's position, not on `streams` itself: with a guide source the list is
+    // re-emitted again and again as programme info arrives, and each emission relaunched this
+    // effect. When the target can't take focus (a hidden list behind the full-screen player, a row
+    // never composed) every relaunch failed again — a log flood that never stopped while watching.
+    val focusTargetIndex = remember(streams, focusTargetId) { streams?.indexOfFirst { it.sourceKey == focusTargetId } ?: -1 }
+    val pane = paneFocus ?: rememberPaneFocus()
+    pane.bind(
+        selectedKey = focusTargetId,
+        // Entry lands on the first channel, never on a separator above it.
+        firstKey = streams?.firstOrNull { it.sourceKey !in markerIds }?.sourceKey,
+        listState = listState,
+        indexOf = { key -> if (key in markerIds) -1 else streams?.indexOfFirst { it.sourceKey == key } ?: -1 },
+    )
+    // Entry focus (F-C-1): a pane's list takes focus once per composition when it first has rows,
+    // even with no target — on the remembered row (a Back return), else the first.
+    var entryPending by remember { mutableStateOf(paneFocus != null) }
+    LaunchedEffect(selectedCategoryKey, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty(), takeEntryFocus) {
+        // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
+        // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
+        // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
+        // actually finished loading a moment later the guard below was already tripped and this
+        // never got a second chance. Focus was left stuck on the header's refresh button (the
+        // first focusable in the composed tree) for good.
+        if (streamsLoading || streams.isNullOrEmpty()) return@LaunchedEffect
+        if (!takeEntryFocus) {
+            // The other pane has focus on this open (LT6): count it as handled, so a later list
+            // that has the target doesn't pull focus off the category the user is on.
+            lastFocusedItemId = focusTargetId
+            entryPending = false
+            return@LaunchedEffect
+        }
+        if (focusTargetId != null && focusTargetId != lastFocusedItemId && focusTargetIndex != -1) {
+            // Only mark handled on success, so a failed attempt (e.g. still racing
+            // composition) gets another go when the effect's keys change instead of being
+            // silently given up on forever.
+            if (pane.focusKey(focusTargetId)) {
+                lastFocusedItemId = focusTargetId
+                entryPending = false
+            }
+        } else if (entryPending) {
+            if (pane.focusEntry()) entryPending = false
+        }
+    }
+
+    LaunchedEffect(streams, streamsLoading, rowFocusAfterChange) {
+        val change = rowFocusAfterChange
+        if (change == null || streamsLoading || streams === change.from) return@LaunchedEffect
+        rowFocusAfterChange = null
+        // Null: the list is empty now; its empty state (or the panel's tab row) takes focus.
+        rowAfterChange(change.oldKeys, change.key, rowKeys(streams))?.let { pane.focusKey(it) }
+    }
+
+    Column(modifier = modifier) {
+        if (showHeader) {
+            StreamListHeader(
+                itemCount = streams?.let { it.size - markerIds.size },
+                selectedCategoryId = selectedCategoryId,
+                selectedCategoryName = selectedCategoryName,
+                contentType = contentType,
+                categoryViewModel = categoryViewModel,
+                isDevMode = isDevMode,
+            )
+        }
+        if (editMode) {
+            // What the mode does, under the list's title (plan → A, "Edit" mode).
+            CinemaText(
+                text = stringResource(if (isRecentList) R.string.edit_recent_hint else R.string.edit_favorites_hint),
+                tone = TextTone.Accent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = Spacing.sm),
+            )
+        }
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = CinemaTheme.colors.surfaceRaised.copy(alpha = CinemaAlpha.tint),
+                        shape = CinemaTheme.shapes.chip,
+                    ).then(
+                        // The screen header above stays outside the pane: Up from the first row
+                        // reaches it. Right goes nowhere (R1).
+                        if (paneFocus != null) Modifier.tvPane(paneFocus, exitLeft = categoriesPane) else Modifier,
+                    ),
+        ) {
+            when {
+                streamsLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(Spacing.sm),
+                    ) {
+                        SkeletonList(
+                            rowCount = 6,
+                            rowHeight = TvDimensions.cardHeight,
+                            thumbnailWidth = TvDimensions.posterWidth * thumbnailScale,
+                            thumbnailHeight = TvDimensions.posterHeight * thumbnailScale,
+                            verticalSpacing = LocalUiStyle.current.grid.spacing,
+                        )
+                    }
+                }
+
+                streams.isNullOrEmpty() && emptyMessage != null -> {
+                    // Nothing focusable: focus stays on the panel's tab row (L-10).
+                    TvEmptyState(
+                        message = emptyMessage,
+                        icon = sectionIcon(contentType),
+                    )
+                }
+
+                streams.isNullOrEmpty() -> {
+                    // Removing the last item from an already-loaded category (e.g. unfavoriting
+                    // the only favorite) left D-pad focus with nowhere to land: the focused Card
+                    // was gone, nothing here claimed it, so it fell to the window root and stopped
+                    // responding to D-pad input. The empty state's Refresh takes focus — on each
+                    // category (keyed) — which both fixes that and gives an actionable retry for
+                    // a genuinely empty category.
+                    // An empty Recent or Favourites says what fills it, and its button goes to the
+                    // categories: refreshing it would find nothing more (household UX plan, K2).
+                    val virtualList =
+                        streams != null &&
+                            categoriesPane != null &&
+                            (isRecentList || selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID)
+                    key(selectedCategoryKey) {
+                        if (virtualList) {
+                            val scope = rememberCoroutineScope()
+                            TvEmptyState(
+                                message =
+                                    stringResource(if (isRecentList) R.string.browse_recent_empty else R.string.browse_favorites_empty),
+                                icon = sectionIcon(contentType),
+                                actionLabel = stringResource(R.string.browse_open_categories),
+                                onAction = { scope.launch { categoriesPane?.focusEntry() } },
+                            )
+                        } else {
+                            TvEmptyState(
+                                message = if (streams == null) selectCategoryText(contentType) else noItemsText(contentType),
+                                icon = sectionIcon(contentType),
+                                actionLabel = selectedCategoryId?.let { stringResource(R.string.common_refresh) },
+                                onAction = selectedCategoryId?.let { categoryId -> { onRefreshStreams(categoryId) } },
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    // See MinimalBringIntoView: the list opens with its first row whole, and a row
+                    // focused below the fold scrolls in only as far as it must.
+                    CompositionLocalProvider(LocalBringIntoViewSpec provides MinimalBringIntoView) {
+                        LazyColumn(
+                            state = listState,
+                            contentPadding = PaddingValues(Spacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
+                        ) {
+                            itemsIndexed(
+                                items = streams,
+                                key = { _, item -> item.sourceKey },
+                                contentType = { _, item -> if (item.sourceKey in markerIds) "separator" else "stream" },
+                            ) { index, item ->
+                                if (item.sourceKey in markerIds) {
+                                    SeparatorRow(name = item.name)
+                                } else {
+                                    StreamItem(
+                                        item = item,
+                                        // Only where the list mixes sources: an ordinary category is one source's.
+                                        sourceName =
+                                            sourceNames[item.providerId].takeIf {
+                                                CategoryViewModel.mixesSources(
+                                                    selectedCategoryId,
+                                                )
+                                            },
+                                        categoryName = categoryNames[categoryKey(item.categoryId, item.providerId)],
+                                        // The Live TV panel's tabs list rows the browse state doesn't hold: a
+                                        // favourite there asks for its own gone state.
+                                        status = rowStatus[item.sourceKey] ?: goneLabel.takeIf { categoryViewModel.goneOf(item) != null },
+                                        isFavorite = item.sourceKey in favoriteIds,
+                                        watchProgress = watchProgress[item.sourceKey] ?: 0f,
+                                        isWatched = item.sourceKey in watchedIds,
+                                        nowPlayingProgram = nowPlaying[item.sourceKey],
+                                        catchupDays = catchupDays[item.sourceKey] ?: 0,
+                                        isCurrent = item.isLastPlayed(lastPlayedItemId, lastPlayedSource),
+                                        editMode = editMode,
+                                        onClick = {
+                                            val gone = if (editMode) null else categoryViewModel.goneOf(item)
+                                            when {
+                                                editMode && isWantedList -> {
+                                                    removeWanted(item)
+                                                }
+
+                                                isWantedList -> {
+                                                    categoryViewModel.wantedCardOf(item)?.let { card ->
+                                                        lastFocusedItemId = item.sourceKey
+                                                        openedItemId = item.sourceKey
+                                                        categoryViewModel.openingWanted(card)
+                                                        openWanted(card.route)
+                                                    }
+                                                }
+
+                                                editMode && isRecentList -> {
+                                                    removeFromRecent(item)
+                                                }
+
+                                                gone != null -> {
+                                                    if (gone.copy != null) {
+                                                        goneMenu = item to gone
+                                                    } else {
+                                                        val name = parseDisplayTitle(item.name).title.ifBlank { item.name }
+                                                        Toast
+                                                            .makeText(
+                                                                goneContext,
+                                                                goneResources.getString(R.string.favorite_gone_message, name),
+                                                                Toast.LENGTH_LONG,
+                                                            ).show()
+                                                    }
+                                                }
+
+                                                editMode -> {
+                                                    removeFavorite(item)
+                                                }
+
+                                                else -> {
+                                                    if (isWatchable) {
+                                                        // Already focused: mark handled too, so the effect above
+                                                        // doesn't scroll this row to the top as the screen leaves.
+                                                        lastFocusedItemId = item.sourceKey
+                                                        openedItemId = item.sourceKey
+                                                    }
+                                                    onStreamSelected(
+                                                        item.id,
+                                                        item.name,
+                                                        item.categoryId,
+                                                        item.browseTarget(contentType),
+                                                        item.providerId,
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onOpenActions = {
+                                            when {
+                                                !rowActions -> Unit
+                                                isWantedList -> wantedMenuItem = item
+                                                else -> actionsItem = item
+                                            }
+                                        },
+                                        cardModifier = Modifier.paneItem(pane, item.sourceKey),
+                                        thumbnailScale = thumbnailScale,
+                                        cardStyle = cardStyle,
+                                        modifier =
+                                            // remember-scoped so a recomposition of an already-visible item
+                                            // reuses the same answer. Called bare, add() returned false on
+                                            // the first recomposition and dropped staggeredEntrance from the
+                                            // chain mid-animation, detaching the node.
+                                            if (remember(item.sourceKey) { enteredStreamIds.add(item.sourceKey) }) {
+                                                Modifier.staggeredEntrance(index)
+                                            } else {
+                                                Modifier
+                                            },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The list's title and its count above a [StreamList]'s rows; the screen's Refresh is in its header. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun StreamListHeader(
+    /** Rows that are channels, films or shows (separators left out); null before a list is loaded. */
+    itemCount: Int?,
+    selectedCategoryId: String?,
+    selectedCategoryName: String?,
+    contentType: String,
+    categoryViewModel: CategoryViewModel,
+    isDevMode: Boolean,
+) {
+    // One line, title then count, so this pane starts level with the categories pane beside it.
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        CinemaText(
+            text = selectedCategoryName ?: stringResource(R.string.category_select_category),
+            role = TextRole.Title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
+        )
+        if (itemCount != null) {
+            val countLabel = itemCountText(contentType, itemCount)
+            val countText =
+                buildString {
+                    append(countLabel)
+                    if (isDevMode && selectedCategoryId != null) {
+                        categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
+                            append(" | $it")
+                        }
+                        categoryViewModel.getFetchTime(selectedCategoryId)?.let {
+                            append(" in $it")
+                        }
+                    }
+                }
+            CinemaText(text = countText, tone = TextTone.Secondary, maxLines = 1, modifier = Modifier.alignByBaseline())
+        }
+    }
+}
+
+/**
+ * A provider's separator row ("####### ETHIOPIA VIP #######") as what it is: a heading over the
+ * channels that follow, text only, never focusable (TV UI audit #24).
+ */
+@Composable
+private fun SeparatorRow(name: String) {
+    CinemaText(
+        text =
+            name
+                .trim()
+                .trim('#')
+                .trim()
+                .ifEmpty { name.trim() },
+        role = TextRole.Heading,
+        tone = TextTone.Secondary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier =
+            Modifier.padding(
+                start =
+                    Spacing.md + Spacing.sm,
+                end = Spacing.md,
+                top = Spacing.sm,
+            ),
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+// internal, not private: StreamItemTest (Robolectric) checks the row's one accessibility node.
+@Composable
+internal fun StreamItem(
+    item: MediaItem,
+    /**
+     * The row's source, where the list mixes several (Recent, Favourites): a badge opening its
+     * second line, before [categoryName] (films, shows, and a channel without a Now line) or the Now line.
+     */
+    sourceName: String? = null,
+    categoryName: String? = null,
+    /** A short state shown first on the second line: Available / Not available, Gone from source. */
+    status: String? = null,
+    isFavorite: Boolean = false,
+    watchProgress: Float = 0f,
+    isWatched: Boolean = false,
+    nowPlayingProgram: EpgProgram? = null,
+    /** Days the channel's archive keeps (catch-up), 0 for none: a badge beside the title. */
+    catchupDays: Int = 0,
+    /** The channel playing / the last played item: the P5 "current" bar and title colour. */
+    isCurrent: Boolean = false,
+    /** Edit mode: OK removes the row, and the focused row shows a ✕ instead of the ⋮. */
+    editMode: Boolean = false,
+    onClick: () -> Unit,
+    /** Long-press OK or the Menu key: open the row's action menu (P3). */
+    onOpenActions: () -> Unit,
+    /** Applied to the card itself (the focusable), not the row. */
+    cardModifier: Modifier = Modifier,
+    thumbnailScale: Float = 1f,
+    cardStyle: TvCardLook,
+    modifier: Modifier = Modifier,
+) {
+    // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
+    // draw every frame for as long as its text overflows, and IPTV channel names overflow
+    // constantly — with it applied unconditionally, every visible row kept two such loops running
+    // (title + "Now:"), so a dozen on-screen rows meant ~24 concurrent per-frame animations
+    // competing with the scroll itself. At rest the two look identical: fraction is 0, so the
+    // node draws the same clipped text a plain Text does.
+    var isFocused by remember { mutableStateOf(false) }
+
+    TvCard(
+        onClick = onClick,
+        onLongClick = onOpenActions,
+        modifier =
+            modifier
+                .padding(horizontal = Spacing.md)
+                .fillMaxWidth()
+                .then(cardModifier)
+                .onFocusChanged { isFocused = it.isFocused }
+                .onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || event.key != Key.Menu) return@onKeyEvent false
+                    onOpenActions()
+                    true
+                },
+        look = cardStyle,
+    ) {
+        // Its code is left out when the category already opens with it.
+        val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
+        // The year goes to the line under it, with the length and rating.
+        val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
+        // Films and shows: what the row already carries — year · length · rating (TV UI
+        // audit #11). The rating is a plain number: a star here means favourite (X9).
+        val metaLine =
+            remember(item.metadata, parsedTitle.year, status) {
+                listOfNotNull(
+                    status,
+                    (extractYear(item.metadata.year, item.metadata.releaseDate, null) ?: parsedTitle.year)?.toString(),
+                    item.metadata.duration
+                        ?.takeIf(::hasMeaningfulDuration)
+                        ?.let(::formatDuration),
+                    item.metadata.rating
+                        ?.takeIf { it.isNotBlank() && it.trim().toDoubleOrNull() != 0.0 }
+                        ?.let(::formatRating),
+                ).joinToString(" · ")
+            }
+        val nowLine = nowPlayingProgram?.let { stringResource(R.string.epg_now_prefix, it.title) }
+        // Badges show in Expert mode only (SourceBadge).
+        val sourceLine = sourceName?.takeIf { LocalShowSourceBadges.current }
+        val sourceLineText =
+            when {
+                sourceLine == null -> {
+                    null
+                }
+
+                item.mediaType == MediaType.LIVE_CHANNEL -> {
+                    listOfNotNull(
+                        status,
+                        nowLine ?: categoryName,
+                    ).joinToString(" · ").ifEmpty { null }
+                }
+
+                // The year first, so a long category can't push it off the line.
+                else -> {
+                    listOfNotNull(metaLine.ifEmpty { null }, categoryName).joinToString(" · ").ifEmpty { null }
+                }
+            }
+        // One accessibility node for the row's content, read as its parts were. With an
+        // accessibility service on (Button Mapper on a Shield), Compose walks and diffs every
+        // semantics node on scroll; a node per text and badge made that the biggest cost of a
+        // frame (docs/plans/20260914_codebase-robustness-plan.md, Phase 4 measurement).
+        val description =
+            listOfNotNull(
+                "★".takeIf { isFavorite },
+                stringResource(R.string.content_watched_badge).takeIf { isWatched },
+                if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
+                displayTitle,
+                sourceLine?.let { stringResource(R.string.source_badge_description, it) },
+                titleBadgesDescription(parsedTitle),
+                if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null },
+                nowLine.takeIf { sourceLine == null },
+                when {
+                    isFocused && editMode -> stringResource(R.string.edit_remove_row)
+                    isFocused -> stringResource(R.string.row_actions_hint)
+                    else -> null
+                },
+            ).joinToString(", ")
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics { contentDescription = description }
+                    .currentIndicator(isCurrent)
+                    .padding(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            // The resume bar sits on the thumbnail's bottom edge, inside its row (TV UI audit
+            // #11) — under the row it read as the next row's.
+            val thumbnailShape = CinemaTheme.shapes.card
+            Box(
+                modifier =
+                    Modifier
+                        .size(
+                            width = TvDimensions.posterWidth * thumbnailScale,
+                            height = TvDimensions.posterHeight * thumbnailScale,
+                        ).clip(thumbnailShape),
+            ) {
+                // A channel's logo is drawn whole on a neutral tile; the shading under artwork
+                // would only dim it.
+                val isChannel = item.mediaType == MediaType.LIVE_CHANNEL
+                CinemaThumbnail(
+                    url = item.thumbnailUrl,
+                    // The clean title's first letter or digit, so a name that opens with a tag,
+                    // a space or a symbol still gets its letter tile (TV UI audit #7).
+                    fallbackLetter = displayTitle.firstOrNull { it.isLetterOrDigit() } ?: displayTitle.firstOrNull(),
+                    contentType = if (isChannel) ThumbnailContentType.LIVE_TV else ThumbnailContentType.DEFAULT,
+                    overlayGradient = !isChannel,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (watchProgress > 0f) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { watchProgress },
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(TvDimensions.resumeBarHeight),
+                        color = CinemaTheme.colors.accent,
+                        trackColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                        drawStopIndicator = {},
+                        gapSize = Spacing.none,
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isFavorite) {
+                        CinemaText(text = "★", role = TextRole.Heading, tone = TextTone.Accent)
+                    }
+
+                    if (isWatched) {
+                        Icon(
+                            imageVector = CinemaIcons.CheckCircle,
+                            contentDescription = stringResource(R.string.content_watched_badge),
+                            tint = CinemaTheme.colors.success,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                        )
+                    }
+
+                    if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = TvDimensions.iconSmall)
+
+                    TvRowTitle(
+                        // See mobile's StreamCard — provider data occasionally sends a blank
+                        // name (e.g. "EN -  (US)" with nothing between the dashes).
+                        text = displayTitle,
+                        isCurrent = isCurrent,
+                        isFocused = isFocused,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
+                    )
+                    // The source (Expert mode) ends the first line, in the same place on every row.
+                    sourceLine?.let { SourceBadge(it, providerId = item.providerId) }
+                }
+                // The second line: the title's badges, then the category,
+                // year · length · rating or the Now line.
+                val lineText = if (sourceLine != null) sourceLineText else metaLine.ifEmpty { null } ?: nowLine
+                if (sourceLine != null || lineText != null || parsedTitle.hasBadges) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TitleBadges(parsedTitle)
+                        lineText?.let { text ->
+                            CinemaText(
+                                text = text,
+                                tone = if (text == nowLine) TextTone.Highlight else TextTone.Secondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = if (isFocused && text == nowLine) Modifier.bounceMarquee() else Modifier,
+                            )
+                        }
+                    }
+                }
+                // A film's year line keeps a Now line, if it has one, under it.
+                nowLine?.takeIf { sourceLine == null && metaLine.isNotEmpty() }?.let { line ->
+                    CinemaText(
+                        text = line,
+                        tone = TextTone.Highlight,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                    )
+                }
+            }
+
+            // Discoverability hint for the action menu: a glyph, not a focus stop, on the
+            // focused row only (plan Decisions 1).
+            when {
+                isFocused && editMode -> RowRemoveHint()
+                isFocused -> RowActionsHint()
+            }
+        }
+    }
+}
+
+/** The "⋮" at the end of a focused content row (StreamList and CategoryList): long-press OK or Menu opens its actions. */
+@Composable
+internal fun RowActionsHint() {
+    Icon(
+        imageVector = CinemaIcons.MoreVert,
+        contentDescription = stringResource(R.string.row_actions_hint),
+        tint = CinemaTheme.colors.textSecondary,
+        modifier = Modifier.size(TvDimensions.iconSmall),
+    )
+}
+
+/** The ✕ at the end of a focused row in edit mode: OK removes it. A glyph, not a focus stop. */
+@Composable
+private fun RowRemoveHint() {
+    Icon(
+        imageVector = CinemaIcons.Close,
+        contentDescription = stringResource(R.string.edit_remove_row),
+        tint = CinemaTheme.colors.danger,
+        modifier = Modifier.size(TvDimensions.iconSmall),
+    )
+}

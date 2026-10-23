@@ -1,0 +1,405 @@
+package org.njarasoa.fijerena.core.network.provider
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import org.njarasoa.fijerena.core.network.profile.ProfileDao
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
+
+@Database(
+    entities = [
+        ProviderEntity::class,
+        EpgSourceEntity::class,
+        EpgPipelineStatsEntity::class,
+        ProfileEntity::class,
+        SettingsTombstoneEntity::class,
+        SettingsVersionEntity::class,
+        SyncClockEntity::class,
+    ],
+    version = SettingsDatabase.DB_VERSION,
+    exportSchema = true,
+)
+abstract class SettingsDatabase : RoomDatabase() {
+    abstract fun providerDao(): ProviderDao
+
+    abstract fun epgSourceDao(): EpgSourceDao
+
+    abstract fun epgPipelineStatsDao(): EpgPipelineStatsDao
+
+    abstract fun profileDao(): ProfileDao
+
+    abstract fun settingsSyncDao(): SettingsSyncDao
+
+    companion object {
+        const val DB_VERSION = 17
+        private const val DB_NAME = "providers.db"
+
+        @Volatile
+        private var INSTANCE: SettingsDatabase? = null
+
+        val MIGRATION_1_2 =
+            object : Migration(1, 2) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE providers ADD COLUMN type TEXT NOT NULL DEFAULT 'XTREAM'")
+                    db.execSQL("ALTER TABLE providers ADD COLUMN config TEXT NOT NULL DEFAULT ''")
+                }
+            }
+
+        val MIGRATION_2_3 =
+            object : Migration(2, 3) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE providers ADD COLUMN providerSettings TEXT NOT NULL DEFAULT '{}'")
+                }
+            }
+
+        val MIGRATION_3_4 =
+            object : Migration(3, 4) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `epg_source` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                            `url` TEXT NOT NULL, 
+                            `label` TEXT NOT NULL, 
+                            `timezone_offset_hours` INTEGER NOT NULL, 
+                            `added_at_ms` INTEGER NOT NULL, 
+                            `last_ingested_at_ms` INTEGER NOT NULL, 
+                            `last_error` TEXT, 
+                            `enabled` INTEGER NOT NULL DEFAULT 1, 
+                            `last_channels` INTEGER NOT NULL DEFAULT 0, 
+                            `last_programmes` INTEGER NOT NULL DEFAULT 0, 
+                            `last_download_bytes` INTEGER NOT NULL DEFAULT 0, 
+                            `ingest_method` TEXT NOT NULL DEFAULT 'DOWNLOADED', 
+                            `last_ingestion_duration_ms` INTEGER NOT NULL DEFAULT 0, 
+                            `last_download_duration_ms` INTEGER NOT NULL DEFAULT 0
+                        )
+                        """.trimIndent(),
+                    )
+                }
+            }
+
+        val MIGRATION_4_5 =
+            object : Migration(4, 5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `epg_pipeline_stats` (
+                            `id` INTEGER PRIMARY KEY NOT NULL, 
+                            `updated_at_ms` INTEGER NOT NULL, 
+                            `duration_ms` INTEGER NOT NULL, 
+                            `sources_processed` INTEGER NOT NULL, 
+                            `errors` INTEGER NOT NULL, 
+                            `total_channels` INTEGER NOT NULL, 
+                            `total_programmes` INTEGER NOT NULL
+                        )
+                        """.trimIndent(),
+                    )
+                }
+            }
+
+        val MIGRATION_5_6 =
+            object : Migration(5, 6) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE providers ADD COLUMN lastSyncedAtMs INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE providers ADD COLUMN lastSyncDurationMs INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE providers ADD COLUMN lastSyncError TEXT")
+                }
+            }
+
+        val MIGRATION_6_7 =
+            object : Migration(6, 7) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN provider_id INTEGER")
+                }
+            }
+
+        val MIGRATION_7_8 =
+            object : Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // EPG is a provider-level concern: every source must have an owning provider.
+                    // Backfill existing global (NULL) sources to the currently active provider,
+                    // falling back to the first known provider if none is active.
+                    db.execSQL(
+                        """
+                        UPDATE epg_source SET provider_id = (SELECT id FROM providers WHERE isActive = 1 LIMIT 1)
+                        WHERE provider_id IS NULL
+                        """.trimIndent(),
+                    )
+                    db.execSQL(
+                        """
+                        UPDATE epg_source SET provider_id = (SELECT id FROM providers ORDER BY id LIMIT 1)
+                        WHERE provider_id IS NULL
+                        """.trimIndent(),
+                    )
+
+                    // SQLite can't add a NOT NULL constraint to an existing column - recreate the table.
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `epg_source_new` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `url` TEXT NOT NULL,
+                            `label` TEXT NOT NULL,
+                            `timezone_offset_hours` INTEGER NOT NULL,
+                            `added_at_ms` INTEGER NOT NULL,
+                            `last_ingested_at_ms` INTEGER NOT NULL,
+                            `last_error` TEXT,
+                            `enabled` INTEGER NOT NULL DEFAULT 1,
+                            `last_channels` INTEGER NOT NULL DEFAULT 0,
+                            `last_programmes` INTEGER NOT NULL DEFAULT 0,
+                            `last_download_bytes` INTEGER NOT NULL DEFAULT 0,
+                            `ingest_method` TEXT NOT NULL DEFAULT 'DOWNLOADED',
+                            `last_ingestion_duration_ms` INTEGER NOT NULL DEFAULT 0,
+                            `last_download_duration_ms` INTEGER NOT NULL DEFAULT 0,
+                            `provider_id` INTEGER NOT NULL
+                        )
+                        """.trimIndent(),
+                    )
+                    db.execSQL(
+                        """
+                        INSERT INTO epg_source_new
+                        SELECT id, url, label, timezone_offset_hours, added_at_ms, last_ingested_at_ms, last_error,
+                               enabled, last_channels, last_programmes, last_download_bytes, ingest_method,
+                               last_ingestion_duration_ms, last_download_duration_ms, provider_id
+                        FROM epg_source WHERE provider_id IS NOT NULL
+                        """.trimIndent(),
+                    )
+                    db.execSQL("DROP TABLE epg_source")
+                    db.execSQL("ALTER TABLE epg_source_new RENAME TO epg_source")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_epg_source_provider_id` ON `epg_source` (`provider_id`)")
+                }
+            }
+
+        val MIGRATION_8_9 =
+            object : Migration(8, 9) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE providers ADD COLUMN lastSyncInserted INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE providers ADD COLUMN lastSyncUpdated INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE providers ADD COLUMN lastSyncDeleted INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+
+        val MIGRATION_9_10 =
+            object : Migration(9, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN last_content_sha256 TEXT")
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN etag TEXT")
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN last_modified_header TEXT")
+                }
+            }
+
+        /**
+         * Migration 10→11: the `profiles` table, seeded with the Default profile every existing
+         * favourite and watch-state row is assigned to by `XtreamDatabase`'s 19→20.
+         * See the live sync plan → User profiles.
+         */
+        val MIGRATION_10_11 =
+            object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `profiles` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                            "`createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                    )
+                    insertDefaultProfile(db)
+                }
+            }
+
+        /** Migration 11→12: avatar colour per profile, an index into the UI palette. */
+        val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `profiles` ADD COLUMN `colorIndex` INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+
+        /**
+         * Migration 12→13, live sync phase 3: `providers.providerKey` (a random UUID per existing
+         * provider, unique) and the `sync_tombstone` table for provider and profile deletions.
+         * See the live sync plan → Record model, Deletions.
+         */
+        val MIGRATION_12_13 =
+            object : Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `providers` ADD COLUMN `providerKey` TEXT NOT NULL DEFAULT ''")
+                    val ids =
+                        db.query("SELECT `id` FROM `providers`").use { cursor ->
+                            buildList { while (cursor.moveToNext()) add(cursor.getLong(0)) }
+                        }
+                    ids.forEach { id ->
+                        db.execSQL(
+                            "UPDATE `providers` SET `providerKey` = ? WHERE `id` = ?",
+                            arrayOf<Any>(
+                                java.util.UUID
+                                    .randomUUID()
+                                    .toString(),
+                                id,
+                            ),
+                        )
+                    }
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_providers_providerKey` ON `providers` (`providerKey`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_tombstone` (`kind` TEXT NOT NULL, `itemKey` TEXT NOT NULL, " +
+                            "`deletedAt` INTEGER NOT NULL, PRIMARY KEY(`kind`, `itemKey`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_tombstone_deletedAt` ON `sync_tombstone` (`deletedAt`)")
+                }
+            }
+
+        /**
+         * Migration 13→14, live sync phase 4: `epg_source.source_key` (a random UUID per existing
+         * source, unique), `sync_outbox` and `sync_clock`. The triggers that fill them are
+         * installed on open — see [SettingsSyncTriggers].
+         */
+        val MIGRATION_13_14 =
+            object : Migration(13, 14) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `source_key` TEXT NOT NULL DEFAULT ''")
+                    val ids =
+                        db.query("SELECT `id` FROM `epg_source`").use { cursor ->
+                            buildList { while (cursor.moveToNext()) add(cursor.getLong(0)) }
+                        }
+                    ids.forEach { id ->
+                        db.execSQL(
+                            "UPDATE `epg_source` SET `source_key` = ? WHERE `id` = ?",
+                            arrayOf<Any>(
+                                java.util.UUID
+                                    .randomUUID()
+                                    .toString(),
+                                id,
+                            ),
+                        )
+                    }
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_epg_source_source_key` ON `epg_source` (`source_key`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_outbox` (`kind` TEXT NOT NULL, `profileId` TEXT NOT NULL, " +
+                            "`itemKey` TEXT NOT NULL, `hlc` INTEGER NOT NULL, PRIMARY KEY(`kind`, `profileId`, `itemKey`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_outbox_hlc` ON `sync_outbox` (`hlc`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_clock` (`id` INTEGER NOT NULL, `hlc` INTEGER NOT NULL, " +
+                            "`applying` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                    )
+                }
+            }
+
+        /**
+         * Migration 14→15, live sync phase 5: `sync_outbox` becomes `sync_version` (kept after
+         * sending, `pending` for what is still to send) — see `XtreamDatabase.MIGRATION_22_23`.
+         */
+        val MIGRATION_14_15 =
+            object : Migration(14, 15) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_version` (`kind` TEXT NOT NULL, `profileId` TEXT NOT NULL, " +
+                            "`itemKey` TEXT NOT NULL, `hlc` INTEGER NOT NULL, `pending` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`kind`, `profileId`, `itemKey`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_version_pending_hlc` ON `sync_version` (`pending`, `hlc`)")
+                    db.execSQL("INSERT INTO `sync_version` SELECT `kind`, `profileId`, `itemKey`, `hlc`, 1 FROM `sync_outbox`")
+                    db.execSQL("DROP TABLE `sync_outbox`")
+                }
+            }
+
+        /**
+         * Migration 15→16: `epg_source.refresh_interval_hours`, each guide source's own auto-refresh
+         * interval. Null (not set) here; on the next start `EpgRefreshSchedule.copyLegacyIntervalOnce`
+         * fills it with the retired device-wide interval.
+         */
+        val MIGRATION_15_16 =
+            object : Migration(15, 16) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `refresh_interval_hours` INTEGER")
+                }
+            }
+
+        /**
+         * Migration 16→17, no schema change: each Xtream source's automatic guide source
+         * (`<server>/xmltv.php?username=…&password=…`) loses its login, which stays only in the
+         * encrypted credential store and is added again when the guide is downloaded
+         * ([AutoXmltvSources.fetchUrl]). Hand-added sources keep their URL. Nothing is queued for
+         * live sync: what is sent for these rows is the same as before ([AutoXmltvSources.syncUrl]).
+         * See the public release plan → R1.
+         */
+        val MIGRATION_16_17 =
+            object : Migration(16, 17) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    val rows =
+                        db
+                            .query(
+                                "SELECT e.`id`, e.`url`, e.`label`, p.`url` FROM `epg_source` e " +
+                                    "JOIN `providers` p ON p.`id` = e.`provider_id` WHERE p.`type` = 'XTREAM' AND e.`url` LIKE '%?%'",
+                            ).use { cursor ->
+                                buildList {
+                                    while (cursor.moveToNext()) {
+                                        val url = cursor.getString(1)
+                                        val stored = AutoXmltvSources.withoutLogin(url, cursor.getString(2), cursor.getString(3))
+                                        if (stored != url) add(cursor.getLong(0) to stored)
+                                    }
+                                }
+                            }
+                    if (rows.isNotEmpty()) {
+                        // The live sync triggers, from an earlier open, still exist: hold them off.
+                        db.execSQL("UPDATE `sync_clock` SET `applying` = 1 WHERE `id` = ${SyncClockEntity.SINGLE_ROW}")
+                        rows.forEach { (id, url) -> db.execSQL("UPDATE `epg_source` SET `url` = ? WHERE `id` = ?", arrayOf<Any>(url, id)) }
+                        db.execSQL("UPDATE `sync_clock` SET `applying` = 0 WHERE `id` = ${SyncClockEntity.SINGLE_ROW}")
+                    }
+                }
+            }
+
+        /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
+        private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "INSERT OR IGNORE INTO `profiles` (`id`, `name`, `createdAt`) VALUES (?, ?, ?)",
+                arrayOf<Any>(ProfileEntity.DEFAULT_ID, ProfileEntity.DEFAULT_NAME, System.currentTimeMillis()),
+            )
+        }
+
+        fun getInstance(context: Context): SettingsDatabase =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: Room
+                    .databaseBuilder(
+                        context.applicationContext,
+                        SettingsDatabase::class.java,
+                        DB_NAME,
+                    ).addMigrations(
+                        MIGRATION_1_2,
+                        MIGRATION_2_3,
+                        MIGRATION_3_4,
+                        MIGRATION_4_5,
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14,
+                        MIGRATION_14_15,
+                        MIGRATION_15_16,
+                        MIGRATION_16_17,
+                    ).addCallback(
+                        object : RoomDatabase.Callback() {
+                            override fun onCreate(db: SupportSQLiteDatabase) {
+                                insertDefaultProfile(db)
+                            }
+
+                            override fun onOpen(db: SupportSQLiteDatabase) {
+                                SettingsSyncTriggers.install(db)
+                            }
+                        },
+                    )
+                    // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
+                    // silently falls back to TRUNCATE (readers block on writes) on any device
+                    // ActivityManager reports as low-RAM, which several of this app's actual
+                    // Android TV targets plausibly are.
+                    .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+                    .build()
+                    .also { INSTANCE = it }
+            }
+    }
+}
