@@ -1,5 +1,11 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **A picture instead of "Buffering…":** while a stream loads, a film shows a camera iris that opens as the video arrives, an episode a film reel that turns at the download speed, and a channel a ring that fills around its logo. They turn amber when the connection is too slow. The title's or channel's logo (or its name) shows at the top left. Expert mode keeps its buffering details under the picture. TV and phone.
+- **No black screen when a stream stalls:** when a film or channel that was playing waits or reconnects, its last picture stays on screen, and the indicator takes a colour from it. A new film or channel still starts from black.
+- **TV: the stream info banner waits for the picture:** at the start and after a channel change, the banner stays up until the stream plays, then for the usual 3 seconds.
+
 ## Version: 0.7.4
 
 - **Trailers play in the app:** the trailer button plays the trailer full screen inside Fijerena, and Back returns to the page. On TV, OK pauses (with a pause sign and the video's title) and Left and Right seek (with the new position). When a source's trailer is no longer on YouTube, TMDB's plays instead. A trailer YouTube does not allow in other apps still opens in the YouTube app. TV and phone.

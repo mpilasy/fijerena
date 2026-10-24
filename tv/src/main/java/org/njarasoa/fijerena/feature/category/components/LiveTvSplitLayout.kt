@@ -616,6 +616,7 @@ internal fun LiveTvSplitLayout(
                 nextEpgProgram = success?.nextEpgProgram,
                 currentStreamId = success?.streamId,
                 tuningChannelName = tuningName,
+                tuningLogoUrl = target.thumbnailUrl,
                 // Guide (GD5): the TV Guide of the list being zapped through, on this channel's row.
                 onShowGuide =
                     onOpenGuide?.let { open ->
@@ -747,7 +748,13 @@ internal fun LiveTvSplitLayout(
                     // frame. Surface the state so it reads as "still loading", not "broken" —
                     // naming the channel while it is being tuned (LT5).
                     if (tuningName != null) {
-                        TvTuningOverlay(channelName = tuningName, compact = true, stalled = stalledId == target.id)
+                        TvTuningOverlay(
+                            channelName = tuningName,
+                            logoUrl = target.thumbnailUrl,
+                            compact = true,
+                            stalled =
+                                stalledId == target.id,
+                        )
                     } else if (previewPlaybackState !is PlaybackState.Playing) {
                         CinemaSpinner(modifier = Modifier.align(Alignment.Center))
                     }

@@ -63,6 +63,8 @@ import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
+import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
@@ -112,6 +114,8 @@ fun PlayerScreen(
      * spinner. Null = nothing being tuned.
      */
     tuningChannelName: String? = null,
+    // The logo of the channel being tuned, in the tuning ring. Null: its name instead.
+    tuningLogoUrl: String? = null,
     /**
      * Live TV's Guide button on the OSD (GD5): opens the TV Guide on the playing channel. Null (no
      * guide for this source, VOD) leaves the button out.
@@ -143,6 +147,8 @@ fun PlayerScreen(
         val context = LocalContext.current
 
         val state = rememberPlayerScreenState(context, currentMetadata)
+        // The frame on screen, for copying (the wait indicator's scene colour).
+        val sceneFrame = rememberSceneFrame()
 
         // Autoplay next episode — see UpNextState. The "Up next" card shows over the playing episode
         // once little enough is left; its countdown is the playback time left, from the polled
@@ -222,6 +228,7 @@ fun PlayerScreen(
             viewModel = viewModel,
             onNextChannel = onNextChannel,
             onPreviousChannel = onPreviousChannel,
+            tuningChannelName = tuningChannelName,
         )
 
         // Ensure focus is requested when no overlays are visible — on the "Up next" card while it is up.
@@ -343,6 +350,9 @@ fun PlayerScreen(
                 modifier = Modifier.fillMaxSize().onSizeChanged { screenHeightPx = it.height },
                 subtitleBottomInsetPx =
                     if (osdShown && osdPanelHeightPx > 0) osdPanelHeightPx + (screenHeightPx * SUBTITLE_GAP_FRACTION).toInt() else 0,
+                // A wait or reconnect keeps the last frame up; a new channel or title starts from black.
+                keepLastFrame = true,
+                sceneFrame = sceneFrame,
             )
 
             // Loading/Error overlays (always show, except Idle which is handled silently)
@@ -408,12 +418,17 @@ fun PlayerScreen(
                     PlaybackState.Buffering -> {
                         // While tuning, the overlay below carries its own spinner.
                         if (!isActuallyMoving && tuningChannelName == null) {
-                            BufferingContent()
+                            // The banner names the stream while it is up; else the badge does.
+                            BufferingContent(
+                                currentMeta,
+                                showBadge = !state.showControls && !state.showStreamInfo,
+                                tint = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
+                            )
                         }
                     }
 
                     is PlaybackState.Ended -> {
-                        if (upNextState.startingFrom != null) BufferingContent() else EndedContent(onBack)
+                        if (upNextState.startingFrom != null) BufferingContent(currentMeta, showBadge = false) else EndedContent(onBack)
                     }
 
                     is PlaybackState.Error -> {
@@ -429,7 +444,7 @@ fun PlayerScreen(
             }
 
             // Zap feedback (LT5): under the banner and the panel, over the picture.
-            tuningChannelName?.let { TvTuningOverlay(channelName = it) }
+            tuningChannelName?.let { TvTuningOverlay(channelName = it, logoUrl = tuningLogoUrl) }
 
             // P4: the connection can't keep up with the stream.
             rememberSlowConnectionText()?.let { TvSlowConnectionBanner(text = it) }
@@ -531,6 +546,7 @@ fun PlayerScreen(
                     isFavorite = isFavorite,
                     onToggleFavorite = onToggleFavorite,
                     showFullControls = state.showControls,
+                    waiting = isStreamWaiting(currentPs, tuningChannelName),
                     hideTopBars = state.showChannelPanel,
                     isDeveloperMode = state.isDeveloperMode,
                     // Channels (LT4): the same panel Left/Right open; the OSD makes way for it.

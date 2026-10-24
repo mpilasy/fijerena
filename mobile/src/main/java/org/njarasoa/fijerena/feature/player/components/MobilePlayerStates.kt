@@ -20,9 +20,10 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.WaitIndicator
+import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -34,16 +35,14 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
+/** Before the stream is known: the wait picture for the route's kind of content, nothing named yet. */
 @Composable
-fun LoadingScreen() {
+fun LoadingScreen(kind: WaitKind) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        MitohanaLoading(
-            role = TextRole.Title,
-            tone = TextTone.Accent,
-        )
+        WaitIndicator(kind = kind)
     }
 }
 

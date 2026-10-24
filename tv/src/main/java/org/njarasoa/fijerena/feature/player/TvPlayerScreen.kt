@@ -38,9 +38,11 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.WaitIndicator
+import org.njarasoa.fijerena.core.ui.components.WaitKind
+import org.njarasoa.fijerena.core.ui.components.waitKindOf
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
@@ -322,7 +324,7 @@ fun TvPlayerScreen(
         is StreamLoaderViewModel.StreamState.Loading -> {
             val previous = lastSuccessState
             if (previous == null) {
-                LoadingScreen()
+                LoadingScreen(waitKindOf(contentType, isCatchup = catchup != null))
             } else {
                 PlayerContent(
                     previous,
@@ -450,15 +452,13 @@ private fun StreamLoaderViewModel.StreamState.Success.playerMetadata(): PlayerMe
         sourceName = sourceName,
     )
 
+/** Before the stream is known: the wait picture for the route's kind of content, nothing named yet. */
 @Composable
-private fun LoadingScreen() {
+private fun LoadingScreen(kind: WaitKind) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        MitohanaLoading(
-            role = TextRole.Display,
-            tone = TextTone.Accent,
-        )
+        WaitIndicator(kind = kind)
     }
 }

@@ -280,6 +280,7 @@ Settings → Display → Text & grid size (0.4–1.0, default 0.8). TV `MainActi
 | `CinemaThemePalette` | core:ui | Palette data class and the 6 palettes |
 | `CinemaTheme` | core:ui | Colour, text, shape and border roles read from the palette and the Look and Feel |
 | `UiStyle` | core:ui | Look-and-feel presets |
+| `WaitStyle` | core:ui | The player's wait indicator: sizes, the badge's logo height, turn and breath times |
 | `TvDimensions` | tv | TV sizes (safe margins, dialog widths, progress bars, guide column) |
 | `TvFocusTokens` | tv | Focus scale, border, containers, driven by `LocalUiStyle` |
 | `MobileDimensions` | mobile | Mobile sizes (icons, overlays) |
@@ -299,7 +300,7 @@ A 15-style scale (48 sp down to 14 sp): display and headline styles in Manrope, 
 
 ### Shared Components (`core:ui` `components/`)
 
-`GlassPanel`, `CinemaThumbnail`, `GradientOverlay`, `CinemaAlertDialog`, `BadgedTitle` / `LanguageBadge` / `CinemaBadge` / `RatingBadge`, `WatchedBadge`, `ProfileAvatar`, `EmbeddedPlayerSurface`, `RetryWhenOnline`, `AppLoadingScreen`, `QrCode`, `TitleLogoOrText`, up-next timing (`UpNext.kt`).
+`GlassPanel`, `CinemaThumbnail`, `GradientOverlay`, `CinemaAlertDialog`, `BadgedTitle` / `LanguageBadge` / `CinemaBadge` / `RatingBadge`, `WatchedBadge`, `ProfileAvatar`, `EmbeddedPlayerSurface`, `RetryWhenOnline`, `AppLoadingScreen`, `QrCode`, `TitleLogoOrText`, up-next timing (`UpNext.kt`), the player's wait (`WaitIndicator.kt`: `WaitIndicator`, `PlayerWait`, `StreamBadge`, `rememberSceneTint`).
 
 ### TV Components (`tv/ui/components/`)
 

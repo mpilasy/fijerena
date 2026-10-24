@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -73,21 +74,26 @@ import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableCatchupDays
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.rememberSceneFrame
+import org.njarasoa.fijerena.core.ui.components.rememberSceneTint
 import org.njarasoa.fijerena.core.ui.components.rememberSlowConnectionText
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
+import org.njarasoa.fijerena.core.ui.components.waitKindOf
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideMediaTheme
+import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -295,6 +301,8 @@ fun MobilePlayerContent(
         val appSettings = remember { AppSettings(context.applicationContext) }
         val lifecycleOwner = LocalLifecycleOwner.current
         val scope = rememberCoroutineScope()
+        // The frame on screen, for copying (the wait indicator's scene colour).
+        val sceneFrame = rememberSceneFrame()
 
         // Observe app focus/lifecycle to pause on background and stop after timeout
         DisposableEffect(lifecycleOwner) {
@@ -679,7 +687,7 @@ fun MobilePlayerContent(
 
         when (val state = displayState) {
             is StreamLoaderViewModel.StreamState.Loading -> {
-                LoadingScreen()
+                LoadingScreen(waitKindOf(contentType, isCatchup))
             }
 
             is StreamLoaderViewModel.StreamState.Error -> {
@@ -862,6 +870,9 @@ fun MobilePlayerContent(
                             } else {
                                 0
                             },
+                        // A wait or reconnect keeps the last frame up; a new channel or title starts from black.
+                        keepLastFrame = true,
+                        sceneFrame = sceneFrame,
                     )
 
                     // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
@@ -895,17 +906,24 @@ fun MobilePlayerContent(
                         when (currentPs) {
                             PlaybackState.Buffering -> {
                                 if (!hasStartedPlaying || showRecoverySpinner) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
-                                            role = TextRole.Display,
-                                            tone = TextTone.OnMedia,
-                                        )
-                                        // Expert mode: what the wait is made of (as on TV).
-                                        if (appSettings.isDevMode && !isInPipMode) {
-                                            Spacer(Modifier.height(CinemaSpacing.sm))
-                                            BufferingDetails()
-                                        }
-                                    }
+                                    // The controls' top bar names the stream while it is up; else the badge
+                                    // does. While the controls are up, a small indicator above their Play
+                                    // button, without the details. Expert mode: what the wait is made of (as on TV).
+                                    PlayerWait(
+                                        metadata = currentMeta,
+                                        showBadge = !isInPipMode && !controlsVisible,
+                                        showDetails = appSettings.isDevMode && !isInPipMode && !controlsVisible,
+                                        badgeLogoHeight = WaitStyle.compactBadgeLogoHeight,
+                                        badgeModifier = Modifier.padding(CinemaSpacing.lg),
+                                        size =
+                                            when {
+                                                isInPipMode -> WaitStyle.compactIndicatorSize
+                                                controlsVisible -> WaitStyle.liftedIndicatorSize
+                                                else -> WaitStyle.indicatorSize
+                                            },
+                                        lift = if (controlsVisible) WaitStyle.controlsLift else Dp.Hairline,
+                                        tint = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
+                                    )
                                 }
                             }
 

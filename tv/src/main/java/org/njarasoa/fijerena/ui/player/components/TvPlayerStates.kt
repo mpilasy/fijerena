@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -36,10 +37,11 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BufferingDetails
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
+import org.njarasoa.fijerena.core.ui.components.PlayerWait
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.colorOf
@@ -58,20 +60,27 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
+/**
+ * The player's wait: the iris, reel or ring for [metadata] in the centre, its logo or name at the
+ * top left when [showBadge] (in the banner's logo place), and Expert mode's details under it.
+ * [tint] is the colour taken from the frozen frame, null for the accent.
+ */
 @Composable
-fun BufferingContent() {
+fun BufferingContent(
+    metadata: PlayerMetadata,
+    showBadge: Boolean,
+    tint: Color? = null,
+) {
     val context = LocalContext.current
     val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
-    Column(horizontalAlignment = CenterHorizontally) {
-        MitohanaLoading(
-            role = TextRole.Title,
-            tone = TextTone.Accent,
-        )
-        if (isDevMode) {
-            Spacer(modifier = Modifier.height(Spacing.md))
-            BufferingDetails()
-        }
-    }
+    PlayerWait(
+        metadata = metadata,
+        tint = tint,
+        showBadge = showBadge,
+        showDetails = isDevMode,
+        // Where the banner's top bar puts its logo, so one replaces the other in place.
+        badgeModifier = Modifier.padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+    )
 }
 
 @Composable
