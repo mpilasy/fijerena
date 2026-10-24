@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Text you could not read:** on light themes and coloured fills, some text was hard or impossible to read: the letter on posters without a picture, the selected row in the phone player's track menus, the phone category rule editor, the subscription-expiry banner, and the channel name over the phone's Live TV video. Each now uses a colour that reads on what is behind it.
+
 ## Version: 0.7.7
 
 - **"Updated 1 hour ago" in the app's language:** the time since an update showed in the phone's language ("Mis à jour 1 hour ago"). It now follows the app's language, on TV and phone.

@@ -48,6 +48,9 @@ enum class TextTone {
     Highlight,
     OnAccent,
 
+    /** On the danger fill (a warning banner). */
+    OnDanger,
+
     /** On the TV's focus fill (a focused tab or chip): dark on the white or cream fill. */
     OnFocus,
 
@@ -94,6 +97,7 @@ fun colorOf(tone: TextTone): Color {
         TextTone.OnAccent -> c.onAccent
         TextTone.OnFocus -> c.onFocusFill
         TextTone.OnMedia -> c.onMedia
+        TextTone.OnDanger -> c.onDanger
         TextTone.Inherit -> LocalContentColor.current
     }
 }

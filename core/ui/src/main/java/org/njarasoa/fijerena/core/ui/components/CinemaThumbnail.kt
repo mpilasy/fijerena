@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 
 /**
@@ -185,10 +187,20 @@ fun TypographyFallback(
     ) {
         if (letter != null) {
             val uiStyle = LocalUiStyle.current
+            val display = CinemaTheme.type.display
             val textStyle =
-                remember(palette, uiStyle) {
-                    androidx.compose.ui.text.TextStyle(
-                        color = palette.textPrimary,
+                remember(palette, uiStyle, contentType, display) {
+                    // The Look's title font, in a colour that reads on the letter's own fill (the
+                    // middle of the gradient): cream text on an amber fill could not be read.
+                    val fill =
+                        when (contentType) {
+                            ThumbnailContentType.LIVE_TV -> palette.highlight
+                            ThumbnailContentType.MOVIE -> lerp(palette.accent, palette.accentStrong, 0.5f)
+                            ThumbnailContentType.TV_SHOW -> lerp(palette.accentSoft, palette.accent, 0.5f)
+                            ThumbnailContentType.DEFAULT -> null
+                        }
+                    display.copy(
+                        color = fill?.let { contentOn(it) } ?: palette.textPrimary,
                         fontSize = 28.sp, // look-ok: the placeholder letter is sized to the poster
                         fontWeight = FontWeight(uiStyle.type.weightEmphasis), // look-ok: same letter
                         textAlign = TextAlign.Center,

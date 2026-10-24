@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -75,6 +76,15 @@ fun AudioTrackSelectorDialog(
                                 } else {
                                     CinemaTheme.colors.surfaceRaised
                                 },
+                            // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
+                            contentColor =
+                                if (track.isSelected) {
+                                    contentOn(
+                                        CinemaTheme.colors.accentStrong,
+                                    )
+                                } else {
+                                    CinemaTheme.colors.textPrimary
+                                },
                             shape = CinemaTheme.shapes.chip,
                         ) {
                             Column(modifier = Modifier.padding(Spacing.sm)) {
@@ -93,7 +103,7 @@ fun AudioTrackSelectorDialog(
                                         CinemaText(
                                             text = stringResource(R.string.player_active),
                                             role = TextRole.BodySmall,
-                                            tone = TextTone.Accent,
+                                            tone = TextTone.Inherit,
                                         )
                                     }
                                 }
@@ -157,6 +167,8 @@ fun SubtitleSelectorDialog(
                         } else {
                             CinemaTheme.colors.surfaceRaised
                         },
+                    // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
+                    contentColor = if (!hasActiveSubtitle) contentOn(CinemaTheme.colors.accentStrong) else CinemaTheme.colors.textPrimary,
                     shape = CinemaTheme.shapes.chip,
                 ) {
                     Row(
@@ -177,7 +189,7 @@ fun SubtitleSelectorDialog(
                             CinemaText(
                                 text = stringResource(R.string.player_active),
                                 role = TextRole.BodySmall,
-                                tone = TextTone.Accent,
+                                tone = TextTone.Inherit,
                             )
                         }
                     }
@@ -196,6 +208,8 @@ fun SubtitleSelectorDialog(
                             } else {
                                 CinemaTheme.colors.surfaceRaised
                             },
+                        // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
+                        contentColor = if (track.isSelected) contentOn(CinemaTheme.colors.accentStrong) else CinemaTheme.colors.textPrimary,
                         shape = CinemaTheme.shapes.chip,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
@@ -214,7 +228,7 @@ fun SubtitleSelectorDialog(
                                     CinemaText(
                                         text = stringResource(R.string.player_active),
                                         role = TextRole.BodySmall,
-                                        tone = TextTone.Accent,
+                                        tone = TextTone.Inherit,
                                     )
                                 }
                             }
@@ -277,6 +291,8 @@ fun QualitySelectorDialog(
                         } else {
                             CinemaTheme.colors.surfaceRaised
                         },
+                    // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
+                    contentColor = if (!hasManualSelection) contentOn(CinemaTheme.colors.accentStrong) else CinemaTheme.colors.textPrimary,
                     shape = CinemaTheme.shapes.chip,
                 ) {
                     Column(modifier = Modifier.padding(Spacing.sm)) {
@@ -295,7 +311,7 @@ fun QualitySelectorDialog(
                                 CinemaText(
                                     text = stringResource(R.string.player_active),
                                     role = TextRole.BodySmall,
-                                    tone = TextTone.Accent,
+                                    tone = TextTone.Inherit,
                                 )
                             }
                         }
@@ -320,6 +336,15 @@ fun QualitySelectorDialog(
                             } else {
                                 CinemaTheme.colors.surfaceRaised
                             },
+                        // Text that reads on the selected row's fill (Material's own pick was invisible on light themes).
+                        contentColor =
+                            if (quality.isSelected) {
+                                contentOn(
+                                    CinemaTheme.colors.accentStrong,
+                                )
+                            } else {
+                                CinemaTheme.colors.textPrimary
+                            },
                         shape = CinemaTheme.shapes.chip,
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
@@ -338,7 +363,7 @@ fun QualitySelectorDialog(
                                     CinemaText(
                                         text = stringResource(R.string.player_active),
                                         role = TextRole.BodySmall,
-                                        tone = TextTone.Accent,
+                                        tone = TextTone.Inherit,
                                     )
                                 }
                             }

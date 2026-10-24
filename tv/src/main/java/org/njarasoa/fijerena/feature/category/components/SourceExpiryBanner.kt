@@ -62,8 +62,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
                     CinemaText(
                         text = SubscriptionExpiry.bannerText(context.resources, source),
                         role = TextRole.Body,
-                        // The banner's colour on CinemaTheme.colors.danger (onDanger).
-                        tone = TextTone.Primary,
+                        tone = TextTone.OnDanger,
                     )
                 }
             }

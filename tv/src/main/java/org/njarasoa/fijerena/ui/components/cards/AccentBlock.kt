@@ -5,17 +5,21 @@ package org.njarasoa.fijerena.ui.components.cards
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -26,6 +30,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.core.ui.theme.cornerShape
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 
@@ -74,12 +79,24 @@ fun AccentBlock(
         contentAlignment = Alignment.Center,
     ) {
         if (fallbackLetter != null) {
-            CinemaText(
-                text = fallbackLetter.uppercase(),
-                role = TextRole.Display,
-                emphasis = true,
-                textAlign = TextAlign.Center,
-            )
+            // A colour that reads on the block's own fill (the middle of the gradient): the primary
+            // text colour was dark on a light theme's accent and white on a pale one.
+            val fill =
+                when (contentType) {
+                    ContentCardType.LIVE_TV -> c.highlight
+                    ContentCardType.MOVIE -> lerp(c.accent, c.accentStrong, 0.5f)
+                    ContentCardType.TV_SHOW -> lerp(c.accentSoft, c.accent, 0.5f)
+                    ContentCardType.DEFAULT -> null
+                }
+            CompositionLocalProvider(LocalContentColor provides (fill?.let { contentOn(it) } ?: c.textPrimary)) {
+                CinemaText(
+                    text = fallbackLetter.uppercase(),
+                    role = TextRole.Display,
+                    tone = TextTone.Inherit,
+                    emphasis = true,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

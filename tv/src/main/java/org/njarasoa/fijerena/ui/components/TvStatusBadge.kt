@@ -9,6 +9,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.contentOn
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /** What a [TvStatusBadge] says: its fill comes with it. */
@@ -40,7 +41,8 @@ fun TvStatusBadge(
     Text(
         text = text,
         style = textStyleOf(TextRole.Caption),
-        color = colors.background,
+        // White or black from the fill: the background colour was pale on a light theme's fill.
+        color = contentOn(fill),
         modifier =
             modifier
                 .background(fill, CinemaTheme.shapes.chip)

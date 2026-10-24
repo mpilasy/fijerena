@@ -33,6 +33,16 @@ unreadable.
 
 | Phase | What | State |
 |---|---|---|
-| 1 | Unreadable text: fills, light themes, text over video | In progress |
+| 1 | Unreadable text: fills, light themes, text over video | Done |
 | 2 | Names in the title font (TV and phone); profile initial and poster letter in the Look's font | Not started |
 | 3 | Accent only on what is current or selected; headings in the primary text colour (TR-D1) | Not started |
+
+## Notes
+
+- **Phase 1:** the no-picture poster letter (both apps) and the TV status badge take white or black
+  from their own fill (`contentOn`); the danger role's text colour does too, and a new
+  `TextTone.OnDanger` gives it to the expiry banners. The phone player menus' selected row had
+  Material's text colour for its fill, the same as the fill on Daylight: it now gets white or
+  black from the fill, "Active" included. The phone category rule editor moved to a neutral fill
+  with an accent outline. The phone dock's text and close buttons over the video use the media
+  scrim and white. Checked on the phone emulator in Meadow (the dock).

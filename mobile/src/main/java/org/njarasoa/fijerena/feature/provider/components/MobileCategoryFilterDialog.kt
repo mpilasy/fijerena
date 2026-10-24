@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.provider.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -198,9 +199,13 @@ fun MobileCategoryFilterDialog(
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
                     rules.forEachIndexed { index, rule ->
                         if (editingIndex == index) {
+                            // A neutral fill with an accent outline: on the accent fill the field, the
+                            // chips and the caption could not be read on light themes.
                             Surface(
-                                color = CinemaTheme.colors.accentStrong,
+                                color = CinemaTheme.colors.surfaceHigh,
+                                contentColor = CinemaTheme.colors.textPrimary,
                                 shape = CinemaTheme.shapes.chip,
+                                border = BorderStroke(CinemaTheme.borders.focus, CinemaTheme.colors.accent),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(
@@ -210,7 +215,7 @@ fun MobileCategoryFilterDialog(
                                     CinemaText(
                                         stringResource(R.string.provider_filter_edit_rule),
                                         role = TextRole.Caption,
-                                        tone = TextTone.AccentSoft,
+                                        tone = TextTone.Secondary,
                                     )
                                     CinemaTextField(
                                         value = editingValue,

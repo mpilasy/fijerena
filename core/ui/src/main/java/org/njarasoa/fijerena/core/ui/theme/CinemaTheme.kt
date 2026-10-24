@@ -108,7 +108,8 @@ data class CinemaColorRoles(
                 accentSoft = palette.accentLight,
                 onAccent = palette.onAccent,
                 danger = palette.error,
-                onDanger = palette.textPrimary,
+                // White or black from the danger colour itself: the primary text was dark on a light theme's red.
+                onDanger = contentOn(palette.error),
                 success = palette.success,
                 warning = palette.warning,
                 live = palette.live,

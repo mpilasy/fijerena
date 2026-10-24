@@ -1173,7 +1173,7 @@ fun MobileCategoryListScreen(
                                                         Icon(
                                                             CinemaIcons.Close,
                                                             contentDescription = stringResource(R.string.common_close),
-                                                            tint = CinemaTheme.colors.textPrimary,
+                                                            tint = CinemaTheme.colors.onMedia,
                                                         )
                                                     }
                                                 }
@@ -1250,21 +1250,16 @@ fun MobileCategoryListScreen(
                                                     Icon(
                                                         CinemaIcons.Close,
                                                         contentDescription = stringResource(R.string.common_close),
-                                                        tint = CinemaTheme.colors.textPrimary,
+                                                        tint = CinemaTheme.colors.onMedia,
                                                     )
                                                 }
 
                                                 val colors = CinemaTheme.colors
-                                                // Memoize brush to avoid allocating new Brush + listOf on
-                                                // every recomposition — mirrors GradientOverlay.kt.
+                                                // Over the video: the media scrim and white text in every theme (a light
+                                                // theme's background wash put dark text on the picture).
                                                 val scrimBrush =
-                                                    remember(colors.background) {
-                                                        Brush.verticalGradient(
-                                                            listOf(
-                                                                colors.clear,
-                                                                colors.background.copy(alpha = CinemaAlpha.imageOverlay),
-                                                            ),
-                                                        )
+                                                    remember(colors.mediaScrim) {
+                                                        Brush.verticalGradient(listOf(colors.clear, colors.mediaScrim))
                                                     }
                                                 Column(
                                                     modifier =
@@ -1278,7 +1273,7 @@ fun MobileCategoryListScreen(
                                                     BadgedTitle(
                                                         raw = dockSuccess?.streamName ?: target.name,
                                                         role = TextRole.Title,
-                                                        tone = TextTone.Primary,
+                                                        tone = TextTone.OnMedia,
                                                     )
                                                     val nowProg = dockSuccess?.currentEpgProgram
                                                     if (nowProg != null) {
@@ -1286,7 +1281,7 @@ fun MobileCategoryListScreen(
                                                             text = stringResource(R.string.epg_now_prefix, nowProg.title),
                                                             maxLines = 1,
                                                             role = TextRole.Body,
-                                                            tone = TextTone.Primary,
+                                                            tone = TextTone.OnMedia,
                                                         )
                                                     }
                                                 }

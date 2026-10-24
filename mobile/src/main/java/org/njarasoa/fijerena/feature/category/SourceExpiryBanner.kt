@@ -51,7 +51,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
             Icon(
                 imageVector = CinemaIcons.Warning,
                 contentDescription = null,
-                tint = CinemaTheme.colors.textPrimary,
+                tint = CinemaTheme.colors.onDanger,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
             Column {
@@ -59,7 +59,7 @@ internal fun SourceExpiryBanner(modifier: Modifier = Modifier) {
                     CinemaText(
                         text = SubscriptionExpiry.bannerText(context.resources, source),
                         role = TextRole.BodySmall,
-                        tone = TextTone.Primary,
+                        tone = TextTone.OnDanger,
                     )
                 }
             }
