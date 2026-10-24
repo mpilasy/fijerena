@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.ProvideLook
+import org.njarasoa.fijerena.ui.theme.ProvideLookAndAccent
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.text.Collator
 
@@ -140,13 +141,17 @@ fun MobileProfileEditScreen(
             val lookLocked = uiThemeId != UiThemes.CUSTOM
             var choosingUiTheme by rememberSaveable { mutableStateOf(false) }
             if (choosingUiTheme) {
+                // Each UI theme's colour theme and Look; Custom is the profile's own (as last saved).
+                val looks =
+                    mapOf(UiThemes.CUSTOM to (themeId to uiStyleId)) +
+                        packagedUiThemesFor(adminView, uiThemeId).associate { it.id to (it.themeId to it.uiStyleId) }
                 SettingsPickerDialog(
                     title = stringResource(R.string.ui_theme_title),
-                    options =
-                        listOf(UiThemes.CUSTOM).plus(packagedUiThemesFor(adminView, uiThemeId).map { it.id }).map {
-                            stringResource(uiThemeNameRes(it)) to it
-                        },
+                    options = looks.keys.map { stringResource(uiThemeNameRes(it)) to it },
                     selected = uiThemeId,
+                    // Each row in its theme's font and accent, with its colours beside it.
+                    preview = { id -> looks[id]?.let { PaletteSwatches(paletteById(it.first)) } },
+                    inLook = { id, row -> looks[id]?.let { ProvideLookAndAccent(it.first, it.second, row) } ?: row() },
                     onSelect = { id ->
                         uiThemeId = id
                         viewModel.setUiTheme(profileId, id)

@@ -14,9 +14,11 @@ import androidx.core.view.WindowCompat
 import org.njarasoa.fijerena.core.ui.theme.CinemaBorders
 import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaShapeRoles
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaBorders
+import org.njarasoa.fijerena.core.ui.theme.LocalCinemaColors
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaShapes
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaType
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
@@ -57,6 +59,28 @@ fun ProvideLook(
         LocalCinemaBorders provides remember(style) { CinemaBorders.from(style) },
         content = content,
     )
+}
+
+/**
+ * [content] in the Look and Feel [styleId] (type, corners) with the accent of the colour theme
+ * [themeId]; the other colours stay, so text keeps its contrast: a picker row that shows a UI theme's
+ * font and accent.
+ */
+@Composable
+fun ProvideLookAndAccent(
+    themeId: String,
+    styleId: String,
+    content: @Composable () -> Unit,
+) {
+    val current = CinemaTheme.colors
+    val colors =
+        remember(themeId, current) {
+            val theme = CinemaColorRoles.from(paletteById(themeId))
+            current.copy(accent = theme.accent, accentStrong = theme.accentStrong, onAccent = theme.onAccent)
+        }
+    ProvideLook(styleById(styleId)) {
+        CompositionLocalProvider(LocalCinemaColors provides colors, content = content)
+    }
 }
 
 /**
