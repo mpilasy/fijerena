@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -109,6 +110,9 @@ private fun <T> PickerColumn(
 ) {
     val selectedFocusRequester = remember { FocusRequester() }
     val selectedIndex = options.indexOfFirst { it.value == selectedValue }.coerceAtLeast(0)
+    // Opens scrolled to the selected option: one below the first screen is not composed yet, so
+    // its focus request would fail and leave focus nowhere.
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
     LaunchedEffect(Unit) {
         selectedFocusRequester.requestFocusWithRetry()
     }
@@ -141,6 +145,7 @@ private fun <T> PickerColumn(
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = Spacing.xs),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),

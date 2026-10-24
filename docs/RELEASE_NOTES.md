@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **TV: settings lists open on the chosen option:** when the chosen option was below the first screen (for example the Meadow UI theme), the list opened with no focus and only Back worked. It now opens scrolled to the chosen option, with focus on it.
 - **The accent marks only what is current:** genres, episode numbers, channel names, counts and status lines are in the normal text colours; section headings in Settings and dialogs too. Success messages are green.
 - **Names in the title font:** names of films, shows, episodes, channels, programmes, sources, profiles and devices, and dialog titles, now use each Look's title font everywhere (Antonio in Console), on TV and phone.
 - **The wait picture stays in the centre:** on the phone it no longer moves up when the controls show. While a stream starts, the controls have no rewind, pause or forward buttons; in a wait after the picture has started, those buttons move down under it. With Expert details, the picture stays centred and the details sit below it (TV and phone).
