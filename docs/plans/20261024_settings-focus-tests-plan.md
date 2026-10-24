@@ -1,7 +1,6 @@
 # Settings focus tests
 
-**Status:** In progress 2026-10-24: Phase 1 (spike) done (the whole screen works, see Spike result);
-Phase 4 (fake server, CI job) started.
+**Status:** In progress 2026-10-24: Phase 1 done (whole-screen route), Phases 2 and 4 in progress.
 
 ## Goal
 
@@ -118,7 +117,7 @@ destructive row. Expected time for all of Settings: well under one minute.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Spike | Done 2026-10-24 | |
-| 2. Settings tests | Not started | |
+| 1. Spike | Done 2026-10-24 | 3fe44e1f |
+| 2. Settings tests | In progress | |
 | 3. Walks and docs | Not started | |
 | 4. Nightly TV walk | In progress (server and CI job) | |
