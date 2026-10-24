@@ -93,6 +93,12 @@ PIN" (2026-10-17, re-confirmed 2026-10-19) for switches away from a child profil
 - **SF-D13** (L5) The PIN nudge stays for households with a child profile only.
 - **SF-D14** The child-lock prompt counts wrong PINs on its own, apart from the Settings PIN.
 - **SF-D15** Leaving a child with the target profile's PIN unlocks that profile's Settings too.
+- **SF-D16** Title Case everywhere in the app (user, 2026-10-24), in English, French and Malagasy:
+  screen and dialog titles, section headings, and Settings row labels. Not buttons, menu items,
+  descriptions or messages. Small words stay lower case unless first or last (English: a, an, the,
+  and, or, but, of, to, in, on, at, by, for, with; French: le, la, les, l', un, une, des, de, du,
+  d', et, ou, à, au, aux, en, par, pour, sur; Malagasy: ny, sy, ary, amin', amin'ny, ho, an'ny,
+  ao, eo). "Add Source" (CONTRIBUTING) already follows this.
 
 ## Design
 
@@ -174,6 +180,9 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 2. **Grouping and wording** (G1–G4, W1, W3, W5): strings in en/fr/mg (British English), TV focus
    walk `settings.txt` re-recorded.
 3. **Admin flows** (E1, E3–E7, W4).
+3b. **Title Case** (SF-D16): an audit of every string used as a screen or dialog title, section
+   heading or Settings row label, in all three languages; the rule written in CONTRIBUTING.md →
+   Strings; focus walks that match those texts edited.
 4. **Docs and walks**: FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES; scripted walks with an Expert, a
    grown-up and a child profile on both emulators.
 
@@ -185,6 +194,7 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 | 1b. Child lock | Done 2026-10-24 (not walked) | 0271f593 |
 | 2. Grouping and wording | Done 2026-10-24 | 6154bf3b |
 | 3. Admin flows | In progress | |
+| 3b. Title Case | Not started | |
 | 4. Docs and walks | Not started | |
 
 **Phase 1 done (2026-10-24).** L1: Home (TV) and a tab root (phone) without Expert mode read
