@@ -29,6 +29,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -219,7 +221,9 @@ private fun PickerCard(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(
             onClick = onClick,
-            modifier = modifier,
+            // The name is under the card, outside it: give it to the card too, so a screen reader
+            // (and the focus walks) read "atr", not only the initial, and the + card reads Add Profile.
+            modifier = modifier.semantics { contentDescription = label },
             shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.identity),
             colors =
                 ClickableSurfaceDefaults.colors(

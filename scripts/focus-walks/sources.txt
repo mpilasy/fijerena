@@ -16,4 +16,11 @@
 # checks the rows' slots, Up to Add Source and the ⋮ menu's rows. The walk keeps only the start
 # focus. Back that closes the ⋮ menu and Back to Manage Sources in Settings are the moves no test
 # can make; they are not recorded yet.
-@start iptv / https://iptv-org.github.io/iptv/index.m3u
+@start bears
+# The ⋮ menu opens on Duplicate; Back closes it with focus back on ⋮; Back again returns to
+# Manage Sources in Settings (recorded 2026-10-24).
+RIGHT	Guide
+RIGHT	More actions for bears
+CENTER	Duplicate
+BACK	More actions for bears
+BACK	Manage Sources

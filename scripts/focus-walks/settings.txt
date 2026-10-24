@@ -24,3 +24,5 @@
 # keeps only the start focus. Back on the rail (it leaves Settings) is the move no test can make;
 # it is not recorded yet.
 @start Profiles
+# Back on the rail leaves Settings: Home again, focus on its content (recorded 2026-10-24).
+BACK	Breaking Bad
