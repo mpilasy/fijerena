@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -134,8 +135,8 @@ fun WaitIndicator(
 /**
  * The player's wait over the full screen: [WaitIndicator] in the centre, the title or channel logo
  * (or its name) at the top left unless [showBadge] is false (the TV banner shows it then), and
- * Expert mode's [BufferingDetails] under the indicator when [showDetails]. [lift] moves both up
- * (clear of the phone's controls).
+ * Expert mode's [BufferingDetails] under the indicator when [showDetails]. The indicator is always
+ * at the centre of the screen; the details hang below it.
  */
 @Composable
 fun PlayerWait(
@@ -148,7 +149,6 @@ fun PlayerWait(
     badgeLogoHeight: Dp = WaitStyle.badgeLogoHeight,
     badgeModifier: Modifier = Modifier,
     size: Dp = WaitStyle.indicatorSize,
-    lift: Dp = Dp.Hairline,
 ) {
     val name = waitName(metadata)
     Box(modifier = modifier.fillMaxSize()) {
@@ -160,14 +160,21 @@ fun PlayerWait(
                 modifier = badgeModifier.align(Alignment.TopStart),
             )
         }
-        Column(
-            modifier = Modifier.align(Alignment.Center).offset(y = -lift),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-        ) {
-            WaitIndicator(kind = kind, size = size, logoUrl = metadata.logoUrl, name = name, tint = tint)
-            // A soft backing: the details may sit on a light frozen frame.
-            if (showDetails) {
+        WaitIndicator(
+            kind = kind,
+            modifier = Modifier.align(Alignment.Center),
+            size = size,
+            logoUrl = metadata.logoUrl,
+            name = name,
+            tint = tint,
+        )
+        // Below the indicator, so the details never push it off the centre. A soft backing: they may
+        // sit on a light frozen frame.
+        if (showDetails) {
+            Box(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxHeight(HALF).padding(top = size / 2 + CinemaSpacing.sm),
+                contentAlignment = Alignment.TopCenter,
+            ) {
                 BufferingDetails(
                     modifier =
                         Modifier

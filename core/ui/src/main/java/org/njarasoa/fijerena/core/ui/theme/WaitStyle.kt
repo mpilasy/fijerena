@@ -14,8 +14,8 @@ object WaitStyle {
     /** The indicator while the phone's controls are up: big enough for a channel logo in the ring. */
     val liftedIndicatorSize: Dp = 64.dp
 
-    /** How far that indicator moves up, clear of the controls' Play button. */
-    val controlsLift: Dp = 80.dp
+    /** How far the phone controls' Play/Pause row moves down during a wait, clear of the centred indicator. */
+    val controlsDrop: Dp = 80.dp
 
     /** The outer ring's line. */
     val stroke: Dp = 4.dp

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.player.components
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -58,6 +60,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +93,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
@@ -129,6 +133,8 @@ fun MobileControlsOverlay(
     onStartOver: (() -> Unit)? = null,
     // The bottom panel's height in px, for the player to lift the subtitles above it.
     onPanelHeightChanged: (Int) -> Unit = {},
+    // The player's wait indicator is up in the centre: the Play/Pause row moves down under it.
+    waiting: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -277,6 +283,7 @@ fun MobileControlsOverlay(
             // every mobile player uses: bare icons, no background pill, centred in whatever space
             // is left between the top bar and the bottom bar. Nothing else shares this space, so
             // it can never be pushed or clipped by anything growing elsewhere.
+            val rowDrop by animateDpAsState(if (waiting) WaitStyle.controlsDrop else Dp.Hairline, label = "row drop")
             Box(
                 modifier =
                     Modifier
@@ -285,6 +292,7 @@ fun MobileControlsOverlay(
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
+                    modifier = Modifier.offset(y = rowDrop),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxl),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

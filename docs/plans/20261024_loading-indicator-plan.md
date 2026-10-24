@@ -43,8 +43,10 @@ stream that already played waits again. Expert mode keeps its buffering details 
 
 ## Notes (2026-10-24)
 
-- **Phone controls:** while the controls are up at the start, a smaller indicator sits above their
-  Play button (`WaitStyle.liftedIndicatorSize`, `controlsLift`), without the Expert details.
+- **Phone controls:** the indicator is always at the centre of the screen (user, 2026-10-24). While
+  the controls are up it is smaller (`WaitStyle.liftedIndicatorSize`) and without the Expert
+  details, and their Play/Pause row moves down under it (`controlsDrop`). The Expert details hang
+  below the indicator, so they never push it off the centre (TV tuning ring too).
 - **Scene colour:** the hue comes from the whole frame, the light or dark from its middle third
   (behind the indicator), so black side bars don't make a light face count as dark.
 - **New stream vs reconnect:** `StreamingPlaybackService.newStreamStarting` is set by `playStream()`

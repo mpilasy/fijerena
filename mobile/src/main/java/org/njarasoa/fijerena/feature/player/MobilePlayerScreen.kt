@@ -907,8 +907,9 @@ fun MobilePlayerContent(
                             PlaybackState.Buffering -> {
                                 if (!hasStartedPlaying || showRecoverySpinner) {
                                     // The controls' top bar names the stream while it is up; else the badge
-                                    // does. While the controls are up, a small indicator above their Play
-                                    // button, without the details. Expert mode: what the wait is made of (as on TV).
+                                    // does. Always centred; while the controls are up, smaller and without the
+                                    // details, and their Play/Pause row moves down under it. Expert mode: what
+                                    // the wait is made of (as on TV).
                                     PlayerWait(
                                         metadata = currentMeta,
                                         showBadge = !isInPipMode && !controlsVisible,
@@ -921,7 +922,6 @@ fun MobilePlayerContent(
                                                 controlsVisible -> WaitStyle.liftedIndicatorSize
                                                 else -> WaitStyle.indicatorSize
                                             },
-                                        lift = if (controlsVisible) WaitStyle.controlsLift else Dp.Hairline,
                                         tint = rememberSceneTint(active = true, capture = sceneFrame::captureKept),
                                     )
                                 }
@@ -948,6 +948,8 @@ fun MobilePlayerContent(
                     ) {
                         MobileControlsOverlay(
                             playbackState = currentPs,
+                            // The wait indicator is up: its Play/Pause row moves down under it.
+                            waiting = currentPs is PlaybackState.Buffering && (!hasStartedPlaying || showRecoverySpinner),
                             metadata = currentMeta,
                             viewModel = viewModel,
                             isLive = isLiveContent,

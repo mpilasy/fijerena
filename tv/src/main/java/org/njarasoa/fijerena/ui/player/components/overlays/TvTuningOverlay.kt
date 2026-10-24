@@ -2,7 +2,7 @@ package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -70,15 +71,25 @@ fun TvTuningOverlay(
                 overflow = TextOverflow.Ellipsis,
             )
         } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                WaitIndicator(
-                    kind = WaitKind.Live,
-                    logoUrl = logoUrl,
-                    name = name,
-                    contentDescription = stringResource(R.string.live_tuning_format, name),
-                )
-                if (showDetails) BufferingDetails()
+            WaitIndicator(
+                kind = WaitKind.Live,
+                logoUrl = logoUrl,
+                name = name,
+                contentDescription = stringResource(R.string.live_tuning_format, name),
+            )
+            // Below the ring, so the details never push it off the centre.
+            if (showDetails) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxHeight(HALF)
+                            .padding(top = WaitStyle.indicatorSize / 2 + Spacing.sm),
+                    contentAlignment = Alignment.TopCenter,
+                ) { BufferingDetails() }
             }
         }
     }
 }
+
+private const val HALF = 0.5f
