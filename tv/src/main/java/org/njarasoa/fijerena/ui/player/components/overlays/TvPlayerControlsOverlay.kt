@@ -128,6 +128,9 @@ fun TvPlayerControlsOverlay(
     isFavorite: Boolean,
     onToggleFavorite: (() -> Unit)?,
     showFullControls: Boolean,
+    // The stream is not playing yet (PlayerEffects' isStreamWaiting): the name shows at the top
+    // left when there is no logo.
+    waiting: Boolean = false,
     hideTopBars: Boolean = false,
     // The resolution/codec line is for developers only (AppSettings.isDevMode, via PlayerScreenState).
     isDeveloperMode: Boolean = false,
@@ -308,7 +311,8 @@ fun TvPlayerControlsOverlay(
                     modifier = Modifier.align(Alignment.TopStart),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    // Nothing when there is no logo or it does not load: the title row names it.
+                    // No logo, or it does not load: the name as text while the stream waits,
+                    // else nothing (the title row names it).
                     if (logoUrl != null && !logoFailed) {
                         val name = if (isLive) metadata.channelName else metadata.showTitle ?: metadata.title
                         AdaptiveLogoImage(
@@ -332,6 +336,20 @@ fun TvPlayerControlsOverlay(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
+                    } else if (waiting) {
+                        val name =
+                            if (isLive) {
+                                parseDisplayTitle(metadata.channelName).title
+                            } else {
+                                metadata.showTitle ?: parseDisplayTitle(metadata.title).title
+                            }
+                        CinemaText(
+                            text = name,
+                            role = TextRole.Title,
+                            tone = TextTone.Primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
 
                     // Resolution and codec — developer mode only (the polling above is gated too).

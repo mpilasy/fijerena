@@ -18,6 +18,8 @@ fun PlayerEffects(
     viewModel: PlaybackViewModel? = null,
     onNextChannel: () -> Unit = {},
     onPreviousChannel: () -> Unit = {},
+    // The channel being tuned (PlayerScreen's tuningChannelName). Null = nothing being tuned.
+    tuningChannelName: String? = null,
 ) {
     // Live position polling for smooth VOD timer updates
     LaunchedEffect(playbackState::class) {
@@ -34,8 +36,23 @@ fun PlayerEffects(
 
     // Auto-hide overlays. Re-keyed on scrubPositionMs so each scrub step resets the timer
     // and the cursor stays visible while the user is still moving it, and on controlsKeyTick so
-    // any key pressed while the OSD is up restarts its 5 s.
-    LaunchedEffect(state.showControls, state.showStreamInfo, state.scrubPositionMs, state.showStreamInfoTick, state.controlsKeyTick) {
+    // any key pressed while the OSD is up restarts its 5 s. Keyed on holdBanner too: the banner
+    // alone stays up while the stream starts, and its 3 s starts fresh once it plays.
+    val holdBanner =
+        holdStreamInfo(
+            showControls = state.showControls,
+            showStreamInfo = state.showStreamInfo,
+            scrubbing = state.scrubPositionMs != null,
+            waiting = isStreamWaiting(playbackState, tuningChannelName),
+        )
+    LaunchedEffect(
+        state.showControls,
+        state.showStreamInfo,
+        state.scrubPositionMs,
+        state.showStreamInfoTick,
+        state.controlsKeyTick,
+        holdBanner,
+    ) {
         if (state.scrubPositionMs != null) {
             // Hold the OSD open while scrubbing; each step restarts the timer
             delay(CinemaAnimation.controlsAutoHideTvMs)
@@ -46,7 +63,7 @@ fun PlayerEffects(
             delay(CinemaAnimation.controlsAutoHideTvMs)
             state.showControls = false
             state.showStreamInfo = false
-        } else if (state.showStreamInfo) {
+        } else if (state.showStreamInfo && !holdBanner) {
             // Stream info alone (channel switch or menu) - hide after 3 seconds
             delay(CinemaAnimation.toastDismissMs)
             state.showStreamInfo = false
@@ -109,3 +126,23 @@ fun PlayerEffects(
         }
     }
 }
+
+/**
+ * True while the stream is not playing yet: it buffers or is idle, or a channel is being tuned.
+ * Buffering in the middle of a stream counts too, but it never opens the banner.
+ */
+internal fun isStreamWaiting(
+    playbackState: PlaybackState,
+    tuningChannelName: String?,
+): Boolean = playbackState is PlaybackState.Buffering || playbackState is PlaybackState.Idle || tuningChannelName != null
+
+/**
+ * True when the stream info banner shows alone (no controls, no scrub cursor) while the stream
+ * waits: its 3 s auto-hide must not run until the stream plays.
+ */
+internal fun holdStreamInfo(
+    showControls: Boolean,
+    showStreamInfo: Boolean,
+    scrubbing: Boolean,
+    waiting: Boolean,
+): Boolean = showStreamInfo && !showControls && !scrubbing && waiting
