@@ -60,6 +60,15 @@ fun NavBackStackEntry?.isNewSource(): Boolean =
     this != null && destination.hasRoute<Screen.AddProvider>() && toRoute<Screen.AddProvider>().editId < 0
 
 /**
+ * The page of the profile in use ([activeId]), opened by a profile without Expert mode. It holds
+ * only that profile's look and playback, so it asks no PIN, as on TV (the settings flow review plan).
+ */
+fun NavBackStackEntry?.isOwnPageOfNonExpert(
+    activeId: String,
+    expert: Boolean,
+): Boolean = !expert && this != null && destination.hasRoute<Screen.ProfileEdit>() && toRoute<Screen.ProfileEdit>().profileId == activeId
+
+/**
  * The screens Settings opens that the PIN of the profile in use guards — sources, guide sources,
  * live sync, a profile's page, Parental controls. Settings itself, About's device info and Diagnostics (read-only) open freely;
  * Settings asks the PIN before what changes shared setup.

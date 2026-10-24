@@ -184,6 +184,9 @@ fun MobileSettingsScreen(
         )
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // A profile without Expert mode opens its own page with no PIN: the page holds only its look and
+    // playback (as on TV).
+    val ownPage: (() -> Unit) -> Unit = { action -> if (uiState.isDevMode) guarded(action) else action() }
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val tmdbKeyViewModel: TmdbKeyViewModel = viewModel(factory = SettingsViewModelFactory(context))
@@ -404,7 +407,7 @@ fun MobileSettingsScreen(
                     onAdd = { name, colorIndex, child ->
                         addProfileGuarded { profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it } }
                     },
-                    onEdit = { id -> guarded { onEditProfile(id) } },
+                    onEdit = { id -> if (id == inUse?.id) ownPage { onEditProfile(id) } else guarded { onEditProfile(id) } },
                     onDismissMessage = profilesViewModel::clearMessage,
                     expertMode = uiState.isDevMode,
                     pinNudge = profilesViewModel.pins.takeIf { profilesViewModel.needsAdminPin() },
@@ -437,7 +440,7 @@ fun MobileSettingsScreen(
                         summary =
                             stringResource(if (autoplay) R.string.common_on else R.string.common_off) + " · " +
                                 stringResource(R.string.settings_profile_row_desc),
-                        onClick = { inUse?.let { guarded { onOpenProfileAt(it.id, ProfilePageRow.AUTOPLAY) } } },
+                        onClick = { inUse?.let { ownPage { onOpenProfileAt(it.id, ProfilePageRow.AUTOPLAY) } } },
                     )
                 }
 
@@ -471,7 +474,7 @@ fun MobileSettingsScreen(
                                 uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
                                 stringResource(R.string.settings_profile_row_desc),
                             ).joinToString(" · "),
-                        onClick = { inUse?.let { guarded { onOpenProfileAt(it.id, ProfilePageRow.LOOK) } } },
+                        onClick = { inUse?.let { ownPage { onOpenProfileAt(it.id, ProfilePageRow.LOOK) } } },
                     )
                 }
             }

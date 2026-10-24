@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.dropSearches
 import org.njarasoa.fijerena.core.navigation.isNewSource
+import org.njarasoa.fijerena.core.navigation.isOwnPageOfNonExpert
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
@@ -1213,7 +1214,12 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     LaunchedEffect(gateEntry, refused) { if (refused) navController.popBackStack() }
     activeProfile?.let { profile ->
         LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
-        if (!refused && !showProfileMenu && gateDestination.isPinGuarded() && profilesViewModel.needsPin(profile.id)) {
+        if (!refused &&
+            !showProfileMenu &&
+            gateDestination.isPinGuarded() &&
+            !gateEntry.isOwnPageOfNonExpert(profile.id, expert) &&
+            profilesViewModel.needsPin(profile.id)
+        ) {
             // Nothing of Settings shows behind the prompt.
             Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
             PinDialog(
