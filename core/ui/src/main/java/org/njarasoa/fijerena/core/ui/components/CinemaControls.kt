@@ -22,6 +22,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.VisualTransformation
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ControlStyle
 
@@ -150,6 +151,13 @@ fun CinemaSwitch(
                 uncheckedThumbColor = c.textSecondary,
                 uncheckedTrackColor = c.surfaceRaised,
                 uncheckedBorderColor = c.outline,
+                // A locked switch keeps its position readable: on stays in the accent, faded.
+                disabledCheckedThumbColor = c.onAccent.copy(alpha = CinemaAlpha.textDisabled),
+                disabledCheckedTrackColor = c.accent.copy(alpha = CinemaAlpha.textDisabled),
+                disabledCheckedBorderColor = c.accent.copy(alpha = CinemaAlpha.textDisabled),
+                disabledUncheckedThumbColor = c.textDisabled,
+                disabledUncheckedTrackColor = c.surfaceRaised,
+                disabledUncheckedBorderColor = c.outline.copy(alpha = CinemaAlpha.textDisabled),
             ),
     )
 }
