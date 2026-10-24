@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phases 1, 1b and 2 done (1b not walked), Phase 3 next.
+**Status:** In progress 2026-10-24: Phases 1, 1b and 2 done (1b not walked), Phase 3 in progress.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
 [Settings audit fixes](./archive/20261017_settings-audit-fixes-plan.md) (archived, private).
@@ -182,9 +182,9 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 | Phase | Status | Commit |
 |---|---|---|
 | 1. Leaks | Done 2026-10-24 | 97ac753f |
-| 1b. Child lock | Done 2026-10-24 (not walked) | |
-| 2. Grouping and wording | Done 2026-10-24 | |
-| 3. Admin flows | Not started | |
+| 1b. Child lock | Done 2026-10-24 (not walked) | 0271f593 |
+| 2. Grouping and wording | Done 2026-10-24 | 6154bf3b |
+| 3. Admin flows | In progress | |
 | 4. Docs and walks | Not started | |
 
 **Phase 1 done (2026-10-24).** L1: Home (TV) and a tab root (phone) without Expert mode read
