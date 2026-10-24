@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.7.8
 
 - **TV: settings lists open on the chosen option:** when the chosen option was below the first screen (for example the Meadow UI theme), the list opened with no focus and only Back worked. It now opens scrolled to the chosen option, with focus on it.
 - **The accent marks only what is current:** genres, episode numbers, channel names, counts and status lines are in the normal text colours; section headings in Settings and dialogs too. Success messages are green.
