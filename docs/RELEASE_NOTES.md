@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: 0.8.1
+
+- **TV: screen readers name the profiles:** on the profile picker, each profile card now has the profile's name, so TalkBack reads it.
+
 ## Version: 0.8.0
 
 - **Locked switches read right:** a switch that cannot be changed, such as Expert mode on the last Expert profile, now shows on in a faded accent instead of looking off. A profile without Expert mode opens its own page on the phone without a PIN, as on TV. TV and phone.
