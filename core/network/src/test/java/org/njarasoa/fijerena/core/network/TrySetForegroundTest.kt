@@ -33,7 +33,7 @@ class TrySetForegroundTest {
     @get:Rule
     val tmp = TemporaryFolder()
 
-    private val refused = IllegalStateException("ForegroundServiceStartNotAllowedException")
+    private val refused = IllegalStateException("foreground start refused")
 
     @Before
     fun setUp() {
@@ -49,7 +49,7 @@ class TrySetForegroundTest {
     }
 
     @Test
-    fun aRefusedForegroundStartIsRecordedNotThrown() =
+    fun anotherRefusalIsRecordedNotThrown() =
         runTest {
             val worker = mockk<CoroutineWorker>()
             coEvery { worker.getForegroundInfo() } returns mockk()

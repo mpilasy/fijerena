@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Diagnostics: less noise:** when Android does not let a background sync show its notification, the sync still runs, and Diagnostics no longer lists it as an error.
+
 ## Version: 0.8.1
 
 - **TV: screen readers name the profiles:** on the profile picker, each profile card now has the profile's name, so TalkBack reads it.
