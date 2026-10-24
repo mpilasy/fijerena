@@ -411,6 +411,12 @@ fun MobilePlayerContent(
         val haptic = LocalHapticFeedback.current
         var hasStartedPlaying by remember { mutableStateOf(false) }
         var showRecoverySpinner by remember { mutableStateOf(false) }
+        // True until the stream on screen (this one, or the channel just zapped to) shows its first
+        // picture: the controls' Play/Pause row has nothing to act on until then.
+        var newStreamStarting by remember { mutableStateOf(true) }
+        LaunchedEffect(Unit) {
+            StreamingPlaybackService.awaitInstanceOrNull()?.newStreamStarting?.collect { newStreamStarting = it }
+        }
 
         // The flyout offers channels to switch to, so the one already playing is filtered out below —
         // unlike the docked preview panel, which keeps it as the highlighted row. Held in display
@@ -948,7 +954,9 @@ fun MobilePlayerContent(
                     ) {
                         MobileControlsOverlay(
                             playbackState = currentPs,
-                            // The wait indicator is up: its Play/Pause row moves down under it.
+                            // Before the first picture the Play/Pause row is hidden; in a wait after it, the
+                            // row moves down under the indicator.
+                            starting = newStreamStarting,
                             waiting = currentPs is PlaybackState.Buffering && (!hasStartedPlaying || showRecoverySpinner),
                             metadata = currentMeta,
                             viewModel = viewModel,

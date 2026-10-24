@@ -45,7 +45,9 @@ stream that already played waits again. Expert mode keeps its buffering details 
 
 - **Phone controls:** the indicator is always at the centre of the screen (user, 2026-10-24). While
   the controls are up it is smaller (`WaitStyle.liftedIndicatorSize`) and without the Expert
-  details, and their Play/Pause row moves down under it (`controlsDrop`). The Expert details hang
+  details. Before a stream's first picture (a new title or a zap) their rewind / Play/Pause /
+  forward row is hidden, as there is nothing to pause or seek; in a wait after it, the row moves
+  down under the indicator (`controlsDrop`). Phone only (user, 2026-10-24). The Expert details hang
   below the indicator, so they never push it off the centre (TV tuning ring too).
 - **Scene colour:** the hue comes from the whole frame, the light or dark from its middle third
   (behind the indicator), so black side bars don't make a light face count as dark.

@@ -135,6 +135,8 @@ fun MobileControlsOverlay(
     onPanelHeightChanged: (Int) -> Unit = {},
     // The player's wait indicator is up in the centre: the Play/Pause row moves down under it.
     waiting: Boolean = false,
+    // The stream has not shown its first picture yet: no Play/Pause row (nothing to pause or seek).
+    starting: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -291,54 +293,56 @@ fun MobileControlsOverlay(
                         .fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                Row(
-                    modifier = Modifier.offset(y = rowDrop),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxl),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (onRewind != null) {
+                if (!starting) {
+                    Row(
+                        modifier = Modifier.offset(y = rowDrop),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxl),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (onRewind != null) {
+                            IconButton(
+                                onClick = onRewind,
+                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                            ) {
+                                Icon(
+                                    imageVector = CinemaIcons.FastRewind,
+                                    contentDescription = stringResource(R.string.player_rewind_1min_description),
+                                    tint = CinemaTheme.colors.onMedia,
+                                    modifier = Modifier.size(MobileDimensions.iconLarge),
+                                )
+                            }
+                        }
                         IconButton(
-                            onClick = onRewind,
+                            onClick = onPlayPause,
                             modifier = Modifier.size(MobileDimensions.iconPlayContainer),
                         ) {
                             Icon(
-                                imageVector = CinemaIcons.FastRewind,
-                                contentDescription = stringResource(R.string.player_rewind_1min_description),
+                                imageVector =
+                                    if (playbackState is PlaybackState.Paused) {
+                                        CinemaIcons.PlayArrow
+                                    } else {
+                                        CinemaIcons.Pause
+                                    },
+                                contentDescription =
+                                    stringResource(
+                                        if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause,
+                                    ),
                                 tint = CinemaTheme.colors.onMedia,
-                                modifier = Modifier.size(MobileDimensions.iconLarge),
+                                modifier = Modifier.size(MobileDimensions.iconPlayIcon),
                             )
                         }
-                    }
-                    IconButton(
-                        onClick = onPlayPause,
-                        modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                    ) {
-                        Icon(
-                            imageVector =
-                                if (playbackState is PlaybackState.Paused) {
-                                    CinemaIcons.PlayArrow
-                                } else {
-                                    CinemaIcons.Pause
-                                },
-                            contentDescription =
-                                stringResource(
-                                    if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause,
-                                ),
-                            tint = CinemaTheme.colors.onMedia,
-                            modifier = Modifier.size(MobileDimensions.iconPlayIcon),
-                        )
-                    }
-                    if (onFastForward != null) {
-                        IconButton(
-                            onClick = onFastForward,
-                            modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                        ) {
-                            Icon(
-                                imageVector = CinemaIcons.FastForward,
-                                contentDescription = stringResource(R.string.player_fast_forward_5min_description),
-                                tint = CinemaTheme.colors.onMedia,
-                                modifier = Modifier.size(MobileDimensions.iconLarge),
-                            )
+                        if (onFastForward != null) {
+                            IconButton(
+                                onClick = onFastForward,
+                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                            ) {
+                                Icon(
+                                    imageVector = CinemaIcons.FastForward,
+                                    contentDescription = stringResource(R.string.player_fast_forward_5min_description),
+                                    tint = CinemaTheme.colors.onMedia,
+                                    modifier = Modifier.size(MobileDimensions.iconLarge),
+                                )
+                            }
                         }
                     }
                 }

@@ -4,7 +4,7 @@
 
 - **The accent marks only what is current:** genres, episode numbers, channel names, counts and status lines are in the normal text colours; section headings in Settings and dialogs too. Success messages are green.
 - **Names in the title font:** names of films, shows, episodes, channels, programmes, sources, profiles and devices, and dialog titles, now use each Look's title font everywhere (Antonio in Console), on TV and phone.
-- **The wait picture stays in the centre:** on the phone it no longer moves up when the controls show; their Play/Pause row moves down under it instead. With Expert details, the picture stays centred and the details sit below it (TV and phone).
+- **The wait picture stays in the centre:** on the phone it no longer moves up when the controls show. While a stream starts, the controls have no rewind, pause or forward buttons; in a wait after the picture has started, those buttons move down under it. With Expert details, the picture stays centred and the details sit below it (TV and phone).
 - **Text you could not read:** on light themes and coloured fills, some text was hard or impossible to read: the letter on posters without a picture, the selected row in the phone player's track menus, the phone category rule editor, the subscription-expiry banner, and the channel name over the phone's Live TV video. Each now uses a colour that reads on what is behind it.
 
 ## Version: 0.7.7
