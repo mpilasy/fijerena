@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** In progress 2026-10-24: Phases 1 and 2 done (whole-screen route), Phase 4 built and running its first CI run, Phase 3 not started.
+**Status:** In progress 2026-10-24: Phases 1 and 2 done (whole-screen route), Phase 4 built and running its first CI run, Phase 3 in progress.
 
 ## Goal
 
@@ -162,6 +162,6 @@ and real categories.
 | Phase | Status | Commit |
 |---|---|---|
 | 1. Spike | Done 2026-10-24 | 3fe44e1f |
-| 2. Settings tests | Done 2026-10-24 | |
-| 3. Walks and docs | Not started | |
+| 2. Settings tests | Done 2026-10-24 | 68006eb0 |
+| 3. Walks and docs | In progress | |
 | 4. Nightly TV walk | Built, not yet run in CI (server, seeding, CI job, `ci-settings.txt`) | |
