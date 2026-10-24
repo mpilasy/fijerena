@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.7.4
 
 - **Trailers play in the app:** the trailer button plays the trailer full screen inside Fijerena, and Back returns to the page. On TV, OK pauses (with a pause sign and the video's title) and Left and Right seek (with the new position). When a source's trailer is no longer on YouTube, TMDB's plays instead. A trailer YouTube does not allow in other apps still opens in the YouTube app. TV and phone.
 - **More films and shows have a trailer:** when the source sends no trailer, the app uses TMDB's (needs a TMDB key). A film page opened from the saved catalogue also keeps its source trailer now.
