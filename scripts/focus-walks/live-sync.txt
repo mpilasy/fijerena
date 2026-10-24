@@ -8,6 +8,8 @@
 # Re-checked 2026-10-24: three devices (this one, then two others), so three Rename buttons come before Leave.
 # Not linked (not walked here): the setup panel opens on Check server, or on the server address
 # while it is empty (settings flow review, W4, 2026-10-24).
+# Settings focus tests (2026-10-24, Phase 3): LiveSyncSetupFocusTest (tv/src/test, feature/settings)
+# checks the setup panel (not linked). No test covers the linked screen, so this walk is unchanged.
 @start Sync now
 DOWN	Add a device
 DOWN	Share What's Playing

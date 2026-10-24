@@ -12,15 +12,8 @@
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04. Multi-source Phase 6 (part 2): the
 # Use slot and the Active label are gone (there is no source in use); edited by hand 2026-10-12,
 # not re-recorded.
+# Settings focus tests (2026-10-24, Phase 3): SourcesFocusTest (tv/src/test, feature/provider) now
+# checks the rows' slots, Up to Add Source and the ⋮ menu's rows. The walk keeps only the start
+# focus. Back that closes the ⋮ menu and Back to Manage Sources in Settings are the moves no test
+# can make; they are not recorded yet.
 @start iptv / https://iptv-org.github.io/iptv/index.m3u
-RIGHT	Guide
-RIGHT	More actions for iptv
-# Down from ⋮ lands on the ⋮ of the next row.
-DOWN	More actions for jellyxtream
-LEFT	Guide
-LEFT	jellyxtream / http://10.0.2.2:8080
-UP	iptv / https://iptv-org.github.io/iptv/index.m3u
-# Up from the first row (bears here) lands on the header "+".
-UP	bearstv
-UP	bears
-UP	Add Source

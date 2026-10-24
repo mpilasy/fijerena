@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** In progress 2026-10-24: Phases 1 and 2 done (whole-screen route), Phase 4 built and running its first CI run, Phase 3 in progress.
+**Status:** In progress 2026-10-24: Phases 1, 2 and 3 done (whole-screen route), Phase 4 built and running its first CI run.
 
 ## Goal
 
@@ -157,11 +157,32 @@ opened it; Live sync linked to a sync group (`live-sync.txt`); a word removed an
 list (`ParentalListContentTest` covers it on the list alone); Check a source with several sources
 and real categories.
 
+## Phase 3 as built
+
+**Done 2026-10-24.** Each Settings walk keeps only the moves the tests can't make, plus the steps
+that reach them; a header line names the test classes that cover the rest. Kept lines have the
+texts recorded on the emulator; no line is new, and no walk was run.
+
+| Walk | Steps before | Steps after | Kept |
+|---|---|---|---|
+| `settings.txt` | 86 | 0 | the start focus |
+| `settings-guide.txt` | 18 | 0 | the start focus |
+| `parental-controls.txt` | 42 | 20 | a word removed and put back, Check a source with real data |
+| `sources.txt` | 9 | 0 | the start focus |
+| `live-sync.txt` | 13 | 13 | all (linked; no test) |
+| `epg-management.txt` | 16 | 1 | Back to Edit Source |
+| `edit-source.txt` | 20 | 12 | the way to Guide sources, Back to its row |
+
+Back on the rail (leaves Settings), Back that closes the Sources ⋮ menu and Back from Sources to
+Manage Sources have no recorded step yet; record them with `scripts/tv-focus-walk.sh -r` at the
+next walk before a release. CONTRIBUTING (focus walks rule) and RUN_GUIDE (Focus walks: how to run
+the tests, the walks in English before a release) updated.
+
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
 | 1. Spike | Done 2026-10-24 | 3fe44e1f |
 | 2. Settings tests | Done 2026-10-24 | 68006eb0 |
-| 3. Walks and docs | In progress | |
+| 3. Walks and docs | Done 2026-10-24 | |
 | 4. Nightly TV walk | Built, not yet run in CI (server, seeding, CI job, `ci-settings.txt`) | |

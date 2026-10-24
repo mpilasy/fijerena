@@ -15,6 +15,11 @@
 # the Profiles group, focus on its first row (text depends on the device, unasserted); Back goes
 # to the rail. A child's page has Parental controls under Admin, which opens this group, focus
 # on its first list (not walked here). Phase 3 lines edited by hand, not re-run in English.
+# Settings focus tests (2026-10-24, Phase 3): SettingsParentalControlsFocusTest (tv/src/test,
+# feature/settings) now checks the group's rows, a list to its end, Back and Left to the row, and
+# the link to Profiles; ParentalListContentTest checks a word removed and put back on the list
+# alone. This walk keeps a word removed and put back in Settings, and Check a source with the
+# emulator's sources and categories.
 @start Profiles
 DOWN	Parental Controls
 RIGHT	Kids' Categories / A category shows to a child when its name has one of these words.
@@ -22,12 +27,6 @@ DOWN	Kids' Film Categories / These also show, for film categories only.
 DOWN	Adult Categories / A category with one of these words never shows to a child.
 DOWN	Hidden Titles / A title with one of these words never shows to a child, also in a kids' category.
 DOWN	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
-DOWN	Check a Source
-DOWN	Content Filters of Each Profile / Set on each profile's page, in Profiles
-# Down at the end of the pane stays put.
-DOWN	Content Filters of Each Profile / Set on each profile's page, in Profiles
-UP	Check a Source
-UP	Exceptions
 CENTER	Add a word
 DOWN	pokemon
 REMOVE	doraemon
@@ -37,21 +36,6 @@ UP	pokemon
 UP	Add a word
 # Left leaves the list, focus back on its row.
 LEFT	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
-CENTER	Add a word
-# Down to the end: the ten words, then Reset to the app's list, where Down stays.
-DOWN	pokemon
-DOWN	doraemon
-DOWN	one piece
-DOWN	naruto
-DOWN	boruto
-DOWN	dragon ball
-DOWN	detective conan
-DOWN	sailor moon
-DOWN	yu-gi-oh
-DOWN	yugioh
-DOWN	Reset to the app's list
-DOWN	Reset to the app's list
-BACK	Exceptions
 DOWN	Check a Source
 # The first child profile's first Xtream source (Kid: panel-a, then panel-d).
 CENTER	
@@ -60,7 +44,3 @@ CENTER	The categories a child sees on this source with the lists now.
 DOWN	AL| FEMIJË / Live TV
 LEFT	
 LEFT	Check a Source
-DOWN	Content Filters of Each Profile / Set on each profile's page, in Profiles
-CENTER	
-# Back in the group's pane returns to the rail row.
-BACK	Profiles

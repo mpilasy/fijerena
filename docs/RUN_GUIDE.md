@@ -393,6 +393,19 @@ receiver's KDoc.
 
 ### Focus walks
 
+Settings' focus order is checked by Robolectric focus tests (`tv/src/test`, the `FocusWalk`
+helper, one `*FocusTest` class per group or screen). They need no device and run in CI with the
+other unit tests. To run them alone:
+
+```bash
+./gradlew :tv:testDebugUnitTest --tests '*FocusTest'
+```
+
+The Settings walks below keep only the moves no test can make (Back on the rail, Back that closes
+a dialog, Back from a screen Settings opens, Live sync linked, Check a source with real data). Run
+the remaining emulator walks before a release, in English: they match English text, so set the TV
+emulator's app language to English first.
+
 `scripts/tv-focus-walk.sh` drives the TV app with D-pad keys and reads which node has focus after
 each one (`uiautomator dump`, then the `focused="true"` node's text and content-desc plus its
 descendants', first four joined by ` / `). It needs `adb` and `python3` on the host, nothing on the
@@ -446,12 +459,12 @@ there. Each file's header comments name the start screen, the source it expects 
 | `details.txt` | Movie details and the episodes list |
 | `search.txt` | Search field (`TvSearchField`) and recent searches |
 | `search-filter.txt` | Search: the filter icon under the field and its dialog (Source, Decade, Genre) |
-| `settings.txt` | Settings rail and panes, pickers |
-| `settings-guide.txt` | Settings: Sources & guide rows and guide data maintenance |
-| `sources.txt` | Sources rows and their fixed slots |
-| `edit-source.txt` | Edit Source, two columns |
-| `epg-management.txt` | Guide sources of one source, a row's Auto-refresh picker |
-| `live-sync.txt` | Live sync screen |
+| `settings.txt` | Settings: the start focus only (the focus tests cover the rail and the panes) |
+| `settings-guide.txt` | Settings: the start focus only (`SettingsSourcesGuideFocusTest` covers the rest) |
+| `sources.txt` | Sources: the start focus only (`SourcesFocusTest` covers the rows and slots) |
+| `edit-source.txt` | Edit Source: the way to Guide sources, and Back to its row |
+| `epg-management.txt` | Guide sources of one source: Back to Edit Source |
+| `live-sync.txt` | Live sync screen, linked to a sync group |
 | `recent-remove.txt` | Live TV browse, Recent (iptv): menu opens on Remove from Recent, removal → next row, Menu undoes; edit mode (pencil, OK removes, Menu undoes), Back from Clear Recent → the pencil |
 | `favorites-remove.txt` | Live TV browse, Favourites (iptv, one favourite): Remove from Favourites with no confirmation, the empty list's Refresh focused, Menu undoes |
 | `live-panel-remove.txt` | Live TV preview's channel panel, Recent tab (iptv): removal → next row (not the tabs), Menu undoes |

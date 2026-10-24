@@ -11,27 +11,9 @@
 # Never press OK on Delete.
 # Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b), re-recorded 2026-10-04;
 # selection toggle replaced by the on/off switch 2026-10-06 (guide on/off clarity, Phase 2).
+# Settings focus tests (2026-10-24, Phase 3): GuideSourcesFocusTest (tv/src/test, feature/epg) now
+# checks the row's buttons, the auto-refresh picker and the moves to Add and Guide Data
+# Maintenance. This walk keeps Back to Edit Source.
 @start Use this guide
-# Up from the first row reaches Add and the stale/failed refresh buttons above the list.
-UP	Add guide source
-DOWN	Use this guide
-DOWN	Refresh
-RIGHT	Edit
-RIGHT	Auto-refresh
-RIGHT	Delete
-LEFT	Auto-refresh
-# Auto-refresh drills into its picker in place of the list, focus on the current interval (this
-# guide source refreshes weekly); Left closes it unchanged, focus back on Auto-refresh.
-CENTER	Weekly
-LEFT	Auto-refresh
-LEFT	Edit
-LEFT	Refresh
-# One guide source only: Down from its last row goes to the Guide Data Maintenance row below the list, Up returns to the row's last button (Delete), then the switch, then Add.
-DOWN	Guide Data Maintenance
-UP	Delete
-# Up from Add: nothing above it, focus stays.
-UP	Use this guide
-UP	Add guide source
 # Back leaves to Edit Source, focus back on the Guide sources row.
 BACK	Guide Sources
-
