@@ -98,6 +98,9 @@ class SyncManager internal constructor(
 
     /** Something asked for a pass while one was running: run another when it ends. */
     @Volatile private var passAgain = false
+
+    /** The deleted child profile this device was asked to leave ([SyncEngine.Listener.onActiveProfileDeleted]). */
+    @Volatile private var askedForDeletedChild: String? = null
     private var retryDelayMs = INITIAL_RETRY_MS
 
     private val listener =
@@ -129,16 +132,33 @@ class SyncManager internal constructor(
                 scope.launch {
                     // Another device deleted the profile this one is using: move to another, then
                     // sync again so the deletion can land.
-                    val active = AppSettings(app).activeProfileId
-                    val other =
+                    val settings = AppSettings(app)
+                    val active = settings.activeProfileId
+                    val others =
                         SettingsDatabase
                             .getInstance(app)
                             .profileDao()
                             .getAll()
-                            .firstOrNull { it.id != active } ?: return@launch
-                    Log.i(TAG, "Active profile deleted on another device; switching to ${other.id}")
-                    AppContainer.getInstance(app).switchProfileExternally(other.id)
-                    requestSync(0)
+                            .filter { it.id != active }
+                    val leavingChild = settings.isChildProfile(active)
+                    // A child goes only to another child, so the child lock stays on.
+                    val other = if (leavingChild) others.firstOrNull { settings.isChildProfile(it.id) } else others.firstOrNull()
+                    when {
+                        other != null -> {
+                            Log.i(TAG, "Active profile deleted on another device; switching to ${other.id}")
+                            AppContainer.getInstance(app).switchProfileExternally(other.id)
+                            requestSync(0)
+                        }
+
+                        // No other child: the device stays on this one and asks who is watching,
+                        // where the child lock applies. The deletion lands after the next switch.
+                        // Asked once, not at each sync that brings the deletion again.
+                        leavingChild && others.isNotEmpty() && askedForDeletedChild != active -> {
+                            Log.i(TAG, "Active child profile deleted on another device; asking who is watching")
+                            askedForDeletedChild = active
+                            AppContainer.getInstance(app).askWhoIsWatching()
+                        }
+                    }
                 }
             }
         }

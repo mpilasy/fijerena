@@ -59,6 +59,49 @@ class PinPromptStateTest {
     }
 
     @Test
+    fun `leaving a child with the target's own PIN unlocks the target too`() {
+        PinSession.onActiveProfile("kid")
+        every { pins.checkToLeaveChild(listOf("atr", "mum"), "2222") } returns ProfilePins.LeaveCheck(ProfilePins.Check.Right, "mum")
+        val state = prompt(PinRequest.LeaveChild(listOf("atr", "mum"), targetId = "mum", title = "Enter an Expert's PIN"))
+
+        state.replace("2222")
+
+        assertEquals(1, done)
+        assertTrue(PinSession.isUnlocked("mum"))
+        // The switch then keeps it: the profile in use stays unlocked.
+        PinSession.onActiveProfile("mum")
+        assertTrue(PinSession.isUnlocked("mum"))
+    }
+
+    @Test
+    fun `leaving a child with another Expert's PIN unlocks nothing`() {
+        PinSession.onActiveProfile("kid")
+        every { pins.checkToLeaveChild(listOf("atr", "mum"), "1111") } returns ProfilePins.LeaveCheck(ProfilePins.Check.Right, "atr")
+        val state = prompt(PinRequest.LeaveChild(listOf("atr", "mum"), targetId = "mum", title = "t"))
+
+        state.replace("1111")
+
+        assertEquals(1, done)
+        assertFalse(PinSession.isUnlocked("mum"))
+        assertFalse(PinSession.isUnlocked("atr"))
+    }
+
+    @Test
+    fun `a wrong PIN to leave a child keeps the child and checks only the child lock`() {
+        every { pins.checkToLeaveChild(listOf("atr"), "0000") } returns
+            ProfilePins.LeaveCheck(ProfilePins.Check.Wrong(triesLeft = 4, waitUntil = 0L), null)
+        every { context.getString(any(), any()) } returns "Wrong PIN"
+        val state = prompt(PinRequest.LeaveChild(listOf("atr"), targetId = "mum", title = "t"))
+
+        state.replace("0000")
+
+        assertEquals(0, done)
+        assertTrue(state.messageIsError)
+        verify(exactly = 0) { pins.checkAny(any(), any()) }
+        verify(exactly = 0) { pins.check(any(), any()) }
+    }
+
+    @Test
     fun `erase drops the last digit and anything but digits is ignored`() {
         val state = prompt(PinRequest.Check("kid", "t"))
         state.type('1')

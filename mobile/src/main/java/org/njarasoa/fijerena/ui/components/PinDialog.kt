@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -26,8 +28,10 @@ import org.njarasoa.fijerena.core.ui.components.PinDots
 import org.njarasoa.fijerena.core.ui.components.PinPromptState
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
@@ -90,4 +94,23 @@ fun PinDialog(
             }
         },
     )
+}
+
+/**
+ * The child lock's prompt: shown while [viewModel] holds a switch away from a child profile
+ * ([ProfilesViewModel.leavingChild]). The right PIN makes the switch, then [onSwitched] runs;
+ * Cancel keeps the child.
+ */
+@Composable
+fun LeaveChildPinDialog(
+    viewModel: ProfilesViewModel,
+    onSwitched: () -> Unit,
+) {
+    val request by viewModel.leavingChild.collectAsStateWithLifecycle()
+    request?.let { leaving ->
+        PinDialog(
+            state = rememberPinPromptState(viewModel.pins, leaving) { viewModel.switchTo(leaving.targetId, onSwitched, pinTyped = true) },
+            onCancel = viewModel::cancelLeavingChild,
+        )
+    }
 }

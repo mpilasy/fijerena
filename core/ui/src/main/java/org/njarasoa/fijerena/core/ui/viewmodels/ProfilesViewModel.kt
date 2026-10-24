@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,11 +19,13 @@ import org.njarasoa.fijerena.core.network.profile.ProfileFavorite
 import org.njarasoa.fijerena.core.network.profile.ProfileFavorites
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
+import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.PinSession
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -94,26 +97,58 @@ class ProfilesViewModel(
      * Makes [id] this device's profile, then calls [onSwitched] — on the main thread — so the
      * caller can rebuild its screens. Picking the profile already in use still calls it: from the
      * launch picker that is the normal way in.
+     *
+     * The child lock ([ProfileRepository.needsAdminPinToSwitch]): a switch away from a child
+     * profile does not happen until an Expert's PIN is typed. It sets [leavingChild] instead, for
+     * the screen to show the prompt; the prompt calls this again with [pinTyped] true.
      */
     fun switchTo(
         id: String,
         onSwitched: () -> Unit,
+        pinTyped: Boolean = false,
     ) {
         // One switch at a time: a second pick while one runs would only queue behind it.
-        if (_switchingTo.value != null) return
+        if (switchJob?.isActive == true) return
+        _leavingChild.value = null
         if (id == appSettings.activeProfileId) {
             onSwitched()
             return
         }
-        _switchingTo.value = profiles.value.firstOrNull { it.id == id }?.name ?: ""
-        viewModelScope.launch {
-            try {
-                AppContainer.getInstance(context).switchProfile(id)
-                onSwitched()
-            } finally {
-                _switchingTo.value = null
+        switchJob =
+            viewModelScope.launch {
+                when (val lock = if (pinTyped) SwitchLock.Free else repository.needsAdminPinToSwitch(id)) {
+                    is SwitchLock.AskPin -> {
+                        _leavingChild.value =
+                            PinRequest.LeaveChild(lock.pinHolders, id, context.getString(R.string.pin_enter_admin))
+                    }
+
+                    // Logged where the profiles were read; the device stays on the child.
+                    SwitchLock.Refused -> {
+                        Unit
+                    }
+
+                    SwitchLock.Free -> {
+                        _switchingTo.value = profiles.value.firstOrNull { it.id == id }?.name ?: ""
+                        try {
+                            AppContainer.getInstance(context).switchProfile(id)
+                            onSwitched()
+                        } finally {
+                            _switchingTo.value = null
+                        }
+                    }
+                }
             }
-        }
+    }
+
+    private var switchJob: Job? = null
+
+    // A switch away from a child profile waiting for an Expert's PIN, for the screen to ask it.
+    private val _leavingChild = MutableStateFlow<PinRequest.LeaveChild?>(null)
+    val leavingChild: StateFlow<PinRequest.LeaveChild?> = _leavingChild.asStateFlow()
+
+    /** Cancel on the child lock's prompt: the device stays on the child profile. */
+    fun cancelLeavingChild() {
+        _leavingChild.value = null
     }
 
     // The name of the profile being switched to while a switch runs, for the picker to say so.

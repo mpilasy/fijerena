@@ -33,6 +33,19 @@ sealed interface PinRequest {
         override val profileId: String get() = profileIds.first()
     }
 
+    /**
+     * The child lock: any of [profileIds]' PINs (the Expert profiles with a PIN) before this device
+     * leaves a child profile for [targetId]. Wrong tries count on the child lock's own count. When
+     * the PIN is [targetId]'s own, [targetId] is unlocked too, so its Settings ask nothing more.
+     */
+    data class LeaveChild(
+        val profileIds: List<String>,
+        val targetId: String,
+        val title: String,
+    ) : PinRequest {
+        override val profileId: String get() = profileIds.first()
+    }
+
     /** A new PIN for [profileId], typed twice; [warning] shows under the dots (the last Expert's). */
     data class Choose(
         override val profileId: String,
@@ -67,6 +80,7 @@ class PinPromptState internal constructor(
             when (request) {
                 is PinRequest.Check -> request.title
                 is PinRequest.AnyOf -> request.title
+                is PinRequest.LeaveChild -> request.title
                 is PinRequest.Choose -> context.getString(if (first == null) R.string.pin_choose else R.string.pin_repeat)
             }
 
@@ -104,6 +118,17 @@ class PinPromptState internal constructor(
                 message = check.message(context)
                 messageIsError = message != null
                 if (check == ProfilePins.Check.Right) onDone()
+            }
+
+            is PinRequest.LeaveChild -> {
+                val result = pins.checkToLeaveChild(request.profileIds, pin)
+                message = result.check.message(context)
+                messageIsError = message != null
+                if (result.check == ProfilePins.Check.Right) {
+                    // The switch keeps the new profile in use unlocked (PinSession.onActiveProfile).
+                    if (result.pinOf == request.targetId) PinSession.unlock(request.targetId)
+                    onDone()
+                }
             }
 
             is PinRequest.Choose -> {

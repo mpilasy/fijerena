@@ -1340,6 +1340,8 @@
     <string name="pin_set_done">Voapetraka ny PIN</string>
     <string name="pin_removed">Voaesotra ny PIN</string>
     <string name="pin_enter_admin">Ampidiro ny PIN-n\'ny mombamomba manam-pahaizana</string>
+    <string name="profile_child_no_pin_warning">Tsy misy PIN voafaritra: afaka mifindra amin\'izay mombamomba tiany ity ankizy ity.</string>
+    <string name="profile_child_set_pin">Mametraha PIN</string>
     <string name="settings_group_sync_backup">Fampifanarahana sy tahiry</string>
     <string name="settings_guide_sources_desc">Ny fitarihana ho an\'ny fantsona isaky ny loharano</string>
     <string name="settings_recent_row_size_title">Zavatra ao amin\'ny Vao haingana</string>

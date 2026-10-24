@@ -39,7 +39,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.ui.components.PinDialog
+import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -67,6 +67,8 @@ fun ProfileSheet(
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     val rowColors = ListItemDefaults.colors(containerColor = CinemaTheme.colors.clear)
+    // Leaving a child profile asks an Expert's PIN (the child lock); Cancel keeps the child.
+    LeaveChildPinDialog(viewModel, onProfileChosen)
     ModalBottomSheet(
         onDismissRequest = { if (!mustChoose) onDismiss() },
         sheetState = rememberModalBottomSheetState(confirmValueChange = { !mustChoose || it != SheetValue.Hidden }),

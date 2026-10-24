@@ -390,6 +390,7 @@ fun MobileSettingsScreen(
                     expertMode = uiState.isDevMode,
                     pinNudge = profilesViewModel.pins.takeIf { profilesViewModel.needsAdminPin() },
                     pinNudgeLastExpert = profiles.firstOrNull { it.isActive }?.let { profilesViewModel.isLastExpert(it.id) } == true,
+                    noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),
                 )
                 ParentalControlsSettingsRow(expertMode = uiState.isDevMode, onOpen = { guarded(onParentalControls) })
             }

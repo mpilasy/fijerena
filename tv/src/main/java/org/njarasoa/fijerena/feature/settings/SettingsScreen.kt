@@ -64,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.feature.settings.components.SettingsRow
 import org.njarasoa.fijerena.ui.components.TvContentText
+import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
@@ -131,6 +132,8 @@ fun SettingsScreen(
             onCancel = { askingAdminPin = null },
         )
     }
+    // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
+    TvLeaveChildPinDialog(profilesViewModel, onProfileSwitched)
     // Settings opens without the PIN; what changes shared setup or another profile (the admin's
     // groups, a profile's page, adding a profile) asks the PIN of the profile in use first.
     val inUse by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
@@ -598,6 +601,7 @@ fun SettingsScreen(
                                                             )
                                                         } ==
                                                             true,
+                                                    noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),
                                                 )
                                             }
                                         }

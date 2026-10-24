@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +19,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -26,10 +28,12 @@ import org.njarasoa.fijerena.core.ui.components.PinDots
 import org.njarasoa.fijerena.core.ui.components.PinPromptState
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.PinStyle
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -126,4 +130,23 @@ private fun PadKey(
     content: @Composable () -> Unit,
 ) {
     CinemaButton(onClick = onClick, modifier = modifier.width(PinStyle.keyWidth), kind = ButtonKind.Other) { content() }
+}
+
+/**
+ * The child lock's prompt: shown while [viewModel] holds a switch away from a child profile
+ * ([ProfilesViewModel.leavingChild]). The right PIN makes the switch, then [onSwitched] runs;
+ * Cancel or Back keeps the child, and focus stays on the control that asked.
+ */
+@Composable
+fun TvLeaveChildPinDialog(
+    viewModel: ProfilesViewModel,
+    onSwitched: () -> Unit,
+) {
+    val request by viewModel.leavingChild.collectAsStateWithLifecycle()
+    request?.let { leaving ->
+        TvPinDialog(
+            state = rememberPinPromptState(viewModel.pins, leaving) { viewModel.switchTo(leaving.targetId, onSwitched, pinTyped = true) },
+            onCancel = viewModel::cancelLeavingChild,
+        )
+    }
 }

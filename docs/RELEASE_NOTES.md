@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Children stay out of shared settings:** a child profile's Settings shows only its own page and About, without Language, Text & grid size and the Last watched delay, which change the whole device. A child cannot rename itself or change its PIN; an Expert still can. A profile without Expert mode and with no source reads "Ask a grown-up to add one" in place of Add Source, and only an Expert sees Add profile on the TV profile picker. Remove PIN now asks first, and says when the child lock stops with it. TV and phone.
+- **Child lock:** a device that uses a child profile now leaves it only after the PIN of an Expert profile, on TV and phone, while an Expert has a PIN. Picking the same child asks nothing. Wrong tries there do not make the Expert wait in Settings. When you type the PIN of the profile you switch to, its Settings do not ask again. With no PIN set, turning Child on says that the child can switch to any profile, with a link to set a PIN.
 
 ## Version: 0.7.8
 

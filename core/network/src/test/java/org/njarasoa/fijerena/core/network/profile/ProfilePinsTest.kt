@@ -134,6 +134,39 @@ class ProfilePinsTest {
     }
 
     @Test
+    fun `leaving a child counts wrong PINs on its own, never on the Expert's`() {
+        pins.set("atr", "1111")
+        val experts = listOf("atr")
+
+        repeat(4) { pins.checkToLeaveChild(experts, "0000") }
+        assertEquals(Check.Wrong(triesLeft = 0, waitUntil = clock + 30_000L), pins.checkToLeaveChild(experts, "0000").check)
+        assertEquals(Check.Waiting(clock + 30_000L), pins.checkToLeaveChild(experts, "1111").check)
+
+        // The Expert's own Settings PIN has no wait.
+        assertEquals(0, settings.pinFailures("atr"))
+        assertNull(pins.waitingUntil("atr"))
+        assertEquals(Check.Right, pins.checkAny(experts, "1111"))
+
+        // Nor does a wait on the Expert's PIN stop the child lock.
+        clock += 30_000L
+        repeat(5) { pins.checkAny(experts, "0000") }
+        assertEquals(Check.Waiting(clock + 30_000L), pins.checkAny(experts, "1111"))
+        assertEquals(ProfilePins.LeaveCheck(Check.Right, "atr"), pins.checkToLeaveChild(experts, "1111"))
+        assertEquals(0, settings.childLockFailures)
+    }
+
+    @Test
+    fun `leaving a child says whose PIN was typed`() {
+        pins.set("atr", "1111")
+        pins.set("mum", "2222")
+        val experts = listOf("atr", "mum")
+
+        assertEquals("mum", pins.checkToLeaveChild(experts, "2222").pinOf)
+        assertEquals("atr", pins.checkToLeaveChild(experts, "1111").pinOf)
+        assertNull(pins.checkToLeaveChild(experts, "0000").pinOf)
+    }
+
+    @Test
     fun `deleting the profile drops its PIN`() {
         pins.set(KID, "1234")
         settings.removePin(KID)

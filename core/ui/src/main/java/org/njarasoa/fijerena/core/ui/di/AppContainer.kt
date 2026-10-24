@@ -180,8 +180,9 @@ class AppContainer(
 
     /**
      * The profile in use was deleted on another device, and live sync moved this device to
-     * another: the nav hosts drop every screen, playback included, and ask who is watching — TV's
-     * profile picker, the phone's profile menu.
+     * another (or kept a child profile with no other child in use, [askWhoIsWatching]): the nav
+     * hosts drop every screen, playback included, and ask who is watching — TV's profile picker,
+     * the phone's profile menu.
      */
     val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
 
@@ -197,6 +198,15 @@ class AppContainer(
     /** [switchProfile], for a switch the UI didn't ask for: announces it on [externalSwitches]. */
     suspend fun switchProfileExternally(profileId: String) {
         switchProfile(profileId)
+        _externalSwitches.emit(Unit)
+    }
+
+    /**
+     * The child profile in use was deleted on another device and no other child is left: the
+     * profile does not change, but the nav hosts ask who is watching ([externalSwitches]), where
+     * leaving the child asks an Expert's PIN (the child lock).
+     */
+    suspend fun askWhoIsWatching() {
         _externalSwitches.emit(Unit)
     }
 

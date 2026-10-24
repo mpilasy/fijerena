@@ -1348,6 +1348,8 @@
     <string name="pin_set_done">Code PIN défini</string>
     <string name="pin_removed">Code PIN supprimé</string>
     <string name="pin_enter_admin">Saisissez le code PIN d\'un profil en mode expert</string>
+    <string name="profile_child_no_pin_warning">Aucun code PIN n\'est défini : cet enfant peut passer à n\'importe quel profil.</string>
+    <string name="profile_child_set_pin">Définir un code PIN</string>
     <string name="settings_group_sync_backup">Synchronisation et sauvegarde</string>
     <string name="settings_guide_sources_desc">Les guides des chaînes de chaque source</string>
     <string name="settings_recent_row_size_title">Éléments dans Récents</string>

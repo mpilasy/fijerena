@@ -49,6 +49,8 @@ class AppSettings(
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_PIN_FAILURES = "pin_failures"
         private const val KEY_PIN_WAIT_UNTIL = "pin_wait_until"
+        private const val KEY_CHILD_LOCK_FAILURES = "child_lock_failures"
+        private const val KEY_CHILD_LOCK_WAIT_UNTIL = "child_lock_wait_until"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
         private const val KEY_CACHE_EXPIRY_HOURS = "cache_expiry_hours"
@@ -534,6 +536,24 @@ class AppSettings(
     ) = prefs.edit {
         putInt(profileKey(KEY_PIN_FAILURES, profileId), failures)
         putLong(profileKey(KEY_PIN_WAIT_UNTIL, profileId), waitUntil)
+    }
+
+    /**
+     * Wrong PINs in a row typed to leave a child profile on this device (not synced). The child lock
+     * counts them apart from each profile's own count, so a child's guesses never start a wait on
+     * the Expert's Settings PIN.
+     */
+    val childLockFailures: Int get() = prefs.getInt(KEY_CHILD_LOCK_FAILURES, 0)
+
+    /** When a PIN to leave a child profile may be tried again on this device, epoch ms; 0 when it may now. */
+    val childLockWaitUntil: Long get() = prefs.getLong(KEY_CHILD_LOCK_WAIT_UNTIL, 0L)
+
+    fun setChildLockThrottle(
+        failures: Int,
+        waitUntil: Long,
+    ) = prefs.edit {
+        putInt(KEY_CHILD_LOCK_FAILURES, failures)
+        putLong(KEY_CHILD_LOCK_WAIT_UNTIL, waitUntil)
     }
 
     /** Drops a deleted profile's PIN and its wrong-PIN count. */

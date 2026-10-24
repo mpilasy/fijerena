@@ -69,6 +69,8 @@ fun ProfilesSettingsRows(
     pinNudge: ProfilePins? = null,
     /** The profile in use is the only Expert: choosing its PIN warns how hard a forgotten one is. */
     pinNudgeLastExpert: Boolean = false,
+    /** No Expert has a PIN: see [ProfileAddDialog]. */
+    noAdminPin: Boolean = false,
 ) {
     var adding by remember { mutableStateOf(false) }
     var choosingPin by remember { mutableStateOf(false) }
@@ -137,6 +139,7 @@ fun ProfilesSettingsRows(
                 adding = false
             },
             onDismiss = { adding = false },
+            noAdminPin = noAdminPin,
         )
     }
 }
@@ -150,6 +153,8 @@ internal fun ProfileAddDialog(
     initialColorIndex: Int,
     onSave: (name: String, colorIndex: Int, child: Boolean) -> Unit,
     onDismiss: () -> Unit,
+    /** No Expert has a PIN: a Child switch turned on warns that the child lock does nothing yet. */
+    noAdminPin: Boolean = false,
 ) {
     var name by remember { mutableStateOf("") }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
@@ -176,6 +181,9 @@ internal fun ProfileAddDialog(
                     onCheckedChange = { child = it },
                     summary = stringResource(R.string.profile_child_desc),
                 )
+                if (child && noAdminPin) {
+                    CinemaText(stringResource(R.string.profile_child_no_pin_warning), tone = TextTone.Danger)
+                }
             }
         },
         confirmButton = {

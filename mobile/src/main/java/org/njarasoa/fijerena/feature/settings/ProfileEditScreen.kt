@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.PaletteSwatches
+import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -58,6 +59,7 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.feature.settings.components.SettingsScope
+import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
@@ -269,6 +271,19 @@ fun MobileProfileEditScreen(
                     },
                 )
             }
+            // "Set a PIN ›" under the Child switch: the PIN of the Expert profile in use.
+            var choosingAdminPin by remember { mutableStateOf(false) }
+            if (choosingAdminPin) {
+                profiles.firstOrNull { it.isActive }?.let { admin ->
+                    val warning = if (viewModel.isLastExpert(admin.id)) stringResource(R.string.pin_last_expert_warning) else null
+                    PinDialog(
+                        state = rememberPinPromptState(viewModel.pins, PinRequest.Choose(admin.id, warning)) { choosingAdminPin = false },
+                        onCancel = { choosingAdminPin = false },
+                    )
+                }
+            }
+            // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
+            LeaveChildPinDialog(viewModel, onProfileSwitched)
             var editingSources by rememberSaveable { mutableStateOf(false) }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
@@ -389,6 +404,14 @@ fun MobileProfileEditScreen(
                         enabled = !(devMode && lastExpert),
                         modifier = inset,
                     )
+                    // No Expert has a PIN, so the child lock does nothing: the admin in use sets one here.
+                    if (child && viewModel.adminPinHolders().isEmpty()) {
+                        SettingsListRow(
+                            title = stringResource(R.string.profile_child_set_pin),
+                            summary = stringResource(R.string.profile_child_no_pin_warning),
+                            onClick = { choosingAdminPin = true },
+                        )
+                    }
                     // A child profile (adult categories hidden) is never Expert.
                     if (!child) {
                         ProfileSwitchRow(

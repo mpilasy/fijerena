@@ -79,16 +79,49 @@ class ProfilePins(
         pin: String,
     ): Check {
         val first = profileIds.firstOrNull() ?: return Check.Right
-        val waitUntil = settings.pinWaitUntil(first)
-        if (now() < waitUntil) return Check.Waiting(waitUntil)
-        if (profileIds.any { id -> settings.pinHash(id)?.let { matches(pin, it) } == true }) {
-            settings.setPinThrottle(first, failures = 0, waitUntil = 0L)
-            return Check.Right
+        return checkAnyCounted(profileIds, pin, settings.pinFailures(first), settings.pinWaitUntil(first)) { failures, waitUntil ->
+            settings.setPinThrottle(first, failures, waitUntil)
+        }.check
+    }
+
+    /** What [checkToLeaveChild] found, and whose PIN it was when right. */
+    data class LeaveCheck(
+        val check: Check,
+        val pinOf: String?,
+    )
+
+    /**
+     * [checkAny] for the child lock: whether [pin] is the PIN of any of [profileIds] (the Expert
+     * profiles with a PIN), to leave a child profile. Wrong tries count on the child lock's own
+     * device count ([AppSettings.childLockFailures]), never on a profile's, so a child's guesses
+     * don't make the Expert wait in Settings. [LeaveCheck.pinOf] says which profile's PIN it was.
+     */
+    fun checkToLeaveChild(
+        profileIds: List<String>,
+        pin: String,
+    ): LeaveCheck =
+        checkAnyCounted(profileIds, pin, settings.childLockFailures, settings.childLockWaitUntil) { failures, waitUntil ->
+            settings.setChildLockThrottle(failures, waitUntil)
         }
-        val failures = settings.pinFailures(first) + 1
+
+    private fun checkAnyCounted(
+        profileIds: List<String>,
+        pin: String,
+        failuresSoFar: Int,
+        waitUntil: Long,
+        setThrottle: (failures: Int, waitUntil: Long) -> Unit,
+    ): LeaveCheck {
+        if (profileIds.isEmpty()) return LeaveCheck(Check.Right, null)
+        if (now() < waitUntil) return LeaveCheck(Check.Waiting(waitUntil), null)
+        val matched = profileIds.firstOrNull { id -> settings.pinHash(id)?.let { matches(pin, it) } == true }
+        if (matched != null) {
+            setThrottle(0, 0L)
+            return LeaveCheck(Check.Right, matched)
+        }
+        val failures = failuresSoFar + 1
         val next = if (failures >= FREE_TRIES) now() + waitAfter(failures) else 0L
-        settings.setPinThrottle(first, failures, next)
-        return Check.Wrong(triesLeft = (FREE_TRIES - failures).coerceAtLeast(0), waitUntil = next)
+        setThrottle(failures, next)
+        return LeaveCheck(Check.Wrong(triesLeft = (FREE_TRIES - failures).coerceAtLeast(0), waitUntil = next), null)
     }
 
     /** When [profileId]'s PIN may be tried again, epoch ms, or null when it may now. */

@@ -130,6 +130,8 @@ fun ProfilesSettingsCard(
     pinNudge: ProfilePins? = null,
     /** The profile in use is the only Expert: choosing its PIN warns how hard a forgotten one is. */
     pinNudgeLastExpert: Boolean = false,
+    /** No Expert has a PIN: see [ProfileAddDialog]. */
+    noAdminPin: Boolean = false,
 ) {
     var adding by remember { mutableStateOf(false) }
     var choosingPin by remember { mutableStateOf(false) }
@@ -217,6 +219,7 @@ fun ProfilesSettingsCard(
             },
             onDismiss = { adding = false },
             scale = scale,
+            noAdminPin = noAdminPin,
         )
     }
 }
@@ -311,6 +314,10 @@ fun ProfileEditPane(
     val sourcesFocus = remember { FocusRequester() }
     val deleteFocus = remember { FocusRequester() }
     val pinFocus = remember { FocusRequester() }
+    val childFocus = remember { FocusRequester() }
+    val setPinFocus = remember { FocusRequester() }
+    // "Set a PIN ›" under the Child switch: the PIN of the Expert profile in use.
+    var choosingAdminPin by remember { mutableStateOf(false) }
     // The PIN row (the profile pin plan): saved as it is set, like the theme.
     val everyone by viewModel.profiles.collectAsStateWithLifecycle()
     val onlyExpert = remember(profile.id, everyone) { viewModel.isLastExpert(profile.id) }
@@ -588,7 +595,17 @@ fun ProfileEditPane(
                                 if (devMode && lastExpert) R.string.profile_child_last_expert else R.string.profile_child_desc,
                             ),
                         enabled = !(devMode && lastExpert),
+                        modifier = Modifier.focusRequester(childFocus),
                     )
+                    // No Expert has a PIN, so the child lock does nothing: the admin in use sets one here.
+                    if (child && viewModel.adminPinHolders().isEmpty()) {
+                        SettingsRow(
+                            title = stringResource(R.string.profile_child_set_pin),
+                            description = stringResource(R.string.profile_child_no_pin_warning),
+                            onClick = { choosingAdminPin = true },
+                            focusRequester = setPinFocus,
+                        )
+                    }
                     // What a child's Home shows: filled here, not by the child.
                     if (child) {
                         SettingsRow(
@@ -695,6 +712,24 @@ fun ProfileEditPane(
                     refocus = filtersFocus
                 },
             )
+        }
+
+        if (choosingAdminPin) {
+            everyone.firstOrNull { it.isActive }?.let { admin ->
+                val warning = if (viewModel.isLastExpert(admin.id)) stringResource(R.string.pin_last_expert_warning) else null
+                TvPinDialog(
+                    state =
+                        rememberPinPromptState(viewModel.pins, PinRequest.Choose(admin.id, warning)) {
+                            choosingAdminPin = false
+                            // The row is gone: focus goes back to the Child switch.
+                            refocus = childFocus
+                        },
+                    onCancel = {
+                        choosingAdminPin = false
+                        refocus = setPinFocus
+                    },
+                )
+            }
         }
 
         pinFlow.request?.let { request ->
@@ -856,6 +891,8 @@ internal fun ProfileAddDialog(
     onSave: (name: String, colorIndex: Int, child: Boolean) -> Unit,
     onDismiss: () -> Unit,
     scale: Float,
+    /** No Expert has a PIN: a Child switch turned on warns that the child lock does nothing yet. */
+    noAdminPin: Boolean = false,
 ) {
     var name by remember { mutableStateOf("") }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
@@ -906,7 +943,11 @@ internal fun ProfileAddDialog(
                     checked = child,
                     onCheckedChange = { child = it },
                     label = stringResource(R.string.profile_child_title),
-                    description = stringResource(R.string.profile_child_desc),
+                    description =
+                        listOfNotNull(
+                            stringResource(R.string.profile_child_desc),
+                            if (child && noAdminPin) stringResource(R.string.profile_child_no_pin_warning) else null,
+                        ).joinToString("\n"),
                     modifier = Modifier.focusProperties { down = saveFocusRequester },
                 )
             }

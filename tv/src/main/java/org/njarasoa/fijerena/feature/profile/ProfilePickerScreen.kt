@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.ProfileAddDialog
+import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -179,6 +180,9 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
         }
     }
 
+    // Leaving a child profile asks an Expert's PIN (the child lock); Cancel keeps the child.
+    TvLeaveChildPinDialog(viewModel, onProfileChosen)
+
     askingAdminPin?.let { holders ->
         TvPinDialog(
             state =
@@ -199,6 +203,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
             },
             onDismiss = { adding = false },
             scale = LocalUiScale.current,
+            noAdminPin = viewModel.adminPinHolders().isEmpty(),
         )
     }
 }

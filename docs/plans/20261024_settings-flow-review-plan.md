@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phase 1 done, Phase 1b in progress. Reviewed from the code only; no
+**Status:** In progress 2026-10-24: Phases 1 and 1b done (1b not walked). Reviewed from the code only; no
 emulator walk yet.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
@@ -155,6 +155,15 @@ PIN" (2026-10-17, re-confirmed 2026-10-19) for switches away from a child profil
   - When the PIN typed is the target profile's own, the target's `PinSession` is unlocked too
     (SF-D15): opening Settings after the switch asks nothing more.
   - Not changed: the 60-min relock.
+  - As built (2026-10-24): the prompt takes any Expert's PIN only; a non-Expert target's own PIN
+    does not open the lock (SF-D15 applies when the target is an Expert with a PIN). The check is
+    `ProfileRepository.needsAdminPinToSwitch` → `SwitchLock` (Free, AskPin, Refused when the
+    profiles can't be read). The prompt is `PinRequest.LeaveChild`, counted on
+    `child_lock_failures` / `child_lock_wait_until`. Sync, deleted child with no other child: the
+    device stays on the deleted child (the deletion is deferred while it is in use) and asks who is
+    watching once per run (`AppContainer.askWhoIsWatching`); the deletion lands after the next
+    switch. Add profile shows the SF-D7 warning in the Child switch's description (TV) or under it
+    (phone); the profile page's "Set a PIN ›" is a row with the warning as its description.
 
 ## Phases
 
@@ -173,8 +182,8 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Leaks | Done 2026-10-24 | |
-| 1b. Child lock | In progress | |
+| 1. Leaks | Done 2026-10-24 | 97ac753f |
+| 1b. Child lock | Done 2026-10-24 (not walked) | |
 | 2. Grouping and wording | Not started | |
 | 3. Admin flows | Not started | |
 | 4. Docs and walks | Not started | |

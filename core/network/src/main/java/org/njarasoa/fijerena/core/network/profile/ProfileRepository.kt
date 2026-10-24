@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.profile
 
 import android.content.Context
+import android.util.Log
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Creating, editing and deleting profiles. See the live sync plan → User
@@ -71,6 +73,28 @@ class ProfileRepository(
         }
         ProviderRepository(context).childProfileChanged(id)
     }
+
+    /**
+     * The child lock on a switch of this device to [targetId] ([SwitchLock.of]): read from the
+     * stored profiles and flags, not from a list a screen collects, which is empty until loaded.
+     * Fails closed: profiles that can't be read refuse a switch away from a child.
+     */
+    suspend fun needsAdminPinToSwitch(targetId: String): SwitchLock =
+        withContext(Dispatchers.IO) {
+            val settings = AppSettings(context)
+            val profileIds =
+                try {
+                    dao.getAll().map { it.id }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Profiles not read for the child lock", e)
+                    null
+                }
+            SwitchLock.of(settings.activeProfileId, targetId, profileIds, settings::isChildProfile) {
+                settings.devMode(it) && settings.pinHash(it) != null
+            }
+        }
 
     /** [keys] without the sources content filters can't reach, or [keys] itself when none could stay. */
     private suspend fun filterableSourceKeys(keys: Set<String>): Set<String> {
@@ -230,6 +254,8 @@ class ProfileRepository(
     }
 
     private companion object {
+        private const val TAG = "ProfileRepository"
+
         // media_cache_<providerId> exactly — not a media_cache_<id>_profile_<profileId> file.
         val SHARED_MEDIA_CACHE = Regex("media_cache_\\d+")
     }
