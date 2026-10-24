@@ -1,6 +1,6 @@
 # Loading indicator
 
-**Status:** Built 2026-10-24 (Phases 1–5). Checked on the TV and phone emulators: films (iris), episodes (reel), the start-up wait with the banner (TV), a stall mid-stream with the last frame and the scene colour (phone), the live ring with the channel logo (phone). Not checked on a device: the TV tuning ring (the TV emulator's only live source is one not used for tests).
+**Status:** Built 2026-10-24 (Phases 1–5). Checked on the TV and phone emulators: films (iris), episodes (reel), the start-up wait with the banner (TV), a stall mid-stream with the last frame and the scene colour (phone), the live ring with the channel logo (phone). The TV tuning ring was checked later the same day (preview and full screen).
 
 ## Goal
 
@@ -39,6 +39,7 @@ stream that already played waits again. Expert mode keeps its buffering details 
 | 3 | Stream info banner waits for play (TV) | Done |
 | 4 | Last frame kept mid-stream; no dimming | Done |
 | 5 | Docs, checks, emulator check, release | Done |
+| 6 | Live TV preview (TV) and phone dock use the ring; full-size ring in the TV preview | Done |
 
 ## Notes (2026-10-24)
 
@@ -49,3 +50,9 @@ stream that already played waits again. Expert mode keeps its buffering details 
 - **New stream vs reconnect:** `StreamingPlaybackService.newStreamStarting` is set by `playStream()`
   and `stop()`, cleared by the first frame; while set, the surface shows Media3's black shutter.
   A reconnect (`reprepare()`, a recycle, a film freed while paused) leaves it clear, so its frame stays.
+- **Preview and dock (Phase 6):** the TV preview's 48 dp ring made a wide logo (RTP 1) too small to
+  read, so the preview uses the full-size ring. The phone dock showed black (portrait) or the old
+  spinner (landscape) while it loaded; both show the ring now, as does the TV preview's wait after
+  the channel played.
+- **Known, not from this work:** on the TV emulator, going full screen from the Live TV preview can
+  stall with the buffer full and no picture. 0.7.4 does the same, so it is older than this plan.

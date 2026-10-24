@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Live TV preview shows the ring too:** on the phone, the small Live TV player shows the channel's ring with its logo while it loads, not a black box or a spinner. On TV the ring in the preview is larger, so a wide logo stays readable, and a wait after the channel played shows the ring instead of the spinner.
+
 ## Version: 0.7.5
 
 - **A picture instead of "Buffering…":** while a stream loads, a film shows a camera iris that opens as the video arrives, an episode a film reel that turns at the download speed, and a channel a ring that fills around its logo. They turn amber when the connection is too slow. The title's or channel's logo (or its name) shows at the top left. Expert mode keeps its buffering details under the picture. TV and phone.

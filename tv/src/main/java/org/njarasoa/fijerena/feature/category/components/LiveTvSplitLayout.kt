@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.categoryKey
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.domain.sourceOr
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -57,7 +58,6 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
-import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
@@ -67,6 +67,8 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.WaitIndicator
+import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -756,7 +758,15 @@ internal fun LiveTvSplitLayout(
                                 stalledId == target.id,
                         )
                     } else if (previewPlaybackState !is PlaybackState.Playing) {
-                        CinemaSpinner(modifier = Modifier.align(Alignment.Center))
+                        // A wait after the channel played: the same ring, without the dimming.
+                        val name = parseDisplayTitle(target.name).title.ifBlank { target.name }
+                        WaitIndicator(
+                            kind = WaitKind.Live,
+                            modifier = Modifier.align(Alignment.Center),
+                            logoUrl = target.thumbnailUrl,
+                            name = name,
+                            contentDescription = stringResource(R.string.live_tuning_format, name),
+                        )
                     }
                 }
 

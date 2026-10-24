@@ -160,7 +160,6 @@ import org.njarasoa.fijerena.core.ui.components.CatchupBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDivider
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
-import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -175,6 +174,8 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.WaitIndicator
+import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.titleBadgesDescription
@@ -1155,7 +1156,11 @@ fun MobileCategoryListScreen(
                                                     // otherwise look identical to a live frozen frame —
                                                     // mirrors TV's LiveTvSplitLayout.
                                                     if (dockPlaybackState !is PlaybackState.Playing) {
-                                                        CinemaSpinner(modifier = Modifier.align(Alignment.Center))
+                                                        DockWait(
+                                                            name = dockSuccess?.streamName ?: target.name,
+                                                            logoUrl = target.thumbnailUrl,
+                                                            modifier = Modifier.align(Alignment.Center),
+                                                        )
                                                     }
 
                                                     IconButton(
@@ -1227,6 +1232,13 @@ fun MobileCategoryListScreen(
                                             ) {
                                                 // TextureView — see the landscape dock box above.
                                                 EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
+                                                if (dockPlaybackState !is PlaybackState.Playing) {
+                                                    DockWait(
+                                                        name = dockSuccess?.streamName ?: target.name,
+                                                        logoUrl = target.thumbnailUrl,
+                                                        modifier = Modifier.align(Alignment.Center),
+                                                    )
+                                                }
 
                                                 IconButton(
                                                     onClick = {
@@ -1334,6 +1346,24 @@ private enum class PreviewListSource { RECENT, FAVORITES }
  * switch the list, and fought the rows' own swipe actions. A sideways swipe on a row is its row
  * actions now; the tabs are the way to switch.
  */
+
+/** The dock's wait: the live ring with the channel's logo in it (its clean name when it has none). */
+@Composable
+private fun DockWait(
+    name: String,
+    logoUrl: String?,
+    modifier: Modifier = Modifier,
+) {
+    val clean = parseDisplayTitle(name).title.ifBlank { name }
+    WaitIndicator(
+        kind = WaitKind.Live,
+        modifier = modifier,
+        logoUrl = logoUrl,
+        name = clean,
+        contentDescription = stringResource(R.string.live_tuning_format, clean),
+    )
+}
+
 @Composable
 private fun DockListTabs(
     selected: PreviewListSource,

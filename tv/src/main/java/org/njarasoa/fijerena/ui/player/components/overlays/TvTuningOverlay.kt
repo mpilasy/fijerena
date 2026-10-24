@@ -23,7 +23,6 @@ import org.njarasoa.fijerena.core.ui.components.WaitIndicator
 import org.njarasoa.fijerena.core.ui.components.WaitKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.WaitStyle
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -31,8 +30,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * it plays, the wait ring with the channel's logo in it ([channelName] when it has none), centred
  * over a dimmed picture. Drawn over whatever the surface shows — the engine's `stop()` + new media
  * source closes PlayerView's shutter, so after the first moment of a zap that is black, not the
- * last frame. Not focusable; the remote keeps zapping. [compact] is the preview pane's size; full
- * size shows Expert mode's [BufferingDetails] under the ring, as the loading indicator does.
+ * last frame. Not focusable; the remote keeps zapping. The ring is full size in the preview pane too,
+ * so a wide logo stays readable. [compact] is the preview pane; full screen shows Expert mode's
+ * [BufferingDetails] under the ring, as the loading indicator does.
  * [stalled]: the preview gave up on the channel (it didn't start in time) — no ring, and a pill
  * says so and that OK tries again, rather than tuning forever.
  */
@@ -73,7 +73,6 @@ fun TvTuningOverlay(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 WaitIndicator(
                     kind = WaitKind.Live,
-                    size = if (compact) WaitStyle.compactIndicatorSize else WaitStyle.indicatorSize,
                     logoUrl = logoUrl,
                     name = name,
                     contentDescription = stringResource(R.string.live_tuning_format, name),
