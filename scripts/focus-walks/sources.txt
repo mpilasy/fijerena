@@ -16,9 +16,11 @@
 RIGHT	Guide
 RIGHT	More actions for iptv
 # Down from ⋮ lands on the ⋮ of the next row.
-DOWN	More actions for panel-a
+DOWN	More actions for jellyxtream
 LEFT	Guide
-LEFT	panel-a / http://panel-a.example / user1
+LEFT	jellyxtream / http://10.0.2.2:8080
 UP	iptv / https://iptv-org.github.io/iptv/index.m3u
-# Up from the first row lands on the header "+".
+# Up from the first row (bears here) lands on the header "+".
+UP	bearstv
+UP	bears
 UP	Add Source

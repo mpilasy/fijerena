@@ -13,7 +13,7 @@ DOWN	Parental Controls
 DOWN	Playback
 DOWN	Display
 DOWN	Sources & Guide
-RIGHT	Manage sources
+RIGHT	Manage Sources
 DOWN	Guide Sources
 DOWN	Guide Data Maintenance
 CENTER	Delete leftover downloads

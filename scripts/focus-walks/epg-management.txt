@@ -4,7 +4,7 @@
 # sources; title "Guide sources · panel-b". The title row has no buttons (the section-root button
 # went with the TV navigation rail, 2026-10-08), so the walk's last UP stays on Add.
 # Entry focus is the first guide source's on/off switch ("Use this guide"); with no guide
-# source it is "Add Guide Source" under "No guide sources configured". No System Status or
+# source it is "Add guide source" under "No guide sources configured". No System Status or
 # Maintenance here (they are in Settings). Each row: the switch, then Refresh / Edit /
 # Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
 # the third its auto-refresh ("Refreshes daily", "Auto-refresh off").
@@ -13,7 +13,7 @@
 # selection toggle replaced by the on/off switch 2026-10-06 (guide on/off clarity, Phase 2).
 @start Use this guide
 # Up from the first row reaches Add and the stale/failed refresh buttons above the list.
-UP	Add Guide Source
+UP	Add guide source
 DOWN	Use this guide
 DOWN	Refresh
 RIGHT	Edit
@@ -26,12 +26,12 @@ CENTER	Weekly
 LEFT	Auto-refresh
 LEFT	Edit
 LEFT	Refresh
-# One guide source only: Down from its last row stays put, Up goes back to its switch, then Add.
-DOWN	Refresh
-UP	Use this guide
+# One guide source only: Down from its last row goes to the Guide Data Maintenance row below the list, Up returns to the row's last button (Delete), then the switch, then Add.
+DOWN	Guide Data Maintenance
+UP	Delete
 # Up from Add: nothing above it, focus stays.
-UP	Add Guide Source
-UP	Add Guide Source
+UP	Use this guide
+UP	Add guide source
 # Back leaves to Edit Source, focus back on the Guide sources row.
 BACK	Guide Sources
 

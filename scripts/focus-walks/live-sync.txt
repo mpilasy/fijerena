@@ -1,22 +1,25 @@
-# T6 — Live sync (SyncSettingsScreen), TV emulator linked to a sync group with one other device.
+# T6 — Live sync (SyncSettingsScreen), TV emulator linked to a sync group with other devices.
 # Start: opened from Settings → Live sync → Manage, focus on Sync now (the first focusable).
 # T-14 order, top to bottom: status + Sync now → Add a device → the share switch → each
 # device's Rename, and each other device's Remove (secondary) → Danger zone: Leave the sync
 # group (outlined, error colour); Up from Leave lands on the last row's last button.
 # Rename opens a dialog (harmless); Remove and Leave keep their confirm dialogs — never OK on them.
 # Checked 2026-10-12 on the TV emulator (two devices: this one, then the phone).
+# Re-checked 2026-10-24: three devices (this one, then two others), so three Rename buttons come before Leave.
 # Not linked (not walked here): the setup panel opens on Check server, or on the server address
 # while it is empty (settings flow review, W4, 2026-10-24).
 @start Sync now
 DOWN	Add a device
-DOWN	Share what's playing
+DOWN	Share What's Playing
+DOWN	Rename
 DOWN	Rename
 DOWN	Rename
 DOWN	Leave the sync group
 UP	Remove
 UP	Rename
-UP	Share what's playing
+UP	Rename
+UP	Share What's Playing
 UP	Add a device
 UP	Sync now
 # Back leaves to Settings, focus back on Manage.
-BACK	Manage
+BACK	Live Sync
