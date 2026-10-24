@@ -30,9 +30,9 @@ class ParentalControlsScreenTest {
         var expert by mutableStateOf(false)
         composeTestRule.setContent { ParentalControlsSettingsRow(expertMode = expert, onOpen = {}) }
 
-        composeTestRule.onNodeWithText("Parental controls").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Parental Controls").assertDoesNotExist()
         expert = true
-        composeTestRule.onNodeWithText("Parental controls").assertExists()
+        composeTestRule.onNodeWithText("Parental Controls").assertExists()
     }
 
     @Test
@@ -78,7 +78,7 @@ class ParentalControlsScreenTest {
         composeTestRule.onNodeWithText("Hidden (1)").assertExists()
         composeTestRule.onNodeWithText("Adults").assertExists()
         composeTestRule
-            .onNodeWithText("A child sees no category on this source. Add the words of its kids' categories to Kids' categories.")
+            .onNodeWithText("A child sees no category on this source. Add the words of its kids' categories to Kids' Categories.")
             .assertExists()
     }
 

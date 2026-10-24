@@ -9,22 +9,22 @@
 # Re-recorded 2026-10-17 after the Settings reorganisation (database line blanked). Parental
 # controls added to the rail 2026-10-20; its two lines are not yet run.
 @start Profiles
-DOWN	Parental controls
+DOWN	Parental Controls
 DOWN	Playback
 DOWN	Display
-DOWN	Sources & guide
+DOWN	Sources & Guide
 RIGHT	Manage sources
-DOWN	Guide sources
-DOWN	Guide data maintenance
+DOWN	Guide Sources
+DOWN	Guide Data Maintenance
 CENTER	Delete leftover downloads
 DOWN	Delete programmes over 2 days old
 DOWN	Clear all data
 DOWN	Clear all data
 UP	Delete programmes over 2 days old
 # Back leaves the sub-pane onto its row, Back again returns to the rail.
-BACK	Guide data maintenance
-BACK	Sources & guide
+BACK	Guide Data Maintenance
+BACK	Sources & Guide
 UP	Display
 UP	Playback
-UP	Parental controls
+UP	Parental Controls
 UP	Profiles

@@ -16,17 +16,17 @@
 # to the rail. A child's page has Parental controls under Admin, which opens this group, focus
 # on its first list (not walked here). Phase 3 lines edited by hand, not re-run in English.
 @start Profiles
-DOWN	Parental controls
-RIGHT	Kids' categories / A category shows to a child when its name has one of these words.
-DOWN	Kids' film categories / These also show, for film categories only.
-DOWN	Adult categories / A category with one of these words never shows to a child.
-DOWN	Hidden titles / A title with one of these words never shows to a child, also in a kids' category.
+DOWN	Parental Controls
+RIGHT	Kids' Categories / A category shows to a child when its name has one of these words.
+DOWN	Kids' Film Categories / These also show, for film categories only.
+DOWN	Adult Categories / A category with one of these words never shows to a child.
+DOWN	Hidden Titles / A title with one of these words never shows to a child, also in a kids' category.
 DOWN	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
-DOWN	Check a source
-DOWN	Content filters of each profile / Set on each profile's page, in Profiles
+DOWN	Check a Source
+DOWN	Content Filters of Each Profile / Set on each profile's page, in Profiles
 # Down at the end of the pane stays put.
-DOWN	Content filters of each profile / Set on each profile's page, in Profiles
-UP	Check a source
+DOWN	Content Filters of Each Profile / Set on each profile's page, in Profiles
+UP	Check a Source
 UP	Exceptions
 CENTER	Add a word
 DOWN	pokemon
@@ -52,15 +52,15 @@ DOWN	yugioh
 DOWN	Reset to the app's list
 DOWN	Reset to the app's list
 BACK	Exceptions
-DOWN	Check a source
+DOWN	Check a Source
 # The first child profile's first Xtream source (Kid: panel-a, then panel-d).
 CENTER	
 CENTER	The categories a child sees on this source with the lists now.
 # The first category under Shown (n).
 DOWN	AL| FEMIJË / Live TV
 LEFT	
-LEFT	Check a source
-DOWN	Content filters of each profile / Set on each profile's page, in Profiles
+LEFT	Check a Source
+DOWN	Content Filters of Each Profile / Set on each profile's page, in Profiles
 CENTER	
 # Back in the group's pane returns to the rail row.
 BACK	Profiles

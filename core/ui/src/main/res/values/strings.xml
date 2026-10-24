@@ -23,7 +23,7 @@
     <string name="epg_clear_all_data_btn">Clear all data</string>
     <string name="epg_maintenance_title">Maintenance</string>
     <string name="epg_auto_refresh_title">Auto-refresh</string>
-    <string name="epg_sources_header">Guide sources</string>
+    <string name="epg_sources_header">Guide Sources</string>
     <string name="epg_cleanup_btn">Delete leftover downloads</string>
     <string name="epg_purge_btn">Delete programmes over 2 days old</string>
 
@@ -48,11 +48,11 @@
     <string name="search_searching">Searching…</string>
 
     <!-- Player Common -->
-    <string name="player_select_audio">Select audio track</string>
+    <string name="player_select_audio">Select Audio Track</string>
     <string name="player_no_audio">No audio tracks available</string>
     <string name="player_select_subtitles">Select Subtitles</string>
     <string name="player_no_subtitles">No subtitle tracks available</string>
-    <string name="player_select_quality">Select quality</string>
+    <string name="player_select_quality">Select Quality</string>
     <string name="player_no_quality">No quality options available</string>
     <string name="player_quality_auto">Auto (Adaptive)</string>
     <string name="player_subtitles_off">Off</string>
@@ -170,15 +170,15 @@
     <string name="epg_source_stat_unchanged">Unchanged</string>
     <string name="epg_source_never">Never</string>
     <string name="epg_source_none">None</string>
-    <string name="epg_add_source_title">Add guide source</string>
-    <string name="epg_edit_source_title">Edit guide source</string>
+    <string name="epg_add_source_title">Add Guide Source</string>
+    <string name="epg_edit_source_title">Edit Guide Source</string>
     <string name="epg_xmltv_url_label">Guide link (XMLTV)</string>
     <string name="epg_label_optional">Label (Optional)</string>
     <string name="epg_timezone_label">Time correction (hours)</string>
-    <string name="epg_clear_db_confirm_title">Clear guide data?</string>
+    <string name="epg_clear_db_confirm_title">Clear Guide Data?</string>
     <string name="epg_clear_db_confirm_message">This will delete all indexed programmes and channels. Your guide source URLs will be preserved.</string>
     <string name="epg_clear_everything_btn">Clear everything</string>
-    <string name="epg_delete_source_confirm_title">Delete guide source?</string>
+    <string name="epg_delete_source_confirm_title">Delete Guide Source?</string>
     <string name="epg_delete_source_confirm_message">Remove \'%1$s\'? Its guide data will be deleted.</string>
 
     <!-- Category -->
@@ -215,7 +215,7 @@
     <string name="provider_edit_title">Edit Source</string>
     <string name="provider_name_label">Source name</string>
     <!-- Edit Source: the source badge's short name ("X4P") -->
-    <string name="provider_short_name_label">Short name</string>
+    <string name="provider_short_name_label">Short Name</string>
     <string name="provider_short_name_desc">What the source badge shows instead of the name, up to 5 characters. Leave empty to work it out from the name.</string>
     <string name="provider_short_name_automatic">%1$s (automatic)</string>
     <string name="provider_short_name_taken">Another source already uses %1$s</string>
@@ -243,32 +243,32 @@
     <string name="provider_error_m3u_url_required">M3U Playlist URL is required</string>
     <string name="provider_connecting">Connecting…</string>
     <string name="provider_saving">Saving…</string>
-    <string name="provider_connection_failed">Connection failed</string>
+    <string name="provider_connection_failed">Connection Failed</string>
     <string name="provider_save_anyway">Save anyway</string>
     <string name="provider_go_back">Go back</string>
-    <string name="provider_clear_cache_all_title">Clear all cache?</string>
+    <string name="provider_clear_cache_all_title">Clear All Cache?</string>
     <string name="provider_clear_cache_all_message">This will remove this source\'s cached Live TV, Movies and TV Shows data (categories and streams). The app will re-download it from the server.</string>
     <string name="provider_clear_all_button">Clear all</string>
-    <string name="provider_clear_cache_live_title">Clear Live TV cache?</string>
+    <string name="provider_clear_cache_live_title">Clear Live TV Cache?</string>
     <string name="provider_clear_cache_live_message">This will remove all cached Live TV data (categories and streams).</string>
-    <string name="provider_clear_cache_movies_title">Clear Movies cache?</string>
+    <string name="provider_clear_cache_movies_title">Clear Movies Cache?</string>
     <string name="provider_clear_cache_movies_message">This will remove all cached Movies data (categories and streams).</string>
-    <string name="provider_clear_cache_tvshows_title">Clear TV Shows cache?</string>
+    <string name="provider_clear_cache_tvshows_title">Clear TV Shows Cache?</string>
     <string name="provider_clear_cache_tvshows_message">This will remove all cached TV Shows data (categories and streams).</string>
     <string name="provider_clear_button">Clear</string>
-    <string name="provider_clear_favorites_title">Clear all favourites?</string>
+    <string name="provider_clear_favorites_title">Clear All Favourites?</string>
     <string name="provider_clear_favorites_message">This will remove all favourites from Live TV, Movies and TV Shows. This action cannot be undone.</string>
     <string name="provider_clear_progress_label">Clear playback progress</string>
-    <string name="provider_clear_progress_title">Clear all playback progress?</string>
+    <string name="provider_clear_progress_title">Clear All Playback Progress?</string>
     <string name="provider_clear_progress_message">This will remove all saved playback positions. You will start from the beginning when playing any VOD content.</string>
-    <string name="provider_filter_mode_label">Filter mode:</string>
+    <string name="provider_filter_mode_label">Filter Mode:</string>
     <string name="provider_filter_exclude">Exclude</string>
     <string name="provider_filter_include">Include only</string>
     <string name="provider_filter_exclude_desc">Categories matching these rules will be hidden</string>
     <string name="provider_filter_include_desc">Only categories matching these rules will be shown</string>
     <string name="provider_filter_add_rules_label">Add rules (comma-separated)</string>
     <string name="provider_filter_prefixes_placeholder">Adult, XXX, 18+</string>
-    <string name="provider_filter_script_title">Language script filter:</string>
+    <string name="provider_filter_script_title">Language Script Filter:</string>
     <string name="provider_filter_script_desc">Show only categories in selected scripts (none = show all)</string>
     <string name="provider_filter_choose_match_type">Choose match type</string>
     <string name="provider_filter_match_starts">Starts</string>
@@ -302,9 +302,9 @@
     <string name="provider_clear_favorites_button">Clear all favourites</string>
     <string name="provider_clear_progress_desc">Remove all saved positions (Continue Watching will be empty)</string>
     <string name="provider_clear_progress_button">Clear all progress</string>
-    <string name="provider_stream_format_label">Stream output format</string>
+    <string name="provider_stream_format_label">Stream Output Format</string>
     <string name="provider_stream_format_desc">Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)</string>
-    <string name="provider_playlist_type_label">Playlist type</string>
+    <string name="provider_playlist_type_label">Playlist Type</string>
     <string name="provider_playlist_type_desc">Playlist format (m3u_plus = with guide details, simple = basic)</string>
     <string name="provider_category_filters_desc">Hide categories by prefix (e.g., \'Adult\', \'XXX\')</string>
     <string name="provider_category_filters_profile">These are %1$s\'s filters. Every profile has its own.</string>
@@ -337,19 +337,19 @@
     <string name="provider_selection_title">Sources</string>
     <string name="provider_loading">Loading sources…</string>
     <string name="provider_no_providers">No sources configured</string>
-    <string name="provider_delete_confirm_title">Delete source?</string>
+    <string name="provider_delete_confirm_title">Delete Source?</string>
     <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this source will be removed.</string>
     <string name="provider_active_label">Active</string>
     <string name="provider_more_actions">More actions</string>
     <string name="provider_more_actions_for_format">More actions for %1$s</string>
     <string name="provider_duplicate_button">Duplicate</string>
-    <string name="provider_duplicate_title">Duplicate source</string>
+    <string name="provider_duplicate_title">Duplicate Source</string>
     <string name="provider_duplicate_name_default_format">%1$s (copy)</string>
     <string name="provider_duplicate_name_label">New source name</string>
     <string name="provider_copy_to_button">Copy to…</string>
-    <string name="provider_copy_to_title">Copy to source</string>
-    <string name="provider_copy_to_target_label">Target source</string>
-    <string name="provider_copy_to_options_label">What to copy</string>
+    <string name="provider_copy_to_title">Copy to Source</string>
+    <string name="provider_copy_to_target_label">Target Source</string>
+    <string name="provider_copy_to_options_label">What to Copy</string>
     <string name="provider_copy_to_settings_label">Settings</string>
     <string name="provider_copy_to_favorites_label">Favourites</string>
     <string name="provider_copy_to_watch_history_label">Watch history</string>
@@ -382,7 +382,7 @@
     <string name="details_community_rating">Community rating</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">None</string>
-    <string name="details_open_other_copy">Open another copy</string>
+    <string name="details_open_other_copy">Open Another Copy</string>
     <string name="details_other_instances">Other instances of this title</string>
     <string name="details_collection_fallback">Collection</string>
     <string name="details_tab_cast">Cast</string>
@@ -390,7 +390,7 @@
     <string name="details_tab_seasons">Seasons</string>
     <string name="details_saved_copy">Saved details: the source couldn\'t be reached</string>
     <string name="details_saved_copy_tv">Saved details: the source couldn\'t be reached. Refresh from the More menu.</string>
-    <string name="details_more_like_this">More like this</string>
+    <string name="details_more_like_this">More Like This</string>
     <string name="details_no_link_handler">No app on this device can open that link</string>
     <string name="trailer_unavailable">This trailer is no longer on YouTube</string>
     <string name="movie_loading_details">Loading movie details…</string>
@@ -417,7 +417,7 @@
     <string name="series_rating_format">Rating: %1$s</string>
     <string name="series_season_label">Season %1$d</string>
     <string name="series_episode_label">Episode %1$d</string>
-    <string name="series_continue_watching_badge">Continue watching</string>
+    <string name="series_continue_watching_badge">Continue Watching</string>
     <string name="series_present">ongoing</string>
     <string name="series_next_up_title">Next up</string>
     <string name="continue_watching_up_next">Up next</string>
@@ -522,14 +522,14 @@
     <!-- EPG Management extras -->
     <string name="epg_source_phase_format">%1$s…</string>
     <string name="epg_source_progress_percent">%1$d%%</string>
-    <string name="epg_delete_source_title">Delete guide source?</string>
+    <string name="epg_delete_source_title">Delete Guide Source?</string>
     <string name="epg_database_ready">Ready (%1$s programmes)</string>
     <string name="epg_database_optimizing">Optimising search index…</string>
     <string name="epg_database_error_prefixed">Guide database problem: %1$s</string>
     <string name="epg_current_status_error">Guide update problem: %1$s</string>
 
     <!-- EPG Browser -->
-    <string name="epg_browser_title">Search the guide</string>
+    <string name="epg_browser_title">Search the Guide</string>
     <string name="epg_browser_refresh_stale_description">Refresh stale guide sources</string>
     <string name="epg_browser_search_titles_placeholder">Search titles…</string>
     <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
@@ -537,8 +537,8 @@
     <string name="epg_browser_indexing_label">Indexing…</string>
     <string name="epg_browser_optimizing_label">Optimising…</string>
     <string name="epg_browser_hint_search_titles">Search programme titles</string>
-    <string name="epg_browser_no_file_message">No guide yet.\nAdd a guide source in Edit Source → Guide sources.</string>
-    <string name="epg_browser_watch_confirm_title">Watch now?</string>
+    <string name="epg_browser_no_file_message">No guide yet.\nAdd a guide source in Edit Source → Guide Sources.</string>
+    <string name="epg_browser_watch_confirm_title">Watch Now?</string>
     <string name="epg_browser_watch_confirm_message">This show airs at %1$s.\nWatch %2$s now?</string>
     <string name="epg_browser_watch_now_btn">Watch now</string>
     <string name="epg_browser_add_calendar_btn">Add to calendar</string>
@@ -549,7 +549,7 @@
     <string name="epg_browser_show_more_count">%1$d more airings</string>
     <string name="epg_browser_on_air_badge">ON AIR</string>
     <string name="epg_browser_soon_badge">SOON</string>
-    <string name="epg_browser_recent_searches">Recent searches</string>
+    <string name="epg_browser_recent_searches">Recent Searches</string>
     <string name="epg_browser_clear_all_description">Clear all</string>
     <string name="epg_browser_remove_description">Remove</string>
 
@@ -593,27 +593,27 @@
     <string name="app_disclaimer_no_content">Fijerena does not provide or host any content. It plays the sources you add.</string>
     <string name="app_copyright">© 2026 Orinasa Njarasoa</string>
     <string name="app_license_notice">Free software under the GNU General Public License, version 3 or later, with no warranty. Source code: github.com/mpilasy/fijerena</string>
-    <string name="terms_title">Terms of use</string>
+    <string name="terms_title">Terms of Use</string>
     <string name="terms_desc">Who is responsible for the sources you add</string>
     <string name="terms_updated">Last changed on 21 October 2026.</string>
-    <string name="terms_s1_title">What Fijerena is</string>
+    <string name="terms_s1_title">What Fijerena Is</string>
     <string name="terms_s1_body">Fijerena is a media player. It does not provide, host, sell or recommend any content, and it comes with no sources. It only plays the sources that you add: servers, playlists and guides from third parties.</string>
-    <string name="terms_s2_title">Your sources are your responsibility</string>
+    <string name="terms_s2_title">Your Sources Are Your Responsibility</string>
     <string name="terms_s2_body">You alone choose the sources that you add and the content that you play. You alone are responsible for making sure that each source, and your use of it, is legal where you are. This includes having the rights or licences for the content, and obeying copyright law, the terms of each provider, and every other law and rule that applies to you.</string>
-    <string name="terms_s3_title">No checks on sources</string>
+    <string name="terms_s3_title">No Checks on Sources</string>
     <string name="terms_s3_body">The developers and contributors of Fijerena do not check, monitor, approve, control or support any source or content. When a source works with the app, this does not mean that they approve it.</string>
-    <string name="terms_s4_title">No warranty</string>
+    <string name="terms_s4_title">No Warranty</string>
     <string name="terms_s4_body">The app is provided as is, with no warranty of any kind, as the GNU General Public License says.</string>
-    <string name="terms_s5_title">No liability</string>
+    <string name="terms_s5_title">No Liability</string>
     <string name="terms_s5_body">To the full extent that the law allows, the developers and contributors are not liable for any claim, loss or damage that comes from the sources that you add, the content that you get access to, or how you use the app. Any dispute about a source or its content is between you and the provider of that source.</string>
-    <string name="terms_s6_title">Your promise to us</string>
+    <string name="terms_s6_title">Your Promise to Us</string>
     <string name="terms_s6_body">To the full extent that the law allows, you agree to defend the developers and contributors, and to keep them free from harm, against any claim that comes from your sources, the content that you get access to, or your use of the app.</string>
-    <string name="terms_s7_title">Your rights under the GPL</string>
+    <string name="terms_s7_title">Your Rights Under the GPL</string>
     <string name="terms_s7_body">These terms do not limit the rights that the GNU General Public License gives you to use, study, share and change the app.</string>
     <string name="terms_s8_title">Changes</string>
     <string name="terms_s8_body">These terms can change. The version in the app that you use is the one that applies. If a translation is different from the English text, the English text applies.</string>
-    <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → Terms of use.</string>
-    <string name="settings_developer_mode_title">Expert mode</string>
+    <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → Terms of Use.</string>
+    <string name="settings_developer_mode_title">Expert Mode</string>
     <string name="settings_developer_mode_desc">Lets this profile change sources, profiles, parental controls and backups</string>
     <string name="settings_developer_mode_last">The only profile with Expert mode keeps it: give Expert mode to another profile first.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
@@ -625,10 +625,10 @@
     <string name="settings_diagnostics_copied">Copied</string>
     <string name="settings_diagnostics_copy">Copy</string>
     <!-- Device info (the device info screen plan) -->
-    <string name="device_info_title">Device info</string>
+    <string name="device_info_title">Device Info</string>
     <string name="device_info_desc">This app and device: versions, memory, storage, screen, media decoders, network and background state</string>
-    <string name="device_info_open">Device info</string>
-    <string name="licenses_title">Open-source licences</string>
+    <string name="device_info_open">Device Info</string>
+    <string name="licenses_title">Open-Source Licences</string>
     <string name="licenses_desc">The libraries and fonts the app is built with, and their licences</string>
     <string name="licenses_no_text">No licence text bundled. See %1$s</string>
     <string name="licenses_count">%1$d libraries and fonts</string>
@@ -682,27 +682,27 @@
     <string name="common_import">Import</string>
     <string name="settings_quick_import_not_found">Settings file not found in Downloads or app folder</string>
     <string name="settings_quick_import_button">Restore from Downloads</string>
-    <string name="settings_shrink_database_title">Database maintenance</string>
+    <string name="settings_shrink_database_title">Database Maintenance</string>
     <string name="settings_shrink_database_desc">Remove leftover data from deleted sources and reclaim disk space</string>
-    <string name="settings_shrink_database_button">Shrink database</string>
+    <string name="settings_shrink_database_button">Shrink Database</string>
     <string name="settings_shrink_database_button_running">Shrinking…</string>
     <string name="settings_shrink_database_result_format">Removed %1$d leftover rows, freed %2$s</string>
     <string name="settings_shrink_database_nothing_to_clean">Nothing to clean up — database is already tidy</string>
     <string name="settings_shrink_database_dev_stats_time">Last shrink: Finished at %1$s • Took %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">%1$d records deleted • %2$s recovered</string>
-    <string name="settings_import_select_title">Select what to import</string>
+    <string name="settings_import_select_title">Select What to Import</string>
     <string name="settings_import_general_label">General settings</string>
     <string name="settings_import_providers_count_format">Sources (%1$d)</string>
     <string name="settings_import_epg_sources_count_format">Guide sources (%1$d)</string>
     <string name="settings_import_favorites_label">Favourites</string>
-    <string name="settings_import_provider_conflict_title">Source conflict</string>
+    <string name="settings_import_provider_conflict_title">Source Conflict</string>
     <string name="settings_import_conflict_message">The following source(s) already exist:\n\n%1$s\n\nWhat would you like to do?</string>
     <string name="common_overwrite">Overwrite</string>
     <string name="common_duplicate">Duplicate</string>
     <string name="settings_import_skip_duplicates_button">Skip duplicates</string>
     <string name="settings_playback_section_title">Playback</string>
     <string name="settings_playback_watch_delay_desc">So a channel you only zap past isn\'t added</string>
-    <string name="settings_watch_delay_label">Add to Recent after (seconds)</string>
+    <string name="settings_watch_delay_label">Add to Recent After (Seconds)</string>
     <string name="settings_watch_delay_range_format">%1$d–%2$d seconds</string>
     <string name="settings_theme_section_title">Theme</string>
     <string name="settings_theme_desc">Select a colour theme for the app</string>
@@ -719,11 +719,11 @@
     <string name="home_library_still_loading">Still loading your library…</string>
     <string name="home_live_row_title">Channels</string>
     <string name="home_live_last_watched">Last watched</string>
-    <string name="home_favorite_movies">Favourite movies</string>
-    <string name="home_favorite_shows">Favourite shows</string>
-    <string name="home_favorite_channel_categories">Favourite channel categories</string>
-    <string name="home_favorite_movie_categories">Favourite movie categories</string>
-    <string name="home_favorite_show_categories">Favourite show categories</string>
+    <string name="home_favorite_movies">Favourite Movies</string>
+    <string name="home_favorite_shows">Favourite Shows</string>
+    <string name="home_favorite_channel_categories">Favourite Channel Categories</string>
+    <string name="home_favorite_movie_categories">Favourite Movie Categories</string>
+    <string name="home_favorite_show_categories">Favourite Show Categories</string>
 
     <!-- Category -->
 
@@ -738,7 +738,7 @@
     <string name="provider_filter_hide_matching_desc">Hide categories matching these rules</string>
     <string name="provider_filter_show_matching_desc">Show only categories matching these rules</string>
     <string name="provider_filter_rules_label">Rules:</string>
-    <string name="provider_filter_add_rules_section_label">Add rules (comma-separated):</string>
+    <string name="provider_filter_add_rules_section_label">Add Rules (Comma-Separated):</string>
     <string name="provider_filter_rules_placeholder">e.g., XXX, Adult, 18+</string>
     <string name="provider_filter_choose_match_type_prompt">Choose match type:</string>
 
@@ -765,8 +765,8 @@
     <string name="settings_about_built_format">Built: %1$s</string>
 
     <!-- TV Settings: Export/Import Card -->
-    <string name="settings_export_button">Back up to a file</string>
-    <string name="settings_import_button">Restore from a file</string>
+    <string name="settings_export_button">Back Up to a File</string>
+    <string name="settings_import_button">Restore from a File</string>
     <string name="settings_import_conflict_intro">The following source(s) already exist:</string>
     <string name="settings_import_choose_action">What would you like to do?</string>
 
@@ -811,7 +811,7 @@
     <string name="player_stats_device_type_format">Device: %1$s | Type: %2$s</string>
     <string name="epg_browser_index_stats_format">Guide index: %1$s</string>
     <string name="category_now_playing_badge">▶ Playing</string>
-    <string name="settings_ui_scale_section_title">Text &amp; grid size</string>
+    <string name="settings_ui_scale_section_title">Text &amp; Grid Size</string>
     <string name="settings_ui_scale_desc">Size of text and everything on screen, on every screen</string>
     <string name="settings_ui_scale_auto_format">Auto (%1$s)</string>
 
@@ -859,11 +859,11 @@
     <!-- Profiles (the live sync plan → User profiles) -->
     <string name="settings_profiles_title">Profiles</string>
     <string name="settings_profiles_description">Each profile has its own sources, look, favourites, watch history and PIN.</string>
-    <string name="settings_profiles_add">Add profile</string>
+    <string name="settings_profiles_add">Add Profile</string>
     <string name="settings_profiles_active_marker">Using on this device</string>
-    <string name="profile_dialog_add_title">New profile</string>
-    <string name="profile_dialog_edit_title">Edit profile</string>
-    <string name="profile_own_page_title">Your profile</string>
+    <string name="profile_dialog_add_title">New Profile</string>
+    <string name="profile_dialog_edit_title">Edit Profile</string>
+    <string name="profile_own_page_title">Your Profile</string>
     <string name="profile_name_label">Name</string>
     <string name="profile_color_label">Colour</string>
     <string name="profile_color_option_format">Colour %1$d</string>
@@ -875,11 +875,11 @@
     <string name="profile_delete_blocked_active">This device is using that profile. Switch to another profile first.</string>
     <string name="profile_delete_blocked_last">The last profile can\'t be deleted.</string>
     <string name="profile_switching">Switching to %1$s…</string>
-    <string name="profile_picker_title">Who\'s watching?</string>
+    <string name="profile_picker_title">Who\'s Watching?</string>
     <string name="profile_switch_description">Switch profile (%1$s)</string>
     <string name="profile_switch_to_button">Switch to this profile</string>
-    <string name="profile_content_filters_title">Content filters</string>
-    <string name="profile_child_title">Child profile</string>
+    <string name="profile_content_filters_title">Content Filters</string>
+    <string name="profile_child_title">Child Profile</string>
     <string name="profile_child_desc">On TV, Home shows only the favourites a grown-up adds here, and Search finds only films and shows, with no browsing. Shows only kids\' categories on every source, without titles for adults, and turns off the sources filters can\'t reach. A child profile is never Expert.</string>
     <!-- The phone has no Favourites pane: a grown-up fills a child's favourites on TV. -->
     <string name="profile_child_desc_phone">On TV, Home shows only the favourites a grown-up adds on the TV, and Search finds only films and shows, with no browsing. Shows only kids\' categories on every source, without titles for adults, and turns off the sources filters can\'t reach. A child profile is never Expert.</string>
@@ -898,7 +898,7 @@
     <string name="profile_sources_count_format">%1$d of %2$d</string>
     <string name="profile_sources_desc">The sources this profile can use. A new source is on only for the profile that added it. A profile keeps at least one source.</string>
     <!-- Live sync (the live sync plan, Phase 9) -->
-    <string name="live_sync_title">Live sync</string>
+    <string name="live_sync_title">Live Sync</string>
     <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves. To run a server, see the server folder at github.com/mpilasy/fijerena.</string>
     <string name="live_sync_open">Set up</string>
     <string name="live_sync_manage">Manage</string>
@@ -911,8 +911,8 @@
     <string name="live_sync_create">Start a sync group</string>
     <string name="live_sync_join_scan">Scan a code to join</string>
     <string name="live_sync_join_show_code">Join from a phone</string>
-    <string name="live_sync_handoff_instructions">On a phone already in the sync group, open Settings → Live sync → Scan a code, and point it at this code. This device joins as soon as it is scanned.</string>
-    <string name="live_sync_invite_instructions">On the device to add, open Settings → Live sync and scan this code. It works once, for 10 minutes.</string>
+    <string name="live_sync_handoff_instructions">On a phone already in the sync group, open Settings → Live Sync → Scan a code, and point it at this code. This device joins as soon as it is scanned.</string>
+    <string name="live_sync_invite_instructions">On the device to add, open Settings → Live Sync and scan this code. It works once, for 10 minutes.</string>
     <string name="live_sync_qr_description">Pairing code</string>
     <string name="live_sync_waiting">Waiting for the scan…</string>
     <string name="live_sync_status_syncing">Syncing…</string>
@@ -934,7 +934,7 @@
     <string name="live_sync_device_name_hint">Shown on every device of the group. Leave it empty for the device\'s model.</string>
     <string name="live_sync_device_remove_title">Remove %1$s?</string>
     <string name="live_sync_device_remove_message">It stops syncing right away. What it already has stays on it.</string>
-    <string name="live_sync_share_playing">Share what\'s playing with my sync group</string>
+    <string name="live_sync_share_playing">Share What\'s Playing with My Sync Group</string>
     <string name="live_sync_share_playing_desc">The group\'s devices see what this device is playing and which profile is watching. Only this device shares it.</string>
     <string name="live_sync_now_playing">▶ Playing · %1$s</string>
     <string name="live_sync_now_live">▶ Live · %1$s</string>
@@ -944,14 +944,14 @@
     <string name="live_sync_now_progress">%1$s / %2$s</string>
     <string name="live_sync_now_detail">%1$s · %2$s</string>
     <string name="live_sync_stop">Stop</string>
-    <string name="live_sync_stop_title">Stop playback on %1$s?</string>
+    <string name="live_sync_stop_title">Stop Playback on %1$s?</string>
     <string name="live_sync_stop_message">What is playing there stops and the player closes. It can be started again right away.</string>
     <string name="live_sync_stopping">Stopping…</string>
     <string name="live_sync_stop_unreachable">Couldn\'t reach %1$s</string>
     <string name="live_sync_stopped_from">Playback stopped from %1$s</string>
     <string name="live_sync_stopped_from_another_device">another device</string>
     <string name="live_sync_leave">Leave the sync group</string>
-    <string name="live_sync_leave_title">Leave the sync group?</string>
+    <string name="live_sync_leave_title">Leave the Sync Group?</string>
     <string name="live_sync_leave_message">This device stops syncing. Its profiles, sources, favourites and history stay on it.</string>
     <string name="live_sync_scan_hint">Point the camera at the code on the other device</string>
     <string name="live_sync_camera_permission">Camera access is needed to scan the code.</string>
@@ -965,7 +965,7 @@
     <string name="sync_error_code_expired">The code expired or was already used. Show a new one.</string>
     <string name="sync_error_not_a_code">That isn\'t a Fijerena pairing code.</string>
     <!-- Autoplay next episode (per profile) -->
-    <string name="settings_autoplay_next_episode_title">Play next episode automatically</string>
+    <string name="settings_autoplay_next_episode_title">Play Next Episode Automatically</string>
     <string name="settings_autoplay_next_episode_desc">Near the end of an episode, the next one is offered and starts when it ends.</string>
     <string name="player_up_next_title">Up next</string>
     <string name="player_up_next_countdown_format">Starts in %1$d s</string>
@@ -973,30 +973,30 @@
     <string name="player_up_next_compact_format">Up next · %1$s · %2$s</string>
 
     <!-- Crash-loop safe mode (SafeMode, R-10) -->
-    <string name="safe_mode_title">Safe mode</string>
+    <string name="safe_mode_title">Safe Mode</string>
     <string name="safe_mode_message">Fijerena closed unexpectedly several times in a row, so it started in safe mode: live sync, guide updates and other startup work are paused. Your sources, favourites and watch history are untouched.</string>
     <string name="safe_mode_hint">Choose Continue to start normally. If it keeps closing, clear caches first.</string>
     <string name="safe_mode_continue">Continue</string>
     <string name="safe_mode_clear_caches">Clear caches</string>
-    <string name="safe_mode_clear_confirm_title">Clear caches?</string>
+    <string name="safe_mode_clear_confirm_title">Clear Caches?</string>
     <string name="safe_mode_clear_confirm_message">This removes the TV guide index, each source\'s downloaded catalogue and the poster cache. Sources, profiles, favourites and watch history are kept. Everything removed is downloaded again after you continue.</string>
     <string name="safe_mode_clear_confirm">Clear</string>
     <string name="safe_mode_clearing">Clearing caches…</string>
     <string name="safe_mode_cleared">Caches cleared. Choose Continue to start normally.</string>
     <string name="safe_mode_clear_failed">Some caches couldn\'t be cleared. Diagnostics has the details.</string>
     <string name="safe_mode_diagnostics">Show diagnostics</string>
-    <string name="newer_data_title">Data from a newer version</string>
+    <string name="newer_data_title">Data from a Newer Version</string>
     <string name="newer_data_message">Your sources on this device were saved by a newer version of Fijerena (data version %1$d; this version reads up to %2$d). Install the newer version to keep using them.</string>
     <string name="newer_data_hint">Or reset sources to use this version now: the sources and their settings are set aside as a backup and you start with none. Favourites and watch history stay on the device.</string>
     <string name="newer_data_reset">Reset sources</string>
-    <string name="newer_data_reset_confirm_title">Reset sources?</string>
+    <string name="newer_data_reset_confirm_title">Reset Sources?</string>
     <string name="newer_data_reset_confirm_message">Every source, profile and guide source on this device is set aside, and the app restarts with none. Installing the newer version and restoring the backup brings them back.</string>
     <string name="newer_data_reset_confirm">Reset</string>
 
     <!-- Settings overhaul (the ux overhaul plan): groups, scope chips, rows -->
-    <string name="settings_group_source_guide">Sources &amp; guide</string>
+    <string name="settings_group_source_guide">Sources &amp; Guide</string>
     <string name="settings_group_display">Display</string>
-    <string name="settings_group_about_advanced">About &amp; advanced</string>
+    <string name="settings_group_about_advanced">About &amp; Advanced</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>
@@ -1004,7 +1004,7 @@
     <!-- M2 -->
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
-    <string name="settings_watch_delay_row_title">Add a channel to Recent after</string>
+    <string name="settings_watch_delay_row_title">Add a Channel to Recent After</string>
     <string name="settings_language_desc">Language for menus and messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->
@@ -1016,20 +1016,20 @@
     <string name="epg_guide_source_native">source\'s own guide</string>
     <string name="epg_guide_updated_unknown">unknown</string>
     <string name="epg_guide_no_listings_title">No listings</string>
-    <string name="epg_guide_no_listings_index_empty">The guide index has nothing for these channels. Refresh the guide in Edit Source → Guide sources.</string>
+    <string name="epg_guide_no_listings_index_empty">The guide index has nothing for these channels. Refresh the guide in Edit Source → Guide Sources.</string>
     <string name="epg_guide_no_listings_stale_format">Nothing for this day: the %1$s was updated %2$s and stops before it.</string>
     <string name="epg_guide_no_listings_none">No listings for these channels, from the guide or from the source.</string>
     <string name="epg_guide_no_guide_title">No guide</string>
     <string name="epg_guide_no_channels">No channels to show a guide for</string>
-    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Edit Source → Guide sources.</string>
+    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Edit Source → Guide Sources.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connection</string>
     <string name="provider_save_connection_button">Save connection</string>
-    <string name="provider_section_content_filters_format">Content filters · %1$s</string>
-    <string name="provider_section_library_data">Library data</string>
-    <string name="provider_section_danger_zone">Danger zone</string>
+    <string name="provider_section_content_filters_format">Content Filters · %1$s</string>
+    <string name="provider_section_library_data">Library Data</string>
+    <string name="provider_section_danger_zone">Danger Zone</string>
     <string name="provider_clear_cached_library_button">Clear all cached library</string>
-    <string name="provider_discard_changes_title">Discard changes?</string>
+    <string name="provider_discard_changes_title">Discard Changes?</string>
     <string name="provider_discard_changes_message">The connection details you changed haven\'t been saved.</string>
     <string name="provider_discard_button">Discard</string>
     <string name="provider_keep_editing_button">Keep editing</string>
@@ -1037,7 +1037,7 @@
     <string name="provider_guide_button">Guide</string>
     <!-- Sources, guide and profiles: P3 -->
     <string name="provider_section_guide">Guide</string>
-    <string name="provider_provides_guide_label">Provides a guide</string>
+    <string name="provider_provides_guide_label">Provides a Guide</string>
     <string name="provider_provides_guide_desc">This source\'s own guide (xmltv.php) is added automatically</string>
     <string name="provider_provides_guide_detected_off_desc">Turned off: this source\'s own guide (xmltv.php) came back empty</string>
     <string name="provider_logins_title">Logins</string>
@@ -1046,7 +1046,7 @@
     <string name="provider_logins_add">Add login</string>
     <string name="provider_logins_make_main">Make main</string>
     <string name="provider_logins_remove">Remove</string>
-    <string name="provider_logins_remove_confirm_title">Remove this login?</string>
+    <string name="provider_logins_remove_confirm_title">Remove This Login?</string>
     <string name="provider_logins_remove_confirm_format">%1$s will no longer be used by this source.</string>
     <string name="provider_logins_remove_main_confirm_format">%1$s is the main login. %2$s becomes the main login.</string>
     <string name="provider_logins_checking_add">Checking this login…</string>
@@ -1074,8 +1074,8 @@
     <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
     <!-- Phase 4 -->
     <!-- M5 -->
-    <string name="epg_management_title_format">Guide sources · %1$s</string>
-    <string name="settings_guide_maintenance_title">Guide data maintenance</string>
+    <string name="epg_management_title_format">Guide Sources · %1$s</string>
+    <string name="settings_guide_maintenance_title">Guide Data Maintenance</string>
     <!-- GD3 -->
     <string name="epg_guide_header_title_format">TV Guide · %1$s</string>
     <string name="epg_tab_today">Today</string>
@@ -1106,8 +1106,8 @@
     <string name="epg_guide_status_partial_format">%1$d of %2$d loaded channels have listings · %3$d in all · %4$s · updated %5$s</string>
     <string name="epg_guide_listings_end_format">Listings end at %1$s</string>
     <!-- Device info: media (P2) -->
-    <string name="device_info_section_video_decoders">Video decoders</string>
-    <string name="device_info_section_audio">Audio output</string>
+    <string name="device_info_section_video_decoders">Video Decoders</string>
+    <string name="device_info_section_audio">Audio Output</string>
     <string name="device_info_decoder_hardware_format">%1$s · hardware · %2$s</string>
     <string name="device_info_decoder_software_format">%1$s · software · %2$s</string>
     <string name="device_info_decoder_none">No decoder</string>
@@ -1119,7 +1119,7 @@
     <string name="epg_browser_no_results_in_category_format">No results for \'%1$s\' in %2$s</string>
     <!-- Device info: network and power (P3) -->
     <string name="device_info_section_network">Network</string>
-    <string name="device_info_section_power">Power and background</string>
+    <string name="device_info_section_power">Power and Background</string>
     <string name="device_info_section_sync">Sync</string>
     <string name="device_info_connection">Connection</string>
     <string name="device_info_transport_wifi">Wi-Fi</string>
@@ -1210,7 +1210,7 @@
     <string name="browse_favorites_empty">Hold OK on a title or channel to add it to Favourites.</string>
     <string name="browse_favorites_empty_phone">Swipe a title or channel right, or press and hold it, to add it to Favourites.</string>
     <string name="browse_open_categories">Browse categories</string>
-    <string name="category_all_title">All categories</string>
+    <string name="category_all_title">All Categories</string>
     <string name="category_all_filter">Find a category</string>
     <string name="category_all_none">No category has that in its name</string>
     <string name="browse_no_shows">No shows in this category</string>
@@ -1233,9 +1233,9 @@
     <string name="tv_search_placeholder_shows">Search shows</string>
     <!-- TV polish: settings and sources -->
     <string name="settings_scope_device_section">Applies to this device only</string>
-    <string name="epg_management_screen_title">Guide sources</string>
+    <string name="epg_management_screen_title">Guide Sources</string>
     <!-- phone polish: search, settings, sources -->
-    <string name="settings_diagnostics_clear_confirm_title">Clear the log?</string>
+    <string name="settings_diagnostics_clear_confirm_title">Clear the Log?</string>
     <!-- phone polish: details and episodes -->
     <string name="details_label_category">Category:</string>
     <string name="series_resume_code_left_format">▶ Resume S%1$02dE%2$02d · %3$s left</string>
@@ -1248,7 +1248,7 @@
     <string name="home_kids_empty">Nothing to watch yet. Ask a grown-up to add something.</string>
     <string name="tv_nav_rail_hint">Press Left for sections</string>
     <!-- TV Recent and Favorites (lane B) -->
-    <string name="home_favorite_channels">Favourite channels</string>
+    <string name="home_favorite_channels">Favourite Channels</string>
     <!-- TV Recent and Favorites -->
     <string name="undo_removed_format">Removed %1$s · Hold OK or press Menu to undo</string>
     <string name="edit_list_action">Edit list</string>
@@ -1259,7 +1259,7 @@
     <string name="recent_clear">Clear Recent</string>
     <string name="recent_clear_confirm_title">Clear Recent?</string>
     <string name="recent_clear_confirm_message">Everything leaves this section\'s Recent list. Progress and watched marks stay.</string>
-    <string name="tmdb_settings_title">Film and series details (TMDB)</string>
+    <string name="tmdb_settings_title">Film and Series Details (TMDB)</string>
     <string name="tmdb_settings_desc">Fills in missing plots, episode summaries and age ratings, and adds title art and More Like This, with your own free TMDB key. Search also asks TMDB for films and shows your sources don\'t have, so what you type in Search is sent to TMDB. Without a key, nothing is sent to TMDB.</string>
     <string name="tmdb_key_label">TMDB key</string>
     <string name="tmdb_key_hint">Get a free key at themoviedb.org (Settings › API). An API key or a read access token both work.</string>
@@ -1272,11 +1272,11 @@
     <string name="tmdb_check_rejected">TMDB refused this key.</string>
     <string name="tmdb_check_unreachable">Couldn\'t reach TMDB. Check the connection and try again.</string>
     <string name="tmdb_remove_button">Remove key</string>
-    <string name="tmdb_remove_confirm_title">Remove the TMDB key?</string>
+    <string name="tmdb_remove_confirm_title">Remove the TMDB Key?</string>
     <string name="tmdb_remove_confirm_text">Details from TMDB turn off on this device and on every device linked by live sync.</string>
     <string name="tmdb_attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
     <string name="tmdb_logo_description">TMDB logo</string>
-    <string name="tmdb_attribution_title">Film and series data</string>
+    <string name="tmdb_attribution_title">Film and Series Data</string>
     <string name="epg_xmltv_url_hint">The address of an XMLTV guide file (.xml or .xml.gz), from your provider or a guide site.</string>
     <string name="epg_timezone_hint">Only if programmes show at the wrong time. Usually 0.</string>
     <string name="settings_developer_mode_enabled">Expert mode is on for this profile</string>
@@ -1295,14 +1295,14 @@
     <!-- Badge on a live channel that only carries live events ("[LIVE-EVENT]") -->
     <string name="title_badge_events">Events</string>
     <string name="browse_source">Browse %1$s</string>
-    <string name="source_chooser_title">Choose a source</string>
+    <string name="source_chooser_title">Choose a Source</string>
     <string name="home_sync_updating_count">Updating %1$d of %2$d…</string>
     <string name="home_sync_updating_count_phase">Updating %1$d of %2$d · %3$s</string>
     <plurals name="home_sync_failed_count">
         <item quantity="one">%1$d failed</item>
         <item quantity="other">%1$d failed</item>
     </plurals>
-    <string name="home_sources_status_title">Your sources</string>
+    <string name="home_sources_status_title">Your Sources</string>
     <string name="home_no_sources">This profile has no source yet.</string>
     <string name="home_no_sources_ask">This profile has no source yet. Ask a grown-up to add one.</string>
     <string name="home_only_browse_sources">Pick a source to browse.</string>
@@ -1346,7 +1346,7 @@
     <string name="pin_enter_admin">Enter the PIN of a profile with Expert mode</string>
     <string name="profile_child_no_pin_warning">No PIN is set: this child can switch to any profile.</string>
     <string name="profile_child_set_pin">Set a PIN</string>
-    <string name="settings_group_sync_backup">Sync &amp; backup</string>
+    <string name="settings_group_sync_backup">Sync &amp; Backup</string>
     <string name="settings_guide_sources_desc">The guides for each source’s channels</string>
     <string name="settings_recent_row_size_title">Items in Recent</string>
     <string name="settings_recent_row_size_desc">How many films, episodes or channels Recent shows</string>
@@ -1356,10 +1356,10 @@
     <string name="settings_import_desc">From a backup file: you choose what to restore</string>
     <string name="provider_clear_library_desc">Removes the downloaded catalogue; the next sync downloads it again. Favourites and watch history stay.</string>
     <string name="profile_section_look">Look</string>
-    <string name="ui_theme_title">UI theme</string>
+    <string name="ui_theme_title">UI Theme</string>
     <string name="ui_theme_desc">Sets the theme and the Look and Feel together. Custom: pick each one.</string>
     <string name="ui_theme_custom">Custom</string>
-    <string name="profile_poster_backdrop_title">Poster in the background</string>
+    <string name="profile_poster_backdrop_title">Poster in the Background</string>
     <string name="profile_poster_backdrop_desc">Shows the focused title’s picture behind Home and the lists. Off uses less memory.</string>
     <string name="profile_section_admin">Admin</string>
     <string name="provider_danger_zone_summary">Clear this source\'s favourites, watch progress or downloaded catalogue</string>
@@ -1377,15 +1377,15 @@
     <string name="theme_console">Console</string>
     <string name="theme_meadow">Meadow</string>
     <string name="theme_meadow_dusk">Meadow dusk</string>
-    <string name="parental_controls_title">Parental controls</string>
+    <string name="parental_controls_title">Parental Controls</string>
     <string name="parental_controls_desc">What child profiles see, on every source. The same for the whole household: a change reaches every device.</string>
-    <string name="parental_list_kids_categories">Kids\' categories</string>
+    <string name="parental_list_kids_categories">Kids\' Categories</string>
     <string name="parental_list_kids_categories_desc">A category shows to a child when its name has one of these words.</string>
-    <string name="parental_list_kids_film_categories">Kids\' film categories</string>
+    <string name="parental_list_kids_film_categories">Kids\' Film Categories</string>
     <string name="parental_list_kids_film_categories_desc">These also show, for film categories only.</string>
-    <string name="parental_list_adult_categories">Adult categories</string>
+    <string name="parental_list_adult_categories">Adult Categories</string>
     <string name="parental_list_adult_categories_desc">A category with one of these words never shows to a child.</string>
-    <string name="parental_list_hidden_titles">Hidden titles</string>
+    <string name="parental_list_hidden_titles">Hidden Titles</string>
     <string name="parental_list_hidden_titles_desc">A title with one of these words never shows to a child, also in a kids\' category.</string>
     <string name="parental_list_exceptions">Exceptions</string>
     <string name="parental_list_exceptions_desc">A film or series with one of these words shows to a child, also from a hidden category.</string>
@@ -1397,13 +1397,13 @@
     <string name="parental_entry_removed">Removed %1$s</string>
     <string name="parental_list_reset">Reset to the app\'s list</string>
     <string name="parental_list_reset_confirm">Replace this list with the app\'s words? Your changes to this list are lost.</string>
-    <string name="parental_check_title">Check a source</string>
-    <string name="parental_profile_filters_title">Content filters of each profile</string>
+    <string name="parental_check_title">Check a Source</string>
+    <string name="parental_profile_filters_title">Content Filters of Each Profile</string>
     <string name="parental_profile_filters_desc">Set on each profile\'s page, in Profiles</string>
     <string name="parental_check_desc">The categories a child sees on this source with the lists now. The child\'s own content filters are not included.</string>
     <string name="parental_check_shown">Shown (%1$d)</string>
     <string name="parental_check_hidden">Hidden (%1$d)</string>
-    <string name="parental_check_none">A child sees no category on this source. Add the words of its kids\' categories to Kids\' categories.</string>
+    <string name="parental_check_none">A child sees no category on this source. Add the words of its kids\' categories to Kids\' Categories.</string>
     <string name="parental_no_sources">No source to check yet.</string>
     <string name="parental_entry_remove">Remove %1$s</string>
     <string name="parental_entry_undo">Undo</string>
@@ -1427,7 +1427,7 @@
     <string name="favorite_gone_message">%1$s is no longer in its source.</string>
     <string name="wanted_kind_movie">Film</string>
     <string name="wanted_kind_show">Show</string>
-    <string name="wanted_prompt_title">Remove %1$s from your Wishlist?</string>
+    <string name="wanted_prompt_title">Remove %1$s from Your Wishlist?</string>
     <string name="wanted_prompt_text">You\'ve watched it.</string>
     <string name="wanted_prompt_remove">Remove</string>
     <string name="wanted_prompt_keep">Keep</string>

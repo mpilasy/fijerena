@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phases 1, 1b, 2 and 3 done (1b, E1, W4 not device-checked), Phase 3b in progress.
+**Status:** In progress 2026-10-24: Phases 1, 1b, 2, 3 and 3b done (1b, E1, W4 not device-checked), Phase 4 not started.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
 [Settings audit fixes](./archive/20261017_settings-audit-fixes-plan.md) (archived, private).
@@ -193,7 +193,7 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 | 1b. Child lock | Done 2026-10-24 (not walked) | 0271f593 |
 | 2. Grouping and wording | Done 2026-10-24 | 6154bf3b |
 | 3. Admin flows | Done 2026-10-24 (E1, W4 not device-checked) | 80b1e388 |
-| 3b. Title Case | In progress | |
+| 3b. Title Case | Done 2026-10-24 (walks not re-run) | |
 | 4. Docs and walks | Not started | |
 
 **Phase 1 done (2026-10-24).** L1: Home (TV) and a tab root (phone) without Expert mode read
@@ -254,3 +254,18 @@ TV picker's and the phone's Add profile ask no PIN; both Parental controls links
 Kids' categories and on the PIN reminder row); the TV ⋮ menu is Duplicate, Copy to…, Delete, focus
 on Duplicate; the phone's Child text. Not device-checked: E1 (it needs no source) and W4 (the TV
 emulator is linked).
+
+**Phase 3b done (2026-10-24).** Found by usage on both apps: top bar and `TvScreenHeader` titles,
+dialog titles (also the question titles: "Delete Source?"), headings (`TextRole.Title` / `Heading`,
+`ProviderSectionTitle`, `SettingsGroupHeader`, `DeviceInfoSection`, the Terms sections, Home row
+titles) and Settings row labels (`SettingsRow`, `SettingsListRow`, `TvSwitchRow`, `ProfileSwitchRow`,
+`ProviderChoiceRow`, the pickers' panes and dialogs). 107 English strings changed, all in
+`core/ui`, and 8 more that name a changed label in a path ("Edit Source → Guide Sources", "Settings →
+Live Sync", "Terms of Use", "Kids' Categories"; one in `core/network`). Left as they are: keys also
+used as a button or a message (`parental_list_reset`, `provider_logins_add`,
+`watched_mark_many_failed`, `wanted_not_in_sources`); the PIN dialogs' titles, which are prompts
+("Enter the current PIN"); form field labels ("Source name", "Source type", "TMDB key"; "Short Name"
+changed, as it is also a row and a dialog title); Device info's key/value row labels; empty and error
+state titles ("No guide", "Couldn't load the guide"); notification titles; prose that names Expert
+mode. Walks edited by hand, not run: `settings.txt`, `settings-guide.txt`, `parental-controls.txt`,
+`edit-source.txt`, `home.txt`, `home-rows.txt`.

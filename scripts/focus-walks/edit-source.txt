@@ -18,26 +18,26 @@ DOWN	Edit Password
 DOWN	Cancel
 RIGHT	Save connection
 # Right from Save connection enters the settings column on its first control: Badge's Short name.
-RIGHT	Short name
+RIGHT	Short Name
 # Shared logins: the Logins section. With only the main login it is one focusable row (no
 # buttons), then Add login. With extra logins the rows' icons are the stops instead.
 DOWN	Main login
 DOWN	Add login
-DOWN	Provides a guide / This source's own guide (xmltv.php) is added automatically
-DOWN	Guide sources
+DOWN	Provides a Guide / This source's own guide (xmltv.php) is added automatically
+DOWN	Guide Sources
 # Advanced (Xtream): stream format (m3u8 or ts), playlist type (m3u_plus or simple).
-DOWN	Stream output format
-DOWN	Playlist type
+DOWN	Stream Output Format
+DOWN	Playlist Type
 # Left goes back to the Connection column, on the row it left.
 LEFT	Save connection
 # Right comes back to the settings row it left.
-RIGHT	Playlist type
+RIGHT	Playlist Type
 DOWN	Sync data now
-UP	Playlist type
-UP	Stream output format
-UP	Guide sources
+UP	Playlist Type
+UP	Stream Output Format
+UP	Guide Sources
 # OK opens the source's guide sources (entry: its first row's toggle, "Use this guide", or Add
 # guide source when it has none — unasserted, it depends on the emulator's data); Back returns to
 # the Guide sources row.
 CENTER	
-BACK	Guide sources
+BACK	Guide Sources

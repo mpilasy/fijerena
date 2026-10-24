@@ -28,5 +28,5 @@ UP	The Godfather
 UP	The Godfather / 2h 42m remaining
 # Multi-source Phase 6 (part 2): the header's first item is the sources' summary line, not the
 # source pill. Edited by hand 2026-10-12, not re-recorded.
-UP	Your sources
+UP	Your Sources
 DOWN	The Godfather / 2h 42m remaining

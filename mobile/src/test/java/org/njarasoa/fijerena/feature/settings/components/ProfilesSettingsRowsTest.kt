@@ -48,7 +48,7 @@ class ProfilesSettingsRowsTest {
 
         composeTestRule.onNodeWithText("Main").assertExists()
         composeTestRule.onNodeWithText("Kid").assertExists()
-        composeTestRule.onNodeWithText("Add profile").assertExists()
+        composeTestRule.onNodeWithText("Add Profile").assertExists()
     }
 
     @Test
@@ -57,7 +57,7 @@ class ProfilesSettingsRowsTest {
         show(expertMode = false, onEdit = { edited = it })
 
         composeTestRule.onNodeWithText("Kid").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Add profile").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Add Profile").assertDoesNotExist()
         composeTestRule.onNodeWithText("Main").performClick()
 
         assertEquals("main", edited)

@@ -22,9 +22,9 @@
 @start Last watched
 LEFT	Home
 RIGHT	Last watched
-UP	Your sources
-RIGHT	Search the guide
-LEFT	Your sources
+UP	Your Sources
+RIGHT	Search the Guide
+LEFT	Your Sources
 LEFT	Home
-RIGHT	Your sources
+RIGHT	Your Sources
 DOWN	Last watched
