@@ -208,13 +208,14 @@ private fun RelatedTitleCard(
                 NotAvailableMark(iconSize = TvDimensions.iconSmall, modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs))
             }
         }
-        val titleStyle = textStyleOf(TextRole.Body)
+        val titleStyle = textStyleOf(TextRole.Heading)
         // Room for two lines on every card, so a one-line title doesn't make its card shorter
         // than the rest and a long one isn't cut after a word ("Avengers: Age …", TV UI audit X4).
         val twoLines = with(LocalDensity.current) { (titleStyle.lineHeight * 2).toDp() }
         CinemaText(
             // See mobile's StreamCard — provider data occasionally sends a blank name.
             text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
+            role = TextRole.Heading,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier =

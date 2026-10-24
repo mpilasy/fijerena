@@ -886,7 +886,7 @@ private fun MobileAiringRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).bounceMarquee(),
-            role = TextRole.BodySmall,
+            role = TextRole.Heading,
             tone = TextTone.Accent,
         )
         // After the name, as on every other row; lighter than the card it sits on.

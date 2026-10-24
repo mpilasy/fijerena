@@ -59,7 +59,7 @@ fun MobileSourceChooserDialog(
                         CinemaText(
                             text = name,
                             modifier = Modifier.padding(CinemaSpacing.md),
-                            role = TextRole.Body,
+                            role = TextRole.Heading,
                             tone = TextTone.Inherit,
                         )
                     }

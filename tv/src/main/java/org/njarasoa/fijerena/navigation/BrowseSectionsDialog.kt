@@ -69,7 +69,7 @@ internal fun BrowseSectionsDialog(
                             )
                         },
                         headlineContent = {
-                            CinemaText(text = sectionLabel(contentType))
+                            CinemaText(text = sectionLabel(contentType), role = TextRole.Heading)
                         },
                     )
                 }

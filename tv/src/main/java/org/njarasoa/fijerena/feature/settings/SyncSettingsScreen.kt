@@ -343,7 +343,7 @@ private fun DevicesPanel(
             active.forEach { device ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        CinemaText(device.name, role = TextRole.Body, tone = TextTone.Primary)
+                        CinemaText(device.name, role = TextRole.Heading, tone = TextTone.Primary)
                         // A playing device's status line says it is there; last seen only when idle.
                         if (device.current) {
                             CinemaText(
@@ -399,7 +399,7 @@ private fun RenameDialog(
     var name by remember(device.id) { mutableStateOf(device.name) }
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { androidx.compose.material3.Text(stringResource(R.string.live_sync_device_rename_title, device.name)) },
+        title = { CinemaText(stringResource(R.string.live_sync_device_rename_title, device.name), role = TextRole.Title) },
         text = {
             androidx.compose.material3.OutlinedTextField(
                 value = name,
@@ -435,8 +435,8 @@ private fun ConfirmDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { androidx.compose.material3.Text(title) },
-        text = { androidx.compose.material3.Text(message) },
+        title = { CinemaText(title, role = TextRole.Title) },
+        text = { CinemaText(message, role = TextRole.Body, tone = TextTone.Secondary) },
         confirmButton = { CinemaDangerButton(onClick = onConfirm, text = confirm) },
         dismissButton = { CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel)) },
     )

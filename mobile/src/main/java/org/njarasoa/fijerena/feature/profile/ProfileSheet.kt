@@ -88,7 +88,14 @@ fun ProfileSheet(
                 } else {
                     profiles.forEach { profile ->
                         ListItem(
-                            headlineContent = { CinemaText(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            headlineContent = {
+                                CinemaText(
+                                    profile.name,
+                                    role = TextRole.Heading,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
                             leadingContent = {
                                 ProfileAvatar(
                                     name = profile.name,
@@ -133,6 +140,7 @@ fun ProfileSheet(
                             headlineContent = {
                                 CinemaText(
                                     stringResource(R.string.browse_source, source.name),
+                                    role = TextRole.Heading,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )

@@ -151,6 +151,7 @@ internal fun SourcesStatusSheet(
                     TvOptionRow(
                         title = if (isDevMode) "${state.name} (${state.type})" else state.name,
                         subtitle = listOfNotNull(status, reason).joinToString("\n").ifEmpty { null },
+                        role = TextRole.Heading,
                         selected = false,
                         onClick = onDismiss,
                         modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,

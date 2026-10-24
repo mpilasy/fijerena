@@ -58,7 +58,8 @@ fun SettingsGroupHeader(
 /**
  * One preference row: title, current value as [summary] (a String or an [AnnotatedString]),
  * optional [scope] chip, optional [leading] content, and [trailing] content — a chevron when the
- * row navigates ([onClick]) and nothing explicit is given.
+ * row navigates ([onClick]) and nothing explicit is given. [titleRole]: [TextRole.Heading] when the
+ * title is a name (a profile).
  */
 @Composable
 fun SettingsListRow(
@@ -69,6 +70,7 @@ fun SettingsListRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    titleRole: TextRole = TextRole.Body,
 ) {
     val titleTone = if (enabled) TextTone.Primary else TextTone.Disabled
     val summaryTone = if (enabled) TextTone.Secondary else TextTone.Disabled
@@ -85,7 +87,7 @@ fun SettingsListRow(
             Spacer(modifier = Modifier.width(Spacing.sm))
         }
         Column(modifier = Modifier.weight(1f)) {
-            CinemaText(title, tone = titleTone)
+            CinemaText(title, role = titleRole, tone = titleTone)
             if (summary != null) {
                 if (summary is AnnotatedString) {
                     CinemaText(summary, tone = summaryTone)

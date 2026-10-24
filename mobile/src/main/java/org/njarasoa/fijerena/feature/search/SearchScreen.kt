@@ -1325,7 +1325,7 @@ private fun CategoryResultCard(
                 text = result.categoryName,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                role = TextRole.Body,
+                role = TextRole.Heading,
                 tone = TextTone.Primary,
                 modifier = Modifier.weight(1f),
             )
@@ -1390,7 +1390,7 @@ private fun SearchResultCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
-                        role = TextRole.Body,
+                        role = TextRole.Heading,
                         tone = TextTone.Primary,
                     )
                     // Its source (when the search covers several) ends the line, in the same place on every row.
@@ -1459,7 +1459,7 @@ private fun TmdbTitleCard(
                     text = title.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    role = TextRole.Body,
+                    role = TextRole.Heading,
                     tone = TextTone.Primary,
                 )
                 CinemaText(

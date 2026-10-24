@@ -82,7 +82,7 @@ fun ProviderGuideSection(
             )
         },
         trailingContent = { TvContentText(text = "›") },
-        headlineContent = { TvContentText(stringResource(R.string.epg_sources_header)) },
+        headlineContent = { TvContentText(stringResource(R.string.epg_sources_header), role = TextRole.Heading) },
     )
 }
 

@@ -1570,7 +1570,7 @@ private fun EpisodeCard(
                         text = ownTitle,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        role = TextRole.Body,
+                        role = TextRole.Heading,
                         tone = TextTone.Inherit,
                     )
                 }

@@ -98,6 +98,7 @@ fun ProfilesSettingsRows(
     profiles.filter { expertMode || it.isActive }.forEach { profile ->
         SettingsListRow(
             title = profile.name,
+            titleRole = TextRole.Heading,
             summary = if (profile.isActive) stringResource(R.string.settings_profiles_active_marker) else null,
             leading = {
                 ProfileAvatar(

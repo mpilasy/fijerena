@@ -150,7 +150,7 @@ fun MobileChannelListSheet(
                                     CinemaText(
                                         text = stream.name,
                                         maxLines = 1,
-                                        role = TextRole.Body,
+                                        role = TextRole.Heading,
                                         tone = TextTone.Primary,
                                     )
                                 }

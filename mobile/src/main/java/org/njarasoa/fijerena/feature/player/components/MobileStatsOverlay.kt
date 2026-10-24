@@ -547,7 +547,7 @@ private fun SectionHeader(title: String) {
     CinemaText(
         text = title,
         modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs),
-        role = TextRole.Caption,
+        role = TextRole.Heading,
         tone = TextTone.Accent,
     )
 }

@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
@@ -444,7 +445,7 @@ fun SettingsScreen(
                                         if (isLeft) focusManager.moveFocus(FocusDirection.Left)
                                         isLeft
                                     }.leftToRail(),
-                            headlineContent = { TvContentText(stringResource(group.titleFor(uiState.isDevMode))) },
+                            headlineContent = { TvContentText(stringResource(group.titleFor(uiState.isDevMode)), role = TextRole.Heading) },
                         )
                     }
                 }

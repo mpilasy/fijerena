@@ -34,6 +34,8 @@ fun TvOptionRow(
     subtitle: String? = null,
     enabled: Boolean = true,
     activeLabel: String? = null,
+    // Heading where the option is a name (a source), Body for track and setting choices.
+    role: TextRole = TextRole.Body,
 ) {
     TvInputListItem(
         selected = selected,
@@ -57,6 +59,6 @@ fun TvOptionRow(
                 { CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Tertiary) }
             },
     ) {
-        CinemaText(text = title, emphasis = selected)
+        CinemaText(text = title, role = role, emphasis = selected)
     }
 }

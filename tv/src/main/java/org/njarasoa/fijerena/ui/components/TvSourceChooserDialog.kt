@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
+import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -45,7 +46,7 @@ fun TvSourceChooserDialog(
         containerColor = CinemaTheme.colors.background,
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,
-        title = { CinemaText(stringResource(R.string.source_chooser_title)) },
+        title = { CinemaText(stringResource(R.string.source_chooser_title), role = TextRole.Title) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -54,6 +55,7 @@ fun TvSourceChooserDialog(
                 sources.forEachIndexed { index, (id, name) ->
                     TvOptionRow(
                         title = name,
+                        role = TextRole.Heading,
                         selected = false,
                         onClick = { onChosen(id) },
                         modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,

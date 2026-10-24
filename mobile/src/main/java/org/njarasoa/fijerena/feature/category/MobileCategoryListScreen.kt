@@ -2199,8 +2199,7 @@ private fun SeparatorRow(name: String) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(start = Spacing.xs, end = Spacing.xs, top = Spacing.sm),
-        role = TextRole.Label,
-        keepCase = true,
+        role = TextRole.Heading,
         tone = TextTone.Secondary,
     )
 }

@@ -9,8 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -33,10 +31,15 @@ fun ProfileAvatar(
                 .background(CinemaProfileColors.forIndex(colorIndex)),
         contentAlignment = Alignment.Center,
     ) {
-        // look-ok: the initial is sized to the avatar, not a text role
+        // look-ok: the initial is sized to the avatar, in the Look's title font (a name's font)
         Text(
             text = initialOf(name),
-            style = TextStyle(fontSize = fontSize, fontWeight = emphasisWeight),
+            style =
+                CinemaTheme.type.heading.copy(
+                    fontSize = fontSize,
+                    fontWeight = emphasisWeight,
+                    lineHeight = TextUnit.Unspecified,
+                ),
             color = CinemaProfileColors.onAvatar,
         )
     }

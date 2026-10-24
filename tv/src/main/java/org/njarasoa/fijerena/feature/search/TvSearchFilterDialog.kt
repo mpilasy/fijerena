@@ -96,7 +96,7 @@ internal fun TvSearchFilterDialog(
         containerColor = CinemaTheme.colors.background,
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,
-        title = { CinemaText(stringResource(R.string.search_filter_label)) },
+        title = { CinemaText(stringResource(R.string.search_filter_label), role = TextRole.Title) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),

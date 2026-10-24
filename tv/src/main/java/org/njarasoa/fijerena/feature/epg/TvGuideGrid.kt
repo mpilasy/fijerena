@@ -665,7 +665,7 @@ private fun GuideFocusLine(
                 } else {
                     program.title + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime)
                 },
-            role = TextRole.Body,
+            role = TextRole.Heading,
             tone = TextTone.Primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1624,7 +1624,7 @@ private fun ProgramDetailsDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                CinemaText(text = channel.name, tone = TextTone.AccentSoft, maxLines = 1)
+                CinemaText(text = channel.name, role = TextRole.Heading, tone = TextTone.AccentSoft, maxLines = 1)
                 CinemaText(
                     text = dayLabel + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime),
                     role = TextRole.Body,
@@ -1712,7 +1712,7 @@ private fun ChannelCell(
                 sourceName?.let { SourceBadge(it) }
                 CinemaText(
                     text = channel.name,
-                    role = TextRole.Body,
+                    role = TextRole.Heading,
                     tone = TextTone.Primary,
                     maxLines = if (sourceName != null && LocalShowSourceBadges.current) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
@@ -1827,6 +1827,7 @@ private fun ProgramCell(
                         }
                         CinemaText(
                             text = cell.program.title,
+                            role = TextRole.Heading,
                             emphasis = phase == CellPhase.ON_AIR,
                             tone = if (phase == CellPhase.ON_AIR) TextTone.AccentSoft else TextTone.Primary,
                             maxLines = 1,

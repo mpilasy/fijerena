@@ -713,7 +713,7 @@ fun ProfileEditPane(
                 onDismissRequest = closeOptions,
                 containerColor = CinemaTheme.colors.background,
                 titleContentColor = CinemaTheme.colors.textPrimary,
-                title = { CinemaText(stringResource(R.string.profile_pin_title)) },
+                title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title) },
                 confirmButton = {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main) {
@@ -843,7 +843,7 @@ internal fun ProfileAddDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { androidx.compose.material3.Text(stringResource(R.string.profile_dialog_add_title)) },
+        title = { CinemaText(stringResource(R.string.profile_dialog_add_title), role = TextRole.Title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 ReadOnlyFieldWithEdit(

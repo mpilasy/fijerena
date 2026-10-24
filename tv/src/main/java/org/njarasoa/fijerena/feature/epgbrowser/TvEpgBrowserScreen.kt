@@ -1042,7 +1042,7 @@ private fun AiringRow(
             }
             CinemaText(
                 text = airing.channelName,
-                role = TextRole.Body,
+                role = TextRole.Heading,
                 tone = TextTone.AccentSoft,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

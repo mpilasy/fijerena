@@ -135,7 +135,7 @@ fun MobileSourcesStatusSheet(
                     Column {
                         CinemaText(
                             text = if (isDevMode) "${state.name} (${state.type})" else state.name,
-                            role = TextRole.Body,
+                            role = TextRole.Heading,
                             tone = TextTone.Inherit,
                             emphasis = true,
                         )

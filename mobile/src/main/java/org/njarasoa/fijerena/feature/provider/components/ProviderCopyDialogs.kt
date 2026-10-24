@@ -92,7 +92,7 @@ fun CopyProviderDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CinemaRadioButton(selected = targetId == candidate.id, onClick = { targetId = candidate.id })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        CinemaText(candidate.name)
+                        CinemaText(candidate.name, role = TextRole.Heading)
                     }
                 }
 

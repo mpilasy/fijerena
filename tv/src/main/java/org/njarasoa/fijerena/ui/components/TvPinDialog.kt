@@ -51,7 +51,7 @@ fun TvPinDialog(
         titleContentColor = CinemaTheme.colors.textPrimary,
         textContentColor = CinemaTheme.colors.textSecondary,
         // Centred over the dots and pad.
-        title = { CinemaText(state.title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        title = { CinemaText(state.title, role = TextRole.Title, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
         text = {
             Column(
                 modifier =

@@ -95,7 +95,7 @@ private fun RelatedTitleCard(
         }
         CinemaText(
             text = parsedTitle.title,
-            role = TextRole.BodySmall,
+            role = TextRole.Heading,
             maxLines = 2,
             minLines = 2,
             overflow = TextOverflow.Ellipsis,

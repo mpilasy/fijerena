@@ -356,7 +356,7 @@ private fun DevicesPanel(
             active.forEach { device ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        CinemaText(device.name)
+                        CinemaText(device.name, role = TextRole.Heading)
                         // A playing device's status line says it is there; last seen only when idle.
                         if (device.current) {
                             CinemaText(

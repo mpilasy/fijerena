@@ -34,7 +34,7 @@ unreadable.
 | Phase | What | State |
 |---|---|---|
 | 1 | Unreadable text: fills, light themes, text over video | Done |
-| 2 | Names in the title font (TV and phone); profile initial and poster letter in the Look's font | Not started |
+| 2 | Names in the title font (TV and phone); profile initial and poster letter in the Look's font | Done |
 | 3 | Accent only on what is current or selected; headings in the primary text colour (TR-D1) | Not started |
 
 ## Notes
@@ -46,3 +46,8 @@ unreadable.
   black from the fill, "Active" included. The phone category rule editor moved to a neutral fill
   with an accent outline. The phone dock's text and close buttons over the video use the media
   scrim and white. Checked on the phone emulator in Meadow (the dock).
+- **Phase 2:** about 46 names moved to Heading or Title (TV and phone), among them Home cards,
+  search results, related titles, episode and channel names, guide names, source, profile and
+  device names, dialog titles; TV dialogs that used Material's Text now use CinemaText. The phone
+  profile initial uses the Look's title font. Left as they were: the rename field's floating label
+  (TV), season tabs, OSD Now/Next lines, and all buttons, tabs and badges (TR-D2).

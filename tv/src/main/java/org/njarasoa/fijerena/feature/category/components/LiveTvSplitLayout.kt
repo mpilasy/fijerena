@@ -814,6 +814,7 @@ internal fun LiveTvSplitLayout(
                         if (nextProg != null) {
                             CinemaText(
                                 text = stringResource(R.string.live_preview_next_format, nextProg.title),
+                                role = TextRole.Heading,
                                 tone = TextTone.Secondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,

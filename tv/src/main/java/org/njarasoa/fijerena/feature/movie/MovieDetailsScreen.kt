@@ -963,7 +963,7 @@ private fun StreamNamePicker(
     val textColor = CinemaTheme.colors.textPrimary
 
     if (alternates.isEmpty()) {
-        CinemaText(text = currentName)
+        CinemaText(text = currentName, role = TextRole.Heading)
         return
     }
 
@@ -1002,7 +1002,7 @@ private fun StreamNamePicker(
                         expanded = true
                     }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
-            CinemaText(text = currentName)
+            CinemaText(text = currentName, role = TextRole.Heading)
             Icon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
@@ -1014,13 +1014,13 @@ private fun StreamNamePicker(
             ProvideUiScaledDensity {
                 Column {
                     DropdownMenuItem(
-                        text = { CinemaText(currentName, tone = TextTone.Accent) },
+                        text = { CinemaText(currentName, role = TextRole.Heading, tone = TextTone.Accent) },
                         leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaTheme.colors.accent) },
                         onClick = { expanded = false },
                     )
                     alternates.forEach { alternate ->
                         DropdownMenuItem(
-                            text = { CinemaText(alternate.name) },
+                            text = { CinemaText(alternate.name, role = TextRole.Heading) },
                             // With several sources, each copy's own (it opens there).
                             leadingIcon = sourceNames[alternate.providerId]?.let { name -> { SourceBadge(name) } },
                             onClick = {

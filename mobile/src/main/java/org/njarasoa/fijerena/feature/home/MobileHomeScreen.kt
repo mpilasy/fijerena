@@ -670,7 +670,7 @@ private fun CardLines(
 ) {
     val parsed = remember(title) { parseDisplayTitle(title) }
     Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
-        CinemaText(text = parsed.title.ifBlank { title }, role = TextRole.BodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        CinemaText(text = parsed.title.ifBlank { title }, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
             sourceName?.let { SourceBadge(it, providerId = providerId) }
             TitleBadges(parsed)
