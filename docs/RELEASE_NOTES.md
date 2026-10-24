@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.0
 
 - **Locked switches read right:** a switch that cannot be changed, such as Expert mode on the last Expert profile, now shows on in a faded accent instead of looking off. A profile without Expert mode opens its own page on the phone without a PIN, as on TV. TV and phone.
 - **A shorter setup for the admin:** with no source, an Expert profile opens on Add Source (Back goes to Settings), and the first source saved goes straight to Home. Add Source no longer offers SMB and Local, which do not work yet. Parental controls and a child's page now link to each other. Add profile asks for an Expert's PIN by the same rule in Settings and on the TV profile picker, and never twice. On the phone, the Child profile text says that a grown-up adds the favourites on TV. On TV, the Sources ⋮ menu no longer repeats Edit and Guide sources, and Live sync's setup opens with focus on its first button. TV and phone.
