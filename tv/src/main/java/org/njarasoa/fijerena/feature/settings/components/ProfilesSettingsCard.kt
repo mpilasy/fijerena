@@ -59,6 +59,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.PaletteSwatches
 import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ProfilePinFlow
@@ -79,6 +80,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.packagedUiThemesFor
+import org.njarasoa.fijerena.core.ui.theme.paletteById
 import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSourceUi
@@ -97,7 +99,9 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.theme.ProvideLookAndAccent
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.ThemePreview
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -345,13 +349,25 @@ fun ProfileEditPane(
             },
         )
     } else if (choosingUiTheme) {
+        // Each UI theme's colour theme and Look; Custom is the profile's own (as last saved).
+        val looks =
+            mapOf(UiThemes.CUSTOM to (themeId to uiStyleId)) +
+                packagedUiThemesFor(adminView, uiThemeId).associate { it.id to (it.themeId to it.uiStyleId) }
         SettingsPickerPane(
             title = stringResource(R.string.ui_theme_title),
             options =
-                listOf(UiThemes.CUSTOM).plus(packagedUiThemesFor(adminView, uiThemeId).map { it.id }).map {
-                    PickerOption(stringResource(uiThemeNameRes(it)), it)
+                looks.map { (id, look) ->
+                    // Each row in its theme's font and accent, with its colours beside it.
+                    PickerOption(
+                        stringResource(uiThemeNameRes(id)),
+                        id,
+                        preview = { PaletteSwatches(paletteById(look.first)) },
+                        inLook = { ProvideLookAndAccent(look.first, look.second, it) },
+                    )
                 },
             selectedValue = uiThemeId,
+            // The pane previews the focused UI theme; the app's theme changes only on OK.
+            paneLook = { id, content -> looks[id]?.let { ThemePreview(it.first, it.second, content) } ?: content() },
             onPick = {
                 uiThemeId = it
                 viewModel.setUiTheme(profile.id, it)

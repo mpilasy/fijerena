@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **TV: preview a UI theme before you pick it:** in a profile's UI theme list, each theme shows in its own font, with its accent and colours. Moving to a theme repaints the list in that theme. The app changes only when you press OK.
 - **Phone: messages above the bottom bar:** in the guide search and in Search, a message such as "The TV guide is up to date" shows above the bottom bar, not behind it. The Expert guide counts are in the app's language.
 
 ## Version: 0.7.6

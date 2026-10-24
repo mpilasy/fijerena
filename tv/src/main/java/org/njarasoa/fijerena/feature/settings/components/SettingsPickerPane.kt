@@ -3,6 +3,7 @@
 package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,10 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -60,6 +65,8 @@ data class PickerOption<T>(
  * level, the TV focus contract). Back is taken in `onPreviewKeyEvent` on the pane root
  * (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"), with [BackHandler] as the fallback;
  * Left is taken there too, before the enclosing `tvPane` could hand it to the rail.
+ * [paneLook]: the whole pane drawn in the focused option's look, as a preview; nothing is applied
+ * until OK.
  */
 @Composable
 fun <T> SettingsPickerPane(
@@ -69,9 +76,37 @@ fun <T> SettingsPickerPane(
     onPick: (T) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    paneLook: (@Composable (T, @Composable () -> Unit) -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
+    var focusedValue by remember { mutableStateOf(selectedValue) }
+    if (paneLook == null) {
+        PickerColumn(title, options, selectedValue, onPick, onBack, modifier) { }
+    } else {
+        paneLook(focusedValue) {
+            // The preview theme's own background, so a light theme reads as light.
+            PickerColumn(
+                title,
+                options,
+                selectedValue,
+                onPick,
+                onBack,
+                modifier.background(CinemaTheme.colors.background, CinemaTheme.shapes.card).padding(Spacing.sm),
+            ) { focusedValue = it }
+        }
+    }
+}
 
+@Composable
+private fun <T> PickerColumn(
+    title: String,
+    options: List<PickerOption<T>>,
+    selectedValue: T,
+    onPick: (T) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier,
+    onFocusOption: (T) -> Unit,
+) {
     val selectedFocusRequester = remember { FocusRequester() }
     val selectedIndex = options.indexOfFirst { it.value == selectedValue }.coerceAtLeast(0)
     LaunchedEffect(Unit) {
@@ -113,9 +148,10 @@ fun <T> SettingsPickerPane(
             itemsIndexed(options) { index, option ->
                 val selected = index == selectedIndex
                 val rowModifier =
-                    Modifier.fillMaxWidth().then(
-                        if (selected) Modifier.focusRequester(selectedFocusRequester) else Modifier,
-                    )
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (it.isFocused) onFocusOption(option.value) }
+                        .then(if (selected) Modifier.focusRequester(selectedFocusRequester) else Modifier)
                 val pick = {
                     onPick(option.value)
                     onBack()

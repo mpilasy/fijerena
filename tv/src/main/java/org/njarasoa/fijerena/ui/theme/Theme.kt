@@ -15,9 +15,11 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaShapeRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
 import org.njarasoa.fijerena.core.ui.theme.CinemaTypeRoles
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaBorders
+import org.njarasoa.fijerena.core.ui.theme.LocalCinemaColors
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaShapes
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaType
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
@@ -120,12 +122,7 @@ fun FirstVideoPlayerTheme(
     content: @Composable () -> Unit,
 ) {
     val palette = remember(themeId) { paletteById(themeId) }
-    // Decision D3 (design-system plan): dialogs stay centred on TV in every Look and Feel — a bottom
-    // sheet or a full-screen dialog doesn't suit the remote.
-    val style =
-        remember(styleId) {
-            styleById(styleId).let { it.copy(dialog = it.dialog.copy(position = DialogPosition.CENTERED)) }
-        }
+    val style = remember(styleId) { tvStyle(styleId) }
 
     // Set the global holders so non-composable code (re-export vals) can read them
     SideEffect {
@@ -133,6 +130,63 @@ fun FirstVideoPlayerTheme(
         UiStyleHolder.current = style
     }
 
+    ProvideTvTheme(palette, style, content)
+}
+
+/**
+ * [content] drawn in the colour theme [themeId] and the Look and Feel [styleId], as a whole screen
+ * would be, without changing the theme in use (the global holders stay): a picker's preview.
+ */
+@Composable
+fun ThemePreview(
+    themeId: String,
+    styleId: String,
+    content: @Composable () -> Unit,
+) {
+    val palette = remember(themeId) { paletteById(themeId) }
+    val style = remember(styleId) { tvStyle(styleId) }
+    ProvideTvTheme(palette, style, content)
+}
+
+/**
+ * [content] in the Look and Feel [styleId] (type, corners, focus) with the accent of the colour
+ * theme [themeId]; the other colours stay, so text keeps its contrast on the pane (the soft accent of
+ * a selected row's text too): a picker row that shows a theme's font and accent.
+ */
+@Composable
+fun ProvideLookAndAccent(
+    themeId: String,
+    styleId: String,
+    content: @Composable () -> Unit,
+) {
+    val current = CinemaTheme.colors
+    val colors =
+        remember(themeId, current) {
+            val theme = CinemaColorRoles.from(paletteById(themeId))
+            current.copy(
+                accent = theme.accent,
+                accentStrong = theme.accentStrong,
+                onAccent = theme.onAccent,
+            )
+        }
+    ProvideLook(styleById(styleId)) {
+        CompositionLocalProvider(LocalCinemaColors provides colors, content = content)
+    }
+}
+
+// Decision D3 (design-system plan): dialogs stay centred on TV in every Look and Feel — a bottom
+// sheet or a full-screen dialog doesn't suit the remote.
+private fun tvStyle(styleId: String): UiStyle =
+    styleById(styleId).let { it.copy(dialog = it.dialog.copy(position = DialogPosition.CENTERED)) }
+
+/** [CinemaTheme], Material 3 and TV Material from [palette] and [style]. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ProvideTvTheme(
+    palette: CinemaThemePalette,
+    style: UiStyle,
+    content: @Composable () -> Unit,
+) {
     val colors = remember(palette) { CinemaColorRoles.from(palette) }
     val typography = remember(style) { cinemaTypography(style.type) }
     ProvideCinemaTheme(palette, style, remember(typography) { cinemaTypeRoles(typography) }) {
