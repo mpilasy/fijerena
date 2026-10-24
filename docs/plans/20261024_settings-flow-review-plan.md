@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phases 1, 1b, 2, 3 and 3b done (1b, E1, W4 not device-checked), Phase 4 not started.
+**Status:** In progress 2026-10-24: Phases 1, 1b, 2, 3 and 3b done (1b, E1, W4 not device-checked), Phase 4 in progress.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
 [Settings audit fixes](./archive/20261017_settings-audit-fixes-plan.md) (archived, private).
@@ -193,8 +193,8 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 | 1b. Child lock | Done 2026-10-24 (not walked) | 0271f593 |
 | 2. Grouping and wording | Done 2026-10-24 | 6154bf3b |
 | 3. Admin flows | Done 2026-10-24 (E1, W4 not device-checked) | 80b1e388 |
-| 3b. Title Case | Done 2026-10-24 (walks not re-run) | |
-| 4. Docs and walks | Not started | |
+| 3b. Title Case | Done 2026-10-24 (walks not re-run) | ce92107d |
+| 4. Docs and walks | In progress | |
 
 **Phase 1 done (2026-10-24).** L1: Home (TV) and a tab root (phone) without Expert mode read
 "This profile has no source yet. Ask a grown-up to add one." with no button (TV focus stays on the
