@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.utils.timeAgo
 
 /** Where live sync stands: syncing, failed, never synced, or when it last did; Off while not linked. */
 @Composable
@@ -24,6 +25,6 @@ fun liveSyncRelative(time: Long): String {
     return if (now - time < DateUtils.MINUTE_IN_MILLIS) {
         stringResource(R.string.live_sync_just_now)
     } else {
-        DateUtils.getRelativeTimeSpanString(time, now, DateUtils.MINUTE_IN_MILLIS).toString()
+        timeAgo(time, now)
     }
 }

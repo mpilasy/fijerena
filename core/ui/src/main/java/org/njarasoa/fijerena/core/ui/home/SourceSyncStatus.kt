@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.network.xtream.CatalogPart
 import org.njarasoa.fijerena.core.network.xtream.CatalogSyncProgress
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -141,7 +142,7 @@ fun rememberProfileSyncStates(): List<SourceSyncState> {
     return states
 }
 
-/** "2 hours ago", or "just now" under a minute (getRelativeTimeSpanString would say "0 minutes ago"). */
+/** "2 hours ago" in the app's language, or "just now" under a minute. */
 @Composable
 fun updatedAgo(
     atMs: Long,
@@ -150,7 +151,7 @@ fun updatedAgo(
     if (now - atMs < DateUtils.MINUTE_IN_MILLIS) {
         stringResource(R.string.live_sync_just_now)
     } else {
-        DateUtils.getRelativeTimeSpanString(atMs, now, DateUtils.MINUTE_IN_MILLIS).toString()
+        timeAgo(atMs, now)
     }
 
 /** One source's status, as its row in the sources sheet says it; null for one that never syncs. */

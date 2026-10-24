@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **"Updated 1 hour ago" in the app's language:** the time since an update showed in the phone's language ("Mis à jour 1 hour ago"). It now follows the app's language, on TV and phone.
+- **Phone: list titles in the Look's title font:** film, show and channel names in the lists use the title font, as on TV (Antonio in Console).
 - **TV: preview a UI theme before you pick it:** in a profile's UI theme list, each theme shows in its own font, with its accent and colours. Moving to a theme repaints the list in that theme. The app changes only when you press OK. On the phone, the list also shows each theme's font and colours.
 - **Phone: messages above the bottom bar:** in the guide search and in Search, a message such as "The TV guide is up to date" shows above the bottom bar, not behind it. The Expert guide counts are in the app's language.
 

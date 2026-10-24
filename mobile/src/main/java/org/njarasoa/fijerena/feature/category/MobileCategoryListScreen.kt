@@ -2416,7 +2416,8 @@ internal fun StreamCard(
                     if (catchupDays > 0) CatchupBadge(catchupDays, iconSize = MobileDimensions.iconSmall)
                     CinemaText(
                         text = displayTitle,
-                        role = TextRole.Body,
+                        // The title role, as on TV's rows: each Look's title font (Console's Antonio).
+                        role = TextRole.Heading,
                         // The primary text colour; the accent only marks what's current
                         // (phone UI audit P1).
                         tone = if (isCurrent) TextTone.Accent else TextTone.Primary,

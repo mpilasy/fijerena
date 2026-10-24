@@ -3,7 +3,6 @@
 package org.njarasoa.fijerena.feature.epg
 
 import android.text.format.DateFormat
-import android.text.format.DateUtils
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -141,6 +140,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.utils.timeAgo
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
@@ -695,9 +695,7 @@ private fun updatedLabel(updatedAtMs: Long?): String =
     if (updatedAtMs == null) {
         stringResource(R.string.epg_guide_updated_unknown)
     } else {
-        DateUtils
-            .getRelativeTimeSpanString(updatedAtMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
-            .toString()
+        timeAgo(updatedAtMs)
     }
 
 // ---------------------------------------------------------------------------------------------
