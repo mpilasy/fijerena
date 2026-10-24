@@ -12,7 +12,7 @@ import javax.crypto.spec.SecretKeySpec
 
 /** The end-to-end encryption and pairing pieces — see the live sync plan → Security. */
 class SyncCryptoTest {
-    private val key = SyncKey("profile", "provider", SyncKind.FAVORITE_STREAM, "m1", "MOVIES")
+    private val key = SyncKey("profile", "provider", SyncKind.FAVORITE_STREAM, "movie-12345", "MOVIES")
 
     @Test
     fun `HKDF matches RFC 5869 test case 3`() {
@@ -30,7 +30,8 @@ class SyncCryptoTest {
         assertEquals(crypto.keyId(key), AccountKeyCrypto(accountKey.copyOf()).keyId(key))
         assertNotEquals(crypto.keyId(key), AccountKeyCrypto(AccountKeyCrypto.newAccountKey()).keyId(key))
         assertNotEquals(crypto.keyId(key), crypto.keyId(key.copy(itemId = "m2")))
-        assertFalse(crypto.keyId(key).contains("m1"))
+        // The item id is long, so a random key id cannot contain it by chance.
+        assertFalse(crypto.keyId(key).contains("movie-12345"))
         assertNotEquals(crypto.tag("provider"), crypto.keyId(key))
         assertEquals(43, crypto.tag("provider").length) // 32 bytes, URL-safe Base64
     }
