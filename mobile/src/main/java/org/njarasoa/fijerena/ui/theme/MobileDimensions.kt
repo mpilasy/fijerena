@@ -67,4 +67,8 @@ object MobileDimensions {
 
     /** A QR code a phone camera can read from another phone's screen. */
     val qrCodeSize: Dp = 280.dp
+
+    /** The gear badge on the profile's avatar that opens the profile menu and Settings, and its icon. */
+    val profileSettingsBadge: Dp = 14.dp
+    val profileSettingsBadgeIcon: Dp = 10.dp
 }

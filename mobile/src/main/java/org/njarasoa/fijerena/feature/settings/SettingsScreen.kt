@@ -33,6 +33,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.BuildConfig
+import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -51,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -67,7 +69,6 @@ import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsRows
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
-import org.njarasoa.fijerena.feature.settings.components.SettingsScope
 import org.njarasoa.fijerena.feature.settings.components.TmdbAttribution
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
@@ -94,6 +95,8 @@ fun MobileSettingsScreen(
     onLiveSync: () -> Unit = {},
     onGuideSources: (providerId: Long) -> Unit = {},
     onEditProfile: (profileId: String) -> Unit = {},
+    /** The page of the profile in use, at one of its rows (Display's and Playback's rows, G1). */
+    onOpenProfileAt: (profileId: String, at: ProfilePageRow) -> Unit = { _, _ -> },
     onParentalControls: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -408,6 +411,18 @@ fun MobileSettingsScreen(
                         summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                         onClick = { showWatchDelayPicker = true },
                     )
+                    // The profile's, not this device's: set on its page, which the row opens.
+                    val autoplay =
+                        remember(inUse, lifecycleState) {
+                            inUse?.let { profilesViewModel.settingsOf(it.id).autoplayNextEpisode } == true
+                        }
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_autoplay_next_episode_title),
+                        summary =
+                            stringResource(if (autoplay) R.string.common_on else R.string.common_off) + " · " +
+                                stringResource(R.string.settings_profile_row_desc),
+                        onClick = { inUse?.let { guarded { onOpenProfileAt(it.id, ProfilePageRow.AUTOPLAY) } } },
+                    )
                 }
 
                 item {
@@ -430,6 +445,17 @@ fun MobileSettingsScreen(
                                 else -> uiState.language
                             },
                         onClick = { showLanguagePicker = true },
+                    )
+                    // The profile's, not this device's: set on its page, which the row opens.
+                    val uiThemeId = remember(inUse, lifecycleState) { inUse?.let { profilesViewModel.uiThemeOf(it.id) } }
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_theme_and_look_title),
+                        summary =
+                            listOfNotNull(
+                                uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
+                                stringResource(R.string.settings_profile_row_desc),
+                            ).joinToString(" · "),
+                        onClick = { inUse?.let { guarded { onOpenProfileAt(it.id, ProfilePageRow.LOOK) } } },
                     )
                 }
             }

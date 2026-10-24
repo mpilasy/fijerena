@@ -12,7 +12,7 @@ import org.njarasoa.fijerena.core.ui.theme.palettesFor
 import org.njarasoa.fijerena.ui.theme.ProvideLook
 import java.text.Collator
 
-/** Display's Theme and Look and feel rows; they sit in the Display section (SettingsScreen). */
+/** The Theme and Look and Feel rows of a profile's page, in its Look section (ProfileEditPane). */
 @Composable
 fun ThemeSettingsRows(
     selectedThemeId: String,
@@ -21,7 +21,7 @@ fun ThemeSettingsRows(
     onOpenUiStylePicker: () -> Unit,
     themeRowFocusRequester: FocusRequester? = null,
     uiStyleRowFocusRequester: FocusRequester? = null,
-    /** Goes on the Theme row, the group's first focusable — the pane's entry row. */
+    /** Goes on the Theme row. */
     themeRowModifier: Modifier = Modifier,
     /** False while a packaged UI theme sets both. */
     enabled: Boolean = true,

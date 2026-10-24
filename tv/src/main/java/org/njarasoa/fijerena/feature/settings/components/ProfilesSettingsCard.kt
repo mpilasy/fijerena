@@ -51,6 +51,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -228,13 +229,16 @@ fun ProfilesSettingsCard(
  * A profile's page, in place of the Profiles group's rows (D8): name, colour, its own Developer
  * mode and Play next episode automatically, Sources › (with two or more sources), Content
  * filters › (this profile's, on one of its Xtream sources — picked first when it has several, O4 of
- * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, Save /
- * Cancel, and Delete last. Left and Back leave it unsaved, like Cancel. Content filters are saved
- * by their own editor's Save, and Sources by each switch, at once.
+ * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, and Delete
+ * last. Every change applies at once; the name applies when the page is left (Left or Back).
+ * Content filters are saved by their own editor's Save.
  *
  * Without Expert mode the Profiles group shows the profile in use's page in place of its rows:
  * [focusOnOpen] false leaves focus on the Settings rail, and [entryModifier] (on the name row)
  * is where entering the pane lands; [title] reads "Your profile" there.
+ *
+ * [startAt] (Settings' Display and Playback rows) puts focus on that row when the page opens, in
+ * place of the first row.
  */
 @Composable
 fun ProfileEditPane(
@@ -251,6 +255,7 @@ fun ProfileEditPane(
     focusOnOpen: Boolean = true,
     entryModifier: Modifier = Modifier,
     title: String = stringResource(R.string.profile_dialog_edit_title),
+    startAt: ProfilePageRow? = null,
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
     var colorIndex by rememberSaveable(profile.id) { mutableIntStateOf(profile.colorIndex) }
@@ -316,6 +321,7 @@ fun ProfileEditPane(
     val pinFocus = remember { FocusRequester() }
     val childFocus = remember { FocusRequester() }
     val setPinFocus = remember { FocusRequester() }
+    val autoplayFocus = remember { FocusRequester() }
     // "Set a PIN ›" under the Child switch: the PIN of the Expert profile in use.
     var choosingAdminPin by remember { mutableStateOf(false) }
     // The PIN row (the profile pin plan): saved as it is set, like the theme.
@@ -441,6 +447,8 @@ fun ProfileEditPane(
                     returnToLook -> lookFocus
                     returnToSources -> sourcesFocus
                     returnToFavorites -> favoritesFocus
+                    focusOnOpen && startAt == ProfilePageRow.LOOK -> uiThemeFocus
+                    focusOnOpen && startAt == ProfilePageRow.AUTOPLAY -> autoplayFocus
                     focusOnOpen -> if (showsNameAndPin) nameFocus else colourFocus
                     else -> null
                 }
@@ -531,7 +539,7 @@ fun ProfileEditPane(
                 if (showsNameAndPin) {
                     SettingsRow(
                         title = stringResource(R.string.profile_pin_title),
-                        description = stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
+                        description = stringResource(R.string.profile_pin_desc),
                         value = stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off),
                         onClick = pinFlow::start,
                         focusRequester = pinFocus,
@@ -572,6 +580,7 @@ fun ProfileEditPane(
                     },
                     label = stringResource(R.string.settings_autoplay_next_episode_title),
                     description = stringResource(R.string.settings_autoplay_next_episode_desc),
+                    modifier = Modifier.focusRequester(autoplayFocus),
                 )
                 // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
                 // content filters (the parental control).

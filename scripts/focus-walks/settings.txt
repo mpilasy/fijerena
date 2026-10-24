@@ -14,6 +14,9 @@
 # The PIN reminder's text changed 2026-10-24 (settings flow review, Phase 1): line edited by hand,
 # checked in Malagasy with a dump, not re-run in English. A child profile's rail (Your profile and
 # About only) is not walked here.
+# Phase 2 (2026-10-24): Display's Theme and Look and Feel and Playback's Play next episode
+# automatically rows added, the watch delay renamed, Manage Sources in title case. Lines edited by
+# hand, checked in Malagasy with a dump, not re-run in English.
 @start Profiles
 DOWN	Parental controls
 DOWN	Playback
@@ -42,27 +45,36 @@ DOWN	Restore from a file / From a backup file: you choose what to restore / ›
 LEFT	Sync & backup
 # Sources & guide: Manage sources, Guide sources, Guide data maintenance, the TMDB key.
 UP	Sources & guide
-RIGHT	Manage sources
+RIGHT	Manage Sources
 DOWN	Guide sources / The guides for each source’s channels / ›
 DOWN	Guide data maintenance / The guide's downloads and programmes kept on this device
 DOWN	Film and series details (TMDB) / Fills in missing plots, episode summaries and age ratings, and adds title art and More Like This, with your own free TMDB key. Without a key, nothing is sent to TMDB. / On ›
 DOWN	Film and series details (TMDB) / Fills in missing plots, episode summaries and age ratings, and adds title art and More Like This, with your own free TMDB key. Without a key, nothing is sent to TMDB. / On ›
 LEFT	Sources & guide
-# Display (this device's): Text & grid size, Items in Recent, Language. The theme and Look and
-# Feel are on the profile's page.
+# Display (this device's): Text & grid size, Items in Recent, Language; then Theme and Look and
+# Feel, which opens the page of the profile in use in the pane, focus on UI theme; Back returns to
+# the row.
 UP	Display
 RIGHT	Text & grid size / Size of text and everything on screen, on every screen / Auto (HD) ›
 DOWN	Items in Recent / How many films, episodes or channels Recent shows / 25 ›
 DOWN	Language / Language for menus and messages / English ›
+DOWN	Theme and Look and Feel / Set on your profile’s page / Console ›
+CENTER	UI theme / Sets the theme and the Look and Feel together. Custom: pick each one. / Console ›
+BACK	Theme and Look and Feel / Set on your profile’s page / Console ›
 LEFT	Display
 UP	Playback
-# Playback: the watch delay, its only row.
-RIGHT	Add a channel to Last watched after / So a channel you only zap past isn't added / 10 s ›
-DOWN	Add a channel to Last watched after / So a channel you only zap past isn't added / 10 s ›
+# Playback: the watch delay, then Play next episode automatically (the profile's).
+RIGHT	Add a channel to Recent after / So a channel you only zap past isn't added / 10 s ›
 # OK opens the picker in the pane, focus on the current value (10 s by default); Left closes it,
 # focus back on the row.
 CENTER	10 s
-LEFT	Add a channel to Last watched after / So a channel you only zap past isn't added / 10 s ›
+LEFT	Add a channel to Recent after / So a channel you only zap past isn't added / 10 s ›
+# Play next episode automatically opens the page of the profile in use, focus on its switch; Back
+# returns to the row.
+DOWN	Play next episode automatically / Set on your profile’s page / On ›
+CENTER	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends.
+BACK	Play next episode automatically / Set on your profile’s page / On ›
+DOWN	Play next episode automatically / Set on your profile’s page / On ›
 LEFT	Playback
 UP	Parental controls
 UP	Profiles

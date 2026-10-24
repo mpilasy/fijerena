@@ -57,7 +57,6 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
@@ -76,6 +75,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSyncSummaryLine
 import org.njarasoa.fijerena.feature.profile.MobileProfileMenu
+import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -151,7 +151,7 @@ fun MobileSourceTopBar(
                     onClick = { showProfileSheet = true },
                     modifier = Modifier.semantics { contentDescription = switchLabel },
                 ) {
-                    ProfileAvatar(
+                    ProfileSettingsAvatar(
                         name = profile.name,
                         colorIndex = profile.colorIndex,
                         size = MobileDimensions.iconLarge,

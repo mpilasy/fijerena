@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -39,6 +40,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.*
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -53,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
@@ -329,6 +332,8 @@ fun SettingsScreen(
     var picker by rememberSaveable { mutableStateOf<SettingPicker?>(null) }
     // The profile whose page (P9) is open in the pane, as SettingPicker.PROFILE.
     var editingProfileId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The row the profile page opens at, when Display or Playback opened it (G1).
+    var profilePageStart by rememberSaveable { mutableStateOf<ProfilePageRow?>(null) }
     // The list whose pane is open, as SettingPicker.PARENTAL_LIST.
     var parentalList by rememberSaveable { mutableStateOf<ParentalList?>(null) }
     LaunchedEffect(Unit) {
@@ -356,6 +361,19 @@ fun SettingsScreen(
         editingProfileId = profile.id
         picker = SettingPicker.PROFILE
     }
+    // Display's and Playback's rows open the page of the profile in use at their row. As from
+    // Profiles: an Expert gives the PIN first; without Expert mode it is the viewer's own page.
+    val openOwnPageAt: (ProfilePageRow) -> Unit = { row ->
+        inUse?.let { profile ->
+            val open = {
+                returnFocus.leaveFrom(profilePageReturnKey(row), listState)
+                editingProfileId = profile.id
+                profilePageStart = row
+                picker = SettingPicker.PROFILE
+            }
+            if (uiState.isDevMode) guarded(open) else open()
+        }
+    }
     // A profile just added opens its page (sources, filters, PIN are the next things to set) once
     // the list shows it.
     var openWhenListed by rememberSaveable { mutableStateOf<String?>(null) }
@@ -369,6 +387,7 @@ fun SettingsScreen(
     val closeProfile: (deleted: Boolean) -> Unit = { deleted ->
         picker = null
         editingProfileId = null
+        profilePageStart = null
         coroutineScope.launch {
             returnFocus.restoreScroll(listState)
             if (deleted || !returnFocus.requester.requestFocusWithRetry()) contentPane.focusEntry()
@@ -545,11 +564,12 @@ fun SettingsScreen(
                                             adminView = uiState.isDevMode,
                                             focusOnOpen = !ownProfilePage,
                                             title =
-                                                if (ownProfilePage) {
+                                                if (ownProfilePage || profilePageStart != null) {
                                                     stringResource(R.string.profile_own_page_title)
                                                 } else {
                                                     stringResource(R.string.profile_dialog_edit_title)
                                                 },
+                                            startAt = profilePageStart,
                                             entryModifier =
                                                 if (ownProfilePage) {
                                                     Modifier.paneItem(
@@ -639,6 +659,21 @@ fun SettingsScreen(
                                                     watchDelayRowModifier = entryModifier,
                                                 )
                                             }
+                                            item {
+                                                val autoplay =
+                                                    remember(inUse, picker) {
+                                                        inUse?.let { profilesViewModel.settingsOf(it.id).autoplayNextEpisode } == true
+                                                    }
+                                                ProfilePageRowLink(
+                                                    title = stringResource(R.string.settings_autoplay_next_episode_title),
+                                                    value = stringResource(if (autoplay) R.string.common_on else R.string.common_off),
+                                                    onClick = { openOwnPageAt(ProfilePageRow.AUTOPLAY) },
+                                                    focusRequester =
+                                                        returnFocus.requesterFor(
+                                                            profilePageReturnKey(ProfilePageRow.AUTOPLAY),
+                                                        ),
+                                                )
+                                            }
                                         }
 
                                         SettingsGroup.DISPLAY -> {
@@ -661,6 +696,16 @@ fun SettingsScreen(
                                                         rowFocusRequester = returnFocus.requesterFor(SettingPicker.LANGUAGE.returnKey),
                                                     )
                                                 }
+                                            }
+                                            item {
+                                                val uiThemeId =
+                                                    remember(inUse, picker) { inUse?.let { profilesViewModel.uiThemeOf(it.id) } }
+                                                ProfilePageRowLink(
+                                                    title = stringResource(R.string.settings_theme_and_look_title),
+                                                    value = uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
+                                                    onClick = { openOwnPageAt(ProfilePageRow.LOOK) },
+                                                    focusRequester = returnFocus.requesterFor(profilePageReturnKey(ProfilePageRow.LOOK)),
+                                                )
                                             }
                                         }
 
@@ -868,6 +913,28 @@ private const val RETURN_TERMS = "terms"
 private const val RETURN_GUIDE_SOURCES = "guideSources"
 
 private fun profileReturnKey(profileId: String) = "profile:$profileId"
+
+private fun profilePageReturnKey(row: ProfilePageRow) = "profilePage:${row.name}"
+
+/**
+ * A row of Display or Playback that is the profile's, not this device's: its [value] here, set on
+ * the page of the profile in use, which [onClick] opens at that row (G1).
+ */
+@Composable
+private fun ProfilePageRowLink(
+    title: String,
+    value: String?,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester?,
+) {
+    SettingsRow(
+        title = title,
+        description = stringResource(R.string.settings_profile_row_desc),
+        value = value,
+        onClick = onClick,
+        focusRequester = focusRequester,
+    )
+}
 
 // Rail ≈ 30 % of the width, pane ≈ 70 % (plan Part I, B).
 private const val RAIL_WEIGHT = 0.3f

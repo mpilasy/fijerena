@@ -42,6 +42,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.dropSearches
 import org.njarasoa.fijerena.core.navigation.isNewSource
@@ -825,6 +826,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         profileId = route.profileId,
                         viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
                         onBack = { navController.navigateUp() },
+                        startAt = ProfilePageRow.of(route.at),
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous
                             // profile's repository, so start over on its last tab.
@@ -856,6 +858,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         },
                         onEditProfile = { id ->
                             navController.navigateOnce(Screen.ProfileEdit(profileId = id))
+                        },
+                        onOpenProfileAt = { id, at ->
+                            navController.navigateOnce(Screen.ProfileEdit(profileId = id, at = at.name))
                         },
                         onParentalControls = { navController.navigateOnce(Screen.ParentalControls) },
                         onProviderChanged = {

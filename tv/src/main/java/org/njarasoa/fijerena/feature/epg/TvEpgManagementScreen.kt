@@ -75,8 +75,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 /**
  * One source's guide sources (A-9, T6): "Guide sources · <source>", the list under its bulk
  * actions, and an empty state that offers to add one. Each row shows its own auto-refresh, and
- * its Auto-refresh button drills into a picker in place of the list (P5b); guide maintenance is
- * device-wide and lives in Settings (Backup & storage).
+ * its Auto-refresh button drills into a picker in place of the list (P5b). Guide maintenance is
+ * device-wide: its row is at the foot of this list and in Settings (Sources & guide).
  */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable

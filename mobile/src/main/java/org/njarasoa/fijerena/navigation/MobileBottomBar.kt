@@ -42,13 +42,13 @@ import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
+import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
 
 /**
  * The phone's bottom bar tabs (docs/plans/20261019_phone-home-tab-plan.md), in bar order. [route] is
@@ -195,7 +195,7 @@ fun MobileBottomBar(
                 val label = slotProfile?.name ?: tab.label()
                 val icon: @Composable (description: String?) -> Unit = { description ->
                     if (slotProfile != null) {
-                        ProfileAvatar(
+                        ProfileSettingsAvatar(
                             name = slotProfile.name,
                             colorIndex = slotProfile.colorIndex,
                             size = MobileDockStyle.iconSize,

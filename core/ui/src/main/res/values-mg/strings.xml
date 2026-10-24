@@ -549,7 +549,7 @@
     <string name="settings_import_skip_duplicates_button">Tsy raharahaina ny mitovy</string>
     <string name="settings_playback_section_title">Filalaovana</string>
     <string name="settings_playback_watch_delay_desc">Mba tsy hampidirana ny fantsona nolalovana fotsiny</string>
-    <string name="settings_watch_delay_label">Ampidirina ao amin\'ny Vao nojerena farany aorian\'ny (segondra)</string>
+    <string name="settings_watch_delay_label">Ampidirina ao amin\'ny Vao haingana aorian\'ny (segondra)</string>
     <string name="settings_watch_delay_range_format">%1$d–%2$d segondra</string>
     <string name="settings_theme_section_title">Endrika</string>
     <string name="settings_theme_desc">Safidio ny endriky ny loko ho an\'ny rindrankajy</string>
@@ -736,10 +736,6 @@
     <string name="settings_group_source_guide">Loharano sy fitarihana</string>
     <string name="settings_group_display">Fisehoana</string>
     <string name="settings_group_about_advanced">Momba sy mandroso</string>
-    <string name="settings_scope_device">Ity fitaovana ity</string>
-    <string name="settings_scope_profile">Ity mombamomba ity</string>
-    <string name="settings_scope_source">Ity loharano ity</string>
-    <string name="settings_scope_synced">Ampifanarahina</string>
     <string name="settings_applies_immediately">Mihatra avy hatrany ny fanovana eto</string>
     <string name="common_custom">Safidy manokana</string>
     <string name="settings_custom_value_format">%1$s (manokana)</string>
@@ -747,7 +743,7 @@
     <!-- M2 -->
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
-    <string name="settings_watch_delay_row_title">Ampidirina ao amin\'ny Vao nojerena farany ny fantsona aorian\'ny</string>
+    <string name="settings_watch_delay_row_title">Ampidirina ao amin\'ny Vao haingana ny fantsona aorian\'ny</string>
     <string name="settings_language_desc">Fiteny ho an\'ny menio sy ny hafatra</string>
     <!-- M3 -->
     <!-- Phase 3 -->
@@ -991,7 +987,7 @@
     <string name="settings_shrink_database_dev_stats_time">Fampihenana farany: vita tamin\'ny %1$s • naharitra %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">Rakitra %1$d voafafa • %2$s azo indray</string>
     <string name="settings_profiles_title">Mombamomba</string>
-    <string name="settings_profiles_description">Samy manana ny ankafiziny, ny tantaran\'ny fijereny ary ny sokajy vao haingana ny mombamomba tsirairay. Iombonana kosa ny loharano sy ny fandrindrana.</string>
+    <string name="settings_profiles_description">Samy manana ny loharanony, ny endriny, ny ankafiziny, ny tantaran\'ny fijereny ary ny PIN-ny ny mombamomba tsirairay.</string>
     <string name="settings_profiles_add">Hampiditra mombamomba</string>
     <string name="settings_profiles_active_marker">Ampiasaina amin\'ity fitaovana ity</string>
     <string name="profile_dialog_add_title">Mombamomba vaovao</string>
@@ -1319,7 +1315,6 @@
     <string name="profile_pin_on">Mandeha</string>
     <string name="profile_pin_off">Tsy mandeha</string>
     <string name="profile_pin_desc">Angatahina ao amin\'ny fandrindrana alohan\'ny loharano, ny fitehirizana ary ny mombamomba</string>
-    <string name="profile_pin_desc_expert">Angatahina ao amin\'ny fandrindrana alohan\'ny loharano, ny fitehirizana ary ny mombamomba</string>
     <string name="profile_pin_change">Ovay ny PIN</string>
     <string name="profile_pin_remove">Esory ny PIN</string>
     <string name="profile_pin_remove_confirm_title">Hesorina ve ny PIN?</string>
@@ -1432,4 +1427,8 @@
     <string name="wanted_out_on_digital">Efa nivoaka nomerika</string>
     <string name="removed_format">Voaesotra %1$s</string>
     <string name="undo_action">Averina</string>
+    <!-- Settings flow review, Phase 2 -->
+    <string name="common_on">Mandeha</string>
+    <string name="settings_theme_and_look_title">Loko sy endrika</string>
+    <string name="settings_profile_row_desc">Amin’ny pejin’ny mombamomba anao</string>
 </resources>

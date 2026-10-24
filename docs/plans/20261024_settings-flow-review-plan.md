@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phases 1 and 1b done (1b not walked), Phase 2 in progress.
+**Status:** In progress 2026-10-24: Phases 1, 1b and 2 done (1b not walked), Phase 3 next.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
 [Settings audit fixes](./archive/20261017_settings-audit-fixes-plan.md) (archived, private).
@@ -183,7 +183,7 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 |---|---|---|
 | 1. Leaks | Done 2026-10-24 | 97ac753f |
 | 1b. Child lock | Done 2026-10-24 (not walked) | |
-| 2. Grouping and wording | In progress | |
+| 2. Grouping and wording | Done 2026-10-24 | |
 | 3. Admin flows | Not started | |
 | 4. Docs and walks | Not started | |
 
@@ -204,3 +204,20 @@ without a message (nothing a non-Expert sees opens it). (4) `settings.txt`: the 
 hand; the emulator stays in Malagasy, so the English walk was not re-run (checked with a dump: a
 child's rail has only Your profile and About, its page starts on Colour; the picker after Kid has
 no Add profile; Remove PIN shows the confirm, Cancel keeps the PIN).
+
+**Phase 2 done (2026-10-24).** G1: Display ends with "Theme and Look and Feel" (value: the UI
+theme) and Playback with "Play next episode automatically" (value: On / Off), both described "Set
+on your profile's page", after the device rows. They open the page of the profile in use at that
+row: `ProfilePageRow` (core:navigation), TV `ProfileEditPane(startAt)` (focus on UI theme or the
+autoplay switch; Back returns to the opening row by its return key), phone
+`Screen.ProfileEdit(at)` (the page scrolls to the Look or Playback heading). The PIN rule is the
+one of each app's Profiles rows: TV asks it only in Expert mode, the phone as its Profiles row does.
+G2: new Profiles text; the unused phone `SettingsScope` chip, its parameter and its four strings
+removed. G3: the watch delay is "Add a channel to Recent after" (the list's name in the lists and on
+Home cards, "Recent"; "Last watched" stays only as the badge on the last channel's card); its phone
+dialog title too. G4: `ProfileSettingsAvatar` (phone), gear badge from `MobileDimensions`, content
+description "Settings". W1: the heading is "Sources" and the row "Manage Sources" (the CONTRIBUTING
+example; French and Malagasy keep their own case). W3: `profile_pin_desc_expert` removed. W5: also
+`TvEpgManagementScreen` KDoc (said Backup & storage). `settings.txt` edited by hand (Malagasy
+emulator, checked with dumps: both rows show and open the page at their row, Back returns focus
+to the row; the phone avatar shows the badge).

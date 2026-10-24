@@ -59,12 +59,12 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /*
  * The guide's device-wide maintenance, moved out of the per-source EPG Management screen into
- * Settings → Backup & storage (A-9, T6, as M5 did on mobile): a value row that drills into a
+ * Settings → Sources & guide (A-9, T6, as M5 did on mobile): a value row that drills into a
  * sub-pane in place of the group's rows, like the choice pickers. Auto-refresh is set on each
  * guide source's row (the sources guide profiles plan → P5b).
  */
 
-/** "Guide data maintenance" row (Backup & storage): the guide database's state; OK opens [GuideMaintenancePane]. */
+/** "Guide data maintenance" row (Sources & guide): the guide database's state; OK opens [GuideMaintenancePane]. */
 @Composable
 fun GuideMaintenanceRow(
     viewModel: EpgManagementViewModel,

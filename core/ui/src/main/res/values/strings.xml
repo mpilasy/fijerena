@@ -516,8 +516,8 @@
     <string name="player_nav_hint">Use D-pad to navigate • OK to select • BACK to cancel</string>
 
     <!-- Settings: Provider Card -->
-    <string name="settings_provider_section_title">Source</string>
-    <string name="settings_provider_manage_button">Manage sources</string>
+    <string name="settings_provider_section_title">Sources</string>
+    <string name="settings_provider_manage_button">Manage Sources</string>
 
     <!-- EPG Management extras -->
     <string name="epg_source_phase_format">%1$s…</string>
@@ -702,7 +702,7 @@
     <string name="settings_import_skip_duplicates_button">Skip duplicates</string>
     <string name="settings_playback_section_title">Playback</string>
     <string name="settings_playback_watch_delay_desc">So a channel you only zap past isn\'t added</string>
-    <string name="settings_watch_delay_label">Add to Last watched after (seconds)</string>
+    <string name="settings_watch_delay_label">Add to Recent after (seconds)</string>
     <string name="settings_watch_delay_range_format">%1$d–%2$d seconds</string>
     <string name="settings_theme_section_title">Theme</string>
     <string name="settings_theme_desc">Select a colour theme for the app</string>
@@ -858,7 +858,7 @@
     <string name="provider_error_save_failed">Failed to save source</string>
     <!-- Profiles (the live sync plan → User profiles) -->
     <string name="settings_profiles_title">Profiles</string>
-    <string name="settings_profiles_description">Each profile has its own favourites, watch history and recent categories. Sources and settings are shared.</string>
+    <string name="settings_profiles_description">Each profile has its own sources, look, favourites, watch history and PIN.</string>
     <string name="settings_profiles_add">Add profile</string>
     <string name="settings_profiles_active_marker">Using on this device</string>
     <string name="profile_dialog_add_title">New profile</string>
@@ -994,10 +994,6 @@
     <string name="settings_group_source_guide">Sources &amp; guide</string>
     <string name="settings_group_display">Display</string>
     <string name="settings_group_about_advanced">About &amp; advanced</string>
-    <string name="settings_scope_device">This device</string>
-    <string name="settings_scope_profile">This profile</string>
-    <string name="settings_scope_source">This source</string>
-    <string name="settings_scope_synced">Synced</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>
@@ -1005,7 +1001,7 @@
     <!-- M2 -->
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
-    <string name="settings_watch_delay_row_title">Add a channel to Last watched after</string>
+    <string name="settings_watch_delay_row_title">Add a channel to Recent after</string>
     <string name="settings_language_desc">Language for menus and messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->
@@ -1325,7 +1321,6 @@
     <string name="profile_pin_on">On</string>
     <string name="profile_pin_off">Off</string>
     <string name="profile_pin_desc">Asked in Settings before sources, backups and profiles</string>
-    <string name="profile_pin_desc_expert">Asked in Settings before sources, backups and profiles</string>
     <string name="profile_pin_change">Change PIN</string>
     <string name="profile_pin_remove">Remove PIN</string>
     <string name="profile_pin_remove_confirm_title">Remove the PIN?</string>
@@ -1438,4 +1433,8 @@
     <string name="wanted_out_on_digital">Out on digital</string>
     <string name="removed_format">Removed %1$s</string>
     <string name="undo_action">Undo</string>
+    <!-- Settings flow review, Phase 2 -->
+    <string name="common_on">On</string>
+    <string name="settings_theme_and_look_title">Theme and Look and Feel</string>
+    <string name="settings_profile_row_desc">Set on your profile’s page</string>
 </resources>

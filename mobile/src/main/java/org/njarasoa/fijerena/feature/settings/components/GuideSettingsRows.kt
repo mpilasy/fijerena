@@ -38,7 +38,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /*
- * The guide's device-wide maintenance, in Settings → Backup & storage (A-9, M5). Auto-refresh is
+ * The guide's device-wide maintenance, in Settings → Sources & guide (A-9, M5). Auto-refresh is
  * set on each guide source's row
  * (the sources guide profiles plan → P5b).
  */

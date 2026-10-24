@@ -23,8 +23,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
@@ -58,7 +61,6 @@ import org.njarasoa.fijerena.feature.settings.components.ProfileSwitchRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
-import org.njarasoa.fijerena.feature.settings.components.SettingsScope
 import org.njarasoa.fijerena.ui.components.LeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -73,10 +75,11 @@ import java.text.Collator
  * A profile's page (`Screen.ProfileEdit`, D8): name, colour, its own Developer mode and Play next
  * episode automatically, Sources › (with two or more sources), Content filters › (this profile's,
  * on one of its Xtream sources — picked first when it has several, O4 of
- * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, Save / Cancel,
- * and Delete last.
- * Content filters are saved by their own editor's Save, and Sources by each switch, at once; the
- * rest by Save. See the sources guide profiles plan → P9.
+ * docs/plans/20261012_multi-source-search-history-plan.md), Switch to this profile, and Delete
+ * last. Every change applies at once; the name applies when the page is left. Content filters
+ * are saved by their own editor's Save. See the sources guide profiles plan → P9.
+ *
+ * [startAt] (Settings' Display and Playback rows) scrolls the page to that row when it opens.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +89,7 @@ fun MobileProfileEditScreen(
     viewModel: ProfilesViewModel,
     onBack: () -> Unit,
     onProfileSwitched: () -> Unit,
+    startAt: ProfilePageRow? = null,
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     // Content filters act on Xtream catalogues only (as they did in Edit Source).
@@ -305,13 +309,26 @@ fun MobileProfileEditScreen(
             BackHandler(onBack = leave)
             leavePage.action = leave
             val inset = Modifier.padding(horizontal = Spacing.md)
+            // The row the page opens at: once, when its place is known.
+            val scrollState = rememberScrollState()
+            var startAtY by remember { mutableStateOf<Int?>(null) }
+            var scrolledToStart by rememberSaveable { mutableStateOf(startAt == null) }
+            LaunchedEffect(startAtY) {
+                startAtY?.takeIf { !scrolledToStart }?.let {
+                    scrollState.scrollTo(it)
+                    scrolledToStart = true
+                }
+            }
+            val startMarker = { row: ProfilePageRow ->
+                if (row == startAt) Modifier.onPlaced { startAtY = it.positionInParent().y.toInt() } else Modifier
+            }
 
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                         .padding(vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
@@ -337,12 +354,12 @@ fun MobileProfileEditScreen(
                         title = stringResource(R.string.profile_pin_title),
                         summary =
                             stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off) + " · " +
-                                stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
+                                stringResource(R.string.profile_pin_desc),
                         onClick = pinFlow::start,
                     )
                 }
 
-                SettingsGroupHeader(stringResource(R.string.profile_section_look))
+                SettingsGroupHeader(stringResource(R.string.profile_section_look), modifier = startMarker(ProfilePageRow.LOOK))
                 SettingsListRow(
                     title = stringResource(R.string.ui_theme_title),
                     summary = stringResource(uiThemeNameRes(uiThemeId)) + " · " + stringResource(R.string.ui_theme_desc),
@@ -371,7 +388,10 @@ fun MobileProfileEditScreen(
                     modifier = inset,
                 )
 
-                SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
+                SettingsGroupHeader(
+                    stringResource(R.string.settings_playback_section_title),
+                    modifier = startMarker(ProfilePageRow.AUTOPLAY),
+                )
                 ProfileSwitchRow(
                     title = stringResource(R.string.settings_autoplay_next_episode_title),
                     checked = autoplayNextEpisode,

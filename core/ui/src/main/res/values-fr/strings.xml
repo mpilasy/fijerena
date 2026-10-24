@@ -512,7 +512,7 @@
     <string name="player_stats_stream_health">Santé du flux</string>
 
     <!-- Settings: Provider Card -->
-    <string name="settings_provider_section_title">Source</string>
+    <string name="settings_provider_section_title">Sources</string>
     <string name="settings_provider_manage_button">Gérer les sources</string>
 
     <!-- EPG Management extras -->
@@ -666,7 +666,7 @@
     <string name="settings_import_skip_duplicates_button">Ignorer les doublons</string>
     <string name="settings_playback_section_title">Lecture</string>
     <string name="settings_playback_watch_delay_desc">Pour qu\'une chaîne seulement survolée en zappant ne soit pas ajoutée</string>
-    <string name="settings_watch_delay_label">Ajouter aux Dernières regardées après (secondes)</string>
+    <string name="settings_watch_delay_label">Ajouter aux Récents après (secondes)</string>
     <string name="settings_watch_delay_range_format">%1$d–%2$d secondes</string>
     <string name="settings_theme_section_title">Thème</string>
     <string name="settings_theme_desc">Choisir un thème de couleur pour l\'application</string>
@@ -822,7 +822,7 @@
     <string name="provider_error_save_failed">Échec de l\'enregistrement de la source</string>
     <!-- Profils (the live sync plan → User profiles) -->
     <string name="settings_profiles_title">Profils</string>
-    <string name="settings_profiles_description">Chaque profil a ses propres favoris, historique et catégories récentes. Les sources et les paramètres sont partagés.</string>
+    <string name="settings_profiles_description">Chaque profil a ses propres sources, son apparence, ses favoris, son historique et son code PIN.</string>
     <string name="settings_profiles_add">Ajouter un profil</string>
     <string name="settings_profiles_active_marker">Utilisé sur cet appareil</string>
     <string name="profile_dialog_add_title">Nouveau profil</string>
@@ -958,10 +958,6 @@
     <string name="settings_group_source_guide">Sources et guide</string>
     <string name="settings_group_display">Affichage</string>
     <string name="settings_group_about_advanced">À propos et avancé</string>
-    <string name="settings_scope_device">Cet appareil</string>
-    <string name="settings_scope_profile">Ce profil</string>
-    <string name="settings_scope_source">Cette source</string>
-    <string name="settings_scope_synced">Synchronisé</string>
     <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>
@@ -969,7 +965,7 @@
     <!-- M2 -->
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
-    <string name="settings_watch_delay_row_title">Ajouter une chaîne aux Dernières regardées après</string>
+    <string name="settings_watch_delay_row_title">Ajouter une chaîne aux Récents après</string>
     <string name="settings_language_desc">Langue des menus et des messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->
@@ -1327,7 +1323,6 @@
     <string name="profile_pin_on">Activé</string>
     <string name="profile_pin_off">Désactivé</string>
     <string name="profile_pin_desc">Demandé dans les réglages avant les sources, les sauvegardes et les profils</string>
-    <string name="profile_pin_desc_expert">Demandé dans les réglages avant les sources, les sauvegardes et les profils</string>
     <string name="profile_pin_change">Changer le code PIN</string>
     <string name="profile_pin_remove">Supprimer le code PIN</string>
     <string name="profile_pin_remove_confirm_title">Supprimer le code PIN ?</string>
@@ -1440,4 +1435,8 @@
     <string name="wanted_out_on_digital">Sorti en numérique</string>
     <string name="removed_format">%1$s retiré</string>
     <string name="undo_action">Annuler</string>
+    <!-- Settings flow review, Phase 2 -->
+    <string name="common_on">Activé</string>
+    <string name="settings_theme_and_look_title">Thème et apparence</string>
+    <string name="settings_profile_row_desc">Se règle sur la page de votre profil</string>
 </resources>

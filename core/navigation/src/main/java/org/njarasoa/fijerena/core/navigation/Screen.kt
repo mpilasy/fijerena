@@ -39,10 +39,14 @@ sealed interface Screen {
      * A profile's page (mobile; TV opens it inside Settings): name, colour, its own settings, its
      * content filters (on a source of its own), Switch to this profile, Delete. See
      * the sources guide profiles plan → P9.
+     *
+     * @param at The name of a [ProfilePageRow] to show first (Settings' Display and Playback rows
+     *   that open the profile in use's page), or null for the top of the page.
      */
     @Serializable
     data class ProfileEdit(
         val profileId: String,
+        val at: String? = null,
     ) : Screen
 
     /**
