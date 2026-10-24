@@ -226,7 +226,7 @@ fun SettingsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            epgViewModel.toastMessage.collect { message ->
+            epgViewModel.userMessage.collect { message ->
                 android.widget.Toast
                     .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
                     .show()

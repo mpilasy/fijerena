@@ -161,7 +161,7 @@ fun MobileEpgBrowserScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
-        viewModel.toastMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+        viewModel.userMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
     }
 
     val isRefreshing =

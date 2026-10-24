@@ -183,8 +183,8 @@ class EpgManagementViewModel(
     private val _cellularDialog = MutableStateFlow<CellularConfirmDialog>(CellularConfirmDialog.Hidden)
     val cellularDialog: StateFlow<CellularConfirmDialog> = _cellularDialog.asStateFlow()
 
-    private val _toastMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
-    val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()
+    private val _userMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val userMessage: SharedFlow<UiText> = _userMessage.asSharedFlow()
 
     private val _hasStrayFiles = MutableStateFlow(false)
     val hasStrayFiles: StateFlow<Boolean> = _hasStrayFiles.asStateFlow()
@@ -306,7 +306,7 @@ class EpgManagementViewModel(
         val taskId = EpgFileManager.refreshStaleTaskId(providerId)
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
@@ -320,7 +320,7 @@ class EpgManagementViewModel(
                 }.filter { EpgRefreshSchedule.isStale(it, now, unsetHours) && !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stale_sources))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_stale_sources))
                 return@launchGuarded
             }
 
@@ -356,14 +356,14 @@ class EpgManagementViewModel(
         val taskId = EpgFileManager.refreshFailedTaskId(providerId)
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
         viewModelScope.launchGuarded("EpgManagementViewModel.refreshFailed") {
             val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources(providerId) }
             if (sources.isEmpty()) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
                 return@launchGuarded
             }
 
@@ -399,7 +399,7 @@ class EpgManagementViewModel(
         val taskId = "epg_refresh_source_$sourceId"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
@@ -440,11 +440,11 @@ class EpgManagementViewModel(
                 }
             _hasStrayFiles.value = false
             if (result.filesDeleted > 0) {
-                _toastMessage.tryEmit(
+                _userMessage.tryEmit(
                     UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, NumberUtils.formatBytes(result.bytesFreed)),
                 )
             } else {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
             }
         }
     }
@@ -462,7 +462,7 @@ class EpgManagementViewModel(
             _staleProgrammeCount.value = 0
             _hasStrayFiles.value = false
             _taskSourceIds.value = emptyMap()
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_data_cleared))
+            _userMessage.tryEmit(UiText.StringResource(R.string.epg_data_cleared))
         }
     }
 
@@ -476,9 +476,9 @@ class EpgManagementViewModel(
             refreshDbStats()
             refreshMaintenanceState()
             if (deleted > 0) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_purged_programmes, deleted))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_purged_programmes, deleted))
             } else {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_old_programmes))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_old_programmes))
             }
         }
     }

@@ -713,7 +713,7 @@ private fun MobileSearchGuideTab(
     val guideViewModel: EpgBrowserViewModel =
         viewModel(factory = remember { EpgBrowserViewModelFactory(context.applicationContext, null, 0L) })
     LaunchedEffect(guideViewModel) {
-        guideViewModel.toastMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
+        guideViewModel.userMessage.collect { snackbarHostState.showSnackbar(it.asString(context)) }
     }
     // Shown with text it last ran another query for (or none): run it here (D3).
     LaunchedEffect(guideViewModel) {

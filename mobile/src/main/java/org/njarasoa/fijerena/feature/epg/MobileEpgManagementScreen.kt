@@ -92,7 +92,7 @@ fun MobileEpgManagementScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.toastMessage.collect { message ->
+            viewModel.userMessage.collect { message ->
                 android.widget.Toast
                     .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
                     .show()

@@ -180,7 +180,7 @@ fun MobileSettingsScreen(
     }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            epgViewModel.toastMessage.collect { message ->
+            epgViewModel.userMessage.collect { message ->
                 Toast.makeText(context, message.asString(context), Toast.LENGTH_SHORT).show()
             }
         }

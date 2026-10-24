@@ -112,7 +112,7 @@ fun TvEpgManagementScreen(
     val nowMs = remember { System.currentTimeMillis() }
 
     LaunchedEffect(Unit) {
-        viewModel.toastMessage.collect { message ->
+        viewModel.userMessage.collect { message ->
             android.widget.Toast
                 .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
                 .show()

@@ -273,8 +273,8 @@ class EpgBrowserViewModel(
             .map { list -> list.count { it.enabled && it.lastIngestedAtMs == 0L } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    private val _toastMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
-    val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()
+    private val _userMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val userMessage: SharedFlow<UiText> = _userMessage.asSharedFlow()
 
     fun refreshStale() {
         viewModelScope.launch {
@@ -283,12 +283,12 @@ class EpgBrowserViewModel(
             val providerIds =
                 withContext(Dispatchers.IO) { GuideScope.searchedProviders(providerRepository.profileSourcesList()).map { it.id } }
             if (providerIds.isEmpty()) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
             }
             val taskId = EpgFileManager.refreshStaleTaskId(providerIds)
             if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launch
             }
             val now = System.currentTimeMillis()
@@ -299,10 +299,10 @@ class EpgBrowserViewModel(
                     providerIds.flatMap { sourceDao.getEnabledSourcesForProvider(it) }
                 }.filter { it.lastIngestedAtMs == 0L || isOlderThanInterval(it, now, unsetHours) }
             if (stale.isEmpty()) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
             }
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refreshing_stale, stale.size))
+            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refreshing_stale, stale.size))
             epgFileManager.launchRefreshStale(providerIds)
         }
     }
