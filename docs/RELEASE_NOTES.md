@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.7.5
 
 - **A picture instead of "Buffering…":** while a stream loads, a film shows a camera iris that opens as the video arrives, an episode a film reel that turns at the download speed, and a channel a ring that fills around its logo. They turn amber when the connection is too slow. The title's or channel's logo (or its name) shows at the top left. Expert mode keeps its buffering details under the picture. TV and phone.
 - **No black screen when a stream stalls:** when a film or channel that was playing waits or reconnects, its last picture stays on screen, and the indicator takes a colour from it. A new film or channel still starts from black.
