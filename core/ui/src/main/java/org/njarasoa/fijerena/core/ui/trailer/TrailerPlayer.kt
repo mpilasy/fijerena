@@ -35,6 +35,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -203,6 +204,7 @@ private val VIDEO_GONE =
 @Composable
 fun TrailerHost(content: @Composable () -> Unit) {
     val context = LocalContext.current
+    val unavailable = stringResource(R.string.trailer_unavailable)
     var request by remember { mutableStateOf<TrailerRequest?>(null) }
     val launcher =
         remember(context) {
@@ -229,7 +231,7 @@ fun TrailerHost(content: @Composable () -> Unit) {
                         }
 
                         error in VIDEO_GONE -> {
-                            Toast.makeText(context, context.getString(R.string.trailer_unavailable), Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, unavailable, Toast.LENGTH_LONG).show()
                         }
 
                         else -> {
