@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -17,6 +18,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import java.lang.ref.WeakReference
 
 /**
  * Bare ExoPlayer surface bound to the single app-wide playback engine
@@ -42,12 +44,22 @@ fun EmbeddedPlayerSurface(
     // Media3's bottom padding fraction: that one only moves cues without a line position, and
     // many subtitle files give every cue one.
     subtitleBottomInsetPx: Int = 0,
+    // Full-screen players: keep the last frame on screen while the same stream waits or reconnects,
+    // instead of black. A new stream still starts from black (newStreamStarting below). The preview
+    // panes keep Media3's default: black whenever the player has no tracks.
+    keepLastFrame: Boolean = false,
+    // Gets the video view, so the frame on screen can be copied.
+    sceneFrame: SceneFrame? = null,
 ) {
     // The playback service is created asynchronously; bump a tick once it's ready (and if it is
     // recycled) so the AndroidView update block re-runs and (re)binds the live player.
     var bindTick by remember { mutableIntStateOf(0) }
+    // True until the stream on screen draws its first frame; black until then.
+    var newStreamStarting by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
-        if (StreamingPlaybackService.awaitInstanceOrNull() != null) bindTick++
+        val service = StreamingPlaybackService.awaitInstanceOrNull() ?: return@LaunchedEffect
+        bindTick++
+        if (keepLastFrame) service.newStreamStarting.collect { newStreamStarting = it }
     }
 
     AndroidView(
@@ -69,6 +81,10 @@ fun EmbeddedPlayerSurface(
                 // letterbox/pillarbox bars RESIZE_MODE_FIT leaves around content whose aspect
                 // ratio doesn't match the view's. Cinema bars read as black regardless of theme.
                 setBackgroundColor(android.graphics.Color.BLACK)
+                // Media3 closes its shutter (black) whenever the player has no tracks: on every
+                // reconnect of the same stream too. Kept open here; the update block closes it for a
+                // new stream.
+                setKeepContentOnPlayerReset(keepLastFrame)
                 this.resizeMode = resizeMode
                 // Subtitle text sized on the whole view, as PlayerView sets it (the device's caption
                 // scale included) but ignoring padding, so lifting them above the controls
@@ -80,6 +96,7 @@ fun EmbeddedPlayerSurface(
                 isFocusable = false
                 isFocusableInTouchMode = false
                 descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                sceneFrame?.videoView = WeakReference(videoSurfaceView)
             }
         },
         modifier = modifier,
@@ -95,6 +112,18 @@ fun EmbeddedPlayerSurface(
             if (view.player != player) {
                 view.player = player
             }
+            // The service's own value too: the state above lags it, and closing the shutter after
+            // the first frame (which opens it) would leave the stream black.
+            val starting = newStreamStarting && StreamingPlaybackService.getInstance()?.newStreamStarting?.value == true
+            if (keepLastFrame && starting) {
+                // A new stream: the surface still holds the previous one's last frame. The shutter
+                // (Media3's black cover) hides it; PlayerView opens it again on the new stream's
+                // first frame.
+                view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_shutter)?.visibility = android.view.View.VISIBLE
+            }
+            if (sceneFrame != null && sceneFrame.videoView?.get() !== view.videoSurfaceView) {
+                sceneFrame.videoView = WeakReference(view.videoSurfaceView)
+            }
         },
         // The shared engine's ExoPlayer instance outlives this composable and keeps whatever
         // SurfaceView/TextureView it was last bound to as its video output. Without detaching
@@ -102,6 +131,9 @@ fun EmbeddedPlayerSurface(
         // unmounting as focus/layout changes) leaks the old PlayerView — and the Surface behind
         // it, a SurfaceFlinger-tracked resource, not just Java heap — for the rest of the process
         // lifetime.
-        onRelease = { view -> view.player = null },
+        onRelease = { view ->
+            view.player = null
+            sceneFrame?.videoView = null
+        },
     )
 }

@@ -197,6 +197,14 @@ class StreamingPlaybackService : MediaSessionService() {
     private var healthMonitor: org.njarasoa.fijerena.core.player.network.StreamHealthMonitor? = null
     private var lastHealthCheckPosition: Long = -1L
 
+    // True from a new stream's start until its first frame is drawn. The full-screen surface keeps
+    // the last frame through a same-stream wait or reconnect (reprepare(), a recycle, a stream freed
+    // while paused), but must not keep the previous channel or title frozen under a new one: while
+    // this is true it shows black. Only a drawn frame clears it; an error before that keeps it, as
+    // the surface still holds the previous stream's last frame.
+    private val _newStreamStarting = MutableStateFlow(true)
+    val newStreamStarting: StateFlow<Boolean> = _newStreamStarting.asStateFlow()
+
     private val _isRecycling = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
 
@@ -596,6 +604,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 onAccountBusy = ::handleAccountBusy,
                 isCatchup = { _currentMetadata.value.catchupLabel != null },
                 streamStartTimeMs = { _streamStartTimeMs.value },
+                onFirstFrame = ::onFirstFrameRendered,
             )
         player.addListener(playerListener!!)
 
@@ -773,6 +782,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 return
             }
 
+        // Black until this stream draws a frame: the old one's last frame must not show under it.
+        _newStreamStarting.value = true
         // Fully release the outgoing renderer/decoder session before starting the next one.
         // setMediaSource() alone replaces the playlist but can reuse the existing renderer
         // rather than releasing it, which on this emulator's decoder leaves the old codec
@@ -1192,6 +1203,11 @@ class StreamingPlaybackService : MediaSessionService() {
         _slowConnection.value = null
     }
 
+    /** The stream on screen drew a frame: from now on a wait or reconnect keeps its last frame. */
+    internal fun onFirstFrameRendered() {
+        _newStreamStarting.value = false
+    }
+
     fun pause() {
         pausedInApp = true
         mediaSession?.player?.pause()
@@ -1238,6 +1254,8 @@ class StreamingPlaybackService : MediaSessionService() {
         // through playStream(), never this item (docs/plans/20261017_xtream-stream-release-plan.md → Phase 4).
         mediaSession?.player?.clearMediaItems()
         _playbackState.value = PlaybackState.Idle
+        // A stopped stream is not kept on screen: whatever plays next starts from black.
+        _newStreamStarting.value = true
         // A remote Stop sent for the playback just stopped must not reach the next one. Idle
         // publishes nothing, so the new id is not shown until something plays.
         playSessionId.value = UUID.randomUUID().toString()
@@ -1546,6 +1564,7 @@ class StreamingPlaybackService : MediaSessionService() {
             mainHandler.removeCallbacks(recycleHandler)
             mainHandler.removeCallbacks(recoveryExhaustedHandler)
             _playbackState.value = PlaybackState.Idle
+            _newStreamStarting.value = true
         }
         val session = mediaSession
         releaseStage("finalSave") {
@@ -1642,6 +1661,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
         // after a new stream can log total prepare-to-ready latency.
         private val streamStartTimeMs: () -> Long = { 0L },
+        private val onFirstFrame: () -> Unit = {},
     ) : Player.Listener {
         private var isInErrorState = false
         private var errorHeldUntilReady = false
@@ -1718,6 +1738,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
         override fun onRenderedFirstFrame() {
             renderedFirstFrame = true
+            onFirstFrame()
         }
 
         override fun onTracksChanged(tracks: Tracks) {

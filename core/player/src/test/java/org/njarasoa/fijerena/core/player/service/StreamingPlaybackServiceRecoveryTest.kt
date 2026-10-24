@@ -347,4 +347,69 @@ class StreamingPlaybackServiceRecoveryTest {
         service.handleFinalError("Connection lost")
         verify(exactly = 2) { lock.release() }
     }
+
+    // The full-screen surface keeps the last frame unless newStreamStarting is set.
+
+    @Test
+    fun `a new stream starts from black until its first frame`() {
+        service.playStream(live)
+        assertTrue(service.newStreamStarting.value)
+
+        service.onFirstFrameRendered()
+        assertFalse(service.newStreamStarting.value)
+
+        service.playStream(live.copy(streamUrl = "http://example.test/live/2.ts"))
+        assertTrue(service.newStreamStarting.value)
+    }
+
+    @Test
+    fun `a reconnect of the same stream keeps its last frame`() {
+        service.playStream(live)
+        service.onFirstFrameRendered()
+
+        service.handleStreamEndedOrError("Network failed")
+        posted.single().first.run()
+        service.performSeamlessRecycle(live, currentPos = 10_000)
+
+        assertFalse(service.newStreamStarting.value)
+    }
+
+    @Test
+    fun `a film freed while paused keeps its last frame through the reopen`() {
+        service.playStream(vod)
+        service.onFirstFrameRendered()
+        pausedAt(60_000L)
+
+        service.freePausedHandler.run()
+        every { player.playWhenReady } returns true
+        val posts = mutableListOf<Runnable>()
+        every { handler.post(any()) } answers {
+            posts += firstArg<Runnable>()
+            true
+        }
+        service.runHeldRetry()
+        posts.single().run()
+
+        assertFalse(service.newStreamStarting.value)
+    }
+
+    @Test
+    fun `an error before the first frame keeps the screen black`() {
+        service.playStream(live)
+
+        service.handleStreamEndedOrError("Network failed")
+        posted.single().first.run()
+
+        assertTrue("the previous stream's last frame is still on the surface", service.newStreamStarting.value)
+    }
+
+    @Test
+    fun `a stopped stream is not kept on screen`() {
+        service.playStream(vod)
+        service.onFirstFrameRendered()
+
+        service.stop()
+
+        assertTrue(service.newStreamStarting.value)
+    }
 }
