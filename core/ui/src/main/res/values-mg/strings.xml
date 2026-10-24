@@ -1023,7 +1023,7 @@
     <string name="profile_child_last_expert">Tsy afaka ho mombamomba ankizy ny hany manam-pahaizana: omeo mombamomba hafa aloha ny manam-pahaizana.</string>
     <string name="profile_source_no_filters">Tsy mahatratra ity loharano ity ny sivana votoaty</string>
     <string name="settings_pin_nudge_title">Mametraha PIN ho an\'ny Fandrindrana</string>
-    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy PIN: afaka manokatra ny Fandrindrana, manova ny sivana votoaty, na mampandeha ny manam-pahaizana amin\'ny tsindry 7 ny olona rehetra.</string>
+    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy manam-pahaizana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary afaka manova ny loharano, ny sivana votoaty sy ny mombamomba, na mampandeha ny manam-pahaizana amin\'ny tsindry 7 ny olona rehetra.</string>
     <string name="profile_sources_title">Loharano</string>
     <string name="profile_sources_count_format">%1$d amin\'ny %2$d</string>
     <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray.</string>
@@ -1299,6 +1299,7 @@
     </plurals>
     <string name="home_sources_status_title">Ny loharanonao</string>
     <string name="home_no_sources">Mbola tsy manana loharano ity mombamomba ity.</string>
+    <string name="home_no_sources_ask">Mbola tsy manana loharano ity mombamomba ity. Angataho olon-dehibe hanampy iray.</string>
     <string name="home_only_browse_sources">Misafidiana loharano hojerena.</string>
     <string name="settings_provider_expires_label">Ho tapitra</string>
     <string name="settings_provider_max_connections_label">Fifandraisana fara-fahabetsahany</string>
@@ -1321,6 +1322,9 @@
     <string name="profile_pin_desc_expert">Angatahina ao amin\'ny fandrindrana alohan\'ny loharano, ny fitehirizana ary ny mombamomba</string>
     <string name="profile_pin_change">Ovay ny PIN</string>
     <string name="profile_pin_remove">Esory ny PIN</string>
+    <string name="profile_pin_remove_confirm_title">Hesorina ve ny PIN?</string>
+    <string name="profile_pin_remove_confirm_text">Tsy hangataka PIN intsony ny Fandrindrana amin\'ity mombamomba ity.</string>
+    <string name="profile_pin_remove_last_expert">Ity no PIN farany an\'ny manam-pahaizana: mijanona ny hidin\'ny ankizy amin\'ny fitaovana rehetra mifandray amin\'ny fampifanarahana.</string>
     <string name="pin_choose">Mifidiana PIN misy isa 4</string>
     <string name="pin_repeat">Ampidiro indray ilay PIN</string>
     <string name="pin_mismatch">Tsy mitovy ireo PIN roa: mifidiana indray.</string>

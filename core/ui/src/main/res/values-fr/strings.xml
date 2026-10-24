@@ -855,7 +855,7 @@
     <string name="profile_child_last_expert">Le seul profil en mode expert ne peut pas être un profil enfant : donnez d\'abord le mode expert à un autre profil.</string>
     <string name="profile_source_no_filters">Les filtres de contenu n\'agissent pas sur cette source</string>
     <string name="settings_pin_nudge_title">Définir un code PIN pour les paramètres</string>
-    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun code PIN : n\'importe qui peut ouvrir les paramètres, changer les filtres de contenu ou activer le mode expert en 7 appuis.</string>
+    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil expert n\'a de code PIN : un enfant peut passer à n\'importe quel profil, et n\'importe qui peut changer les sources, les filtres de contenu et les profils, ou activer le mode expert en 7 appuis.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d sur %2$d</string>
     <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n\'est activée que pour le profil qui l\'a ajoutée. Un profil garde au moins une source.</string>
@@ -1307,6 +1307,7 @@
     </plurals>
     <string name="home_sources_status_title">Vos sources</string>
     <string name="home_no_sources">Ce profil n\'a encore aucune source.</string>
+    <string name="home_no_sources_ask">Ce profil n\'a encore aucune source. Demande à un adulte d\'en ajouter une.</string>
     <string name="home_only_browse_sources">Choisissez une source à parcourir.</string>
     <string name="settings_provider_expires_label">Expire le</string>
     <string name="settings_provider_max_connections_label">Connexions max.</string>
@@ -1329,6 +1330,9 @@
     <string name="profile_pin_desc_expert">Demandé dans les réglages avant les sources, les sauvegardes et les profils</string>
     <string name="profile_pin_change">Changer le code PIN</string>
     <string name="profile_pin_remove">Supprimer le code PIN</string>
+    <string name="profile_pin_remove_confirm_title">Supprimer le code PIN ?</string>
+    <string name="profile_pin_remove_confirm_text">Les paramètres ne demanderont plus de code PIN sur ce profil.</string>
+    <string name="profile_pin_remove_last_expert">C\'est le dernier code PIN d\'un profil expert : le verrou enfant s\'arrête sur tous les appareils liés par la synchronisation.</string>
     <string name="pin_choose">Choisissez un code PIN à 4 chiffres</string>
     <string name="pin_repeat">Saisissez de nouveau le même code PIN</string>
     <string name="pin_mismatch">Les deux codes PIN diffèrent : choisissez-en un de nouveau.</string>

@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phases 1 and 1b. Reviewed from the code only; no
+**Status:** In progress 2026-10-24: Phase 1 done, Phase 1b in progress. Reviewed from the code only; no
 emulator walk yet.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
@@ -173,8 +173,26 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Leaks | In progress | |
+| 1. Leaks | Done 2026-10-24 | |
 | 1b. Child lock | In progress | |
 | 2. Grouping and wording | Not started | |
 | 3. Admin flows | Not started | |
 | 4. Docs and walks | Not started | |
+
+**Phase 1 done (2026-10-24).** L1: Home (TV) and a tab root (phone) without Expert mode read
+"This profile has no source yet. Ask a grown-up to add one." with no button (TV focus stays on the
+rail); both nav gates pop a new-source `AddProvider` for a non-Expert (`isNewSource`, before any
+PIN prompt), Expert followed live through `AppSettings.observeDevMode`. L2: the TV picker lists
+Add profile only for an Expert in use; its PIN rule is unchanged (E7). L3: `SettingsGroup.visibleFor`
+takes `child` (Profiles and About only); the phone hides Playback and Display for a child. L4:
+`ProfileSettings.showsNameAndPin` (TV page starts on Colour). L6: `ProfilePinFlow.Step.CONFIRM_REMOVE`;
+the last-Expert sentence from `ProfilesViewModel.isLastAdminPin`. W2: the nudge text.
+Deviations: (1) the L2 race is possible, not seen: `SettingsViewModel` read Expert at creation and
+on resume only, while `ensureAnExpert` runs in the startup coroutine after other steps. Fixed by
+collecting `observeDevMode` in `SettingsViewModel` (re-reads Expert and the child flag on change).
+(2) The Remove PIN confirm always has one body sentence ("Settings will not ask for a PIN on this
+profile any more."), the last-Expert sentence after it. (3) The refused new-source screen closes
+without a message (nothing a non-Expert sees opens it). (4) `settings.txt`: the nudge line edited by
+hand; the emulator stays in Malagasy, so the English walk was not re-run (checked with a dump: a
+child's rail has only Your profile and About, its page starts on Colour; the picker after Kid has
+no Add profile; Remove PIN shows the confirm, Cancel keeps the PIN).

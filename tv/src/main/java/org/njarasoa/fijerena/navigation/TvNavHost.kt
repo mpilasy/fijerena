@@ -33,8 +33,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.navigation.isNewSource
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
@@ -161,6 +163,9 @@ fun TvNavHost(
     }
     val accountManager = remember { AccountManager(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
+    // The profile in use has Expert mode: only then does it add sources (Home's Add Source, the gate below).
+    val expert by remember { appSettings.observeDevMode().map { it.second } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
     val coroutineScope = rememberCoroutineScope()
 
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
@@ -576,7 +581,7 @@ fun TvNavHost(
                                     }
                                 },
                                 onBrowse = ::browseSource,
-                                onAddSource = { navController.navigateOnce(Screen.AddProvider()) },
+                                onAddSource = if (expert) ({ navController.navigateOnce(Screen.AddProvider()) }) else null,
                                 onEpgBrowser = {
                                     navController.navigateOnce(Screen.EpgBrowser())
                                 },
@@ -1212,10 +1217,14 @@ fun TvNavHost(
     if (startDestination != null) {
         val gateProfiles: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
         val inUse by gateProfiles.activeProfile.collectAsStateWithLifecycle()
-        val destination = navController.currentBackStackEntryAsState().value?.destination
+        val entry = navController.currentBackStackEntryAsState().value
+        val destination = entry?.destination
+        // Add Source for a new source is the Expert's only, whatever opened it: closed at once.
+        val refused = !expert && entry.isNewSource()
+        LaunchedEffect(entry, refused) { if (refused) navController.popBackStack() }
         inUse?.let { profile ->
             LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
-            if (destination.isPinGuarded() && gateProfiles.needsPin(profile.id)) {
+            if (!refused && destination.isPinGuarded() && gateProfiles.needsPin(profile.id)) {
                 // Nothing of Settings shows behind the prompt.
                 Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
                 TvPinDialog(

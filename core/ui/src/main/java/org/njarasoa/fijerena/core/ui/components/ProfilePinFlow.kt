@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.ui.R
  * The profile page's PIN row (the profile pin plan, Phase 2), the same on TV
  * and phone: without a PIN it chooses one; with one, the profile's own page asks for it first,
  * then offers Change or Remove — an Expert on another profile's page goes straight to those (the
- * "forgot my PIN" path). Saved at once, like the theme.
+ * "forgot my PIN" path). Remove asks for a confirm first. Saved at once, like the theme.
  */
 @Stable
 class ProfilePinFlow internal constructor(
@@ -24,7 +24,7 @@ class ProfilePinFlow internal constructor(
     private val currentTitle: String,
     private val warning: String?,
 ) {
-    enum class Step { CURRENT, OPTIONS, CHOOSE }
+    enum class Step { CURRENT, OPTIONS, CHOOSE, CONFIRM_REMOVE }
 
     var hasPin by mutableStateOf(pins.hasPin(profileId))
         private set
@@ -63,7 +63,12 @@ class ProfilePinFlow internal constructor(
         step = Step.CHOOSE
     }
 
+    /** Remove PIN: the confirm first ([confirmRemove] removes it). */
     fun remove() {
+        step = Step.CONFIRM_REMOVE
+    }
+
+    fun confirmRemove() {
         pins.remove(profileId)
         hasPin = false
         step = null

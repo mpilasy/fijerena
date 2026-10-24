@@ -219,8 +219,8 @@ fun ContentTypeSelectionScreen(
     onFavoriteCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A "Browse <source>" entry of a profile with no Xtream source (O1): that source's sections.
     onBrowse: (BrowseSource) -> Unit = {},
-    // A profile with no source: Add Source.
-    onAddSource: () -> Unit = {},
+    // A profile with no source: Add Source. Null for a profile without Expert mode: it asks a grown-up.
+    onAddSource: (() -> Unit)? = null,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWantedSelected: (Screen) -> Unit = {},
 ) {
@@ -481,9 +481,14 @@ fun ContentTypeSelectionScreen(
         withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
             snapshotFlow { sections?.merged?.isEmpty() == true || (continueWatchingLoaded && liveRowLoaded) }.first { it }
         }
-        // No merged sections: the panel's first button (Browse <source>, or Add Source).
+        // No merged sections: the panel's first button (Browse <source>, or Add Source); the rail
+        // when the panel has no button (no source and no Expert mode).
         if (sections?.merged?.isEmpty() == true) {
-            sourcesPanelFocus.requestFocusWithRetry(fallback = rail?.entry)
+            if (sections?.hasNoSources == true && onAddSource == null) {
+                rail?.entry?.requestFocusWithRetry()
+            } else {
+                sourcesPanelFocus.requestFocusWithRetry(fallback = rail?.entry)
+            }
             return@LaunchedEffect
         }
         // No row at all (a new source, nothing watched yet): the sections are on the rail, so
@@ -1136,15 +1141,20 @@ fun ContentTypeSelectionScreen(
 
                 val loadedSections = sections
                 if (loadedSections != null && loadedSections.merged.isEmpty()) {
-                    // No Xtream source: a Browse entry per source (O1); no source at all: Add Source.
+                    // No Xtream source: a Browse entry per source (O1); no source at all: Add Source,
+                    // or without Expert mode only the words, and focus stays on the rail.
                     HomeSourcesPanel(
                         message =
                             stringResource(
-                                if (loadedSections.hasNoSources) R.string.home_no_sources else R.string.home_only_browse_sources,
+                                when {
+                                    !loadedSections.hasNoSources -> R.string.home_only_browse_sources
+                                    onAddSource == null -> R.string.home_no_sources_ask
+                                    else -> R.string.home_no_sources
+                                },
                             ),
                         actions =
                             if (loadedSections.hasNoSources) {
-                                listOf(stringResource(R.string.provider_add_title) to onAddSource)
+                                listOfNotNull(onAddSource?.let { stringResource(R.string.provider_add_title) to it })
                             } else {
                                 loadedSections.browse.map { source ->
                                     stringResource(R.string.browse_source, source.name) to
@@ -1634,8 +1644,8 @@ private const val BACKDROP_SETTLE_MS = 250L
 
 /**
  * In place of the rows when the profile has no merged sections: [message] over one button per
- * action — a "Browse <source>" per source (O1), or Add Source with none. Buttons stack, so Up/Down
- * walk them; each hands Left to the navigation rail.
+ * action — a "Browse <source>" per source (O1), or Add Source with none (no button without Expert
+ * mode). Buttons stack, so Up/Down walk them; each hands Left to the navigation rail.
  */
 @Composable
 private fun HomeSourcesPanel(

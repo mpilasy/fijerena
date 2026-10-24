@@ -40,9 +40,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.dropSearches
+import org.njarasoa.fijerena.core.navigation.isNewSource
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
@@ -107,6 +109,9 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
+    // The profile in use has Expert mode: only then does it add sources (a tab's Add Source, the gate below).
+    val expert by remember { appSettings.observeDevMode().map { it.second } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
     val coroutineScope = rememberCoroutineScope()
 
     // The bottom bar's tabs (docs/plans/20261019_phone-home-tab-plan.md): Home, then the profile's
@@ -414,7 +419,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         }
 
     // [tab]'s list under that top bar — or, while the profile has no merged sections, the sources
-    // panel: a Browse entry per source, or Add Source with none.
+    // panel: a Browse entry per source, or Add Source with none (for an Expert only).
     val tabRoot: @Composable (MobileTab, @Composable () -> Unit) -> Unit = { tab, section ->
         TabRoot(
             sections = profileSections,
@@ -439,7 +444,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 }
             },
-            onAddSource = { navController.navigateOnce(Screen.AddProvider()) },
+            onAddSource = if (expert) ({ navController.navigateOnce(Screen.AddProvider()) }) else null,
             section = section,
         )
     }
@@ -1147,10 +1152,14 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // The screens Settings opens ask the PIN of the profile in use, once per session (locked again
     // after a while in the background or a switch of profile); Settings asks it before opening them,
     // this is the backstop. Picking a profile and watching never ask. Cancel goes back to Settings.
-    val gateDestination = navController.currentBackStackEntryAsState().value?.destination
+    val gateEntry = navController.currentBackStackEntryAsState().value
+    val gateDestination = gateEntry?.destination
+    // Add Source for a new source is the Expert's only, whatever opened it: closed at once.
+    val refused = !expert && gateEntry.isNewSource()
+    LaunchedEffect(gateEntry, refused) { if (refused) navController.popBackStack() }
     activeProfile?.let { profile ->
         LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
-        if (!showProfileMenu && gateDestination.isPinGuarded() && profilesViewModel.needsPin(profile.id)) {
+        if (!refused && !showProfileMenu && gateDestination.isPinGuarded() && profilesViewModel.needsPin(profile.id)) {
             // Nothing of Settings shows behind the prompt.
             Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
             PinDialog(
@@ -1298,7 +1307,8 @@ private fun browseTargetRoute(
 /**
  * A bottom-bar tab's root: [section] — or, while the profile has no merged sections (no Xtream
  * source), the sources panel under [topBar]: a "Browse <source>" per source ([onBrowse], its first
- * section; the profile sheet lists them too), or Add Source with no source at all ([onAddSource]).
+ * section; the profile sheet lists them too), or Add Source with no source at all ([onAddSource];
+ * null without Expert mode, which asks a grown-up instead).
  * [onEnter] runs on each visit.
  */
 @Composable
@@ -1307,7 +1317,7 @@ private fun TabRoot(
     topBar: @Composable ((() -> Unit)?) -> Unit,
     onEnter: () -> Unit,
     onBrowse: (BrowseSource) -> Unit,
-    onAddSource: () -> Unit,
+    onAddSource: (() -> Unit)?,
     section: @Composable () -> Unit,
 ) {
     LaunchedEffect(Unit) { onEnter() }
@@ -1320,10 +1330,16 @@ private fun TabRoot(
             ) { paddingValues ->
                 MobileSourcesPanel(
                     message =
-                        stringResource(if (sections.hasNoSources) R.string.home_no_sources else R.string.home_only_browse_sources),
+                        stringResource(
+                            when {
+                                !sections.hasNoSources -> R.string.home_only_browse_sources
+                                onAddSource == null -> R.string.home_no_sources_ask
+                                else -> R.string.home_no_sources
+                            },
+                        ),
                     actions =
                         if (sections.hasNoSources) {
-                            listOf(stringResource(R.string.provider_add_title) to onAddSource)
+                            listOfNotNull(onAddSource?.let { stringResource(R.string.provider_add_title) to it })
                         } else {
                             sections.browse.map { source -> stringResource(R.string.browse_source, source.name) to { onBrowse(source) } }
                         },

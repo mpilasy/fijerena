@@ -394,41 +394,43 @@ fun MobileSettingsScreen(
                 ParentalControlsSettingsRow(expertMode = uiState.isDevMode, onOpen = { guarded(onParentalControls) })
             }
 
-            // === 2. Playback ===
-            item {
-                SettingsGroupHeader(
-                    title = stringResource(R.string.settings_playback_section_title),
-                    description = stringResource(R.string.settings_scope_device_section),
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_watch_delay_row_title),
-                    summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
-                    onClick = { showWatchDelayPicker = true },
-                )
-            }
+            // === 2. Playback === and === 3. Display ===: they change the whole device, so a child
+            // profile does not see them (its Settings: its own page and About).
+            if (!uiState.isChildProfile) {
+                item {
+                    SettingsGroupHeader(
+                        title = stringResource(R.string.settings_playback_section_title),
+                        description = stringResource(R.string.settings_scope_device_section),
+                    )
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_watch_delay_row_title),
+                        summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
+                        onClick = { showWatchDelayPicker = true },
+                    )
+                }
 
-            // === 3. Display ===
-            item {
-                SettingsGroupHeader(
-                    title = stringResource(R.string.settings_group_display),
-                    description = stringResource(R.string.settings_scope_device_section),
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_recent_row_size_title),
-                    summary = uiState.recentRowSize.toString(),
-                    onClick = { showRecentSizePicker = true },
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_language),
-                    summary =
-                        when (uiState.language) {
-                            "en" -> stringResource(R.string.settings_language_en)
-                            "mg" -> stringResource(R.string.settings_language_mg)
-                            "fr" -> stringResource(R.string.settings_language_fr)
-                            else -> uiState.language
-                        },
-                    onClick = { showLanguagePicker = true },
-                )
+                item {
+                    SettingsGroupHeader(
+                        title = stringResource(R.string.settings_group_display),
+                        description = stringResource(R.string.settings_scope_device_section),
+                    )
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_recent_row_size_title),
+                        summary = uiState.recentRowSize.toString(),
+                        onClick = { showRecentSizePicker = true },
+                    )
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_language),
+                        summary =
+                            when (uiState.language) {
+                                "en" -> stringResource(R.string.settings_language_en)
+                                "mg" -> stringResource(R.string.settings_language_mg)
+                                "fr" -> stringResource(R.string.settings_language_fr)
+                                else -> uiState.language
+                            },
+                        onClick = { showLanguagePicker = true },
+                    )
+                }
             }
 
             // === 4. Sources & guide ===

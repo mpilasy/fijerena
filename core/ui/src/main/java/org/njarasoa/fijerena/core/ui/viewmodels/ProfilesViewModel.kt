@@ -43,7 +43,14 @@ data class ProfileSettings(
     val autoplayNextEpisode: Boolean,
     /** A child profile (docs/plans/20261019_tv-household-ux-plan.md): adult categories hidden, never Expert. */
     val child: Boolean = false,
-)
+) {
+    /**
+     * The page shows the Name and PIN rows. A child's own page (seen without Expert mode,
+     * [adminView] false) does not: a child does not rename itself or set, change or remove its
+     * PIN. An Expert on the child's page still edits both.
+     */
+    fun showsNameAndPin(adminView: Boolean): Boolean = adminView || !child
+}
 
 /** One of a profile's sources whose content filters its page edits; its name heads the filters. */
 data class FilterSource(
@@ -139,6 +146,13 @@ class ProfilesViewModel(
      * Settings, change the filters or become Expert with the 7 taps.
      */
     fun needsAdminPin(): Boolean = profiles.value.any { appSettings.isChildProfile(it.id) } && adminPinHolders().isEmpty()
+
+    /**
+     * [id]'s PIN is the last Expert PIN and a child profile exists: removing it stops the child
+     * lock, on every linked device (the PIN syncs). Remove PIN's confirm says so. From the listed
+     * profiles, which a profile page has read.
+     */
+    fun isLastAdminPin(id: String): Boolean = adminPinHolders() == listOf(id) && profiles.value.any { appSettings.isChildProfile(it.id) }
 
     /** [id] has a PIN not typed in this session: picking it asks for it first. */
     fun needsPin(id: String): Boolean = pins.hasPin(id) && !PinSession.isUnlocked(id)

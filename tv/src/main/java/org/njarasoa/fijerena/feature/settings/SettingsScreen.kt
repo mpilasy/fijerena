@@ -259,9 +259,10 @@ fun SettingsScreen(
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
     // Back round trip from a child screen come back to the same group.
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
-    // Without Expert mode (admin, for now) the shared setup groups are not listed; a group left
-    // selected when Expert mode was turned off falls back to Profiles.
-    val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isDevMode)
+    // Without Expert mode (admin, for now) the shared setup groups are not listed, and a child
+    // profile sees only its page and About; a group left selected when Expert mode was turned off
+    // falls back to Profiles.
+    val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isDevMode, child = uiState.isChildProfile)
     if (selectedGroup !in visibleGroups) selectedGroup = SettingsGroup.PROFILES
     val railPane = rememberPaneFocus()
     val contentPane = rememberPaneFocus()
@@ -879,14 +880,16 @@ enum class SettingsGroup(
      * Live sync, backups.
      */
     val adminOnly: Boolean = false,
+    /** A child profile sees it too (its own page). The other groups change shared or device setup. */
+    val forChild: Boolean = false,
 ) {
-    PROFILES(R.string.settings_profiles_title),
+    PROFILES(R.string.settings_profiles_title, forChild = true),
     PARENTAL_CONTROLS(R.string.parental_controls_title, adminOnly = true),
     PLAYBACK(R.string.settings_playback_section_title),
     DISPLAY(R.string.settings_group_display),
     SOURCE_GUIDE(R.string.settings_group_source_guide, adminOnly = true),
     SYNC_BACKUP(R.string.settings_group_sync_backup, adminOnly = true),
-    ABOUT_ADVANCED(R.string.settings_group_about_advanced),
+    ABOUT_ADVANCED(R.string.settings_group_about_advanced, forChild = true),
     ;
 
     /**
@@ -906,8 +909,14 @@ enum class SettingsGroup(
     val entryKey: String get() = "$name:first"
 
     companion object {
-        /** The groups the rail lists: without Expert mode ([admin] false), not the admin-only ones. */
-        fun visibleFor(admin: Boolean): List<SettingsGroup> = entries.filter { admin || !it.adminOnly }
+        /**
+         * The groups the rail lists: without Expert mode ([admin] false), not the admin-only ones;
+         * for a child profile ([child]), only its own page and About.
+         */
+        fun visibleFor(
+            admin: Boolean,
+            child: Boolean = false,
+        ): List<SettingsGroup> = entries.filter { if (child) it.forChild else admin || !it.adminOnly }
     }
 }
 

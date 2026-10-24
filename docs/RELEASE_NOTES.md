@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Children stay out of shared settings:** a child profile's Settings shows only its own page and About, without Language, Text & grid size and the Last watched delay, which change the whole device. A child cannot rename itself or change its PIN; an Expert still can. A profile without Expert mode and with no source reads "Ask a grown-up to add one" in place of Add Source, and only an Expert sees Add profile on the TV profile picker. Remove PIN now asks first, and says when the child lock stops with it. TV and phone.
+
 ## Version: 0.7.8
 
 - **TV: settings lists open on the chosen option:** when the chosen option was below the first screen (for example the Meadow UI theme), the list opened with no focus and only Back worked. It now opens scrolled to the chosen option, with focus on it.

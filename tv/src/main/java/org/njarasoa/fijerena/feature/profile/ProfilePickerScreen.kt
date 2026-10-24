@@ -41,6 +41,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.PinRequest
@@ -75,6 +77,11 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val viewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
+    // Add profile is for an Expert only: the profile in use (at launch, the last one used) must
+    // have Expert mode. So after a child, the launch picker has no Add profile.
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val expert by remember { appSettings.observeDevMode().map { it.second } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
     var adding by remember { mutableStateOf(false) }
     var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
     val activeFocusRequester = remember { FocusRequester() }
@@ -144,25 +151,27 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                         )
                     }
                 }
-                item(key = ADD_PROFILE_KEY) {
-                    PickerCard(
-                        label = stringResource(R.string.settings_profiles_add),
-                        // Adding a profile is the admin's: an Expert's PIN first while one has a PIN.
-                        onClick = {
-                            val holders = viewModel.adminPinHolders()
-                            if (holders.isEmpty()) adding = true else askingAdminPin = holders
-                        },
-                    ) {
-                        Box(
-                            modifier = Modifier.size(TvDimensions.profilePickerAvatarSize),
-                            contentAlignment = Alignment.Center,
+                if (expert) {
+                    item(key = ADD_PROFILE_KEY) {
+                        PickerCard(
+                            label = stringResource(R.string.settings_profiles_add),
+                            // Adding a profile is the admin's: an Expert's PIN first while one has a PIN.
+                            onClick = {
+                                val holders = viewModel.adminPinHolders()
+                                if (holders.isEmpty()) adding = true else askingAdminPin = holders
+                            },
                         ) {
-                            Icon(
-                                imageVector = CinemaIcons.Add,
-                                contentDescription = null,
-                                tint = CinemaTheme.colors.textPrimary,
-                                modifier = Modifier.size(TvDimensions.iconXLarge),
-                            )
+                            Box(
+                                modifier = Modifier.size(TvDimensions.profilePickerAvatarSize),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = CinemaIcons.Add,
+                                    contentDescription = null,
+                                    tint = CinemaTheme.colors.textPrimary,
+                                    modifier = Modifier.size(TvDimensions.iconXLarge),
+                                )
+                            }
                         }
                     }
                 }

@@ -255,6 +255,8 @@ fun ProfileEditPane(
     var devMode by rememberSaveable(profile.id) { mutableStateOf(stored.devMode) }
     var autoplayNextEpisode by rememberSaveable(profile.id) { mutableStateOf(stored.autoplayNextEpisode) }
     var child by rememberSaveable(profile.id) { mutableStateOf(stored.child) }
+    // A child's own page has no Name and no PIN; the page then starts on Colour.
+    val showsNameAndPin = stored.showsNameAndPin(adminView)
     var showNameError by remember { mutableStateOf(false) }
     // Every change applies at once, as in the rest of Settings; the name when the page is left
     // (a blank one is dropped, the old name kept).
@@ -432,7 +434,7 @@ fun ProfileEditPane(
                     returnToLook -> lookFocus
                     returnToSources -> sourcesFocus
                     returnToFavorites -> favoritesFocus
-                    focusOnOpen -> nameFocus
+                    focusOnOpen -> if (showsNameAndPin) nameFocus else colourFocus
                     else -> null
                 }
             target?.requestFocusWithRetry()
@@ -491,17 +493,19 @@ fun ProfileEditPane(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                ReadOnlyFieldWithEdit(
-                    value = name,
-                    onValueChange = {
-                        name = it
-                        showNameError = false
-                    },
-                    label = stringResource(R.string.profile_name_label),
-                    keyboardOptions = FieldKeyboards.Name,
-                    modifier = entryModifier,
-                    editButtonFocusRequester = nameFocus,
-                )
+                if (showsNameAndPin) {
+                    ReadOnlyFieldWithEdit(
+                        value = name,
+                        onValueChange = {
+                            name = it
+                            showNameError = false
+                        },
+                        label = stringResource(R.string.profile_name_label),
+                        keyboardOptions = FieldKeyboards.Name,
+                        modifier = entryModifier,
+                        editButtonFocusRequester = nameFocus,
+                    )
+                }
                 if (showNameError) {
                     CinemaText(
                         stringResource(R.string.profile_error_name_required),
@@ -513,16 +517,19 @@ fun ProfileEditPane(
                     title = stringResource(R.string.profile_color_label),
                     description = null,
                     onClick = { choosingColour = true },
+                    modifier = if (showsNameAndPin) Modifier else entryModifier,
                     focusRequester = colourFocus,
                     leading = { ColourDot(colorIndex, scale) },
                 )
-                SettingsRow(
-                    title = stringResource(R.string.profile_pin_title),
-                    description = stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
-                    value = stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off),
-                    onClick = pinFlow::start,
-                    focusRequester = pinFocus,
-                )
+                if (showsNameAndPin) {
+                    SettingsRow(
+                        title = stringResource(R.string.profile_pin_title),
+                        description = stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
+                        value = stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off),
+                        onClick = pinFlow::start,
+                        focusRequester = pinFocus,
+                    )
+                }
                 CinemaText(stringResource(R.string.profile_section_look), role = TextRole.Heading, tone = TextTone.Primary)
                 SettingsRow(
                     title = stringResource(R.string.ui_theme_title),
@@ -720,10 +727,7 @@ fun ProfileEditPane(
                             CinemaText(stringResource(R.string.profile_pin_change), tone = TextTone.Inherit)
                         }
                         CinemaButton(
-                            onClick = {
-                                pinFlow.remove()
-                                refocus = pinFocus
-                            },
+                            onClick = pinFlow::remove,
                             kind = ButtonKind.Danger,
                         ) { CinemaText(stringResource(R.string.profile_pin_remove), tone = TextTone.Inherit) }
                     }
@@ -732,6 +736,27 @@ fun ProfileEditPane(
                     CinemaButton(onClick = closeOptions, kind = ButtonKind.Other) {
                         CinemaText(stringResource(R.string.common_cancel), tone = TextTone.Inherit)
                     }
+                },
+            )
+        }
+        if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
+            // The last Expert PIN with a child profile: the child lock stops too, on every linked device.
+            val lastAdminPin = remember(profile.id, everyone) { viewModel.isLastAdminPin(profile.id) }
+            ConfirmActionDialog(
+                title = stringResource(R.string.profile_pin_remove_confirm_title),
+                text =
+                    listOfNotNull(
+                        stringResource(R.string.profile_pin_remove_confirm_text),
+                        if (lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
+                    ).joinToString(" "),
+                confirmText = stringResource(R.string.profile_pin_remove),
+                onConfirm = {
+                    pinFlow.confirmRemove()
+                    refocus = pinFocus
+                },
+                onDismiss = {
+                    pinFlow.cancel()
+                    refocus = pinFocus
                 },
             )
         }

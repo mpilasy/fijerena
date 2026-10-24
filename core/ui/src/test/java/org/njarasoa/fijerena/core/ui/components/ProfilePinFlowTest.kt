@@ -53,8 +53,22 @@ class ProfilePinFlowTest {
 
         assertEquals(ProfilePinFlow.Step.OPTIONS, flow.step)
         flow.remove()
+        flow.confirmRemove()
         verify { pins.remove("kid") }
         assertFalse(flow.hasPin)
+        assertNull(flow.step)
+    }
+
+    @Test
+    fun `Remove PIN asks for a confirm, and Cancel keeps the PIN`() {
+        val flow = flow(hasPin = true, own = false)
+        flow.start()
+
+        flow.remove()
+        assertEquals(ProfilePinFlow.Step.CONFIRM_REMOVE, flow.step)
+        verify(exactly = 0) { pins.remove(any()) }
+        flow.cancel()
+        assertTrue(flow.hasPin)
         assertNull(flow.step)
     }
 }

@@ -1,10 +1,12 @@
 package org.njarasoa.fijerena.core.navigation
 
 import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.toRoute
 
 /**
  * Navigates only if the current back stack entry is RESUMED, guarding against a
@@ -48,6 +50,14 @@ fun NavController.navigateOnce(
         navigate(route, builder)
     }
 }
+
+/**
+ * Add Source for a new source ([Screen.AddProvider] without an `editId`). Only an Expert profile
+ * may open it: a PIN alone is not enough, because a profile without a PIN has nothing to ask.
+ * Edit mode stays open to all, for the Browse sign-in (a Jellyfin login is per profile).
+ */
+fun NavBackStackEntry?.isNewSource(): Boolean =
+    this != null && destination.hasRoute<Screen.AddProvider>() && toRoute<Screen.AddProvider>().editId < 0
 
 /**
  * The screens Settings opens that the PIN of the profile in use guards — sources, guide sources,

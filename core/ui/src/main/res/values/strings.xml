@@ -890,7 +890,7 @@
     <string name="profile_child_last_expert">The only profile with Expert mode can\'t be a child\'s: give Expert mode to another profile first.</string>
     <string name="profile_source_no_filters">Content filters don\'t reach this source</string>
     <string name="settings_pin_nudge_title">Set a PIN for Settings</string>
-    <string name="settings_pin_nudge_desc">There is a child profile but no PIN: anyone can open Settings, change the content filters, or turn on Expert mode with 7 taps.</string>
+    <string name="settings_pin_nudge_desc">There is a child profile but no Expert has a PIN: a child can switch to any profile, and anyone can change sources, content filters and profiles, or turn on Expert mode with 7 taps.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d of %2$d</string>
     <string name="profile_sources_desc">The sources this profile can use. A new source is on only for the profile that added it. A profile keeps at least one source.</string>
@@ -1305,6 +1305,7 @@
     </plurals>
     <string name="home_sources_status_title">Your sources</string>
     <string name="home_no_sources">This profile has no source yet.</string>
+    <string name="home_no_sources_ask">This profile has no source yet. Ask a grown-up to add one.</string>
     <string name="home_only_browse_sources">Pick a source to browse.</string>
     <string name="settings_provider_expires_label">Expires</string>
     <string name="settings_provider_max_connections_label">Max connections</string>
@@ -1327,6 +1328,9 @@
     <string name="profile_pin_desc_expert">Asked in Settings before sources, backups and profiles</string>
     <string name="profile_pin_change">Change PIN</string>
     <string name="profile_pin_remove">Remove PIN</string>
+    <string name="profile_pin_remove_confirm_title">Remove the PIN?</string>
+    <string name="profile_pin_remove_confirm_text">Settings will not ask for a PIN on this profile any more.</string>
+    <string name="profile_pin_remove_last_expert">This is the last Expert PIN: the child lock stops on every device linked by live sync.</string>
     <string name="pin_choose">Choose a 4-digit PIN</string>
     <string name="pin_repeat">Enter the same PIN again</string>
     <string name="pin_mismatch">The two PINs differ: choose one again.</string>

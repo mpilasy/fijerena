@@ -28,6 +28,11 @@ data class SettingsUiState(
     val themeId: String = "deep_night",
     val uiStyleId: String = "modern",
     val isDevMode: Boolean = false,
+    /**
+     * The profile in use is a child's: its Settings show only its own page and About, not the
+     * groups that change the whole device (Playback, Display).
+     */
+    val isChildProfile: Boolean = false,
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val recentRowSize: Int = AppSettings.DEFAULT_WATCH_HISTORY_SIZE,
@@ -54,6 +59,7 @@ class SettingsViewModel(
                 themeId = appSettings.themeId,
                 uiStyleId = appSettings.uiStyleId,
                 isDevMode = appSettings.isDevMode,
+                isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 recentRowSize = appSettings.recentRowSize,
@@ -71,6 +77,11 @@ class SettingsViewModel(
         // or deleted), so Manage sources and Edit Source follow without reopening Settings.
         viewModelScope.launchGuarded("SettingsViewModel.followProfileSources") {
             providerRepo.profileSourceSet(appSettings.activeProfileId).collect { refreshProviderInfo() }
+        }
+        // Expert mode as it changes, not only on resume: on a new install the first profile gets it
+        // in the background at start (ProfileRepository.ensureAnExpert), maybe after Settings opened.
+        viewModelScope.launchGuarded("SettingsViewModel.followDevMode") {
+            appSettings.observeDevMode().collect { refreshDevMode() }
         }
         // The profile's colour theme and Look and Feel, also when another device changes them.
         viewModelScope.launchGuarded("SettingsViewModel.followLook") {
@@ -102,9 +113,13 @@ class SettingsViewModel(
         }
     }
 
-    /** Re-reads the active profile's developer mode, which its profile page may have changed. */
+    /** Re-reads the active profile's developer mode and child flag, which its profile page may have changed. */
     fun refreshDevMode() {
-        _uiState.value = _uiState.value.copy(isDevMode = appSettings.isDevMode)
+        _uiState.value =
+            _uiState.value.copy(
+                isDevMode = appSettings.isDevMode,
+                isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
+            )
     }
 
     /** The 7th tap on the version row: developer mode on for the profile in use. */

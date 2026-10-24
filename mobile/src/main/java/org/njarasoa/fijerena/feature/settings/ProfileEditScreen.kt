@@ -132,6 +132,8 @@ fun MobileProfileEditScreen(
             var confirmDelete by remember { mutableStateOf(false) }
             // Sources, Content filters, Expert mode and the expert-only themes are admin-only.
             val adminView = remember { viewModel.viewerIsAdmin }
+            // A child's own page has no Name and no PIN.
+            val showsNameAndPin = stored.showsNameAndPin(adminView)
             // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
             var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
             var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
@@ -240,6 +242,33 @@ fun MobileProfileEditScreen(
                     },
                 )
             }
+            if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
+                // The last Expert PIN with a child profile: the child lock stops too, on every linked device.
+                val lastAdminPin = remember(profileId, profiles) { viewModel.isLastAdminPin(profileId) }
+                CinemaAlertDialog(
+                    onDismissRequest = pinFlow::cancel,
+                    title = { CinemaText(stringResource(R.string.profile_pin_remove_confirm_title), role = TextRole.Title) },
+                    text = {
+                        CinemaText(
+                            listOfNotNull(
+                                stringResource(R.string.profile_pin_remove_confirm_text),
+                                if (lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
+                            ).joinToString(" "),
+                            tone = TextTone.Secondary,
+                        )
+                    },
+                    confirmButton = {
+                        CinemaDialogActionButton(onClick = pinFlow::confirmRemove, kind = ButtonKind.Danger) {
+                            CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
+                        }
+                    },
+                    dismissButton = {
+                        CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
+                            CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                        }
+                    },
+                )
+            }
             var editingSources by rememberSaveable { mutableStateOf(false) }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
             val canDelete = !profile.isActive && profiles.size > 1
@@ -271,28 +300,32 @@ fun MobileProfileEditScreen(
                         .padding(vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
-                // The profile: name, colour, PIN.
+                // The profile: name, colour, PIN (a child's own page: colour only).
                 Column(modifier = inset, verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                    ProfileNameField(
-                        name = name,
-                        onNameChange = {
-                            name = it
-                            showNameError = it.isBlank()
-                        },
-                        showError = showNameError,
-                    )
+                    if (showsNameAndPin) {
+                        ProfileNameField(
+                            name = name,
+                            onNameChange = {
+                                name = it
+                                showNameError = it.isBlank()
+                            },
+                            showError = showNameError,
+                        )
+                    }
                     ProfileColourPicker(colorIndex = colorIndex, onPick = {
                         colorIndex = it
                         apply(name)
                     })
                 }
-                SettingsListRow(
-                    title = stringResource(R.string.profile_pin_title),
-                    summary =
-                        stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off) + " · " +
-                            stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
-                    onClick = pinFlow::start,
-                )
+                if (showsNameAndPin) {
+                    SettingsListRow(
+                        title = stringResource(R.string.profile_pin_title),
+                        summary =
+                            stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off) + " · " +
+                                stringResource(if (stored.devMode) R.string.profile_pin_desc_expert else R.string.profile_pin_desc),
+                        onClick = pinFlow::start,
+                    )
+                }
 
                 SettingsGroupHeader(stringResource(R.string.profile_section_look))
                 SettingsListRow(

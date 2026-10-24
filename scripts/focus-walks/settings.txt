@@ -11,6 +11,9 @@
 # profiles, and Parental controls / Sources & guide / Sync & backup are not listed.
 # Re-recorded 2026-10-17 after the Settings reorganisation. Parental controls added to the rail
 # 2026-10-20 (its own walk: parental-controls.txt); those two lines are not yet run.
+# The PIN reminder's text changed 2026-10-24 (settings flow review, Phase 1): line edited by hand,
+# checked in Malagasy with a dump, not re-run in English. A child profile's rail (Your profile and
+# About only) is not walked here.
 @start Profiles
 DOWN	Parental controls
 DOWN	Playback
@@ -72,7 +75,7 @@ UP	Profiles
 # Content filters), then Switch to this profile and Delete profile on another profile's page.
 # Every change applies at once; Left leaves, focus back on the profile's row. Nothing below is
 # pressed except the OKs that open a page.
-RIGHT	Set a PIN for Settings / There is a child profile but no PIN: anyone can open Settings, change the content filters, or turn on Expert mode with 7 taps. / ›
+RIGHT	Set a PIN for Settings / There is a child profile but no Expert has a PIN: a child can switch to any profile, and anyone can change sources, content filters and profiles, or turn on Expert mode with 7 taps. / ›
 DOWN	A / atr / Using on this device / ›
 CENTER	Edit Name / Name / atr
 DOWN	Colour / ›
