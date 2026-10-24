@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** Proposed 2026-10-24. Decisions taken; not started.
+**Status:** In progress 2026-10-24: Phase 1 (spike) and Phase 4 (fake server, CI job) started.
 
 ## Goal
 
@@ -78,7 +78,7 @@ now, as Phase 4.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Spike | Not started | |
+| 1. Spike | In progress | |
 | 2. Settings tests | Not started | |
 | 3. Walks and docs | Not started | |
-| 4. Nightly TV walk | Not started | |
+| 4. Nightly TV walk | In progress (server and CI job) | |
