@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** In progress 2026-10-24: Phases 1, 2 and 3 done (whole-screen route), Phase 4 built and running its first CI run.
+**Status:** In progress 2026-10-24: Phases 1–3 done; Phase 4 built, its CI walk being fixed.
 
 ## Goal
 
@@ -184,5 +184,11 @@ the tests, the walks in English before a release) updated.
 |---|---|---|
 | 1. Spike | Done 2026-10-24 | 3fe44e1f |
 | 2. Settings tests | Done 2026-10-24 | 68006eb0 |
-| 3. Walks and docs | Done 2026-10-24 | |
-| 4. Nightly TV walk | Built, not yet run in CI (server, seeding, CI job, `ci-settings.txt`) | |
+| 3. Walks and docs | Done 2026-10-24 | 11682338 |
+| 4. Nightly TV walk | Built; first CI run: infrastructure works, walk fixed at its first line, second run due | 1870a1b4 |
+
+**Phase 3 follow-up (2026-10-24).** The three moves left unrecorded were recorded on the TV
+emulator in English: Back on the Settings rail (to Home's content), Back closing the Sources ⋮
+menu (to ⋮), Back from Sources (to Manage Sources). The first CI run of `ci-settings.txt` stopped
+at its first line: the picker's cards read only the initial ("A"), and the + card nothing. The
+cards now carry their names (`ProfilePickerScreen`, `c7e4571a`), a screen-reader fix as well.
