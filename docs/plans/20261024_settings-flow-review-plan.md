@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** Proposed 2026-10-24. Decisions taken; not started. Reviewed from the code only; no
+**Status:** In progress 2026-10-24: Phases 1 and 1b. Reviewed from the code only; no
 emulator walk yet.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
@@ -57,7 +57,7 @@ a profile switch).
 
 | # | Finding |
 |---|---|
-| W1 | Section "Source", row "Manage sources", screen "Sources"; "Add Source" / "Edit Source" in title case |
+| W1 | Section "Source" (singular) above "Manage sources"; title case "Add Source" / "Edit Source" is the project rule (CONTRIBUTING.md, Strings), so it stays |
 | W2 | The nudge says "anyone can open Settings"; Settings opens without a PIN for everyone anyway |
 | W3 | `profile_pin_desc` and `profile_pin_desc_expert` have the same text |
 | W4 | TV Live sync setup panel sets no first focus when not linked (`SyncSettingsScreen.kt:94-96`) |
@@ -173,8 +173,8 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Leaks | Not started | |
-| 1b. Child lock | Not started | |
+| 1. Leaks | In progress | |
+| 1b. Child lock | In progress | |
 | 2. Grouping and wording | Not started | |
 | 3. Admin flows | Not started | |
 | 4. Docs and walks | Not started | |
