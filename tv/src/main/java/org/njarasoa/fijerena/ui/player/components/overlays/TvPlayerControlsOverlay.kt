@@ -359,7 +359,7 @@ fun TvPlayerControlsOverlay(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (videoResolution != null) {
-                                CinemaText(text = videoResolution!!, role = TextRole.Label, tone = TextTone.Accent, emphasis = true)
+                                CinemaText(text = videoResolution!!, role = TextRole.Label, tone = TextTone.Secondary, emphasis = true)
                             }
                             if (videoCodec != null) {
                                 CinemaBadge(

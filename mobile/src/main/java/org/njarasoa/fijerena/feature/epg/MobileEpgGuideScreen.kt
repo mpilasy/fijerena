@@ -554,7 +554,7 @@ private fun ProgramDetailsSheet(
                 CinemaText(
                     text = selection.channel.name,
                     role = TextRole.Body,
-                    tone = TextTone.Accent,
+                    tone = TextTone.Secondary,
                 )
                 CinemaText(
                     text =

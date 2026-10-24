@@ -1231,7 +1231,7 @@ private fun SearchSectionHeader(
         CinemaText(
             text = title,
             role = TextRole.Heading,
-            tone = TextTone.Accent,
+            tone = TextTone.Primary,
         )
         Spacer(Modifier.weight(1f))
         CinemaText(
@@ -1270,7 +1270,7 @@ private fun MobileCollapsibleHeader(
             CinemaText(
                 text = title,
                 role = TextRole.Heading,
-                tone = TextTone.Accent,
+                tone = TextTone.Primary,
                 emphasis = true,
             )
             Spacer(Modifier.weight(1f))

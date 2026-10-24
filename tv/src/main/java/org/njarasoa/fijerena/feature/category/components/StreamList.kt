@@ -451,7 +451,7 @@ internal fun StreamList(
             // What the mode does, under the list's title (plan → A, "Edit" mode).
             CinemaText(
                 text = stringResource(if (isRecentList) R.string.edit_recent_hint else R.string.edit_favorites_hint),
-                tone = TextTone.Accent,
+                tone = TextTone.Secondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(bottom = Spacing.sm),

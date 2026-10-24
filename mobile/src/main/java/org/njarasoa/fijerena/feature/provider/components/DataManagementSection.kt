@@ -129,7 +129,7 @@ fun ColumnScope.DataManagementSection(
                             }
                         }
                         if (syncState is SyncState.Success) {
-                            CinemaText(stringResource(R.string.provider_sync_success), role = TextRole.BodySmall, tone = TextTone.Accent)
+                            CinemaText(stringResource(R.string.provider_sync_success), role = TextRole.BodySmall, tone = TextTone.Success)
                         }
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     }
@@ -140,7 +140,7 @@ fun ColumnScope.DataManagementSection(
                     CinemaText(
                         stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
                         role = TextRole.Title,
-                        tone = TextTone.Accent,
+                        tone = TextTone.Primary,
                     )
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -156,7 +156,7 @@ fun ColumnScope.DataManagementSection(
                                 NumberUtils.formatCount(stats.liveTv.categoryCount),
                                 NumberUtils.formatCount(stats.liveTv.itemsCount),
                             ),
-                            tone = TextTone.Accent,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -171,7 +171,7 @@ fun ColumnScope.DataManagementSection(
                                 NumberUtils.formatCount(stats.movies.categoryCount),
                                 NumberUtils.formatCount(stats.movies.itemsCount),
                             ),
-                            tone = TextTone.Accent,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -186,7 +186,7 @@ fun ColumnScope.DataManagementSection(
                                 NumberUtils.formatCount(stats.tvShows.itemsCount),
                                 NumberUtils.formatCount(stats.tvShows.episodesCount),
                             ),
-                            tone = TextTone.Accent,
+                            tone = TextTone.Primary,
                         )
                     }
                 }

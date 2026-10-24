@@ -207,7 +207,7 @@ fun MobileCategoryLinkRow(
                 .padding(vertical = CinemaSpacing.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CinemaText(text = categoryName, tone = TextTone.Accent)
+            CinemaText(text = categoryName, tone = TextTone.Primary)
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowRight,
                 contentDescription = null,

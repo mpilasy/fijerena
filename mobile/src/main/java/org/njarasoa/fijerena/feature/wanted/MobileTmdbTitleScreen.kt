@@ -151,7 +151,7 @@ fun MobileTmdbTitleScreen(
                         onCovered = { heroCovered = it },
                     )
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                    details.genres?.let { CinemaText(text = it, role = TextRole.Heading, tone = TextTone.Accent) }
+                    details.genres?.let { CinemaText(text = it, role = TextRole.Heading, tone = TextTone.Secondary) }
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     MetaLine(
                         segments =

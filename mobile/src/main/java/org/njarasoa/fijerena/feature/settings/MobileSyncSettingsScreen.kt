@@ -257,7 +257,7 @@ private fun SetupPanel(
                     CinemaText(stringResource(R.string.live_sync_check_server), role = TextRole.Label, tone = TextTone.Inherit)
                 }
             } else {
-                CinemaText(stringResource(R.string.live_sync_server_found), tone = TextTone.Accent)
+                CinemaText(stringResource(R.string.live_sync_server_found), tone = TextTone.Success)
                 if (ui.setupSecretRequired) {
                     CinemaTextField(
                         value = setupSecret,
@@ -352,7 +352,7 @@ private fun DevicesPanel(
     val active = devices?.filterNot { it.revoked } ?: return
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-            CinemaText(stringResource(R.string.live_sync_devices_title), role = TextRole.Heading, tone = TextTone.Accent)
+            CinemaText(stringResource(R.string.live_sync_devices_title), role = TextRole.Heading, tone = TextTone.Primary)
             active.forEach { device ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

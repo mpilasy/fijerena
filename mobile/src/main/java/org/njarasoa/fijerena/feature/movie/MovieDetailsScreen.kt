@@ -318,7 +318,7 @@ private fun MovieDetailsContent(
                         CinemaText(
                             text = genre,
                             role = TextRole.Heading,
-                            tone = TextTone.Accent,
+                            tone = TextTone.Secondary,
                         )
                     }
 

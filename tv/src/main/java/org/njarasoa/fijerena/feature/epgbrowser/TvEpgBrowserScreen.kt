@@ -536,7 +536,7 @@ private fun EpgBrowserContent(
                                 stringResource(R.string.epg_browser_optimizing_index_label)
                             },
                         role = TextRole.Label,
-                        tone = TextTone.AccentSoft,
+                        tone = TextTone.Secondary,
                     )
                     CinemaText(
                         text = progressText,
@@ -844,7 +844,7 @@ private fun DateHeader(
     CinemaText(
         text = dateLabel,
         role = TextRole.Heading,
-        tone = TextTone.AccentSoft,
+        tone = TextTone.Primary,
         modifier =
             modifier
                 .fillMaxWidth()
@@ -903,7 +903,7 @@ private fun ProgramCard(
                             text = category,
                             role = TextRole.Label,
                             keepCase = true,
-                            tone = TextTone.AccentSoft,
+                            tone = TextTone.Secondary,
                             modifier =
                                 Modifier.padding(
                                     horizontal = Spacing.sm.scaled(scale),
@@ -1043,7 +1043,7 @@ private fun AiringRow(
             CinemaText(
                 text = airing.channelName,
                 role = TextRole.Heading,
-                tone = TextTone.AccentSoft,
+                tone = TextTone.Primary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).bounceMarquee(),

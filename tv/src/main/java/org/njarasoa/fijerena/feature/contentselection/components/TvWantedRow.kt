@@ -121,7 +121,7 @@ private fun TvWantedCard(
                         // "Available · panel-a · FR" (wishlist UX plan, Phase 5), then the year.
                         text = listOfNotNull(card.statusLabel(LocalResources.current), card.entity.year?.toString()).joinToString(" • "),
                         role = TextRole.BodySmall,
-                        tone = if (card.isAvailable) TextTone.Accent else TextTone.Secondary,
+                        tone = if (card.isAvailable) TextTone.Success else TextTone.Secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -156,7 +156,7 @@ fun TvWantedBanner(
                 modifier = Modifier.size(TvDimensions.iconMedium),
             )
             CinemaText(text = text, role = TextRole.Heading, modifier = Modifier.weight(1f))
-            CinemaText(text = action, role = TextRole.Body, tone = TextTone.Accent)
+            CinemaText(text = action, role = TextRole.Body, tone = TextTone.Primary)
         }
     }
 }

@@ -675,7 +675,7 @@ private fun GuideFocusLine(
             CinemaText(
                 text = stringResource(R.string.epg_guide_listings_end_format, TimeFormat.formatTime(endedAt)),
                 role = TextRole.Body,
-                tone = TextTone.AccentSoft,
+                tone = TextTone.Secondary,
                 maxLines = 1,
                 modifier = Modifier.padding(start = Spacing.md.scaled(scale)),
             )
@@ -1624,7 +1624,7 @@ private fun ProgramDetailsDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                CinemaText(text = channel.name, role = TextRole.Heading, tone = TextTone.AccentSoft, maxLines = 1)
+                CinemaText(text = channel.name, role = TextRole.Heading, tone = TextTone.Secondary, maxLines = 1)
                 CinemaText(
                     text = dayLabel + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime),
                     role = TextRole.Body,

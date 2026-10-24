@@ -45,7 +45,7 @@ fun TermsScreen() {
                 CinemaText(
                     stringResource(title),
                     role = TextRole.Heading,
-                    tone = TextTone.Accent,
+                    tone = TextTone.Primary,
                     modifier = Modifier.padding(top = Spacing.md.scaled(LocalUiScale.current)),
                 )
                 LicenseCard(

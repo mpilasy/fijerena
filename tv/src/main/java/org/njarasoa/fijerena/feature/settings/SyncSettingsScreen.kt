@@ -230,7 +230,7 @@ private fun SetupPanel(
                     modifier = Modifier.leftToRail(),
                 )
             } else {
-                CinemaText(stringResource(R.string.live_sync_server_found), role = TextRole.Body, tone = TextTone.Accent)
+                CinemaText(stringResource(R.string.live_sync_server_found), role = TextRole.Body, tone = TextTone.Success)
                 if (ui.setupSecretRequired) {
                     ReadOnlyFieldWithEdit(
                         value = setupSecret,
@@ -300,7 +300,7 @@ private fun LinkedPanel(
             CinemaText(
                 liveSyncStatusLine(status),
                 role = TextRole.Heading,
-                tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Accent,
+                tone = if (status.lastError != null && !status.syncing) TextTone.Danger else TextTone.Primary,
             )
             if (devMode && status.lastError != null) {
                 CinemaText("[dev] ${status.lastError}", role = TextRole.BodySmall, tone = TextTone.Secondary)
@@ -338,7 +338,7 @@ private fun DevicesPanel(
             CinemaText(
                 stringResource(R.string.live_sync_devices_title),
                 role = TextRole.Heading,
-                tone = TextTone.Accent,
+                tone = TextTone.Primary,
             )
             active.forEach { device ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,7 +362,7 @@ private fun DevicesPanel(
                             CinemaText(
                                 nowPlayingLine(it),
                                 role = TextRole.BodySmall,
-                                tone = TextTone.Accent,
+                                tone = TextTone.Secondary,
                             )
                         }
                     }

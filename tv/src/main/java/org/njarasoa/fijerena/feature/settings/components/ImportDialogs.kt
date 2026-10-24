@@ -110,7 +110,7 @@ fun ImportOptionsDialog(
                         CinemaText(
                             stringResource(R.string.settings_import_select_title),
                             role = TextRole.Title,
-                            tone = TextTone.Accent,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md))
@@ -280,7 +280,7 @@ fun ConflictResolutionDialog(
                         CinemaText(
                             stringResource(R.string.settings_import_provider_conflict_title),
                             role = TextRole.Title,
-                            tone = TextTone.Accent,
+                            tone = TextTone.Primary,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.sm))

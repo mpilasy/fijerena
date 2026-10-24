@@ -134,7 +134,7 @@ fun LicenseDetailScreen(entryId: String) {
                 CinemaText(
                     text,
                     role = TextRole.Heading,
-                    tone = TextTone.Accent,
+                    tone = TextTone.Primary,
                     modifier = Modifier.padding(top = Spacing.md.scaled(LocalUiScale.current)),
                 )
             } else {

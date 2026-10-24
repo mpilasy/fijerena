@@ -352,7 +352,7 @@ fun MobileStatsOverlay(
                     CinemaText(
                         text = stringResource(R.string.player_stats_title),
                         role = TextRole.Heading,
-                        tone = TextTone.Accent,
+                        tone = TextTone.Primary,
                     )
                     IconButton(
                         onClick = onClose,
@@ -548,7 +548,7 @@ private fun SectionHeader(title: String) {
         text = title,
         modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs),
         role = TextRole.Heading,
-        tone = TextTone.Accent,
+        tone = TextTone.Primary,
     )
 }
 

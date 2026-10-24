@@ -523,7 +523,7 @@ fun ProfileEditPane(
                     onClick = pinFlow::start,
                     focusRequester = pinFocus,
                 )
-                CinemaText(stringResource(R.string.profile_section_look), role = TextRole.Heading, tone = TextTone.Accent)
+                CinemaText(stringResource(R.string.profile_section_look), role = TextRole.Heading, tone = TextTone.Primary)
                 SettingsRow(
                     title = stringResource(R.string.ui_theme_title),
                     description = stringResource(R.string.ui_theme_desc),
@@ -549,7 +549,7 @@ fun ProfileEditPane(
                     label = stringResource(R.string.profile_poster_backdrop_title),
                     description = stringResource(R.string.profile_poster_backdrop_desc),
                 )
-                CinemaText(stringResource(R.string.settings_playback_section_title), role = TextRole.Heading, tone = TextTone.Accent)
+                CinemaText(stringResource(R.string.settings_playback_section_title), role = TextRole.Heading, tone = TextTone.Primary)
                 TvSwitchRow(
                     checked = autoplayNextEpisode,
                     onCheckedChange = {
@@ -562,7 +562,7 @@ fun ProfileEditPane(
                 // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
                 // content filters (the parental control).
                 if (adminView) {
-                    CinemaText(stringResource(R.string.profile_section_admin), role = TextRole.Heading, tone = TextTone.Accent)
+                    CinemaText(stringResource(R.string.profile_section_admin), role = TextRole.Heading, tone = TextTone.Primary)
                 }
                 if (adminView) {
                     // There is always an Expert: the only one can't turn it off, nor be a child's.

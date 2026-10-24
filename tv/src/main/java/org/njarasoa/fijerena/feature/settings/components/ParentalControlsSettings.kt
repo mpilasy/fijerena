@@ -440,7 +440,7 @@ private fun ParentalCheckHeading(text: String) {
         text,
         modifier = Modifier.padding(horizontal = Spacing.xs).padding(top = Spacing.sm),
         role = TextRole.Heading,
-        tone = TextTone.Accent,
+        tone = TextTone.Primary,
     )
 }
 

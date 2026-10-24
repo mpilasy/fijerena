@@ -68,7 +68,7 @@ internal fun Modifier.rowNeighbours(
 internal fun ProviderSectionTitle(
     title: String,
     subtitle: String? = null,
-    titleTone: TextTone = TextTone.Accent,
+    titleTone: TextTone = TextTone.Primary,
 ) {
     val scale = LocalUiScale.current
     CinemaText(text = title, role = TextRole.Heading, tone = titleTone)

@@ -48,7 +48,7 @@ fun SettingsGroupHeader(
                 .fillMaxWidth()
                 .padding(start = Spacing.md, end = Spacing.md, top = Spacing.lg, bottom = Spacing.xs),
     ) {
-        CinemaText(title, role = TextRole.Label, tone = TextTone.Accent)
+        CinemaText(title, role = TextRole.Label, tone = TextTone.Primary)
         if (description != null) {
             CinemaText(description, role = TextRole.BodySmall, tone = TextTone.Secondary)
         }

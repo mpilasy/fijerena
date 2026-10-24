@@ -702,7 +702,7 @@ private fun EpisodeListContent(
                     CinemaText(
                         text = genre,
                         role = TextRole.Heading,
-                        tone = TextTone.Accent,
+                        tone = TextTone.Secondary,
                     )
                 }
 
@@ -1219,7 +1219,7 @@ private fun EpisodeDetailContent(
         CinemaText(
             text = subLabel,
             role = TextRole.Heading,
-            tone = TextTone.Accent,
+            tone = TextTone.Secondary,
         )
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -1228,7 +1228,7 @@ private fun EpisodeDetailContent(
             CinemaText(
                 text = genre,
                 role = TextRole.Heading,
-                tone = TextTone.Accent,
+                tone = TextTone.Secondary,
             )
         }
 
@@ -1532,7 +1532,7 @@ private fun EpisodeCard(
                     CinemaText(
                         text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
                         role = TextRole.Label,
-                        tone = TextTone.Accent,
+                        tone = TextTone.Secondary,
                     )
                     // Watched toggle (Phase 6, the watch state durable storage plan): the
                     // badge itself is the tap target, since CinemaCard's onClick already owns the

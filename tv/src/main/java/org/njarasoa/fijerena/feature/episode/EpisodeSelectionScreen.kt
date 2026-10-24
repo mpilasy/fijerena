@@ -2417,7 +2417,7 @@ private fun EpisodeCard(
                 CinemaText(
                     text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
                     role = TextRole.Heading,
-                    tone = TextTone.AccentSoft,
+                    tone = TextTone.Secondary,
                     // At least the old column width, growing for E1992 rather than wrapping it
                     // onto two lines (Phase 6, F-E-4).
                     maxLines = 1,

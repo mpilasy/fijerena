@@ -159,7 +159,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                             ),
                 ) {
                     Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                        CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Accent)
+                        CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
                         CinemaCodeText(entry.detail)
                     }
                 }

@@ -141,7 +141,7 @@ fun ErrorContent(
                     Column(
                         modifier = Modifier.padding(Spacing.md),
                     ) {
-                        CinemaText(text = stringResource(R.string.player_technical_details), role = TextRole.Label, tone = TextTone.Accent)
+                        CinemaText(text = stringResource(R.string.player_technical_details), role = TextRole.Label, tone = TextTone.Primary)
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
                         val typeLabel = stringResource(R.string.player_error_type_label)

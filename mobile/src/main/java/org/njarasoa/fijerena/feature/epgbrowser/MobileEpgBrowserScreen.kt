@@ -634,7 +634,7 @@ private fun MobileDateHeader(dateLabel: String) {
                 .background(CinemaTheme.colors.surface)
                 .padding(vertical = CinemaSpacing.sm),
         role = TextRole.Label,
-        tone = TextTone.Accent,
+        tone = TextTone.Primary,
     )
 }
 
@@ -679,7 +679,7 @@ private fun MobileProgramCard(
                         text = category,
                         modifier = Modifier.padding(start = CinemaSpacing.sm),
                         role = TextRole.Caption,
-                        tone = TextTone.Accent,
+                        tone = TextTone.Secondary,
                     )
                 }
             }
@@ -887,7 +887,7 @@ private fun MobileAiringRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).bounceMarquee(),
             role = TextRole.Heading,
-            tone = TextTone.Accent,
+            tone = TextTone.Primary,
         )
         // After the name, as on every other row; lighter than the card it sits on.
         airing.sourceName?.let { SourceBadge(it, kind = BadgeKind.OnCard) }

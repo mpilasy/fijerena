@@ -48,7 +48,7 @@ fun SettingsSection(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
-            CinemaText(title, role = TextRole.Heading, tone = TextTone.Accent)
+            CinemaText(title, role = TextRole.Heading, tone = TextTone.Primary)
         }
         if (description != null) {
             CinemaText(

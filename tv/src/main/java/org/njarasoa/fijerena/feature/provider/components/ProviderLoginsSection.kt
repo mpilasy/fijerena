@@ -264,7 +264,7 @@ fun ProviderLoginsSection(
 
     shownMessage?.takeIf { !showAddDialog }?.let {
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-        CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Accent)
+        CinemaText(text = it, role = TextRole.BodySmall, tone = TextTone.Primary)
     }
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))

@@ -97,7 +97,7 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
             items(sections.orEmpty()) { section ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                        CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Accent)
+                        CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
                         section.rows.forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                                 CinemaText(

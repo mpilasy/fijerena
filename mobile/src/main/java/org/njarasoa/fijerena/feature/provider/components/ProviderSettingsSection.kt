@@ -50,7 +50,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 internal fun ProviderSectionTitle(
     title: String,
     subtitle: String? = null,
-    titleTone: TextTone = TextTone.Accent,
+    titleTone: TextTone = TextTone.Primary,
 ) {
     CinemaText(title, role = TextRole.Heading, tone = titleTone)
     subtitle?.let {
@@ -86,7 +86,7 @@ private fun ProviderChoiceRow(
             CinemaText(description, role = TextRole.BodySmall, tone = TextTone.Secondary)
         }
         Spacer(modifier = Modifier.width(CinemaSpacing.md))
-        CinemaText(value, tone = TextTone.Accent)
+        CinemaText(value, tone = TextTone.Primary)
         Icon(
             CinemaIcons.KeyboardArrowRight,
             contentDescription = null,

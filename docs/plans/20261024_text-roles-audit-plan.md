@@ -1,6 +1,6 @@
 # Text fonts and colours audit
 
-**Status:** In progress 2026-10-24.
+**Status:** Built 2026-10-24 (Phases 1–3). Checked on the phone emulator: phase 1's dock in Meadow.
 
 ## Goal
 
@@ -35,7 +35,7 @@ unreadable.
 |---|---|---|
 | 1 | Unreadable text: fills, light themes, text over video | Done |
 | 2 | Names in the title font (TV and phone); profile initial and poster letter in the Look's font | Done |
-| 3 | Accent only on what is current or selected; headings in the primary text colour (TR-D1) | Not started |
+| 3 | Accent only on what is current or selected; headings in the primary text colour (TR-D1) | Done |
 
 ## Notes
 
@@ -51,3 +51,9 @@ unreadable.
   device names, dialog titles; TV dialogs that used Material's Text now use CinemaText. The phone
   profile initial uses the Look's title font. Left as they were: the rename field's floating label
   (TV), season tabs, OSD Now/Next lines, and all buttons, tabs and badges (TR-D2).
+- **Phase 3:** about 66 accent texts moved to Primary, Secondary or Success (genres, episode
+  numbers, channel names, counts, status and success lines), section headings to Primary (TR-D1).
+  Kept in the accent because they mark something current: a synced device's now-playing line, the
+  current login, ON AIR cells, the active "Only <source>" filter. Not reviewed yet: a few more
+  accents the phone pass found (detail stream-name rows, EPG browser and guide lines, search
+  progress, the sync status line).

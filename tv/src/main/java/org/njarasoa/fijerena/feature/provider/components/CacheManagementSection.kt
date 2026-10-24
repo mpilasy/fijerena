@@ -141,7 +141,7 @@ fun CacheManagementSection(
                 CinemaText(
                     stringResource(R.string.provider_sync_success),
                     role = TextRole.BodySmall,
-                    tone = TextTone.Accent,
+                    tone = TextTone.Success,
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -157,7 +157,7 @@ fun CacheManagementSection(
         CinemaText(
             stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
             role = TextRole.Title,
-            tone = TextTone.Accent,
+            tone = TextTone.Primary,
         )
 
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -216,7 +216,7 @@ private fun CountRow(
 ) {
     Column {
         CinemaText(text = label, role = TextRole.Heading, tone = TextTone.Primary)
-        CinemaText(text = value, role = TextRole.Body, tone = TextTone.Accent)
+        CinemaText(text = value, role = TextRole.Body, tone = TextTone.Primary)
     }
 }
 

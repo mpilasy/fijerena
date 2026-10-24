@@ -414,7 +414,7 @@ fun TvEpgManagementScreen(
                                                         localizedEpgPhase(activeProgress.phase),
                                                     ),
                                                 role = TextRole.Caption,
-                                                tone = TextTone.Accent,
+                                                tone = TextTone.Secondary,
                                             )
                                             CinemaText(
                                                 // No size from the server (panel-a sends none): the bytes so far instead of a percentage.
@@ -425,7 +425,7 @@ fun TvEpgManagementScreen(
                                                         NumberUtils.formatBytes(activeProgress.downloadedBytes)
                                                     },
                                                 role = TextRole.Caption,
-                                                tone = TextTone.Accent,
+                                                tone = TextTone.Secondary,
                                             )
                                         }
                                         if (activeProgress.progressPercent >= 0) {

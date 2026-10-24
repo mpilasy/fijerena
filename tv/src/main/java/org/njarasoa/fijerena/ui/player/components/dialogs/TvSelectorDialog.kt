@@ -138,7 +138,7 @@ fun TvSelectorDialog(
                 CinemaText(
                     text = title,
                     role = TextRole.Title,
-                    tone = TextTone.Accent,
+                    tone = TextTone.Primary,
                     emphasis = true,
                 )
 

@@ -94,7 +94,7 @@ fun MobileLicenseDetailScreen(
             items(entry?.licenses.orEmpty()) { license ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                        CinemaText(license.name, role = TextRole.Heading, tone = TextTone.Accent)
+                        CinemaText(license.name, role = TextRole.Heading, tone = TextTone.Primary)
                         CinemaText(
                             license.content.ifBlank { stringResource(R.string.licenses_no_text, license.url.orEmpty()) },
                             role = TextRole.BodySmall,
@@ -141,7 +141,7 @@ fun MobileTermsScreen(onBack: () -> Unit) {
             items(TermsOfUse.sections) { (title, body) ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                        CinemaText(stringResource(title), role = TextRole.Heading, tone = TextTone.Accent)
+                        CinemaText(stringResource(title), role = TextRole.Heading, tone = TextTone.Primary)
                         CinemaText(stringResource(body))
                     }
                 }

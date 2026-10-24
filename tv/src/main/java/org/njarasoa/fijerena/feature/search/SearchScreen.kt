@@ -1174,7 +1174,7 @@ private fun SearchResultsList(
                                 tone = TextTone.Accent,
                             )
                         }
-                        CinemaText(text = if (isSearching) " ($searchProgress)" else searchProgress, tone = TextTone.Accent)
+                        CinemaText(text = if (isSearching) " ($searchProgress)" else searchProgress, tone = TextTone.Secondary)
                     }
                 }
             }

@@ -372,7 +372,7 @@ fun TvStatsOverlay(
                     CinemaText(
                         text = "📊 " + stringResource(R.string.player_stats_title),
                         role = TextRole.Heading,
-                        tone = TextTone.Accent,
+                        tone = TextTone.Primary,
                         emphasis = true,
                     )
                     // The provider's names as sent: everywhere else they are shown cleaned (the tag
@@ -697,5 +697,5 @@ private fun CompactStatRowColored(
 
 @Composable
 private fun SectionHeader(title: String) {
-    CinemaText(text = title, role = TextRole.Label, tone = TextTone.Accent, emphasis = true, modifier = Modifier.padding(top = Spacing.xs))
+    CinemaText(text = title, role = TextRole.Label, tone = TextTone.Primary, emphasis = true, modifier = Modifier.padding(top = Spacing.xs))
 }

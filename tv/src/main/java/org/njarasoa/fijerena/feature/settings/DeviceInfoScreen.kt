@@ -136,7 +136,7 @@ fun DeviceInfoScreen() {
                     ),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Accent)
+                    CinemaText(stringResource(section.title), role = TextRole.Heading, tone = TextTone.Primary)
                     section.rows.forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
                             CinemaText(

@@ -148,7 +148,7 @@ fun DiagnosticsScreen() {
                     ),
             ) {
                 Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Accent)
+                    CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
                     // look-ok: the detail is raw log text (stack traces), set in monospace; size and colour are the Body role's
                     Text(
                         text = entry.detail,
