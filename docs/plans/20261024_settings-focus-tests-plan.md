@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** Proposed 2026-10-24. Not started; two decisions open.
+**Status:** Proposed 2026-10-24. Decisions taken; not started.
 
 ## Goal
 
@@ -40,9 +40,9 @@ build in seconds, with fixed data, and keeps the emulator walks as a local check
    Right into a pane, Back returning focus to the row that opened it.
 4. **Walk files:** the walks these tests cover are removed or cut down (TF-D1); `docs/RUN_GUIDE.md`
    → Focus walks says to run the remaining walks in English before a release.
-5. **Nightly TV walk in CI** (TF-D2, later): a TV emulator job in `instrumented-tests.yml`, a small
+5. **Nightly TV walk in CI** (TF-D2): a TV emulator job in `instrumented-tests.yml`, a small
    fake Xtream server with fixed data started in the job, profiles seeded through the debug receiver,
-   then all remaining walks. Only if TF-D2 says so.
+   then all remaining walks.
 
 ## Risks
 
@@ -60,6 +60,9 @@ build in seconds, with fixed data, and keeps the emulator walks as a local check
 - **TF-D2** Nightly TV walk in CI with a fake Xtream server: (a) now, as Phase 4; (b) later, only if
   the local walks keep being skipped. Recommend (b).
 
+**Decided (user, 2026-10-24):** TF-D1 (b) keep the walks, shorter; TF-D2 (a) the nightly TV walk
+now, as Phase 4.
+
 ## Phases
 
 1. **Spike:** the helper, the fixture, and one test (the Profiles group for an Expert and a child).
@@ -67,7 +70,9 @@ build in seconds, with fixed data, and keeps the emulator walks as a local check
 2. **Settings tests:** every Settings group and pane listed in Design 3; run time under one minute.
 3. **Walks and docs:** walk files per TF-D1, RUN_GUIDE and CONTRIBUTING (a focus change updates its
    test, or its walk where no test covers it).
-4. **Nightly TV walk** (only per TF-D2).
+4. **Nightly TV walk** (TF-D2): a fake Xtream server with fixed data (films, series, live channels
+   with a short XMLTV guide), started in the job; a TV emulator job in `instrumented-tests.yml`;
+   profiles seeded through the debug receiver; the remaining walks recorded against that data.
 
 ## Progress
 
@@ -76,4 +81,4 @@ build in seconds, with fixed data, and keeps the emulator walks as a local check
 | 1. Spike | Not started | |
 | 2. Settings tests | Not started | |
 | 3. Walks and docs | Not started | |
-| 4. Nightly TV walk | Not started (TF-D2) | |
+| 4. Nightly TV walk | Not started | |
