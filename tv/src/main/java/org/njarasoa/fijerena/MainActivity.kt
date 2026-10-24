@@ -16,6 +16,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.history.ProvideSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.LocalPosterBackdrop
+import org.njarasoa.fijerena.core.ui.trailer.TrailerHost
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.navigation.TvNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
@@ -81,12 +82,14 @@ class MainActivity : ComponentActivity() {
             ) {
                 FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                     ProvideSourceBadges {
-                        TvNavHost(
-                            onUiScaleChanged = { choice ->
-                                appSettings.uiScaleChoice = choice
-                                uiScale = choice ?: autoUiScale(this@MainActivity)
-                            },
-                        )
+                        TrailerHost {
+                            TvNavHost(
+                                onUiScaleChanged = { choice ->
+                                    appSettings.uiScaleChoice = choice
+                                    uiScale = choice ?: autoUiScale(this@MainActivity)
+                                },
+                            )
+                        }
                     }
                 }
             }

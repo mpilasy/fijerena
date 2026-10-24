@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
@@ -187,6 +188,7 @@ class MovieDetailsViewModel(
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
                     loadArtwork(detail)
+                    loadTmdbTrailer(detail)
                     loadAlternateStreams(detail)
                 },
                 onFailure = { e ->
@@ -237,6 +239,26 @@ class MovieDetailsViewModel(
                 suspendRunCatching {
                     getRepository().getTmdbTitle(detail.metadata.tmdbId, "MOVIES")
                 }.getOrNull()
+        }
+    }
+
+    /**
+     * TMDB's trailer, when TMDB has one: the trailer of a film whose source sends none, else the
+     * fallback for a source trailer that is no longer on YouTube.
+     */
+    private fun loadTmdbTrailer(detail: MovieDetail) {
+        viewModelScope.launchGuarded("load TMDB trailer", Dispatchers.IO) {
+            val url =
+                suspendRunCatching { getRepository().getTmdbTrailerUrl(detail.metadata.tmdbId, "MOVIES") }.getOrNull()
+                    ?: return@launchGuarded
+            _uiState.update { state ->
+                val shown = (state as? UiState.Success)?.movieDetail
+                if (shown?.id != detail.id) {
+                    state
+                } else {
+                    state.copy(movieDetail = shown.copy(metadata = shown.metadata.withTmdbTrailer(url)))
+                }
+            }
         }
     }
 

@@ -739,6 +739,12 @@ class MediaRepository(
         contentType: String,
     ): String? = provider?.getTmdbBackdropUrl(tmdbId, contentType)
 
+    /** See [MediaProvider.getTmdbTrailerUrl]. */
+    suspend fun getTmdbTrailerUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbTrailerUrl(tmdbId, contentType)
+
     /** See [MediaProvider.getAlternateStreams]. */
     suspend fun getAlternateStreams(
         itemId: String,

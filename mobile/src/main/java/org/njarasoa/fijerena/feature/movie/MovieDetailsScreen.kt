@@ -60,8 +60,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
-import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
@@ -386,7 +386,7 @@ private fun MovieDetailsContent(
 
                     // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                    val trailerContext = LocalContext.current
+                    val playTrailer = rememberPlayTrailer()
                     // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1); none for a child.
                     val wishlistTitle = tmdbTitle ?: cleanTitle(movieDetail.name.ifEmpty { movieName })
                     val wishlist =
@@ -436,7 +436,7 @@ private fun MovieDetailsContent(
                             DetailIconAction(
                                 icon = CinemaIcons.Movie,
                                 label = stringResource(R.string.details_watch_trailer),
-                                onClick = { openExternalUrl(trailerContext, trailer) },
+                                onClick = { playTrailer(trailer, movieDetail.metadata.tmdbTrailerUrl) },
                             )
                         }
                     }

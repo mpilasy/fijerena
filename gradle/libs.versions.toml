@@ -64,6 +64,7 @@ palette = "1.0.0"
 
 # Live sync pairing: QR codes drawn and scanned
 zxing = "3.5.4"
+youtubePlayer = "13.0.0"
 camerax = "1.6.2"
 
 [libraries]
@@ -162,6 +163,7 @@ androidx-palette = { group = "androidx.palette", name = "palette", version.ref =
 
 # Live sync pairing
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+youtube-player-core = { group = "com.pierfrancescosoffritti.androidyoutubeplayer", name = "core", version.ref = "youtubePlayer" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }

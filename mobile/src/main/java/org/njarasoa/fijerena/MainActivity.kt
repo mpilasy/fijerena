@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.history.ProvideSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.LocalPosterBackdrop
+import org.njarasoa.fijerena.core.ui.trailer.TrailerHost
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.navigation.MobileNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
@@ -70,7 +71,9 @@ class MainActivity : ComponentActivity() {
             FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                 CompositionLocalProvider(LocalPosterBackdrop provides posterBackdrop) {
                     ProvideSourceBadges {
-                        MobileNavHost()
+                        TrailerHost {
+                            MobileNavHost()
+                        }
                     }
                 }
             }

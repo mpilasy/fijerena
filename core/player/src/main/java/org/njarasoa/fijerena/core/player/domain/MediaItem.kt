@@ -26,7 +26,17 @@ data class MediaMetadata(
     val year: Int? = null,
     /** Ready-to-open trailer URL, already normalized by [trailerUrl]. */
     val trailerUrl: String? = null,
-)
+    /** TMDB's trailer, played when [trailerUrl] (the source's) is no longer on YouTube. */
+    val tmdbTrailerUrl: String? = null,
+) {
+    /** With TMDB's trailer [url]: the trailer when the source sent none, else its fallback. */
+    fun withTmdbTrailer(url: String): MediaMetadata =
+        when (trailerUrl) {
+            null -> copy(trailerUrl = url)
+            url -> this
+            else -> copy(tmdbTrailerUrl = url)
+        }
+}
 
 private val YOUTUBE_ID = Regex("[A-Za-z0-9_-]{11}")
 

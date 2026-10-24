@@ -989,7 +989,7 @@ class XtreamContentManager(
                         releaseDate = info.releaseDate,
                         rating = info.rating.asString(),
                         duration = info.duration.asString(),
-                        youtubeTrailer = null, // MovieInfo doesn't seem to have trailer, but SeriesInfo does
+                        youtubeTrailer = info.youtubeTrailer,
                     )
                 }
 

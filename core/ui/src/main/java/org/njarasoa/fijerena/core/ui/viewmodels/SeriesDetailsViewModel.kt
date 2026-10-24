@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
@@ -101,6 +102,11 @@ class SeriesDetailsViewModel(
     private var tmdbTitleTmdbId: String? = null
     private var artworkJob: Job? = null
     private var artworkTmdbId: String? = null
+    private var tmdbTrailerJob: Job? = null
+    private var tmdbTrailerTmdbId: String? = null
+
+    /** TMDB's trailer for [tmdbTrailerTmdbId], once [loadTmdbTrailer] has it. */
+    private var tmdbTrailerUrl: String? = null
 
     /**
      * Other local catalogue entries for the same TMDB id, on every Xtream source of the profile,
@@ -183,6 +189,9 @@ class SeriesDetailsViewModel(
         _tmdbTitle.value = null
         artworkJob?.cancel()
         artworkJob = null
+        tmdbTrailerJob?.cancel()
+        tmdbTrailerJob = null
+        tmdbTrailerUrl = null
         _logoUrl.value = null
         _backdropUrl.value = null
         alternateStreamsJob?.cancel()
@@ -203,7 +212,7 @@ class SeriesDetailsViewModel(
             if (cached != null) {
                 _uiState.value =
                     UiState.Success(
-                        seriesDetail = cached,
+                        seriesDetail = withTmdbTrailer(cached),
                         isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
                         categoryName = categoryNameOrNull(repo),
                         categoryId = categoryId,
@@ -212,6 +221,7 @@ class SeriesDetailsViewModel(
                 loadRelatedTitles(cached)
                 loadTmdbTitle(cached)
                 loadArtwork(cached)
+                loadTmdbTrailer(cached)
                 loadAlternateStreams(cached)
             } else if (!isSwitch) {
                 // A stream switch never flashes Loading — the previous stream's content stays on
@@ -224,7 +234,7 @@ class SeriesDetailsViewModel(
                 onSuccess = { detail ->
                     _uiState.value =
                         UiState.Success(
-                            seriesDetail = detail,
+                            seriesDetail = withTmdbTrailer(detail),
                             isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
                             categoryName = categoryNameOrNull(repo),
                             categoryId = categoryId,
@@ -234,6 +244,7 @@ class SeriesDetailsViewModel(
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
                     loadArtwork(detail)
+                    loadTmdbTrailer(detail)
                     loadAlternateStreams(detail)
                 },
                 // A failed refresh must not blank a screen already drawn from the cache — the
@@ -283,6 +294,37 @@ class SeriesDetailsViewModel(
                         ensureRepo().getTmdbTitle(tmdbId, "TV_SHOWS")
                     }.getOrNull()
             }
+    }
+
+    /**
+     * TMDB's trailer, when TMDB has one: the trailer of a show whose source sends none, else the
+     * fallback for a source trailer that is no longer on YouTube. As [loadRelatedTitles],
+     * fetch only for the first of the cached and the fetched detail; [withTmdbTrailer] keeps the
+     * trailer on the fetched one when it lands after this.
+     */
+    private fun loadTmdbTrailer(detail: SeriesDetail) {
+        val tmdbId = detail.metadata.tmdbId
+        if (tmdbTrailerJob != null && tmdbId == tmdbTrailerTmdbId) return
+        tmdbTrailerJob?.cancel()
+        tmdbTrailerTmdbId = tmdbId
+        tmdbTrailerUrl = null
+        tmdbTrailerJob =
+            viewModelScope.launchGuarded("load TMDB trailer", Dispatchers.IO) {
+                val url =
+                    suspendRunCatching { ensureRepo().getTmdbTrailerUrl(tmdbId, "TV_SHOWS") }.getOrNull()
+                        ?: return@launchGuarded
+                tmdbTrailerUrl = url
+                _uiState.update { state ->
+                    if (state is UiState.Success) state.copy(seriesDetail = withTmdbTrailer(state.seriesDetail)) else state
+                }
+            }
+    }
+
+    /** [detail] with TMDB's trailer, when it has come and is for the same title. */
+    private fun withTmdbTrailer(detail: SeriesDetail): SeriesDetail {
+        val url = tmdbTrailerUrl
+        if (url == null || detail.metadata.tmdbId != tmdbTrailerTmdbId) return detail
+        return detail.copy(metadata = detail.metadata.withTmdbTrailer(url))
     }
 
     /**

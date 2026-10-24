@@ -159,6 +159,7 @@ when `server/` changes).
 | Material Design | Material 3 | 1.4.0 (`strictly`) |
 | TV Components | androidx.tv.material3 (lists are plain LazyColumn/LazyRow) | 1.0.0-alpha10 |
 | Video Player | Media3 (ExoPlayer), Jellyfin FFmpeg decoder | 1.8.0 |
+| Trailer Player | android-youtube-player (YouTube's embedded player in the system WebView, MIT) | 13.0.0 |
 | Networking | Ktor (OkHttp engine) | 3.5.2 |
 | Serialization | kotlinx.serialization | 1.11.0 |
 | Database | Room (FTS4) | 2.8.4 |
@@ -249,5 +250,6 @@ for details.
 - **Jetpack Compose** - declarative UI toolkit
 - **Media3** - the ExoPlayer playback engine, and Jellyfin's FFmpeg decoder build
 - **Ktor** - networking
+- **android-youtube-player** (Pierfrancesco Soffritti) - plays trailers in the app
 - **Hierynomus** - the smbj SMB client library
 - The open-source libraries listed in `gradle/libs.versions.toml`

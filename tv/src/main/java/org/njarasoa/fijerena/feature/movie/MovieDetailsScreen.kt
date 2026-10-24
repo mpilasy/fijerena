@@ -96,8 +96,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
-import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.WishlistControl
@@ -584,9 +584,9 @@ private fun MovieDetailsContent(
                             )
                         }
                         movieDetail.metadata.trailerUrl?.let { trailer ->
-                            val trailerContext = LocalContext.current
+                            val playTrailer = rememberPlayTrailer()
                             CinemaIconButton(
-                                onClick = { openExternalUrl(trailerContext, trailer) },
+                                onClick = { playTrailer(trailer, movieDetail.metadata.tmdbTrailerUrl) },
                                 modifier = downToTabRow.then(upScrollToTop),
                                 icon = {
                                     Icon(

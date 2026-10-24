@@ -91,8 +91,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
-import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
@@ -381,6 +381,7 @@ private fun EpisodeListContent(
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
+    val playTrailer = rememberPlayTrailer()
     val resources = LocalResources.current
     val watchedToggleScope = rememberCoroutineScope()
     val sortedSeasons =
@@ -836,7 +837,7 @@ private fun EpisodeListContent(
                         DetailIconAction(
                             icon = CinemaIcons.Movie,
                             label = stringResource(R.string.details_watch_trailer),
-                            onClick = { openExternalUrl(context, trailer) },
+                            onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                         )
                     }
                     if (canMarkManyWatched) {
@@ -1306,10 +1307,10 @@ private fun EpisodeDetailContent(
         // The trailer is the show's, not this episode's — Xtream and Jellyfin only ever
         // carry one per series.
         seriesDetail.metadata.trailerUrl?.let { trailer ->
-            val trailerContext = LocalContext.current
+            val playTrailer = rememberPlayTrailer()
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             CinemaOutlinedButton(
-                onClick = { openExternalUrl(trailerContext, trailer) },
+                onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 CinemaText(

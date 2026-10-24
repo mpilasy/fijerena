@@ -46,8 +46,8 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
-import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbTitleViewModel
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.movie.CastChipsTabContent
@@ -81,6 +81,7 @@ fun MobileTmdbTitleScreen(
     onRelatedTitleSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
+    val playTrailer = rememberPlayTrailer()
     val viewModel: TmdbTitleViewModel =
         viewModel(
             key = "tmdb_${title.contentType}_${title.tmdbId}",
@@ -185,7 +186,7 @@ fun MobileTmdbTitleScreen(
                             DetailIconAction(
                                 icon = CinemaIcons.Movie,
                                 label = stringResource(R.string.details_watch_trailer),
-                                onClick = { openExternalUrl(context, trailer) },
+                                onClick = { playTrailer(trailer) },
                             )
                         }
                     }

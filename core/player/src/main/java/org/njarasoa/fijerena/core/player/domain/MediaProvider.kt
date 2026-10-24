@@ -150,6 +150,15 @@ interface MediaProvider {
     ): String? = null
 
     /**
+     * TMDB's YouTube trailer for [tmdbId], for a title whose source sends none. Null for no TMDB
+     * id, no API key, a failed call, or no trailer on TMDB.
+     */
+    suspend fun getTmdbTrailerUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = null
+
+    /**
      * Other entries in this provider's local catalogue carrying the same TMDB id as [itemId] —
      * different rips/languages of the same movie or show, for the "other instances" picker next
      * to the stream name. Empty for every reason it should simply not show: no TMDB id, or

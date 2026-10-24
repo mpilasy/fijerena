@@ -39,6 +39,7 @@ android {
 
 dependencies {
     implementation(libs.zxing.core)
+    implementation(libs.youtube.player.core)
     // Reads the open-source licence list the apps generate at build time (OpenSourceLicenses).
     implementation(libs.kotlinx.serialization.json)
     implementation(project(":core:network"))

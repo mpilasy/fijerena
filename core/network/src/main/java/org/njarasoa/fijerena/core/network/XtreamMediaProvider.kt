@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import java.util.concurrent.ConcurrentHashMap
@@ -880,6 +881,32 @@ class XtreamMediaProvider(
     ): String? {
         val images = getTmdbImages(tmdbId, contentType) ?: return null
         return TmdbApiService.bestBackdropUrl(images.backdrops)
+    }
+
+    override suspend fun getTmdbTrailerUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        if (!tmdb.hasApiKey()) return null
+        val id = tmdbId?.toIntOrNull() ?: return null
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
+
+        return try {
+            val videos = tmdb.getVideos(contentType == ContentType.MOVIES, id).results
+            trailerUrl(
+                TmdbApiService.bestTrailerKey(
+                    videos,
+                    java.util.Locale
+                        .getDefault()
+                        .language,
+                ),
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB trailer for $contentType $id: ${e.message}")
+            null
+        }
     }
 
     /** Shared by [getTmdbLogoUrl] and [getTmdbBackdropUrl] — both read the same `/images`

@@ -381,6 +381,7 @@
     <string name="details_saved_copy_tv">Détails enregistrés : la source est injoignable. Actualisez depuis le menu Plus.</string>
     <string name="details_more_like_this">Dans le même genre</string>
     <string name="details_no_link_handler">Aucune application de cet appareil ne peut ouvrir ce lien</string>
+    <string name="trailer_unavailable">Cette bande-annonce n\'est plus sur YouTube</string>
     <string name="movie_loading_details">Chargement des détails…</string>
     <string name="movie_error_loading">Erreur de chargement du film</string>
     <string name="movie_back_to_movies">Retour aux films</string>

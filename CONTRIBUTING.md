@@ -25,7 +25,7 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 - Compose BOM 2026.03.01 (ui/foundation/runtime/animation 1.10.6). Compose 1.11+ needs `compileSdk` 37.
 - Material 3 is pinned `strictly` 1.4.0 so the compile and runtime classpaths agree.
 - `androidx.tv:tv-material` 1.0.0-alpha10 is used; `tv-foundation` only arrives as its transitive dependency. Its `TvLazyColumn`/`TvLazyRow` crash on Compose 1.9+ (see Focus below).
-- Room 2.8.4 on a bundled requery SQLite 3.49.0 (FTS5 capable; the app's indexes use FTS4). Media3 1.8.0 (with the Jellyfin FFmpeg decoder 1.8.0+1, kept on the same Media3 release), Ktor 3.5.2 (OkHttp engine), Coil 3.5.0, Navigation Compose 2.8.5, smbj 0.15.0, WorkManager 2.11.2.
+- Room 2.8.4 on a bundled requery SQLite 3.49.0 (FTS5 capable; the app's indexes use FTS4). Media3 1.8.0 (with the Jellyfin FFmpeg decoder 1.8.0+1, kept on the same Media3 release), Ktor 3.5.2 (OkHttp engine), Coil 3.5.0, Navigation Compose 2.8.5, smbj 0.15.0, WorkManager 2.11.2, android-youtube-player 13.0.0 (trailers).
 - Theming: `CinemaThemeHolder` + `CinemaThemePalette` (colour); `UiStyleHolder` + `UiStyle` (look and feel).
 
 ---

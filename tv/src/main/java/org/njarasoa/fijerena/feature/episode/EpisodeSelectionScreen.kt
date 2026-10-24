@@ -154,8 +154,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
+import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
-import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
@@ -333,6 +333,7 @@ internal fun EpisodeListContent(
     sourceNames: Map<Long, String> = emptyMap(),
 ) {
     val context = LocalContext.current
+    val playTrailer = rememberPlayTrailer()
     val resources = LocalResources.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf(appSettings.providerName) }
@@ -1170,7 +1171,7 @@ internal fun EpisodeListContent(
                             }
                             seriesDetail.metadata.trailerUrl?.let { trailer ->
                                 CinemaIconButton(
-                                    onClick = { openExternalUrl(context, trailer) },
+                                    onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                                     modifier = downToTabRow.then(upScrollToTop),
                                     icon = {
                                         Icon(
@@ -2001,9 +2002,9 @@ private fun EpisodeDetailPanel(
                 // The trailer is the show's, not this episode's — Xtream and Jellyfin only ever
                 // carry one per series.
                 seriesDetail.metadata.trailerUrl?.let { trailer ->
-                    val trailerContext = LocalContext.current
+                    val playTrailer = rememberPlayTrailer()
                     CinemaIconButton(
-                        onClick = { openExternalUrl(trailerContext, trailer) },
+                        onClick = { playTrailer(trailer, seriesDetail.metadata.tmdbTrailerUrl) },
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Movie,

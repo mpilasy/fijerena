@@ -406,6 +406,7 @@ Building, installing and device discovery: [RUN_GUIDE.md](RUN_GUIDE.md).
 - **UI:** Jetpack Compose, `androidx.tv.material3` (TV), Coil
 - **Networking:** Ktor (OkHttp engine), kotlinx.serialization
 - **Player:** Media3 (ExoPlayer, HLS, DASH, session), Jellyfin's FFmpeg decoder
+- **Trailers:** `com.pierfrancescosoffritti.androidyoutubeplayer:core` (YouTube's embedded player in the system WebView; `core/ui` `trailer/TrailerPlayer.kt`)
 - **Database:** Room with KSP
 - **Navigation:** Navigation Compose with kotlinx.serialization routes
 - **SMB:** `com.hierynomus:smbj`

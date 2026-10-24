@@ -156,6 +156,17 @@ class TmdbApiService(
             ),
         ).body()
 
+    /** The title's trailers, teasers and clips: in the app language, English or none, as [getDetailsWithCredits]. */
+    suspend fun getVideos(
+        movie: Boolean,
+        id: Int,
+    ): TmdbVideos =
+        fetch(
+            if (movie) "movie/$id/videos" else "tv/$id/videos",
+            Language.APP,
+            mapOf("include_video_language" to "${appLanguage()},en,null"),
+        ).body()
+
     /** Backdrops/posters/logos for a movie. `logos` (wordmark art) and `backdrops` (hero
      * background) are used; posters come from the Xtream catalogue instead. */
     suspend fun getMovieImages(movieId: Int): TmdbImagesResponse = fetch("movie/$movieId/images").body()
