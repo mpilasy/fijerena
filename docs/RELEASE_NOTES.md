@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.7.7
 
 - **"Updated 1 hour ago" in the app's language:** the time since an update showed in the phone's language ("Mis à jour 1 hour ago"). It now follows the app's language, on TV and phone.
 - **Phone: list titles in the Look's title font:** film, show and channel names in the lists use the title font, as on TV (Antonio in Console).
