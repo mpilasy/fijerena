@@ -4,9 +4,11 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import org.junit.Assert.fail
@@ -28,8 +30,14 @@ class FocusWalk(
     /** The focused control's text, read as `scripts/tv-focus-walk.sh` reads it. */
     fun focusedText(): String {
         rule.waitForIdle()
+        return readFocusedText()
+    }
+
+    private fun readFocusedText(): String {
         val nodes = rule.onAllNodes(isFocused(), useUnmergedTree = true).fetchSemanticsNodes()
-        val node = nodes.firstOrNull() ?: return NOTHING_FOCUSED
+        // A dialog is a window of its own, above the screen, and the screen's control keeps its
+        // focused state under it: the last focused node is the one in the top window.
+        val node = nodes.lastOrNull() ?: return NOTHING_FOCUSED
         val parts = mutableListOf<String>()
         collectText(node, parts)
         return if (parts.isEmpty()) "(no text)" else parts.take(4).joinToString(" / ")
@@ -46,8 +54,24 @@ class FocusWalk(
         }
     }
 
+    /**
+     * Waits until focus is on [expected], for a screen whose first focus waits for data that loads
+     * off the main thread (a list from the database), then fails as [assertFocused] if it never is.
+     */
+    fun awaitFocused(
+        expected: String,
+        timeoutMs: Long = FIRST_FOCUS_TIMEOUT_MS,
+    ) {
+        try {
+            rule.waitUntil(timeoutMs) { readFocusedText().startsWith(expected) }
+        } catch (_: ComposeTimeoutException) {
+            // assertFocused names what has focus instead.
+        }
+        assertFocused(expected)
+    }
+
     fun press(key: Key) {
-        rule.onNode(isFocused(), useUnmergedTree = true).performKeyInput { pressKey(key) }
+        rule.onAllNodes(isFocused(), useUnmergedTree = true).onLast().performKeyInput { pressKey(key) }
         rule.waitForIdle()
     }
 
@@ -85,6 +109,7 @@ class FocusWalk(
 
     companion object {
         const val NOTHING_FOCUSED = "(nothing focused)"
+        private const val FIRST_FOCUS_TIMEOUT_MS = 5_000L
     }
 }
 

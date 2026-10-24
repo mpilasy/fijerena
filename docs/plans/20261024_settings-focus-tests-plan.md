@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** In progress 2026-10-24: Phase 1 done (whole-screen route), Phase 2 in progress, Phase 4 built (not yet run in CI).
+**Status:** In progress 2026-10-24: Phases 1 and 2 done (whole-screen route), Phase 4 built and running its first CI run, Phase 3 not started.
 
 ## Goal
 
@@ -126,11 +126,42 @@ destructive row. Expected time for all of Settings: well under one minute.
    so far, `ci-settings.txt` (the picker, the rail, Settings for Admin, Admin's and Kid's pages),
    written from the code: the first CI run checks it. The other walks follow once it passes.
 
+## Phase 2 as built
+
+**Done 2026-10-24.** Ten more test classes, 21 tests and 283 steps, on the whole screen as in
+Phase 1; all 23 Settings focus tests run in about 10.5 s (about 4 s of it Robolectric's start).
+No focus bug found; no app code changed.
+
+- **Settings groups** (`tv/src/test/.../feature/settings/`): `SettingsRailFocusTest` (the rail
+  for an Expert, a grown-up and a child), `SettingsPlaybackDisplayFocusTest` (pickers; the rows
+  that open the profile page at Play next episode and at UI theme, and Back or Left to them, for
+  an Expert and a grown-up), `SettingsProfilePageFocusTest` (a grown-up's own page, a grown-up's
+  page in an Expert's view, a child's page with an Expert PIN: no "Set a PIN" row, PIN On, and
+  "Parental Controls ›" opening that group), `SettingsParentalControlsFocusTest` (the group, the
+  Exceptions list to Reset, Check a source, the link to Profiles), `SettingsSourcesGuideFocusTest`
+  (the rows, the guide's maintenance and TMDB key sub-panes), `SettingsSyncBackupFocusTest`,
+  `SettingsAboutFocusTest` (Expert and grown-up).
+- **Screens Settings opens**, shown directly: `SourcesFocusTest` (the Sources list's slots and ⋮
+  menu; Edit Source's two columns), `GuideSourcesFocusTest` (a guide source's row and its
+  auto-refresh picker), `LiveSyncSetupFocusTest` (Live sync not linked).
+- **Helpers:** `SettingsFocusTest` (the rule, the walk, `open`, or `seed` then `show` for another
+  screen); `FocusWalk.awaitFocused` waits for a first focus that waits for a list loaded off the
+  main thread; the walk reads the top window's focus, so a dialog's rows count. The fixture adds
+  a PIN on chosen profiles (the one in use unlocked), a weekly guide source on Source One and
+  `sourceId`; `reset()` also clears `SyncManager` and `PinSession`.
+
+**Stays with the walks (Phase 3):** Back on the rail (leaves Settings) and Back that closes a
+dialog (both go through the activity or the dialog's window, which a test key doesn't reach);
+Back from a screen Settings opens (Sources, Live sync, Guide sources, Edit Source) to the row that
+opened it; Live sync linked to a sync group (`live-sync.txt`); a word removed and put back in a
+list (`ParentalListContentTest` covers it on the list alone); Check a source with several sources
+and real categories.
+
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
 | 1. Spike | Done 2026-10-24 | 3fe44e1f |
-| 2. Settings tests | In progress | |
+| 2. Settings tests | Done 2026-10-24 | |
 | 3. Walks and docs | Not started | |
 | 4. Nightly TV walk | Built, not yet run in CI (server, seeding, CI job, `ci-settings.txt`) | |
