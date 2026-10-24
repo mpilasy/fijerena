@@ -231,7 +231,8 @@ fun MobileEpgBrowserScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Above the floating bottom bar, not behind it.
+        snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = LocalDockInset.current)) },
     ) { paddingValues ->
         MobileGuideSearchPane(
             viewModel = viewModel,
@@ -278,8 +279,13 @@ internal fun MobileGuideSearchPane(
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val epgDbStats =
         when (val idx = indexState) {
-            is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
-            else -> null
+            is EpgIndexState.Indexed -> {
+                stringResource(R.string.epg_browser_dev_stats_counts_format, formatCount(idx.programmeCount), formatCount(idx.channelCount))
+            }
+
+            else -> {
+                null
+            }
         }
 
     // Unmatched airings (no channel in the profile's sources) stay hidden; the toggle is gone

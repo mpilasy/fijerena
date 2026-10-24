@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Phone: messages above the bottom bar:** in the guide search and in Search, a message such as "The TV guide is up to date" shows above the bottom bar, not behind it. The Expert guide counts are in the app's language.
+
 ## Version: 0.7.6
 
 - **Live TV preview shows the ring too:** on the phone, the small Live TV player shows the channel's ring with its logo while it loads, not a black box or a spinner. On TV the ring in the preview is larger, so a wide logo stays readable, and a wait after the channel played shows the ring instead of the spinner.

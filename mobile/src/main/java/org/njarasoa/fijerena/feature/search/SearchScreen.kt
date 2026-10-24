@@ -320,7 +320,8 @@ fun MobileSearchScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Above the floating bottom bar, not behind it.
+        snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = LocalDockInset.current)) },
     ) { paddingValues ->
         Column(
             modifier =
