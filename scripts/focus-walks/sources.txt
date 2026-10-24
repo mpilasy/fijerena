@@ -5,6 +5,8 @@
 # Each row: the row itself (OK = Edit), then fixed slots Guide (empty on a source without live
 # channels: Jellyfin, SMB) and ⋮ ("More actions for <name>"). Right walks the slots, Left walks
 # back, Up/Down keep the column, Up from the first row lands on the header "+" (Add Source).
+# The ⋮ menu (never opened here) has Duplicate, Copy to… and Delete, focus on Duplicate: Edit
+# (OK on the row) and Guide sources (the Guide slot) left it 2026-10-24 (settings flow review, E6).
 # Expectations assume the first row is iptv (M3U, so it has a Guide slot) and the next panel-a
 # (Xtream: Guide, ⋮) — the TV AVD on 2026-10-03.
 # Written 2026-10-03 from the plan, re-recorded 2026-10-04. Multi-source Phase 6 (part 2): the

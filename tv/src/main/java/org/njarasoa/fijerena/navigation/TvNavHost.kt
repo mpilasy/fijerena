@@ -40,6 +40,8 @@ import org.njarasoa.fijerena.core.navigation.isNewSource
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
+import org.njarasoa.fijerena.core.navigation.opensHomeAfterSave
+import org.njarasoa.fijerena.core.navigation.startsOnAddSource
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
@@ -173,6 +175,8 @@ fun TvNavHost(
     // "Who's watching?" on every launch once a second profile exists — the TV is shared, so the
     // last person's profile is a poor guess (the live sync plan → User profiles).
     var pickProfileAtLaunch by remember { mutableStateOf(false) }
+    // No source at all and an Expert in use: Add Source over Settings at start (E1).
+    var addSourceAtStart by remember { mutableStateOf(false) }
     var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
     // The navigation rail (the tv nav rail plan): drawn over the NavHost, given to
@@ -347,6 +351,12 @@ fun TvNavHost(
             hasProvider = providerCount > 0
             appSettings.hasProviderCache = providerCount > 0
         }
+        if (hasProvider != true) {
+            // A new install's first profile becomes Expert in the background startup work, maybe
+            // after this point: the start needs it now (the call does nothing when there is one).
+            ProfileRepository(context.applicationContext).ensureAnExpert()
+            addSourceAtStart = startsOnAddSource(hasSource = false, expert = appSettings.isDevMode)
+        }
         pickProfileAtLaunch = ProfileRepository(context.applicationContext).count() > 1
         initializationComplete = true
     }
@@ -375,10 +385,29 @@ fun TvNavHost(
                 Screen.ProfilePicker
             } else if (hasProvider == true) {
                 Screen.ContentTypeSelection
-            } else {
+            } else if (addSourceAtStart) {
+                // Add Source opens over it (the effect after the NavHost).
                 Screen.Settings
+            } else {
+                // Not Expert: Home says to ask a grown-up for a source.
+                Screen.ContentTypeSelection
             }
         }
+
+    // The first source saved: Home, from the root (E1). No screen may keep a repository from before
+    // it: clearAllCaches(), then start over like a profile switch (every screen below holds a
+    // repository clearAllCaches() just closed). See the rock solid stability resilience plan → F-18.
+    fun startOverAfterFirstSource() {
+        coroutineScope.launch {
+            org.njarasoa.fijerena.core.ui.di.AppContainer
+                .getInstance(context)
+                .clearAllCaches()
+            clearSectionStacks()
+            navController.navigateOnce(Screen.ContentTypeSelection) {
+                popUpTo(navController.graph.id) { inclusive = true }
+            }
+        }
+    }
 
     // No session restore here: each Xtream source of the profile restores its own when it is first
     // used (AppContainer.getMediaRepository / getStoredDataRepository), as there is no source in use.
@@ -1070,6 +1099,15 @@ fun TvNavHost(
                         composable<Screen.AddProvider> { backStackEntry ->
                             HideTvNavRail()
                             val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
+                            // Read before the save: the first source opens Home once saved (E1).
+                            var homeAfterSave by remember { mutableStateOf(false) }
+                            LaunchedEffect(Unit) {
+                                homeAfterSave =
+                                    opensHomeAfterSave(
+                                        addProviderScreen.editId,
+                                        ProviderRepository(context.applicationContext).getProviderCount(),
+                                    )
+                            }
                             TvAddProviderScreen(
                                 editId = addProviderScreen.editId,
                                 onBack = {
@@ -1077,7 +1115,7 @@ fun TvNavHost(
                                 },
                                 onSuccess = {
                                     appSettings.hasProviderCache = true
-                                    navController.navigateUp()
+                                    if (homeAfterSave) startOverAfterFirstSource() else navController.navigateUp()
                                 },
                                 onGuideSources = { id ->
                                     navController.navigateOnce(Screen.EpgManagement(providerId = id))
@@ -1164,24 +1202,18 @@ fun TvNavHost(
                                         popUpTo(navController.graph.id) { inclusive = true }
                                     }
                                 },
-                                onProviderChanged = {
-                                    coroutineScope.launch {
-                                        // The first source was added: no screen may keep a repository
-                                        // from before it.
-                                        org.njarasoa.fijerena.core.ui.di.AppContainer
-                                            .getInstance(context)
-                                            .clearAllCaches()
-
-                                        // From the root, like a profile switch: every screen below holds a
-                                        // repository clearAllCaches() just closed. See
-                                        // the rock solid stability resilience plan → F-18.
-                                        clearSectionStacks()
-                                        navController.navigateOnce(Screen.ContentTypeSelection) {
-                                            popUpTo(navController.graph.id) { inclusive = true }
-                                        }
-                                    }
-                                },
+                                // Settings opened with no source and has one on its return (a restore,
+                                // live sync): Home, as after the first save.
+                                onProviderChanged = ::startOverAfterFirstSource,
                             )
+                        }
+                    }
+                    // E1: Add Source over Settings, once (a recreated Activity keeps its back stack).
+                    var addSourceOpened by rememberSaveable { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        if (addSourceAtStart && !addSourceOpened) {
+                            addSourceOpened = true
+                            navController.navigate(Screen.AddProvider())
                         }
                     }
                     // After the NavHost, so it draws over the screen and its scrim covers it.

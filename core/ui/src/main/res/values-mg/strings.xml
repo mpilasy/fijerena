@@ -529,7 +529,7 @@
     <string name="terms_s8_body">Mety hiova ireto fepetra ireto. Ny dika ao amin\'ny rindrankajy ampiasainao no mihatra. Raha misy fahasamihafana amin\'ny lahatsoratra anglisy ny dikanteny, ny lahatsoratra anglisy no manan-kery.</string>
     <string name="provider_add_terms_notice">Ianao irery no tompon\'andraikitra amin\'ny loharano ampidirinao sy ny fomba fampiasanao azy. Jereo Fandrindrana → Momba → Fepetra fampiasana.</string>
     <string name="settings_developer_mode_title">Manam-pahaizana</string>
-    <string name="settings_developer_mode_desc">Fitiliana, antsipiriany ara-teknika, ary karazana loharano mbola amboarina (SMB, rakitra eo an-toerana)</string>
+    <string name="settings_developer_mode_desc">Mamela ity mombamomba ity hanova ny loharano, ny mombamomba, ny fanaraha-maso ny ray aman-dreny ary ny tahiry</string>
     <string name="settings_developer_mode_last">Io ihany no manam-pahaizana, ka mitazona izany: omeo mombamomba hafa aloha ny manam-pahaizana.</string>
     <string name="settings_export_import_section_title">Tahiry</string>
     <string name="settings_export_import_desc">Ny loharano sy ny fidirana, ny ankafizina, ny tantaran\'ny fijerena ary ny fikirana</string>
@@ -1010,8 +1010,11 @@
     <string name="profile_content_filters_title">Sivana votoaty</string>
     <string name="profile_child_title">Mombamomba ankizy</string>
     <string name="profile_child_desc">Amin\'ny TV, ny Fandraisana dia mampiseho afa-tsy ny ankafizina ampidirin\'olon-dehibe eto, ary sarimihetsika sy andian-tantara ihany no hitan\'ny fitadiavana, tsy misy fizahana. Ny sokajy ho an\'ny ankizy ihany no asehony amin\'ny loharano rehetra, tsy misy ny ho an\'ny olon-dehibe, ary manajanona ny loharano tsy tratran\'ny sivana. Tsy manam-pahaizana mihitsy ny mombamomba ankizy.</string>
+    <!-- The phone has no Favourites pane: a grown-up fills a child's favourites on TV. -->
+    <string name="profile_child_desc_phone">Amin\'ny TV, ny Fandraisana dia mampiseho afa-tsy ny ankafizina ampidirin\'olon-dehibe amin\'ny TV, ary sarimihetsika sy andian-tantara ihany no hitan\'ny fitadiavana, tsy misy fizahana. Ny sokajy ho an\'ny ankizy ihany no asehony amin\'ny loharano rehetra, tsy misy ny ho an\'ny olon-dehibe, ary manajanona ny loharano tsy tratran\'ny sivana. Tsy manam-pahaizana mihitsy ny mombamomba ankizy.</string>
     <string name="profile_favorites_title">Ankafizina</string>
     <string name="profile_favorites_row_desc">Izay hitan\'ity ankizy ity eo amin\'ny Fandraisana</string>
+    <string name="profile_parental_controls_desc">Ny lisitry ny teny an\'ny ankohonana, ho an\'ny mombamomba ankizy rehetra</string>
     <string name="profile_favorites_desc">Izay hitan\'i %1$s eo amin\'ny Fandraisana. Mitadiava sarimihetsika, fandaharana na fantsona; OK no manampy na manala azy.</string>
     <string name="profile_favorites_search">Mitady sarimihetsika, fandaharana ary fantsona</string>
     <string name="profile_favorites_none">Mbola tsy misy ankafizina. Mitadiava hanampiana.</string>
@@ -1389,6 +1392,8 @@
     <string name="parental_list_reset">Hiverina amin\'ny lisitry ny app</string>
     <string name="parental_list_reset_confirm">Hosoloina ny tenin\'ny app ve ity lisitra ity? Ho very ny fanovanao tamin\'ity lisitra ity.</string>
     <string name="parental_check_title">Hanamarina loharano</string>
+    <string name="parental_profile_filters_title">Sivana votoatin\'ny mombamomba tsirairay</string>
+    <string name="parental_profile_filters_desc">Apetraka eo amin\'ny pejin\'ny mombamomba tsirairay, ao amin\'ny Mombamomba</string>
     <string name="parental_check_desc">Ireo sokajy hitan\'ny ankizy amin\'ity loharano ity amin\'ny lisitra ankehitriny. Tsy tafiditra ny sivana atiny an\'ny ankizy.</string>
     <string name="parental_check_shown">Hita (%1$d)</string>
     <string name="parental_check_hidden">Afenina (%1$d)</string>

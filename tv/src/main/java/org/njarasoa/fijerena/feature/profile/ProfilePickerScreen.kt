@@ -156,9 +156,9 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                     item(key = ADD_PROFILE_KEY) {
                         PickerCard(
                             label = stringResource(R.string.settings_profiles_add),
-                            // Adding a profile is the admin's: an Expert's PIN first while one has a PIN.
+                            // Adding a profile is the admin's: the same PIN rule as in Settings.
                             onClick = {
-                                val holders = viewModel.adminPinHolders()
+                                val holders = viewModel.addProfilePinHolders()
                                 if (holders.isEmpty()) adding = true else askingAdminPin = holders
                             },
                         ) {

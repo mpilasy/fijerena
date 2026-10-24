@@ -78,14 +78,15 @@ fun ParentalControlsSettingsRow(
 
 /**
  * Settings › Parental controls (`Screen.ParentalControls`): the description, one row per list with
- * its number of words ([onOpenList]), then Check a source ([onCheck]; a chooser first when the child
- * profiles have two or more sources).
+ * its number of words ([onOpenList]), Check a source ([onCheck]; a chooser first when the child
+ * profiles have two or more sources), then Content filters of each profile ([onProfiles]).
  */
 @Composable
 fun MobileParentalControlsScreen(
     viewModel: ParentalControlsViewModel,
     onOpenList: (ParentalList) -> Unit,
     onCheck: (providerId: Long) -> Unit,
+    onProfiles: () -> Unit,
     onBack: () -> Unit,
 ) {
     val lists by viewModel.lists.collectAsStateWithLifecycle()
@@ -134,6 +135,14 @@ fun MobileParentalControlsScreen(
                             SourceChoice.None -> Unit
                         }
                     },
+                )
+            }
+            // Each child's own filters are on its page: this row goes back to Settings' profiles.
+            item {
+                SettingsListRow(
+                    title = stringResource(R.string.parental_profile_filters_title),
+                    summary = stringResource(R.string.parental_profile_filters_desc),
+                    onClick = onProfiles,
                 )
             }
         }

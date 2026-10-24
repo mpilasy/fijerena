@@ -213,6 +213,19 @@ private fun SetupPanel(
     // (Start a sync group, under the edit button) can't make a new group by accident.
     val joinFocus = remember { FocusRequester() }
     LaunchedEffect(ui.serverChecked) { if (ui.serverChecked) joinFocus.requestFocus() }
+    // First focus before that: Check server, or the server address's edit button while Check
+    // server is disabled (no address). Without it the screen opened with nothing focused.
+    val serverFocus = remember { FocusRequester() }
+    val checkServerFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        if (!ui.serverChecked) {
+            if (ui.serverUrl.isNotBlank()) {
+                checkServerFocus.requestFocusWithRetry(fallback = serverFocus)
+            } else {
+                serverFocus.requestFocusWithRetry()
+            }
+        }
+    }
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
             ReadOnlyFieldWithEdit(
@@ -221,13 +234,14 @@ private fun SetupPanel(
                 label = stringResource(R.string.live_sync_server_label),
                 keyboardOptions = FieldKeyboards.Url,
                 modifier = Modifier.leftToRail(),
+                editButtonFocusRequester = serverFocus,
             )
             if (!ui.serverChecked) {
                 CinemaPrimaryButton(
                     onClick = viewModel::checkServer,
                     text = stringResource(R.string.live_sync_check_server),
                     enabled = ui.serverUrl.isNotBlank() && !ui.busy,
-                    modifier = Modifier.leftToRail(),
+                    modifier = Modifier.focusRequester(checkServerFocus).leftToRail(),
                 )
             } else {
                 CinemaText(stringResource(R.string.live_sync_server_found), role = TextRole.Body, tone = TextTone.Success)

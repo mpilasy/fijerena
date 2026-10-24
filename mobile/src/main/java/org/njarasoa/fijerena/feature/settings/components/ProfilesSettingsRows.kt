@@ -179,7 +179,7 @@ internal fun ProfileAddDialog(
                     title = stringResource(R.string.profile_child_title),
                     checked = child,
                     onCheckedChange = { child = it },
-                    summary = stringResource(R.string.profile_child_desc),
+                    summary = stringResource(R.string.profile_child_desc_phone),
                 )
                 if (child && noAdminPin) {
                     CinemaText(stringResource(R.string.profile_child_no_pin_warning), tone = TextTone.Danger)

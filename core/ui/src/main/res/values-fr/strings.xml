@@ -586,7 +586,7 @@
     <string name="terms_s8_body">Ces conditions peuvent changer. La version présente dans l\'application que vous utilisez est celle qui s\'applique. Si une traduction diffère du texte anglais, le texte anglais prévaut.</string>
     <string name="provider_add_terms_notice">Vous seul êtes responsable des sources que vous ajoutez et de l\'usage que vous en faites. Voir Paramètres → À propos → Conditions d\'utilisation.</string>
     <string name="settings_developer_mode_title">Mode expert</string>
-    <string name="settings_developer_mode_desc">Diagnostics, détails techniques et types de source encore en développement (SMB, fichiers locaux)</string>
+    <string name="settings_developer_mode_desc">Permet à ce profil de modifier les sources, les profils, le contrôle parental et les sauvegardes</string>
     <string name="settings_developer_mode_last">Seul profil en mode expert, il le garde : donnez d\'abord le mode expert à un autre profil.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
@@ -846,8 +846,11 @@
     <string name="profile_content_filters_title">Filtres de contenu</string>
     <string name="profile_child_title">Profil enfant</string>
     <string name="profile_child_desc">Sur la TV, l\'Accueil ne montre que les favoris ajoutés ici par un adulte, et la recherche ne trouve que des films et des séries, sans navigation. Montre seulement les catégories pour enfants sur chaque source, sans les titres pour adultes, et désactive les sources que les filtres n\'atteignent pas. Un profil enfant n\'est jamais en mode expert.</string>
+    <!-- The phone has no Favourites pane: a grown-up fills a child's favourites on TV. -->
+    <string name="profile_child_desc_phone">Sur la TV, l\'Accueil ne montre que les favoris ajoutés sur la TV par un adulte, et la recherche ne trouve que des films et des séries, sans navigation. Montre seulement les catégories pour enfants sur chaque source, sans les titres pour adultes, et désactive les sources que les filtres n\'atteignent pas. Un profil enfant n\'est jamais en mode expert.</string>
     <string name="profile_favorites_title">Favoris</string>
     <string name="profile_favorites_row_desc">Ce que cet enfant voit sur l\'Accueil</string>
+    <string name="profile_parental_controls_desc">Les listes de mots du foyer, pour chaque profil enfant</string>
     <string name="profile_favorites_desc">Ce que %1$s voit sur l\'Accueil. Cherchez un film, une série ou une chaîne ; OK l\'ajoute ou le retire.</string>
     <string name="profile_favorites_search">Chercher films, séries et chaînes</string>
     <string name="profile_favorites_none">Pas encore de favoris. Cherchez pour en ajouter.</string>
@@ -1397,6 +1400,8 @@
     <string name="parental_list_reset">Revenir à la liste de l\'app</string>
     <string name="parental_list_reset_confirm">Remplacer cette liste par les mots de l\'app ? Vos changements de cette liste seront perdus.</string>
     <string name="parental_check_title">Vérifier une source</string>
+    <string name="parental_profile_filters_title">Filtres de contenu de chaque profil</string>
+    <string name="parental_profile_filters_desc">Réglés sur la page de chaque profil, dans Profils</string>
     <string name="parental_check_desc">Les catégories qu\'un enfant voit sur cette source avec les listes actuelles. Les filtres de contenu propres à l\'enfant ne sont pas inclus.</string>
     <string name="parental_check_shown">Visibles (%1$d)</string>
     <string name="parental_check_hidden">Masquées (%1$d)</string>

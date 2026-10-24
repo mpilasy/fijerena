@@ -107,9 +107,8 @@ fun TvProviderSelectionScreen(
         viewModel.loadProviders()
     }
 
-    // Back from Add, Edit (OK on a row, or the row's overflow menu) or Guide sources (the row's
-    // Guide slot, or the menu) lands on the control that led there, once the reloaded list is back
-    // on screen (T-9).
+    // Back from Add, Edit (OK on a row) or Guide sources (the row's Guide slot) lands on the
+    // control that led there, once the reloaded list is back on screen (T-9).
     val listState = rememberLazyListState()
     val returnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(returnFocus, listState = listState) {
@@ -253,19 +252,6 @@ fun TvProviderSelectionScreen(
         ProviderActionsMenuDialog(
             provider = provider,
             canCopyTo = allProviders.size > 1,
-            onEdit = {
-                returnFocus.leaveFrom(RETURN_MORE_PREFIX + provider.id, listState)
-                onEditProvider(provider.id)
-            },
-            onManageEpg =
-                if (MediaProviderFactory.hasLiveTv(provider)) {
-                    {
-                        returnFocus.leaveFrom(RETURN_MORE_PREFIX + provider.id, listState)
-                        onManageEpg(provider.id)
-                    }
-                } else {
-                    null
-                },
             onDuplicate = { duplicateProvider = provider },
             onCopyTo = { copyFromProvider = provider },
             onDelete = { deleteConfirmProvider = provider },
@@ -394,11 +380,10 @@ private fun ProviderList(
                         )
                     }
                 }
-                // Edit / Guide sources / Duplicate / Copy to… / Delete with real text labels —
+                // Duplicate / Copy to… / Delete with real text labels —
                 // see ProviderActionsMenuDialog. White like the slots' icons, not the accent.
                 CinemaIconButton(
                     onClick = { onMoreActions(provider) },
-                    modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_MORE_PREFIX + provider.id),
                     icon = {
                         Icon(
                             CinemaIcons.MoreVert,
@@ -421,7 +406,6 @@ private val ACTION_SLOT_WIDTH = TvDimensions.settingsInputWidth
 private const val RETURN_ADD = "add"
 private const val RETURN_ROW_PREFIX = "row:"
 private const val RETURN_EPG_PREFIX = "epg:"
-private const val RETURN_MORE_PREFIX = "more:"
 
 /** How long Back waits for the reloaded provider list before handing focus back anyway. */
 private const val RETURN_LIST_WAIT_MS = 2_000L

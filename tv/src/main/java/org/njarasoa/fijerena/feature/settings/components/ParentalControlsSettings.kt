@@ -92,13 +92,14 @@ internal val ParentalList.descriptionRes: Int
 
 /**
  * The Parental controls group's rows: the description, one row per list with its number of words,
- * then Check a source. [firstRowModifier] carries the pane's entry key; [focusRequesterFor] gives
+ * Check a source, then Content filters of each profile ([onOpenProfiles]). [firstRowModifier] carries the pane's entry key; [focusRequesterFor] gives
  * the row that opened a pane its focus back (by [parentalListReturnKey] or [PARENTAL_CHECK_RETURN_KEY]).
  */
 @Composable
 internal fun ParentalControlsCard(
     onOpenList: (ParentalList) -> Unit,
     onOpenCheck: () -> Unit,
+    onOpenProfiles: () -> Unit,
     focusRequesterFor: (String) -> FocusRequester?,
     firstRowModifier: Modifier = Modifier,
 ) {
@@ -123,6 +124,12 @@ internal fun ParentalControlsCard(
             description = null,
             onClick = onOpenCheck,
             focusRequester = focusRequesterFor(PARENTAL_CHECK_RETURN_KEY),
+        )
+        // Each child's own filters are on its page: this row opens the Profiles group.
+        SettingsRow(
+            title = stringResource(R.string.parental_profile_filters_title),
+            description = stringResource(R.string.parental_profile_filters_desc),
+            onClick = onOpenProfiles,
         )
     }
 }

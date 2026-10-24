@@ -10,11 +10,12 @@ import org.njarasoa.fijerena.core.player.domain.ProviderType
 private val DEV_ONLY_SOURCE_TYPES = setOf(ProviderType.SMB, ProviderType.LOCAL)
 
 /**
- * The types Add Source offers: all of them in developer mode, otherwise all but SMB and Local. The
- * type of a source being edited ([editedType]) is always kept, so an existing SMB or Local source
- * can still be edited.
+ * The types Add Source offers: all of them in a debug build, otherwise all but SMB and Local.
+ * Expert mode does not change this: it is the admin's switch now, and an admin must not see types
+ * that do not work. The type of a source being edited ([editedType]) is always kept, so an
+ * existing SMB or Local source can still be edited.
  */
 fun addSourceTypes(
-    isDevMode: Boolean,
+    debugBuild: Boolean,
     editedType: ProviderType? = null,
-): List<ProviderType> = ProviderType.entries.filter { isDevMode || it == editedType || it !in DEV_ONLY_SOURCE_TYPES }
+): List<ProviderType> = ProviderType.entries.filter { debugBuild || it == editedType || it !in DEV_ONLY_SOURCE_TYPES }

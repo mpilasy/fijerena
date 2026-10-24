@@ -597,24 +597,21 @@ fun DuplicateProviderDialog(
 
 /**
  * Overflow menu for a source row's actions, in the shared order of
- * the ux overhaul plan Part I ("Source actions"): Edit, Guide sources,
- * Duplicate, Copy to…, then Delete last and set apart. Opens with focus on Edit; Back closes it
- * (the dialog dismisses on Back, so there is no Cancel row) — T-10. Use stays a direct row
- * button; Guide sources is also one, on sources that carry live channels, and [onManageEpg] is
- * null for the rest.
+ * the ux overhaul plan Part I ("Source actions"): Duplicate, Copy to…, then Delete last and set
+ * apart. Opens with focus on Duplicate; Back closes it (the dialog dismisses on Back, so there is
+ * no Cancel row) — T-10. Edit is OK on the row and Guide sources is the row's Guide slot, so the
+ * menu does not repeat them (the settings flow review, E6).
  */
 @Composable
 fun ProviderActionsMenuDialog(
     provider: ProviderEntity,
     canCopyTo: Boolean,
-    onEdit: () -> Unit,
-    onManageEpg: (() -> Unit)?,
     onDuplicate: () -> Unit,
     onCopyTo: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val editFocusRequester = remember { FocusRequester() }
+    val firstFocusRequester = remember { FocusRequester() }
 
     @Composable
     fun MenuRow(
@@ -664,22 +661,10 @@ fun ProviderActionsMenuDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 MenuRow(
-                    icon = CinemaIcons.Edit,
-                    label = stringResource(R.string.provider_edit_button),
-                    onClick = onEdit,
-                    modifier = Modifier.focusRequester(editFocusRequester),
-                )
-                if (onManageEpg != null) {
-                    MenuRow(
-                        icon = CinemaIcons.LiveTv,
-                        label = stringResource(R.string.epg_sources_header),
-                        onClick = onManageEpg,
-                    )
-                }
-                MenuRow(
                     icon = CinemaIcons.ContentCopy,
                     label = stringResource(R.string.provider_duplicate_button),
                     onClick = onDuplicate,
+                    modifier = Modifier.focusRequester(firstFocusRequester),
                 )
                 if (canCopyTo) {
                     MenuRow(
@@ -701,7 +686,7 @@ fun ProviderActionsMenuDialog(
                 )
             }
         },
-        initialFocus = editFocusRequester,
+        initialFocus = firstFocusRequester,
         confirmButton = {},
         containerColor = CinemaTheme.colors.surface,
         titleContentColor = CinemaTheme.colors.textPrimary,

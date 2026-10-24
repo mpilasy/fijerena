@@ -24,7 +24,7 @@ sealed interface PinRequest {
 
     /**
      * Any of [profileIds]' PINs — the Expert profiles' (admin, for now): the 7 taps on the version
-     * and Add profile on TV's picker while an Expert has a PIN. [profileId] is the first of them.
+     * and Add profile (see ProfilesViewModel.addProfilePins). [profileId] is the first of them.
      */
     data class AnyOf(
         val profileIds: List<String>,

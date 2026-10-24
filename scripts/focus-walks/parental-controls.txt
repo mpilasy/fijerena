@@ -11,6 +11,10 @@
 # Check a source: with several sources, the sources first; OK on one shows its row (focus), then
 # Shown (n) and Hidden (n) with each category and its type. Left goes back to the sources (focus
 # on the one checked), Left again to the Check a source row.
+# Last, Content filters of each profile (the settings flow review, Phase 3, 2026-10-24): OK opens
+# the Profiles group, focus on its first row (text depends on the device, unasserted); Back goes
+# to the rail. A child's page has Parental controls under Admin, which opens this group, focus
+# on its first list (not walked here). Phase 3 lines edited by hand, not re-run in English.
 @start Profiles
 DOWN	Parental controls
 RIGHT	Kids' categories / A category shows to a child when its name has one of these words.
@@ -19,8 +23,10 @@ DOWN	Adult categories / A category with one of these words never shows to a chil
 DOWN	Hidden titles / A title with one of these words never shows to a child, also in a kids' category.
 DOWN	Exceptions / A film or series with one of these words shows to a child, also from a hidden category.
 DOWN	Check a source
+DOWN	Content filters of each profile / Set on each profile's page, in Profiles
 # Down at the end of the pane stays put.
-DOWN	Check a source
+DOWN	Content filters of each profile / Set on each profile's page, in Profiles
+UP	Check a source
 UP	Exceptions
 CENTER	Add a word
 DOWN	pokemon
@@ -54,6 +60,7 @@ CENTER	The categories a child sees on this source with the lists now.
 DOWN	AL| FEMIJË / Live TV
 LEFT	
 LEFT	Check a source
+DOWN	Content filters of each profile / Set on each profile's page, in Profiles
+CENTER	
 # Back in the group's pane returns to the rail row.
-BACK	Parental controls
-UP	Profiles
+BACK	Profiles

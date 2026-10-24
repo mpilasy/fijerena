@@ -138,7 +138,7 @@ fun SettingsScreen(
     // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
     TvLeaveChildPinDialog(profilesViewModel, onProfileSwitched)
     // Settings opens without the PIN; what changes shared setup or another profile (the admin's
-    // groups, a profile's page, adding a profile) asks the PIN of the profile in use first.
+    // groups, a profile's page) asks the PIN of the profile in use first.
     val inUse by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     var guardedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val guarded: (() -> Unit) -> Unit = { action ->
@@ -158,6 +158,22 @@ fun SettingsScreen(
                 onCancel = { guardedAction = null },
             )
         }
+    }
+    // Add profile has its own rule, the same as on the picker (ProfilesViewModel.addProfilePins).
+    var addProfileAction by remember { mutableStateOf<Pair<List<String>, () -> Unit>?>(null) }
+    val addProfileGuarded: (() -> Unit) -> Unit = { action ->
+        val holders = profilesViewModel.addProfilePinHolders()
+        if (holders.isEmpty()) action() else addProfileAction = holders to action
+    }
+    addProfileAction?.let { (holders, action) ->
+        TvPinDialog(
+            state =
+                rememberPinPromptState(profilesViewModel.pins, PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin))) {
+                    addProfileAction = null
+                    action()
+                },
+            onCancel = { addProfileAction = null },
+        )
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9, T6).
@@ -394,6 +410,24 @@ fun SettingsScreen(
             returnFocus.clear()
         }
     }
+    // A row that leads to another group (Parental controls and a child's page lead to each other's
+    // group): that group's rows, focus on its first row once they show. Back from there goes to
+    // the rail, as in every group.
+    var focusGroupEntry by remember { mutableStateOf(false) }
+    val openGroup: (SettingsGroup) -> Unit = { group ->
+        picker = null
+        editingProfileId = null
+        profilePageStart = null
+        returnFocus.clear()
+        selectedGroup = group
+        focusGroupEntry = true
+    }
+    LaunchedEffect(selectedGroup, focusGroupEntry) {
+        if (focusGroupEntry) {
+            focusGroupEntry = false
+            contentPane.focusEntry()
+        }
+    }
 
     // Back while in the pane returns to the rail row (Left does the same, via tvPane); Back on
     // the rail leaves Settings as before. Taken in onPreviewKeyEvent on the root — a BackHandler
@@ -570,6 +604,10 @@ fun SettingsScreen(
                                                     stringResource(R.string.profile_dialog_edit_title)
                                                 },
                                             startAt = profilePageStart,
+                                            onParentalControls = {
+                                                viewModel.refreshDevMode()
+                                                openGroup(SettingsGroup.PARENTAL_CONTROLS)
+                                            },
                                             entryModifier =
                                                 if (ownProfilePage) {
                                                     Modifier.paneItem(
@@ -600,7 +638,7 @@ fun SettingsScreen(
                                                     message = profilesMessage,
                                                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                                                     onAdd = { name, colorIndex, child ->
-                                                        guarded {
+                                                        addProfileGuarded {
                                                             profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it }
                                                         }
                                                     },
@@ -641,6 +679,7 @@ fun SettingsScreen(
                                                         returnFocus.leaveFrom(PARENTAL_CHECK_RETURN_KEY, listState)
                                                         picker = SettingPicker.PARENTAL_CHECK
                                                     },
+                                                    onOpenProfiles = { openGroup(SettingsGroup.PROFILES) },
                                                     focusRequesterFor = returnFocus::requesterFor,
                                                     firstRowModifier = entryModifier,
                                                 )

@@ -90,6 +90,8 @@ fun MobileProfileEditScreen(
     onBack: () -> Unit,
     onProfileSwitched: () -> Unit,
     startAt: ProfilePageRow? = null,
+    /** A child's page, admin view: "Parental controls ›" (the page is saved first). */
+    onParentalControls: () -> Unit = {},
 ) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     // Content filters act on Xtream catalogues only (as they did in Edit Source).
@@ -419,7 +421,7 @@ fun MobileProfileEditScreen(
                         },
                         summary =
                             stringResource(
-                                if (devMode && lastExpert) R.string.profile_child_last_expert else R.string.profile_child_desc,
+                                if (devMode && lastExpert) R.string.profile_child_last_expert else R.string.profile_child_desc_phone,
                             ),
                         enabled = !(devMode && lastExpert),
                         modifier = inset,
@@ -464,6 +466,17 @@ fun MobileProfileEditScreen(
                                     is SourceChoice.Ask -> choosingFiltersSource = true
                                     SourceChoice.None -> Unit
                                 }
+                            },
+                        )
+                    }
+                    // The household's word lists, which decide what every child sees.
+                    if (child) {
+                        SettingsListRow(
+                            title = stringResource(R.string.parental_controls_title),
+                            summary = stringResource(R.string.profile_parental_controls_desc),
+                            onClick = {
+                                apply(name)
+                                onParentalControls()
                             },
                         )
                     }

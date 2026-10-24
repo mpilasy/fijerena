@@ -46,8 +46,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
@@ -106,9 +106,8 @@ fun MobileAddProviderScreen(
     val isEditMode = editId > 0L
 
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
-    // The type of the source being edited: kept on the type list even when it's dev-mode only (R-22).
+    // The type of the source being edited: kept on the type list even when it's debug-build only (R-22).
     var editedType by remember { mutableStateOf<ProviderType?>(null) }
-    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
@@ -403,7 +402,7 @@ fun MobileAddProviderScreen(
                         expanded = typeDropdownExpanded,
                         onDismissRequest = { typeDropdownExpanded = false },
                     ) {
-                        addSourceTypes(isDevMode, editedType).forEach { type ->
+                        addSourceTypes(BuildConfig.DEBUG, editedType).forEach { type ->
                             DropdownMenuItem(
                                 text = { CinemaText(type.displayName, role = TextRole.Label, tone = TextTone.Inherit) },
                                 onClick = {

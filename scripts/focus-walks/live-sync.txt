@@ -5,6 +5,8 @@
 # group (outlined, error colour); Up from Leave lands on the last row's last button.
 # Rename opens a dialog (harmless); Remove and Leave keep their confirm dialogs — never OK on them.
 # Checked 2026-10-12 on the TV emulator (two devices: this one, then the phone).
+# Not linked (not walked here): the setup panel opens on Check server, or on the server address
+# while it is empty (settings flow review, W4, 2026-10-24).
 @start Sync now
 DOWN	Add a device
 DOWN	Share what's playing

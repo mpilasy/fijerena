@@ -146,7 +146,7 @@ fun MobileSettingsScreen(
         )
     }
     // Settings opens without the PIN; what changes shared setup or another profile (the admin's
-    // groups, a profile's page, adding a profile) asks the PIN of the profile in use first.
+    // groups, a profile's page) asks the PIN of the profile in use first.
     val inUse by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     var guardedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val guarded: (() -> Unit) -> Unit = { action ->
@@ -166,6 +166,22 @@ fun MobileSettingsScreen(
                 onCancel = { guardedAction = null },
             )
         }
+    }
+    // Add profile has its own rule, the same as on TV's picker (ProfilesViewModel.addProfilePins).
+    var addProfileAction by remember { mutableStateOf<Pair<List<String>, () -> Unit>?>(null) }
+    val addProfileGuarded: (() -> Unit) -> Unit = { action ->
+        val holders = profilesViewModel.addProfilePinHolders()
+        if (holders.isEmpty()) action() else addProfileAction = holders to action
+    }
+    addProfileAction?.let { (holders, action) ->
+        PinDialog(
+            state =
+                rememberPinPromptState(profilesViewModel.pins, PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin))) {
+                    addProfileAction = null
+                    action()
+                },
+            onCancel = { addProfileAction = null },
+        )
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
@@ -386,7 +402,7 @@ fun MobileSettingsScreen(
                     message = profilesMessage,
                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                     onAdd = { name, colorIndex, child ->
-                        guarded { profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it } }
+                        addProfileGuarded { profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it } }
                     },
                     onEdit = { id -> guarded { onEditProfile(id) } },
                     onDismissMessage = profilesViewModel::clearMessage,

@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,10 +50,13 @@ import org.njarasoa.fijerena.core.navigation.isNewSource
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
+import org.njarasoa.fijerena.core.navigation.opensHomeAfterSave
+import org.njarasoa.fijerena.core.navigation.startsOnAddSource
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ParentalList
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
@@ -233,6 +237,19 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         restartOn(startTab(appSettings.lastTab, sections.merged))
     }
 
+    // The first source saved on Add Source: Home, from the root (E1). No screen may keep a
+    // repository from before it, as after Settings' first source.
+    fun startOverAfterFirstSource() {
+        coroutineScope.launch {
+            org.njarasoa.fijerena.core.ui.di.AppContainer
+                .getInstance(context)
+                .clearAllCaches()
+            profileSections = ProfileSections.load(context)
+            sourcesProfileId = appSettings.activeProfileId
+            restartOn(MobileTab.HOME)
+        }
+    }
+
     // Each visit to a tab's root re-reads the profile's sources: a source turned on or off, added,
     // signed in to or renamed meanwhile.
     fun refreshSource() {
@@ -295,6 +312,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
 
     // Async initialization: migrate legacy creds, determine start destination
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
+    // No source at all and an Expert in use: Add Source over Settings at start (E1).
+    var addSourceAtStart by remember { mutableStateOf(false) }
 
     suspend fun initializeStartup() {
         val providerRepo = ProviderRepository(context.applicationContext)
@@ -314,6 +333,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             val sections = ProfileSections.load(context)
             profileSections = sections
             openingTab = startTab(appSettings.lastTab, sections.merged)
+        } else {
+            // A new install's first profile becomes Expert in the background startup work, maybe
+            // after this point: the start needs it now (the call does nothing when there is one).
+            ProfileRepository(context.applicationContext).ensureAnExpert()
+            addSourceAtStart = startsOnAddSource(hasSource = false, expert = appSettings.isDevMode)
         }
         hasProvider = anyProvider
     }
@@ -350,10 +374,12 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             Screen.NewerData
         } else if (SafeMode.isActive) {
             Screen.SafeMode
-        } else if (hasProvider == true) {
-            openingTab.route
-        } else {
+        } else if (addSourceAtStart) {
+            // Add Source opens over it (the effect after the NavHost).
             Screen.Settings
+        } else {
+            // With no source, Home says to ask a grown-up for one (not Expert).
+            openingTab.route
         }
 
     // No session restore here: each Xtream source of the profile restores its own when it is first
@@ -786,13 +812,22 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
 
                 composable<Screen.AddProvider> { backStackEntry ->
                     val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
+                    // Read before the save: the first source opens Home once saved (E1).
+                    var homeAfterSave by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        homeAfterSave =
+                            opensHomeAfterSave(
+                                addProviderScreen.editId,
+                                ProviderRepository(context.applicationContext).getProviderCount(),
+                            )
+                    }
                     MobileAddProviderScreen(
                         editId = addProviderScreen.editId,
                         onBack = {
                             navController.navigateUp()
                         },
                         onSuccess = {
-                            navController.navigateUp()
+                            if (homeAfterSave) startOverAfterFirstSource() else navController.navigateUp()
                         },
                         onGuideSources = { id ->
                             navController.navigateOnce(Screen.EpgManagement(providerId = id))
@@ -827,6 +862,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
                         onBack = { navController.navigateUp() },
                         startAt = ProfilePageRow.of(route.at),
+                        onParentalControls = { navController.navigateOnce(Screen.ParentalControls) },
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous
                             // profile's repository, so start over on its last tab.
@@ -882,6 +918,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         viewModel = viewModel(factory = SettingsViewModelFactory(context)),
                         onOpenList = { list -> navController.navigateOnce(Screen.ParentalListEdit(list.key)) },
                         onCheck = { id -> navController.navigateOnce(Screen.ParentalCheck(id)) },
+                        // Settings, where the Profiles group (each profile's page) is: what is
+                        // over it (this page, and a child's page that opened it) closes.
+                        onProfiles = {
+                            if (!navController.popBackStack<Screen.Settings>(inclusive = false)) navController.navigateUp()
+                        },
                         onBack = { navController.navigateUp() },
                     )
                 }
@@ -1141,6 +1182,14 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         },
                     )
                 }
+            }
+        }
+        // E1: Add Source over Settings, once (a recreated Activity keeps its back stack).
+        var addSourceOpened by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (addSourceAtStart && !addSourceOpened) {
+                addSourceOpened = true
+                navController.navigate(Screen.AddProvider())
             }
         }
         if (showBar && currentTab != null) {

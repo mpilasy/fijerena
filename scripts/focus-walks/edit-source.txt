@@ -1,6 +1,6 @@
 # T5 — Edit Source (TvAddProviderScreen, edit mode), TV emulator, an Xtream source
-# (jellyxtream). Start: Settings → Sources & guide → Manage sources → OK on the source's row (or
-# ⋮ → Edit). Focus is on the Name edit button (T-12).
+# (jellyxtream). Start: Settings → Sources & guide → Manage sources → OK on the source's row.
+# Focus is on the Name edit button (T-12).
 # Two panes: the Connection column (Name, Server URL, Username, Password, then Cancel / Save
 # connection) and the settings column (Badge, Logins, Guide, Advanced, Library data, Danger zone;
 # the settings reorg plan, Phase 3).

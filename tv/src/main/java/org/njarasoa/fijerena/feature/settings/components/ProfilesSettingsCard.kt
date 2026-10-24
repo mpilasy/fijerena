@@ -256,6 +256,8 @@ fun ProfileEditPane(
     entryModifier: Modifier = Modifier,
     title: String = stringResource(R.string.profile_dialog_edit_title),
     startAt: ProfilePageRow? = null,
+    /** A child's page, admin view: "Parental controls ›" opens that group (the page is saved first). */
+    onParentalControls: () -> Unit = {},
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
     var colorIndex by rememberSaveable(profile.id) { mutableIntStateOf(profile.colorIndex) }
@@ -666,6 +668,17 @@ fun ProfileEditPane(
                             }
                         },
                         focusRequester = filtersFocus,
+                    )
+                }
+                // The household's word lists, which decide what every child sees.
+                if (adminView && child) {
+                    SettingsRow(
+                        title = stringResource(R.string.parental_controls_title),
+                        description = stringResource(R.string.profile_parental_controls_desc),
+                        onClick = {
+                            apply()
+                            onParentalControls()
+                        },
                     )
                 }
                 CinemaButtonArea(modifier = Modifier.align(Alignment.End)) {

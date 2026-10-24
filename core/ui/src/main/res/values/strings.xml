@@ -614,7 +614,7 @@
     <string name="terms_s8_body">These terms can change. The version in the app that you use is the one that applies. If a translation is different from the English text, the English text applies.</string>
     <string name="provider_add_terms_notice">You alone are responsible for the sources that you add and for how you use them. See Settings → About → Terms of use.</string>
     <string name="settings_developer_mode_title">Expert mode</string>
-    <string name="settings_developer_mode_desc">Diagnostics, technical details, and source types still in development (SMB, local files)</string>
+    <string name="settings_developer_mode_desc">Lets this profile change sources, profiles, parental controls and backups</string>
     <string name="settings_developer_mode_last">The only profile with Expert mode keeps it: give Expert mode to another profile first.</string>
     <string name="settings_diagnostics_title">Diagnostics</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
@@ -881,8 +881,11 @@
     <string name="profile_content_filters_title">Content filters</string>
     <string name="profile_child_title">Child profile</string>
     <string name="profile_child_desc">On TV, Home shows only the favourites a grown-up adds here, and Search finds only films and shows, with no browsing. Shows only kids\' categories on every source, without titles for adults, and turns off the sources filters can\'t reach. A child profile is never Expert.</string>
+    <!-- The phone has no Favourites pane: a grown-up fills a child's favourites on TV. -->
+    <string name="profile_child_desc_phone">On TV, Home shows only the favourites a grown-up adds on the TV, and Search finds only films and shows, with no browsing. Shows only kids\' categories on every source, without titles for adults, and turns off the sources filters can\'t reach. A child profile is never Expert.</string>
     <string name="profile_favorites_title">Favourites</string>
     <string name="profile_favorites_row_desc">What this child sees on Home</string>
+    <string name="profile_parental_controls_desc">The household\'s word lists, for every child profile</string>
     <string name="profile_favorites_desc">What %1$s sees on Home. Search to add a film, show or channel; OK adds it or takes it out.</string>
     <string name="profile_favorites_search">Search films, shows and channels</string>
     <string name="profile_favorites_none">No favourites yet. Search to add some.</string>
@@ -1395,6 +1398,8 @@
     <string name="parental_list_reset">Reset to the app\'s list</string>
     <string name="parental_list_reset_confirm">Replace this list with the app\'s words? Your changes to this list are lost.</string>
     <string name="parental_check_title">Check a source</string>
+    <string name="parental_profile_filters_title">Content filters of each profile</string>
+    <string name="parental_profile_filters_desc">Set on each profile\'s page, in Profiles</string>
     <string name="parental_check_desc">The categories a child sees on this source with the lists now. The child\'s own content filters are not included.</string>
     <string name="parental_check_shown">Shown (%1$d)</string>
     <string name="parental_check_hidden">Hidden (%1$d)</string>

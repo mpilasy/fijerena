@@ -53,6 +53,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -157,11 +158,6 @@ fun TvAddProviderScreen(
             factory = ProviderViewModelFactory(context),
         )
     val isEditMode = editId > 0L
-    val appSettings =
-        remember {
-            org.njarasoa.fijerena.core.network
-                .AppSettings(context.applicationContext)
-        }
 
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
@@ -172,9 +168,8 @@ fun TvAddProviderScreen(
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
-    // The type of the source being edited: kept on the type list even when it's dev-mode only (R-22).
+    // The type of the source being edited: kept on the type list even when it's debug-build only (R-22).
     var editedType by remember { mutableStateOf<ProviderType?>(null) }
-    val isDevMode = remember { appSettings.isDevMode }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -404,7 +399,7 @@ fun TvAddProviderScreen(
         // when editing: the type of an existing source cannot change, so the first
         // D-pad stop is the Name field's edit button.
         ProviderTypeDropdown(
-            types = addSourceTypes(isDevMode, editedType),
+            types = addSourceTypes(BuildConfig.DEBUG, editedType),
             selectedType = selectedType,
             onTypeSelected = { selectedType = it },
             enabled = !isEditMode,

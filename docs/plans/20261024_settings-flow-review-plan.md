@@ -1,6 +1,6 @@
 # Settings flow review
 
-**Status:** In progress 2026-10-24: Phases 1, 1b and 2 done (1b not walked), Phase 3 in progress.
+**Status:** In progress 2026-10-24: Phases 1, 1b, 2 and 3 done (1b not walked; E1 and W4 not device-checked), Phase 4 not started.
 
 Follows [Settings reorganisation](./archive/20261017_settings-reorg-plan.md) and
 [Settings audit fixes](./archive/20261017_settings-audit-fixes-plan.md) (archived, private).
@@ -192,7 +192,7 @@ its screens change, in the same commit (CONTRIBUTING.md: picker, Settings rail, 
 | 1. Leaks | Done 2026-10-24 | 97ac753f |
 | 1b. Child lock | Done 2026-10-24 (not walked) | 0271f593 |
 | 2. Grouping and wording | Done 2026-10-24 | 6154bf3b |
-| 3. Admin flows | In progress | |
+| 3. Admin flows | Done 2026-10-24 (E1, W4 not device-checked) | |
 | 3b. Title Case | Not started | |
 | 4. Docs and walks | Not started | |
 
@@ -230,3 +230,27 @@ example; French and Malagasy keep their own case). W3: `profile_pin_desc_expert`
 `TvEpgManagementScreen` KDoc (said Backup & storage). `settings.txt` edited by hand (Malagasy
 emulator, checked with dumps: both rows show and open the page at their row, Back returns focus
 to the row; the phone avatar shows the badge).
+
+**Phase 3 done (2026-10-24).** E1: `startsOnAddSource` / `opensHomeAfterSave` (core:navigation
+`FirstSource.kt`). With no source, startup calls `ProfileRepository.ensureAnExpert` before it reads
+Expert (a new install's first profile is made Expert by the background startup work, maybe too
+late); an Expert in use starts on Settings with `AddProvider()` pushed once (Back goes to Settings),
+anyone else on Home (TV `ContentTypeSelection`, phone the Home tab) with the Phase 1 message. The
+TV launch picker is unchanged: it shows only when a source exists, as before. The source count is
+read when Add Source opens; a save with no source before clears the stack and opens Home after
+`clearAllCaches()` (TV `startOverAfterFirstSource`, which Settings' `onProviderChanged` now uses
+too; phone the Home tab, not the last tab). E3: `addSourceTypes(debugBuild)` takes the app's
+`BuildConfig.DEBUG` (localRelease and release builds hide SMB and Local); the phone's Expert switch
+shows no description, as before, so the new text shows on TV only. E4: `profile_child_desc_phone`
+(Add profile and a profile's page on the phone). E5: TV switches the group in place (not a
+navigation, so no `NavReturnFocus`): focus on the new group's first row, Back goes to the rail;
+the phone's row pops back to Settings (Profiles is its first group; the list keeps its scroll). No
+PIN for either link. E6: the ⋮ button's return-focus key went with the menu's navigating rows.
+E7: `ProfilesViewModel.addProfilePins`; Settings still asks after the Add profile dialog and the
+picker before it, as before. W4: first focus on Check server, or the address's edit button while it
+is empty. Walks edited by hand, not re-run (the emulator stays in Malagasy): `parental-controls.txt`,
+`sources.txt`, `edit-source.txt`, `live-sync.txt`. Checked with dumps on the emulators (atr): the
+TV picker's and the phone's Add profile ask no PIN; both Parental controls links (TV focus lands on
+Kids' categories and on the PIN reminder row); the TV ⋮ menu is Duplicate, Copy to…, Delete, focus
+on Duplicate; the phone's Child text. Not device-checked: E1 (it needs no source) and W4 (the TV
+emulator is linked).
