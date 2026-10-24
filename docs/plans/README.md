@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-10-24 | [Text fonts and colours](./20261024_text-roles-audit-plan.md) | Every text takes its font and colour from its role: names in the title font, the accent only on what is current or selected, no text unreadable on a light theme or a fill | In progress |
 | 2026-10-24 | [Loading indicator](./20261024_loading-indicator-plan.md) | The player's "Buffering…" and "Tuning" text become an iris (films), a reel (episodes) and a ring with the channel logo (Live TV), with the title or channel logo at the top left; the last frame stays during a wait mid-stream; the TV stream info banner waits for play | Built 2026-10-24; checked on the emulators except the TV tuning ring |
 | 2026-10-21 | [Meadow look](./20261021_meadow-look-plan.md) | A hand-painted look: Meadow (day, Expert only) and Meadow dusk colour themes with a painted sky and hills, a Meadow Look (Klee One, Zen Maru Gothic, round corners), packaged UI themes | Built 2026-10-21, checked on the emulators |
 | 2026-10-21 | [UI themes](./20261021_ui-themes-plan.md) | A per-profile UI theme: a packaged one forces the colour theme and the Look and Feel; Custom keeps them free. A separate switch turns off the poster background | Built 2026-10-21: seven packaged UI themes and Custom, poster switch; checked on the emulators |
