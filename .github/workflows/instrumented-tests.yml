@@ -29,7 +29,8 @@ jobs:
             profile: pixel_6
             build: ':core:network:assembleDebugAndroidTest :mobile:assembleDebug :mobile:assembleDebugAndroidTest'
             tasks: ':core:network:connectedDebugAndroidTest :mobile:connectedDebugAndroidTest'
-          # No TV job: the TV's Compose UI tests run on the JVM with Robolectric (unit tests).
+          # No TV job here: the TV's Compose UI tests run on the JVM with Robolectric (unit tests).
+          # The TV focus walk is its own job, tv-walk, below.
 
     steps:
       - name: Checkout repository
@@ -79,4 +80,76 @@ jobs:
         with:
           name: androidTest-reports-${{ matrix.target }}
           path: '**/build/reports/androidTests/'
+          retention-days: 14
+
+  # The TV focus walks on a TV emulator (the settings focus tests plan, Phase 4): a fresh install of
+  # the debug TV app, the fake Xtream source served from the runner, the test household seeded over
+  # adb, then the walks in scripts/focus-walks/ci-walks.txt. See docs/RUN_GUIDE.md → Focus walks.
+  tv-walk:
+    name: TV walk (fake Xtream source)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Remove local Java home from gradle.properties
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Check the fake Xtream server
+        run: python3 tools/fake-xtream/server.py --self-test
+
+      # Before the emulator boots, so it isn't idle during the build.
+      - name: Build the TV app
+        run: ./gradlew :tv:assembleDebug
+
+      # The emulator reaches the runner at 10.0.2.2. The server runs until the job ends.
+      - name: Start the fake Xtream server
+        run: |
+          nohup python3 tools/fake-xtream/server.py --port 8090 > fake-xtream.log 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -fs 'http://127.0.0.1:8090/player_api.php?username=test&password=test' > /dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+
+      - name: Run the TV walk
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: android-tv
+          arch: x86
+          profile: tv_1080p
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # One line: the runner runs each script line on its own. The emulator is killed outright,
+          # as above: the TV image ignores the runner's shutdown.
+          script: scripts/ci-tv-walk.sh emulator-5554; status=$?; pkill -9 qemu-system || true; exit $status
+
+      - name: Upload the walk output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tv-walk-output
+          path: |
+            walk-output/
+            fake-xtream.log
           retention-days: 14

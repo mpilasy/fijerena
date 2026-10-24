@@ -1,0 +1,130 @@
+# CI — the profile picker, the rail to Settings, then Settings' rail and every group for Admin.
+# Run by the nightly TV walk (scripts/ci-tv-walk.sh) on a fresh install with the test household
+# (scripts/seed-test-household.sh): the fake Xtream source "Fake Xtream" (tools/fake-xtream) and
+# the profiles Admin (Expert, in use, no PIN), Guest (a grown-up) and Kid (a child profile, no PIN).
+# Start: the app just opened on the profile picker, focus on Admin (the profile in use). Ends on
+# Settings' rail row Profiles.
+# Written from the code and settings.txt on 2026-10-24, NOT YET RUN: unverified until the first
+# CI run. Expectations are labels only (no values that depend on the build or the device, such as
+# the theme names or the TMDB key), so most lines are prefixes of what settings.txt records.
+# Never presses OK on a destructive control: Shrink Database and Delete profile are only focused.
+@start Admin
+# The picker: the profiles in creation order, then Add Profile (Admin is Expert).
+RIGHT	Guest
+RIGHT	Kid
+RIGHT	Add Profile
+LEFT	Kid
+LEFT	Guest
+LEFT	Admin
+# OK opens Home; Left from Home's first focus reaches the rail on Home.
+CENTER
+WAIT 5
+LEFT	Home
+# Admin's rail: the avatar, Home, the fake source's three sections, Search, Settings.
+DOWN	Live TV
+DOWN	Movies
+DOWN	TV Shows
+DOWN	Search
+DOWN	Settings
+# Admin has no PIN: Settings opens with no prompt, focus on its rail's first group.
+CENTER	Profiles
+WAIT 2
+DOWN	Parental Controls
+DOWN	Playback
+DOWN	Display
+DOWN	Sources & Guide
+DOWN	Sync & Backup
+DOWN	About & Advanced
+# Down at the end of the rail stays put.
+DOWN	About & Advanced
+# About & Advanced: the About card, Device Info, Terms of Use, Open-Source Licences, Diagnostics
+# (Expert), Shrink Database (Expert; never pressed).
+RIGHT	Fijerena v
+DOWN	Device Info
+DOWN	Terms of Use
+DOWN	Open-Source Licences
+DOWN	Diagnostics
+DOWN	Shrink Database
+LEFT	About & Advanced
+# Sync & Backup: Live Sync, then the backups.
+UP	Sync & Backup
+RIGHT	Live Sync
+DOWN	Back Up to a File
+DOWN	Restore from a File
+LEFT	Sync & Backup
+# Sources & Guide: Manage Sources, Guide Sources (the fake source has live channels), Guide Data
+# Maintenance, the TMDB key (On or Off by build: not checked).
+UP	Sources & Guide
+RIGHT	Manage Sources
+DOWN	Guide Sources
+DOWN	Guide Data Maintenance
+DOWN	Film and Series Details (TMDB)
+LEFT	Sources & Guide
+# Display: Text & Grid Size, Items in Recent, Language (English on a fresh install), Theme and Look
+# and Feel, which opens Admin's page in the pane on UI Theme; Back returns to the row.
+UP	Display
+RIGHT	Text & Grid Size
+DOWN	Items in Recent
+DOWN	Language / Language for menus and messages / English
+DOWN	Theme and Look and Feel
+CENTER	UI Theme
+BACK	Theme and Look and Feel
+LEFT	Display
+# Playback: the watch delay (OK opens its picker on 10 s, the default; Left closes it), then Play
+# Next Episode Automatically, which opens Admin's page on its switch; Back returns to the row.
+UP	Playback
+RIGHT	Add a Channel to Recent After
+CENTER	10 s
+LEFT	Add a Channel to Recent After
+DOWN	Play Next Episode Automatically / Set on your profile’s page
+CENTER	Play Next Episode Automatically / Near the end of an episode
+BACK	Play Next Episode Automatically / Set on your profile’s page
+LEFT	Playback
+UP	Parental Controls
+UP	Profiles
+# Up at the top of the rail stays put.
+UP	Profiles
+# Profiles: a child profile and no Expert PIN, so "Set a PIN for Settings" first (never pressed),
+# then Admin, Guest, Kid and Add Profile.
+RIGHT	Set a PIN for Settings
+DOWN	Admin / Using on this device
+# Admin's page (the only Expert, in use, one source so no Sources row): focus on the name's Edit
+# button; Down to the end, Content Filters. Admin can't be deleted or switched to.
+CENTER	Edit Name / Name / Admin
+DOWN	Colour
+DOWN	PIN / Asked in Settings before sources, backups and profiles / Off
+DOWN	UI Theme
+DOWN	Theme
+DOWN	Look and Feel
+DOWN	Poster in the Background
+DOWN	Play Next Episode Automatically
+DOWN	Child Profile / The only profile with Expert mode can't be a child's
+DOWN	Expert Mode / The only profile with Expert mode keeps it
+DOWN	Content Filters / Hide categories by prefix
+DOWN	Content Filters / Hide categories by prefix
+LEFT	Admin / Using on this device
+DOWN	Guest
+# Kid's page (a child profile, not in use): no Expert Mode row; Set a PIN (no Expert has one),
+# Favourites, Content Filters, Parental Controls, Switch to this profile, Delete profile (never
+# pressed).
+DOWN	Kid
+CENTER	Edit Name / Name / Kid
+DOWN	Colour
+DOWN	PIN / Asked in Settings before sources, backups and profiles / Off
+DOWN	UI Theme
+DOWN	Theme
+DOWN	Look and Feel
+DOWN	Poster in the Background
+DOWN	Play Next Episode Automatically
+DOWN	Child Profile / On TV, Home shows only the favourites
+DOWN	Set a PIN / No PIN is set
+DOWN	Favourites / What this child sees on Home
+DOWN	Content Filters / Hide categories by prefix
+DOWN	Parental Controls / The household's word lists
+DOWN	Switch to this profile
+DOWN	Delete profile
+LEFT	Kid
+DOWN	Add Profile
+DOWN	Add Profile
+# Back in the pane returns to the rail row, not out of Settings.
+BACK	Profiles

@@ -11,5 +11,15 @@
                 <action android:name="org.njarasoa.fijerena.DEBUG_EPG_SYNC" />
             </intent-filter>
         </receiver>
+        <!-- Debug builds only: sets up the nightly TV walk's test household over adb (see
+             TestHouseholdDebugReceiver). DUMP: adb shell can send it, other apps can't. -->
+        <receiver
+            android:name="org.njarasoa.fijerena.core.network.profile.TestHouseholdDebugReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="org.njarasoa.fijerena.DEBUG_TEST_HOUSEHOLD" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

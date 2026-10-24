@@ -1,0 +1,5 @@
+# The walks the nightly TV walk runs (scripts/ci-tv-walk.sh), in this order, against the fake
+# Xtream source and the test household (scripts/seed-test-household.sh). One walk file per line.
+# The first walk starts on the profile picker of a fresh start; each next walk starts where the
+# one before it ends.
+scripts/focus-walks/ci-settings.txt

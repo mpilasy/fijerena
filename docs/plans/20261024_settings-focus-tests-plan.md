@@ -1,6 +1,6 @@
 # Settings focus tests
 
-**Status:** In progress 2026-10-24: Phase 1 done (whole-screen route), Phases 2 and 4 in progress.
+**Status:** In progress 2026-10-24: Phase 1 done (whole-screen route), Phase 2 in progress, Phase 4 built (not yet run in CI).
 
 ## Goal
 
@@ -113,6 +113,19 @@ group needs more data (a PIN, guide sources, a backup waiting in Downloads); kee
 `*.invalid` and add any new singleton the screen reaches to `reset()`. Never press OK on a
 destructive row. Expected time for all of Settings: well under one minute.
 
+   **As built (2026-10-24, not yet run in CI):** `tools/fake-xtream/server.py` (stdlib only, fixed
+   data: News / Kids / Adult live and film categories, two series categories, a guide made around
+   the current time, streams answer 404; `--self-test` checks every endpoint).
+   `TestHouseholdDebugReceiver` (core:network, debug source set, DUMP-guarded like the other debug
+   receivers) adds the source, renames the first profile Admin (Expert) and adds Guest and Kid (a
+   child), then loads the catalogue; it refuses an app that has a source already. Tested with
+   Robolectric (`core/network/src/testDebug`). `scripts/seed-test-household.sh` sends it and waits;
+   `scripts/ci-tv-walk.sh` installs, seeds, opens the app and runs `scripts/focus-walks/ci-walks.txt`.
+   The job `tv-walk` in `instrumented-tests.yml` (Android TV image, API 34, x86, `tv_1080p`, the
+   configuration of the TV job removed on 2026-10-12) uploads the walk output on a failure. One walk
+   so far, `ci-settings.txt` (the picker, the rail, Settings for Admin, Admin's and Kid's pages),
+   written from the code: the first CI run checks it. The other walks follow once it passes.
+
 ## Progress
 
 | Phase | Status | Commit |
@@ -120,4 +133,4 @@ destructive row. Expected time for all of Settings: well under one minute.
 | 1. Spike | Done 2026-10-24 | 3fe44e1f |
 | 2. Settings tests | In progress | |
 | 3. Walks and docs | Not started | |
-| 4. Nightly TV walk | In progress (server and CI job) | |
+| 4. Nightly TV walk | Built, not yet run in CI (server, seeding, CI job, `ci-settings.txt`) | |

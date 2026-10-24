@@ -96,7 +96,8 @@ CI runs on every push to `main`, or by hand (`workflow_dispatch`), in these work
   (`gradle/gradle-daemon-jvm.properties`).
 - `server.yml` (only when `server/` changes): the sync server's `npm ci && npm test`.
 - `instrumented-tests.yml`, nightly at 06:17 UTC or by hand: `connectedDebugAndroidTest` for
-  `core:network` and `mobile` on a phone emulator, with the test reports uploaded as artifacts.
+  `core:network` and `mobile` on a phone emulator, with the test reports uploaded as artifacts; and
+  the TV walk (job `tv-walk`, see "Focus walks" → "Nightly TV walk in CI").
   Compose UI tests run on the JVM with Robolectric, among the unit tests: `robolectric.properties`
   in `tv/src/test/resources` (a plain `Application`, a 960 × 540 dp TV screen) and
   `mobile/src/test/resources` (a plain `Application`; a test sets its screen with `@Config(qualifiers)`).
@@ -197,6 +198,24 @@ JELLYFIN_URL=https://other.host BRIDGE_PORT=8081 tools/jellyfin-xtream/restart.s
 In the app, add an Xtream source with Server URL `http://10.0.2.2:8080` (emulator → host; use the host's LAN IP from real devices) and the Jellyfin username/password. Movie and TV-show libraries become one category each; Live TV and EPG appear only if Jellyfin has Live TV. Playback redirects to Jellyfin, so the device must reach `JELLYFIN_URL` too. Keep `xtream_ids_<host>.db` (or the file named by `BRIDGE_DB`): it maps Xtream ids to Jellyfin GUIDs, and losing it changes every id (orphaning watch history and favourites).
 
 Like a real panel, a series' `last_modified` moves when episodes are added (Jellyfin's `DateLastMediaAdded`, else `DateCreated`), so adding an episode in Jellyfin makes the app fetch that show's episodes again after its next sync. An item that sits in two Jellyfin libraries is listed once, under the first library by name. After editing the bridge, rerun `restart.sh`.
+
+#### Test source: fake Xtream
+
+`tools/fake-xtream/server.py` (Python 3, stdlib only) is a fake Xtream panel with fixed data, for
+the nightly TV walk and other scripted checks: 3 live categories (News, Kids, Adult) with 6
+channels, 3 film categories (Drama, Kids, Adult) with 8 films, 2 series categories (Drama Series,
+Kids Series) with 4 series of 2 seasons × 3 episodes, and an XMLTV guide (`xmltv.php`, also
+`get_short_epg`) of half-hour programmes from 2 hours before now to 12 hours after, so the guide
+is never empty. Names are English, ids never change. Login `test` / `test`. Stream URLs answer HTTP
+404: nothing plays.
+
+```bash
+python3 tools/fake-xtream/server.py --port 8090    # serve until stopped (default port 8090)
+python3 tools/fake-xtream/server.py --self-test    # call every endpoint, check the answers, exit 0 or 1
+```
+
+In the app, add an Xtream source with Server URL `http://10.0.2.2:8090` (emulator → host) and
+`test` / `test`, or seed a fresh install with `scripts/seed-test-household.sh` (see "Focus walks").
 
 ### 2. Physical Android TV (NVIDIA Shield, Chromecast, Sony Bravia)
 
@@ -350,7 +369,7 @@ adb -s <device-id> shell run-as <pkg> rm files/safemode/launches
 
 ### Debug broadcasts
 
-Two receivers exist in debug builds only (`src/debug` source sets) and require
+Three receivers exist in debug builds only (`src/debug` source sets) and require
 `android.permission.DUMP`, which the adb shell holds and other apps don't — so `adb shell am
 broadcast …` works, and nothing else on the device can link the sync account or force refreshes.
 
@@ -360,6 +379,11 @@ adb -s <device-id> shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p
 
 # SyncDebugReceiver (core:ui): drive live sync; results go to logcat under SyncDebug
 adb -s <device-id> shell am broadcast -a org.njarasoa.fijerena.DEBUG_SYNC -p <pkg> --es cmd status
+
+# TestHouseholdDebugReceiver (core:network): the TV walk's test household on a fresh install;
+# results go to logcat under TestHousehold. Use scripts/seed-test-household.sh, which waits for it.
+adb -s <device-id> shell am broadcast --include-stopped-packages -a org.njarasoa.fijerena.DEBUG_TEST_HOUSEHOLD \
+    -p <pkg> --es url http://10.0.2.2:8090
 ```
 
 `DEBUG_SYNC` commands (`--es cmd …`): `setup --es url <server> [--es secret <setup secret>] [--es name
@@ -432,6 +456,7 @@ there. Each file's header comments name the start screen, the source it expects 
 | `favorites-remove.txt` | Live TV browse, Favourites (iptv, one favourite): Remove from Favourites with no confirmation, the empty list's Refresh focused, Menu undoes |
 | `live-panel-remove.txt` | Live TV preview's channel panel, Recent tab (iptv): removal → next row (not the tabs), Menu undoes |
 | `home-card-actions.txt` | Home (iptv): a Channels card's menu, removal → next card, Menu undoes; a Favourite channels card opens on Remove from Favourites, Back keeps focus |
+| `ci-settings.txt` | CI only (test household, fake source): the profile picker, the rail to Settings, Settings' rail and every group for Admin, Admin's and Kid's pages |
 
 The first fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches
 after the fixes). After the navigation rail and the Home change (2026-10-08 / 09): `home.txt`,
@@ -443,6 +468,34 @@ profile page that needs another source; `details.txt`, `live-tv-browse.txt`, `gu
 immediate removal with Undo, edit mode, Home card actions, the Favourite channels row) was walked by
 hand on the emulator, then the four walks above were recorded (2026-10-09, 0 mismatches each) and
 `home.txt` re-run (0 mismatches); `home-rows.txt` not re-run after it. Some file headers still say "not yet recorded" from before those rounds.
+
+#### Nightly TV walk in CI
+
+`instrumented-tests.yml`'s job `tv-walk` (nightly and by hand) runs walks on a TV emulator
+(Android TV image, API 34, `tv_1080p`) with fixed data, so it needs no prepared device. It builds
+`:tv:assembleDebug`, checks and starts the fake Xtream server on the runner (port 8090, see "Test
+source: fake Xtream"), then on the emulator runs `scripts/ci-tv-walk.sh`: install the APK, seed the
+test household, open the app, run the walks listed in `scripts/focus-walks/ci-walks.txt`. On a
+failure it uploads `walk-output/` (the walk log, a screenshot, the UI dump and logcat) and the
+server's log as the artifact `tv-walk-output`.
+
+The test household (`scripts/seed-test-household.sh <serial> [server URL]`, debug builds only,
+emulators only): the source "Fake Xtream" (`http://10.0.2.2:8090`, `test` / `test`) and the
+profiles Admin (the first profile renamed, Expert, in use, no PIN), Guest (a grown-up) and Kid (a
+child profile), all with the source. The script sends `TestHouseholdDebugReceiver` its broadcast
+and waits (up to 5 minutes) until the catalogue is loaded. The app refuses when it has a source
+already, so the script never changes a device that has data; it does not open the app either. The
+app's language is English on a fresh install, which the walks need.
+
+The CI walks start on the profile picker of a fresh start, each where the one before ended, and
+assert labels, not values that depend on the build (theme names, the TMDB key). A new CI walk is
+recorded the same way as the others, on an emulator seeded like CI: a fresh install there needs an
+uninstall first, so ask before doing it on an emulator that has data. To run the same thing
+locally on a throwaway TV emulator with the server running: `./gradlew :tv:assembleDebug`, then
+`scripts/ci-tv-walk.sh <serial>`.
+
+`ci-settings.txt` was written from the code and `settings.txt` on 2026-10-24 and has not run yet:
+the first CI run checks it.
 
 ---
 
