@@ -1566,6 +1566,8 @@ class MediaRepository(
 
     /** Re-reads the Recent list and publishes it to every [recentItems] collector. */
     suspend fun refreshRecentItems(contentType: String): List<MediaItem> {
+        // A Recent write just queued (saveLastPlayedItem) lands first: else this reads the old order.
+        awaitPendingWrites()
         val items = getRecentItemsSuspend(contentType)
         recentItemsFlow(contentType).value = items
         return items

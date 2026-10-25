@@ -26,6 +26,22 @@ class RecentChannelsTest {
     }
 
     @Test
+    fun firstMovesThePlayingChannelToTheTop() {
+        assertEquals(
+            listOf("cnn", "bbc"),
+            recent.withCurrentChannel(channel("cnn"), CurrentChannelPolicy.FIRST).map { it.id },
+        )
+    }
+
+    @Test
+    fun firstPrependsAPlayingChannelThatIsNotInTheListYet() {
+        assertEquals(
+            listOf("arte", "bbc", "cnn"),
+            recent.withCurrentChannel(channel("arte"), CurrentChannelPolicy.FIRST).map { it.id },
+        )
+    }
+
+    @Test
     fun includeLeavesTheListAloneWhenTheChannelIsAlreadyThere() {
         assertEquals(
             listOf("bbc", "cnn"),

@@ -21,6 +21,12 @@ enum class CurrentChannelPolicy {
     INCLUDE,
 
     /**
+     * Put it first: the channel playing is the most recent, whether or not its delayed write has
+     * landed. For TV Live TV's preview panel (docs/plans/20261025_live-recent-order-plan.md).
+     */
+    FIRST,
+
+    /**
      * Filter it out: for the "switch to something else" flyout, where offering the channel
      * already playing is just a dead row.
      */
@@ -86,10 +92,26 @@ fun List<MediaItem>.withCurrentChannel(
     listSource: Long = 0L,
 ): List<MediaItem> =
     when {
-        current == null -> this
-        policy == CurrentChannelPolicy.EXCLUDE -> filterNot { it.isSameChannel(current, listSource) }
-        any { it.isSameChannel(current, listSource) } -> this
-        else -> listOf(current) + this
+        current == null -> {
+            this
+        }
+
+        policy == CurrentChannelPolicy.EXCLUDE -> {
+            filterNot { it.isSameChannel(current, listSource) }
+        }
+
+        policy == CurrentChannelPolicy.FIRST -> {
+            listOf(firstOrNull { it.isSameChannel(current, listSource) } ?: current) +
+                filterNot { it.isSameChannel(current, listSource) }
+        }
+
+        any { it.isSameChannel(current, listSource) } -> {
+            this
+        }
+
+        else -> {
+            listOf(current) + this
+        }
     }
 
 /** The same channel: its id on its source, a row that leaves its source 0 being on [listSource]. */
