@@ -1,6 +1,6 @@
 # One Guide Sources page
 
-**Status:** Planned 2026-10-24. Decisions GS-D1 and GS-D2 taken; GS-D3 and GS-D4 open. Not started.
+**Status:** Planned 2026-10-24. Decisions GS-D1, GS-D2 and GS-D5 taken; GS-D3 and GS-D4 open. Not started.
 
 ## Goal
 
@@ -40,7 +40,7 @@ for.
    auto-refresh, refresh, edit, delete). A source's own guide (`<host> (Bulk)`) stays in its group.
    A group with no guide source shows one line: "No guide sources".
 3. **Add (GS-D1).** The Add form gets a **For** list: the media sources with live channels, as
-   switches (TV) or check boxes (phone), the first one on — or the group's source when the page was
+   switches (TV) or check boxes (phone), under "Use for" (GS-D5), the first one on — or the group's source when the page was
    opened on a source. Save adds one row per checked source (same URL, label, time zone). With one
    media source the list does not show. A URL that a checked source already has is skipped for that
    source (`getSourceByUrl`), not doubled.
@@ -59,6 +59,11 @@ for.
 - **GS-D2 Which media sources show (decided, user 2026-10-24):** every media source on the device
   that can have live channels, not only the profile in use's. Guide sources are shared and only an
   admin opens this page.
+- **GS-D5 Words (decided, user 2026-10-24):** no new words. On screen a media source is a
+  "source" (Manage Sources, Add Source) and an EPG source is always a "guide source", never
+  "source" alone. The page never says "media source": each group header is the source's own name,
+  and the Add form's list reads "Use for" with the source names. "Media source" is this plan's word
+  only.
 - **GS-D3 Refresh buttons (open):** (a) the page header keeps one **Refresh stale (n)** and one
   **Retry failed (n)** for all groups; or (b) each group header has its own. Recommend (a): fewer
   buttons in the D-pad path, and a per-guide refresh stays on every card.
