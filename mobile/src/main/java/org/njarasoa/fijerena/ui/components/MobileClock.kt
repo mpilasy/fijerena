@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -33,7 +35,11 @@ import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.LocalTextTone
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
+import org.njarasoa.fijerena.core.ui.components.colorOf
+import org.njarasoa.fijerena.core.ui.components.textStyleOf
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import java.util.Date
 
@@ -113,7 +119,9 @@ fun MobileClockOverlay(state: MobileClockState) {
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
             .padding(CinemaSpacing.md),
     ) {
+        // No panel behind it: a soft halo keeps it readable on bright art.
         MobileClockText(
+            halo = true,
             modifier =
                 Modifier
                     .align(Alignment.TopEnd)
@@ -122,11 +130,16 @@ fun MobileClockOverlay(state: MobileClockState) {
     }
 }
 
-/** The time, in the system's 12/24 h format, ticking each second. Shared with the player's controls. */
+/**
+ * The time, in the system's 12/24 h format, ticking each second. Shared with the player's controls.
+ * [halo]: a soft halo in the theme's background colour, as TV's backdrop text has, for a clock with
+ * no panel behind it.
+ */
 @Composable
 fun MobileClockText(
     modifier: Modifier = Modifier,
     tone: TextTone = LocalTextTone.current,
+    halo: Boolean = false,
 ) {
     var tick by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -135,7 +148,25 @@ fun MobileClockText(
             delay(1000L)
         }
     }
-    CinemaText(text = TimeFormat.formatClockTime(Date(tick)), role = TextRole.Heading, tone = tone, modifier = modifier)
+    val time = TimeFormat.formatClockTime(Date(tick))
+    if (!halo) {
+        CinemaText(text = time, role = TextRole.Heading, tone = tone, modifier = modifier)
+        return
+    }
+    val haloColor = CinemaTheme.colors.background
+    val style = textStyleOf(TextRole.Heading)
+    val haloStyle =
+        remember(style, haloColor) {
+            style.copy(shadow = Shadow(color = haloColor.copy(alpha = CinemaAlpha.textHigh), blurRadius = CLOCK_HALO_BLUR))
+        }
+    val color = colorOf(tone)
+    // One halo is too faint on white art: the same text drawn again darkens it.
+    Box(modifier) {
+        repeat(CLOCK_HALO_LAYERS) {
+            // look-ok: CinemaText has no shadow; the halo is the clock's backing (as TV's TvBackdropText)
+            Text(text = time, style = haloStyle, color = color)
+        }
+    }
 }
 
 /**
@@ -143,3 +174,9 @@ fun MobileClockText(
  * CinemaSpacing.md in from the safe edge; the bar's actions have a small end padding of their own.
  */
 internal fun clockClearance(clockWidth: Dp): Dp = clockWidth + CinemaSpacing.md + CinemaSpacing.xxs
+
+/** Blur of the halo behind the screens' clock, in px (as TV's backdrop text). */
+private const val CLOCK_HALO_BLUR = 8f
+
+/** How many halos the screens' clock draws under its digits. */
+private const val CLOCK_HALO_LAYERS = 3

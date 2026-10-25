@@ -60,3 +60,6 @@
   `TopAppBar` takes `mobileClockTopBarInsets()` (its end moves in by the clock's width while it
   shows); the player and the dock covering the screen call `HideMobileClock`. Walked: the switch on
   both emulators, the clock on TV Settings, phone This Device and the Live TV tab.
+- **Halo (user, 2026-10-25: a shadow, not a panel or inverted colours):** the screens' clock draws
+  three halos in the theme's background colour under its digits (TV through `TvBackdropText`);
+  checked on TV on The Matrix's white art. The player's controls clock has none.

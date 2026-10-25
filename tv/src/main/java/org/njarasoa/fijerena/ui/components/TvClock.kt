@@ -113,7 +113,9 @@ fun TvClockOverlay(state: TvClockState) {
     if (!state.visible) return
     val density = LocalDensity.current
     Box(Modifier.fillMaxSize().padding(horizontal = Spacing.xxl, vertical = Spacing.xl)) {
+        // No panel behind it: a soft halo keeps it readable on bright art.
         TvClockText(
+            halo = true,
             modifier =
                 Modifier
                     .align(Alignment.TopEnd)
@@ -127,9 +129,15 @@ fun TvClockOverlay(state: TvClockState) {
     }
 }
 
-/** The time, in the system's 12/24 h format, ticking each second. Shared with the player's controls. */
+/**
+ * The time, in the system's 12/24 h format, ticking each second. Shared with the player's controls.
+ * [halo]: drawn as [TvBackdropText], for a clock with no panel behind it.
+ */
 @Composable
-fun TvClockText(modifier: Modifier = Modifier) {
+fun TvClockText(
+    modifier: Modifier = Modifier,
+    halo: Boolean = false,
+) {
     var tick by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -137,7 +145,13 @@ fun TvClockText(modifier: Modifier = Modifier) {
             delay(1000L)
         }
     }
-    CinemaText(text = TimeFormat.formatClockTime(Date(tick)), role = TextRole.Heading, modifier = modifier)
+    val time = TimeFormat.formatClockTime(Date(tick))
+    if (halo) {
+        // One halo is too faint on white art: the same text drawn again darkens it.
+        Box(modifier) { repeat(CLOCK_HALO_LAYERS) { TvBackdropText(text = time, role = TextRole.Heading) } }
+    } else {
+        CinemaText(text = time, role = TextRole.Heading, modifier = modifier)
+    }
 }
 
 /**
@@ -145,3 +159,6 @@ fun TvClockText(modifier: Modifier = Modifier) {
  * Spacing.xxl from the right edge, the safe margin a little further in.
  */
 internal fun clockClearance(clockWidth: Dp): Dp = clockWidth + Spacing.xxl - Spacing.tvSafeMarginHorizontal + Spacing.lg
+
+/** How many halos the screens' clock draws under its digits. */
+private const val CLOCK_HALO_LAYERS = 3
