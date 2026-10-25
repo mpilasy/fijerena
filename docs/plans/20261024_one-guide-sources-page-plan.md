@@ -1,7 +1,6 @@
 # One Guide Sources page
 
-**Status:** Built 2026-10-24 (Phases 1–5). Not yet walked on the emulators: the TV and phone
-pages with two sources with live channels, and the Add dialog's Use for list.
+**Status:** Done 2026-10-24: built on TV and phone and walked on both emulators.
 
 ## Goal
 
@@ -96,7 +95,7 @@ for.
 | Phase | Status | Commit |
 |---|---|---|
 | 1. ViewModel and route | Done | b865c642 |
-| 2. TV page | Done (the Add dialog's Use for list not yet checked on the emulator) | dcac75b3 |
-| 3. Phone page | Done (not yet checked on the emulator) | 970ec699 |
+| 2. TV page | Done, walked on the emulator | dcac75b3 |
+| 3. Phone page | Done, walked on the emulator | 970ec699 |
 | 4. Ways in | Done | d15470f3 |
-| 5. Docs and checks | Done, except the walks on both emulators | 5be98083 |
+| 5. Docs and checks | Done, walked on both emulators | 5be98083 |

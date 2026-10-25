@@ -1,6 +1,6 @@
 # Profile rules
 
-**Status:** Done 2026-10-24: Phases 1–5 built and merged; the walks on both emulators are left.
+**Status:** Done 2026-10-24: Phases 1–5 built, merged and walked on both emulators.
 
 ## Goal
 

@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-24 | [Profile rules](./20261024_profile-rules-plan.md) | One written set of who may do what to a profile, enforced below the screens: kids change only personal settings, any grown-up adds a profile (kid allowed, never Expert), only an Expert promotes, deletes or un-kids, a kid is never Expert (sync and restore too) | Done 2026-10-24; emulator walks left |
+| 2026-10-24 | [Profile rules](./20261024_profile-rules-plan.md) | One written set of who may do what to a profile, enforced below the screens: kids change only personal settings, any grown-up adds a profile (kid allowed, never Expert), only an Expert promotes, deletes or un-kids, a kid is never Expert (sync and restore too) | Done 2026-10-24, walked on both emulators |
 | 2026-10-24 | [One Guide Sources page](./20261024_one-guide-sources-page-plan.md) | Guide Sources is one page for every source, grouped by source; Settings opens it with no chooser; Add asks which sources the guide is for | Built 2026-10-24 (Phases 1–5); not yet walked on the emulators |
 | 2026-10-24 | [Tablet layout](./20261024_tablet-layout-plan.md) | The phone app as a good tablet app: both orientations, a navigation rail, wider grids, and list-and-details panes, without changing the phone | Shelved 2026-10-24; decisions taken, not started |
 | 2026-10-24 | [Text fonts and colours](./20261024_text-roles-audit-plan.md) | Every text takes its font and colour from its role: names in the title font, the accent only on what is current or selected, no text unreadable on a light theme or a fill | Built 2026-10-24 (Phases 1–3) |
