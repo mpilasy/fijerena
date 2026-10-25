@@ -53,23 +53,34 @@ mac_of() {
     echo "$mac"
 }
 
-# Sends a Wake-on-LAN packet to $1 and waits up to a minute for adb. Returns whether it answers.
+# Wakes $1 with Wake-on-LAN and waits up to a minute for adb. A TV in deep standby wakes its
+# network only for a moment, so the packets go on every 2 s, to this network's broadcast address
+# too, until the script ends (the install included). Returns whether adb answers.
+WAKE_PIDS=()
+trap 'for pid in "${WAKE_PIDS[@]+"${WAKE_PIDS[@]}"}"; do kill "$pid" 2>/dev/null || true; done' EXIT
 wake_target() {
-    local target="$1" mac
+    local target="$1" mac broadcast
     mac="$(mac_of "$target")"
     [ -n "$mac" ] || return 1
+    broadcast="${target%%:*}"
+    broadcast="${broadcast%.*}.255"
     echo "Device $target not reachable — sending Wake-on-LAN to $mac..."
-    python3 - "$mac" <<'PY'
-import socket, sys
+    python3 - "$mac" "$broadcast" <<'PY' &
+import socket, sys, time
 mac = bytes.fromhex(sys.argv[1].replace(":", "").replace("-", ""))
 packet = b"\xff" * 6 + mac * 16
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-for port in (9, 7):
-    s.sendto(packet, ("255.255.255.255", port))
+end = time.time() + 900
+while time.time() < end:
+    for address in (sys.argv[2], "255.255.255.255"):
+        for port in (9, 7):
+            s.sendto(packet, (address, port))
+    time.sleep(2)
 PY
-    for _ in $(seq 1 12); do
-        sleep 5
+    WAKE_PIDS+=("$!")
+    for _ in $(seq 1 30); do
+        sleep 2
         adb disconnect "$target" >/dev/null 2>&1 || true
         adb connect "$target" >/dev/null 2>&1 || true
         [ "$(adb -s "$target" get-state 2>/dev/null)" = "device" ] && return 0
