@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -382,6 +384,7 @@ private val CHANNEL_CELL_PADDING = CinemaSpacing.xxs
  * the tags the name carried (country, quality) and its source when the rows mix sources, as badges,
  * as the Live TV list shows a channel ([parseDisplayTitle], [TitleBadges]). Tap = tune.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChannelCell(
     channel: MediaItem,
@@ -401,9 +404,11 @@ private fun ChannelCell(
         verticalArrangement = Arrangement.Center,
     ) {
         if (sourceName != null || parsed.hasBadges) {
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs), verticalAlignment = Alignment.CenterVertically) {
+            // One line; a badge that doesn't fit whole is left out, never squeezed into an empty pill
+            // (the column is narrow: the source's badge alone often fills it).
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs, Alignment.CenterHorizontally), maxLines = 1) {
                 sourceName?.let { SourceBadge(it) }
-                TitleBadges(parsed, modifier = Modifier.weight(1f, fill = false), maxLines = 1)
+                TitleBadges(parsed, maxLines = 1)
             }
         }
         if (hasLogo) {
