@@ -136,9 +136,11 @@ dalvik, input; sched).
   `FavoriteMenuDialogTest` (focus opens on the list's action, Back closes without acting, OK
   commits and closes), mobile `MobileBottomBarLabelsTest` (names on a wide phone, icons only under
   380 dp, long-press tooltip).
-- Left from the task list: Live TV category selection and focus recovery on Back for the
-  two-pane browse (`CategoryList`/`StreamList` need a `CategoryViewModel`: a fake repository or a
-  smaller seam first).
+- Done 2026-10-25: `TwoColumnBrowseFocusTest`, the two-pane browse (`TwoColumnLayout`) as
+  `live-tv-browse.txt` and `live-tv-back.txt` walk it: the row a list opens on, an empty Recent's
+  Browse categories button (K2), Left and Right between the panes, OK on a category, and Back from
+  the Live TV preview (LT6) or a film's details. Its `CategoryViewModel` stands on a profile with
+  no sources, so no fake repository was needed.
 - **Goal:** Protect fragile UI lifecycle and focus handoffs from regression.
 - **Tasks:**
   1. Expand `tv/src/androidTest` to cover Live TV category selection, focus recovery on back-navigation, and modal dismissals.

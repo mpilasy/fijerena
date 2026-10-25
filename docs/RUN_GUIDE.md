@@ -393,9 +393,9 @@ receiver's KDoc.
 
 ### Focus walks
 
-Settings' focus order is checked by Robolectric focus tests (`tv/src/test`, the `FocusWalk`
-helper, one `*FocusTest` class per group or screen). They need no device and run in CI with the
-other unit tests. To run them alone:
+Settings' and the two-pane browse's focus order is checked by Robolectric focus tests
+(`tv/src/test`, the `FocusWalk` helper, one `*FocusTest` class per group or screen). They need no
+device and run in CI with the other unit tests. To run them alone:
 
 ```bash
 ./gradlew :tv:testDebugUnitTest --tests '*FocusTest'
