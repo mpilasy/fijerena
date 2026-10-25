@@ -48,17 +48,13 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * Status lines plus Cleanup, Purge and Clear All Data (behind its confirm).
  */
 @Composable
-fun GuideMaintenanceRow(
-    viewModel: EpgManagementViewModel,
-    // Runs the row's opening behind Settings' PIN.
-    guard: (() -> Unit) -> Unit = { it() },
-) {
+fun GuideMaintenanceRow(viewModel: EpgManagementViewModel) {
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
     SettingsListRow(
         title = stringResource(R.string.settings_guide_maintenance_title),
         summary = databaseStatusText(indexState),
-        onClick = { guard { showDialog = true } },
+        onClick = { showDialog = true },
     )
     if (showDialog) {
         GuideMaintenanceDialog(viewModel = viewModel, onDismiss = { showDialog = false })

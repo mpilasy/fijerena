@@ -18,22 +18,13 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Settings › Parental controls on the phone (docs/plans/20261020_parental-controls-plan.md → The
- * page): the entry for the admin only, a list's words with their counts and Undo, and the check view.
+ * page): a list's words with their counts and Undo, and the check view. Settings' entry is an
+ * Expert group's row (SettingsExpertGroupTest).
  */
 @RunWith(RobolectricTestRunner::class)
 class ParentalControlsScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
-
-    @Test
-    fun `the Settings entry shows only for an Expert profile`() {
-        var expert by mutableStateOf(false)
-        composeTestRule.setContent { ParentalControlsSettingsRow(expertMode = expert, onOpen = {}) }
-
-        composeTestRule.onNodeWithText("Parental Controls").assertDoesNotExist()
-        expert = true
-        composeTestRule.onNodeWithText("Parental Controls").assertExists()
-    }
 
     @Test
     fun `a word shows its match count, nothing while loading`() {

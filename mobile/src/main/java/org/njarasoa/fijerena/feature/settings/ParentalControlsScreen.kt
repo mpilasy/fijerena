@@ -59,24 +59,6 @@ import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Settings' row into Parental controls, in the Profiles group. Only the admin sees it: with
- * [expertMode] false there is no row (docs/plans/20261020_parental-controls-plan.md → The page).
- */
-@Composable
-fun ParentalControlsSettingsRow(
-    expertMode: Boolean,
-    onOpen: () -> Unit,
-) {
-    if (expertMode) {
-        SettingsListRow(
-            title = stringResource(R.string.parental_controls_title),
-            summary = stringResource(R.string.parental_controls_desc),
-            onClick = onOpen,
-        )
-    }
-}
-
-/**
  * Settings › Parental controls (`Screen.ParentalControls`): the description, one row per list with
  * its number of words ([onOpenList]), Check a source ([onCheck]; a chooser first when the child
  * profiles have two or more sources), then Content filters of each profile ([onProfiles]).

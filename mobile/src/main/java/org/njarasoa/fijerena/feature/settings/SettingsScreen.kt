@@ -2,8 +2,10 @@ package org.njarasoa.fijerena.feature.settings
 
 import android.app.Application
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.rememberDeveloperModeTapHandler
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
@@ -76,9 +79,10 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Settings as one grouped preference list: the seven shared groups of
- * the ux overhaul plan (Part I, A) as section headers, value rows that open
- * pickers, switches inline.
+ * Settings as one grouped preference list: the groups everyone opens (Your Profile, Playback,
+ * Display, About) as section headers, value rows that open pickers, switches inline. With Expert
+ * mode the Expert groups come first, each a row that opens the group as its own page after the PIN
+ * (the settings guarded by page plan).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,8 +117,8 @@ fun MobileSettingsScreen(
         }
     }
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
-    // Settings opens without the PIN; what changes shared setup or another profile (the admin's
-    // groups, a profile's page) asks the PIN of the profile in use first.
+    // Settings opens without the PIN; an Expert group (shared setup, this device, the list of
+    // profiles) asks the PIN of the profile in use once, on the way into its page.
     val inUse by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     var guardedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val guarded: (() -> Unit) -> Unit = { action ->
@@ -137,7 +141,7 @@ fun MobileSettingsScreen(
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // A profile without Expert mode opens its own page with no PIN: the page holds only its look and
-    // playback (as on TV).
+    // playback (as on TV). An Expert's page is the one the Profiles group opens, so the PIN first.
     val ownPage: (() -> Unit) -> Unit = { action -> if (uiState.isDevMode) guarded(action) else action() }
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
@@ -305,13 +309,34 @@ fun MobileSettingsScreen(
         )
     }
 
+    // An Expert group open as its own page (SG-D1), in place of the list; Back returns to the list.
+    // A language change (Activity recreate) and the round trip through a screen it opens come back
+    // to it.
+    var openGroup by rememberSaveable { mutableStateOf<ExpertGroup?>(null) }
+    // A group is opened after the PIN of the profile in use, once per session (PinSession); the rows
+    // inside ask nothing more. Parental Controls is its own screen already.
+    val enterGroup: (ExpertGroup) -> Unit = { group ->
+        guarded { if (group == ExpertGroup.PARENTAL_CONTROLS) onParentalControls() else openGroup = group }
+    }
+    // Expert mode turned off, or the session locked again (a long time in the background): back to
+    // the list, so the group's rows are not open without the PIN.
+    val groupLocked = openGroup != null && (!uiState.isDevMode || inUse?.let { profilesViewModel.needsPin(it.id) } == true)
+    LaunchedEffect(groupLocked) { if (groupLocked) openGroup = null }
+    BackHandler(enabled = openGroup != null) { openGroup = null }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { CinemaText(stringResource(R.string.settings_title), role = TextRole.Title) },
+                title = {
+                    CinemaText(
+                        stringResource(openGroup?.titleRes ?: R.string.settings_title),
+                        role = TextRole.Title,
+                    )
+                },
                 navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
+                    val back = if (openGroup != null) ({ openGroup = null }) else onBack
+                    if (back != null) {
+                        IconButton(onClick = back) {
                             Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
                         }
                     }
@@ -326,73 +351,118 @@ fun MobileSettingsScreen(
                     .padding(paddingValues),
             contentPadding = PaddingValues(bottom = Spacing.lg + LocalDockInset.current),
         ) {
-            // === 1. Profiles === first, since it decides whose favourites and history the rest is about.
-            item {
-                SettingsGroupHeader(
-                    stringResource(if (uiState.isDevMode) R.string.settings_profiles_title else R.string.profile_own_page_title),
-                )
-                ProfilesSettingsRows(
-                    profiles = profiles,
-                    message = profilesMessage,
-                    newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
-                    // No PIN: any grown-up may add a profile (the profile rules plan, PR-D2). Only an
-                    // Expert edits another profile, so only an Expert's new profile opens its page.
-                    onAdd = { name, colorIndex, child ->
-                        profilesViewModel.addProfile(name, colorIndex, child) { if (uiState.isDevMode) openWhenListed = it }
-                    },
-                    onEdit = { id -> if (id == inUse?.id) ownPage { onEditProfile(id) } else guarded { onEditProfile(id) } },
-                    onDismissMessage = profilesViewModel::clearMessage,
-                    expertMode = uiState.isDevMode,
-                    canAddProfile = !uiState.isChildProfile,
-                    pinNudge = profilesViewModel.pins.takeIf { profilesViewModel.needsAdminPin() },
-                    pinNudgeLastExpert = profiles.firstOrNull { it.isActive }?.let { profilesViewModel.isLastExpert(it.id) } == true,
-                    noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),
-                )
-                ParentalControlsSettingsRow(expertMode = uiState.isDevMode, onOpen = { guarded(onParentalControls) })
-            }
-
-            // === 2. Playback === and === 3. Display ===: they change the whole device, so a child
-            // profile does not see them (its Settings: its own page and About).
-            if (!uiState.isChildProfile) {
-                item {
-                    SettingsGroupHeader(
-                        title = stringResource(R.string.settings_playback_section_title),
-                        description = if (uiState.isDevMode) stringResource(R.string.settings_scope_device_section) else null,
-                    )
-                    // This device's settings: an Expert's, behind its PIN (the profile rules plan).
-                    if (uiState.isDevMode) {
-                        SettingsListRow(
-                            title = stringResource(R.string.settings_watch_delay_row_title),
-                            summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
-                            onClick = { guarded { showWatchDelayPicker = true } },
-                        )
-                    }
-                    // The profile's, not this device's: set on its page, which the row opens.
-                    val autoplay =
-                        remember(inUse, lifecycleState) {
-                            inUse?.let { profilesViewModel.settingsOf(it.id).autoplayNextEpisode } == true
+            when (openGroup) {
+                // The list: with Expert mode the Expert groups as rows that open their own page,
+                // then the groups everyone opens freely.
+                null -> {
+                    item {
+                        if (uiState.isDevMode) {
+                            // The Expert groups first, as on TV's rail, where Profiles leads.
+                            ExpertGroup.visibleFor(admin = true).forEach { group ->
+                                SettingsListRow(title = stringResource(group.titleRes), onClick = { enterGroup(group) })
+                            }
+                        } else {
+                            // === Your Profile === first, since it decides whose favourites and history the rest is about.
+                            SettingsGroupHeader(stringResource(R.string.profile_own_page_title))
+                            ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, onEditProfile) { openWhenListed = it }
                         }
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_autoplay_next_episode_title),
-                        summary =
-                            stringResource(if (autoplay) R.string.common_on else R.string.common_off) + " · " +
-                                stringResource(R.string.settings_profile_row_desc),
-                        onClick = { inUse?.let { ownPage { onOpenProfileAt(it.id, ProfilePageRow.AUTOPLAY) } } },
-                    )
+                    }
+
+                    // Playback and Display: the profile's own rows, set on its page, which each row
+                    // opens. A child profile does not see them (its Settings: its own page and About).
+                    if (!uiState.isChildProfile) {
+                        item {
+                            SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
+                            val autoplay =
+                                remember(inUse, lifecycleState) {
+                                    inUse?.let { profilesViewModel.settingsOf(it.id).autoplayNextEpisode } == true
+                                }
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_autoplay_next_episode_title),
+                                summary =
+                                    stringResource(if (autoplay) R.string.common_on else R.string.common_off) + " · " +
+                                        stringResource(R.string.settings_profile_row_desc),
+                                onClick = { inUse?.let { ownPage { onOpenProfileAt(it.id, ProfilePageRow.AUTOPLAY) } } },
+                            )
+                        }
+
+                        item {
+                            SettingsGroupHeader(stringResource(R.string.settings_group_display))
+                            val uiThemeId = remember(inUse, lifecycleState) { inUse?.let { profilesViewModel.uiThemeOf(it.id) } }
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_theme_and_look_title),
+                                summary =
+                                    listOfNotNull(
+                                        uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
+                                        stringResource(R.string.settings_profile_row_desc),
+                                    ).joinToString(" · "),
+                                onClick = { inUse?.let { ownPage { onOpenProfileAt(it.id, ProfilePageRow.LOOK) } } },
+                            )
+                        }
+                    }
+
+                    // === About ===
+                    item {
+                        SettingsGroupHeader(stringResource(R.string.settings_about_section_title))
+                        // Tapping the version 7 times turns Expert mode on while no profile is Expert (DeveloperModeTaps).
+                        val onVersionClick = rememberDeveloperModeTapHandler(uiState.expertExists, viewModel::enableDevMode)
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable(onClick = onVersionClick)
+                                    .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                        ) {
+                            CinemaText(stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME))
+                            CinemaText(
+                                stringResource(R.string.app_disclaimer_no_content),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                            )
+                            // GPL-3.0 "Appropriate Legal Notices": copyright, licence, no warranty, source.
+                            CinemaText(stringResource(R.string.app_copyright), role = TextRole.BodySmall, tone = TextTone.Secondary)
+                            CinemaText(stringResource(R.string.app_license_notice), role = TextRole.BodySmall, tone = TextTone.Secondary)
+                            CinemaText(
+                                stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                            )
+                            CinemaText(
+                                stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                            )
+                        }
+                        SettingsListRow(
+                            title = stringResource(R.string.device_info_open),
+                            summary = stringResource(R.string.device_info_desc),
+                            onClick = onDeviceInfo,
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.terms_title),
+                            summary = stringResource(R.string.terms_desc),
+                            onClick = onTerms,
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.licenses_title),
+                            summary = stringResource(R.string.licenses_desc),
+                            onClick = onLicenses,
+                        )
+                        TmdbAttribution()
+                    }
                 }
 
-                item {
-                    SettingsGroupHeader(
-                        title = stringResource(R.string.settings_group_display),
-                        description = if (uiState.isDevMode) stringResource(R.string.settings_scope_device_section) else null,
-                    )
-                    // This device's settings: an Expert's, behind its PIN (the profile rules plan).
-                    if (uiState.isDevMode) {
-                        SettingsListRow(
-                            title = stringResource(R.string.settings_recent_row_size_title),
-                            summary = uiState.recentRowSize.toString(),
-                            onClick = { guarded { showRecentSizePicker = true } },
-                        )
+                // The list of every profile; a profile's row opens its page.
+                ExpertGroup.PROFILES -> {
+                    item { ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, onEditProfile) { openWhenListed = it } }
+                }
+
+                // Opened as its own screen, never as a page here.
+                ExpertGroup.PARENTAL_CONTROLS -> {}
+
+                // This device's settings.
+                ExpertGroup.THIS_DEVICE -> {
+                    item {
                         SettingsListRow(
                             title = stringResource(R.string.settings_language),
                             summary =
@@ -402,75 +472,67 @@ fun MobileSettingsScreen(
                                     "fr" -> stringResource(R.string.settings_language_fr)
                                     else -> uiState.language
                                 },
-                            onClick = { guarded { showLanguagePicker = true } },
+                            onClick = { showLanguagePicker = true },
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_recent_row_size_title),
+                            summary = uiState.recentRowSize.toString(),
+                            onClick = { showRecentSizePicker = true },
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_watch_delay_row_title),
+                            summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
+                            onClick = { showWatchDelayPicker = true },
                         )
                     }
-                    // The profile's, not this device's: set on its page, which the row opens.
-                    val uiThemeId = remember(inUse, lifecycleState) { inUse?.let { profilesViewModel.uiThemeOf(it.id) } }
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_theme_and_look_title),
-                        summary =
-                            listOfNotNull(
-                                uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
-                                stringResource(R.string.settings_profile_row_desc),
-                            ).joinToString(" · "),
-                        onClick = { inUse?.let { ownPage { onOpenProfileAt(it.id, ProfilePageRow.LOOK) } } },
-                    )
                 }
-            }
 
-            // === 4. Sources & guide ===
-            // Shared setup: Expert mode (admin, for now) only.
-            if (uiState.isDevMode) {
-                item {
-                    SettingsGroupHeader(stringResource(R.string.settings_group_source_guide))
-                    // Switching, editing and adding sources live on the Sources list (D6).
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_provider_manage_button),
-                        summary = manageSourcesSummary(uiState),
-                        onClick = { guarded(onManageProviders) },
-                    )
-                    // Only sources with live channels have guide sources: one page for all of
-                    // them (the one guide sources page plan), shown when the device has one.
-                    if (uiState.hasGuideSources) {
+                ExpertGroup.SOURCE_GUIDE -> {
+                    item {
+                        // Switching, editing and adding sources live on the Sources list (D6).
                         SettingsListRow(
-                            title = stringResource(R.string.epg_management_screen_title),
-                            summary = stringResource(R.string.settings_guide_sources_desc),
-                            onClick = { guarded(onGuideSources) },
+                            title = stringResource(R.string.settings_provider_manage_button),
+                            summary = manageSourcesSummary(uiState),
+                            onClick = onManageProviders,
                         )
+                        // Only sources with live channels have guide sources: one page for all of
+                        // them (the one guide sources page plan), shown when the device has one.
+                        if (uiState.hasGuideSources) {
+                            SettingsListRow(
+                                title = stringResource(R.string.epg_management_screen_title),
+                                summary = stringResource(R.string.settings_guide_sources_desc),
+                                onClick = onGuideSources,
+                            )
+                        }
+                        GuideMaintenanceRow(viewModel = epgViewModel)
+                        TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
                     }
-                    GuideMaintenanceRow(viewModel = epgViewModel, guard = guarded)
-                    TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { guarded { showTmdbKeyDialog = true } })
                 }
-            }
 
-            // === 5. Sync & backup ===
-            // Shared setup and backups (with source logins): Expert mode (admin, for now) only.
-            if (uiState.isDevMode) {
-                item {
-                    SettingsGroupHeader(stringResource(R.string.settings_group_sync_backup))
-                    LiveSyncRow(onOpen = { guarded(onLiveSync) })
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_export_button),
-                        summary = stringResource(R.string.settings_export_import_desc),
-                        trailing = {},
-                        onClick = { guarded { exportLauncher.launch("fijerena_settings.json") } },
-                    )
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_import_button),
-                        summary = stringResource(R.string.settings_import_desc),
-                        trailing = {},
-                        onClick = { guarded { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) } },
-                    )
-                    // Only when there is a backup in Downloads to restore (a developer's shortcut).
-                    val quickImportReady = remember { exportManager.getQuickImportPath() != null }
-                    if (uiState.isDevMode && quickImportReady) {
-                        val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
+                // Shared setup and backups (with source logins).
+                ExpertGroup.SYNC_BACKUP -> {
+                    item {
+                        LiveSyncRow(onOpen = onLiveSync)
                         SettingsListRow(
-                            title = stringResource(R.string.settings_quick_import_button),
+                            title = stringResource(R.string.settings_export_button),
+                            summary = stringResource(R.string.settings_export_import_desc),
                             trailing = {},
-                            onClick = {
-                                guarded {
+                            onClick = { exportLauncher.launch("fijerena_settings.json") },
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_import_button),
+                            summary = stringResource(R.string.settings_import_desc),
+                            trailing = {},
+                            onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
+                        )
+                        // Only when there is a backup in Downloads to restore (a developer's shortcut).
+                        val quickImportReady = remember { exportManager.getQuickImportPath() != null }
+                        if (quickImportReady) {
+                            val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
+                            SettingsListRow(
+                                title = stringResource(R.string.settings_quick_import_button),
+                                trailing = {},
+                                onClick = {
                                     val path = exportManager.getQuickImportPath()
                                     if (path != null) {
                                         coroutineScope.launch {
@@ -489,106 +551,111 @@ fun MobileSettingsScreen(
                                     } else {
                                         viewModel.setExportImportMessage(fileNotFoundText)
                                     }
+                                },
+                            )
+                        }
+                        uiState.exportImportMessage?.let { SettingsMessage(it) }
+                    }
+                }
+
+                ExpertGroup.ADVANCED -> {
+                    item {
+                        // Developer mode is switched on each profile's page; Diagnostics is here for
+                        // the profile in use.
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_diagnostics_title),
+                            summary = stringResource(R.string.settings_diagnostics_desc),
+                            onClick = onDiagnostics,
+                        )
+                        // Housekeeping: the catalogue's leftovers.
+                        SettingsListRow(
+                            title =
+                                stringResource(
+                                    if (uiState.isPruningDatabase) {
+                                        R.string.settings_shrink_database_button_running
+                                    } else {
+                                        R.string.settings_shrink_database_button
+                                    },
+                                ),
+                            summary = stringResource(R.string.settings_shrink_database_desc),
+                            trailing = {
+                                if (uiState.isPruningDatabase) {
+                                    CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                                 }
                             },
+                            onClick = viewModel::pruneDatabase,
+                            enabled = !uiState.isPruningDatabase,
                         )
-                    }
-                    uiState.exportImportMessage?.let { SettingsMessage(it) }
-                }
-            }
-
-            // === 6. About & advanced ===
-            item {
-                SettingsGroupHeader(
-                    stringResource(
-                        if (uiState.isDevMode) R.string.settings_group_about_advanced else R.string.settings_about_section_title,
-                    ),
-                )
-                // Tapping the version 7 times turns Expert mode on while no profile is Expert (DeveloperModeTaps).
-                val onVersionClick = rememberDeveloperModeTapHandler(uiState.expertExists, viewModel::enableDevMode)
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onVersionClick)
-                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                ) {
-                    CinemaText(stringResource(R.string.settings_about_version_format, BuildConfig.VERSION_NAME))
-                    CinemaText(stringResource(R.string.app_disclaimer_no_content), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                    // GPL-3.0 "Appropriate Legal Notices": copyright, licence, no warranty, source.
-                    CinemaText(stringResource(R.string.app_copyright), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                    CinemaText(stringResource(R.string.app_license_notice), role = TextRole.BodySmall, tone = TextTone.Secondary)
-                    CinemaText(
-                        stringResource(R.string.settings_about_build_format, BuildConfig.GIT_HASH),
-                        role = TextRole.BodySmall,
-                        tone = TextTone.Secondary,
-                    )
-                    CinemaText(
-                        stringResource(R.string.settings_about_built_format, BuildConfig.BUILD_TIME),
-                        role = TextRole.BodySmall,
-                        tone = TextTone.Secondary,
-                    )
-                }
-                SettingsListRow(
-                    title = stringResource(R.string.device_info_open),
-                    summary = stringResource(R.string.device_info_desc),
-                    onClick = onDeviceInfo,
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.terms_title),
-                    summary = stringResource(R.string.terms_desc),
-                    onClick = onTerms,
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.licenses_title),
-                    summary = stringResource(R.string.licenses_desc),
-                    onClick = onLicenses,
-                )
-                // Developer mode is switched on each profile's page; Diagnostics stays here for the
-                // profile in use.
-                if (uiState.isDevMode) {
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_diagnostics_title),
-                        summary = stringResource(R.string.settings_diagnostics_desc),
-                        onClick = onDiagnostics,
-                    )
-                    // Housekeeping for the admin: the catalogue's leftovers.
-                    SettingsListRow(
-                        title =
-                            stringResource(
-                                if (uiState.isPruningDatabase) {
-                                    R.string.settings_shrink_database_button_running
-                                } else {
-                                    R.string.settings_shrink_database_button
-                                },
-                            ),
-                        summary = stringResource(R.string.settings_shrink_database_desc),
-                        trailing = {
-                            if (uiState.isPruningDatabase) {
-                                CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                            }
-                        },
-                        onClick = { guarded { viewModel.pruneDatabase() } },
-                        enabled = !uiState.isPruningDatabase,
-                    )
-                    uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
-                    // Only when the last run found something: "0 records deleted" says nothing.
-                    if (uiState.isDevMode && uiState.lastShrinkAtMs > 0L &&
-                        (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)
-                    ) {
-                        val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
-                        val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
-                        SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
-                        val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
-                        SettingsMessage(
-                            stringResource(R.string.settings_shrink_database_dev_stats_delta, uiState.lastShrinkRowsRemoved, bytesStr),
-                        )
+                        uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
+                        // Only when the last run found something: "0 records deleted" says nothing.
+                        if (uiState.lastShrinkAtMs > 0L && (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)) {
+                            val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
+                            val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
+                            SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
+                            val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
+                            SettingsMessage(
+                                stringResource(R.string.settings_shrink_database_dev_stats_delta, uiState.lastShrinkRowsRemoved, bytesStr),
+                            )
+                        }
                     }
                 }
-                TmdbAttribution()
             }
         }
     }
+}
+
+/**
+ * The phone's Expert groups, in TV's rail order: each one a row at the top of Settings' list that
+ * opens the group as its own page after the PIN (the settings guarded by page plan, SG-D1). Only Expert mode
+ * lists them.
+ */
+enum class ExpertGroup(
+    @StringRes val titleRes: Int,
+) {
+    // With Expert mode, the list of every profile (SG-D2).
+    PROFILES(R.string.settings_profiles_title),
+    PARENTAL_CONTROLS(R.string.parental_controls_title),
+    THIS_DEVICE(R.string.settings_group_this_device),
+    SOURCE_GUIDE(R.string.settings_group_source_guide),
+    SYNC_BACKUP(R.string.settings_group_sync_backup),
+    ADVANCED(R.string.settings_section_advanced),
+    ;
+
+    companion object {
+        /** The Expert groups Settings lists: all of them with Expert mode ([admin]), else none. */
+        fun visibleFor(admin: Boolean): List<ExpertGroup> = if (admin) entries else emptyList()
+    }
+}
+
+/**
+ * Profiles' rows: with Expert mode every profile (the Profiles page), else the viewer's own page.
+ * Add Profile for any grown-up, with no PIN (the profile rules plan, PR-D2); only an Expert edits
+ * another profile, so only an Expert's new profile opens its page ([onAdded]).
+ */
+@Composable
+private fun ProfilesRows(
+    profilesViewModel: ProfilesViewModel,
+    profiles: List<ProfileUi>,
+    message: String?,
+    uiState: SettingsUiState,
+    onEditProfile: (String) -> Unit,
+    onAdded: (String) -> Unit,
+) {
+    ProfilesSettingsRows(
+        profiles = profiles,
+        message = message,
+        newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
+        onAdd = { name, colorIndex, child ->
+            profilesViewModel.addProfile(name, colorIndex, child) { if (uiState.isDevMode) onAdded(it) }
+        },
+        onEdit = onEditProfile,
+        onDismissMessage = profilesViewModel::clearMessage,
+        expertMode = uiState.isDevMode,
+        canAddProfile = !uiState.isChildProfile,
+        pinNudge = profilesViewModel.pins.takeIf { profilesViewModel.needsAdminPin() },
+        pinNudgeLastExpert = profiles.firstOrNull { it.isActive }?.let { profilesViewModel.isLastExpert(it.id) } == true,
+        noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),
+    )
 }
 
 /** Live sync's line in Settings: whether it's on, and the way into its own screen. */

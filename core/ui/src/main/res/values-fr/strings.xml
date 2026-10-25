@@ -964,7 +964,6 @@
     <string name="settings_group_source_guide">Sources et guide</string>
     <string name="settings_group_display">Affichage</string>
     <string name="settings_group_this_device">Cet appareil</string>
-    <string name="settings_group_about_advanced">À propos et avancé</string>
     <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>
