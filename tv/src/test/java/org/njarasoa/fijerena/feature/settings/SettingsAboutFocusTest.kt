@@ -12,33 +12,38 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → About & Advanced (`scripts/focus-walks/settings.txt`): its rows for an Expert, and
- * About for a grown-up (no Diagnostics, no Shrink Database). The rows open other screens or shrink
- * the database, so nothing here presses OK.
+ * TV Settings → Advanced and About (`scripts/focus-walks/settings.txt`): Advanced for an Expert
+ * (Diagnostics, Shrink Database), About for everyone. The rows open other screens or shrink the
+ * database, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAboutFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert walks About and Advanced`() {
+    fun `an Expert walks Advanced and About`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
+            down("This Device"),
             down("Sources & Guide"),
             down("Sync & Backup"),
-            down("About & Advanced"),
+            down("Advanced"),
+            right("Diagnostics / Crashes and errors recorded on this device"),
+            down("Shrink Database"),
+            down("Shrink Database"),
+            up("Diagnostics"),
+            back("Advanced"),
+            down("About"),
             right("Fijerena v"),
             down("Device Info / This app and device"),
             down("Terms of Use / Who is responsible for the sources you add"),
             down("Open-Source Licences / The libraries and fonts the app is built with"),
-            down("Diagnostics / Crashes and errors recorded on this device"),
-            down("Shrink Database"),
             // TMDB's attribution: one focusable row, last.
             down("Film and Series Data / TMDB logo"),
             down("Film and Series Data / TMDB logo"),
-            up("Shrink Database"),
-            back("About & Advanced"),
+            up("Open-Source Licences"),
+            back("About"),
         )
     }
 

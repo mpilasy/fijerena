@@ -23,6 +23,7 @@ class SettingsSyncBackupFocusTest : SettingsFocusTest() {
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
+            down("This Device"),
             down("Sources & Guide"),
             down("Sync & Backup"),
             // No backup waits in Downloads, so no Restore from Downloads row.

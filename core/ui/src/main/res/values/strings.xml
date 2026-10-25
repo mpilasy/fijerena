@@ -999,6 +999,7 @@
     <!-- Settings overhaul (the ux overhaul plan): groups, scope chips, rows -->
     <string name="settings_group_source_guide">Sources &amp; Guide</string>
     <string name="settings_group_display">Display</string>
+    <string name="settings_group_this_device">This Device</string>
     <string name="settings_group_about_advanced">About &amp; Advanced</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>

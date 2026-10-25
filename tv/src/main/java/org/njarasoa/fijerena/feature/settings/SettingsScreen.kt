@@ -9,6 +9,8 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -105,8 +107,8 @@ fun SettingsScreen(
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
     // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
     TvLeaveChildPinDialog(profilesViewModel, onProfileSwitched)
-    // Settings opens without the PIN; what changes shared setup or another profile (the admin's
-    // groups, a profile's page) asks the PIN of the profile in use first.
+    // Settings opens without the PIN; an Expert group (shared setup, this device, the list of
+    // profiles) asks the PIN of the profile in use once, on the way into its pane.
     val inUse by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     var guardedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val guarded: (() -> Unit) -> Unit = { action ->
@@ -233,9 +235,9 @@ fun SettingsScreen(
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
     // Back round trip from a child screen come back to the same group.
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
-    // Without Expert mode (admin, for now) the shared setup groups are not listed, and a child
-    // profile sees only its page and About; a group left selected when Expert mode was turned off
-    // falls back to Profiles.
+    // Without Expert mode (admin, for now) the Expert groups are not listed, and a child profile
+    // sees only its page and About; a group left selected when Expert mode was turned off falls
+    // back to Profiles.
     val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isDevMode, child = uiState.isChildProfile)
     if (selectedGroup !in visibleGroups) selectedGroup = SettingsGroup.PROFILES
     val railPane = rememberPaneFocus()
@@ -299,8 +301,9 @@ fun SettingsScreen(
         editingProfileId = profile.id
         picker = SettingPicker.PROFILE
     }
-    // Display's and Playback's rows open the page of the profile in use at their row. As from
-    // Profiles: an Expert gives the PIN first; without Expert mode it is the viewer's own page.
+    // Display's and Playback's rows open the page of the profile in use at their row. An Expert's
+    // page is the one Profiles (an Expert group) opens, so the PIN first; without Expert mode it is
+    // the viewer's own page.
     val openOwnPageAt: (ProfilePageRow) -> Unit = { row ->
         inUse?.let { profile ->
             val open = {
@@ -369,6 +372,29 @@ fun SettingsScreen(
     }
     BackHandler(enabled = paneHasFocus && picker == null && !ownProfilePage) { backToRail() }
 
+    // An Expert group's pane is entered (Right or OK on its rail row) after the PIN of the profile
+    // in use, once per session (PinSession); Cancel leaves focus on the rail row. The rows inside
+    // ask nothing more.
+    val groupLocked: (SettingsGroup) -> Boolean = { group ->
+        group.asksPin(uiState.isDevMode) && inUse?.let { profilesViewModel.needsPin(it.id) } == true
+    }
+    val enterGroup: (SettingsGroup) -> Unit = { group ->
+        val enter = { coroutineScope.launch { contentPane.focusEntry() } }
+        if (groupLocked(group)) guarded { enter() } else enter()
+    }
+    // The session locked again (a long time in the background) while in an Expert group: back to
+    // the rail, so its rows are not open without the PIN.
+    val selectedGroupLocked = groupLocked(selectedGroup)
+    LaunchedEffect(selectedGroupLocked) {
+        if (selectedGroupLocked && paneHasFocus) {
+            picker = null
+            editingProfileId = null
+            profilePageStart = null
+            returnFocus.clear()
+            railPane.focusEntry()
+        }
+    }
+
     Box(
         modifier =
             Modifier.fillMaxSize().onPreviewKeyEvent { event ->
@@ -404,7 +430,10 @@ fun SettingsScreen(
                         Modifier
                             .weight(RAIL_WEIGHT)
                             .fillMaxHeight()
-                            .tvPane(railPane, exitRight = contentPane, exitUp = false),
+                            .tvPane(railPane, exitRight = contentPane, exitUp = false)
+                            // An Expert's nine groups are taller than a TV screen: the focused
+                            // row scrolls into view.
+                            .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     visibleGroups.forEach { group ->
@@ -412,7 +441,7 @@ fun SettingsScreen(
                             selected = group == selectedGroup,
                             onClick = {
                                 selectedGroup = group
-                                coroutineScope.launch { contentPane.focusEntry() }
+                                enterGroup(group)
                             },
                             modifier =
                                 Modifier
@@ -420,9 +449,14 @@ fun SettingsScreen(
                                     .paneItem(railPane, group.name)
                                     .onFocusChanged { if (it.isFocused) selectedGroup = group }
                                     .onKeyEvent { event ->
-                                        val isLeft = event.key == Key.DirectionLeft && event.type == KeyEventType.KeyDown
+                                        val keyDown = event.type == KeyEventType.KeyDown
+                                        val isLeft = keyDown && event.key == Key.DirectionLeft
+                                        // Right into a locked Expert group asks the PIN first; else
+                                        // the pane (tvPane) takes it.
+                                        val isLockedRight = keyDown && event.key == Key.DirectionRight && groupLocked(group)
                                         if (isLeft) focusManager.moveFocus(FocusDirection.Left)
-                                        isLeft
+                                        if (isLockedRight) enterGroup(group)
+                                        isLeft || isLockedRight
                                     }.leftToRail(),
                             headlineContent = { TvContentText(stringResource(group.titleFor(uiState.isDevMode)), role = TextRole.Heading) },
                         )
@@ -565,7 +599,7 @@ fun SettingsScreen(
                                                     onAdd = { name, colorIndex, child ->
                                                         profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it }
                                                     },
-                                                    onEdit = { profile -> guarded { openProfile(profile) } },
+                                                    onEdit = openProfile,
                                                     onDismissMessage = profilesViewModel::clearMessage,
                                                     scale = scale,
                                                     firstRowModifier = entryModifier,
@@ -590,13 +624,10 @@ fun SettingsScreen(
                                         SettingsGroup.PARENTAL_CONTROLS -> {
                                             item {
                                                 ParentalControlsCard(
-                                                    // A list changes shared setup: the PIN first, like Sources.
                                                     onOpenList = { list ->
-                                                        guarded {
-                                                            returnFocus.leaveFrom(parentalListReturnKey(list), listState)
-                                                            parentalList = list
-                                                            picker = SettingPicker.PARENTAL_LIST
-                                                        }
+                                                        returnFocus.leaveFrom(parentalListReturnKey(list), listState)
+                                                        parentalList = list
+                                                        picker = SettingPicker.PARENTAL_LIST
                                                     },
                                                     onOpenCheck = {
                                                         returnFocus.leaveFrom(PARENTAL_CHECK_RETURN_KEY, listState)
@@ -609,21 +640,9 @@ fun SettingsScreen(
                                             }
                                         }
 
+                                        // Playback and Display hold only the profile's own rows; this
+                                        // device's are in This Device.
                                         SettingsGroup.PLAYBACK -> {
-                                            // This device's settings: an Expert's, behind its PIN (the profile rules plan).
-                                            if (uiState.isDevMode) {
-                                                item {
-                                                    PlaybackSettingsCard(
-                                                        watchDelaySeconds = uiState.watchDelaySeconds,
-                                                        onOpenWatchDelayPicker = { guarded { openPicker(SettingPicker.WATCH_DELAY) } },
-                                                        watchDelayRowFocusRequester =
-                                                            returnFocus.requesterFor(
-                                                                SettingPicker.WATCH_DELAY.returnKey,
-                                                            ),
-                                                        watchDelayRowModifier = entryModifier,
-                                                    )
-                                                }
-                                            }
                                             item {
                                                 val autoplay =
                                                     remember(inUse, picker) {
@@ -637,38 +656,12 @@ fun SettingsScreen(
                                                         returnFocus.requesterFor(
                                                             profilePageReturnKey(ProfilePageRow.AUTOPLAY),
                                                         ),
-                                                    modifier = if (uiState.isDevMode) Modifier else entryModifier,
+                                                    modifier = entryModifier,
                                                 )
                                             }
                                         }
 
                                         SettingsGroup.DISPLAY -> {
-                                            // This device's settings: an Expert's, behind its PIN (the profile rules plan).
-                                            if (uiState.isDevMode) {
-                                                item {
-                                                    SettingsSection(description = stringResource(R.string.settings_scope_device_section)) {
-                                                        UiScaleSettingsRow(
-                                                            uiScale = uiState.uiScale,
-                                                            onOpenPicker = { guarded { openPicker(SettingPicker.TEXT_SIZE) } },
-                                                            rowFocusRequester = returnFocus.requesterFor(SettingPicker.TEXT_SIZE.returnKey),
-                                                            modifier = entryModifier,
-                                                        )
-                                                        RecentRowSizeRow(
-                                                            size = uiState.recentRowSize,
-                                                            onOpenPicker = { guarded { openPicker(SettingPicker.RECENT_SIZE) } },
-                                                            rowFocusRequester =
-                                                                returnFocus.requesterFor(
-                                                                    SettingPicker.RECENT_SIZE.returnKey,
-                                                                ),
-                                                        )
-                                                        LanguageSettingsRow(
-                                                            selectedLanguage = uiState.language,
-                                                            onOpenPicker = { guarded { openPicker(SettingPicker.LANGUAGE) } },
-                                                            rowFocusRequester = returnFocus.requesterFor(SettingPicker.LANGUAGE.returnKey),
-                                                        )
-                                                    }
-                                                }
-                                            }
                                             item {
                                                 val uiThemeId =
                                                     remember(inUse, picker) { inUse?.let { profilesViewModel.uiThemeOf(it.id) } }
@@ -677,8 +670,36 @@ fun SettingsScreen(
                                                     value = uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
                                                     onClick = { openOwnPageAt(ProfilePageRow.LOOK) },
                                                     focusRequester = returnFocus.requesterFor(profilePageReturnKey(ProfilePageRow.LOOK)),
-                                                    modifier = if (uiState.isDevMode) Modifier else entryModifier,
+                                                    modifier = entryModifier,
                                                 )
+                                            }
+                                        }
+
+                                        SettingsGroup.THIS_DEVICE -> {
+                                            item {
+                                                SettingsSection {
+                                                    LanguageSettingsRow(
+                                                        selectedLanguage = uiState.language,
+                                                        onOpenPicker = { openPicker(SettingPicker.LANGUAGE) },
+                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.LANGUAGE.returnKey),
+                                                        modifier = entryModifier,
+                                                    )
+                                                    UiScaleSettingsRow(
+                                                        uiScale = uiState.uiScale,
+                                                        onOpenPicker = { openPicker(SettingPicker.TEXT_SIZE) },
+                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.TEXT_SIZE.returnKey),
+                                                    )
+                                                    RecentRowSizeRow(
+                                                        size = uiState.recentRowSize,
+                                                        onOpenPicker = { openPicker(SettingPicker.RECENT_SIZE) },
+                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.RECENT_SIZE.returnKey),
+                                                    )
+                                                    WatchDelaySettingsRow(
+                                                        watchDelaySeconds = uiState.watchDelaySeconds,
+                                                        onOpenPicker = { openPicker(SettingPicker.WATCH_DELAY) },
+                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.WATCH_DELAY.returnKey),
+                                                    )
+                                                }
                                             }
                                         }
 
@@ -687,10 +708,8 @@ fun SettingsScreen(
                                                 ProviderSettingsCard(
                                                     sourceNames = uiState.profileSources.map { it.second },
                                                     onManageProviders = {
-                                                        guarded {
-                                                            returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
-                                                            onManageProviders()
-                                                        }
+                                                        returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
+                                                        onManageProviders()
                                                     },
                                                     manageRowFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
                                                     manageRowModifier = entryModifier,
@@ -706,17 +725,15 @@ fun SettingsScreen(
                                                             title = stringResource(R.string.epg_management_screen_title),
                                                             description = stringResource(R.string.settings_guide_sources_desc),
                                                             onClick = {
-                                                                guarded {
-                                                                    returnFocus.leaveFrom(RETURN_GUIDE_SOURCES, listState)
-                                                                    onGuideSources()
-                                                                }
+                                                                returnFocus.leaveFrom(RETURN_GUIDE_SOURCES, listState)
+                                                                onGuideSources()
                                                             },
                                                             focusRequester = returnFocus.requesterFor(RETURN_GUIDE_SOURCES),
                                                         )
                                                     }
                                                     GuideMaintenanceRow(
                                                         viewModel = epgViewModel,
-                                                        onOpen = { guarded { openPicker(SettingPicker.GUIDE_MAINTENANCE) } },
+                                                        onOpen = { openPicker(SettingPicker.GUIDE_MAINTENANCE) },
                                                         focusRequester =
                                                             returnFocus.requesterFor(
                                                                 SettingPicker.GUIDE_MAINTENANCE.returnKey,
@@ -727,7 +744,7 @@ fun SettingsScreen(
                                             item {
                                                 TmdbKeySettingsRow(
                                                     viewModel = tmdbKeyViewModel,
-                                                    onOpen = { guarded { openPicker(SettingPicker.TMDB_KEY) } },
+                                                    onOpen = { openPicker(SettingPicker.TMDB_KEY) },
                                                     focusRequester = returnFocus.requesterFor(SettingPicker.TMDB_KEY.returnKey),
                                                 )
                                             }
@@ -737,10 +754,8 @@ fun SettingsScreen(
                                             item {
                                                 LiveSyncSettingsCard(
                                                     onOpen = {
-                                                        guarded {
-                                                            returnFocus.leaveFrom(RETURN_LIVE_SYNC, listState)
-                                                            onLiveSync()
-                                                        }
+                                                        returnFocus.leaveFrom(RETURN_LIVE_SYNC, listState)
+                                                        onLiveSync()
                                                     },
                                                     openRowFocusRequester = returnFocus.requesterFor(RETURN_LIVE_SYNC),
                                                     openRowModifier = entryModifier,
@@ -748,24 +763,20 @@ fun SettingsScreen(
                                             }
                                             item {
                                                 ExportImportSettingsCard(
-                                                    onExport = { guarded { exportLauncher.launch("fijerena_settings.json") } },
+                                                    onExport = { exportLauncher.launch("fijerena_settings.json") },
                                                     onImport = {
-                                                        guarded {
-                                                            importLauncher.launch(
-                                                                arrayOf("application/json", "application/octet-stream", "*/*"),
-                                                            )
-                                                        }
+                                                        importLauncher.launch(
+                                                            arrayOf("application/json", "application/octet-stream", "*/*"),
+                                                        )
                                                     },
                                                     onQuickImport = {
-                                                        guarded {
-                                                            val path = exportManager.getQuickImportPath()
-                                                            if (path != null) {
-                                                                pendingImportPath = path
-                                                            } else {
-                                                                viewModel.setExportImportMessage(
-                                                                    resources.getString(R.string.settings_quick_import_not_found),
-                                                                )
-                                                            }
+                                                        val path = exportManager.getQuickImportPath()
+                                                        if (path != null) {
+                                                            pendingImportPath = path
+                                                        } else {
+                                                            viewModel.setExportImportMessage(
+                                                                resources.getString(R.string.settings_quick_import_not_found),
+                                                            )
                                                         }
                                                     },
                                                     exportImportMessage = uiState.exportImportMessage,
@@ -775,7 +786,37 @@ fun SettingsScreen(
                                             }
                                         }
 
-                                        SettingsGroup.ABOUT_ADVANCED -> {
+                                        SettingsGroup.ADVANCED -> {
+                                            // Developer mode is switched on each profile's page; Diagnostics
+                                            // shows here for the profile in use.
+                                            item {
+                                                SettingsRow(
+                                                    title = stringResource(R.string.settings_diagnostics_title),
+                                                    description = stringResource(R.string.settings_diagnostics_desc),
+                                                    onClick = {
+                                                        returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
+                                                        onDiagnostics()
+                                                    },
+                                                    focusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
+                                                    modifier = entryModifier,
+                                                )
+                                            }
+                                            // Housekeeping: the catalogue's leftovers.
+                                            item {
+                                                DatabaseMaintenanceCard(
+                                                    isPruning = uiState.isPruningDatabase,
+                                                    resultMessage = uiState.databaseMaintenanceMessage,
+                                                    onShrinkClick = viewModel::pruneDatabase,
+                                                    isDevMode = uiState.isDevMode,
+                                                    lastShrinkAtMs = uiState.lastShrinkAtMs,
+                                                    lastShrinkDurationMs = uiState.lastShrinkDurationMs,
+                                                    lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
+                                                    lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
+                                                )
+                                            }
+                                        }
+
+                                        SettingsGroup.ABOUT -> {
                                             item {
                                                 AboutSettingsCard(
                                                     onDeviceInfo = {
@@ -790,39 +831,12 @@ fun SettingsScreen(
                                                         returnFocus.leaveFrom(RETURN_TERMS, listState)
                                                         onTerms()
                                                     },
-                                                    // Developer mode is switched on each profile's page;
-                                                    // Diagnostics shows here for the profile in use.
-                                                    onDiagnostics =
-                                                        if (uiState.isDevMode) {
-                                                            {
-                                                                returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
-                                                                onDiagnostics()
-                                                            }
-                                                        } else {
-                                                            null
-                                                        },
                                                     onVersionClick = onVersionClick,
                                                     rowModifier = entryModifier,
                                                     deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
                                                     licensesFocusRequester = returnFocus.requesterFor(RETURN_LICENSES),
                                                     termsFocusRequester = returnFocus.requesterFor(RETURN_TERMS),
-                                                    diagnosticsFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
                                                 )
-                                            }
-                                            // Housekeeping for the admin: the catalogue's leftovers.
-                                            if (uiState.isDevMode) {
-                                                item {
-                                                    DatabaseMaintenanceCard(
-                                                        isPruning = uiState.isPruningDatabase,
-                                                        resultMessage = uiState.databaseMaintenanceMessage,
-                                                        onShrinkClick = { guarded { viewModel.pruneDatabase() } },
-                                                        isDevMode = uiState.isDevMode,
-                                                        lastShrinkAtMs = uiState.lastShrinkAtMs,
-                                                        lastShrinkDurationMs = uiState.lastShrinkDurationMs,
-                                                        lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
-                                                        lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
-                                                    )
-                                                }
                                             }
                                             item { TmdbAttributionRow() }
                                         }
@@ -922,14 +936,15 @@ private const val RAIL_WEIGHT = 0.3f
 private const val PANE_WEIGHT = 0.7f
 
 /**
- * The groups of Settings, in rail order (the settings reorg plan);
- * Parental controls since docs/plans/20261020_parental-controls-plan.md.
+ * The groups of Settings, in rail order (the settings reorg plan); Parental controls since the
+ * parental controls plan; This Device and Advanced since the settings guarded by page plan.
  */
 enum class SettingsGroup(
     @StringRes val titleRes: Int,
     /**
-     * Shared setup only Expert mode (admin, for now) sees: Parental controls, sources and guides,
-     * Live sync, backups.
+     * An Expert group, which only Expert mode (admin, for now) sees: the household's shared setup
+     * (Parental controls, sources and guides, Live sync, backups), this device's settings and the
+     * database's housekeeping.
      */
     val adminOnly: Boolean = false,
     /** A child profile sees it too (its own page). The other groups change shared or device setup. */
@@ -939,30 +954,29 @@ enum class SettingsGroup(
     PARENTAL_CONTROLS(R.string.parental_controls_title, adminOnly = true),
     PLAYBACK(R.string.settings_playback_section_title),
     DISPLAY(R.string.settings_group_display),
+    THIS_DEVICE(R.string.settings_group_this_device, adminOnly = true),
     SOURCE_GUIDE(R.string.settings_group_source_guide, adminOnly = true),
     SYNC_BACKUP(R.string.settings_group_sync_backup, adminOnly = true),
-    ABOUT_ADVANCED(R.string.settings_group_about_advanced, forChild = true),
+    ADVANCED(R.string.settings_section_advanced, adminOnly = true),
+    ABOUT(R.string.settings_about_section_title, forChild = true),
     ;
 
-    /**
-     * The group's name. Without Expert mode Profiles is the viewer's own page, "Your profile", and
-     * About & advanced is plain About, having nothing advanced.
-     */
+    /** The group's name. Without Expert mode Profiles is the viewer's own page, "Your profile". */
     @StringRes
-    fun titleFor(admin: Boolean): Int =
-        when {
-            admin -> titleRes
-            this == PROFILES -> R.string.profile_own_page_title
-            this == ABOUT_ADVANCED -> R.string.settings_about_section_title
-            else -> titleRes
-        }
+    fun titleFor(admin: Boolean): Int = if (this == PROFILES && !admin) R.string.profile_own_page_title else titleRes
+
+    /**
+     * Its pane is entered after the PIN of the profile in use (when it has one): the Expert groups,
+     * and Profiles with Expert mode, where it lists every profile (SG-D2).
+     */
+    fun asksPin(admin: Boolean): Boolean = adminOnly || (admin && this == PROFILES)
 
     /** The pane key of this group's first focusable row — where Right from the rail lands. */
     val entryKey: String get() = "$name:first"
 
     companion object {
         /**
-         * The groups the rail lists: without Expert mode ([admin] false), not the admin-only ones;
+         * The groups the rail lists: without Expert mode ([admin] false), not the Expert ones;
          * for a child profile ([child]), only its own page and About.
          */
         fun visibleFor(

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
@@ -18,8 +19,11 @@ fun LanguageSettingsRow(
     selectedLanguage: String,
     onOpenPicker: () -> Unit,
     rowFocusRequester: FocusRequester? = null,
+    /** This Device's first row: the pane's entry row. */
+    modifier: Modifier = Modifier,
 ) {
     SettingsRow(
+        modifier = modifier,
         title = stringResource(R.string.settings_language),
         description = stringResource(R.string.settings_language_desc),
         value = languageOptions().firstOrNull { it.value == selectedLanguage }?.label ?: selectedLanguage,

@@ -19,13 +19,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
  * About: version and build as one focusable row — the group's entry row, so Right from the rail
  * always lands somewhere and Up/Down never skip it (focus contract rule 3); OK counts toward
  * developer mode ([onVersionClick], 7 taps). Then
- * Device info, Terms of use, Open-source licences, and Diagnostics while the profile in use has developer mode on ([onDiagnostics]
- * not null; switched on each profile's page). Both open their own screens. Last, the copyright and licence notice.
+ * Device info, Terms of use and Open-source licences, each opening its own screen. Last, the
+ * copyright and licence notice. Diagnostics is in Advanced, an Expert group.
  */
 @Composable
 fun AboutSettingsCard(
     onDeviceInfo: () -> Unit,
-    onDiagnostics: (() -> Unit)?,
     onLicenses: () -> Unit = {},
     onTerms: () -> Unit = {},
     onVersionClick: () -> Unit = {},
@@ -33,7 +32,6 @@ fun AboutSettingsCard(
     deviceInfoFocusRequester: FocusRequester? = null,
     licensesFocusRequester: FocusRequester? = null,
     termsFocusRequester: FocusRequester? = null,
-    diagnosticsFocusRequester: FocusRequester? = null,
 ) {
     SettingsSection(title = stringResource(R.string.settings_about_section_title)) {
         SettingsRow(
@@ -80,14 +78,6 @@ fun AboutSettingsCard(
             onClick = onLicenses,
             focusRequester = licensesFocusRequester,
         )
-        if (onDiagnostics != null) {
-            SettingsRow(
-                title = stringResource(R.string.settings_diagnostics_title),
-                description = stringResource(R.string.settings_diagnostics_desc),
-                onClick = onDiagnostics,
-                focusRequester = diagnosticsFocusRequester,
-            )
-        }
         // GPL-3.0 "Appropriate Legal Notices": copyright, licence, no warranty, source. A note, not
         // in the version row: two more lines there made the Console Look's pill clip its corners.
         SettingsNote(stringResource(R.string.app_copyright) + "\n" + stringResource(R.string.app_license_notice))

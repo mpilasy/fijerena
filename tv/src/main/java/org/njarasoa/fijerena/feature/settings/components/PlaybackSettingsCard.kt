@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
@@ -21,27 +20,20 @@ private fun watchDelayLabel(seconds: Int): String =
         stringResource(R.string.settings_custom_value_format, secondsLabel(seconds))
     }
 
+/** Add a Channel to Recent After: this device's setting, in This Device. */
 @Composable
-fun PlaybackSettingsCard(
+fun WatchDelaySettingsRow(
     watchDelaySeconds: Int,
-    onOpenWatchDelayPicker: () -> Unit,
-    watchDelayRowFocusRequester: FocusRequester? = null,
-    /** Goes on the watch-delay row, the card's first focusable — the pane's entry row. */
-    watchDelayRowModifier: Modifier = Modifier,
+    onOpenPicker: () -> Unit,
+    rowFocusRequester: FocusRequester? = null,
 ) {
-    SettingsSection(
-        title = stringResource(R.string.settings_playback_section_title),
-        description = stringResource(R.string.settings_scope_device_section),
-    ) {
-        SettingsRow(
-            title = stringResource(R.string.settings_watch_delay_row_title),
-            description = stringResource(R.string.settings_playback_watch_delay_desc),
-            value = watchDelayLabel(watchDelaySeconds),
-            onClick = onOpenWatchDelayPicker,
-            focusRequester = watchDelayRowFocusRequester,
-            modifier = watchDelayRowModifier,
-        )
-    }
+    SettingsRow(
+        title = stringResource(R.string.settings_watch_delay_row_title),
+        description = stringResource(R.string.settings_playback_watch_delay_desc),
+        value = watchDelayLabel(watchDelaySeconds),
+        onClick = onOpenPicker,
+        focusRequester = rowFocusRequester,
+    )
 }
 
 @Composable

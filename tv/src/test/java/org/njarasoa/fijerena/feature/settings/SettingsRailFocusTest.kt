@@ -22,12 +22,14 @@ class SettingsRailFocusTest : SettingsFocusTest() {
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
+            down("This Device"),
             down("Sources & Guide"),
             down("Sync & Backup"),
-            down("About & Advanced"),
+            down("Advanced"),
+            down("About"),
             // Down at the end of the rail stays put.
-            down("About & Advanced"),
-            up("Sync & Backup"),
+            down("About"),
+            up("Advanced"),
         )
     }
 
@@ -36,6 +38,8 @@ class SettingsRailFocusTest : SettingsFocusTest() {
         open(SettingsFixture.GUEST)
         walk.assertFocused("Your Profile")
         walk.run(
+            // No Expert group: no Parental Controls, This Device, Sources & Guide, Sync & Backup
+            // or Advanced.
             down("Playback"),
             down("Display"),
             down("About"),

@@ -8,7 +8,8 @@
 # the group; Back on the rail leaves Settings. A picker opens in the pane on the current value;
 # Left or Back closes it with focus back on its row.
 # Needs Expert mode on for atr: without it the Profiles pane is atr's own page, not the list of
-# profiles, and Parental controls / Sources & guide / Sync & backup are not listed.
+# profiles, and the Expert groups (Parental controls, This Device, Sources & guide, Sync & backup,
+# Advanced) are not listed.
 # Re-recorded 2026-10-17 after the Settings reorganisation. Parental controls added to the rail
 # 2026-10-20 (its own walk: parental-controls.txt); those two lines are not yet run.
 # The PIN reminder's text changed 2026-10-24 (settings flow review, Phase 1): line edited by hand,
@@ -23,6 +24,9 @@
 # SettingsSyncBackupFocusTest and SettingsAboutFocusTest (tv/src/test, feature/settings). This walk
 # keeps only the start focus. Back on the rail (it leaves Settings) is the move no test can make;
 # it is not recorded yet.
+# Settings guarded by page (2026-10-25): an Expert's rail is Profiles, Parental Controls, Playback,
+# Display, This Device, Sources & Guide, Sync & Backup, Advanced, About; an Expert group asks the
+# PIN on the way in (SettingsExpertGroupPinFocusTest). The start focus is unchanged.
 @start Profiles
 # Back on the rail leaves Settings: Home again, focus on its content (recorded 2026-10-24).
 BACK	Breaking Bad

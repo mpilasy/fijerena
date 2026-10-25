@@ -13,55 +13,62 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Playback and Display (`scripts/focus-walks/settings.txt`): the device's rows (an
- * Expert's only), a picker and the way back to its row, and the rows that open the page of the profile in use at
- * their row ("Play Next Episode Automatically", "Theme and Look and Feel"), Back returning to them.
+ * TV Settings → Playback, Display and This Device (`scripts/focus-walks/settings.txt`): Playback and
+ * Display hold only the rows that open the page of the profile in use at their row ("Play Next
+ * Episode Automatically", "Theme and Look and Feel"), Back returning to them; This Device (an
+ * Expert's) holds the device's rows, a picker and the way back to its row.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsPlaybackDisplayFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert walks Playback`() {
+    fun `an Expert walks Playback and Display`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Parental Controls"),
             down("Playback"),
-            right("Add a Channel to Recent After / So a channel you only zap past isn't added / 10 s"),
-            // OK opens the picker on the current value; Left closes it, focus back on its row.
-            center("10 s"),
-            down("15 s"),
-            left("Add a Channel to Recent After"),
-            down("Play Next Episode Automatically / Set on your profile’s page / Off"),
+            right("Play Next Episode Automatically / Set on your profile’s page / Off"),
+            // Nothing else in the group: Down stays put.
+            down("Play Next Episode Automatically / Set on your profile’s page"),
             // The page of the profile in use, focus on its switch; Back returns to the row.
             center("Play Next Episode Automatically / Near the end of an episode"),
             back("Play Next Episode Automatically / Set on your profile’s page"),
-            down("Play Next Episode Automatically / Set on your profile’s page"),
             left("Playback"),
+            down("Display"),
+            right("Theme and Look and Feel / Set on your profile’s page"),
+            // The page of the profile in use at its UI theme; Back returns to the row.
+            center("UI Theme / Sets the theme and the Look and Feel together."),
+            back("Theme and Look and Feel / Set on your profile’s page"),
+            up("Theme and Look and Feel"),
+            back("Display"),
         )
     }
 
     @Test
-    fun `an Expert walks Display`() {
+    fun `an Expert walks This Device`() {
         open(SettingsFixture.ADMIN)
         walk.run(
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
-            right("Text & Grid Size / Size of text and everything on screen, on every screen"),
+            down("This Device"),
+            right("Language / Language for menus and messages"),
+            down("Text & Grid Size / Size of text and everything on screen, on every screen"),
             down("Items in Recent / How many films, episodes or channels Recent shows / 25"),
-            down("Language / Language for menus and messages"),
-            down("Theme and Look and Feel / Set on your profile’s page"),
-            // The page of the profile in use at its UI theme; Back returns to the row.
-            center("UI Theme / Sets the theme and the Look and Feel together."),
-            back("Theme and Look and Feel / Set on your profile’s page"),
-            down("Theme and Look and Feel"),
-            up("Language"),
+            down("Add a Channel to Recent After / So a channel you only zap past isn't added / 10 s"),
+            // Down at the end of the pane stays put.
+            down("Add a Channel to Recent After"),
+            // OK opens the picker on the current value; Left closes it, focus back on its row.
+            center("10 s"),
+            down("15 s"),
+            left("Add a Channel to Recent After"),
             up("Items in Recent"),
             center("25"),
             back("Items in Recent"),
             up("Text & Grid Size"),
+            up("Language"),
             // Up at the top of the pane stays put.
-            up("Text & Grid Size"),
-            back("Display"),
+            up("Language"),
+            back("This Device"),
         )
     }
 
@@ -71,7 +78,7 @@ class SettingsPlaybackDisplayFocusTest : SettingsFocusTest() {
         walk.assertFocused("Your Profile")
         walk.run(
             down("Playback"),
-            // No device rows without Expert mode (the profile rules plan): only the profile's row.
+            // Only the profile's row.
             right("Play Next Episode Automatically / Set on your profile’s page"),
             // Nothing above it: Up stays put.
             up("Play Next Episode Automatically / Set on your profile’s page"),

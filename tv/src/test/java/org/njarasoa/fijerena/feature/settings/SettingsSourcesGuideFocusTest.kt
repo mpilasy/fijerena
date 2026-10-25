@@ -28,6 +28,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
+            down("This Device"),
             down("Sources & Guide"),
             right("Manage Sources / Source One, Source Two"),
             // The fixture's sources are Xtream ones, with live channels: Guide Sources shows.
@@ -57,6 +58,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
+            down("This Device"),
             down("Sources & Guide"),
             right("Manage Sources"),
             down("Guide Sources"),
@@ -73,6 +75,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("Parental Controls"),
             down("Playback"),
             down("Display"),
+            down("This Device"),
             down("Sources & Guide"),
             right("Manage Sources"),
             down("Guide Sources"),

@@ -8,6 +8,9 @@
 # CI run. Expectations are labels only (no values that depend on the build or the device, such as
 # the theme names or the TMDB key), so most lines are prefixes of what settings.txt records.
 # Never presses OK on a destructive control: Shrink Database and Delete profile are only focused.
+# Settings guarded by page (2026-10-25): the rail now lists This Device and Advanced, and About
+# last; Playback and Display keep only the rows that open the profile's page. Edited by hand from
+# the focus tests, not yet run.
 @start Admin
 # The picker: the profiles in creation order, and no Add Profile (profiles are added in Settings).
 RIGHT	Guest
@@ -24,26 +27,31 @@ DOWN	Movies
 DOWN	TV Shows
 DOWN	Search
 DOWN	Settings
-# Admin has no PIN: Settings opens with no prompt, focus on its rail's first group.
+# Admin has no PIN: Settings opens with no prompt, focus on its rail's first group, and no Expert
+# group asks the PIN on the way in.
 CENTER	Profiles
 WAIT 2
 DOWN	Parental Controls
 DOWN	Playback
 DOWN	Display
+DOWN	This Device
 DOWN	Sources & Guide
 DOWN	Sync & Backup
-DOWN	About & Advanced
+DOWN	Advanced
+DOWN	About
 # Down at the end of the rail stays put.
-DOWN	About & Advanced
-# About & Advanced: the About card, Device Info, Terms of Use, Open-Source Licences, Diagnostics
-# (Expert), Shrink Database (Expert; never pressed).
+DOWN	About
+# About: the About card, Device Info, Terms of Use, Open-Source Licences.
 RIGHT	Fijerena v
 DOWN	Device Info
 DOWN	Terms of Use
 DOWN	Open-Source Licences
-DOWN	Diagnostics
+LEFT	About
+# Advanced: Diagnostics, Shrink Database (never pressed).
+UP	Advanced
+RIGHT	Diagnostics
 DOWN	Shrink Database
-LEFT	About & Advanced
+LEFT	Advanced
 # Sync & Backup: Live Sync, then the backups.
 UP	Sync & Backup
 RIGHT	Live Sync
@@ -58,23 +66,27 @@ DOWN	Guide Sources
 DOWN	Guide Data Maintenance
 DOWN	Film and Series Details (TMDB)
 LEFT	Sources & Guide
-# Display: Text & Grid Size, Items in Recent, Language (English on a fresh install), Theme and Look
-# and Feel, which opens Admin's page in the pane on UI Theme; Back returns to the row.
-UP	Display
-RIGHT	Text & Grid Size
+# This Device: Language (English on a fresh install), Text & Grid Size, Items in Recent, the watch
+# delay (OK opens its picker on 10 s, the default; Left closes it).
+UP	This Device
+RIGHT	Language / Language for menus and messages / English
+DOWN	Text & Grid Size
 DOWN	Items in Recent
-DOWN	Language / Language for menus and messages / English
-DOWN	Theme and Look and Feel
+DOWN	Add a Channel to Recent After
+CENTER	10 s
+LEFT	Add a Channel to Recent After
+LEFT	This Device
+# Display: Theme and Look and Feel only, which opens Admin's page in the pane on UI Theme; Back
+# returns to the row.
+UP	Display
+RIGHT	Theme and Look and Feel
 CENTER	UI Theme
 BACK	Theme and Look and Feel
 LEFT	Display
-# Playback: the watch delay (OK opens its picker on 10 s, the default; Left closes it), then Play
-# Next Episode Automatically, which opens Admin's page on its switch; Back returns to the row.
+# Playback: Play Next Episode Automatically only, which opens Admin's page on its switch; Back
+# returns to the row.
 UP	Playback
-RIGHT	Add a Channel to Recent After
-CENTER	10 s
-LEFT	Add a Channel to Recent After
-DOWN	Play Next Episode Automatically / Set on your profile’s page
+RIGHT	Play Next Episode Automatically / Set on your profile’s page
 CENTER	Play Next Episode Automatically / Near the end of an episode
 BACK	Play Next Episode Automatically / Set on your profile’s page
 LEFT	Playback
