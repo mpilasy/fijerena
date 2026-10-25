@@ -113,36 +113,6 @@ fun MobileSettingsScreen(
         }
     }
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
-    // Becoming Expert (the 7 taps on the version) asks an Expert's PIN while one has a PIN
-    // (the profile pin plan, Phase 4).
-    var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
-    val enableExpert = {
-        val holders = profilesViewModel.adminPinHolders()
-        if (holders.isEmpty()) {
-            viewModel.enableDevMode()
-            true
-        } else {
-            askingAdminPin = holders
-            false
-        }
-    }
-    askingAdminPin?.let { holders ->
-        val enabledText = stringResource(R.string.settings_developer_mode_enabled)
-        PinDialog(
-            state =
-                rememberPinPromptState(
-                    profilesViewModel.pins,
-                    PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin)),
-                ) {
-                    askingAdminPin = null
-                    viewModel.enableDevMode()
-                    android.widget.Toast
-                        .makeText(context, enabledText, android.widget.Toast.LENGTH_SHORT)
-                        .show()
-                },
-            onCancel = { askingAdminPin = null },
-        )
-    }
     // Settings opens without the PIN; what changes shared setup or another profile (the admin's
     // groups, a profile's page) asks the PIN of the profile in use first.
     val inUse by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
@@ -528,8 +498,8 @@ fun MobileSettingsScreen(
                         if (uiState.isDevMode) R.string.settings_group_about_advanced else R.string.settings_about_section_title,
                     ),
                 )
-                // Tapping the version 7 times turns developer mode on (DeveloperModeTaps).
-                val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, enableExpert)
+                // Tapping the version 7 times turns Expert mode on while no profile is Expert (DeveloperModeTaps).
+                val onVersionClick = rememberDeveloperModeTapHandler(uiState.expertExists, viewModel::enableDevMode)
                 Column(
                     modifier =
                         Modifier

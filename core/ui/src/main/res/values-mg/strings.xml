@@ -1022,7 +1022,7 @@
     <string name="profile_child_last_expert">Tsy afaka ho mombamomba ankizy ny hany manam-pahaizana: omeo mombamomba hafa aloha ny manam-pahaizana.</string>
     <string name="profile_source_no_filters">Tsy mahatratra ity loharano ity ny sivana votoaty</string>
     <string name="settings_pin_nudge_title">Mametraha PIN ho an\'ny Fandrindrana</string>
-    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy manam-pahaizana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary afaka manova ny loharano, ny sivana votoaty sy ny mombamomba, na mampandeha ny manam-pahaizana amin\'ny tsindry 7 ny olona rehetra.</string>
+    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy manam-pahaizana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary na iza na iza dia afaka manova ny loharano, ny sivana votoaty sy ny mombamomba.</string>
     <string name="profile_sources_title">Loharano</string>
     <string name="profile_sources_count_format">%1$d amin\'ny %2$d</string>
     <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray.</string>
@@ -1274,7 +1274,6 @@
     <string name="epg_xmltv_url_hint">Ny adiresin\'ny rakitra fandaharana XMLTV (.xml na .xml.gz), avy amin\'ny mpamatsy anao na tranonkala fandaharana.</string>
     <string name="epg_timezone_hint">Raha diso ora ihany ny fandaharana. Matetika 0.</string>
     <string name="settings_developer_mode_enabled">Mandeha ho an\'ity mombamomba ity ny Manam-pahaizana</string>
-    <string name="settings_developer_mode_already_on">Efa mandeha ny Manam-pahaizana</string>
     <string name="settings_developer_mode_taps_left">Manam-pahaizana: %1$d sisa</string>
     <string name="ui_style_standard">Mahazatra</string>
     <string name="ui_style_rounded">Boribory</string>

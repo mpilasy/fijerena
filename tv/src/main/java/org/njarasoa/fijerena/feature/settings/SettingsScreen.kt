@@ -103,36 +103,6 @@ fun SettingsScreen(
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
-    // Becoming Expert (the 7 taps on the version) asks an Expert's PIN while one has a PIN
-    // (the profile pin plan, Phase 4).
-    var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
-    val enableExpert = {
-        val holders = profilesViewModel.adminPinHolders()
-        if (holders.isEmpty()) {
-            viewModel.enableDevMode()
-            true
-        } else {
-            askingAdminPin = holders
-            false
-        }
-    }
-    askingAdminPin?.let { holders ->
-        val enabledText = stringResource(R.string.settings_developer_mode_enabled)
-        TvPinDialog(
-            state =
-                rememberPinPromptState(
-                    profilesViewModel.pins,
-                    PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin)),
-                ) {
-                    askingAdminPin = null
-                    viewModel.enableDevMode()
-                    android.widget.Toast
-                        .makeText(context, enabledText, android.widget.Toast.LENGTH_SHORT)
-                        .show()
-                },
-            onCancel = { askingAdminPin = null },
-        )
-    }
     // "Switch to this profile" away from a child profile asks an Expert's PIN (the child lock).
     TvLeaveChildPinDialog(profilesViewModel, onProfileSwitched)
     // Settings opens without the PIN; what changes shared setup or another profile (the admin's
@@ -257,7 +227,7 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
-    val onVersionClick = rememberDeveloperModeTapHandler(uiState.isDevMode, enableExpert)
+    val onVersionClick = rememberDeveloperModeTapHandler(uiState.expertExists, viewModel::enableDevMode)
 
     // Two panes (plan Part I, B): a rail of the groups on the left, the selected group's
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the

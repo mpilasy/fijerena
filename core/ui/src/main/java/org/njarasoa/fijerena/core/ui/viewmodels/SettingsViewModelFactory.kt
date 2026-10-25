@@ -34,6 +34,9 @@ class SettingsViewModelFactory(
                     appSettings = AppSettings(appContext),
                     providerRepo = ProviderRepository(appContext),
                     exportManager = SettingsExportManager(appContext),
+                    profileRepo =
+                        org.njarasoa.fijerena.core.network.profile
+                            .ProfileRepository(appContext),
                 ) as T
             }
 

@@ -894,7 +894,7 @@
     <string name="profile_child_last_expert">The only profile with Expert mode can\'t be a child\'s: give Expert mode to another profile first.</string>
     <string name="profile_source_no_filters">Content filters don\'t reach this source</string>
     <string name="settings_pin_nudge_title">Set a PIN for Settings</string>
-    <string name="settings_pin_nudge_desc">There is a child profile but no Expert has a PIN: a child can switch to any profile, and anyone can change sources, content filters and profiles, or turn on Expert mode with 7 taps.</string>
+    <string name="settings_pin_nudge_desc">There is a child profile but no Expert has a PIN: a child can switch to any profile, and anyone can change sources, content filters and profiles.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d of %2$d</string>
     <string name="profile_sources_desc">The sources this profile can use. A new source is on only for the profile that added it. A profile keeps at least one source.</string>
@@ -1280,7 +1280,6 @@
     <string name="epg_xmltv_url_hint">The address of an XMLTV guide file (.xml or .xml.gz), from your provider or a guide site.</string>
     <string name="epg_timezone_hint">Only if programmes show at the wrong time. Usually 0.</string>
     <string name="settings_developer_mode_enabled">Expert mode is on for this profile</string>
-    <string name="settings_developer_mode_already_on">Expert mode is already on</string>
     <string name="settings_developer_mode_taps_left">Expert mode: %1$d to go</string>
     <string name="ui_style_standard">Standard</string>
     <string name="ui_style_rounded">Rounded</string>

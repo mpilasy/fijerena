@@ -12,13 +12,13 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 
 /**
- * The version row's click on TV and phone: counts taps toward developer mode
- * ([DeveloperModeTaps]) and says where they stand in a short toast. [onEnable] returns whether it
- * is on now — false while it first asks an Expert's PIN, which says nothing yet.
+ * The version row's click on TV and phone: while no profile is Expert, counts taps toward Expert
+ * mode ([DeveloperModeTaps]) and says where they stand in a short toast. While one is, it does and
+ * says nothing. [onEnable] returns whether Expert mode is on now.
  */
 @Composable
 fun rememberDeveloperModeTapHandler(
-    isDevMode: Boolean,
+    expertExists: Boolean,
     onEnable: () -> Boolean,
 ): () -> Unit {
     val context = LocalContext.current
@@ -28,7 +28,7 @@ fun rememberDeveloperModeTapHandler(
         // A child profile is never Expert (docs/plans/20261019_tv-household-ux-plan.md): its taps count nothing.
         val settings = AppSettings(context.applicationContext)
         if (settings.isChildProfile(settings.activeProfileId)) return@taps
-        val outcome = DeveloperModeTaps.onTap(taps, isDevMode)
+        val outcome = DeveloperModeTaps.onTap(taps, expertExists)
         val message =
             when (outcome) {
                 DeveloperModeTaps.Outcome.Nothing -> {
@@ -42,12 +42,8 @@ fun rememberDeveloperModeTapHandler(
                 DeveloperModeTaps.Outcome.Enable -> {
                     if (onEnable()) resources.getString(R.string.settings_developer_mode_enabled) else null
                 }
-
-                DeveloperModeTaps.Outcome.AlreadyOn -> {
-                    resources.getString(R.string.settings_developer_mode_already_on)
-                }
             }
-        taps = if (isDevMode || outcome == DeveloperModeTaps.Outcome.Enable) 0 else taps + 1
+        taps = if (expertExists || outcome == DeveloperModeTaps.Outcome.Enable) 0 else taps + 1
         message?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 }

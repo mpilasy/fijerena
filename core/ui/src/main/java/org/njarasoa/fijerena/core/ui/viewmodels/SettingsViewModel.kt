@@ -11,8 +11,10 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.DeveloperModeTaps
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
@@ -31,6 +33,8 @@ data class SettingsUiState(
     val themeId: String = "deep_night",
     val uiStyleId: String = "modern",
     val isDevMode: Boolean = false,
+    /** A profile is Expert, so the 7 taps on the version do nothing (PR-3). Yes until the list has loaded. */
+    val expertExists: Boolean = true,
     /**
      * The profile in use is a child's: its Settings show only its own page and About, not the
      * groups that change the whole device (Playback, Display).
@@ -55,7 +59,11 @@ class SettingsViewModel(
     private val appSettings: AppSettings,
     private val providerRepo: ProviderRepository,
     private val exportManager: SettingsExportManager,
+    private val profileRepo: ProfileRepository,
 ) : ViewModel() {
+    /** Every profile's id, null until the list has loaded. */
+    private var profileIds: List<String>? = null
+
     private val _uiState =
         MutableStateFlow(
             SettingsUiState(
@@ -85,6 +93,12 @@ class SettingsViewModel(
         // in the background at start (ProfileRepository.ensureAnExpert), maybe after Settings opened.
         viewModelScope.launchGuarded("SettingsViewModel.followDevMode") {
             appSettings.observeDevMode().collect { refreshDevMode() }
+        }
+        viewModelScope.launchGuarded("SettingsViewModel.followProfiles") {
+            profileRepo.observeProfiles().collect { rows ->
+                profileIds = rows.map { it.id }
+                refreshDevMode()
+            }
         }
         // The profile's colour theme and Look and Feel, also when another device changes them.
         viewModelScope.launchGuarded("SettingsViewModel.followLook") {
@@ -124,15 +138,22 @@ class SettingsViewModel(
             _uiState.value.copy(
                 isDevMode = appSettings.isDevMode,
                 isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
+                expertExists = expertExists(),
             )
     }
 
-    /** The 7th tap on the version row: developer mode on for the profile in use. */
-    fun enableDevMode() {
+    private fun expertExists(): Boolean = DeveloperModeTaps.expertExists(profileIds, appSettings::devMode)
+
+    /**
+     * The 7th tap on the version row: Expert mode on for the profile in use, only while no profile
+     * is Expert (the profile rules plan, PR-3). Returns whether it is on now.
+     */
+    fun enableDevMode(): Boolean {
         // A child profile is never Expert (docs/plans/20261019_tv-household-ux-plan.md).
-        if (appSettings.isChildProfile(appSettings.activeProfileId)) return
-        appSettings.isDevMode = true
+        val allowed = !appSettings.isChildProfile(appSettings.activeProfileId) && !expertExists()
+        if (allowed) appSettings.isDevMode = true
         refreshDevMode()
+        return allowed
     }
 
     fun updateLanguage(language: String) {

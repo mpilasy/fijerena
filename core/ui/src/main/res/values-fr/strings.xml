@@ -859,7 +859,7 @@
     <string name="profile_child_last_expert">Le seul profil en mode expert ne peut pas être un profil enfant : donnez d\'abord le mode expert à un autre profil.</string>
     <string name="profile_source_no_filters">Les filtres de contenu n\'agissent pas sur cette source</string>
     <string name="settings_pin_nudge_title">Définir un code PIN pour les paramètres</string>
-    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil expert n\'a de code PIN : un enfant peut passer à n\'importe quel profil, et n\'importe qui peut changer les sources, les filtres de contenu et les profils, ou activer le mode expert en 7 appuis.</string>
+    <string name="settings_pin_nudge_desc">Il y a un profil enfant mais aucun profil expert n\'a de code PIN : un enfant peut passer à n\'importe quel profil, et n\'importe qui peut changer les sources, les filtres de contenu et les profils.</string>
     <string name="profile_sources_title">Sources</string>
     <string name="profile_sources_count_format">%1$d sur %2$d</string>
     <string name="profile_sources_desc">Les sources que ce profil peut utiliser. Une nouvelle source n\'est activée que pour le profil qui l\'a ajoutée. Un profil garde au moins une source.</string>
@@ -1282,7 +1282,6 @@
     <string name="epg_xmltv_url_hint">L\'adresse d\'un fichier de guide XMLTV (.xml ou .xml.gz), fournie par votre fournisseur ou un site de guides.</string>
     <string name="epg_timezone_hint">Seulement si les programmes s\'affichent à la mauvaise heure. En général 0.</string>
     <string name="settings_developer_mode_enabled">Mode expert activé pour ce profil</string>
-    <string name="settings_developer_mode_already_on">Le mode expert est déjà activé</string>
     <string name="settings_developer_mode_taps_left">Mode expert : encore %1$d</string>
     <string name="ui_style_standard">Standard</string>
     <string name="ui_style_rounded">Arrondi</string>
