@@ -9,11 +9,9 @@
 # the theme names or the TMDB key), so most lines are prefixes of what settings.txt records.
 # Never presses OK on a destructive control: Shrink Database and Delete profile are only focused.
 @start Admin
-# The picker: the profiles in creation order, then Add Profile (Admin is Expert).
+# The picker: the profiles in creation order, and no Add Profile (profiles are added in Settings).
 RIGHT	Guest
 RIGHT	Kid
-RIGHT	Add Profile
-LEFT	Kid
 LEFT	Guest
 LEFT	Admin
 # OK opens Home; Left from Home's first focus reaches the rail on Home.

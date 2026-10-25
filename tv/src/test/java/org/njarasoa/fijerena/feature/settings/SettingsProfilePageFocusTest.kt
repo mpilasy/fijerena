@@ -9,11 +9,12 @@ import org.njarasoa.fijerena.testing.center
 import org.njarasoa.fijerena.testing.down
 import org.njarasoa.fijerena.testing.left
 import org.njarasoa.fijerena.testing.right
+import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → a profile's page (`scripts/focus-walks/settings.txt`, the Profiles part), the
- * cases `SettingsProfilesFocusTest` leaves: a grown-up's own page, a grown-up's page in an
+ * cases `SettingsProfilesFocusTest` leaves: a grown-up's own page (Add Profile at its end), a grown-up's page in an
  * Expert's view, and a child's page when an Expert has a PIN, with its "Parental Controls ›" link.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -35,10 +36,32 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
-            down("Play Next Episode Automatically"),
+            // A grown-up adds a profile from the end of its own page (the profile rules plan, PR-D1).
+            down("Add Profile"),
+            down("Add Profile"),
             left("Your Profile"),
             right("Edit Name / Name / Guest"),
             back("Your Profile"),
+        )
+    }
+
+    @Test
+    fun `a grown-up's own page ends on Add Profile, and Up goes back up the page`() {
+        open(SettingsFixture.GUEST)
+        walk.run(
+            right("Edit Name / Name / Guest"),
+            down("Colour"),
+            down("PIN / Asked in Settings before sources, backups and profiles / Off"),
+            down("UI Theme"),
+            down("Theme"),
+            down("Look and Feel"),
+            down("Poster in the Background"),
+            down("Play Next Episode Automatically"),
+            down("Add Profile"),
+            up("Play Next Episode Automatically"),
+            down("Add Profile"),
+            // Left leaves the page from Add Profile too.
+            left("Your Profile"),
         )
     }
 

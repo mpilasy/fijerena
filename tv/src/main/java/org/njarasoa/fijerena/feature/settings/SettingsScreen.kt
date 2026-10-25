@@ -157,22 +157,6 @@ fun SettingsScreen(
             )
         }
     }
-    // Add profile has its own rule, the same as on the picker (ProfilesViewModel.addProfilePins).
-    var addProfileAction by remember { mutableStateOf<Pair<List<String>, () -> Unit>?>(null) }
-    val addProfileGuarded: (() -> Unit) -> Unit = { action ->
-        val holders = profilesViewModel.addProfilePinHolders()
-        if (holders.isEmpty()) action() else addProfileAction = holders to action
-    }
-    addProfileAction?.let { (holders, action) ->
-        TvPinDialog(
-            state =
-                rememberPinPromptState(profilesViewModel.pins, PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin))) {
-                    addProfileAction = null
-                    action()
-                },
-            onCancel = { addProfileAction = null },
-        )
-    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9, T6).
     val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
@@ -565,6 +549,8 @@ fun SettingsScreen(
                                             scale = scale,
                                             adminView = uiState.isDevMode,
                                             focusOnOpen = !ownProfilePage,
+                                            // A grown-up without Expert mode adds a profile from its own page.
+                                            canAddProfile = ownProfilePage && !uiState.isChildProfile,
                                             title =
                                                 if (ownProfilePage || profilePageStart != null) {
                                                     stringResource(R.string.profile_own_page_title)
@@ -605,10 +591,9 @@ fun SettingsScreen(
                                                     profiles = profiles,
                                                     message = profilesMessage,
                                                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
+                                                    // No PIN: any grown-up may add a profile (the profile rules plan, PR-D2).
                                                     onAdd = { name, colorIndex, child ->
-                                                        addProfileGuarded {
-                                                            profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it }
-                                                        }
+                                                        profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it }
                                                     },
                                                     onEdit = { profile -> guarded { openProfile(profile) } },
                                                     onDismissMessage = profilesViewModel::clearMessage,

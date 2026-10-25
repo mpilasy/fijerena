@@ -165,22 +165,6 @@ fun MobileSettingsScreen(
             )
         }
     }
-    // Add profile has its own rule, the same as on TV's picker (ProfilesViewModel.addProfilePins).
-    var addProfileAction by remember { mutableStateOf<Pair<List<String>, () -> Unit>?>(null) }
-    val addProfileGuarded: (() -> Unit) -> Unit = { action ->
-        val holders = profilesViewModel.addProfilePinHolders()
-        if (holders.isEmpty()) action() else addProfileAction = holders to action
-    }
-    addProfileAction?.let { (holders, action) ->
-        PinDialog(
-            state =
-                rememberPinPromptState(profilesViewModel.pins, PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin))) {
-                    addProfileAction = null
-                    action()
-                },
-            onCancel = { addProfileAction = null },
-        )
-    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // A profile without Expert mode opens its own page with no PIN: the page holds only its look and
     // playback (as on TV).
@@ -381,12 +365,15 @@ fun MobileSettingsScreen(
                     profiles = profiles,
                     message = profilesMessage,
                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
+                    // No PIN: any grown-up may add a profile (the profile rules plan, PR-D2). Only an
+                    // Expert edits another profile, so only an Expert's new profile opens its page.
                     onAdd = { name, colorIndex, child ->
-                        addProfileGuarded { profilesViewModel.addProfile(name, colorIndex, child) { openWhenListed = it } }
+                        profilesViewModel.addProfile(name, colorIndex, child) { if (uiState.isDevMode) openWhenListed = it }
                     },
                     onEdit = { id -> if (id == inUse?.id) ownPage { onEditProfile(id) } else guarded { onEditProfile(id) } },
                     onDismissMessage = profilesViewModel::clearMessage,
                     expertMode = uiState.isDevMode,
+                    canAddProfile = !uiState.isChildProfile,
                     pinNudge = profilesViewModel.pins.takeIf { profilesViewModel.needsAdminPin() },
                     pinNudgeLastExpert = profiles.firstOrNull { it.isActive }?.let { profilesViewModel.isLastExpert(it.id) } == true,
                     noAdminPin = profilesViewModel.adminPinHolders().isEmpty(),

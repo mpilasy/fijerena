@@ -171,7 +171,8 @@ class ProfilesViewModel(
 
     /**
      * The Expert profiles (admin, for now) with a PIN, oldest first: while there is one, becoming
-     * Expert (the 7 taps) or adding a profile ([addProfilePinHolders]) asks for one of their PINs.
+     * Expert (the 7 taps) asks for one of their PINs. Adding a profile asks none (the profile
+     * rules plan, PR-D2).
      */
     fun adminPinHolders(): List<String> = profiles.value.map { it.id }.filter { appSettings.devMode(it) && pins.hasPin(it) }
 
@@ -191,15 +192,6 @@ class ProfilesViewModel(
 
     /** [id] has a PIN not typed in this session: picking it asks for it first. */
     fun needsPin(id: String): Boolean = pins.hasPin(id) && !PinSession.isUnlocked(id)
-
-    /**
-     * The PINs Add profile asks for (one of them), the same in Settings and on TV's picker; empty
-     * for no prompt. See [addProfilePins].
-     */
-    fun addProfilePinHolders(): List<String> {
-        val inUse = appSettings.activeProfileId
-        return addProfilePins(appSettings.devMode(inUse), !needsPin(inUse), adminPinHolders())
-    }
 
     /** [onAdded] gets the new profile's id, on the main thread. */
     fun addProfile(
@@ -443,18 +435,6 @@ class ProfilesViewModel(
 
         // A Favourites pane search: per section and source, enough to find a title without a long list.
         private const val FAVORITE_SEARCH_LIMIT = 20
-
-        /**
-         * The rule of Add profile's PIN (the settings flow review, E7): nothing when the profile in
-         * use is an Expert ([inUseExpert]) whose PIN is typed in this session or that has no PIN
-         * ([inUseOpen]); otherwise any Expert's PIN, one of [adminPinHolders] (none to ask while no
-         * Expert has a PIN). One prompt at most.
-         */
-        fun addProfilePins(
-            inUseExpert: Boolean,
-            inUseOpen: Boolean,
-            adminPinHolders: List<String>,
-        ): List<String> = if (inUseExpert && inUseOpen) emptyList() else adminPinHolders
 
         /**
          * [providers] as a profile's Sources pane shows them, for a profile with [keys] (its

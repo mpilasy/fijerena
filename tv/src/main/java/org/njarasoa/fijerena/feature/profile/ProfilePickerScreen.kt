@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,9 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,32 +35,23 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
-import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
-import org.njarasoa.fijerena.core.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.feature.settings.components.ProfileAddDialog
 import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
-import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -80,13 +68,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val viewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
-    // Add profile is for an Expert only: the profile in use (at launch, the last one used) must
-    // have Expert mode. So after a child, the launch picker has no Add profile.
-    val appSettings = remember { AppSettings(context.applicationContext) }
-    val expert by remember { appSettings.observeDevMode().map { it.second } }
-        .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
-    var adding by remember { mutableStateOf(false) }
-    var askingAdminPin by remember { mutableStateOf<List<String>?>(null) }
+    // No Add profile here: no profile is in use yet, and profiles are added in Settings.
     val activeFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
 
@@ -154,60 +136,12 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                         )
                     }
                 }
-                if (expert) {
-                    item(key = ADD_PROFILE_KEY) {
-                        PickerCard(
-                            label = stringResource(R.string.settings_profiles_add),
-                            // Adding a profile is the admin's: the same PIN rule as in Settings.
-                            onClick = {
-                                val holders = viewModel.addProfilePinHolders()
-                                if (holders.isEmpty()) adding = true else askingAdminPin = holders
-                            },
-                        ) {
-                            Box(
-                                modifier = Modifier.size(TvDimensions.profilePickerAvatarSize),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = CinemaIcons.Add,
-                                    contentDescription = null,
-                                    tint = CinemaTheme.colors.textPrimary,
-                                    modifier = Modifier.size(TvDimensions.iconXLarge),
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
     }
 
     // Leaving a child profile asks an Expert's PIN (the child lock); Cancel keeps the child.
     TvLeaveChildPinDialog(viewModel, onProfileChosen)
-
-    askingAdminPin?.let { holders ->
-        TvPinDialog(
-            state =
-                rememberPinPromptState(viewModel.pins, PinRequest.AnyOf(holders, stringResource(R.string.pin_enter_admin))) {
-                    askingAdminPin = null
-                    adding = true
-                },
-            onCancel = { askingAdminPin = null },
-        )
-    }
-
-    if (adding) {
-        ProfileAddDialog(
-            initialColorIndex = remember { viewModel.nextFreeColorIndex() },
-            onSave = { name, color, child ->
-                viewModel.addProfile(name, color, child)
-                adding = false
-            },
-            onDismiss = { adding = false },
-            scale = LocalUiScale.current,
-            noAdminPin = viewModel.adminPinHolders().isEmpty(),
-        )
-    }
 }
 
 /** A focusable avatar with its name underneath; the whole card is the D-pad target. */
@@ -222,7 +156,7 @@ private fun PickerCard(
         Surface(
             onClick = onClick,
             // The name is under the card, outside it: give it to the card too, so a screen reader
-            // (and the focus walks) read "atr", not only the initial, and the + card reads Add Profile.
+            // (and the focus walks) read "atr", not only the initial.
             modifier = modifier.semantics { contentDescription = label },
             shape = ClickableSurfaceDefaults.shape(shape = CinemaTheme.shapes.identity),
             colors =
@@ -261,8 +195,6 @@ private fun PickerCard(
         )
     }
 }
-
-private const val ADD_PROFILE_KEY = "add-profile"
 
 /** The picker's big avatars carry a letter twice the Display role's size. */
 private const val PICKER_INITIAL_SCALE = 2f

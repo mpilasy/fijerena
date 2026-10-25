@@ -240,6 +240,9 @@ fun ProfilesSettingsCard(
  *
  * [startAt] (Settings' Display and Playback rows) puts focus on that row when the page opens, in
  * place of the first row.
+ *
+ * [canAddProfile] (a grown-up's own page, without Expert mode) adds an Add profile row at the end,
+ * above Switch and Delete; the new profile is not opened, since only an Expert edits another one.
  */
 @Composable
 fun ProfileEditPane(
@@ -259,6 +262,7 @@ fun ProfileEditPane(
     startAt: ProfilePageRow? = null,
     /** A child's page, admin view: "Parental controls ›" opens that group (the page is saved first). */
     onParentalControls: () -> Unit = {},
+    canAddProfile: Boolean = false,
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
     var colorIndex by rememberSaveable(profile.id) { mutableIntStateOf(profile.colorIndex) }
@@ -314,6 +318,8 @@ fun ProfileEditPane(
     var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
     var choosingFiltersSource by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(false) }
+    val addFocus = remember { FocusRequester() }
     // Set when a dialog opened from the page closes: focus goes back to the row that opened it.
     var refocus by remember { mutableStateOf<FocusRequester?>(null) }
     val nameFocus = remember { FocusRequester() }
@@ -682,6 +688,22 @@ fun ProfileEditPane(
                         },
                     )
                 }
+                if (canAddProfile) {
+                    SettingsRow(
+                        title = stringResource(R.string.settings_profiles_add),
+                        description = null,
+                        onClick = { adding = true },
+                        focusRequester = addFocus,
+                        chevron = false,
+                        leading = {
+                            Icon(
+                                imageVector = CinemaIcons.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(TvDimensions.iconMedium),
+                            )
+                        },
+                    )
+                }
                 CinemaButtonArea(modifier = Modifier.align(Alignment.End)) {
                     // Switching to the profile already in use would do nothing.
                     if (!profile.isActive) {
@@ -816,6 +838,22 @@ fun ProfileEditPane(
                     pinFlow.cancel()
                     refocus = pinFocus
                 },
+            )
+        }
+        if (adding) {
+            ProfileAddDialog(
+                initialColorIndex = remember { viewModel.nextFreeColorIndex() },
+                onSave = { newName, color, newChild ->
+                    viewModel.addProfile(newName, color, newChild)
+                    adding = false
+                    refocus = addFocus
+                },
+                onDismiss = {
+                    adding = false
+                    refocus = addFocus
+                },
+                scale = scale,
+                noAdminPin = viewModel.adminPinHolders().isEmpty(),
             )
         }
         if (confirmDelete) {

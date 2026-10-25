@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Settings → Profiles (FEATURES → Profiles): with Expert mode every profile and Add profile; without
- * it, only the profile in use, whose row opens its own page.
+ * it, only the profile in use, whose row opens its own page, and Add profile for a grown-up only.
  */
 @RunWith(RobolectricTestRunner::class)
 class ProfilesSettingsRowsTest {
@@ -27,6 +27,7 @@ class ProfilesSettingsRowsTest {
 
     private fun show(
         expertMode: Boolean,
+        canAddProfile: Boolean = expertMode,
         onEdit: (String) -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -38,6 +39,7 @@ class ProfilesSettingsRowsTest {
                 onEdit = onEdit,
                 onDismissMessage = {},
                 expertMode = expertMode,
+                canAddProfile = canAddProfile,
             )
         }
     }
@@ -57,9 +59,22 @@ class ProfilesSettingsRowsTest {
         show(expertMode = false, onEdit = { edited = it })
 
         composeTestRule.onNodeWithText("Kid").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Add Profile").assertDoesNotExist()
         composeTestRule.onNodeWithText("Main").performClick()
 
         assertEquals("main", edited)
+    }
+
+    @Test
+    fun `a grown-up without Expert mode gets Add profile`() {
+        show(expertMode = false, canAddProfile = true)
+
+        composeTestRule.onNodeWithText("Add Profile").assertExists()
+    }
+
+    @Test
+    fun `a kid gets no Add profile`() {
+        show(expertMode = false, canAddProfile = false)
+
+        composeTestRule.onNodeWithText("Add Profile").assertDoesNotExist()
     }
 }

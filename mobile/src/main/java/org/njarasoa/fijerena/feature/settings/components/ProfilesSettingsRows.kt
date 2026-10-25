@@ -51,8 +51,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * Settings → Profiles: the profile rows (a tap opens the profile's page, [onEdit]) and "Add
  * profile". Without Expert mode ([expertMode] false) a profile can only edit itself: one row, the
- * profile in use, opens its own page, and there is no Add profile. See
- * the live sync plan → User profiles.
+ * profile in use, opens its own page; Add profile follows it for a grown-up ([canAddProfile]),
+ * not for a kid. See the live sync plan → User profiles.
  */
 @Composable
 fun ProfilesSettingsRows(
@@ -63,6 +63,8 @@ fun ProfilesSettingsRows(
     onEdit: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
     expertMode: Boolean = true,
+    /** The profile in use may add a profile: any grown-up (the profile rules plan, PR-5). */
+    canAddProfile: Boolean = expertMode,
     /**
      * Set when a child profile exists and no Expert has a PIN ([ProfilesViewModel.needsAdminPin]):
      * a first row offers the profile in use a PIN, chosen here with these [pins].
@@ -120,7 +122,7 @@ fun ProfilesSettingsRows(
     if (message != null) {
         CinemaText(message, tone = TextTone.Danger, modifier = Modifier.padding(horizontal = Spacing.md))
     }
-    if (expertMode) {
+    if (canAddProfile) {
         SettingsListRow(
             title = stringResource(R.string.settings_profiles_add),
             leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTheme.colors.textSecondary) },
