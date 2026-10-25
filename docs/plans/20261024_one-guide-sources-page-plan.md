@@ -73,6 +73,9 @@ for.
 - **GS-D4 Add from a group (decided, user 2026-10-24: recommended (a)):** (a) one Add at the top of the page only; or (b) also an Add
   on each group header, with that source checked. Recommend (a), with the group's source checked
   when the page was opened on a source.
+  **Amended (user, 2026-10-24, after the TV walk):** a group with no guide source gets its own
+  Add guide source button, with that source checked; opened on that group, the TV page scrolls to it
+  and focuses that button (on TV nothing else in an empty group can take focus).
 
 ## Phases
 

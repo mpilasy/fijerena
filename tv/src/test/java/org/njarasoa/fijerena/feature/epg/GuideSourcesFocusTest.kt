@@ -40,9 +40,11 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
             left("Auto-refresh"),
             left("Edit"),
             left("Refresh"),
-            // One guide source: Down from its last row goes to Guide Data Maintenance below the list.
+            // Source Two's group has no guide source: its own Add, then Guide Data Maintenance.
+            down("Add guide source"),
             down("Guide Data Maintenance"),
-            up("Delete"),
+            up("Add guide source"),
+            up("Refresh"),
             up("Use this guide"),
             up("Add guide source"),
             // Nothing above Add: focus stays.
@@ -51,7 +53,7 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
     }
 
     @Test
-    fun `opened on a source with no guide source, focus is on Add`() {
+    fun `opened on a source with no guide source, focus is on that group's Add`() {
         seed(SettingsFixture.ADMIN)
         val sourceId = SettingsFixture.sourceId(context, SettingsFixture.SOURCE_TWO)
         show { TvEpgManagementScreen(providerId = sourceId, onBack = {}) }
@@ -60,6 +62,8 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
         rule.onNodeWithText("Source One").assertExists()
         rule.onNodeWithText("Source Two").assertExists()
         rule.onNodeWithText("No guide sources configured").assertExists()
+        // The group's own Add, under Source One's guide source: Up reaches that guide source's row.
+        walk.run(up("Refresh"))
         // The Add dialog's Use for list is checked on the emulator: its text field's cursor keeps
         // Compose from going idle here.
     }

@@ -115,6 +115,8 @@ fun TvEpgManagementScreen(
     }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    // The source an empty group's own Add was pressed for; null: the Add at the top.
+    var addForSource by remember { mutableStateOf<Long?>(null) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
 
@@ -129,13 +131,16 @@ fun TvEpgManagementScreen(
     // has none. TvEmptyState focuses its action itself (the TV focus contract, plan Part I, B).
     val entryRowFocus = remember { FocusRequester() }
     val addFocus = remember { FocusRequester() }
+    val emptyGroupAddFocus = remember { FocusRequester() }
     var entrySourceId by remember { mutableStateOf<Long?>(null) }
     val loaded = groups != null
     LaunchedEffect(loaded) {
         if (!loaded || sources.isNullOrEmpty()) return@LaunchedEffect
         val target = if (openGroup != null) openGroup.sources.firstOrNull() else sources.first()
         if (target == null) {
-            addFocus.requestFocusWithRetry()
+            // The group opened on has no guide source: its own Add, scrolled into view.
+            openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id)) }
+            emptyGroupAddFocus.requestFocusWithRetry()
         } else {
             entrySourceId = target.id
             openGroup?.let { listState.scrollToItem(groupHeaderIndex(groupList, it.provider.id)) }
@@ -264,12 +269,31 @@ fun TvEpgManagementScreen(
                     groupList.forEach { group ->
                         item(key = "group-${group.provider.id}", contentType = "group") { GuideGroupHeader(group, scale) }
                         if (group.sources.isEmpty()) {
+                            // No guide source: say so, and an Add for this source (the page opens on it
+                            // from this source's Edit Source).
                             item(key = "none-${group.provider.id}", contentType = "none") {
-                                CinemaText(
-                                    text = stringResource(R.string.epg_summary_no_sources),
-                                    role = TextRole.BodySmall,
-                                    tone = TextTone.Secondary,
-                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                                    CinemaText(
+                                        text = stringResource(R.string.epg_summary_no_sources),
+                                        role = TextRole.BodySmall,
+                                        tone = TextTone.Secondary,
+                                    )
+                                    CinemaSecondaryButton(
+                                        onClick = {
+                                            addForSource = group.provider.id
+                                            showAddDialog = true
+                                        },
+                                        text = stringResource(R.string.epg_add_source),
+                                        modifier =
+                                            (
+                                                if (group.provider.id == openGroup?.provider?.id) {
+                                                    Modifier.focusRequester(emptyGroupAddFocus)
+                                                } else {
+                                                    Modifier
+                                                }
+                                            ).leftToRail(),
+                                    )
+                                }
                             }
                         }
                         items(group.sources, key = { it.id }, contentType = { "source" }) { source ->
@@ -554,15 +578,20 @@ fun TvEpgManagementScreen(
 
     if (showAddDialog) {
         EpgSourceEditDialog(
-            onDismiss = { showAddDialog = false },
+            onDismiss = {
+                showAddDialog = false
+                addForSource = null
+            },
             onConfirm = { url, label, tz, method, enabled, forSources ->
                 viewModel.addSource(url, label, tz, forSources, method, enabled)
                 showAddDialog = false
+                addForSource = null
             },
             scale = scale,
-            // Use for (GS-D1): the group the page was opened on, else the first.
+            // Use for (GS-D1): the group whose own Add was pressed, else the group the page was
+            // opened on, else the first.
             forSources = groupList.map { it.provider },
-            initialFor = setOfNotNull((openGroup ?: groupList.firstOrNull())?.provider?.id),
+            initialFor = setOfNotNull(addForSource ?: (openGroup ?: groupList.firstOrNull())?.provider?.id),
         )
     }
 
