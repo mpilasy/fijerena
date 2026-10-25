@@ -36,10 +36,51 @@ done
 # Connect + reachability check for every target before building, so an unreachable device is
 # skipped up front instead of discovered only after paying for the build. Also verify each
 # target actually reports itself as a TV, so a phone never gets the TV app.
+#
+# A TV in standby that sleeps its network (a Bravia with Remote start on) is woken with a
+# Wake-on-LAN packet first; its screen stays off. Its MAC address comes from the ARP cache, or from
+# scripts/wake-macs.local ("<ip> <mac>" per line, not in git).
+WAKE_MACS_FILE="${FIJERENA_WAKE_MACS:-$ROOT_DIR/scripts/wake-macs.local}"
+
+mac_of() {
+    local ip="${1%%:*}" mac=""
+    if [ -f "$WAKE_MACS_FILE" ]; then
+        mac="$(awk -v ip="$ip" '$1 == ip { print $2; exit }' "$WAKE_MACS_FILE")"
+    fi
+    if [ -z "$mac" ]; then
+        mac="$(ip neigh show "$ip" 2>/dev/null | awk '/lladdr/ { for (i = 1; i <= NF; i++) if ($i == "lladdr") print $(i + 1); exit }')"
+    fi
+    echo "$mac"
+}
+
+# Sends a Wake-on-LAN packet to $1 and waits up to a minute for adb. Returns whether it answers.
+wake_target() {
+    local target="$1" mac
+    mac="$(mac_of "$target")"
+    [ -n "$mac" ] || return 1
+    echo "Device $target not reachable — sending Wake-on-LAN to $mac..."
+    python3 - "$mac" <<'PY'
+import socket, sys
+mac = bytes.fromhex(sys.argv[1].replace(":", "").replace("-", ""))
+packet = b"\xff" * 6 + mac * 16
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+for port in (9, 7):
+    s.sendto(packet, ("255.255.255.255", port))
+PY
+    for _ in $(seq 1 12); do
+        sleep 5
+        adb disconnect "$target" >/dev/null 2>&1 || true
+        adb connect "$target" >/dev/null 2>&1 || true
+        [ "$(adb -s "$target" get-state 2>/dev/null)" = "device" ] && return 0
+    done
+    return 1
+}
+
 REACHABLE=()
 for TARGET in "${TARGETS[@]}"; do
     adb connect "$TARGET" >/dev/null 2>&1 || true
-    if [ "$(adb -s "$TARGET" get-state 2>/dev/null)" != "device" ]; then
+    if [ "$(adb -s "$TARGET" get-state 2>/dev/null)" != "device" ] && ! wake_target "$TARGET"; then
         echo "Device $TARGET not reachable — skipping. Check it's powered on and on the network." >&2
         continue
     fi

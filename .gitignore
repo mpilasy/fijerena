@@ -29,3 +29,6 @@ local.properties
 /keystore.properties
 *.jks
 *.keystore
+
+# Wake-on-LAN MAC addresses for scripts/deploy-tv-ip.sh
+/scripts/wake-macs.local
