@@ -1,7 +1,6 @@
 # Profile rules
 
-**Status:** Planned 2026-10-24. Rules PR-1 to PR-9 and decisions PR-D1, PR-D2 taken by the user.
-In progress: Phases 1–4 and the route part of 5 run in three parallel lanes (A: 1–2, B: 3 and the route, C: 4); docs last.
+**Status:** Done 2026-10-24: Phases 1–5 built and merged; the walks on both emulators are left.
 
 ## Goal
 
@@ -98,8 +97,8 @@ these rules do not depend on it.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Rules and checks | In progress | |
-| 2. Add Profile for grown-ups | In progress | |
-| 3. 7 taps | In progress | |
-| 4. Sync and restore | In progress | |
-| 5. Phone page route and docs | In progress | |
+| 1. Rules and checks | Done | 97520c33 |
+| 2. Add Profile for grown-ups | Done | ac205c04 |
+| 3. 7 taps | Done | 5c58b9fd |
+| 4. Sync and restore | Done | d8372691 |
+| 5. Phone page route and docs | Done | 0faaa4cf, docs commit |

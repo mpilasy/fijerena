@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Who may change a profile:** any grown-up profile can now add a profile, with no PIN (name, colour, Child Profile; never Expert): on TV at the end of its own page, on the phone under its own row. The profile picker no longer has Add Profile. Only an Expert changes another profile, deletes one, makes one Expert, or turns Child Profile on or off on an existing profile; a kid changes only its own look and Play Next Episode. These rules are now checked by the app itself, not only by hiding buttons. TV and phone.
+- **7 taps on the version:** they no longer turn on Expert mode, since there is always an Expert; only an Expert makes another profile Expert.
+- **A kid is never Expert:** live sync and a backup restore can no longer make a child profile Expert.
 - **One Guide Sources page:** Guide Sources now shows the guide sources of every source with live channels on one page, under each source's name, with "Not used by this profile" when your profile does not have that source. Settings → Guide Sources and the guide search's Guide Sources button open it at once, without asking which source first. When you add a guide source, "Use for" lets you pick the sources it is for, and it is added to each of them. TV and phone.
 - **Child lock off for now:** leaving a child profile no longer asks an Expert's PIN, on TV and phone. The lock needs more thought and will come back in another form.
 - **Resume after Back from the player:** a film's page showed plain Play (or the old resume time) after you stopped watching, until you left the page and opened it again. It now shows "Resume from" with the new time at once. A show's page could do the same after a quick Back. TV and phone.

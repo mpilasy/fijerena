@@ -149,7 +149,7 @@ EpisodeSelection ─→ Player | CategoryList(TV_SHOWS, category) | EpisodeSelec
 Settings                                 seven groups: Profiles, Parental controls, Playback, Display, Sources & guide, Sync & backup, About & advanced
 ├─→ ProviderSelection ─→ AddProvider() | AddProvider(editId) | EpgManagement(id)   Sources & guide → Manage Sources (a source's Guide button: the page on that source's group)
 ├─→ EpgManagement(providerId = 0)        Sources & guide → Guide sources (no source chooser; shown when a source on the device has live channels)
-├─→ ProfileEdit(profileId)               a profile's row (mobile; without Expert mode only the profile in use's row; TV: a page in the Profiles pane)
+├─→ ProfileEdit(profileId)               a profile's row (mobile; without Expert mode only the profile in use's row, and a route to another profile shows the profile in use's own page: `Screen.ProfileEdit.shownProfileId`; TV: a page in the Profiles pane, a grown-up's own page ending on Add Profile)
 ├─→ ProfileEdit(profileId, at)           Display → Theme and Look and Feel (LOOK), Playback → Play next episode automatically (AUTOPLAY): the profile in use's page at that row (TV: in the pane, focus on the row, Back to the opening row)
 ├─→ ParentalControls ─→ ParentalListEdit(listKey) | ParentalCheck(providerId)   Parental controls (mobile, Expert mode, PIN; TV: panes in Settings)
 ├─→ SyncSettings                         Sync & backup → Live sync
@@ -210,7 +210,7 @@ Both hosts look up the sources on start (`initializeStartup()`: provider count, 
 | Profile picker at launch | With two or more profiles | Never (the bar's profile slot) |
 | Profile PIN (the profile in use has one, not typed this session) | Settings opens freely; its rows that change shared setup or another profile ask first (a prompt over Settings, Cancel stays on the row), and the screens they open (`isPinGuarded`) ask over an opaque screen if reached otherwise, Cancel pops back to Settings. Picking a profile asks only to leave a child profile (below) | The same; the profile menu asks only to leave a child profile |
 | Child lock (a child profile in use, an Expert has a PIN) | Any other profile picked on the picker (launch or rail avatar) or with **Switch to this profile** asks an Expert's PIN first (`TvLeaveChildPinDialog`); the prompt takes focus, Cancel or Back keeps the child with focus back on the profile picked | The same from the profile menu and a profile page (`LeaveChildPinDialog`) |
-| New source (`AddProvider()` without `editId`, `isNewSource`) | Only for a profile with Expert mode (followed live through `AppSettings.observeDevMode`): for any other the gate pops it at once, before any PIN prompt. The edit mode stays open, for the Browse sign-in. The picker shows Add profile only for an Expert | The same |
+| New source (`AddProvider()` without `editId`, `isNewSource`) | Only for a profile with Expert mode (followed live through `AppSettings.observeDevMode`): for any other the gate pops it at once, before any PIN prompt. The edit mode stays open, for the Browse sign-in. The picker has no Add profile (profile rules plan, PR-9) | The same |
 
 ## TV Focus
 
