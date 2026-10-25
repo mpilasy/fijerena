@@ -102,9 +102,11 @@ class SettingsViewModel(
 
     fun refreshProviderInfo() {
         viewModelScope.launchGuarded("SettingsViewModel.refreshProviderInfo") {
-            val entities = providerRepo.profileSourcesList()
+            // One read for both: a second one delays the state, and focus can land before it.
+            val all = providerRepo.getAllProvidersList()
+            val entities = ProviderRepository.resolveProfileSources(all, appSettings.profileSourceKeys(appSettings.activeProfileId))
             val hasGuideSources =
-                providerRepo.getAllProvidersList().any {
+                all.any {
                     org.njarasoa.fijerena.core.network.MediaProviderFactory
                         .hasLiveTv(it)
                 }

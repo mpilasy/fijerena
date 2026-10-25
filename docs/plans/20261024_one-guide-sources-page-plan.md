@@ -96,4 +96,4 @@ for.
 | 2. TV page | Done (the Add dialog's Use for list not yet checked on the emulator) | dcac75b3 |
 | 3. Phone page | Done (not yet checked on the emulator) | 970ec699 |
 | 4. Ways in | Done | d15470f3 |
-| 5. Docs and checks | Done, except the walks on both emulators | Phase 5 commit |
+| 5. Docs and checks | Done, except the walks on both emulators | 5be98083 |
