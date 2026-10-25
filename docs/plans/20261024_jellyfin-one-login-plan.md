@@ -1,6 +1,6 @@
 # One Jellyfin login per source
 
-**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Built 2026-10-25 (Phases 1–3 and the Phase 4 docs); the emulator walks are left.
+**Status:** Done 2026-10-25: built (4d93ac8e, 5e549d99, 5381405f, docs 03f1e104) and walked on both emulators: the upgrade ran cleanly, Edit Source shows the household note, and a profile without Expert mode browsed the Jellyfin library with no sign-in. "Ask an admin" (a source with no login) was not reachable on the emulators.
 
 ## Goal
 
@@ -56,10 +56,10 @@ profile that has the source shares them (user, 2026-10-24).
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Storage and upgrade | Done | 108178b73 |
-| 2. Sync | Done | 0a3b96b64 |
-| 3. Screens | Done | 077a8ffbe |
-| 4. Docs and walks | Docs done; walks left | the docs commit after 077a8ffbe |
+| 1. Storage and upgrade | Done | 4d93ac8e |
+| 2. Sync | Done | 5e549d99 |
+| 3. Screens | Done | 5381405f |
+| 4. Docs and walks | Done, walked on both emulators | 03f1e104 |
 
 ## Done notes
 

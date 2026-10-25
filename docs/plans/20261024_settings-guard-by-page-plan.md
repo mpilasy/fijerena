@@ -1,6 +1,6 @@
 # Settings guarded by page
 
-**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Built 2026-10-25 on the branch `settings-by-page` (phases 1-3: code, tests, docs). Left: the emulator walks of phase 3, not yet run, and the merge.
+**Status:** Done 2026-10-25: built (6b88bd28, 675ceb7d, docs 6f659b32) and walked on both emulators (an Expert with no PIN, a grown-up; the PIN on the way in is covered by SettingsExpertGroupPinFocusTest).
 
 ## Goal
 
@@ -82,6 +82,6 @@ Expert group is guarded without a line of its own.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. TV groups | Done | 1a0dacd1c |
-| 2. Phone groups | Done | eaf0cddb7 |
-| 3. Docs and walks | Docs done; emulator walks left | the docs commit after eaf0cddb7 |
+| 1. TV groups | Done | 6b88bd28 |
+| 2. Phone groups | Done | 675ceb7d |
+| 3. Docs and walks | Done, walked on both emulators | 6f659b32 |
