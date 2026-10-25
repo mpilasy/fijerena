@@ -130,6 +130,11 @@ class FijerenaApplication :
             startupStep("migrateLegacyProfileSettings") {
                 ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
             }
+            // After the step above, which keeps an Expert: one Jellyfin login per source, from
+            // the per-profile ones older builds kept — see ProviderRepository.moveJellyfinLoginsToSources().
+            startupStep("moveJellyfinLoginsToSources") {
+                ProviderRepository(this@FijerenaApplication).moveJellyfinLoginsToSources()
+            }
             // Live sync keeps deletions for 90 days — see SyncKind.TOMBSTONE_RETENTION_MS.
             startupStep("pruneSyncTombstones") { pruneSyncTombstones(this@FijerenaApplication) }
             // Build the encrypted credential store off the main thread, before the nav host's

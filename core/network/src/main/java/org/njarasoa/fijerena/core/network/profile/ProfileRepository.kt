@@ -205,8 +205,8 @@ class ProfileRepository(
     enum class DeleteBlocked { NONE, ACTIVE, LAST }
 
     /**
-     * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider, and its developer-mode flag, PIN, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
+     * Deletes a profile with its favourites, watch state, Recent Categories and bookmarks on every
+     * provider, and its developer-mode flag, PIN, colour theme and Look and Feel, search history, category filters and sources. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -260,14 +260,12 @@ class ProfileRepository(
         }
 
     /**
-     * The Default profile keeps its Jellyfin logins, Recent Categories and bookmarks in the
-     * provider-level storage every profile shares (`providers.username`, `provider_creds_<id>`,
-     * `media_cache_<id>`), not in `_profile_` files — so [deleteProfilePrefs] finds none of it.
-     * Cleared here instead, leaving what is genuinely shared (other providers' logins, migration
-     * flags) in place.
+     * The Default profile keeps its Recent Categories and bookmarks in the provider-level storage
+     * every profile shares (`media_cache_<id>`), not in `_profile_` files — so [deleteProfilePrefs]
+     * finds none of it. Cleared here instead, leaving what is genuinely shared (every source's
+     * login, Jellyfin's included, and migration flags) in place.
      */
-    private suspend fun clearDefaultProfileData() {
-        ProviderRepository(context).clearDefaultJellyfinLogins()
+    private fun clearDefaultProfileData() {
         java.io
             .File(context.applicationInfo.dataDir, "shared_prefs")
             .listFiles()
@@ -285,8 +283,8 @@ class ProfileRepository(
 
     /**
      * Every `media_cache_<providerId>_profile_<id>.xml` (see `MediaRepository.profileCacheName`)
-     * and `provider_creds_<providerId>_profile_<id>.xml` — its Jellyfin logins, see
-     * `ProviderRepository.credsFileName`.
+     * and any `provider_creds_<providerId>_profile_<id>.xml` an older build left (a Jellyfin login
+     * of its own, see `ProviderRepository.credsFileName`).
      */
     private fun deleteProfilePrefs(id: String) {
         val suffix = "_profile_$id"

@@ -35,7 +35,6 @@ class AppContainerProfileSwitchTest {
     fun setup() {
         every { context.applicationContext } returns context
         mockkObject(MediaProviderFactory)
-        every { MediaProviderFactory.clearProfileScopedProviders() } just runs
         mockkConstructor(ProviderRepository::class)
         coEvery { anyConstructed<ProviderRepository>().applyCategoryFiltersForSwitch(any(), any()) } just runs
         // The switch asks for the new profile's Wanted list in the background; not this test's subject.

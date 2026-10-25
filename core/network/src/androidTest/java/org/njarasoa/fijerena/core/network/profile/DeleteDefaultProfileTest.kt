@@ -6,7 +6,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,8 +15,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * Deleting the `default` profile clears what is its own from the provider-level storage it
- * shares with everyone — Jellyfin logins, Recent Categories, bookmarks, legacy blobs — and leaves
- * what is genuinely shared: other providers' logins and migration flags.
+ * shares with everyone — Recent Categories, bookmarks, legacy blobs — and leaves what is genuinely
+ * shared: every source's login, Jellyfin's included, and migration flags.
  * See the live sync plan → User profiles.
  *
  * Runs against this test APK's own databases and prefs, never the app's.
@@ -27,7 +26,7 @@ class DeleteDefaultProfileTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
-    fun deletingDefault_clearsItsOwnDataAndKeepsSharedLogins() =
+    fun deletingDefault_clearsItsOwnDataAndKeepsEverySourceLogin() =
         runBlocking {
             val appSettings = AppSettings(context)
             appSettings.activeProfileId = ProfileEntity.DEFAULT_ID
@@ -69,9 +68,9 @@ class DeleteDefaultProfileTest {
             assertEquals(ProfileRepository.DeleteBlocked.NONE, profiles.deleteProfile(ProfileEntity.DEFAULT_ID))
 
             assertFalse(SettingsDbProbe.profileExists(context, ProfileEntity.DEFAULT_ID))
-            // Default's Jellyfin login is gone; the Xtream login everyone shares is not.
-            assertEquals("", providers.getProviderById(jellyfinId)?.username)
-            assertNull(providers.getPassword(jellyfinId))
+            // Every source's login is the household's, Jellyfin's too: none goes with Default.
+            assertEquals("kilonga", providers.getProviderById(jellyfinId)?.username)
+            assertEquals("jfpw", providers.getPassword(jellyfinId))
             assertEquals("xpw", providers.getPassword(xtreamId))
             // Its Recent Categories, bookmarks and legacy blobs are gone; migration flags stay.
             assertFalse(mediaCache.contains("recent_categories_MOVIES"))
@@ -88,9 +87,9 @@ class DeleteDefaultProfileTest {
                     .isEmpty(),
             )
 
-            // Adding a Jellyfin server now stores no login for the profile that no longer exists.
+            // A Jellyfin server added now keeps its login with the source.
             val laterJellyfinId = providers.addProvider("jf2", "http://jf2.test", "someone", "pw2", "JELLYFIN")
-            assertNull(providers.getPassword(laterJellyfinId))
+            assertEquals("pw2", providers.getPassword(laterJellyfinId))
         }
 }
 

@@ -119,28 +119,6 @@ object MediaProviderFactory {
         providerChangedListener?.invoke(providerId)
     }
 
-    /**
-     * Drops the cached providers whose session belongs to one profile — Jellyfin, whose login is
-     * per profile — so the next [create] signs in as the newly active profile. Everything else is
-     * shared by all profiles and keeps its session. Called on profile switch.
-     */
-    fun clearProfileScopedProviders() {
-        val removed = providerCache.entries.filter { it.value is JellyfinMediaProvider }
-        removed.forEach { providerCache.remove(it.key, it.value) }
-        if (removed.isNotEmpty()) {
-            disconnectScope.launch {
-                removed.forEach { entry ->
-                    try {
-                        entry.value.disconnect()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                    }
-                }
-            }
-        }
-    }
-
     fun clearAllCaches() {
         val removed = providerCache.values.toList()
         providerCache.clear()
@@ -240,10 +218,10 @@ object MediaProviderFactory {
         context: Context,
         providerId: Long,
     ): android.content.SharedPreferences? {
-        // This profile's session: each profile signs in to Jellyfin as its own user.
+        // The source's session: every profile shares its one Jellyfin login.
         val fileName =
             org.njarasoa.fijerena.core.network.provider.ProviderRepository
-                .credsFileName(providerId, AppSettings(context).activeProfileId)
+                .credsFileName(providerId, org.njarasoa.fijerena.core.network.profile.ProfileEntity.DEFAULT_ID)
         val prefs =
             try {
                 val masterKey =

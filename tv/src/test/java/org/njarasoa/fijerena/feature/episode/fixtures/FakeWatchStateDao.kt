@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.episode.fixtures
 
+import org.njarasoa.fijerena.core.network.xtream.db.ProfileLastChange
 import org.njarasoa.fijerena.core.network.xtream.db.RecentPlay
 import org.njarasoa.fijerena.core.network.xtream.db.SeriesCompletedCount
 import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
@@ -348,6 +349,9 @@ class FakeWatchStateDao : WatchStateDao {
     ) {
         rows.keys.filter { it.providerId == providerId && it.profileId == profileId }.forEach { rows.remove(it) }
     }
+
+    override suspend fun lastChangeByProfile(): List<ProfileLastChange> =
+        rows.values.groupBy { it.profileId }.map { (profileId, own) -> ProfileLastChange(profileId, own.maxOf { it.updatedAt }) }
 
     override suspend fun deleteProfile(profileId: String) {
         rows.keys.filter { it.profileId == profileId }.forEach { rows.remove(it) }

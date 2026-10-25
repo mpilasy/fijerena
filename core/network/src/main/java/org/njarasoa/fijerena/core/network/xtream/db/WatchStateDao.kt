@@ -388,6 +388,10 @@ interface WatchStateDao {
         insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.WATCH_CLEAR, "", "", clearedAt))
     }
 
+    /** Each profile's latest watch change on this device: how recently it was used. */
+    @Query("SELECT profileId, MAX(updatedAt) AS lastAt FROM watch_state GROUP BY profileId")
+    suspend fun lastChangeByProfile(): List<ProfileLastChange>
+
     /** Profile deletion: that profile's rows across every provider. */
     @Query("DELETE FROM watch_state WHERE profileId = :profileId")
     suspend fun deleteProfile(profileId: String)
@@ -414,4 +418,10 @@ data class RecentPlay(
 data class SeriesCompletedCount(
     val seriesId: String,
     val completed: Int,
+)
+
+/** A profile and its latest watch change ([WatchStateDao.lastChangeByProfile]). */
+data class ProfileLastChange(
+    val profileId: String,
+    val lastAt: Long,
 )

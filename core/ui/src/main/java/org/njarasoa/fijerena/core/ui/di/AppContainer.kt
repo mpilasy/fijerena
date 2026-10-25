@@ -96,7 +96,7 @@ class AppContainer(
                     val entity = providerRepository.getProviderById(providerId)
 
                     if (entity != null) {
-                        // This profile's login — its own for Jellyfin, the shared one otherwise.
+                        // The source's login, the same for every profile.
                         val login = providerRepository.getLogin(entity)
                         val provider =
                             MediaProviderFactory.create(
@@ -137,9 +137,9 @@ class AppContainer(
     /**
      * Makes [profileId] the profile this device uses. Every cached MediaRepository belongs to the
      * previous profile (see its `profileId`), so all of them are closed and dropped; the next
-     * getMediaRepository() builds one for the new profile. Shared provider sessions are kept —
-     * switching person doesn't mean logging back in to Xtream — but Jellyfin's are dropped, since
-     * each profile signs in to Jellyfin as its own user. Xtream providers whose category filters
+     * getMediaRepository() builds one for the new profile. Provider sessions are kept — every
+     * source, Jellyfin included, has one login for the whole household, so switching person
+     * doesn't mean signing in again. Xtream providers whose category filters
      * differ between the two profiles get their hidden-category flags recomputed. No source moves:
      * the lists reload over the new profile's own sources (multi-source plan, Phase 6). Callers must
      * also drop any screen still holding a repository, which the nav hosts do by rebuilding the back
@@ -164,7 +164,6 @@ class AppContainer(
                     }
                 }
                 mediaRepositories.clear()
-                MediaProviderFactory.clearProfileScopedProviders()
                 val done = android.os.SystemClock.elapsedRealtime()
                 android.util.Log.i(
                     "ProfileSwitch",
