@@ -1,6 +1,6 @@
 # Settings guarded by page
 
-**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Not started.
+**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). In progress (one lane, in parallel with the other 2026-10-24 plan).
 
 ## Goal
 
@@ -62,6 +62,6 @@ Expert group is guarded without a line of its own.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. TV groups | Not started | |
-| 2. Phone groups | Not started | |
-| 3. Docs and walks | Not started | |
+| 1. TV groups | In progress | |
+| 2. Phone groups | In progress | |
+| 3. Docs and walks | In progress | |

@@ -1,6 +1,6 @@
 # One Jellyfin login per source
 
-**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Not started.
+**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). In progress (one lane, in parallel with the other 2026-10-24 plan).
 
 ## Goal
 
@@ -56,7 +56,7 @@ profile that has the source shares them (user, 2026-10-24).
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Storage and upgrade | Not started | |
-| 2. Sync | Not started | |
-| 3. Screens | Not started | |
-| 4. Docs and walks | Not started | |
+| 1. Storage and upgrade | In progress | |
+| 2. Sync | In progress | |
+| 3. Screens | In progress | |
+| 4. Docs and walks | In progress | |
