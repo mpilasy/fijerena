@@ -84,7 +84,7 @@ class ProfilesViewModel(
         // The stored profile in use, so a switch live sync makes (the profile in use deleted on
         // another device) shows as well as [switchTo]'s.
         combine(repository.observeProfiles(), appSettings.observeActiveProfileId()) { rows, activeId ->
-            rows.map { ProfileUi(it.id, it.name, it.colorIndex, it.id == activeId) }
+            sortedByName(rows.map { ProfileUi(it.id, it.name, it.colorIndex, it.id == activeId) })
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /** The profile this device uses, or null until the list has loaded. */
@@ -170,9 +170,8 @@ class ProfilesViewModel(
     val pins = ProfilePins(appSettings)
 
     /**
-     * The Expert profiles (admin, for now) with a PIN, oldest first: while there is one, becoming
-     * Expert (the 7 taps) asks for one of their PINs. Adding a profile asks none (the profile
-     * rules plan, PR-D2).
+     * The Expert profiles (admin, for now) with a PIN, in list order (by name). Adding a profile
+     * asks none (the profile rules plan, PR-D2).
      */
     fun adminPinHolders(): List<String> = profiles.value.map { it.id }.filter { appSettings.devMode(it) && pins.hasPin(it) }
 
@@ -476,4 +475,16 @@ class ProfilesViewModel(
             }
         }
     }
+}
+
+/**
+ * Profiles as every list shows them: by name, in the app's language, ignoring case and accents;
+ * same names stay in the stored order (oldest first).
+ */
+internal fun sortedByName(profiles: List<ProfileUi>): List<ProfileUi> {
+    val collator =
+        java.text.Collator
+            .getInstance()
+            .apply { strength = java.text.Collator.PRIMARY }
+    return profiles.sortedWith { a, b -> collator.compare(a.name, b.name) }
 }

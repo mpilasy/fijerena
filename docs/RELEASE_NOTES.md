@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Profiles in name order:** the profile picker, Settings → Profiles and the phone's profile menu list profiles alphabetically, not oldest first. TV and phone.
 - **Text & Grid Size stays on its device:** like the language, a settings export no longer includes it and a restore no longer changes it. TV.
 
 ## Version: 0.8.2
