@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Scrolling names stay between the badges:** on a focused row, a long name that scrolls no longer runs on under the source badge ("BEARS") or the catch-up badge ("↻ 3d"). The text stops at the badges' edges. The same fix applies to every scrolling text: Live TV lists and the panel over full screen, categories, the guide, the player's controls and the phone's channel rows. TV and phone.
+
 ## Version: 0.8.5
 
 - **More Like This for kids:** a child profile's film and show pages have More Like This again, filtered as its Search is: only titles in its sources that its kids' filters allow, never a title no source has. On the phone it was there unfiltered; now it is filtered too. TV and phone.

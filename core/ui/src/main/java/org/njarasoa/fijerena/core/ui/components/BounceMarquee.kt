@@ -62,6 +62,7 @@ private class BounceMarqueeNode(
     LayoutModifierNode,
     DrawModifierNode {
     private var overflowPx = 0
+    private var layoutWidthPx = 0
     private var fraction = 0f
     private var velocityPxPerSec = 0f
     private var animationJob: Job? = null
@@ -100,13 +101,16 @@ private class BounceMarqueeNode(
         // As wide as the text, up to the space given: a short title must not claim the whole row
         // (the player's "· S2:E10 · Over" was pushed halfway across the screen).
         val width = if (isInfiniteWidth) placeable.width else placeable.width.coerceIn(constraints.minWidth, containerWidth)
+        layoutWidthPx = width
         return layout(width, placeable.height) {
             placeable.place(0, 0)
         }
     }
 
     override fun ContentDrawScope.draw() {
-        clipRect {
+        // Clip to this node's own width. The draw scope has the size of the wider text measured
+        // under it, so a plain clipRect let the text run on under the badges after it.
+        clipRect(right = layoutWidthPx.toFloat()) {
             val offset = if (overflowPx > 0) -overflowPx * fraction else 0f
             translate(left = offset) {
                 this@draw.drawContent()
