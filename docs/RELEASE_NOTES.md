@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.5
 
 - **More Like This for kids:** a child profile's film and show pages have More Like This again, filtered as its Search is: only titles in its sources that its kids' filters allow, never a title no source has. On the phone it was there unfiltered; now it is filtered too. TV and phone.
 - **Show Clock for every profile:** with Show Clock on, a child profile's screens show the clock too; it is this device's setting, for every profile on it. TV and phone.
