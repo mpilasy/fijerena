@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import org.njarasoa.fijerena.core.player.domain.CatchupAvailability
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -65,7 +66,10 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
+import org.njarasoa.fijerena.core.ui.components.rememberTextHeight
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -141,6 +145,8 @@ fun MobileGuideGrid(
     // 60 s tick never recomposes the whole grid.
     val nowEpochSeconds = rememberNowEpochSecondsState()
     val channelColumnWidth = MobileDimensions.posterWidth
+    // Tall enough for the channel cell's badge line and two name lines at every font size.
+    val rowHeight = guideRowHeight()
     val canvasLeftPx = with(density) { channelColumnWidth.toPx() }
     val nowLineWidthPx = with(density) { MobileDimensions.strokeWidth.toPx() }
 
@@ -218,6 +224,7 @@ fun MobileGuideGrid(
                     scrollState = scrollState,
                     nowEpochSeconds = nowEpochSeconds,
                     channelColumnWidth = channelColumnWidth,
+                    rowHeight = rowHeight,
                     noListings = row.programs.isEmpty() && isRowLoaded(index),
                     archiveDays = catchupDays[row.channel.sourceKey] ?: 0,
                     sourceName = sourceNames[row.channel.providerId],
@@ -283,6 +290,7 @@ private fun GuideRow(
     scrollState: ScrollState,
     nowEpochSeconds: State<Long>,
     channelColumnWidth: Dp,
+    rowHeight: Dp,
     noListings: Boolean,
     archiveDays: Int,
     sourceName: String?,
@@ -292,7 +300,7 @@ private fun GuideRow(
     val cells = remember(row.programs, layout, composeRange) { layout.cellsIn(row.programs, composeRange.first, composeRange.last) }
     val totalWidthPx = layout.totalWidthPx.roundToInt()
 
-    Row(modifier = Modifier.fillMaxWidth().height(MobileDimensions.epgProgramHeight)) {
+    Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
         ChannelCell(
             channel = row.channel,
             sourceName = sourceName,
@@ -358,8 +366,21 @@ private fun GuideRow(
 }
 
 /**
- * The channel's logo with its name beneath, or the name alone when it has no logo; above them its
- * source's badge when the rows mix sources. Tap = tune.
+ * A guide row's height: [MobileDimensions.epgProgramHeight], or more when the channel cell's badge
+ * line and two name lines need more. Measured, so the name is not cut off at a large font size.
+ */
+@Composable
+private fun guideRowHeight(): Dp {
+    val content = rememberBadgeHeight() + rememberTextHeight(TextRole.Caption, lines = 2, emphasis = true)
+    return maxOf(MobileDimensions.epgProgramHeight, content + CHANNEL_CELL_PADDING * 2)
+}
+
+private val CHANNEL_CELL_PADDING = CinemaSpacing.xxs
+
+/**
+ * The channel's logo with its clean name beneath, or the name alone when it has no logo; above them
+ * the tags the name carried (country, quality) and its source when the rows mix sources, as badges,
+ * as the Live TV list shows a channel ([parseDisplayTitle], [TitleBadges]). Tap = tune.
  */
 @Composable
 private fun ChannelCell(
@@ -369,26 +390,33 @@ private fun ChannelCell(
     modifier: Modifier = Modifier,
 ) {
     val hasLogo = !channel.thumbnailUrl.isNullOrBlank()
+    val parsed = remember(channel.name) { parseDisplayTitle(channel.name) }
+    val name = parsed.title.ifBlank { channel.name }
     Column(
         modifier =
             modifier
                 .clickable(onClick = onClick)
-                .padding(horizontal = CinemaSpacing.xxs, vertical = CinemaSpacing.xxs),
+                .padding(CHANNEL_CELL_PADDING),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        sourceName?.let { SourceBadge(it) }
+        if (sourceName != null || parsed.hasBadges) {
+            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs), verticalAlignment = Alignment.CenterVertically) {
+                sourceName?.let { SourceBadge(it) }
+                TitleBadges(parsed, modifier = Modifier.weight(1f, fill = false), maxLines = 1)
+            }
+        }
         if (hasLogo) {
             CinemaThumbnail(
                 url = channel.thumbnailUrl,
-                fallbackLetter = channel.name.firstOrNull(),
+                fallbackLetter = name.firstOrNull { it.isLetterOrDigit() } ?: name.firstOrNull(),
                 contentType = ThumbnailContentType.LIVE_TV,
-                contentDescription = channel.name,
+                contentDescription = name,
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
         }
         CinemaText(
-            text = channel.name,
+            text = name,
             maxLines = if (hasLogo) 1 else 2,
             overflow = TextOverflow.Ellipsis,
             role = TextRole.Caption,

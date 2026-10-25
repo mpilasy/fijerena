@@ -5,10 +5,12 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
@@ -16,9 +18,11 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
@@ -148,6 +152,29 @@ fun CinemaText(
         onTextLayout = onTextLayout,
     )
 }
+
+/**
+ * The height that [lines] lines of [role] text take, measured in the current Look and Feel, font
+ * size and Text & Grid Size. A cell of fixed height uses it to make sure that its text fits.
+ */
+@Composable
+fun rememberTextHeight(
+    role: TextRole,
+    lines: Int = 1,
+    emphasis: Boolean = false,
+): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = resolvedStyle(role, emphasis, strikethrough = false, italic = false)
+    val density = LocalDensity.current
+    return remember(measurer, style, density, lines) {
+        val sample = List(lines) { TEXT_HEIGHT_SAMPLE }.joinToString("\n")
+        val height = measurer.measure(sample, style, maxLines = lines).size.height
+        with(density) { height.toDp() }
+    }
+}
+
+/** Tall and deep letters, so the measured line holds every glyph. */
+private const val TEXT_HEIGHT_SAMPLE = "ÁÉgjpqy"
 
 /** [CinemaText] for styled text (spans set their own emphasis or tone through the theme's roles). */
 @Composable

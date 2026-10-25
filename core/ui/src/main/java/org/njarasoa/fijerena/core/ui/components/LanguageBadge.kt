@@ -65,6 +65,7 @@ fun CinemaBadge(
     modifier: Modifier = Modifier,
     kind: BadgeKind = BadgeKind.Neutral,
     role: TextRole = TextRole.Caption,
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     val c = CinemaTheme.colors
     val (container, tone) =
@@ -79,13 +80,21 @@ fun CinemaBadge(
         text = text,
         role = role,
         tone = tone,
+        maxLines = maxLines,
+        overflow = if (maxLines == Int.MAX_VALUE) TextOverflow.Clip else TextOverflow.Ellipsis,
         modifier =
             modifier
                 .clip(CinemaTheme.shapes.chip)
                 .background(container)
-                .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
+                .padding(horizontal = CinemaSpacing.xs, vertical = BADGE_PADDING_VERTICAL),
     )
 }
+
+private val BADGE_PADDING_VERTICAL = CinemaSpacing.xxs
+
+/** The height of a one-line [CinemaBadge] in [role] text, in the current Look and Feel and size. */
+@Composable
+fun rememberBadgeHeight(role: TextRole = TextRole.Caption): Dp = rememberTextHeight(role) + BADGE_PADDING_VERTICAL * 2
 
 /**
  * Small pill for the language/region code
@@ -96,8 +105,9 @@ fun CinemaBadge(
 fun LanguageBadge(
     code: String,
     modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
 ) {
-    CinemaBadge(text = code, modifier = modifier)
+    CinemaBadge(text = code, modifier = modifier, maxLines = maxLines)
 }
 
 /**
@@ -106,14 +116,18 @@ fun LanguageBadge(
  * joined by dots ("DE · 4K · Events"). Nothing when there is none.
  */
 @Composable
-fun TitleBadges(parsed: ParsedTitle) {
+fun TitleBadges(
+    parsed: ParsedTitle,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+) {
     val events = stringResource(R.string.title_badge_events)
     if (!parsed.hasBadges) return
     val text =
         remember(parsed, events) {
             (listOfNotNull(parsed.badge) + parsed.tags + listOfNotNull(events.takeIf { parsed.eventsOnly })).joinToString(BADGE_SEPARATOR)
         }
-    LanguageBadge(text)
+    LanguageBadge(text, modifier, maxLines)
 }
 
 private const val BADGE_SEPARATOR = " · "

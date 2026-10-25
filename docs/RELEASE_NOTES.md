@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Scrolling names stay between the badges:** on a focused row, a long name that scrolls no longer runs on under the source badge ("BEARS") or the catch-up badge ("↻ 3d"). The text stops at the badges' edges. The same fix applies to every scrolling text: Live TV lists and the panel over full screen, categories, the guide, the player's controls and the phone's channel rows. TV and phone.
+- **Guide channel names:** the TV Guide's channel column showed the provider's raw name ("US: BBC WORLD"), and with a larger font or some Looks the name was cut off at the bottom. Now each channel shows its clean name on one line and, under it, its tags (country, quality) and its source as badges, as in the Live TV list, and the rows grow when the text needs more room. The programme details show the clean name too. TV and phone.
 
 ## Version: 0.8.5
 

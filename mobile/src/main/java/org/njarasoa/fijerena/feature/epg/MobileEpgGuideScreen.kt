@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
@@ -553,11 +554,7 @@ private fun ProgramDetailsSheet(
                     tone = TextTone.Inherit,
                     emphasis = true,
                 )
-                CinemaText(
-                    text = selection.channel.name,
-                    role = TextRole.Body,
-                    tone = TextTone.Secondary,
-                )
+                BadgedTitle(selection.channel.name, role = TextRole.Body, tone = TextTone.Secondary)
                 CinemaText(
                     text =
                         dayLabel(startDay, today, formatter) + " · " +

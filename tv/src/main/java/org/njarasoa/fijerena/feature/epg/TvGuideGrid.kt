@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -122,10 +123,12 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.rememberBadgeHeight
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
+import org.njarasoa.fijerena.core.ui.components.rememberTextHeight
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
-import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -1009,6 +1012,8 @@ private fun GuideBody(
     val cardStyle = TvCardLooks.guideCell()
     // Wide enough for the channel's logo beside its name (TV UI audit #22).
     val channelColumnWidth = TvDimensions.epgChannelColumnWidth + TvDimensions.iconXLarge
+    // Tall enough for the channel cell's two lines in every Look and size.
+    val rowHeight = guideRowHeight()
     val columnGap = Spacing.sm.scaled(scale)
     val canvasLeftPx = with(density) { (channelColumnWidth + columnGap).toPx() }
     // A cell narrower than half an hour cannot show a title worth reading ("Bu…"): it shows when it
@@ -1383,6 +1388,7 @@ private fun GuideBody(
                     archiveDays = state.catchupDays[row.channel.sourceKey] ?: 0,
                     sourceName = state.sourceNames[row.channel.providerId],
                     channelColumnWidth = channelColumnWidth,
+                    rowHeight = rowHeight,
                     columnGap = columnGap,
                     onChannelClick = {
                         returnFocus.leaveFrom(channelKey(row.channel.sourceKey), verticalListState)
@@ -1477,13 +1483,12 @@ private fun GuideRow(
     /** The channel's source, when the rows mix several (a Recent or Favourites guide); else null. */
     sourceName: String?,
     channelColumnWidth: androidx.compose.ui.unit.Dp,
+    rowHeight: androidx.compose.ui.unit.Dp,
     columnGap: androidx.compose.ui.unit.Dp,
     onChannelClick: () -> Unit,
     onProgramClick: (EpgProgram) -> Unit,
     onRowActions: () -> Unit,
 ) {
-    val scale = LocalUiScale.current
-    val rowHeight = TvDimensions.epgRowHeight.scaled(scale)
     val rowKey = row.channel.sourceKey
     val cells = remember(row.programs, layout, composeRange) { layout.cellsIn(row.programs, composeRange.first, composeRange.last) }
     val totalWidthPx = layout.totalWidthPx.roundToInt()
@@ -1624,7 +1629,7 @@ private fun ProgramDetailsDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                CinemaText(text = channel.name, role = TextRole.Heading, tone = TextTone.Secondary, maxLines = 1)
+                BadgedTitle(channel.name, tone = TextTone.Secondary)
                 CinemaText(
                     text = dayLabel + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime),
                     role = TextRole.Body,
@@ -1673,8 +1678,28 @@ private fun ProgramDetailsDialog(
 // Cells
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * A guide row's height: [TvDimensions.epgRowHeight], or more when the channel cell's name line and
+ * badge line need more ([ChannelCell]'s padding around them). Measured, so the name is not cut off
+ * with a taller font (a Look, the system font size).
+ */
 @Composable
-private fun ChannelCell(
+internal fun guideRowHeight(): androidx.compose.ui.unit.Dp {
+    val content = rememberTextHeight(TextRole.Heading) + CHANNEL_LINE_GAP + rememberBadgeHeight()
+    return maxOf(TvDimensions.epgRowHeight, content + (CHANNEL_CELL_MARGIN + CHANNEL_CELL_PADDING) * 2)
+}
+
+private val CHANNEL_CELL_MARGIN = Spacing.xxs
+private val CHANNEL_CELL_PADDING = Spacing.xs
+private val CHANNEL_LINE_GAP = Spacing.xxs
+
+/**
+ * The channel's logo, then its clean name on one line and, under it, the tags the name carried
+ * (country, quality) and its source when the rows mix sources, as badges: as the Live TV list shows
+ * a channel ([parseDisplayTitle], [TitleBadges]).
+ */
+@Composable
+internal fun ChannelCell(
     channel: MediaItem,
     sourceName: String?,
     cardStyle: TvCardLook,
@@ -1682,41 +1707,44 @@ private fun ChannelCell(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val scale = LocalUiScale.current
     var isFocused by remember { mutableStateOf(false) }
+    val parsed = remember(channel.name) { parseDisplayTitle(channel.name) }
+    val name = parsed.title.ifBlank { channel.name }
     TvCard(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier =
             modifier
                 .fillMaxHeight()
-                .padding(vertical = Spacing.xxs.scaled(scale))
+                .padding(vertical = CHANNEL_CELL_MARGIN)
                 .onFocusChanged { isFocused = it.isFocused }
                 .onMenuKey(onLongClick),
         look = cardStyle,
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(Spacing.sm.scaled(scale)),
+            modifier = Modifier.fillMaxSize().padding(CHANNEL_CELL_PADDING),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             // The logo whole on its neutral tile, as in the channel lists.
             CinemaThumbnail(
                 url = channel.thumbnailUrl,
-                fallbackLetter = channel.name.firstOrNull(),
+                fallbackLetter = name.firstOrNull { it.isLetterOrDigit() } ?: name.firstOrNull(),
                 contentType = ThumbnailContentType.LIVE_TV,
                 modifier = Modifier.fillMaxHeight().aspectRatio(16f / 9f),
             )
-            // The name on one line under its source's badge when the rows mix sources.
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                sourceName?.let { SourceBadge(it) }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CHANNEL_LINE_GAP)) {
                 CinemaText(
-                    text = channel.name,
+                    text = name,
                     role = TextRole.Heading,
                     tone = TextTone.Primary,
-                    maxLines = if (sourceName != null && LocalShowSourceBadges.current) 1 else 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs), verticalAlignment = Alignment.CenterVertically) {
+                    TitleBadges(parsed, modifier = Modifier.weight(1f, fill = false), maxLines = 1)
+                    sourceName?.let { SourceBadge(it) }
+                }
             }
             // The row-actions hint, as on the channel lists' rows; programme cells are too narrow for it.
             if (isFocused) RowActionsHint()
