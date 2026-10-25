@@ -46,7 +46,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.dropSearches
-import org.njarasoa.fijerena.core.navigation.isNewSource
+import org.njarasoa.fijerena.core.navigation.isExpertOnly
 import org.njarasoa.fijerena.core.navigation.isOwnPageOfNonExpert
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
@@ -1210,8 +1210,9 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // this is the backstop. Picking a profile and watching never ask. Cancel goes back to Settings.
     val gateEntry = navController.currentBackStackEntryAsState().value
     val gateDestination = gateEntry?.destination
-    // Add Source for a new source is the Expert's only, whatever opened it: closed at once.
-    val refused = !expert && gateEntry.isNewSource()
+    // The household's shared setup (sources, guide sources, live sync, Parental controls) is
+    // the Expert's only, whatever opened it: closed at once.
+    val refused = !expert && gateEntry.isExpertOnly()
     LaunchedEffect(gateEntry, refused) { if (refused) navController.popBackStack() }
     activeProfile?.let { profile ->
         LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }

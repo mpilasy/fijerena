@@ -260,6 +260,7 @@ Recent and Favourites live in `xtream_v2.db` (`watch_state`, `favorite_state`); 
 - Nobody adds a profile from the profile picker.
 - A kid is never an Expert, also when live sync or a backup restore brings a profile in: a child loses Expert mode (the change syncs), the oldest grown-up gets it if no Expert is left, and a restored file's Expert mode goes to a grown-up only. Startup also turns Expert off on a child.
 - On the phone, a profile's page shows another profile only to an Expert; anyone else gets its own page, with no PIN.
+- The household's shared setup — sources, guide sources, the TMDB key, the Parental controls lists, live sync — is an Expert's only, behind its PIN: those screens close at once for any other profile, whatever opened them, and the guide search shows its Guide Sources button to an Expert only. A profile still changes its own name and colour, and any grown-up adds a profile.
 - What changes the whole device (Language, Text & grid size, Items in Recent, Add a channel to Recent after) is an Expert's only, behind its PIN, and checked in `SettingsViewModel` too. The language and Text & grid size are this device's: not per profile, not synced and not exported.
 
 ## Live Sync

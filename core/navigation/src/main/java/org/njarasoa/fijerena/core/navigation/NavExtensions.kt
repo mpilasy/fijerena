@@ -83,6 +83,22 @@ fun NavBackStackEntry?.isOwnPageOfNonExpert(
         toRoute<Screen.ProfileEdit>().shownProfileId(activeId, expert) == activeId
 
 /**
+ * The household's shared setup — sources (a new one: [isNewSource]), guide sources, live sync,
+ * Parental controls: an Expert's only, whatever opened it (the profile rules plan, PR-11). For any
+ * other profile the screen closes at once; an Expert still types its PIN ([isPinGuarded]).
+ */
+fun NavBackStackEntry?.isExpertOnly(): Boolean =
+    isNewSource() ||
+        this?.destination?.let {
+            it.hasRoute<Screen.ProviderSelection>() ||
+                it.hasRoute<Screen.EpgManagement>() ||
+                it.hasRoute<Screen.SyncSettings>() ||
+                it.hasRoute<Screen.ParentalControls>() ||
+                it.hasRoute<Screen.ParentalListEdit>() ||
+                it.hasRoute<Screen.ParentalCheck>()
+        } == true
+
+/**
  * The screens Settings opens that the PIN of the profile in use guards — sources, guide sources,
  * live sync, a profile's page, Parental controls. Settings itself, About's device info and Diagnostics (read-only) open freely;
  * Settings asks the PIN before what changes shared setup.

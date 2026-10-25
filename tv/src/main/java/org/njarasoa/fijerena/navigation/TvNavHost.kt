@@ -36,7 +36,7 @@ import androidx.tv.material3.Surface
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.navigation.Screen
-import org.njarasoa.fijerena.core.navigation.isNewSource
+import org.njarasoa.fijerena.core.navigation.isExpertOnly
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
@@ -1251,8 +1251,9 @@ fun TvNavHost(
         val inUse by gateProfiles.activeProfile.collectAsStateWithLifecycle()
         val entry = navController.currentBackStackEntryAsState().value
         val destination = entry?.destination
-        // Add Source for a new source is the Expert's only, whatever opened it: closed at once.
-        val refused = !expert && entry.isNewSource()
+        // The household's shared setup (sources, guide sources, live sync, Parental controls) is
+        // the Expert's only, whatever opened it: closed at once.
+        val refused = !expert && entry.isExpertOnly()
         LaunchedEffect(entry, refused) { if (refused) navController.popBackStack() }
         inUse?.let { profile ->
             LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }

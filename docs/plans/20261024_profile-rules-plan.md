@@ -35,6 +35,12 @@ kid; an **Expert** is a grown-up with Expert mode on.
 - **PR-10 What changes the whole device is an Expert's only, behind its PIN** (user, 2026-10-24,
   added after the phases): Language, Text & Grid Size, Items in Recent, Add a Channel to Recent
   After. The language is per device, not synced, not exported. Built in 284690fd.
+- **PR-11 The household's shared setup is an Expert's only, behind its PIN** (user, 2026-10-24,
+  after the phases): sources, guide sources, the TMDB key, the Parental controls lists, and live
+  sync. The screens close at once for any other profile, whatever opened them
+  (`NavBackStackEntry.isExpertOnly`), and the guide search's Guide Sources button shows only to an
+  Expert. Exceptions kept: any grown-up adds a profile (PR-5), and a profile changes its own name
+  (a grown-up) and colour. Left open: a non-Expert's Jellyfin sign-in opens the whole Edit Source.
 - **PR-8 A kid is never an Expert.** *Holds today* for a change made on the device
   (`ProfileRepository`); *change:* also when live sync or a backup restore brings a profile in.
 
