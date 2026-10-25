@@ -81,6 +81,44 @@ class ProfileExpertGuardTest {
             assertTrue(AppSettings(context).devMode(ProfileEntity.DEFAULT_ID))
         }
 
+    @Test
+    fun `a child profile with Expert mode loses it`() =
+        runBlocking {
+            val settings = AppSettings(context)
+            settings.setDevMode(KID, true)
+            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+            settings.setChildProfile(KID, true)
+
+            assertEquals(listOf(KID), ProfileRepository(context).clearChildExperts())
+
+            assertFalse(settings.devMode(KID))
+            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+        }
+
+    @Test
+    fun `a grown-up keeps Expert mode`() =
+        runBlocking {
+            val settings = AppSettings(context)
+            settings.setDevMode(ProfileEntity.DEFAULT_ID, true)
+
+            assertEquals(emptyList<String>(), ProfileRepository(context).clearChildExperts())
+
+            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+        }
+
+    @Test
+    fun `startup turns Expert off on a child and keeps an Expert`() =
+        runBlocking {
+            val settings = AppSettings(context)
+            settings.setDevMode(KID, true)
+            settings.setChildProfile(KID, true)
+
+            ProfileRepository(context).migrateLegacyProfileSettings()
+
+            assertFalse(settings.devMode(KID))
+            assertTrue(settings.devMode(ProfileEntity.DEFAULT_ID))
+        }
+
     private companion object {
         const val KID = "kid"
     }

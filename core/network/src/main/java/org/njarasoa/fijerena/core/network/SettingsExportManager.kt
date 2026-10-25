@@ -568,7 +568,8 @@ class SettingsExportManager(
                     appSettings.themeId = exported.global.themeId
                     exported.global.uiStyleId?.let { appSettings.uiStyleId = it }
                     appSettings.uiScaleChoice = exported.global.uiScale
-                    appSettings.isDevMode = exported.global.isDevMode
+                    // A child is never Expert, whatever the file says.
+                    appSettings.isDevMode = exported.global.isDevMode && !appSettings.isChildProfile(appSettings.activeProfileId)
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
                     appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
                 }

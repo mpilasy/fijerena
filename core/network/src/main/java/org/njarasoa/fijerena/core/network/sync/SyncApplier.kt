@@ -159,8 +159,13 @@ class SyncApplier(
                 }
             }
         }
-        // Two devices may each turn off a different Expert at once, or delete one: keep one.
-        if (applied > 0) ProfileRepository(context).ensureAnExpert()
+        if (applied > 0) {
+            // A child is never Expert: one device may make a profile a child while another makes
+            // it Expert, and the two flags come in separately, in any order.
+            ProfileRepository(context).clearChildExperts()
+            // Two devices may each turn off a different Expert at once, or delete one: keep one.
+            ProfileRepository(context).ensureAnExpert()
+        }
         // Volatile records are no step of the clocks: they write nothing to either database.
         records.filterNot { it.key.kind in SyncKind.VOLATILE }.maxOfOrNull { it.hlc }?.let { newest ->
             sync.receive(newest)

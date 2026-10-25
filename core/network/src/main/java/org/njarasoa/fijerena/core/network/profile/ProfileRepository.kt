@@ -135,8 +135,26 @@ class ProfileRepository(
         ProviderRepository(context).movePerSourcePlaybackOnce()
         ProviderRepository(context).seedParentalListsOnce()
         seedProfileSourceRecordsOnce(settings)
+        clearChildExperts()
         ensureAnExpert()
     }
+
+    /**
+     * A child profile is never Expert, as [setChildProfile] keeps it for a change made here: turns
+     * Expert mode off on every child profile that has it. For what comes in from elsewhere (live
+     * sync, an upgrade), whatever order the two flags came in. Synced like any change, so every
+     * device ends with Expert off, not only this one. Run [ensureAnExpert] after it. Returns the
+     * ids of the profiles it changed.
+     */
+    suspend fun clearChildExperts(): List<String> =
+        withContext(Dispatchers.IO) {
+            val settings = AppSettings(context)
+            dao
+                .getAll()
+                .map { it.id }
+                .filter { settings.isChildProfile(it) && settings.devMode(it) }
+                .onEach { settings.setDevMode(it, false) }
+        }
 
     /**
      * Keeps at least one profile with Expert mode (the admin, for now), whatever changed it — an
