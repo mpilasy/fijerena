@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-24 | [Settings guarded by page](./20261024_settings-guard-by-page-plan.md) | The PIN guards whole Settings groups, not rows: your own settings open freely, Expert groups (This Device, Parental Controls, Sources & Guide, Sync & Backup, Advanced) ask the Expert's PIN once on the way in | In progress |
+| 2026-10-24 | [Settings guarded by page](./20261024_settings-guard-by-page-plan.md) | The PIN guards whole Settings groups, not rows: your own settings open freely, Expert groups (This Device, Parental Controls, Sources & Guide, Sync & Backup, Advanced) ask the Expert's PIN once on the way in | Built (branch `settings-by-page`); emulator walks left |
 | 2026-10-24 | [One Jellyfin login](./20261024_jellyfin-one-login-plan.md) | A Jellyfin source has one login, set by an Expert, and is on or off per profile like any source; profiles share its Jellyfin watch state | Built 2026-10-25 (Phases 1–3, docs); not yet walked on the emulators |
 | 2026-10-24 | [Profile rules](./20261024_profile-rules-plan.md) | One written set of who may do what to a profile, enforced below the screens: kids change only personal settings, any grown-up adds a profile (kid allowed, never Expert), only an Expert promotes, deletes or un-kids, a kid is never Expert (sync and restore too) | Done 2026-10-24, walked on both emulators |
 | 2026-10-24 | [One Guide Sources page](./20261024_one-guide-sources-page-plan.md) | Guide Sources is one page for every source, grouped by source; Settings opens it with no chooser; Add asks which sources the guide is for | Built 2026-10-24 (Phases 1–5); not yet walked on the emulators |

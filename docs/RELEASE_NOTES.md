@@ -7,6 +7,8 @@
 - **One Jellyfin login per source:** an Expert signs a Jellyfin source in once, in Add Source or Edit Source, for the whole household, and turns it on or off for each profile like any other source; no profile signs in by itself. Every profile with the source shares its progress, watched marks and favourites. On upgrade each Jellyfin source keeps one login: the Expert profile in use's, else the oldest Expert's, else the most recently used profile's. The login syncs with the source, encrypted like every password. Update every device of a sync group together: a device on an older version keeps asking its other profiles to sign in. TV and phone.
 - **Profiles in name order:** the profile picker, Settings → Profiles and the phone's profile menu list profiles alphabetically, not oldest first. TV and phone.
 - **Text & Grid Size stays on its device:** like the language, a settings export no longer includes it and a restore no longer changes it. TV.
+- **The PIN guards whole Settings groups:** an Expert with a PIN types it once, on the way into an Expert group — Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup, Advanced — and not again for each row. Playback, Display and About never ask. On TV, Right or OK on the group in the rail asks it, and Cancel stays on the rail; on the phone, Settings starts with a row per Expert group, which opens the group as its own page. TV and phone.
+- **This Device and Advanced:** Language, Text & Grid Size (TV), Items in Recent and Add a Channel to Recent After moved to a new This Device group; Playback and Display keep only your profile's own rows. Diagnostics and Shrink Database moved from About & Advanced to Advanced, and About is for everyone. TV and phone.
 
 ## Version: 0.8.2
 

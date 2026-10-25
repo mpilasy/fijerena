@@ -321,7 +321,7 @@ Every build records what went wrong on the device itself, so a crash on a TV is 
 the fact without logcat having been attached:
 
 - **Diagnostics** (expert mode on for the profile in use, on its page under Settings →
-  Profiles; then Settings → About & advanced → Diagnostics; mobile's can also Share as
+  Profiles; then Settings → Advanced → Diagnostics; mobile's can also Share as
   text) lists, newest
   first, the app's own crash log — uncaught exceptions, and exceptions absorbed by the app-wide
   coroutine scopes (`AppScopes`), sync records that couldn't be applied, a database set aside on

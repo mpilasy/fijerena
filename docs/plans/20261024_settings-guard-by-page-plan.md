@@ -1,6 +1,6 @@
 # Settings guarded by page
 
-**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). In progress (one lane, in parallel with the other 2026-10-24 plan).
+**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Built 2026-10-25 on the branch `settings-by-page` (phases 1-3: code, tests, docs). Left: the emulator walks of phase 3, not yet run, and the merge.
 
 ## Goal
 
@@ -58,10 +58,30 @@ Expert group is guarded without a line of its own.
 3. **Docs and walks:** FEATURES (Settings table, profile PIN paragraph), NAVIGATION_GUIDE,
    RELEASE_NOTES; both emulators, as an Expert with and without a PIN, a grown-up and a kid.
 
+## Done notes
+
+- **Phase 1 (TV):** `SettingsGroup` gets This Device and Advanced (About last) and `asksPin(admin)`:
+  the Expert groups, and Profiles with Expert mode (SG-D2). Right or OK on such a rail row asks
+  the PIN while the session has not got it; Cancel leaves focus on the rail row. Only one row-level
+  `guarded` is left: an Expert opening its own page from Playback or Display (that page is the one
+  the Profiles group opens). When the session locks again while in an Expert group, focus goes
+  back to the rail. The rail scrolls: nine groups are taller than a 1080p screen. Tests:
+  `SettingsGroupTest`, the focus tests, and `SettingsExpertGroupPinFocusTest` (the PIN pad on the
+  way in, Cancel back to the rail, the PIN held for the other groups). Walks `settings.txt` and
+  `ci-settings.txt` edited by hand, not run.
+- **Phase 2 (phone, SG-D1 a):** with Expert mode, Settings starts with one row per Expert group
+  (`ExpertGroup`, TV's rail order), then Playback, Display and About. A row asks the PIN, then opens
+  the group as a page in place of the list (`rememberSaveable`, Back or the back arrow returns);
+  Parental Controls opens its own screen as before. A page closes when the session locks again or
+  Expert mode goes off. No new route: the page shares the screen's pickers, launchers and dialogs.
+- **Phase 3:** FEATURES (Settings table, Profile PIN, Without Expert mode, Parental Controls),
+  NAVIGATION_GUIDE, CONTRIBUTING, DATABASE_SCHEMA, RUN_GUIDE, RELEASE_NOTES. The walks on both
+  emulators (an Expert with and without a PIN, a grown-up, a kid) are left.
+
 ## Progress
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. TV groups | In progress | |
-| 2. Phone groups | In progress | |
-| 3. Docs and walks | In progress | |
+| 1. TV groups | Done | 1a0dacd1c |
+| 2. Phone groups | Done | eaf0cddb7 |
+| 3. Docs and walks | Docs done; emulator walks left | the docs commit after eaf0cddb7 |
