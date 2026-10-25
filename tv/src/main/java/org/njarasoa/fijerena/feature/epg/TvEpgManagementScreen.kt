@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -764,7 +766,12 @@ private fun EpgSourceEditDialog(
         },
         containerColor = CinemaTheme.colors.surface,
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+            // Scrolls: with several sources the Use for list runs past the dialog's height, and
+            // rows cut off below took focus out of sight.
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 CinemaTextField(
                     value = url,
                     onValueChange = { url = it },
