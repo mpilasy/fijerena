@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.6
 
 - **Kids' history lists:** a child profile's Continue watching, Recent and Favourites could show a title from a category it may not see: a show from a source whose catalogue never loaded, or one stored without its category. Now, on an Xtream source, these lists show a child only titles known to be in its categories; the others stay stored and come back when the catalogue shows they are allowed. TV and phone.
 - **Scrolling names stay between the badges:** on a focused row, a long name that scrolls no longer runs on under the source badge ("BEARS") at the end of the row. The text stops at the badge's edge. The same fix applies to every scrolling text: Live TV lists and the panel over full screen, categories, the guide, the player's controls and the phone's channel rows. TV and phone.
