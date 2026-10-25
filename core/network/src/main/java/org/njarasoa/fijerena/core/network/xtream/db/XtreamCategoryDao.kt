@@ -58,6 +58,38 @@ interface XtreamCategoryDao {
         type: String,
     ): List<String>
 
+    /** The categories of [type] the profile in use sees on this source: those its filters do not hide. */
+    @Query("SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 0")
+    fun getVisibleCategoryIds(
+        providerId: Long,
+        type: String,
+    ): List<String>
+
+    /** The catalogue's category of each film ([type] `VOD`) or channel (`LIVE`) of [ids] it has. */
+    @Query("SELECT streamId, categoryId FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)")
+    fun getStreamCategoryIds(
+        providerId: Long,
+        type: String,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "streamId")
+        Int,
+        @MapColumn(columnName = "categoryId")
+        String,
+    >
+
+    /** The catalogue's category of each series of [ids] it has. */
+    @Query("SELECT seriesId, categoryId FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids)")
+    fun getSeriesCategoryIds(
+        providerId: Long,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "seriesId")
+        Int,
+        @MapColumn(columnName = "categoryId")
+        String,
+    >
+
     /**
      * The films ([type] `VOD`) or series (`SERIES`) that a Parental controls exception shows in an
      * excluded category (see XtreamCategoryExclusionSync), by id. Empty for `LIVE`.

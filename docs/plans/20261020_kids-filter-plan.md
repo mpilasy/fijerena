@@ -80,6 +80,18 @@ Animation film categories show and every Animation series category stays hidden.
 finds "Toy Story" in "VOD - ANIMAZIONE [IT]". No database migration: only the values of the
 existing `excluded` column change.
 
+**Fix, history lists (2026-10-25):** Continue watching, Recent and Favourites come from watch
+history, not from the catalogue, and hid an entry only when its category was excluded. That failed
+open: a source whose catalogue never loaded has no categories, so nothing was excluded, and an
+entry stored with a blank category was never in the excluded set. Seen on the phone emulator: Kid's
+Continue watching showed a horror series from a source whose sync fails, and most TV Shows entries
+had no category. Now, for a child profile on an Xtream source, an entry stays only when its
+category (the stored one, else the catalogue's for its film, series or channel, one query for all
+blank entries) is one the child sees (`excluded = 0`), or an exception allows it, and its title is
+not hidden. An unknown category hides it; the entry stays stored. Grown-ups and other sources keep
+the old rule. `MediaRepository.visibleHistory`, unit tests in `MediaRepositoryKidsHistoryTest`. No
+database change.
+
 ## Not done
 
 - `is_adult`: the app does not read it. It adds almost nothing on these servers. To add it: parse

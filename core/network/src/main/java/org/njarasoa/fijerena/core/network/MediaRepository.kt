@@ -1678,28 +1678,24 @@ class MediaRepository(
             if (usesServerUserData) {
                 emptyList()
             } else {
-                // Titles in categories the content filters hide stay out, as in Recent and Favourites,
-                // unless a Parental controls exception allows them.
-                val hiddenMovies = hiddenCategoryIds(ContentType.MOVIES)
-                val allowedMovies = allowedItemIds(ContentType.MOVIES, hiddenMovies)
-                val childRules = childRules()
-                val hiddenShows = hiddenCategoryIds(ContentType.TV_SHOWS)
-                val allowedShows = allowedItemIds(ContentType.TV_SHOWS, hiddenShows)
+                // Titles the profile may not see stay out, as in Recent and Favourites ([visibleHistory]).
                 val movieRows =
-                    watchStateDao
-                        .getResumable(providerId, profileId, ContentType.MOVIES, limit)
-                        .filterNot {
-                            (it.categoryId in hiddenMovies && it.itemId !in allowedMovies) ||
-                                childRules?.hidesTitle(it.itemName) == true
-                        }
+                    visibleHistory(
+                        watchStateDao.getResumable(providerId, profileId, ContentType.MOVIES, limit),
+                        ContentType.MOVIES,
+                        catalogueId = { it.itemId },
+                        categoryId = { it.categoryId },
+                        title = { it.itemName },
+                    )
                 // Over-fetched: a finished show whose episodes are unknown drops out below.
                 val latestPerShow =
-                    watchStateDao
-                        .getRecentSeriesCollapsed(providerId, profileId, ContentType.TV_SHOWS, limit * 3)
-                        .filterNot {
-                            (it.categoryId in hiddenShows && it.seriesId !in allowedShows) ||
-                                childRules?.hidesTitle(it.seriesName ?: it.itemName) == true
-                        }
+                    visibleHistory(
+                        watchStateDao.getRecentSeriesCollapsed(providerId, profileId, ContentType.TV_SHOWS, limit * 3),
+                        ContentType.TV_SHOWS,
+                        catalogueId = { it.seriesId },
+                        categoryId = { it.categoryId },
+                        title = { it.seriesName ?: it.itemName },
+                    )
                 val upNext = upNextForShows(latestPerShow, limit)
                 val seriesRows = latestPerShow.filter { it.isResumable() || upNext[it] != null }.take(limit)
 
@@ -1967,21 +1963,117 @@ class MediaRepository(
      * source: a filter hides a title from Recent, Favourites and Continue watching too, not only
      * from the catalogue (docs/plans/20261019_tv-household-ux-plan.md, Phase 2). The entries stay
      * stored, so removing the filter brings them back. A title that a Parental controls exception
-     * allows stays, as in the catalogue.
+     * allows stays, as in the catalogue. See [visibleHistory].
      */
     internal suspend fun withoutHiddenCategories(
         items: List<MediaItem>,
         contentType: String,
-    ): List<MediaItem> {
-        val hidden = hiddenCategoryIds(contentType)
+    ): List<MediaItem> =
+        visibleHistory(
+            items,
+            contentType,
+            // An episode card's id is the episode's, not a catalogue id of its section.
+            catalogueId = { if (it.target is BrowseTarget.Episode) null else it.id },
+            categoryId = { it.categoryId },
+            title = { it.name },
+        )
+
+    /**
+     * The history entries of [items] (Recent, Favourites, Continue watching) that the profile in
+     * use may see. [catalogueId] is the entry's film, channel or series id in the catalogue (null
+     * when it has none), [categoryId] the category stored with it (can be blank) and [title] its name.
+     *
+     * A grown-up, or any profile on a source that is not Xtream: an entry stays unless its category
+     * is one the content filters hide (and no Parental controls exception allows it).
+     *
+     * A child profile on an Xtream source: an entry stays only when it is known to be visible —
+     * its category (the stored one, else the catalogue's) is one the profile sees on this source,
+     * or an exception allows it — and its title is not hidden. An entry whose category is unknown
+     * (no catalogue yet, or the catalogue does not have it) stays out. The entries stay stored.
+     */
+    private suspend fun <T> visibleHistory(
+        items: List<T>,
+        contentType: String,
+        catalogueId: (T) -> String?,
+        categoryId: (T) -> String,
+        title: (T) -> String,
+    ): List<T> {
         val child = childRules()
-        return if (hidden.isEmpty() && child == null) {
-            items
-        } else {
-            val allowed = allowedItemIds(contentType, hidden)
-            items.filterNot { (it.categoryId in hidden && it.id !in allowed) || child?.hidesTitle(it.name) == true }
+        val type = categoryType(contentType)
+        return when {
+            items.isEmpty() -> {
+                items
+            }
+
+            child != null && type != null && provider is XtreamMediaProvider -> {
+                val known = knownCategories(items, type, catalogueId, categoryId)
+                withContext(Dispatchers.IO) {
+                    val visible = categoryDao.getVisibleCategoryIds(providerId, type).toHashSet()
+                    val allowed =
+                        if (type ==
+                            XtreamCategoryEntity.TYPE_LIVE
+                        ) {
+                            emptySet()
+                        } else {
+                            categoryDao.getAllowedItemIds(providerId, type).toHashSet()
+                        }
+                    items.filter { item ->
+                        val category = known(item)
+                        ((category.isNotEmpty() && category in visible) || catalogueId(item) in allowed) && !child.hidesTitle(title(item))
+                    }
+                }
+            }
+
+            else -> {
+                val hidden = hiddenCategoryIds(contentType)
+                if (hidden.isEmpty() && child == null) {
+                    items
+                } else {
+                    val allowed = allowedItemIds(contentType, hidden)
+                    items.filterNot {
+                        (categoryId(it) in hidden && catalogueId(it) !in allowed) || child?.hidesTitle(title(it)) == true
+                    }
+                }
+            }
         }
     }
+
+    /**
+     * Each entry's category: the stored one, else the catalogue's for its [catalogueId], else blank.
+     * One catalogue query for all the entries stored without a category.
+     */
+    private suspend fun <T> knownCategories(
+        items: List<T>,
+        type: String,
+        catalogueId: (T) -> String?,
+        categoryId: (T) -> String,
+    ): (T) -> String {
+        val blankIds = items.filter { categoryId(it).isBlank() }.mapNotNull { catalogueId(it)?.toIntOrNull() }.distinct()
+        val catalogue: Map<Int, String> =
+            when {
+                blankIds.isEmpty() -> {
+                    emptyMap()
+                }
+
+                type == XtreamCategoryEntity.TYPE_SERIES -> {
+                    withContext(Dispatchers.IO) { categoryDao.getSeriesCategoryIds(providerId, blankIds) }
+                }
+
+                else -> {
+                    withContext(Dispatchers.IO) { categoryDao.getStreamCategoryIds(providerId, type, blankIds) }
+                }
+            }
+        return { item -> categoryId(item).ifBlank { catalogueId(item)?.toIntOrNull()?.let { catalogue[it] }.orEmpty() } }
+    }
+
+    /** The `xtream_categories` type of [contentType]; null for any other section. */
+    private fun categoryType(contentType: String): String? =
+        when (contentType) {
+            ContentType.MOVIES -> XtreamCategoryEntity.TYPE_VOD
+            ContentType.LIVE_TV -> XtreamCategoryEntity.TYPE_LIVE
+            ContentType.TV_SHOWS -> XtreamCategoryEntity.TYPE_SERIES
+            else -> null
+        }
 
     /** The profile in use's Parental controls rules when it is a child's: its hidden titles stay out too. */
     private fun childRules(): ParentalRules? = if (appSettings.isChildProfile(profileId)) appSettings.parentalRules() else null
