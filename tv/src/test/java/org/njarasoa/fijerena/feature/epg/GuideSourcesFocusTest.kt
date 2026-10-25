@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.epg
 
+import androidx.compose.ui.test.onNodeWithText
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.testing.SettingsFixture
@@ -12,7 +13,7 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → a source's Guide Sources (`scripts/focus-walks/epg-management.txt`), on Source
+ * TV Settings → Guide Sources, one page for every source (`scripts/focus-walks/epg-management.txt`), on Source
  * One's one weekly guide source: the switch, the row's buttons, the auto-refresh picker and the
  * way back to its button. Nothing is refreshed or deleted.
  */
@@ -47,5 +48,19 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
             // Nothing above Add: focus stays.
             up("Add guide source"),
         )
+    }
+
+    @Test
+    fun `opened on a source with no guide source, focus is on Add`() {
+        seed(SettingsFixture.ADMIN)
+        val sourceId = SettingsFixture.sourceId(context, SettingsFixture.SOURCE_TWO)
+        show { TvEpgManagementScreen(providerId = sourceId, onBack = {}) }
+        walk.awaitFocused("Add guide source")
+        // Both sources' groups show, Source Two's with no guide source.
+        rule.onNodeWithText("Source One").assertExists()
+        rule.onNodeWithText("Source Two").assertExists()
+        rule.onNodeWithText("No guide sources configured").assertExists()
+        // The Add dialog's Use for list is checked on the emulator: its text field's cursor keeps
+        // Compose from going idle here.
     }
 }

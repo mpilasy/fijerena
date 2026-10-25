@@ -167,6 +167,7 @@
     <string name="epg_source_never">Mbola tsy nisy</string>
     <string name="epg_source_none">Tsy misy</string>
     <string name="epg_add_source_title">Hampiditra loharanon\'ny fitarihana</string>
+    <string name="epg_use_for_label">Ampiasao ho an\'ny</string>
     <string name="epg_edit_source_title">Hanova loharanon\'ny fitarihana</string>
     <string name="epg_xmltv_url_label">Rohin\'ny fandaharana (XMLTV)</string>
     <string name="epg_label_optional">Anarana (tsy voatery)</string>

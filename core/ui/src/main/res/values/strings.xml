@@ -171,6 +171,7 @@
     <string name="epg_source_never">Never</string>
     <string name="epg_source_none">None</string>
     <string name="epg_add_source_title">Add Guide Source</string>
+    <string name="epg_use_for_label">Use for</string>
     <string name="epg_edit_source_title">Edit Guide Source</string>
     <string name="epg_xmltv_url_label">Guide link (XMLTV)</string>
     <string name="epg_label_optional">Label (Optional)</string>
