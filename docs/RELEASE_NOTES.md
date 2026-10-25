@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.3
 
 - **Sources for Experts only:** a profile without Expert mode can no longer open Add Source or Edit Source, Jellyfin's sign-in included. A Jellyfin source it is not signed in to now says "Ask an admin to sign it in". TV and phone.
 - **Shared setup for Experts only:** Guide Sources could be opened by any grown-up from the guide search's button. That button now shows only to an Expert, and the screens for sources, guide sources, live sync and Parental controls close at once for anyone else, however they were reached. TV and phone.
