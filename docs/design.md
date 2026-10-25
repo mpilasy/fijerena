@@ -352,7 +352,7 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | Sources | `feature/provider/ProviderSelectionScreen.kt` | Source list: guide, add, edit, copy, delete |
 | Add / Edit Source | `feature/provider/TvAddProviderScreen.kt` (+ `components/`) | Connection form; per-source settings, filters, library data |
 | TV Guide | `feature/epg/TvEpgGuideScreen.kt` + `feature/epg/TvGuideGrid.kt` | Time grid |
-| Guide sources | `feature/epg/TvEpgManagementScreen.kt` | XMLTV sources of one source |
+| Guide sources | `feature/epg/TvEpgManagementScreen.kt` | XMLTV sources of every source, grouped by source |
 | Search the guide | `feature/epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
 | Profile picker | `feature/profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live sync | `feature/settings/SyncSettingsScreen.kt` | Sync group setup, pairing, devices |
@@ -380,7 +380,7 @@ Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEff
 | Sources | `feature/provider/ProviderSelectionScreen.kt` | Source list |
 | Add / Edit Source | `feature/provider/MobileAddProviderScreen.kt` (+ `components/`) | Connection form, Quick Connect, per-source settings, data management |
 | TV Guide | `feature/epg/MobileEpgGuideScreen.kt` + `feature/epg/MobileGuideGrid.kt` | Date tabs, time grid, programme sheet |
-| Guide sources | `feature/epg/MobileEpgManagementScreen.kt` | XMLTV sources of one source |
+| Guide sources | `feature/epg/MobileEpgManagementScreen.kt` | XMLTV sources of every source, grouped by source |
 | Search the guide | `feature/epgbrowser/MobileEpgBrowserScreen.kt` | Programme search |
 | Profile menu | `feature/profile/MobileProfileMenu.kt`, `ProfileSheet.kt` | The profiles, Settings, Browse entries |
 | Profile page | `feature/settings/ProfileEditScreen.kt` | A profile's page |

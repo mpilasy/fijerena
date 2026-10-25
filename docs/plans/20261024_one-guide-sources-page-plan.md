@@ -1,6 +1,7 @@
 # One Guide Sources page
 
-**Status:** In progress 2026-10-24. All decisions taken. Phases 1–4 done; Phase 5 next.
+**Status:** Built 2026-10-24 (Phases 1–5). Not yet walked on the emulators: the TV and phone
+pages with two sources with live channels, and the Add dialog's Use for list.
 
 ## Goal
 
@@ -31,14 +32,16 @@ for.
 ## Design
 
 1. **One page.** `Screen.EpgManagement(providerId: Long = 0L)`. 0 opens the page at the top; a
-   media source's id opens it with focus on that source's group header (the four ways in from one
-   source). Settings → Guide Sources opens it with 0 and no chooser.
+   media source's id opens it on that source's group (Edit Source and the Sources list's Guide
+   button): on TV, focus on the group's first guide source, or on Add when the group has none, with
+   the group scrolled into view; on the phone, the list scrolled to the group. Settings → Guide
+   Sources and Search the guide's Guide Sources button open it with 0 and no chooser.
 2. **Groups.** One group for each media source on the device that can have live channels (GS-D2),
-   in the Sources list's order. The header shows the source's name and a line: how many guide
-   sources, the last refresh, and "Not used by this profile" when the profile in use does not have
-   it (as on the Sources list). Under it, that source's guide sources as today's cards (switch,
+   in the Sources list's order. The header shows the source's name and, when the profile in use
+   does not have it, "Not used by this profile" (as on the Sources list); no count and no last
+   refresh. Under it, that source's guide sources as today's cards (switch,
    auto-refresh, refresh, edit, delete). A source's own guide (`<host> (Bulk)`) stays in its group.
-   A group with no guide source shows one line: "No guide sources".
+   A group with no guide source shows one line: "No guide sources configured".
 3. **Add (GS-D1).** The Add form gets a **For** list: the media sources with live channels, as
    switches (TV) or check boxes (phone), under "Use for" (GS-D5), the first one on — or the group's source when the page was
    opened on a source. Save adds one row per checked source (same URL, label, time zone). With one
@@ -92,5 +95,5 @@ for.
 | 1. ViewModel and route | Done | b865c642 |
 | 2. TV page | Done (the Add dialog's Use for list not yet checked on the emulator) | dcac75b3 |
 | 3. Phone page | Done (not yet checked on the emulator) | 970ec699 |
-| 4. Ways in | Done | Phase 4 commit |
-| 5. Docs and checks | Not started | |
+| 4. Ways in | Done | d15470f3 |
+| 5. Docs and checks | Done, except the walks on both emulators | Phase 5 commit |
