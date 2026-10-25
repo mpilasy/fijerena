@@ -48,11 +48,10 @@ so that once sync lands every device's pre-existing data converges on one profil
 device is using is `active_profile_id` in `app_settings` (§5), not a column here.
 
 `default` can be deleted once another profile is in use. Its data lives in provider-level storage
-rather than `_profile_` files, so `ProfileRepository` clears it there: Jellyfin providers'
-`providers.username` and the password/session in `provider_creds_<id>`, and the Recent Categories,
+rather than `_profile_` files, so `ProfileRepository` clears it there: the Recent Categories,
 `last_*` bookmarks and legacy blobs in each `media_cache_<id>` (migration flags set, so the legacy
-backfill never recreates rows for it). Other providers' logins in `provider_creds_<id>` are shared
-and stay.
+backfill never recreates rows for it). Every source's login (`providers.username` and
+`provider_creds_<id>`, Jellyfin's included) is the household's and stays.
 
 ### Table: `sync_tombstone` (added v13)
 Deleted providers and profiles, kept so live sync can tell other devices (see
@@ -146,8 +145,8 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 | `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's kind; stamps `deletedAt` when it is 0 |
 
 Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just after they are
-written (no shared transaction): provider passwords (`provider`), Jellyfin logins
-(`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
+written (no shared transaction): provider passwords (`provider`; a Jellyfin source's login too),
+category filters (`category_filters`), and the synced settings (`setting`):
 `theme_id` and `ui_style_id` (per profile; a device-wide `theme_id` record from an older build,
 profile `shared`, is ignored), `dev_mode` (per profile), `autoplay_next_episode` (per
 profile), `pin_hash` (per profile; a removed PIN is sent as blank), each live sync device's name as one shared record per device, `device_name:<deviceId>` = the name, or "" for its server name (the model), stored under the same key in `app_settings`, and each profile's sources as one record per source, `profile_source:<providerKey>` = true / false (per profile; last writer wins per source, so edits to different sources on two devices both survive; a whole-list `profile_sources` record from an earlier build is ignored). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
@@ -658,8 +657,8 @@ The application uses several specialized SharedPreferences files for internal st
 | `xmltv_cache_{providerId}` | `xmltv_epg_data_v2`, `xmltv_cache_timestamp_v2`, `xmltv_cache_index_generation_v2` | `XmltvEpgService`'s parsed-EPG cache (JSON), valid 12 h and only for the index build it was read from (`epg_index_metadata.indexed_at_ms`). Cleared after a sync that ingested one of the provider's sources, and by the guide's Refresh. |
 | `xtream_cache_{providerId}` | timestamps | Xtream catalogue fetch timestamps (`XtreamCacheKeys`, `XtreamContentManager`); `xtream_epg_prefs_purged` marks the one-time purge of the per-stream EPG blobs older builds kept here. `panel_guide_local_as_utc`: whether the source's own guide stamps its local time as UTC (`PanelGuideTimes`), re-measured against its `xmltv.php`. `xtream_cache` (no id) is the legacy single-provider file. |
 | `category_filters` | `{providerId}_{profileId}` | Category filters (`CategoryFilters` JSON) of one profile on one provider, via `CategoryFiltersStore`. No key = no filters. A new profile copies the creating profile's keys; provider and profile deletion remove theirs. |
-| `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. Xtream extra logins' passwords as `extra_password_<username>` beside the main `password`. |
-| `provider_creds_{id}_profile_{profileId}` | per-provider, per-profile | (Encrypted) A non-Default profile's own Jellyfin login: `username`, `password`, `jellyfin_token`, `jellyfin_user_id`. The Default profile uses `provider_creds_{id}` and `providers.username`. Only Jellyfin logins are per profile. |
+| `provider_creds_{id}` | per-provider | (Encrypted) The source's login, the same for every profile, via `EncryptedSharedPreferences`: `password` (its username is `providers.username`); for Jellyfin also this device's session, `jellyfin_token` and `jellyfin_user_id` (never synced). Xtream extra logins' passwords as `extra_password_<username>` beside the main `password`. |
+| `provider_creds_{id}_profile_{profileId}` | per-provider, per-profile | **Retired.** A profile's own Jellyfin login in older builds (`username`, `password`, `jellyfin_token`, `jellyfin_user_id`). At startup `ProviderRepository.moveJellyfinLoginsToSources` keeps one per source in `provider_creds_{id}` and `providers.username` (the Expert profile in use, else the oldest Expert, else the most recently used profile) and deletes every one of these files. |
 | `xtream_secure_credentials_{providerId}` | `url`, `username`, `password`, `auth_response`, `remember_me` | (Encrypted) Xtream login credentials and cached auth response, held by `AccountManager`, one file per provider. `xtream_secure_credentials` (no id) is the legacy pre-multi-provider file. |
 | `tmdb_secure_key` | `api_key`, `rejected_key` | (Encrypted) The user's TMDB key (`TmdbKeyStore`), app-wide; an empty `api_key` means removed. `rejected_key` is the key TMDB last answered 401 to: while it equals `api_key`, TMDB is off. Synced as the setting `tmdb_api_key` (sealed like every record); never exported. |
 | `credential_store_health` | one key per encrypted file name | Plain flags, never secrets: an encrypted file that could not be decrypted (lost Keystore key) was reset, so a failing login can say why. Cleared when a login is saved again. |

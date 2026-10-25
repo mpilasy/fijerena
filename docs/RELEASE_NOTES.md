@@ -4,6 +4,7 @@
 
 - **Sources for Experts only:** a profile without Expert mode can no longer open Add Source or Edit Source, Jellyfin's sign-in included. A Jellyfin source it is not signed in to now says "Ask an admin to sign it in". TV and phone.
 - **Shared setup for Experts only:** Guide Sources could be opened by any grown-up from the guide search's button. That button now shows only to an Expert, and the screens for sources, guide sources, live sync and Parental controls close at once for anyone else, however they were reached. TV and phone.
+- **One Jellyfin login per source:** an Expert signs a Jellyfin source in once, in Add Source or Edit Source, for the whole household, and turns it on or off for each profile like any other source; no profile signs in by itself. Every profile with the source shares its progress, watched marks and favourites. On upgrade each Jellyfin source keeps one login: the Expert profile in use's, else the oldest Expert's, else the most recently used profile's. The login syncs with the source, encrypted like every password. Update every device of a sync group together: a device on an older version keeps asking its other profiles to sign in. TV and phone.
 - **Profiles in name order:** the profile picker, Settings → Profiles and the phone's profile menu list profiles alphabetically, not oldest first. TV and phone.
 - **Text & Grid Size stays on its device:** like the language, a settings export no longer includes it and a restore no longer changes it. TV.
 

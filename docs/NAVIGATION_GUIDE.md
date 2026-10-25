@@ -95,6 +95,7 @@ TV navigation rail (every screen but the player, the Live TV preview and first-r
 ├─→ ContentTypeSelection                 Home (sections saved)
 ├─→ LiveTvTab | MoviesTab | TvShowsTab   each a saved stack hosting the section's browse (CategoryList's screen)
 ├─→ CategoryList(type, source)           Browse <source> (a Jellyfin / M3U source; a dialog first with several sections)
+│   └─→ AddProvider(editId = source)     instead, a Jellyfin source with no login, for an Expert (anyone else: "Ask an admin")
 ├─→ Search(current section | "ALL")
 └─→ Settings
 A child profile's rail (kids' Home plan): ProfilePicker, ContentTypeSelection, Search("ALL") and Settings only. Its
@@ -104,7 +105,7 @@ preview has the Favourites tab only (no Recent, no category, no row menu, no Gui
 has no favourite button; its Home cards have no actions menu.
 
 Phone bottom bar: HomeTab | LiveTvTab | MoviesTab | TvShowsTab | profile slot, each a saved stack (Back-Stack Rule 7); the profile slot opens the profile menu (switch profile, Settings — the slot's tab —, Browse entries)
-Phone profile sheet: Browse <source> ─→ CategoryList(type, source), pushed in the current tab
+Phone profile sheet: Browse <source> ─→ CategoryList(type, source), pushed in the current tab (a Jellyfin source with no login: AddProvider(editId) for an Expert, "Ask an admin" for anyone else)
 
 ContentTypeSelection (Home, TV)
 ├─→ LiveTvTab | MoviesTab | TvShowsTab   only the single-section auto-skip (the sections are on the rail)
@@ -210,7 +211,7 @@ Both hosts look up the sources on start (`initializeStartup()`: provider count, 
 | Profile picker at launch | With two or more profiles | Never (the bar's profile slot) |
 | Profile PIN (the profile in use has one, not typed this session) | Settings opens freely; its rows that change shared setup or another profile ask first (a prompt over Settings, Cancel stays on the row), and the screens they open (`isPinGuarded`) ask over an opaque screen if reached otherwise, Cancel pops back to Settings. Picking a profile asks only to leave a child profile (below) | The same; the profile menu asks only to leave a child profile |
 | Child lock (a child profile in use, an Expert has a PIN) | Any other profile picked on the picker (launch or rail avatar) or with **Switch to this profile** asks an Expert's PIN first (`TvLeaveChildPinDialog`); the prompt takes focus, Cancel or Back keeps the child with focus back on the profile picked | The same from the profile menu and a profile page (`LeaveChildPinDialog`) |
-| Household setup (`isExpertOnly`: `AddProvider` new or edit, Sources, Guide Sources, Live sync, Parental controls) | Only for a profile with Expert mode (followed live through `AppSettings.observeDevMode`): for any other the gate pops it at once, before any PIN prompt; a Browse sign-in shows "Ask an admin" instead. The picker has no Add profile (profile rules plan, PR-9) | The same |
+| Household setup (`isExpertOnly`: `AddProvider` new or edit, Sources, Guide Sources, Live sync, Parental controls) | Only for a profile with Expert mode (followed live through `AppSettings.observeDevMode`): for any other the gate pops it at once, before any PIN prompt; a Browse sign-in (a Jellyfin source with no login: one login per source, for the whole household) shows "Ask an admin" instead. The picker has no Add profile (profile rules plan, PR-9) | The same |
 
 ## TV Focus
 

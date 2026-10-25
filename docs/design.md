@@ -101,7 +101,7 @@ IDs are `String` throughout (Jellyfin UUIDs, SMB paths, file URIs).
 | `providers.db` (`SettingsDatabase`, Room v17) | Sources (config, sync stats and last-sync delta), guide sources (with change-detection validators), pipeline stats, profiles, live-sync bookkeeping | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity`, `ProfileEntity`, settings-sync entities |
 | `xtream_v2.db` (`XtreamDatabase`, Room v24) | Xtream catalogue (categories, streams, series, episodes, per-stream EPG payloads, FTS4), and the provider-agnostic `watch_state` and `favorite_state` tables | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
 | `epg_index.db` (`EpgIndexDatabase`, Room v17) | Guide programme index with FTS4 | `epgindex/` |
-| EncryptedSharedPreferences | Passwords and sessions per source (and per profile for Jellyfin logins) | `provider_creds_<id>`, `xtream_secure_credentials` |
+| EncryptedSharedPreferences | Passwords and sessions per source (one login per source, Jellyfin included) | `provider_creds_<id>`, `xtream_secure_credentials` |
 | `xtream_cache_<id>` SharedPreferences | Per-source Xtream response cache | JSON blobs |
 | `media_cache_<id>` SharedPreferences | Recent categories (up to 20 per content type), last-browsed position | JSON blobs + scalars |
 | `app_settings` SharedPreferences | Device, per-profile and synced settings | `AppSettings` |

@@ -1,6 +1,6 @@
 # One Jellyfin login per source
 
-**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). In progress (one lane, in parallel with the other 2026-10-24 plan).
+**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Built 2026-10-25 (Phases 1–3 and the Phase 4 docs); the emulator walks are left.
 
 ## Goal
 
@@ -56,7 +56,27 @@ profile that has the source shares them (user, 2026-10-24).
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Storage and upgrade | In progress | |
-| 2. Sync | In progress | |
-| 3. Screens | In progress | |
-| 4. Docs and walks | In progress | |
+| 1. Storage and upgrade | Done | 108178b73 |
+| 2. Sync | Done | 0a3b96b64 |
+| 3. Screens | Done | 077a8ffbe |
+| 4. Docs and walks | Docs done; walks left | the docs commit after 077a8ffbe |
+
+## Done notes
+
+- **Storage:** the source's login is `providers.username` plus `password` in `provider_creds_<id>`,
+  as for Xtream; a Jellyfin session (`jellyfin_token`, `jellyfin_user_id`) stays in the same file,
+  per device. A profile switch keeps the Jellyfin session; deleting the Default profile keeps the
+  login. No Room schema change (one new read query on `watch_state`).
+- **Upgrade (JF-D1):** `ProviderRepository.moveJellyfinLoginsToSources`, a startup step after the
+  profile settings move. "Most recently used" is the profile in use, then the profile with the
+  latest `watch_state` change on this device. Each device upgrades on its own; when two devices
+  pick different logins, the provider record's last writer wins.
+- **Sync (JF-D2):** the login rides in the `provider` record (sealed end to end). No
+  `provider_login` record is written; a pending one is dropped. One received becomes the source's
+  login only while the source has none, and is then sent on with the source. A Jellyfin `provider`
+  record with no username (an older device whose Default profile had none) keeps the login here.
+- **Screens:** Add Source and Edit Source say the login is the household's; the "Ask an admin"
+  text now names the source, not the profile. Exports still carry no password.
+- **Not settled by the plan:** a Quick Connect login has no password and its token stays on the
+  device, so the group's other devices get the username only and fail to connect until the source
+  is signed in there with a password. Edit Source still offers Quick Connect only when adding.
