@@ -1,6 +1,6 @@
 # One Guide Sources page
 
-**Status:** Planned 2026-10-24. Decisions GS-D1, GS-D2 and GS-D5 taken; GS-D3 and GS-D4 open. Not started.
+**Status:** In progress 2026-10-24. All decisions taken. Phase 1 done; Phase 2 in progress.
 
 ## Goal
 
@@ -64,10 +64,10 @@ for.
   "source" alone. The page never says "media source": each group header is the source's own name,
   and the Add form's list reads "Use for" with the source names. "Media source" is this plan's word
   only.
-- **GS-D3 Refresh buttons (open):** (a) the page header keeps one **Refresh stale (n)** and one
+- **GS-D3 Refresh buttons (decided, user 2026-10-24: recommended (a)):** (a) the page header keeps one **Refresh stale (n)** and one
   **Retry failed (n)** for all groups; or (b) each group header has its own. Recommend (a): fewer
   buttons in the D-pad path, and a per-guide refresh stays on every card.
-- **GS-D4 Add from a group (open):** (a) one Add at the top of the page only; or (b) also an Add
+- **GS-D4 Add from a group (decided, user 2026-10-24: recommended (a)):** (a) one Add at the top of the page only; or (b) also an Add
   on each group header, with that source checked. Recommend (a), with the group's source checked
   when the page was opened on a source.
 
@@ -89,8 +89,8 @@ for.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. ViewModel and route | Not started | |
-| 2. TV page | Not started | |
+| 1. ViewModel and route | Done | Phase 1 commit |
+| 2. TV page | In progress | |
 | 3. Phone page | Not started | |
 | 4. Ways in | Not started | |
 | 5. Docs and checks | Not started | |

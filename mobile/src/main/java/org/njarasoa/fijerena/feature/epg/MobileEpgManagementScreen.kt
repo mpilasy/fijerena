@@ -68,7 +68,7 @@ fun MobileEpgManagementScreen(
         viewModel(
             factory =
                 remember(providerId) {
-                    SettingsViewModelFactory(context.applicationContext, providerId = providerId)
+                    SettingsViewModelFactory(context.applicationContext)
                 },
         )
 
@@ -215,7 +215,7 @@ fun MobileEpgManagementScreen(
                                     source.enabled,
                                     viewModel.refreshIntervalHours(source),
                                 ).asString(),
-                        onRefresh = { viewModel.refreshSource(source.id) },
+                        onRefresh = { viewModel.refreshSource(source) },
                         onAutoRefresh = { intervalSource = source },
                         onEdit = { editingSource = source },
                         onDelete = { viewModel.deleteSource(source.id) },
@@ -232,7 +232,7 @@ fun MobileEpgManagementScreen(
         EpgSourceEditDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { url, label, tz, method, enabled ->
-                viewModel.addSource(url, label, tz, method, enabled)
+                viewModel.addSource(url, label, tz, listOf(providerId), method, enabled)
                 showAddDialog = false
             },
         )

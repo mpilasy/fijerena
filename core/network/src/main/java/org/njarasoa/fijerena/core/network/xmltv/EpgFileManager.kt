@@ -91,7 +91,7 @@ class EpgFileManager private constructor(
         /** Refresh stale over several providers' sources (Search the guide's, multi-source Phase 7). */
         fun refreshStaleTaskId(providerIds: List<Long>): String = "epg_refresh_stale_${providerIds.joinToString("_")}"
 
-        fun refreshFailedTaskId(providerId: Long): String = "epg_refresh_failed_$providerId"
+        fun refreshFailedTaskId(providerIds: List<Long>): String = "epg_refresh_failed_${providerIds.joinToString("_")}"
 
         private const val RETRY_DELAY_MS = 5000L
 
@@ -618,20 +618,25 @@ class EpgFileManager private constructor(
         }
     }
 
+    /** Retries the failed sources of each of [providerIds] in turn, in one task, as [launchRefreshStale]. */
     fun launchRefreshFailed(
-        providerId: Long,
+        providerIds: List<Long>,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask(refreshFailedTaskId(providerId), providerId, onComplete, onCellularConfirm) {
+        if (providerIds.isEmpty()) return
+        launchGenericTask(refreshFailedTaskId(providerIds), providerIds.first(), onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val failedSources = sourceDao.getFailedSources(providerId)
-            if (failedSources.isNotEmpty()) {
-                processAllSourcesInternal(failedSources)
-            } else {
-                if (_state.value is MultiSourceState.Pending) {
-                    _state.value = MultiSourceState.Idle
+            var refreshed = false
+            for (providerId in providerIds) {
+                val failedSources = sourceDao.getFailedSources(providerId)
+                if (failedSources.isNotEmpty()) {
+                    processAllSourcesInternal(failedSources)
+                    refreshed = true
                 }
+            }
+            if (!refreshed && _state.value is MultiSourceState.Pending) {
+                _state.value = MultiSourceState.Idle
             }
         }
     }

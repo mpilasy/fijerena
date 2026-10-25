@@ -10,8 +10,6 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 class SettingsViewModelFactory(
     context: Context,
     private val contentType: String = "ALL",
-    // EPG is provider-scoped: the EPG management screen is opened for one specific provider.
-    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
     // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
     private val appContext = context.applicationContext
@@ -20,7 +18,7 @@ class SettingsViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         when {
             modelClass.isAssignableFrom(EpgManagementViewModel::class.java) -> {
-                EpgManagementViewModel(appContext, providerId) as T
+                EpgManagementViewModel(appContext) as T
             }
 
             modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {

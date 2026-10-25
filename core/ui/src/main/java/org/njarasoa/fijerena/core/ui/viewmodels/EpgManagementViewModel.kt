@@ -14,8 +14,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -23,7 +25,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
@@ -42,12 +46,28 @@ import kotlin.coroutines.resume
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
     private val context: Context,
-    // EPG is a provider-level concern: this screen manages one provider's sources only.
-    private val providerId: Long,
+    private val providerRepository: ProviderRepository = ProviderRepository(context),
 ) : ViewModel() {
     private val epgFileManager = EpgFileManager.getInstance(context)
     private val indexer = EpgIndexer.getInstance(context)
     private val appSettings = AppSettings(context)
+
+    /**
+     * One group of the Guide Sources page: a source that can have channels and its guide sources
+     * (the one guide sources page plan). [usedByProfile]: the profile in use has the source.
+     */
+    data class GuideGroup(
+        val provider: ProviderEntity,
+        val usedByProfile: Boolean,
+        val sources: List<EpgSourceEntity>,
+    )
+
+    /** Every source on the device that can have channels, not only the profile's (GS-D2), in the Sources list's order. */
+    private val guideProviders: Flow<List<ProviderEntity>> =
+        providerRepository
+            .getAllProviders()
+            .map { list -> list.filter { MediaProviderFactory.hasLiveTv(it) } }
+            .distinctUntilChanged()
 
     private fun indexDb() = EpgIndexDatabase.getInstance(context)
 
@@ -56,9 +76,20 @@ class EpgManagementViewModel(
     // Generation counter for index DB
     private val _dbGeneration = MutableStateFlow(0)
 
-    // Sources are in the persistent SettingsDatabase, scoped to this provider
+    val groups: Flow<List<GuideGroup>> =
+        combine(
+            guideProviders,
+            providerRepository.profileSources(appSettings.activeProfileId),
+            settingsDb().epgSourceDao().getAllSources(),
+        ) { providers, profileSources, all ->
+            val inProfile = profileSources.mapTo(HashSet()) { it.id }
+            val byProvider = all.groupBy { it.providerId }
+            providers.map { GuideGroup(it, it.id in inProfile, byProvider[it.id].orEmpty()) }
+        }.distinctUntilChanged()
+
+    /** Every guide source on the page, group after group. */
     val sources: Flow<List<EpgSourceEntity>> =
-        settingsDb().epgSourceDao().getSourcesForProvider(providerId).distinctUntilChanged()
+        groups.map { list -> list.flatMap { it.sources } }.distinctUntilChanged()
 
     val staleSourceCount: StateFlow<Int> =
         sources
@@ -74,8 +105,10 @@ class EpgManagementViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val processingState: StateFlow<EpgFileManager.MultiSourceState> =
-        epgFileManager
-            .stateFor(providerId)
+        guideProviders
+            .map { list -> list.mapTo(HashSet()) { it.id } }
+            .distinctUntilChanged()
+            .flatMapLatest { epgFileManager.stateFor(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EpgFileManager.MultiSourceState.Idle)
 
     val indexState: StateFlow<EpgIndexState> = indexer.state
@@ -246,10 +279,12 @@ class EpgManagementViewModel(
             indexDb().epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
         }
 
+    /** Adds the guide source to each of [providerIds] (GS-D1); a source that already has the URL is skipped. */
     fun addSource(
         url: String,
         label: String,
         timezoneOffsetHours: Int,
+        providerIds: Collection<Long>,
         ingestMethod: String = "DOWNLOADED",
         enabled: Boolean = true,
     ) {
@@ -261,23 +296,27 @@ class EpgManagementViewModel(
                         .map { it.trim() }
                         .filter { it.startsWith("http://") || it.startsWith("https://") }
 
-                for (u in urls) {
-                    val finalLabel =
-                        if (urls.size == 1) {
-                            label.ifBlank { EpgFileManager.extractLabel(u) }
-                        } else {
-                            EpgFileManager.extractLabel(u)
-                        }
-                    settingsDb().epgSourceDao().insertSource(
-                        EpgSourceEntity(
-                            url = u,
-                            label = finalLabel,
-                            timezoneOffsetHours = timezoneOffsetHours,
-                            ingestMethod = ingestMethod,
-                            enabled = enabled,
-                            providerId = providerId,
-                        ),
-                    )
+                val dao = settingsDb().epgSourceDao()
+                for (providerId in providerIds) {
+                    for (u in urls) {
+                        if (dao.getSourceByUrl(u, providerId) != null) continue
+                        val finalLabel =
+                            if (urls.size == 1) {
+                                label.ifBlank { EpgFileManager.extractLabel(u) }
+                            } else {
+                                EpgFileManager.extractLabel(u)
+                            }
+                        dao.insertSource(
+                            EpgSourceEntity(
+                                url = u,
+                                label = finalLabel,
+                                timezoneOffsetHours = timezoneOffsetHours,
+                                ingestMethod = ingestMethod,
+                                enabled = enabled,
+                                providerId = providerId,
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -302,21 +341,22 @@ class EpgManagementViewModel(
         }
     }
 
+    /** Refreshes the stale guide sources of every group (GS-D3). */
     fun refreshStale() {
-        val taskId = EpgFileManager.refreshStaleTaskId(providerId)
-        val queued = RefreshQueue.queuedTaskIds.value
-        if (queued.contains(taskId)) {
-            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
-            return
-        }
-
         viewModelScope.launchGuarded("EpgManagementViewModel.refreshStale") {
+            val providerIds = guideProviders.first().map { it.id }
+            val taskId = EpgFileManager.refreshStaleTaskId(providerIds)
+            val queued = RefreshQueue.queuedTaskIds.value
+            if (queued.contains(taskId)) {
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+                return@launchGuarded
+            }
             // Instant feedback: calculate which IDs will be refreshed and put them in the map
             val now = System.currentTimeMillis()
             val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
             val sourcesToRefresh =
                 withContext(Dispatchers.IO) {
-                    settingsDb().epgSourceDao().getEnabledSourcesForProvider(providerId)
+                    providerIds.flatMap { settingsDb().epgSourceDao().getEnabledSourcesForProvider(it) }
                 }.filter { EpgRefreshSchedule.isStale(it, now, unsetHours) && !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
@@ -327,7 +367,7 @@ class EpgManagementViewModel(
             _taskSourceIds.value += (taskId to sourcesToRefresh.map { it.id }.toSet())
 
             epgFileManager.launchRefreshStale(
-                providerId = providerId,
+                providerIds = providerIds,
                 onComplete = {
                     refreshDbStats()
                     _taskSourceIds.value -= taskId
@@ -352,16 +392,16 @@ class EpgManagementViewModel(
         }
     }
 
+    /** Retries the failed guide sources of every group (GS-D3). */
     fun refreshFailed() {
-        val taskId = EpgFileManager.refreshFailedTaskId(providerId)
-        val queued = RefreshQueue.queuedTaskIds.value
-        if (queued.contains(taskId)) {
-            _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
-            return
-        }
-
         viewModelScope.launchGuarded("EpgManagementViewModel.refreshFailed") {
-            val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources(providerId) }
+            val providerIds = guideProviders.first().map { it.id }
+            val taskId = EpgFileManager.refreshFailedTaskId(providerIds)
+            if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
+                _userMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+                return@launchGuarded
+            }
+            val sources = withContext(Dispatchers.IO) { providerIds.flatMap { settingsDb().epgSourceDao().getFailedSources(it) } }
             if (sources.isEmpty()) {
                 _userMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
                 return@launchGuarded
@@ -370,7 +410,7 @@ class EpgManagementViewModel(
             _taskSourceIds.value += (taskId to sources.map { it.id }.toSet())
 
             epgFileManager.launchRefreshFailed(
-                providerId = providerId,
+                providerIds = providerIds,
                 onComplete = {
                     refreshDbStats()
                     _taskSourceIds.value -= taskId
@@ -395,7 +435,8 @@ class EpgManagementViewModel(
         }
     }
 
-    fun refreshSource(sourceId: Long) {
+    fun refreshSource(source: EpgSourceEntity) {
+        val sourceId = source.id
         val taskId = "epg_refresh_source_$sourceId"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
@@ -406,7 +447,7 @@ class EpgManagementViewModel(
         _taskSourceIds.value += (taskId to setOf(sourceId))
 
         epgFileManager.launchProcessSingleSource(
-            providerId = providerId,
+            providerId = source.providerId,
             sourceId = sourceId,
             onComplete = {
                 refreshDbStats()

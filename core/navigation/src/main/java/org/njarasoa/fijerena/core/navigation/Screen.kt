@@ -208,13 +208,13 @@ sealed interface Screen {
     ) : Screen
 
     /**
-     * EPG Management screen destination.
-     * Manage a single provider's XMLTV EPG sources (add, edit, delete, refresh).
-     * EPG sources belong to one provider and are never shared between providers.
+     * Guide Sources: every source's XMLTV guide sources on one page, grouped by source (add,
+     * edit, delete, refresh). A guide source belongs to one source. [providerId] opens the page
+     * on that source's group; 0 opens it at the top (the one guide sources page plan).
      */
     @Serializable
     data class EpgManagement(
-        val providerId: Long,
+        val providerId: Long = 0L,
     ) : Screen
 
     /** Settings → Live sync: linking this device to a sync account, pairing, devices. */

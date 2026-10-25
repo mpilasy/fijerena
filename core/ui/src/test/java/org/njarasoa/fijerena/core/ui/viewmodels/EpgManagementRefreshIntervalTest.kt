@@ -89,7 +89,7 @@ class EpgManagementRefreshIntervalTest {
     fun `a source's own interval wins, one without uses the retired device-wide interval`() {
         every { prefs.getBoolean("epg_auto_refresh", any()) } returns true
         every { prefs.getInt("epg_refresh_interval", any()) } returns 8
-        val viewModel = EpgManagementViewModel(context, providerId = 1)
+        val viewModel = EpgManagementViewModel(context, providerRepository = mockk(relaxed = true))
 
         assertEquals(12, viewModel.refreshIntervalHours(source(12)))
         assertEquals(8, viewModel.refreshIntervalHours(source(null)))
@@ -98,7 +98,7 @@ class EpgManagementRefreshIntervalTest {
 
     @Test
     fun `picking an interval writes it for that source`() {
-        val viewModel = EpgManagementViewModel(context, providerId = 1)
+        val viewModel = EpgManagementViewModel(context, providerRepository = mockk(relaxed = true))
 
         viewModel.setRefreshInterval(7, 168)
         viewModel.setRefreshInterval(7, REFRESH_OFF)
