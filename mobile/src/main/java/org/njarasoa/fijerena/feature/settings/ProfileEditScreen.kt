@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.UiThemes
+import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -260,7 +261,7 @@ fun MobileProfileEditScreen(
                         CinemaText(
                             listOfNotNull(
                                 stringResource(R.string.profile_pin_remove_confirm_text),
-                                if (lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
+                                if (SwitchLock.ON && lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
                             ).joinToString(" "),
                             tone = TextTone.Secondary,
                         )
@@ -427,7 +428,7 @@ fun MobileProfileEditScreen(
                         modifier = inset,
                     )
                     // No Expert has a PIN, so the child lock does nothing: the admin in use sets one here.
-                    if (child && viewModel.adminPinHolders().isEmpty()) {
+                    if (SwitchLock.ON && child && viewModel.adminPinHolders().isEmpty()) {
                         SettingsListRow(
                             title = stringResource(R.string.profile_child_set_pin),
                             summary = stringResource(R.string.profile_child_no_pin_warning),

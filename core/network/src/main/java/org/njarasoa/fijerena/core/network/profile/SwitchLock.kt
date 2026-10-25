@@ -4,7 +4,7 @@ package org.njarasoa.fijerena.core.network.profile
  * The child lock (the settings flow review plan, SF-D6 to SF-D9): a device that uses a child
  * profile leaves it only after an Expert's PIN, while at least one Expert has a PIN. A switch to
  * another child asks it too; picking the same child asks nothing. With no Expert PIN, there is no
- * lock.
+ * lock. Off while [ON] is false.
  */
 sealed interface SwitchLock {
     /** The switch needs no PIN. */
@@ -19,6 +19,13 @@ sealed interface SwitchLock {
     data object Refused : SwitchLock
 
     companion object {
+        /**
+         * Whether the lock applies. Off since 2026-10-24: the user put it on hold, as asking a PIN
+         * to leave a child profile needs more thought. While off, no switch asks a PIN and the
+         * texts about the lock don't show; the code stays for when it comes back.
+         */
+        const val ON = false
+
         /**
          * The lock on a switch from [activeId] to [targetId]. [profileIds] are every profile, oldest
          * first, or null when they could not be read; [isChild] and [isAdminPinHolder] (Expert with

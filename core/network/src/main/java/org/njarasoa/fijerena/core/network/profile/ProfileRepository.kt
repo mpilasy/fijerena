@@ -77,22 +77,27 @@ class ProfileRepository(
     /**
      * The child lock on a switch of this device to [targetId] ([SwitchLock.of]): read from the
      * stored profiles and flags, not from a list a screen collects, which is empty until loaded.
-     * Fails closed: profiles that can't be read refuse a switch away from a child.
+     * Fails closed: profiles that can't be read refuse a switch away from a child. Always free
+     * while the lock is off ([SwitchLock.ON]).
      */
     suspend fun needsAdminPinToSwitch(targetId: String): SwitchLock =
-        withContext(Dispatchers.IO) {
-            val settings = AppSettings(context)
-            val profileIds =
-                try {
-                    dao.getAll().map { it.id }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Profiles not read for the child lock", e)
-                    null
+        if (!SwitchLock.ON) {
+            SwitchLock.Free
+        } else {
+            withContext(Dispatchers.IO) {
+                val settings = AppSettings(context)
+                val profileIds =
+                    try {
+                        dao.getAll().map { it.id }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Profiles not read for the child lock", e)
+                        null
+                    }
+                SwitchLock.of(settings.activeProfileId, targetId, profileIds, settings::isChildProfile) {
+                    settings.devMode(it) && settings.pinHash(it) != null
                 }
-            SwitchLock.of(settings.activeProfileId, targetId, profileIds, settings::isChildProfile) {
-                settings.devMode(it) && settings.pinHash(it) != null
             }
         }
 

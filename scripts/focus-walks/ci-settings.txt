@@ -104,7 +104,7 @@ DOWN	Content Filters / Hide categories by prefix
 DOWN	Content Filters / Hide categories by prefix
 LEFT	Admin / Using on this device
 DOWN	Guest
-# Kid's page (a child profile, not in use): no Expert Mode row; Set a PIN (no Expert has one),
+# Kid's page (a child profile, not in use): no Expert Mode row (no Set a PIN while the child lock is off),
 # Favourites, Content Filters, Parental Controls, Switch to this profile, Delete profile (never
 # pressed).
 DOWN	Kid
@@ -117,7 +117,6 @@ DOWN	Look and Feel
 DOWN	Poster in the Background
 DOWN	Play Next Episode Automatically
 DOWN	Child Profile / On TV, Home shows only the favourites
-DOWN	Set a PIN / No PIN is set
 DOWN	Favourites / What this child sees on Home
 DOWN	Content Filters / Hide categories by prefix
 DOWN	Parental Controls / The household's word lists

@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
+import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
@@ -181,7 +182,7 @@ internal fun ProfileAddDialog(
                     onCheckedChange = { child = it },
                     summary = stringResource(R.string.profile_child_desc_phone),
                 )
-                if (child && noAdminPin) {
+                if (SwitchLock.ON && child && noAdminPin) {
                     CinemaText(stringResource(R.string.profile_child_no_pin_warning), tone = TextTone.Danger)
                 }
             }

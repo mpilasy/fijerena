@@ -81,7 +81,6 @@ class SettingsProfilesFocusTest {
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
             down("Child Profile / On TV, Home shows only the favourites"),
-            down("Set a PIN / No PIN is set"),
             down("Favourites / What this child sees on Home"),
             down("Sources / 1 of 2"),
             down("Content Filters / Hide categories by prefix (e.g., 'Adult', 'XXX') / Source One"),

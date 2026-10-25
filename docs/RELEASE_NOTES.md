@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Child lock off for now:** leaving a child profile no longer asks an Expert's PIN, on TV and phone. The lock needs more thought and will come back in another form.
 - **Resume after Back from the player:** a film's page showed plain Play (or the old resume time) after you stopped watching, until you left the page and opened it again. It now shows "Resume from" with the new time at once. A show's page could do the same after a quick Back. TV and phone.
 - **Diagnostics: less noise:** when Android does not let a background sync show its notification, the sync still runs, and Diagnostics no longer lists it as an error.
 

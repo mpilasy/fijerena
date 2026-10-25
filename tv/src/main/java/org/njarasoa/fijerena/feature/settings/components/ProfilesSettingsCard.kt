@@ -54,6 +54,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
+import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -609,7 +610,7 @@ fun ProfileEditPane(
                         modifier = Modifier.focusRequester(childFocus),
                     )
                     // No Expert has a PIN, so the child lock does nothing: the admin in use sets one here.
-                    if (child && viewModel.adminPinHolders().isEmpty()) {
+                    if (SwitchLock.ON && child && viewModel.adminPinHolders().isEmpty()) {
                         SettingsRow(
                             title = stringResource(R.string.profile_child_set_pin),
                             description = stringResource(R.string.profile_child_no_pin_warning),
@@ -804,7 +805,7 @@ fun ProfileEditPane(
                 text =
                     listOfNotNull(
                         stringResource(R.string.profile_pin_remove_confirm_text),
-                        if (lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
+                        if (SwitchLock.ON && lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
                     ).joinToString(" "),
                 confirmText = stringResource(R.string.profile_pin_remove),
                 onConfirm = {
@@ -968,7 +969,7 @@ internal fun ProfileAddDialog(
                     description =
                         listOfNotNull(
                             stringResource(R.string.profile_child_desc),
-                            if (child && noAdminPin) stringResource(R.string.profile_child_no_pin_warning) else null,
+                            if (SwitchLock.ON && child && noAdminPin) stringResource(R.string.profile_child_no_pin_warning) else null,
                         ).joinToString("\n"),
                     modifier = Modifier.focusProperties { down = saveFocusRequester },
                 )
