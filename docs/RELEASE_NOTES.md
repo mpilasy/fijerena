@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Text & Grid Size stays on its device:** like the language, a settings export no longer includes it and a restore no longer changes it. TV.
+
 ## Version: 0.8.2
 
 - **Device settings for Experts only:** Language, Text & Grid Size, Items in Recent and Add a Channel to Recent After change the whole device, so only an Expert sees them now, and an Expert with a PIN types it first. Other grown-ups still reach their own Theme, Look and Feel and Play Next Episode from Display and Playback. TV and phone.

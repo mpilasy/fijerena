@@ -137,8 +137,10 @@ class SettingsExportManager(
         // the import then leaves it alone.
         @EncodeDefault(EncodeDefault.Mode.NEVER)
         val uiStyleId: String? = null,
-        /** Null: Auto (the TV works it out from its screen). Missing in an older export: 100%. */
-        val uiScale: Float? = 1.0f,
+        // Text & grid size is this device's, like the language: an older file's is read and
+        // ignored, a new file leaves it out.
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val uiScale: Float? = null,
         val isDevMode: Boolean = false,
         // The retired device-wide guide auto-refresh switch: read from an older file only (see
         // importedRefreshIntervalHours), never written — null, and then left out of the file, so
@@ -306,7 +308,6 @@ class SettingsExportManager(
                 GlobalSettings(
                     themeId = appSettings.themeId,
                     uiStyleId = appSettings.uiStyleId,
-                    uiScale = appSettings.uiScaleChoice,
                     isDevMode = appSettings.isDevMode,
                     cellularLiveMultiplier = appSettings.cellularLiveMultiplier,
                     cellularVodMultiplier = appSettings.cellularVodMultiplier,
@@ -567,7 +568,6 @@ class SettingsExportManager(
                     val appSettings = AppSettings(context)
                     appSettings.themeId = exported.global.themeId
                     exported.global.uiStyleId?.let { appSettings.uiStyleId = it }
-                    appSettings.uiScaleChoice = exported.global.uiScale
                     // A child is never Expert, whatever the file says.
                     appSettings.isDevMode = exported.global.isDevMode && !appSettings.isChildProfile(appSettings.activeProfileId)
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
