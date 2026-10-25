@@ -416,6 +416,9 @@ internal fun StreamList(
             return@LaunchedEffect
         }
         if (focusTargetId != null && focusTargetId != lastFocusedItemId && focusTargetIndex != -1) {
+            // The playing channel moved to the top of Recent (the live recent order plan): its row
+            // is still composed above the view, and focusing it alone would not scroll it in.
+            if (focusTargetIndex == 0) listState.scrollToItem(0)
             // Only mark handled on success, so a failed attempt (e.g. still racing
             // composition) gets another go when the effect's keys change instead of being
             // silently given up on forever.

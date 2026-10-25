@@ -1,6 +1,6 @@
 # Live TV Recent: newest first, playing on top
 
-**Status:** In progress 2026-10-25.
+**Status:** Done 2026-10-25: built (9f271e73, 9d022ad1) and walked on the TV emulator.
 
 ## Goal
 
@@ -46,6 +46,18 @@ when the channel changes, never while you scroll. Agreed with the user 2026-10-2
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Core | In progress | |
-| 2. TV | Not started | |
-| 3. Docs | Not started | |
+| 1. Core | Done | 9f271e73 |
+| 2. TV | Done, walked on the TV emulator | 9d022ad1 |
+| 3. Docs | Done | |
+
+## Done notes
+
+- **Scroll:** a row moved to the top of Recent stayed composed above the view, so the focused
+  playing row was clipped; `StreamList` scrolls to the top first when its focus target is row 0.
+- **Walk (2026-10-25, TV emulator):** the preview opened on CNN PT at the top; OK on the fourth row
+  (Al Jazeera) put it at the top, focused and in view, with the channel before it second; in full
+  screen Down, Down, Down, Up walked the fixed order and the slid-in panel showed the playing
+  channel first, the same order as the docked panel; the Live TV list behind showed newest first.
+  A channel zapped to and left within 60 s stays where its last write put it, as designed.
+- **VOD sections:** their Recent was never frozen (repository order); the stale read fix reaches
+  them too.
