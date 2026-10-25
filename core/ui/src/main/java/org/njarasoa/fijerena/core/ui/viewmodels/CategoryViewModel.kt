@@ -460,10 +460,6 @@ class CategoryViewModel(
     // The selected category's source (0 for a virtual list): its rows, guide and Refresh are its.
     private var currentCategorySource: Long = 0L
 
-    // Live TV's Recent keeps its order for the visit (the tv recents favorites plan
-    // → B): the row ids in display order, removed ones included so an Undo puts a row back in its
-    // place. Reset on Refresh and when the section is entered again ([reloadRecentOnEntry]).
-    private var liveRecentOrder: List<String> = emptyList()
     private var isInitialLoad = true
     private var initialLoadRetried = false
     private var categoriesRetried = false
@@ -540,7 +536,6 @@ class CategoryViewModel(
         MergedLists.xtreamSourceIdChanges(container, appSettings.activeProfileId).collect { ids ->
             if (ids != builtOn.filterNotNull().first()) {
                 repositoryJob?.cancel()
-                liveRecentOrder = emptyList()
                 repositoryJob = startRepository()
             }
         }
@@ -801,7 +796,7 @@ class CategoryViewModel(
             when (categoryId) {
                 // Every source of the profile's (Phase 4).
                 RECENT_CATEGORY_ID -> {
-                    emitStreams(inRecentOrder(awaitMerged().refreshRecentItems(contentType)))
+                    emitStreams(awaitMerged().refreshRecentItems(contentType))
                     loadNowPlaying(currentStreams)
                     true
                 }
@@ -1248,11 +1243,11 @@ class CategoryViewModel(
         }
     }
 
-    /** Recent on screen after a removal, an Undo or a clear: the sources' lists, in place for Live TV. */
+    /** Recent on screen after a removal, an Undo or a clear: the sources' lists, newest first. */
     private fun showRecentChange(merged: MergedLists) {
         val currentState = _uiState.value
         if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
-            val updatedStreams = inRecentOrder(merged.publishedRecent(contentType).onSources(sourceId))
+            val updatedStreams = merged.publishedRecent(contentType).onSources(sourceId)
             currentStreams = updatedStreams
             _uiState.value =
                 currentState.copy(
@@ -1263,21 +1258,9 @@ class CategoryViewModel(
     }
 
     /**
-     * Live TV's Recent in the order it had on screen this visit (new rows first); other sections'
-     * Recent as the repository orders it.
-     */
-    private fun inRecentOrder(items: List<MediaItem>): List<MediaItem> =
-        if (contentType == ContentType.LIVE_TV) {
-            liveRecentOrder = items.stableOrder(liveRecentOrder)
-            items.inStableOrder(liveRecentOrder)
-        } else {
-            items
-        }
-
-    /**
      * The Live TV section entered again (back from another section, Home, the TV Guide or Search):
-     * Recent on screen reloads in the repository's order, last watched first. Not on returning from
-     * the preview layer, which keeps the order ([loadStreams] on Recent). The rows are replaced
+     * Recent on screen reloads, last watched first (closing the preview layer reloads it through
+     * [loadStreams] on Recent). The rows are replaced
      * in place, with no loading state: the screen's own focus hand-back (a header button, a row)
      * has already run on the list it found.
      */
@@ -1288,7 +1271,6 @@ class CategoryViewModel(
             viewModelScope.launchGuarded("CategoryViewModel.reloadRecentOnEntry") {
                 val merged = awaitMerged()
                 merged.refreshRecentItems(contentType)
-                liveRecentOrder = emptyList()
                 showRecentChange(merged)
             }
         }
@@ -1483,8 +1465,6 @@ class CategoryViewModel(
 
     /** Reloads [categoryId]: the selected category's source when it is the selected one. */
     fun refreshStreams(categoryId: String) {
-        // Refresh is the viewer asking for the current truth: Recent re-sorts.
-        if (categoryId == RECENT_CATEGORY_ID) liveRecentOrder = emptyList()
         val source = if (categoryId == currentCategoryId) currentCategorySource else 0L
         loadStreamsJob?.cancel()
         nowPlayingJob?.cancel()

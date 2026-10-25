@@ -81,7 +81,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.isSameChannel
-import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.belowTvClock
@@ -276,15 +275,10 @@ internal fun LiveTvSplitLayout(
             }
         }
 
-    // Bumped by the panel's own refresh action — the viewer asking for current truth, and so the
-    // one place the frozen order below is allowed to re-sort.
-    var recentOrderResetTick by remember { mutableStateOf(0) }
+    // Newest first, as the repository orders it (docs/plans/20261025_live-recent-order-plan.md): the
+    // order changes only when a channel is written, which follows a change of channel.
     val publishedRecentStreams by categoryViewModel.recentItems.collectAsStateWithLifecycle()
-    // Held in display order: a channel previewed past the watch delay is recorded while this
-    // panel is on screen, and promoting it to the top live would shift every row under the
-    // viewer's cursor.
-    val recentStreams =
-        rememberStableRecentOrder(publishedRecentStreams.orEmpty(), resetKey = recentOrderResetTick)
+    val recentStreams = publishedRecentStreams.orEmpty()
     var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
@@ -303,8 +297,8 @@ internal fun LiveTvSplitLayout(
     LaunchedEffect(target?.sourceKey) {
         target?.let { currentOnPlayingChannel(it.id, it.sourceOr(listSource)) }
     }
-    // INCLUDE keeps the current channel reachable even before the delayed history write lands,
-    // so there's always a row to OK-press for promote, and a zap neighbour. Not done for
+    // FIRST: the channel playing is the most recent, so it is the top row, also before its delayed
+    // write lands — there's always a row to OK-press for promote, and a zap neighbour. Not done for
     // Favorites — there it's expected the current channel may simply not be one, same as any
     // other list the user browses to. Remembered, not built inline: an unremembered wrapper
     // hands StreamList a new `streams` identity on every recomposition of this screen, which
@@ -312,9 +306,13 @@ internal fun LiveTvSplitLayout(
     // visible row and, with it, a per-frame invalidateMeasurement loop.
     val recentWithCurrent =
         remember(recentStreams, target?.sourceKey) {
-            ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE, listSource))
+            ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.FIRST, listSource))
         }
     val favoriteList = remember(favoriteStreams) { ImmutableMediaList(favoriteStreams) }
+    // Up/Down in full screen walk the list as it was at the first zap: with the playing channel on
+    // top of Recent, the live list would send Down back to the channel just left. Taken again
+    // after a pick, a tab change, or leaving full screen.
+    var zapOrder by remember(channelContext, fullScreen) { mutableStateOf<List<MediaItem>?>(null) }
 
     fun streamsOf(tab: ChannelContext): ImmutableMediaList? =
         when (tab) {
@@ -336,10 +334,7 @@ internal fun LiveTvSplitLayout(
             }
 
             ChannelContext.Recent -> {
-                composableScope.launch {
-                    categoryViewModel.refreshRecentItems()
-                    recentOrderResetTick++
-                }
+                composableScope.launch { categoryViewModel.refreshRecentItems() }
             }
 
             ChannelContext.Favorites -> {
@@ -699,6 +694,7 @@ internal fun LiveTvSplitLayout(
                                 // the SAME loader/engine. A channel of another source gets its own
                                 // loader, which starts on it.
                                 previewTarget = newItem
+                                zapOrder = null
                                 if (newItem.sourceOr(listSource) == targetSource) loader.loadStream(newItem)
                                 close()
                             },
@@ -709,13 +705,17 @@ internal fun LiveTvSplitLayout(
                     }
                 },
                 onNextChannel = {
-                    neighborChannel(contextStreams, target, +1, listSource)?.let { newItem ->
+                    val order = zapOrder ?: contextStreams
+                    zapOrder = order
+                    neighborChannel(order, target, +1, listSource)?.let { newItem ->
                         previewTarget = newItem
                         loader.loadStream(newItem, zapped = true)
                     }
                 },
                 onPreviousChannel = {
-                    neighborChannel(contextStreams, target, -1, listSource)?.let { newItem ->
+                    val order = zapOrder ?: contextStreams
+                    zapOrder = order
+                    neighborChannel(order, target, -1, listSource)?.let { newItem ->
                         previewTarget = newItem
                         loader.loadStream(newItem, zapped = true)
                     }
