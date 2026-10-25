@@ -28,7 +28,8 @@ kid; an **Expert** is a grown-up with Expert mode on.
 - **PR-6 A grown-up that is not an Expert makes a profile a kid only when adding it.** On an
   existing profile, Child Profile stays on its page, for an Expert only. *Holds today* for existing
   profiles.
-- **PR-7 Only an Expert turns Child Profile off.** *Holds today* (the switch is Expert-only).
+- **PR-7 Only an Expert turns Child Profile off.** A kid never turns off its own Child Profile.
+  *Holds today* (the switch is Expert-only, and a kid is never Expert: PR-8).
 - **PR-8 A kid is never an Expert.** *Holds today* for a change made on the device
   (`ProfileRepository`); *change:* also when live sync or a backup restore brings a profile in.
 
