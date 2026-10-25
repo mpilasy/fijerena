@@ -1,6 +1,6 @@
 # TV clock and Recent on full screen
 
-**Status:** Done 2026-10-25: built (5addcd81, f1192e0b) and walked on both emulators. The clock was not checked for a child profile.
+**Status:** Done 2026-10-25: built (5addcd81, f1192e0b) and walked on both emulators. The clock shows for every profile (CL-D6).
 
 ## Goal
 
@@ -19,8 +19,8 @@
 - **CL-D5 Show Clock (user, 2026-10-25):** the clock is a device setting in This Device, off by
   default (many phones show the time all the time), on TV and phone; the player's controls keep
   their clock whatever the setting.
-- **Not asked:** a child profile's Home has had no clock since the kids' Home plan; the clock
-  stays off for a child profile.
+- **CL-D6 Every profile (user, 2026-10-25):** Show Clock applies to every profile on the device,
+  a child profile's included (at first it was off for a child profile, not asked).
 
 ## Phases
 
@@ -50,7 +50,7 @@
   over the screens and under the rail, `HideTvClock` in `PlayerScreen` (the player route and Live TV
   full screen), and `TvClockText`, which the controls' clock now uses too. `clearOfTvClock` moves
   `TvScreenHeader`'s buttons and Home's header row left; `belowTvClock` moves the preview's channel
-  list and the details page's side card down. Home's clock went. Off for a child profile.
+  list and the details page's side card down. Home's clock went.
 - **Walks (2026-10-25):** TV: the clock on the profile picker, Home, a film's page, Live TV's list
   (header buttons moved left), the preview (channel list moved down); full screen shows the
   controls' clock only, at the same place. CNN PT went into Recent 3 s after the preview started

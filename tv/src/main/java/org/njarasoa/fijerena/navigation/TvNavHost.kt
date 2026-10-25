@@ -171,13 +171,10 @@ fun TvNavHost(
     // The profile in use has Expert mode: only then does it add sources (Home's Add Source, the gate below).
     val expert by remember { appSettings.observeDevMode().map { it.second } }
         .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
-    // The clock over every screen, when this device's Show Clock is on; a child profile's screens
-    // have none (as its Home had none).
+    // The clock over every screen, for every profile, when this device's Show Clock is on.
     val clock = remember { TvClockState() }
-    val child by remember { appSettings.observeActiveProfileId().map { appSettings.isChildProfile(it) } }
-        .collectAsStateWithLifecycle(initialValue = appSettings.isChildProfile(appSettings.activeProfileId))
     val showClock by remember { appSettings.observeShowClock() }.collectAsStateWithLifecycle(initialValue = appSettings.showClock)
-    LaunchedEffect(child, showClock) { clock.off = child || !showClock }
+    LaunchedEffect(showClock) { clock.off = !showClock }
     val coroutineScope = rememberCoroutineScope()
 
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }

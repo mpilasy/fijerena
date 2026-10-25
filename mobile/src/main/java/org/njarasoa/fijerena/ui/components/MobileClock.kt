@@ -59,7 +59,7 @@ import java.util.Date
 class MobileClockState {
     private var hideCount by mutableIntStateOf(0)
 
-    /** Off for the whole app: the setting is off, or the profile is a child's. */
+    /** Off for the whole app: Show Clock is off. */
     var off by mutableStateOf(false)
 
     /** The clock's drawn width, for [mobileClockTopBarInsets]. */

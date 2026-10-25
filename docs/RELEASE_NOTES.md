@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Show Clock for every profile:** with Show Clock on, a child profile's screens show the clock too; it is this device's setting, for every profile on it. TV and phone.
+
 ## Version: 0.8.4
 
 - **Live TV's Recent in one order:** Recent is now newest first everywhere on TV, and the channel playing is always the top row of the preview's list and of the panel over full screen. It no longer keeps an older order while you are in Live TV, which made the playing channel's place look random. Up/Down in full screen walk the list as it was when you started zapping. Recent also no longer shows an old order just after a channel was added. TV.

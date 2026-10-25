@@ -44,7 +44,7 @@ import java.util.Date
 class TvClockState {
     private var hideCount by mutableIntStateOf(0)
 
-    /** Off for the whole app, e.g. for a child profile. */
+    /** Off for the whole app: Show Clock is off. */
     var off by mutableStateOf(false)
 
     /** The clock's drawn width and height, for [clearOfTvClock] and [belowTvClock]. */

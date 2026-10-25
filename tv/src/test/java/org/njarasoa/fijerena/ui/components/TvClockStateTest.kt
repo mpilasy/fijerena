@@ -4,7 +4,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The screens' clock shows unless full-screen playback hides it or the profile is a child's. */
+/** The screens' clock shows unless full-screen playback hides it or Show Clock is off. */
 class TvClockStateTest {
     private val clock = TvClockState()
 
@@ -24,7 +24,7 @@ class TvClockStateTest {
     }
 
     @Test
-    fun `a child profile has no clock`() {
+    fun `Show Clock off hides the clock`() {
         clock.off = true
         assertFalse(clock.visible)
     }
