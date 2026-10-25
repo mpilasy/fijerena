@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.HideTvClock
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.player.components.BufferingContent
 import org.njarasoa.fijerena.ui.player.components.EndedContent
@@ -134,6 +135,8 @@ fun PlayerScreen(
     // Live TV: the OSD's Start over, the programme on air from its start. Null leaves it out.
     onStartOver: (() -> Unit)? = null,
 ) {
+    // Full screen: the controls have their own clock, so the screens' clock goes.
+    HideTvClock()
     // Over video: dark in every theme (ProvideMediaTheme).
     TvMediaTheme {
         val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()

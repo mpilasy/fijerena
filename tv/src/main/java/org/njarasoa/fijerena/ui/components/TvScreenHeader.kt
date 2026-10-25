@@ -85,6 +85,7 @@ fun TvScreenHeader(
             }
         }
         Row(
+            modifier = Modifier.clearOfTvClock(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
             content = actions,

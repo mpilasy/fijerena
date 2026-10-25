@@ -84,6 +84,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.isSameChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.belowTvClock
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.player.components.overlays.TvTuningOverlay
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -400,7 +401,8 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = onStreamSelected,
                 onStreamPromote = { item -> previewTarget = item },
                 onRefresh = refreshContext,
-                modifier = Modifier.weight(0.34f).fillMaxHeight(),
+                // Its tab row starts under the screens' clock.
+                modifier = Modifier.weight(0.34f).fillMaxHeight().belowTvClock(),
             )
         }
         return
@@ -870,7 +872,8 @@ internal fun LiveTvSplitLayout(
                         fullScreen = true
                     }
                 },
-                modifier = Modifier.weight(0.34f).fillMaxHeight(),
+                // Its tab row starts under the screens' clock.
+                modifier = Modifier.weight(0.34f).fillMaxHeight().belowTvClock(),
             )
         }
     }

@@ -32,6 +32,18 @@
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Recent on full screen | Done | |
-| 2. TV clock | In progress | |
+| 1. Recent on full screen | Done | 5addcd81 |
+| 2. TV clock | Built, not walked | |
 | 3. Docs | Not started | |
+
+## Done notes
+
+- **Phase 1:** `RecentWrite` (in `StreamLoaderViewModel.kt`) holds the delayed write; `now()` writes
+  it at once, or makes the next load write at once when it is not scheduled yet. TV calls it after
+  the full load that promotes the preview; the phone on a tap on the docked video. A channel the
+  preview already wrote is written again (it moves to the front of Recent).
+- **Phase 2:** `TvClock.kt`: `TvClockState` in `LocalTvClock`, `TvClockOverlay` drawn by `TvNavHost`
+  over the screens and under the rail, `HideTvClock` in `PlayerScreen` (the player route and Live TV
+  full screen), and `TvClockText`, which the controls' clock now uses too. `clearOfTvClock` moves
+  `TvScreenHeader`'s buttons and Home's header row left; `belowTvClock` moves the preview's channel
+  list and the details page's side card down. Home's clock went. Off for a child profile.

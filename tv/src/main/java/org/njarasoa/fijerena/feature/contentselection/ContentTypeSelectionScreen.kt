@@ -172,7 +172,6 @@ import org.njarasoa.fijerena.core.ui.wanted.toAnnounce
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.MinimalBringIntoView
 import org.njarasoa.fijerena.feature.category.components.RowMenuList
-import org.njarasoa.fijerena.feature.contentselection.components.HomeClock
 import org.njarasoa.fijerena.feature.contentselection.components.SourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
@@ -187,6 +186,7 @@ import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.clearOfTvClock
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -1057,7 +1057,6 @@ fun ContentTypeSelectionScreen(
                             CinemaText(text = childProfile.name, role = TextRole.Title)
                         } else if (!child) {
                             CinemaText(text = stringResource(R.string.login_app_name), role = TextRole.Title)
-                            HomeClock()
                         }
                     }
                     if (!child) {
@@ -1069,6 +1068,7 @@ fun ContentTypeSelectionScreen(
                                 Modifier
                                     .weight(1f)
                                     .padding(start = Spacing.md)
+                                    .clearOfTvClock()
                                     .then(
                                         if (firstRowFocus == null) {
                                             Modifier

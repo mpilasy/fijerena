@@ -100,6 +100,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.TvClockText
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
@@ -305,7 +306,7 @@ fun TvPlayerControlsOverlay(
                         ).padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             ) {
                 // Self-ticking so only this leaf recomposes each second.
-                ClockDisplay(modifier = Modifier.align(Alignment.TopEnd))
+                TvClockText(modifier = Modifier.align(Alignment.TopEnd))
 
                 Column(
                     modifier = Modifier.align(Alignment.TopStart),
@@ -841,17 +842,3 @@ private fun Modifier.moveFocusOn(
     } else {
         onPreviewKeyEvent { event -> event.type == KeyEventType.KeyDown && event.key == key && target.requestFocus() }
     }
-
-@Composable
-private fun ClockDisplay(modifier: Modifier = Modifier) {
-    var tick by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            tick = System.currentTimeMillis()
-            delay(1000L)
-        }
-    }
-    @Suppress("UNUSED_VARIABLE")
-    val ignored = tick // Read to trigger recomposition
-    CinemaText(text = TimeFormat.formatClockTime(Date(tick)), role = TextRole.Heading, modifier = modifier)
-}

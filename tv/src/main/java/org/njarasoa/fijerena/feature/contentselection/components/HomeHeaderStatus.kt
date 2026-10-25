@@ -60,19 +60,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
-import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-import java.util.Date
-
-/** Home's clock, in the system's 12/24 h format. */
-@Composable
-fun HomeClock(modifier: Modifier = Modifier) {
-    val now = rememberMinuteTick()
-    CinemaText(text = TimeFormat.formatClockTime(Date(now)), role = TextRole.Title, tone = TextTone.Secondary, modifier = modifier)
-}
 
 /**
  * Home's one line for all the profile's sources (O3): a dot and "Updated 2 hours ago" /

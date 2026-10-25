@@ -90,6 +90,9 @@ import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
 import org.njarasoa.fijerena.feature.wanted.TmdbTitleScreen
+import org.njarasoa.fijerena.ui.components.LocalTvClock
+import org.njarasoa.fijerena.ui.components.TvClockOverlay
+import org.njarasoa.fijerena.ui.components.TvClockState
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.rail.HideTvNavRail
 import org.njarasoa.fijerena.ui.components.rail.LocalTvNavRail
@@ -168,6 +171,11 @@ fun TvNavHost(
     // The profile in use has Expert mode: only then does it add sources (Home's Add Source, the gate below).
     val expert by remember { appSettings.observeDevMode().map { it.second } }
         .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
+    // The clock over every screen; a child profile's screens have none (as its Home had none).
+    val clock = remember { TvClockState() }
+    val child by remember { appSettings.observeActiveProfileId().map { appSettings.isChildProfile(it) } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isChildProfile(appSettings.activeProfileId))
+    LaunchedEffect(child) { clock.off = child }
     val coroutineScope = rememberCoroutineScope()
 
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
@@ -576,7 +584,11 @@ fun TvNavHost(
         shape = RectangleShape,
     ) {
         if (initializationComplete && startDestination != null) {
-            CompositionLocalProvider(LocalTvNavRail provides rail, LocalOpenWanted provides { navController.navigateOnce(it) }) {
+            CompositionLocalProvider(
+                LocalTvNavRail provides rail,
+                LocalTvClock provides clock,
+                LocalOpenWanted provides { navController.navigateOnce(it) },
+            ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     NavHost(
                         navController = navController,
@@ -1223,6 +1235,8 @@ fun TvNavHost(
                             navController.navigate(Screen.AddProvider())
                         }
                     }
+                    // Over the screen, under the rail's scrim.
+                    TvClockOverlay(clock)
                     // After the NavHost, so it draws over the screen and its scrim covers it.
                     TvSectionRail(
                         rail = rail,

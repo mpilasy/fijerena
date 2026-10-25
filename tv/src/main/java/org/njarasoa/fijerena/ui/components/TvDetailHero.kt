@@ -198,7 +198,8 @@ fun TvDetailHero(
                     modifier =
                         Modifier
                             .align(Alignment.TopEnd)
-                            .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical),
+                            .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical)
+                            .belowTvClock(),
                 ) {
                     sideSlot()
                 }
