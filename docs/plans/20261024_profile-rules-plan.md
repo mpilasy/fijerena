@@ -1,7 +1,7 @@
 # Profile rules
 
 **Status:** Planned 2026-10-24. Rules PR-1 to PR-9 and decisions PR-D1, PR-D2 taken by the user.
-Not started.
+In progress: Phases 1–4 and the route part of 5 run in three parallel lanes (A: 1–2, B: 3 and the route, C: 4); docs last.
 
 ## Goal
 
@@ -98,8 +98,8 @@ these rules do not depend on it.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. Rules and checks | Not started | |
-| 2. Add Profile for grown-ups | Not started | |
-| 3. 7 taps | Not started | |
-| 4. Sync and restore | Not started | |
-| 5. Phone page route and docs | Not started | |
+| 1. Rules and checks | In progress | |
+| 2. Add Profile for grown-ups | In progress | |
+| 3. 7 taps | In progress | |
+| 4. Sync and restore | In progress | |
+| 5. Phone page route and docs | In progress | |
