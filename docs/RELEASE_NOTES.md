@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.2
 
 - **Device settings for Experts only:** Language, Text & Grid Size, Items in Recent and Add a Channel to Recent After change the whole device, so only an Expert sees them now, and an Expert with a PIN types it first. Other grown-ups still reach their own Theme, Look and Feel and Play Next Episode from Display and Playback. TV and phone.
 - **Who may change a profile:** any grown-up profile can now add a profile, with no PIN (name, colour, Child Profile; never Expert): on TV at the end of its own page, on the phone under its own row. The profile picker no longer has Add Profile. Only an Expert changes another profile, deletes one, makes one Expert, or turns Child Profile on or off on an existing profile; a kid changes only its own look and Play Next Episode. These rules are now checked by the app itself, not only by hiding buttons. TV and phone.
