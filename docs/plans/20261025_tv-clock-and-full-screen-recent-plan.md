@@ -1,6 +1,6 @@
 # TV clock and Recent on full screen
 
-**Status:** In progress 2026-10-25.
+**Status:** Done 2026-10-25: built (5addcd81, f1192e0b) and walked on both emulators. The clock was not checked for a child profile.
 
 ## Goal
 
@@ -33,8 +33,8 @@
 | Phase | Status | Commit |
 |---|---|---|
 | 1. Recent on full screen | Done | 5addcd81 |
-| 2. TV clock | Built, not walked | |
-| 3. Docs | Not started | |
+| 2. TV clock | Done, walked on the TV emulator | f1192e0b |
+| 3. Docs | Done | |
 
 ## Done notes
 
@@ -47,3 +47,7 @@
   full screen), and `TvClockText`, which the controls' clock now uses too. `clearOfTvClock` moves
   `TvScreenHeader`'s buttons and Home's header row left; `belowTvClock` moves the preview's channel
   list and the details page's side card down. Home's clock went. Off for a child profile.
+- **Walks (2026-10-25):** TV: the clock on the profile picker, Home, a film's page, Live TV's list
+  (header buttons moved left), the preview (channel list moved down); full screen shows the
+  controls' clock only, at the same place. CNN PT went into Recent 3 s after the preview started
+  (watch delay 10 s). Phone: France 24 went into Recent 3 s after it docked.

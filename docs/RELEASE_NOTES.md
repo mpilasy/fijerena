@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A clock on every TV screen:** the time now shows at the top right of every screen but full-screen playback, at the same place as in the player's controls, the Live TV preview included. Home's clock next to the app name went. Not for a child profile. TV.
 - **Full screen adds to Recent at once:** a live channel opened full screen from the Live TV preview goes into Recent straight away, without waiting for the watch delay. The delay still applies to the preview and to channel changes. TV and phone.
 
 ## Version: 0.8.3
