@@ -42,6 +42,7 @@ data class SettingsUiState(
     val isChildProfile: Boolean = false,
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
+    val showClock: Boolean = false,
     val recentRowSize: Int = AppSettings.DEFAULT_WATCH_HISTORY_SIZE,
     /** TV's Text & grid size as picked; null: Auto. */
     val uiScale: Float? = null,
@@ -73,6 +74,7 @@ class SettingsViewModel(
                 isChildProfile = appSettings.isChildProfile(appSettings.activeProfileId),
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
+                showClock = appSettings.showClock,
                 recentRowSize = appSettings.recentRowSize,
                 uiScale = appSettings.uiScaleChoice,
                 lastShrinkAtMs = appSettings.lastShrinkAtMs,
@@ -172,6 +174,12 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(watchDelaySeconds = seconds)
     }
 
+    fun updateShowClock(show: Boolean) {
+        if (!appSettings.isDevMode) return
+        appSettings.showClock = show
+        _uiState.value = _uiState.value.copy(showClock = show)
+    }
+
     fun updateRecentRowSize(size: Int) {
         if (!appSettings.isDevMode) return
         appSettings.recentRowSize = size
@@ -207,6 +215,7 @@ class SettingsViewModel(
                             uiStyleId = appSettings.uiStyleId,
                             isDevMode = appSettings.isDevMode,
                             language = appSettings.language,
+                            showClock = appSettings.showClock,
                             watchDelaySeconds = appSettings.watchDelaySeconds,
                             recentRowSize = appSettings.recentRowSize,
                             uiScale = appSettings.uiScaleChoice,

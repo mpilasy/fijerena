@@ -72,6 +72,7 @@ class AppSettings(
         private const val KEY_AUTO_XMLTV_SOURCES_CLEANED = "auto_xmltv_sources_cleaned_v1"
         private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
+        private const val KEY_SHOW_CLOCK = "show_clock"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LAST_TAB = "last_tab"
@@ -854,6 +855,23 @@ class AppSettings(
             val clamped = value.coerceIn(MIN_WATCH_DELAY_SECONDS, MAX_WATCH_DELAY_SECONDS)
             prefs.edit { putInt(KEY_WATCH_DELAY_SECONDS, clamped) }
         }
+
+    /**
+     * The screens' clock at the top right (docs/plans/20261025_tv-clock-and-full-screen-recent-plan.md).
+     * This device's: not per profile, not synced, not exported. Off by default: many phones show
+     * the time all the time. The player's controls always show it.
+     */
+    var showClock: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_CLOCK, false)
+        set(value) = prefs.edit { putBoolean(KEY_SHOW_CLOCK, value) }
+
+    fun observeShowClock(): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(showClock) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(showClock)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
 
     /**
      * Cached flag for whether at least one provider exists.

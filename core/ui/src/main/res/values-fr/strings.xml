@@ -972,6 +972,8 @@
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
     <string name="settings_watch_delay_row_title">Ajouter une chaîne aux Récents après</string>
+    <string name="settings_show_clock_title">Afficher l\'heure</string>
+    <string name="settings_show_clock_desc">L\'heure en haut à droite de chaque écran. Le lecteur l\'affiche toujours.</string>
     <string name="settings_language_desc">Langue des menus et des messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->

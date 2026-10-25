@@ -1008,6 +1008,8 @@
     <string name="settings_seconds_short_format">%1$d s</string>
     <!-- T2 -->
     <string name="settings_watch_delay_row_title">Add a Channel to Recent After</string>
+    <string name="settings_show_clock_title">Show Clock</string>
+    <string name="settings_show_clock_desc">The time at the top right of every screen. The player always shows it.</string>
     <string name="settings_language_desc">Language for menus and messages</string>
     <!-- M3 -->
     <!-- Phase 3 -->

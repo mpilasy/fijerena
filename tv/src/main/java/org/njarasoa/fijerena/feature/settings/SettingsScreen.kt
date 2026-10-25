@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
@@ -698,6 +699,12 @@ fun SettingsScreen(
                                                         watchDelaySeconds = uiState.watchDelaySeconds,
                                                         onOpenPicker = { openPicker(SettingPicker.WATCH_DELAY) },
                                                         rowFocusRequester = returnFocus.requesterFor(SettingPicker.WATCH_DELAY.returnKey),
+                                                    )
+                                                    TvSwitchRow(
+                                                        checked = uiState.showClock,
+                                                        onCheckedChange = viewModel::updateShowClock,
+                                                        label = stringResource(R.string.settings_show_clock_title),
+                                                        description = stringResource(R.string.settings_show_clock_desc),
                                                     )
                                                 }
                                             }
