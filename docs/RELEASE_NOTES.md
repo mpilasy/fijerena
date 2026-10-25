@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.4
 
 - **Live TV's Recent in one order:** Recent is now newest first everywhere on TV, and the channel playing is always the top row of the preview's list and of the panel over full screen. It no longer keeps an older order while you are in Live TV, which made the playing channel's place look random. Up/Down in full screen walk the list as it was when you started zapping. Recent also no longer shows an old order just after a channel was added. TV.
 - **Show Clock:** a new switch in Settings → This Device (Expert only, off by default, this device's only) shows the time at the top right of every screen but full-screen playback, at the same place as in the player's controls, the TV's Live TV preview included. The player's controls still always show it. Home's clock next to the app name went. Not for a child profile. TV and phone.
