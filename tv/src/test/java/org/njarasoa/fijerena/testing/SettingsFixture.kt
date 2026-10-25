@@ -106,6 +106,8 @@ object SettingsFixture {
             "org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer" to "instance",
             "org.njarasoa.fijerena.core.network.xmltv.EpgFileManager" to "instance",
             "org.njarasoa.fijerena.core.network.tmdb.TmdbApiService" to "instance",
+            // The browse lists' CategoryViewModel reads it (TwoColumnBrowseFocusTest).
+            "org.njarasoa.fijerena.core.network.wanted.WantedTitles" to "instance",
             "org.njarasoa.fijerena.core.ui.di.AppContainer" to "instance",
             "org.njarasoa.fijerena.core.ui.sync.SyncManager" to "instance",
         ).forEach { (className, fieldName) ->
