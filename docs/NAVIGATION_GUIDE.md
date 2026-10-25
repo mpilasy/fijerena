@@ -210,7 +210,7 @@ Both hosts look up the sources on start (`initializeStartup()`: provider count, 
 | Profile picker at launch | With two or more profiles | Never (the bar's profile slot) |
 | Profile PIN (the profile in use has one, not typed this session) | Settings opens freely; its rows that change shared setup or another profile ask first (a prompt over Settings, Cancel stays on the row), and the screens they open (`isPinGuarded`) ask over an opaque screen if reached otherwise, Cancel pops back to Settings. Picking a profile asks only to leave a child profile (below) | The same; the profile menu asks only to leave a child profile |
 | Child lock (a child profile in use, an Expert has a PIN) | Any other profile picked on the picker (launch or rail avatar) or with **Switch to this profile** asks an Expert's PIN first (`TvLeaveChildPinDialog`); the prompt takes focus, Cancel or Back keeps the child with focus back on the profile picked | The same from the profile menu and a profile page (`LeaveChildPinDialog`) |
-| New source (`AddProvider()` without `editId`, `isNewSource`) | Only for a profile with Expert mode (followed live through `AppSettings.observeDevMode`): for any other the gate pops it at once, before any PIN prompt. The edit mode stays open, for the Browse sign-in. The picker has no Add profile (profile rules plan, PR-9) | The same |
+| Household setup (`isExpertOnly`: `AddProvider` new or edit, Sources, Guide Sources, Live sync, Parental controls) | Only for a profile with Expert mode (followed live through `AppSettings.observeDevMode`): for any other the gate pops it at once, before any PIN prompt; a Browse sign-in shows "Ask an admin" instead. The picker has no Add profile (profile rules plan, PR-9) | The same |
 
 ## TV Focus
 

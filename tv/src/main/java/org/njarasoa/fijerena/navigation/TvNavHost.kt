@@ -309,8 +309,15 @@ fun TvNavHost(
         coroutineScope.launch {
             when (val opening = ProfileSections.opening(context, source.providerId)) {
                 // As Home's sign-in prompt: plain navigate, the rail is leaving focus.
+                // The sign-in is the source's form, an Expert's only (PR-12): anyone else asks an admin.
                 ProfileSections.Opening.SignIn -> {
-                    navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
+                    if (expert) {
+                        navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
+                    } else {
+                        android.widget.Toast
+                            .makeText(context, R.string.browse_sign_in_ask_admin, android.widget.Toast.LENGTH_LONG)
+                            .show()
+                    }
                 }
 
                 is ProfileSections.Opening.Sections -> {

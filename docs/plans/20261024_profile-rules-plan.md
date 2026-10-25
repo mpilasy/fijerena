@@ -40,7 +40,10 @@ kid; an **Expert** is a grown-up with Expert mode on.
   sync. The screens close at once for any other profile, whatever opened them
   (`NavBackStackEntry.isExpertOnly`), and the guide search's Guide Sources button shows only to an
   Expert. Exceptions kept: any grown-up adds a profile (PR-5), and a profile changes its own name
-  (a grown-up) and colour. Left open: a non-Expert's Jellyfin sign-in opens the whole Edit Source.
+  (a grown-up) and colour.
+- **PR-12 Only an Expert adds or edits a source,** Jellyfin or any other (user, 2026-10-24): Add
+  Source and Edit Source close at once for anyone else, and a Jellyfin source a non-Expert profile
+  is not signed in to says "Ask an admin to sign it in".
 - **PR-8 A kid is never an Expert.** *Holds today* for a change made on the device
   (`ProfileRepository`); *change:* also when live sync or a backup restore brings a profile in.
 

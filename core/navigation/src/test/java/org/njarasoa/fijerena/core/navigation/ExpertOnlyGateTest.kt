@@ -27,6 +27,7 @@ class ExpertOnlyGateTest {
                 composable<Screen.SyncSettings> {}
                 composable<Screen.ParentalControls> {}
                 composable<Screen.ProfileEdit> {}
+                composable<Screen.AddProvider> {}
             }
         return nav
     }
@@ -44,6 +45,9 @@ class ExpertOnlyGateTest {
         assertTrue(expertOnly(Screen.ProviderSelection))
         assertTrue(expertOnly(Screen.SyncSettings))
         assertTrue(expertOnly(Screen.ParentalControls))
+        // Adding a source, and editing one, Jellyfin's sign-in included (PR-12).
+        assertTrue(expertOnly(Screen.AddProvider()))
+        assertTrue(expertOnly(Screen.AddProvider(editId = 4)))
     }
 
     @Test

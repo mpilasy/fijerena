@@ -52,14 +52,6 @@ fun NavController.navigateOnce(
 }
 
 /**
- * Add Source for a new source ([Screen.AddProvider] without an `editId`). Only an Expert profile
- * may open it: a PIN alone is not enough, because a profile without a PIN has nothing to ask.
- * Edit mode stays open to all, for the Browse sign-in (a Jellyfin login is per profile).
- */
-fun NavBackStackEntry?.isNewSource(): Boolean =
-    this != null && destination.hasRoute<Screen.AddProvider>() && toRoute<Screen.AddProvider>().editId < 0
-
-/**
  * The profile this page shows: the one the route names for an Expert; for any other profile, the
  * page of the profile in use ([activeId]). Only an Expert opens another profile's page (the
  * profile rules plan, Design 5).
@@ -83,20 +75,21 @@ fun NavBackStackEntry?.isOwnPageOfNonExpert(
         toRoute<Screen.ProfileEdit>().shownProfileId(activeId, expert) == activeId
 
 /**
- * The household's shared setup — sources (a new one: [isNewSource]), guide sources, live sync,
- * Parental controls: an Expert's only, whatever opened it (the profile rules plan, PR-11). For any
- * other profile the screen closes at once; an Expert still types its PIN ([isPinGuarded]).
+ * The household's shared setup — sources (adding or editing one, Jellyfin's sign-in too), guide
+ * sources, live sync, Parental controls: an Expert's only, whatever opened it (the profile rules
+ * plan, PR-11, PR-12). For any other profile the screen closes at once; an Expert still types its
+ * PIN ([isPinGuarded]).
  */
 fun NavBackStackEntry?.isExpertOnly(): Boolean =
-    isNewSource() ||
-        this?.destination?.let {
+    this?.destination?.let {
+        it.hasRoute<Screen.AddProvider>() ||
             it.hasRoute<Screen.ProviderSelection>() ||
-                it.hasRoute<Screen.EpgManagement>() ||
-                it.hasRoute<Screen.SyncSettings>() ||
-                it.hasRoute<Screen.ParentalControls>() ||
-                it.hasRoute<Screen.ParentalListEdit>() ||
-                it.hasRoute<Screen.ParentalCheck>()
-        } == true
+            it.hasRoute<Screen.EpgManagement>() ||
+            it.hasRoute<Screen.SyncSettings>() ||
+            it.hasRoute<Screen.ParentalControls>() ||
+            it.hasRoute<Screen.ParentalListEdit>() ||
+            it.hasRoute<Screen.ParentalCheck>()
+    } == true
 
 /**
  * The screens Settings opens that the PIN of the profile in use guards — sources, guide sources,

@@ -197,6 +197,7 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="login_sign_in_title">Midira mba hanohy</string>
+    <string name="browse_sign_in_ask_admin">Tsy tafiditra amin\'ity loharano ity ity mombamomba ity. Angataho ny mpitantana hampiditra azy.</string>
     <string name="login_xtream_title">Fidirana Xtream</string>
     <string name="login_server_url_label">URL-n\'ny mpizara</string>
     <string name="login_server_url_placeholder">http://example.com:8080</string>

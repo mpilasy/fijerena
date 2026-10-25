@@ -415,8 +415,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         contentType: String,
     ) = leaveTabRoot { navController.navigateOnce(Screen.CategoryList(contentType = contentType, providerId = providerId)) }
 
+    // The sign-in is the source's form, an Expert's only (PR-12): anyone else asks an admin.
     fun browseSignIn(providerId: Long) =
-        leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
+        if (expert) {
+            leaveTabRoot { navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true } }
+        } else {
+            Toast.makeText(context, R.string.browse_sign_in_ask_admin, Toast.LENGTH_LONG).show()
+        }
 
     // The top bar of [tab]'s root: the section's name over the sources' sync summary; Search the
     // guide on Home and Live TV, and the section's Search (everything on Home). The profile avatar is in the dock — in the top bar
@@ -458,7 +463,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 coroutineScope.launch {
                     when (val opening = ProfileSections.opening(context, source.providerId)) {
                         ProfileSections.Opening.SignIn -> {
-                            navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
+                            if (expert) {
+                                navController.navigate(Screen.AddProvider(editId = source.providerId)) { launchSingleTop = true }
+                            } else {
+                                Toast.makeText(context, R.string.browse_sign_in_ask_admin, Toast.LENGTH_LONG).show()
+                            }
                         }
 
                         is ProfileSections.Opening.Sections -> {

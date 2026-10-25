@@ -197,6 +197,7 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="login_sign_in_title">Connectez-vous pour continuer</string>
+    <string name="browse_sign_in_ask_admin">Ce profil n\'est pas connecté à cette source. Demande à un admin de le connecter.</string>
     <string name="login_xtream_title">Connexion Xtream</string>
     <string name="login_server_url_label">URL du serveur</string>
     <string name="login_server_url_placeholder">http://exemple.com:8080</string>
