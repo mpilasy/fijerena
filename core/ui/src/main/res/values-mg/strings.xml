@@ -816,7 +816,6 @@
     <string name="live_panel_no_favorites">Mbola tsy misy ankafizina — tazony ny OK amin\'ny fantsona iray hanampiana azy</string>
     <!-- Phase 4 -->
     <!-- M5 -->
-    <string name="epg_management_title_format">Loharanon\'ny fitarihana · %1$s</string>
     <string name="settings_guide_maintenance_title">Fikojakojana ny angon\'ny fitarihana</string>
     <!-- GD3 -->
     <string name="epg_guide_header_title_format">Fandaharana · %1$s</string>

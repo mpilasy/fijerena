@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -13,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,6 +30,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaCheckbox
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -35,7 +39,6 @@ import org.njarasoa.fijerena.core.ui.components.FieldKeyboards
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
-import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -53,9 +56,10 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
 
 /**
- * One source's guide sources (A-9, M5): the list first, its bulk actions, an empty state that
- * offers to add one. Each card shows its own auto-refresh, changed from its Auto-refresh button
- * (P5b); guide maintenance is device-wide and lives in Settings.
+ * Every source's guide sources on one page (A-9, M5; the one guide sources page plan): the bulk
+ * actions, then a group for each source with channels, then guide maintenance; an empty state
+ * that offers to add one. Each card shows its own auto-refresh, changed from its Auto-refresh
+ * button (P5b). [providerId] scrolls the page to that source's group; 0 opens it at the top.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -72,20 +76,17 @@ fun MobileEpgManagementScreen(
                 },
         )
 
-    // null until the first emission, so the empty state doesn't flash while the list loads.
-    val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = null)
+    // null until the first emission, so the empty state doesn't flash while the list loads. One
+    // group per source with channels (the one guide sources page plan).
+    val groups by viewModel.groups.collectAsStateWithLifecycle(initialValue = null)
+    val sources = groups?.flatMap { it.sources }
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
-    val provider by produceState<ProviderEntity?>(initialValue = null, providerId) {
-        value =
-            AppContainer
-                .getInstance(context.applicationContext)
-                .providerRepository
-                .getProviderById(providerId)
-    }
-    val providerName = provider?.name
+    val groupList = groups.orEmpty()
+    // The group the page was opened on ([providerId]), if it is one of them.
+    val openGroup = groupList.firstOrNull { it.provider.id == providerId }
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -104,13 +105,21 @@ fun MobileEpgManagementScreen(
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var intervalSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
 
+    // Opened on a source: once the list has loaded, scroll to its group.
+    val listState = rememberLazyListState()
+    val bulkRow = staleSourceCount > 0 || failedSourceCount > 0
+    LaunchedEffect(groups != null) {
+        if (openGroup != null && !sources.isNullOrEmpty()) {
+            listState.scrollToItem(groupHeaderIndex(groupList, openGroup.provider.id, if (bulkRow) 1 else 0))
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     CinemaText(
-                        providerName?.let { stringResource(R.string.epg_management_title_format, it) }
-                            ?: stringResource(R.string.epg_sources_header),
+                        stringResource(R.string.epg_management_screen_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         role = TextRole.Title,
@@ -141,6 +150,7 @@ fun MobileEpgManagementScreen(
                 return@Box
             }
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding =
                     PaddingValues(
@@ -152,7 +162,7 @@ fun MobileEpgManagementScreen(
                     ),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
-                if (staleSourceCount > 0 || failedSourceCount > 0) {
+                if (bulkRow) {
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -186,41 +196,53 @@ fun MobileEpgManagementScreen(
                     }
                 }
 
-                items(sources.orEmpty(), key = { it.id }) { source ->
-                    val latestTime = latestProgrammeTimes[source.id] ?: 0L
-
-                    val activeProgress =
-                        if (processingState is MultiSourceState.Processing) {
-                            (processingState as MultiSourceState.Processing).activeProgress[source.id]
-                        } else {
-                            null
+                groupList.forEach { group ->
+                    item(key = "group-${group.provider.id}", contentType = "group") { GuideGroupHeader(group) }
+                    if (group.sources.isEmpty()) {
+                        item(key = "none-${group.provider.id}", contentType = "none") {
+                            CinemaText(
+                                text = stringResource(R.string.epg_summary_no_sources),
+                                role = TextRole.BodySmall,
+                                tone = TextTone.Secondary,
+                            )
                         }
+                    }
+                    items(group.sources, key = { it.id }, contentType = { "source" }) { source ->
+                        val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
-                    // Whether the run that just finished confirmed this source's data hadn't
-                    // changed (304, or a matching content hash) — true only right after that run.
-                    val wasUnchanged =
-                        (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+                        val activeProgress =
+                            if (processingState is MultiSourceState.Processing) {
+                                (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                            } else {
+                                null
+                            }
 
-                    EpgSourceCard(
-                        source = source,
-                        latestProgrammeTime = latestTime,
-                        activeProgress = activeProgress,
-                        wasUnchanged = wasUnchanged,
-                        isOwnGuide = provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true,
-                        nowMs = nowMs,
-                        staleThresholdMs = viewModel.staleThresholdMs(source),
-                        refreshSummary =
-                            EpgManagementViewModel
-                                .refreshSummary(
-                                    source.enabled,
-                                    viewModel.refreshIntervalHours(source),
-                                ).asString(),
-                        onRefresh = { viewModel.refreshSource(source) },
-                        onAutoRefresh = { intervalSource = source },
-                        onEdit = { editingSource = source },
-                        onDelete = { viewModel.deleteSource(source.id) },
-                        onEnabledChange = { viewModel.setSourceEnabled(source, it) },
-                    )
+                        // Whether the run that just finished confirmed this source's data hadn't
+                        // changed (304, or a matching content hash) — true only right after that run.
+                        val wasUnchanged =
+                            (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+
+                        EpgSourceCard(
+                            source = source,
+                            latestProgrammeTime = latestTime,
+                            activeProgress = activeProgress,
+                            wasUnchanged = wasUnchanged,
+                            isOwnGuide = AutoXmltvSources.isAutoXmltvSource(source, group.provider.url),
+                            nowMs = nowMs,
+                            staleThresholdMs = viewModel.staleThresholdMs(source),
+                            refreshSummary =
+                                EpgManagementViewModel
+                                    .refreshSummary(
+                                        source.enabled,
+                                        viewModel.refreshIntervalHours(source),
+                                    ).asString(),
+                            onRefresh = { viewModel.refreshSource(source) },
+                            onAutoRefresh = { intervalSource = source },
+                            onEdit = { editingSource = source },
+                            onDelete = { viewModel.deleteSource(source.id) },
+                            onEnabledChange = { viewModel.setSourceEnabled(source, it) },
+                        )
+                    }
                 }
                 // The guide data of every source, as in Settings' Sources & guide (Settings reorg, Phase 3).
                 item { GuideMaintenanceRow(viewModel = viewModel) }
@@ -231,10 +253,13 @@ fun MobileEpgManagementScreen(
     if (showAddDialog) {
         EpgSourceEditDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { url, label, tz, method, enabled ->
-                viewModel.addSource(url, label, tz, listOf(providerId), method, enabled)
+            onConfirm = { url, label, tz, method, enabled, forSources ->
+                viewModel.addSource(url, label, tz, forSources, method, enabled)
                 showAddDialog = false
             },
+            // Use for (GS-D1): the group the page was opened on, else the first.
+            forSources = groupList.map { it.provider },
+            initialFor = setOfNotNull((openGroup ?: groupList.firstOrNull())?.provider?.id),
         )
     }
 
@@ -242,7 +267,7 @@ fun MobileEpgManagementScreen(
         EpgSourceEditDialog(
             initialSource = source,
             onDismiss = { editingSource = null },
-            onConfirm = { url, label, tz, method, enabled ->
+            onConfirm = { url, label, tz, method, enabled, _ ->
                 viewModel.updateSource(
                     source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled),
                 )
@@ -265,6 +290,38 @@ fun MobileEpgManagementScreen(
             },
             onDismiss = { intervalSource = null },
         )
+    }
+}
+
+/**
+ * The list index of [providerId]'s group header: after [leadingItems] (the bulk actions row), each
+ * group's header, then its cards (or its "none" line).
+ */
+private fun groupHeaderIndex(
+    groups: List<EpgManagementViewModel.GuideGroup>,
+    providerId: Long,
+    leadingItems: Int,
+): Int {
+    var index = leadingItems
+    for (group in groups) {
+        if (group.provider.id == providerId) return index
+        index += 1 + maxOf(group.sources.size, 1)
+    }
+    return 0
+}
+
+/** A group's header: the source's name, and "Not used by this profile" when the profile in use doesn't have it. */
+@Composable
+private fun GuideGroupHeader(group: EpgManagementViewModel.GuideGroup) {
+    Column(modifier = Modifier.padding(top = CinemaSpacing.sm)) {
+        CinemaText(text = group.provider.name, role = TextRole.Title, tone = TextTone.Inherit)
+        if (!group.usedByProfile) {
+            CinemaText(
+                text = stringResource(R.string.provider_not_in_profile),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
+            )
+        }
     }
 }
 
@@ -598,9 +655,13 @@ private fun SourceStat(
 private fun EpgSourceEditDialog(
     initialSource: EpgSourceEntity? = null,
     onDismiss: () -> Unit,
-    onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean) -> Unit,
+    onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean, forSources: Set<Long>) -> Unit,
+    // Adding: the sources the guide source can be for; the list shows with two or more (GS-D1).
+    forSources: List<ProviderEntity> = emptyList(),
+    initialFor: Set<Long> = emptySet(),
 ) {
     var url by remember { mutableStateOf(initialSource?.url ?: "") }
+    var checkedFor by remember { mutableStateOf(initialFor) }
     var label by remember { mutableStateOf(initialSource?.label ?: "") }
     var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
 
@@ -628,9 +689,10 @@ private fun EpgSourceEditDialog(
                         tzOffset.toIntOrNull() ?: 0,
                         initialSource?.ingestMethod ?: "DOWNLOADED",
                         initialSource?.enabled ?: true,
+                        checkedFor,
                     )
                 },
-                enabled = url.isNotBlank(),
+                enabled = url.isNotBlank() && (initialSource != null || checkedFor.isNotEmpty()),
                 kind = ButtonKind.Main,
             ) {
                 CinemaText(
@@ -677,6 +739,23 @@ private fun EpgSourceEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
+                if (initialSource == null && forSources.size > 1) {
+                    CinemaText(stringResource(R.string.epg_use_for_label), role = TextRole.Label, tone = TextTone.Secondary)
+                    forSources.forEach { source ->
+                        val checked = source.id in checkedFor
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Checkbox) { on ->
+                                    checkedFor = if (on) checkedFor + source.id else checkedFor - source.id
+                                },
+                        ) {
+                            CinemaCheckbox(checked = checked, onCheckedChange = null)
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            CinemaText(source.name, tone = TextTone.Inherit)
+                        }
+                    }
+                }
             }
         },
     )

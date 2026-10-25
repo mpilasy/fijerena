@@ -1075,7 +1075,6 @@
     <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
     <!-- Phase 4 -->
     <!-- M5 -->
-    <string name="epg_management_title_format">Guide Sources · %1$s</string>
     <string name="settings_guide_maintenance_title">Guide Data Maintenance</string>
     <!-- GD3 -->
     <string name="epg_guide_header_title_format">TV Guide · %1$s</string>

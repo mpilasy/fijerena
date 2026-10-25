@@ -1041,7 +1041,6 @@
     <string name="live_panel_no_favorites">Pas encore de favoris — maintenez OK sur une chaîne pour en ajouter une</string>
     <!-- Phase 4 -->
     <!-- M5 -->
-    <string name="epg_management_title_format">Sources de guide · %1$s</string>
     <string name="settings_guide_maintenance_title">Maintenance des données du guide</string>
     <!-- GD3 -->
     <string name="epg_guide_header_title_format">Guide TV · %1$s</string>

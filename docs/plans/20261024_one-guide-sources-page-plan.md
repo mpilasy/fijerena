@@ -1,6 +1,6 @@
 # One Guide Sources page
 
-**Status:** In progress 2026-10-24. All decisions taken. Phases 1–2 done; Phase 3 next.
+**Status:** In progress 2026-10-24. All decisions taken. Phases 1–3 done; Phase 4 next.
 
 ## Goal
 
@@ -90,7 +90,7 @@ for.
 | Phase | Status | Commit |
 |---|---|---|
 | 1. ViewModel and route | Done | b865c642 |
-| 2. TV page | Done (the Add dialog's Use for list not yet checked on the emulator) | Phase 2 commit |
-| 3. Phone page | Not started | |
+| 2. TV page | Done (the Add dialog's Use for list not yet checked on the emulator) | dcac75b3 |
+| 3. Phone page | Done (not yet checked on the emulator) | Phase 3 commit |
 | 4. Ways in | Not started | |
 | 5. Docs and checks | Not started | |
