@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -108,6 +109,11 @@ fun MobileMovieDetailsScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // Back from the player: the resume time the player just saved.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshResumeState()
+        onPauseOrDispose {}
+    }
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()

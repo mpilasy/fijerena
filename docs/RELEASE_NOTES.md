@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Resume after Back from the player:** a film's page showed plain Play (or the old resume time) after you stopped watching, until you left the page and opened it again. It now shows "Resume from" with the new time at once. A show's page could do the same after a quick Back. TV and phone.
 - **Diagnostics: less noise:** when Android does not let a background sync show its notification, the sync still runs, and Diagnostics no longer lists it as an error.
 
 ## Version: 0.8.1

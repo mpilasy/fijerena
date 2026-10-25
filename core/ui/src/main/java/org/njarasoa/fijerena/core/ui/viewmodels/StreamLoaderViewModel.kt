@@ -764,6 +764,8 @@ class StreamLoaderViewModel(
             // write must neither crash the app nor strand the viewer on the player.
             try {
                 doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+                // The position write is queued, not done, when doStopPlayback returns.
+                mediaRepository?.awaitPendingWrites()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

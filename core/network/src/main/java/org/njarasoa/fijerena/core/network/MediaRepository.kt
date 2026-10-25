@@ -348,12 +348,13 @@ class MediaRepository(
     }
 
     /**
-     * Test-only synchronization point: suspends until every write already queued on
-     * [writeScope] — specifically the fire-and-forget `watch_state` upserts from
-     * [savePlaybackPosition]/[saveLastPlayedItem] — has finished. [writeDispatcher] runs at most
-     * one task at a time, so an empty task queued here can only run once every earlier one has.
+     * Suspends until every write already queued on [writeScope] — specifically the
+     * fire-and-forget `watch_state` upserts from [savePlaybackPosition]/[saveLastPlayedItem] — has
+     * finished. [writeDispatcher] runs at most one task at a time, so an empty task queued here
+     * can only run once every earlier one has. The player's last write awaits this before Back,
+     * so the details page it returns to reads the new position; tests use it too.
      */
-    internal suspend fun awaitPendingWrites() {
+    suspend fun awaitPendingWrites() {
         withContext(writeDispatcher) {}
     }
 

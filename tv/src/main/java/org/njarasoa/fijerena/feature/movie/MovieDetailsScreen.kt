@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -151,6 +152,11 @@ fun MovieDetailsScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // Back from the player: the resume time the player just saved.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshResumeState()
+        onPauseOrDispose {}
+    }
     // A child profile's (docs/plans/20261019_kids-home-plan.md, Phase 2): no way on to other titles
     // or the category, and no favourite to undo — it reached this film from its Home.
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }

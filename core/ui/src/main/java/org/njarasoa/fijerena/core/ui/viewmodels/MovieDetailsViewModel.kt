@@ -352,6 +352,21 @@ class MovieDetailsViewModel(
         get() = mediaRepository?.supportsMarkWatched == true
 
     /**
+     * Re-reads the resume position and the watched mark. This ViewModel stays alive while the
+     * player is on top, so on the way back the state loaded on entry is out of date: Play would
+     * still say Play after a first watch, or name the old resume time.
+     */
+    fun refreshResumeState() {
+        viewModelScope.launchGuarded("MovieDetailsViewModel.refreshResumeState", Dispatchers.IO) {
+            val repo = mediaRepository ?: return@launchGuarded
+            val resume = resolveResumeState(repo)
+            val currentState = _uiState.value as? UiState.Success ?: return@launchGuarded
+            _uiState.value =
+                currentState.copy(isWatched = resume.isWatched, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
+        }
+    }
+
+    /**
      * Manual watched/unwatched mark (Phase 6, the watch state durable storage plan). Marking
      * watched leaves the stored position in `watch_state` alone — a rewatch still resumes — but
      * hides this screen's own resume bar immediately rather than waiting for a reload, matching
