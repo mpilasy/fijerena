@@ -208,17 +208,36 @@ class ProfilesViewModel(
         child: Boolean = false,
         onAdded: (String) -> Unit = {},
     ) {
-        viewModelScope.launch { onAdded(repository.addProfile(name, colorIndex, child)) }
+        // A kid adds nothing (ProfileRules).
+        val fields = ProfileRules.add(actor(), ProfileFields(name, colorIndex, ProfileSettings(false, true, child))) ?: return
+        viewModelScope.launch { onAdded(repository.addProfile(fields.name, fields.colorIndex, fields.settings.child)) }
+    }
+
+    /** The profile in use, for [ProfileRules]. */
+    private fun actor(): ProfileActor {
+        val id = appSettings.activeProfileId
+        return ProfileActor(id, appSettings.isChildProfile(id), appSettings.devMode(id))
     }
 
     fun updateProfile(
         id: String,
         name: String,
         colorIndex: Int,
-        settings: ProfileSettings,
+        requested: ProfileSettings,
     ) {
         // Only what changed, so an untouched switch doesn't queue a sync record.
         val stored = settingsOf(id)
+        // Who may change what (ProfileRules): a field the profile in use may not change keeps its
+        // stored value. A profile that isn't listed is not changed.
+        val listed = profiles.value.firstOrNull { it.id == id } ?: return
+        val allowed =
+            ProfileRules.update(
+                actor(),
+                id,
+                ProfileFields(listed.name, listed.colorIndex, stored),
+                ProfileFields(name, colorIndex, requested),
+            ) ?: return
+        val settings = allowed.settings
         // The last Expert keeps it and can't become a child (its page disables both switches; this
         // guards the rest). A child is never Expert: ProfileRepository.setChildProfile turns it off.
         val lastExpert = isLastExpert(id)
@@ -226,12 +245,12 @@ class ProfilesViewModel(
         if (child != stored.child) {
             viewModelScope.launchGuarded("ProfilesViewModel.setChildProfile") { repository.setChildProfile(id, child) }
         }
-        val devMode = settings.devMode || lastExpert
+        val devMode = settings.devMode || (stored.devMode && lastExpert)
         if (!child && devMode != stored.devMode) appSettings.setDevMode(id, devMode)
         if (settings.autoplayNextEpisode != stored.autoplayNextEpisode) {
             appSettings.setAutoplayNextEpisode(id, settings.autoplayNextEpisode)
         }
-        viewModelScope.launch { repository.updateProfile(id, name, colorIndex) }
+        viewModelScope.launch { repository.updateProfile(id, allowed.name, allowed.colorIndex) }
     }
 
     /**
@@ -263,6 +282,7 @@ class ProfilesViewModel(
         profileId: String,
         filters: CategoryFilters,
     ) {
+        if (!ProfileRules.changesSetup(actor())) return
         viewModelScope.launchGuarded("ProfilesViewModel.saveCategoryFilters") {
             AppContainer.getInstance(context).providerRepository.setCategoryFilters(providerId, profileId, filters)
         }
@@ -312,6 +332,7 @@ class ProfilesViewModel(
         item: ProfileFavorite,
         on: Boolean,
     ) {
+        if (!ProfileRules.changesSetup(actor())) return
         viewModelScope.launchGuarded("ProfilesViewModel.setFavoriteFor") {
             if (on) profileFavorites.add(profileId, item) else profileFavorites.remove(profileId, item)
         }
@@ -335,6 +356,7 @@ class ProfilesViewModel(
         providerKey: String,
         on: Boolean,
     ) {
+        if (!ProfileRules.changesSetup(actor())) return
         toggledSourceKeys(appSettings.profileSourceKeys(profileId).orEmpty(), rows, providerKey, on)
             ?.let { appSettings.setProfileSourceKeys(profileId, it) }
     }
@@ -358,12 +380,16 @@ class ProfilesViewModel(
     fun setTheme(
         id: String,
         themeId: String,
-    ) = appSettings.setThemeId(id, themeId)
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setThemeId(id, themeId)
+    }
 
     fun setUiStyle(
         id: String,
         styleId: String,
-    ) = appSettings.setUiStyleId(id, styleId)
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setUiStyleId(id, styleId)
+    }
 
     /** Whether [id]'s Home and lists show the focused title's poster behind them. */
     fun posterBackdropOf(id: String): Boolean = appSettings.posterBackdrop(id)
@@ -371,7 +397,9 @@ class ProfilesViewModel(
     fun setPosterBackdrop(
         id: String,
         on: Boolean,
-    ) = appSettings.setPosterBackdrop(id, on)
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setPosterBackdrop(id, on)
+    }
 
     fun uiThemeOf(id: String): String = appSettings.uiThemeId(id).takeIf { UiThemes.packaged(it) != null } ?: UiThemes.CUSTOM
 
@@ -379,12 +407,16 @@ class ProfilesViewModel(
     fun setUiTheme(
         id: String,
         uiThemeId: String,
-    ) = appSettings.setUiThemeId(id, uiThemeId)
+    ) {
+        if (ProfileRules.changesLook(actor(), id)) appSettings.setUiThemeId(id, uiThemeId)
+    }
 
     /** [id] uses a packaged UI theme: its colour theme and Look and Feel can't be changed one by one. */
     fun lookLockedOf(id: String): Boolean = UiThemes.packaged(appSettings.uiThemeId(id)) != null
 
     fun deleteProfile(id: String) {
+        // Only an Expert deletes a profile (ProfileRules).
+        if (!ProfileRules.delete(actor())) return
         viewModelScope.launch {
             _message.value =
                 when (repository.deleteProfile(id)) {
