@@ -806,7 +806,7 @@
     <string name="provider_logins_as_of_format">%1$s · tamin\'ny %2$s</string>
     <string name="provider_logins_main_format">Fidirana fototra · %1$s</string>
     <string name="epg_source_use_label">Ampiasao ity fitarihana ity</string>
-    <string name="epg_source_own_guide_hint">Fitarihan\'ity loharano ity: ny Manome fitarihana ao amin\'ny Hanova loharano no mampandeha azy.</string>
+    <string name="epg_source_own_guide_hint">Fitarihan\'ity loharano ity: ny « Manome fitarihana » ao amin\'ny « Hanova loharano » no mampandeha azy.</string>
     <!-- Sources, guide and profiles: P4 -->
     <string name="provider_guide_sources_value_format">%1$d · fanavaozana farany %2$s</string>
     <string name="provider_guide_sources_value_never_format">%1$d · mbola tsy nohavaozina</string>
@@ -1350,7 +1350,7 @@
     <string name="provider_clear_library_desc">Fafana ny katalaogy nalaina; alaina indray amin\'ny fampifanarahana manaraka. Mijanona ny ankafizina sy ny tantaran\'ny fijerena.</string>
     <string name="profile_section_look">Endrika</string>
     <string name="ui_theme_title">Endrika iraisana</string>
-    <string name="ui_theme_desc">Mametraka miaraka ny endrika sy ny endrika sy fahatsapana. Manokana: safidio tsirairay.</string>
+    <string name="ui_theme_desc">Mametraka miaraka ny « Endrika » sy ny « Endrika sy fahatsapana ». Manokana: safidio tsirairay.</string>
     <string name="ui_theme_custom">Manokana</string>
     <string name="profile_poster_backdrop_title">Sary ao ambadika</string>
     <string name="profile_poster_backdrop_desc">Asehoy ao ambadiky ny Fandraisana sy ny lisitra ny sarin\'ilay lohateny voafidy. Raha maty, kely kokoa ny fitadidiana ampiasaina.</string>
