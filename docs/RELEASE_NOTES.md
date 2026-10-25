@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Full screen adds to Recent at once:** a live channel opened full screen from the Live TV preview goes into Recent straight away, without waiting for the watch delay. The delay still applies to the preview and to channel changes. TV and phone.
+
 ## Version: 0.8.3
 
 - **Sources for Experts only:** a profile without Expert mode can no longer open Add Source or Edit Source, Jellyfin's sign-in included. A Jellyfin source it is not signed in to now says "Ask an admin to sign it in". TV and phone.

@@ -497,6 +497,12 @@ fun MobileCategoryListScreen(
         } else {
             null
         }
+    // A tap on the docked video opens it full screen, and opening it is a choice: Recent now, not
+    // after the watch delay.
+    val promoteDock = {
+        dockLoader?.addToRecentNow()
+        fullScreen = true
+    }
     // The loader a channel of another source took over from: nothing of it may land any more (its
     // delayed Recent write would record a channel no longer playing).
     var activeDockLoader by remember { mutableStateOf<StreamLoaderViewModel?>(null) }
@@ -1135,7 +1141,7 @@ fun MobileCategoryListScreen(
                                                         .fillMaxWidth()
                                                         .clip(CinemaTheme.shapes.card)
                                                         .background(CinemaTheme.colors.surface)
-                                                        .clickable(onClick = { fullScreen = true }),
+                                                        .clickable(onClick = { promoteDock() }),
                                             ) {
                                                 val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
                                                 Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
@@ -1228,7 +1234,7 @@ fun MobileCategoryListScreen(
                                                         // category/last-watched data and watch-history
                                                         // recording already happened at dock time, so
                                                         // promoting needs no extra reload.
-                                                        .clickable(onClick = { fullScreen = true }),
+                                                        .clickable(onClick = { promoteDock() }),
                                             ) {
                                                 // TextureView — see the landscape dock box above.
                                                 EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)

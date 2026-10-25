@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-10-25 | [TV clock and Recent on full screen](./20261025_tv-clock-and-full-screen-recent-plan.md) | A clock at the top right of every TV screen but full-screen playback; a live channel opened full screen from the preview goes into Recent at once | In progress |
 | 2026-10-24 | [Settings guarded by page](./20261024_settings-guard-by-page-plan.md) | The PIN guards whole Settings groups, not rows: your own settings open freely, Expert groups (This Device, Parental Controls, Sources & Guide, Sync & Backup, Advanced) ask the Expert's PIN once on the way in | Done 2026-10-25, walked on both emulators |
 | 2026-10-24 | [One Jellyfin login](./20261024_jellyfin-one-login-plan.md) | A Jellyfin source has one login, set by an Expert, and is on or off per profile like any source; profiles share its Jellyfin watch state | Done 2026-10-25, walked on both emulators |
 | 2026-10-24 | [Profile rules](./20261024_profile-rules-plan.md) | One written set of who may do what to a profile, enforced below the screens: kids change only personal settings, any grown-up adds a profile (kid allowed, never Expert), only an Expert promotes, deletes or un-kids, a kid is never Expert (sync and restore too) | Done 2026-10-24, walked on both emulators |

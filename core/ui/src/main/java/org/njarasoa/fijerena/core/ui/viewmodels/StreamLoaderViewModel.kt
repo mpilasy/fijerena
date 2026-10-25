@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.abs
 
 class StreamLoaderViewModel(
@@ -149,7 +151,7 @@ class StreamLoaderViewModel(
     var requestedStreamId: String? = initialStreamId
         private set
 
-    private var historyJob: Job? = null
+    private val recentWrite = RecentWrite(viewModelScope, Dispatchers.IO)
 
     // The load in flight (resolve the URL, publish Success). A new load cancels the previous one.
     private var loadJob: Job? = null
@@ -308,24 +310,25 @@ class StreamLoaderViewModel(
                     }
 
                     // Schedule history update (Recent) after the configured delay — LIVE TV ONLY.
-                    historyJob?.cancel()
+                    recentWrite.cancel()
                     if (isLiveTv) {
-                        historyJob =
-                            viewModelScope.launchGuarded("StreamLoaderViewModel.liveHistory", Dispatchers.IO) {
-                                delay(recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped))
-                                repo.saveLastPlayedItem(
-                                    categoryId = currentCategoryId,
-                                    itemId = streamId,
-                                    itemName = streamName,
-                                    contentType = contentType,
-                                    episodeId = episode,
-                                    episodeExtension = currentEpisodeExtension,
-                                    seriesId = series,
-                                    seriesName = seriesName,
-                                )
+                        // Reads the category when it writes: a load into another category sets it
+                        // only after this one returns.
+                        val record: suspend () -> Unit = {
+                            repo.saveLastPlayedItem(
+                                categoryId = currentCategoryId,
+                                itemId = streamId,
+                                itemName = streamName,
+                                contentType = contentType,
+                                episodeId = episode,
+                                episodeExtension = currentEpisodeExtension,
+                                seriesId = series,
+                                seriesName = seriesName,
+                            )
 
-                                repo.refreshRecentItems(contentType)
-                            }
+                            repo.refreshRecentItems(contentType)
+                        }
+                        recentWrite.schedule(record, recentRecordDelayMs(AppSettings(context).watchDelaySeconds, zapped))
                     }
 
                     // Enrich metadata (EPG & Plot description) asynchronously in background
@@ -510,7 +513,14 @@ class StreamLoaderViewModel(
     private fun cancelLoads() {
         loadJob?.cancel()
         enrichJob?.cancel()
+        recentWrite.loadStarted()
     }
+
+    /**
+     * The live channel opens full screen from a preview: it goes into Recent now, not after the
+     * watch delay. When its load is not ready yet, that load writes Recent as soon as it is.
+     */
+    fun addToRecentNow() = recentWrite.now()
 
     /**
      * Archive days of the channels among [items] that keep one, for the player's channel lists'
@@ -617,7 +627,7 @@ class StreamLoaderViewModel(
      */
     fun abandon() {
         cancelLoads()
-        historyJob?.cancel()
+        recentWrite.cancel()
     }
 
     fun retryLastLoad() {
@@ -1046,5 +1056,57 @@ internal data class ChannelCursor(
             items: List<MediaItem>,
             id: String,
         ): ChannelCursor = ChannelCursor(items, items.indexOfFirst { it.id == id }.takeIf { it >= 0 || items.isEmpty() } ?: 0)
+    }
+}
+
+/**
+ * A live channel's Recent write, after the watch delay. [now] writes it at once; when the load it
+ * is for has not scheduled it yet, that load's [schedule] writes at once.
+ */
+internal class RecentWrite(
+    private val scope: CoroutineScope,
+    private val context: CoroutineContext,
+) {
+    private var job: Job? = null
+
+    @Volatile
+    private var pending: (suspend () -> Unit)? = null
+
+    @Volatile
+    private var atOnce = false
+
+    /** A new load starts: a [now] asked for the load before it no longer applies. */
+    fun loadStarted() {
+        atOnce = false
+    }
+
+    fun schedule(
+        write: suspend () -> Unit,
+        delayMs: Long,
+    ) {
+        job?.cancel()
+        pending = write
+        val wait = if (atOnce) 0L else delayMs
+        atOnce = false
+        job =
+            scope.launchGuarded("StreamLoaderViewModel.liveHistory", context) {
+                delay(wait)
+                pending = null
+                write()
+            }
+    }
+
+    fun now() {
+        val write = pending
+        if (write == null) {
+            atOnce = true
+        } else {
+            schedule(write, 0L)
+        }
+    }
+
+    fun cancel() {
+        job?.cancel()
+        pending = null
     }
 }

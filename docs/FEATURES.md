@@ -221,7 +221,7 @@ Listed before the source's categories:
 
 | Category | Shown | Contents |
 |----------|-------|----------|
-| **Recent** | Always | Everything watched, newest first (in-progress titles are also Home's Continue watching); one card per series. Live: a channel you pick is added after the watch delay (10 s by default), one you only zapped onto (Up/Down in full screen, a phone swipe) after a minute on it; on TV, Live TV's Recent keeps its order while you're in the section (re-sorted when you come back or Refresh). VOD: after 2 %. Per-source size, 1–100 (default 25) |
+| **Recent** | Always | Everything watched, newest first (in-progress titles are also Home's Continue watching); one card per series. Live: a channel you pick is added after the watch delay (10 s by default), one you only zapped onto (Up/Down in full screen, a phone swipe) after a minute on it, and one opened full screen from the preview at once; on TV, Live TV's Recent keeps its order while you're in the section (re-sorted when you come back or Refresh). VOD: after 2 %. Per-source size, 1–100 (default 25) |
 | **Favourites** | Always | Starred items, newest first, no limit; its name counts the favourites gone from their source ("Favourites · 2 gone") |
 | **Wishlist** | Movies and TV Shows, while the section has a title on the Wishlist | The [Wishlist](#wishlist) titles of the section's kind, available ones first, each row marked Available or Not available; its name counts the new ones |
 | **Favourite Categories** | When there are any | Favourited categories |

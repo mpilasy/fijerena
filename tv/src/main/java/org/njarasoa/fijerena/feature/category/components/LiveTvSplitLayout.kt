@@ -865,6 +865,8 @@ internal fun LiveTvSplitLayout(
                         // separate LaunchedEffect keyed on the streamId *value*, which doesn't change
                         // here, so this only refreshes metadata — it does not restart the stream.
                         loader.loadStream(item)
+                        // Opening full screen is a choice: Recent now, not after the watch delay.
+                        loader.addToRecentNow()
                         fullScreen = true
                     }
                 },
