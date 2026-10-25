@@ -85,8 +85,12 @@ class MainActivity : ComponentActivity() {
                         TrailerHost {
                             TvNavHost(
                                 onUiScaleChanged = { choice ->
-                                    appSettings.uiScaleChoice = choice
-                                    uiScale = choice ?: autoUiScale(this@MainActivity)
+                                    // This device's setting: an Expert's only, like the language
+                                    // (the profile rules plan, PR-10).
+                                    if (appSettings.isDevMode) {
+                                        appSettings.uiScaleChoice = choice
+                                        uiScale = choice ?: autoUiScale(this@MainActivity)
+                                    }
                                 },
                             )
                         }
