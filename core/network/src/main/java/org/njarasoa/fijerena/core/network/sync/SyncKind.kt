@@ -16,7 +16,11 @@ object SyncKind {
     const val PROVIDER = "provider"
     const val PROFILE = "profile"
 
-    /** A Jellyfin login, per provider and profile; keyed by the provider's `providerKey`. */
+    /**
+     * A profile's own Jellyfin login, keyed by the source's `providerKey`: older builds only. A
+     * Jellyfin login now travels with the source ([PROVIDER]); one of these is never sent, and
+     * one received becomes the source's login only while the source has none.
+     */
     const val PROVIDER_LOGIN = "provider_login"
 
     /** A profile's category filters on one provider; keyed by the provider's `providerKey`. */

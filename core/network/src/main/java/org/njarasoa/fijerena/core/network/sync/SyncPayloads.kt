@@ -120,8 +120,9 @@ object SyncPayloads {
     }
 
     /**
-     * A provider. [password] is the shared login — for Jellyfin, the Default profile's. Phase 8
-     * encrypts it. [extraPasswords]: an Xtream source's extra logins' passwords by username (the
+     * A provider. [username] and [password] are the source's login, the same for every profile —
+     * a Jellyfin source's too; sealed end to end like every payload (Phase 8). Never a Jellyfin
+     * session token. [extraPasswords]: an Xtream source's extra logins' passwords by username (the
      * usernames are in [providerSettings]); null from a version without extra logins.
      */
     @Serializable
@@ -144,7 +145,7 @@ object SyncPayloads {
         }
     }
 
-    /** A profile's own Jellyfin login. No session token: each device signs in itself. */
+    /** A profile's own Jellyfin login ([SyncKind.PROVIDER_LOGIN]), from an older build only. */
     @Serializable
     data class Login(
         val username: String,

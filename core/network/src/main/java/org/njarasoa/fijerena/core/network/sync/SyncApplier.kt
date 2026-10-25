@@ -234,7 +234,8 @@ class SyncApplier(
             SyncKind.PROVIDER -> applyProvider(record)
             SyncKind.EPG_SOURCE -> applyEpgSource(record)
             SyncKind.SETTING -> applySetting(record)
-            SyncKind.PROVIDER_LOGIN, SyncKind.CATEGORY_FILTERS -> applyProviderScopedSetting(record)
+            SyncKind.PROVIDER_LOGIN -> applyOldLogin(record)
+            SyncKind.CATEGORY_FILTERS -> applyProviderScopedSetting(record)
             SyncKind.NOW_PLAYING -> applyNowPlaying(record)
             SyncKind.REMOTE_COMMAND -> applyRemoteCommand(record)
             else -> Outcome.Skipped
@@ -681,21 +682,53 @@ class SyncApplier(
             Resolution.Upsert, Resolution.Delete -> {
                 val providerId = sync.providerByKey(key.providerKey)?.id ?: return Outcome.Deferred
                 inSettingsApply {
-                    if (key.kind == SyncKind.PROVIDER_LOGIN) {
-                        val login = if (record.deleted) null else SyncPayloads.decode<SyncPayloads.Login>(record.payload)
-                        providers.applyRemoteLogin(providerId, key.profileKey, login)
-                    } else {
-                        val filters =
-                            if (record.deleted) {
-                                CategoryFilters()
-                            } else {
-                                SyncPayloads.json.decodeFromString(CategoryFiltersSerializer, requireNotNull(record.payload))
-                            }
-                        providers.applyRemoteCategoryFilters(providerId, key.profileKey, filters)
-                    }
+                    val filters =
+                        if (record.deleted) {
+                            CategoryFilters()
+                        } else {
+                            SyncPayloads.json.decodeFromString(CategoryFiltersSerializer, requireNotNull(record.payload))
+                        }
+                    providers.applyRemoteCategoryFilters(providerId, key.profileKey, filters)
                     markSettingsVersion(key.kind, key.profileKey, key.providerKey, record.hlc)
                 }
                 Outcome.AppliedProvider(providerId)
+            }
+
+            else -> {
+                skippedOrDeferred(resolution)
+            }
+        }
+    }
+
+    /**
+     * A profile's own Jellyfin login from a device on an older build (JF-D2): the login travels
+     * with the source now, so this one becomes the source's only while the source has none. A
+     * deletion, or a login for a source that has one, is only marked as seen. One taken is sent
+     * on with the source, so every device of the household ends with the same login.
+     */
+    private suspend fun applyOldLogin(record: SyncRecord): Outcome {
+        val key = record.key
+        val local =
+            SyncMerge.Local(
+                version = settingsVersion(key.kind, key.profileKey, key.providerKey),
+                provider = providerPresence(key.providerKey),
+                profile = profilePresence(key.profileKey),
+            )
+        return when (val resolution = SyncMerge.resolve(record, local)) {
+            Resolution.Upsert, Resolution.Delete -> {
+                val provider = sync.providerByKey(key.providerKey) ?: return Outcome.Deferred
+                val login = if (record.deleted) null else SyncPayloads.decode<SyncPayloads.Login>(record.payload)
+                val taken = login?.takeIf { it.username.isNotBlank() && provider.type == "JELLYFIN" && !providers.hasLogin(provider) }
+                inSettingsApply {
+                    taken?.let { providers.applyRemoteLogin(provider.id, it) }
+                    markSettingsVersion(key.kind, key.profileKey, key.providerKey, record.hlc)
+                }
+                if (taken != null) {
+                    SettingsSyncQueue.provider(context, provider.id)
+                    Outcome.AppliedProvider(provider.id)
+                } else {
+                    Outcome.Applied
+                }
             }
 
             else -> {

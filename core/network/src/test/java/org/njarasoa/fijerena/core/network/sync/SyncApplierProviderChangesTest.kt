@@ -58,7 +58,6 @@ class SyncApplierProviderChangesTest {
         coEvery { profiles.exists(ProfileEntity.DEFAULT_ID) } returns true
         mockkConstructor(ProviderRepository::class)
         coEvery { anyConstructed<ProviderRepository>().applyRemoteProvider(any(), any()) } returns provider.id
-        coEvery { anyConstructed<ProviderRepository>().applyRemoteLogin(any(), any(), any()) } returns Unit
         coEvery { anyConstructed<ProviderRepository>().applyRemoteCategoryFilters(any(), any(), any()) } returns Unit
         coEvery { anyConstructed<ProviderRepository>().deleteProvider(any(), any()) } returns Unit
     }
@@ -82,12 +81,6 @@ class SyncApplierProviderChangesTest {
             hlc = 10,
             payload = SyncPayloads.encode(SyncPayloads.Provider("IPTV", "http://new.test", "me", "XTREAM", "", "{}", "new-password")),
         )
-    private val loginRecord =
-        SyncRecord(
-            SyncKey(ProfileEntity.DEFAULT_ID, "prov-1", SyncKind.PROVIDER_LOGIN),
-            hlc = 11,
-            payload = SyncPayloads.encode(SyncPayloads.Login("me", "new-password")),
-        )
     private val filtersRecord =
         SyncRecord(SyncKey(ProfileEntity.DEFAULT_ID, "prov-1", SyncKind.CATEGORY_FILTERS), hlc = 12, payload = "{}")
 
@@ -101,9 +94,8 @@ class SyncApplierProviderChangesTest {
         }
 
     @Test
-    fun `a login or category filters record reports its provider`() =
+    fun `a category filters record reports its provider`() =
         runBlocking {
-            assertEquals(setOf(provider.id), applier().apply(listOf(loginRecord)).providerChangedIds)
             assertEquals(setOf(provider.id), applier().apply(listOf(filtersRecord)).providerChangedIds)
         }
 

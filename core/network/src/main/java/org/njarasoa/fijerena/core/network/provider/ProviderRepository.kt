@@ -755,20 +755,8 @@ class ProviderRepository(
     // cached MediaRepository is dropped after the pass instead, once the change is committed
     // (SyncApplier.Result.providerChangedIds → SyncEngine.Listener.onProvidersChanged).
 
-    /** [profileId]'s own Jellyfin login on [entity] as it is sent, or null if it has none. */
-    internal fun syncedLogin(
-        entity: ProviderEntity,
-        profileId: String,
-    ): org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login? {
-        val prefs = getProviderPrefs(entity.id, profileId)
-        val username = if (profileId == ProfileEntity.DEFAULT_ID) entity.username else prefs.getString(KEY_USERNAME, null).orEmpty()
-        if (username.isBlank()) return null
-        return org.njarasoa.fijerena.core.network.sync.SyncPayloads
-            .Login(username, prefs.getString(KEY_PASSWORD, null))
-    }
-
     /** Profiles with a Jellyfin login of their own on [providerId] — Default's is the row's. */
-    internal fun profilesWithOwnLogin(providerId: Long): List<String> {
+    private fun profilesWithOwnLogin(providerId: Long): List<String> {
         val prefix = "${credsFileName(providerId, ProfileEntity.DEFAULT_ID)}_profile_"
         return java.io
             .File(context.applicationInfo.dataDir, "shared_prefs")
@@ -785,13 +773,17 @@ class ProviderRepository(
         remote: org.njarasoa.fijerena.core.network.sync.SyncPayloads.Provider,
     ): Long {
         val existing = db.settingsSyncDao().providerByKey(providerKey)
+        val jellyfin = remote.type == "JELLYFIN"
+        // A Jellyfin record with no username comes from an older build whose Default profile had
+        // no login: it says nothing about the source's login, so this device's stays.
+        val keepLogin = jellyfin && existing != null && remote.username.isBlank()
         val id =
             if (existing != null) {
                 dao.updateProvider(
                     existing.copy(
                         name = remote.name,
                         url = remote.url,
-                        username = remote.username,
+                        username = if (keepLogin) existing.username else remote.username,
                         type = remote.type,
                         config = remote.config,
                         providerSettings = remote.providerSettings,
@@ -811,7 +803,16 @@ class ProviderRepository(
                     ),
                 )
             }
-        remote.password?.let { savePassword(id, it) }
+        if (!jellyfin) {
+            remote.password?.let { savePassword(id, it) }
+        } else if (!keepLogin &&
+            (existing?.username != remote.username || (remote.password != null && remote.password != getPassword(id)))
+        ) {
+            // The household's Jellyfin login changed: this device signs in again with it. A new
+            // user with no password (Quick Connect) drops the old one; the same user sent with
+            // none keeps the password this device has (no change, so not here).
+            writeJellyfinLogin(id, remote.password)
+        }
         // Null: a record from a version without extra logins — keep what this device has.
         remote.extraPasswords?.takeIf { remote.type == "XTREAM" }?.let { extras ->
             val mainPassword = getPassword(id).orEmpty()
@@ -823,29 +824,32 @@ class ProviderRepository(
     }
 
     /**
-     * Writes (or, when [login] is null, removes) a profile's Jellyfin login. Drops the session so
-     * the next use signs in with it — sessions are per device and never synced.
+     * A profile's own Jellyfin login sent by an older build, taken as the source's login: the
+     * caller checks the source has none ([hasLogin]). Drops the session so the next use signs in
+     * with it — sessions are per device and never synced.
      */
     internal suspend fun applyRemoteLogin(
         providerId: Long,
-        profileId: String,
-        login: org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login?,
+        login: org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login,
     ) {
-        if (profileId == ProfileEntity.DEFAULT_ID) {
-            dao.getProviderById(providerId)?.let { dao.updateProvider(it.copy(username = login?.username.orEmpty())) }
-        }
-        getProviderPrefs(providerId, profileId).edit {
-            if (profileId != ProfileEntity.DEFAULT_ID) {
-                if (login == null) remove(KEY_USERNAME) else putString(KEY_USERNAME, login.username)
-            }
-            if (login?.password == null) remove(KEY_PASSWORD) else putString(KEY_PASSWORD, login.password)
+        dao.getProviderById(providerId)?.let { dao.updateProvider(it.copy(username = login.username)) }
+        writeJellyfinLogin(providerId, login.password)
+        MediaProviderFactory.clearCache(providerId)
+    }
+
+    /** [password] (none: removed) as the Jellyfin source's, dropping this device's session. */
+    private fun writeJellyfinLogin(
+        providerId: Long,
+        password: String?,
+    ) {
+        getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID).edit {
+            if (password == null) remove(KEY_PASSWORD) else putString(KEY_PASSWORD, password)
             remove(KEY_JELLYFIN_TOKEN).remove(KEY_JELLYFIN_USER_ID)
         }
-        if (login?.password != null) {
+        if (password != null) {
             org.njarasoa.fijerena.core.network.CredentialStoreHealth
                 .clear(context)
         }
-        MediaProviderFactory.clearCache(providerId)
     }
 
     /** A profile's category filters on a provider; re-applied to Xtream's flags if it is this device's profile. */

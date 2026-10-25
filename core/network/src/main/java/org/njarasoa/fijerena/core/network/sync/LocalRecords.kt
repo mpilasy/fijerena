@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersSerializer
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersStore
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -35,7 +34,8 @@ class LocalRecords(
     /**
      * The next batch of pending changes, oldest first, `providers.db` before `xtream_v2.db` so a
      * provider reaches the server before its favourites. Versions with nothing left to send (the
-     * item vanished without a tombstone, or it belongs to a Jellyfin provider) are cleared here.
+     * item vanished without a tombstone, it belongs to a Jellyfin provider, or it is a per-profile
+     * Jellyfin login an older build queued) are cleared here.
      */
     suspend fun pending(limit: Int): List<Outgoing> {
         val out = mutableListOf<Outgoing>()
@@ -92,15 +92,6 @@ class LocalRecords(
         for (provider in settingsDb.providerDao().getAllProvidersList()) {
             for (profile in profiles) {
                 if (filters.has(provider.id, profile)) sync.seed(SyncKind.CATEGORY_FILTERS, profile, provider.providerKey, now)
-            }
-            if (provider.type == "JELLYFIN") {
-                (providers.profilesWithOwnLogin(provider.id) + ProfileEntity.DEFAULT_ID).distinct().forEach { profile ->
-                    if (providers.syncedLogin(provider, profile) !=
-                        null
-                    ) {
-                        sync.seed(SyncKind.PROVIDER_LOGIN, profile, provider.providerKey, now)
-                    }
-                }
             }
         }
         val settings = AppSettings(context)
@@ -169,27 +160,6 @@ class LocalRecords(
                     else -> {
                         val sent = source.copy(url = AutoXmltvSources.syncUrl(providers, source))
                         SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.EpgSource.of(sent, providerKey)))
-                    }
-                }
-            }
-
-            SyncKind.PROVIDER_LOGIN -> {
-                val entity = sync.providerByKey(v.itemKey)
-                when {
-                    entity == null || entity.type != "JELLYFIN" -> {
-                        null
-                    }
-
-                    else -> {
-                        val key = SyncKey(v.profileId, v.itemKey, SyncKind.PROVIDER_LOGIN)
-                        val login = providers.syncedLogin(entity, v.profileId)
-                        if (login ==
-                            null
-                        ) {
-                            SyncRecord(key, v.hlc, deleted = true)
-                        } else {
-                            SyncRecord(key, v.hlc, payload = SyncPayloads.encode(login))
-                        }
                     }
                 }
             }

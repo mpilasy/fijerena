@@ -9,7 +9,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
- * Queues changes to values kept outside `providers.db` — passwords and Jellyfin logins, category
+ * Queues changes to values kept outside `providers.db` — every source's password, category
  * filters, synced settings — which no trigger can see. Not in the same transaction as the change
  * (SharedPreferences has none), so a crash in between loses the entry; the next change to the same
  * value queues it again. Fire-and-forget on its own IO scope: callers include plain property
@@ -23,12 +23,6 @@ object SettingsSyncQueue {
         context: Context,
         providerId: Long,
     ) = byProvider(context, SyncKind.PROVIDER, SyncKind.SHARED, providerId)
-
-    fun providerLogin(
-        context: Context,
-        providerId: Long,
-        profileId: String,
-    ) = byProvider(context, SyncKind.PROVIDER_LOGIN, profileId, providerId)
 
     fun categoryFilters(
         context: Context,
