@@ -13,8 +13,8 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Playback and Display (`scripts/focus-walks/settings.txt`): the device's rows, a
- * picker and the way back to its row, and the rows that open the page of the profile in use at
+ * TV Settings → Playback and Display (`scripts/focus-walks/settings.txt`): the device's rows (an
+ * Expert's only), a picker and the way back to its row, and the rows that open the page of the profile in use at
  * their row ("Play Next Episode Automatically", "Theme and Look and Feel"), Back returning to them.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -71,17 +71,16 @@ class SettingsPlaybackDisplayFocusTest : SettingsFocusTest() {
         walk.assertFocused("Your Profile")
         walk.run(
             down("Playback"),
-            right("Add a Channel to Recent After"),
-            down("Play Next Episode Automatically / Set on your profile’s page"),
+            // No device rows without Expert mode (the profile rules plan): only the profile's row.
+            right("Play Next Episode Automatically / Set on your profile’s page"),
+            // Nothing above it: Up stays put.
+            up("Play Next Episode Automatically / Set on your profile’s page"),
             center("Play Next Episode Automatically / Near the end of an episode"),
             // Left leaves the page too, focus back on the row.
             left("Play Next Episode Automatically / Set on your profile’s page"),
             left("Playback"),
             down("Display"),
-            right("Text & Grid Size"),
-            down("Items in Recent"),
-            down("Language"),
-            down("Theme and Look and Feel"),
+            right("Theme and Look and Feel"),
             center("UI Theme"),
             // The page's rows below go on as on Your profile; no Admin rows for a grown-up.
             down("Theme"),

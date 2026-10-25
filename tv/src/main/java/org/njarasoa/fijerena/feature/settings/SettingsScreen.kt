@@ -610,16 +610,19 @@ fun SettingsScreen(
                                         }
 
                                         SettingsGroup.PLAYBACK -> {
-                                            item {
-                                                PlaybackSettingsCard(
-                                                    watchDelaySeconds = uiState.watchDelaySeconds,
-                                                    onOpenWatchDelayPicker = { openPicker(SettingPicker.WATCH_DELAY) },
-                                                    watchDelayRowFocusRequester =
-                                                        returnFocus.requesterFor(
-                                                            SettingPicker.WATCH_DELAY.returnKey,
-                                                        ),
-                                                    watchDelayRowModifier = entryModifier,
-                                                )
+                                            // This device's settings: an Expert's, behind its PIN (the profile rules plan).
+                                            if (uiState.isDevMode) {
+                                                item {
+                                                    PlaybackSettingsCard(
+                                                        watchDelaySeconds = uiState.watchDelaySeconds,
+                                                        onOpenWatchDelayPicker = { guarded { openPicker(SettingPicker.WATCH_DELAY) } },
+                                                        watchDelayRowFocusRequester =
+                                                            returnFocus.requesterFor(
+                                                                SettingPicker.WATCH_DELAY.returnKey,
+                                                            ),
+                                                        watchDelayRowModifier = entryModifier,
+                                                    )
+                                                }
                                             }
                                             item {
                                                 val autoplay =
@@ -634,29 +637,36 @@ fun SettingsScreen(
                                                         returnFocus.requesterFor(
                                                             profilePageReturnKey(ProfilePageRow.AUTOPLAY),
                                                         ),
+                                                    modifier = if (uiState.isDevMode) Modifier else entryModifier,
                                                 )
                                             }
                                         }
 
                                         SettingsGroup.DISPLAY -> {
-                                            item {
-                                                SettingsSection(description = stringResource(R.string.settings_scope_device_section)) {
-                                                    UiScaleSettingsRow(
-                                                        uiScale = uiState.uiScale,
-                                                        onOpenPicker = { openPicker(SettingPicker.TEXT_SIZE) },
-                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.TEXT_SIZE.returnKey),
-                                                        modifier = entryModifier,
-                                                    )
-                                                    RecentRowSizeRow(
-                                                        size = uiState.recentRowSize,
-                                                        onOpenPicker = { openPicker(SettingPicker.RECENT_SIZE) },
-                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.RECENT_SIZE.returnKey),
-                                                    )
-                                                    LanguageSettingsRow(
-                                                        selectedLanguage = uiState.language,
-                                                        onOpenPicker = { openPicker(SettingPicker.LANGUAGE) },
-                                                        rowFocusRequester = returnFocus.requesterFor(SettingPicker.LANGUAGE.returnKey),
-                                                    )
+                                            // This device's settings: an Expert's, behind its PIN (the profile rules plan).
+                                            if (uiState.isDevMode) {
+                                                item {
+                                                    SettingsSection(description = stringResource(R.string.settings_scope_device_section)) {
+                                                        UiScaleSettingsRow(
+                                                            uiScale = uiState.uiScale,
+                                                            onOpenPicker = { guarded { openPicker(SettingPicker.TEXT_SIZE) } },
+                                                            rowFocusRequester = returnFocus.requesterFor(SettingPicker.TEXT_SIZE.returnKey),
+                                                            modifier = entryModifier,
+                                                        )
+                                                        RecentRowSizeRow(
+                                                            size = uiState.recentRowSize,
+                                                            onOpenPicker = { guarded { openPicker(SettingPicker.RECENT_SIZE) } },
+                                                            rowFocusRequester =
+                                                                returnFocus.requesterFor(
+                                                                    SettingPicker.RECENT_SIZE.returnKey,
+                                                                ),
+                                                        )
+                                                        LanguageSettingsRow(
+                                                            selectedLanguage = uiState.language,
+                                                            onOpenPicker = { guarded { openPicker(SettingPicker.LANGUAGE) } },
+                                                            rowFocusRequester = returnFocus.requesterFor(SettingPicker.LANGUAGE.returnKey),
+                                                        )
+                                                    }
                                                 }
                                             }
                                             item {
@@ -667,6 +677,7 @@ fun SettingsScreen(
                                                     value = uiThemeId?.let { stringResource(uiThemeNameRes(it)) },
                                                     onClick = { openOwnPageAt(ProfilePageRow.LOOK) },
                                                     focusRequester = returnFocus.requesterFor(profilePageReturnKey(ProfilePageRow.LOOK)),
+                                                    modifier = if (uiState.isDevMode) Modifier else entryModifier,
                                                 )
                                             }
                                         }
@@ -894,6 +905,7 @@ private fun ProfilePageRowLink(
     value: String?,
     onClick: () -> Unit,
     focusRequester: FocusRequester?,
+    modifier: Modifier = Modifier,
 ) {
     SettingsRow(
         title = title,
@@ -901,6 +913,7 @@ private fun ProfilePageRowLink(
         value = value,
         onClick = onClick,
         focusRequester = focusRequester,
+        modifier = modifier,
     )
 }
 

@@ -156,18 +156,24 @@ class SettingsViewModel(
         return allowed
     }
 
+    // Language, the Recent delay and Recent's size change the whole device: an Expert's only (the
+    // profile rules plan). The screens show them to an Expert only, behind its PIN.
+
     fun updateLanguage(language: String) {
+        if (!appSettings.isDevMode) return
         org.njarasoa.fijerena.core.ui.utils.LocaleManager
             .updateLocale(context, language)
         _uiState.value = _uiState.value.copy(language = language)
     }
 
     fun updateWatchDelay(seconds: Int) {
+        if (!appSettings.isDevMode) return
         appSettings.watchDelaySeconds = seconds
         _uiState.value = _uiState.value.copy(watchDelaySeconds = seconds)
     }
 
     fun updateRecentRowSize(size: Int) {
+        if (!appSettings.isDevMode) return
         appSettings.recentRowSize = size
         _uiState.value = _uiState.value.copy(recentRowSize = appSettings.recentRowSize)
     }

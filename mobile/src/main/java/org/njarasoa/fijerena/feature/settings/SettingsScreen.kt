@@ -357,13 +357,16 @@ fun MobileSettingsScreen(
                 item {
                     SettingsGroupHeader(
                         title = stringResource(R.string.settings_playback_section_title),
-                        description = stringResource(R.string.settings_scope_device_section),
+                        description = if (uiState.isDevMode) stringResource(R.string.settings_scope_device_section) else null,
                     )
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_watch_delay_row_title),
-                        summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
-                        onClick = { showWatchDelayPicker = true },
-                    )
+                    // This device's settings: an Expert's, behind its PIN (the profile rules plan).
+                    if (uiState.isDevMode) {
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_watch_delay_row_title),
+                            summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
+                            onClick = { guarded { showWatchDelayPicker = true } },
+                        )
+                    }
                     // The profile's, not this device's: set on its page, which the row opens.
                     val autoplay =
                         remember(inUse, lifecycleState) {
@@ -381,24 +384,27 @@ fun MobileSettingsScreen(
                 item {
                     SettingsGroupHeader(
                         title = stringResource(R.string.settings_group_display),
-                        description = stringResource(R.string.settings_scope_device_section),
+                        description = if (uiState.isDevMode) stringResource(R.string.settings_scope_device_section) else null,
                     )
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_recent_row_size_title),
-                        summary = uiState.recentRowSize.toString(),
-                        onClick = { showRecentSizePicker = true },
-                    )
-                    SettingsListRow(
-                        title = stringResource(R.string.settings_language),
-                        summary =
-                            when (uiState.language) {
-                                "en" -> stringResource(R.string.settings_language_en)
-                                "mg" -> stringResource(R.string.settings_language_mg)
-                                "fr" -> stringResource(R.string.settings_language_fr)
-                                else -> uiState.language
-                            },
-                        onClick = { showLanguagePicker = true },
-                    )
+                    // This device's settings: an Expert's, behind its PIN (the profile rules plan).
+                    if (uiState.isDevMode) {
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_recent_row_size_title),
+                            summary = uiState.recentRowSize.toString(),
+                            onClick = { guarded { showRecentSizePicker = true } },
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_language),
+                            summary =
+                                when (uiState.language) {
+                                    "en" -> stringResource(R.string.settings_language_en)
+                                    "mg" -> stringResource(R.string.settings_language_mg)
+                                    "fr" -> stringResource(R.string.settings_language_fr)
+                                    else -> uiState.language
+                                },
+                            onClick = { guarded { showLanguagePicker = true } },
+                        )
+                    }
                     // The profile's, not this device's: set on its page, which the row opens.
                     val uiThemeId = remember(inUse, lifecycleState) { inUse?.let { profilesViewModel.uiThemeOf(it.id) } }
                     SettingsListRow(
