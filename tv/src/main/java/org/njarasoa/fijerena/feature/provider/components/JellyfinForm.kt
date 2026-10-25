@@ -45,6 +45,15 @@ fun JellyfinForm(
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
+    // Above the fields, so it is on screen while the first one has focus.
+    CinemaText(
+        text = stringResource(R.string.provider_jellyfin_household_login),
+        role = TextRole.BodySmall,
+        tone = TextTone.Secondary,
+    )
+
+    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
     ReadOnlyFieldWithEdit(
         value = url,
         onValueChange = { newValue ->

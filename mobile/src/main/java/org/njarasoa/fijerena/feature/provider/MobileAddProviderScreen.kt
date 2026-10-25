@@ -195,7 +195,7 @@ fun MobileAddProviderScreen(
             if (provider != null) {
                 name = provider.name
                 url = provider.url
-                // This profile's login: its own for Jellyfin, the shared one otherwise.
+                // The source's login, the same for every profile.
                 val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
                 username = login.username
                 password = login.password

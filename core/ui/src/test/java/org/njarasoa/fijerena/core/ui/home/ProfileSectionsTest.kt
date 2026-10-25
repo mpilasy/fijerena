@@ -110,7 +110,7 @@ class ProfileSectionsTest {
     }
 
     @Test
-    fun `a Jellyfin source this profile has no login for opens its sign-in`() {
+    fun `a Jellyfin source with no login opens its sign-in`() {
         val context = mockk<Context>(relaxed = true)
         every { context.applicationContext } returns context
         val jellyfin = source(2, "JELLYFIN")

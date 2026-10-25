@@ -366,8 +366,8 @@ class ProviderViewModel(
      * Save a Jellyfin provider authenticated via Quick Connect.
      * Stores the access token directly so no password-based re-auth is ever needed.
      *
-     * With [id], this signs this device's profile in to that existing provider instead of adding a
-     * new one, so Quick Connect from the edit screen doesn't add a duplicate provider.
+     * With [id], this signs that existing source in, for every profile, instead of adding a new
+     * one, so Quick Connect from the edit screen doesn't add a duplicate provider.
      */
     fun quickConnectSave(
         id: Long? = null,

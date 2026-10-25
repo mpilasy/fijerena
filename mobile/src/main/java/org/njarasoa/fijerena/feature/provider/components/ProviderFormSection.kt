@@ -126,6 +126,14 @@ fun ColumnScope.ProviderFormSection(
         ProviderType.JELLYFIN -> {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
+            CinemaText(
+                stringResource(R.string.provider_jellyfin_household_login),
+                role = TextRole.BodySmall,
+                tone = TextTone.Secondary,
+            )
+
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
             CinemaTextField(
                 value = url,
                 onValueChange = { newValue ->

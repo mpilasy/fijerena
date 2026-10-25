@@ -35,7 +35,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
  * ([onProfileChosen] runs after the switch), Settings ([onSettings]), and a "Browse <source>" row
  * per source outside the merged tabs ([sections]' Browse entries, O1): [onBrowseSection] opens the
  * section picked (a dialog asks which when it has several), [onBrowseSignIn] the source's sign-in
- * while this profile has no login for it. Kept composed while hidden, so that dialog outlives the
+ * while the source has no login. Kept composed while hidden, so that dialog outlives the
  * sheet.
  */
 @Composable

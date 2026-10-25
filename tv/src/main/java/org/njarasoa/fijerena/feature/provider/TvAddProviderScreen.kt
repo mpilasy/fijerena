@@ -251,7 +251,7 @@ fun TvAddProviderScreen(
             if (provider != null) {
                 name = provider.name
                 url = provider.url
-                // This profile's login: its own for Jellyfin, the shared one otherwise.
+                // The source's login, the same for every profile.
                 val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
                 username = login.username
                 password = login.password
@@ -1072,7 +1072,7 @@ fun TvAddProviderScreen(
                 onSuccess = { nameVal, usernameVal, token, userId ->
                     showQuickConnectDialog = false
                     viewModel.quickConnectSave(
-                        // Editing: sign this profile in to this provider rather
+                        // Editing: sign this source in for the household rather
                         // than add a second one, as whoever Jellyfin says it is.
                         id = if (isEditMode) editId else null,
                         name = name.ifBlank { nameVal },

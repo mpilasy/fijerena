@@ -197,7 +197,7 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="login_sign_in_title">Midira mba hanohy</string>
-    <string name="browse_sign_in_ask_admin">Tsy tafiditra amin\'ity loharano ity ity mombamomba ity. Angataho ny mpitantana hampiditra azy.</string>
+    <string name="browse_sign_in_ask_admin">Mbola tsy tafiditra ity loharano ity. Angataho ny mpitantana hampiditra azy.</string>
     <string name="login_xtream_title">Fidirana Xtream</string>
     <string name="login_server_url_label">URL-n\'ny mpizara</string>
     <string name="login_server_url_placeholder">http://example.com:8080</string>
@@ -285,6 +285,7 @@
     <string name="provider_or_separator">— na —</string>
     <string name="provider_enter_jellyfin_url_first">Ampidiro aloha ny URL-n\'ny mpizara Jellyfin</string>
     <string name="provider_use_quick_connect">Ampiasao ny Quick Connect</string>
+    <string name="provider_jellyfin_household_login">Fidirana iray ho an\'ny ankohonana rehetra: mizara ny fandrosoana, ny efa hita ary ny ankafiziana ny mombamomba rehetra manana ity loharano ity.</string>
     <string name="provider_host_label">Host / IP</string>
     <string name="provider_host_placeholder">192.168.1.100</string>
     <string name="provider_share_label">Lahatahiry iombonana</string>

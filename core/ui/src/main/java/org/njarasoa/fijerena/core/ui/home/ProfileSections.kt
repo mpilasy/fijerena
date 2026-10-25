@@ -36,7 +36,10 @@ data class ProfileSections(
 
     /** What a Browse entry opens. */
     sealed interface Opening {
-        /** This profile has no login for the source (a Jellyfin server): its sign-in. */
+        /**
+         * The source has no login yet (a Jellyfin server): its sign-in, which an Expert gives in
+         * Edit Source for the whole household; anyone else is asked to get an admin.
+         */
         data object SignIn : Opening
 
         /** The source's sections, in rail / bar order (Live TV, Movies, TV Shows). */
@@ -99,8 +102,8 @@ data class ProfileSections(
         internal fun inSectionOrder(contentTypes: Set<String>): List<String> = SECTION_ORDER.filter { it in contentTypes }
 
         /**
-         * What [providerId]'s Browse entry opens: its sign-in while this profile has no login for
-         * it (no repository is built for it then: it could only fail to authenticate), else its
+         * What [providerId]'s Browse entry opens: its sign-in while the source has no login (no
+         * repository is built for it then: it could only fail to authenticate), else its
          * sections. Builds (and connects) its repository, as opening its list would.
          */
         suspend fun opening(

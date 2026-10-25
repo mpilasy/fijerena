@@ -197,7 +197,7 @@
     <!-- Login -->
     <string name="login_app_name">fijerena</string>
     <string name="login_sign_in_title">Connectez-vous pour continuer</string>
-    <string name="browse_sign_in_ask_admin">Ce profil n\'est pas connecté à cette source. Demande à un admin de le connecter.</string>
+    <string name="browse_sign_in_ask_admin">Cette source n\'est pas encore connectée. Demande à un admin de la connecter.</string>
     <string name="login_xtream_title">Connexion Xtream</string>
     <string name="login_server_url_label">URL du serveur</string>
     <string name="login_server_url_placeholder">http://exemple.com:8080</string>
@@ -285,6 +285,7 @@
     <string name="provider_or_separator">— ou —</string>
     <string name="provider_enter_jellyfin_url_first">Entrez d\'abord l\'URL du serveur Jellyfin</string>
     <string name="provider_use_quick_connect">Utiliser la connexion rapide</string>
+    <string name="provider_jellyfin_household_login">Une seule connexion pour tout le foyer : chaque profil qui a cette source partage sa progression, ses vus et ses favoris.</string>
     <string name="provider_host_label">Hôte / IP</string>
     <string name="provider_host_placeholder">192.168.1.100</string>
     <string name="provider_share_label">Nom du partage</string>

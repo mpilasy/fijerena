@@ -409,7 +409,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     }
 
     // A Browse entry (O1) picked in the profile menu: that source's section, on it alone, pushed in
-    // this tab — or its sign-in while the profile has no login for it.
+    // this tab — or its sign-in while the source has no login.
     fun browseSection(
         providerId: Long,
         contentType: String,
