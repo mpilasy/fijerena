@@ -32,6 +32,9 @@ kid; an **Expert** is a grown-up with Expert mode on.
 - **PR-9 Nobody adds a profile from the profile picker.** On the picker no profile is in use yet
   (anonymous), so there is no Add Profile there; profiles are added in Settings. *Change:* today
   TV's picker shows Add Profile while the last profile used is an Expert.
+- **PR-10 What changes the whole device is an Expert's only, behind its PIN** (user, 2026-10-24,
+  added after the phases): Language, Text & Grid Size, Items in Recent, Add a Channel to Recent
+  After. The language is per device, not synced, not exported. Built in 284690fd.
 - **PR-8 A kid is never an Expert.** *Holds today* for a change made on the device
   (`ProfileRepository`); *change:* also when live sync or a backup restore brings a profile in.
 
