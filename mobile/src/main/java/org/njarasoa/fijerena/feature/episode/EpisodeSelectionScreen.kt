@@ -119,6 +119,7 @@ import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.detailBackBacking
 import org.njarasoa.fijerena.ui.components.detailTopBarColors
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
@@ -207,6 +208,7 @@ fun MobileEpisodeSelectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 colors = detailTopBarColors(solidBar),
                 // TMDB's clean title once it resolves, the provider's raw stream name until then
                 title = {

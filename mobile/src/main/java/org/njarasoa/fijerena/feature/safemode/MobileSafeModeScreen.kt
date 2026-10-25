@@ -34,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Shown instead of home when the app started in crash-loop safe mode ([SafeMode]). Back has
@@ -50,7 +51,12 @@ fun MobileSafeModeScreen(onShowDiagnostics: () -> Unit) {
     var confirmingClear by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { CinemaText(stringResource(R.string.safe_mode_title), role = TextRole.Title) }) },
+        topBar = {
+            TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
+                title = { CinemaText(stringResource(R.string.safe_mode_title), role = TextRole.Title) },
+            )
+        },
     ) { paddingValues ->
         Column(
             modifier =

@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.DeviceInfoViewModel
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Settings → About → Device info on mobile, shareable as plain text. See
@@ -53,6 +54,7 @@ fun MobileDeviceInfoScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = { CinemaText(stringResource(R.string.device_info_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

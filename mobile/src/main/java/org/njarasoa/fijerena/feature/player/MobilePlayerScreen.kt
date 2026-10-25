@@ -111,6 +111,7 @@ import org.njarasoa.fijerena.feature.player.components.MobileUpNextOverlay
 import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
 import org.njarasoa.fijerena.feature.player.components.SlowConnectionBanner
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
+import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.RequestOrientation
 
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
@@ -293,6 +294,8 @@ fun MobilePlayerContent(
     // this one must then not pause or stop it.
     handedOff: () -> Boolean = { false },
 ) {
+    // Full screen and picture-in-picture: no screen clock, the controls show their own.
+    HideMobileClock()
     // Over video: dark in every theme (ProvideMediaTheme).
     ProvideMediaTheme {
         val context = LocalContext.current

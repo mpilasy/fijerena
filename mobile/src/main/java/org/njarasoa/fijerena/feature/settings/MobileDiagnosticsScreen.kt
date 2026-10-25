@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.text.CinemaCodeText
 
 /**
@@ -93,6 +94,7 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = { CinemaText(stringResource(R.string.settings_diagnostics_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

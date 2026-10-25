@@ -214,6 +214,7 @@ import org.njarasoa.fijerena.ui.components.CinemaIconTab
 import org.njarasoa.fijerena.ui.components.CinemaIconTabRow
 import org.njarasoa.fijerena.ui.components.CinemaSearchField
 import org.njarasoa.fijerena.ui.components.CinemaTabRow
+import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
@@ -226,6 +227,7 @@ import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -640,6 +642,8 @@ fun MobileCategoryListScreen(
         onDockChanged(dockPlayback?.let { playback -> { playback.stop() } }, dockCoversScreen)
         onDispose { onDockChanged(null, false) }
     }
+    // The dock takes the screen (full screen, picture-in-picture, the landscape split): no clock.
+    if (dockCoversScreen) HideMobileClock()
 
     if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
         // Refresh the favorites list on demote (fullScreen leaving composition) so it reflects
@@ -761,6 +765,7 @@ fun MobileCategoryListScreen(
                         sourceTopBar(null)
                     } else {
                         TopAppBar(
+                            windowInsets = mobileClockTopBarInsets(),
                             title = {
                                 CinemaText(
                                     when (contentType) {

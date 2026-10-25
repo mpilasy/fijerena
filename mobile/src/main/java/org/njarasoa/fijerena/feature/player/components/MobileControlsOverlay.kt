@@ -47,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -94,6 +93,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.WaitStyle
+import org.njarasoa.fijerena.ui.components.MobileClockText
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
@@ -278,7 +278,7 @@ fun MobileControlsOverlay(
                     }
                 }
                 // Clock — self-ticking so only this leaf recomposes each second
-                ClockDisplay()
+                MobileClockText(tone = TextTone.OnMedia)
             }
 
             // Rewind | Play/Pause | FastForward, floating plainly over the video — the pattern
@@ -743,22 +743,4 @@ fun MobileControlsOverlay(
             }
         }
     }
-}
-
-@Composable
-private fun ClockDisplay() {
-    var tick by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            tick = System.currentTimeMillis()
-            delay(1000L)
-        }
-    }
-    CinemaText(
-        text =
-            org.njarasoa.fijerena.core.ui.theme.TimeFormat
-                .formatClockTime(Date(tick)),
-        role = TextRole.Heading,
-        tone = TextTone.OnMedia,
-    )
 }

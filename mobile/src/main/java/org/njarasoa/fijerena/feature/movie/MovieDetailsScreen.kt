@@ -84,6 +84,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.detailBackBacking
 import org.njarasoa.fijerena.ui.components.detailTopBarColors
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -139,6 +140,7 @@ fun MobileMovieDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 colors = detailTopBarColors(solidBar),
                 // The film's own title, as the episodes screen shows the show's (phone UI audit,
                 // #2): TMDB's clean title once it resolves, the provider's name until then.

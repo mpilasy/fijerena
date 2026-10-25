@@ -78,6 +78,7 @@ import org.njarasoa.fijerena.feature.profile.MobileProfileMenu
 import org.njarasoa.fijerena.ui.components.ProfileSettingsAvatar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -120,6 +121,7 @@ fun MobileSourceTopBar(
     val hasEpgData = epgIndexState is EpgIndexState.Indexed
 
     TopAppBar(
+        windowInsets = mobileClockTopBarInsets(),
         title = {
             Column {
                 CinemaText(

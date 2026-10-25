@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.detailBackBacking
 import org.njarasoa.fijerena.ui.components.detailTopBarColors
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.ratingOutOfTen
 
 /**
@@ -106,6 +107,7 @@ fun MobileTmdbTitleScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 colors = detailTopBarColors(heroCovered),
                 title = {
                     if (heroCovered) {

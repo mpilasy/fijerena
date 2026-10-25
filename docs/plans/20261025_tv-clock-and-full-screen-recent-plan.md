@@ -16,6 +16,9 @@
   keeps that corner free: its top-right items move left or down by the clock's size.
 - **CL-D3 Home's clock:** Home's clock next to the app name goes; there is one clock.
 - **CL-D4 Recent at once:** TV and phone.
+- **CL-D5 Show Clock (user, 2026-10-25):** the clock is a device setting in This Device, off by
+  default (many phones show the time all the time), on TV and phone; the player's controls keep
+  their clock whatever the setting.
 - **Not asked:** a child profile's Home has had no clock since the kids' Home plan; the clock
   stays off for a child profile.
 
@@ -35,6 +38,7 @@
 | 1. Recent on full screen | Done | 5addcd81 |
 | 2. TV clock | Done, walked on the TV emulator | f1192e0b |
 | 3. Docs | Done | |
+| 4. Show Clock setting, phone clock | Done, walked on both emulators | |
 
 ## Done notes
 
@@ -51,3 +55,8 @@
   (header buttons moved left), the preview (channel list moved down); full screen shows the
   controls' clock only, at the same place. CNN PT went into Recent 3 s after the preview started
   (watch delay 10 s). Phone: France 24 went into Recent 3 s after it docked.
+- **Phase 4:** `AppSettings.showClock` (device key `show_clock`, not exported or synced) and a
+  switch row in This Device on TV and phone. Phone: `MobileClock.kt` mirrors `TvClock.kt`; every
+  `TopAppBar` takes `mobileClockTopBarInsets()` (its end moves in by the clock's width while it
+  shows); the player and the dock covering the screen call `HideMobileClock`. Walked: the switch on
+  both emulators, the clock on TV Settings, phone This Device and the Live TV tab.

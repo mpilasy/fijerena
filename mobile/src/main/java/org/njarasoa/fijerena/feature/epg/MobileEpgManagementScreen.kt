@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Every source's guide sources on one page (A-9, M5; the one guide sources page plan): the bulk
@@ -117,6 +118,7 @@ fun MobileEpgManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = {
                     CinemaText(
                         stringResource(R.string.epg_management_screen_title),

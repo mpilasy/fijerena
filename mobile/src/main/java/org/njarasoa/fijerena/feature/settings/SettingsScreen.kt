@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
+import org.njarasoa.fijerena.core.ui.components.CinemaSwitch
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaTextField
 import org.njarasoa.fijerena.core.ui.components.PinRequest
@@ -75,6 +76,7 @@ import org.njarasoa.fijerena.feature.settings.components.TmdbKeyDialog
 import org.njarasoa.fijerena.feature.settings.components.TmdbKeySettingsRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.PinDialog
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -327,6 +329,7 @@ fun MobileSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = {
                     CinemaText(
                         stringResource(openGroup?.titleRes ?: R.string.settings_title),
@@ -483,6 +486,12 @@ fun MobileSettingsScreen(
                             title = stringResource(R.string.settings_watch_delay_row_title),
                             summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                             onClick = { showWatchDelayPicker = true },
+                        )
+                        SettingsListRow(
+                            title = stringResource(R.string.settings_show_clock_title),
+                            summary = stringResource(R.string.settings_show_clock_desc),
+                            trailing = { CinemaSwitch(checked = uiState.showClock, onCheckedChange = viewModel::updateShowClock) },
+                            onClick = { viewModel.updateShowClock(!uiState.showClock) },
                         )
                     }
                 }

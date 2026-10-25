@@ -71,6 +71,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
 import java.time.LocalDate
@@ -164,6 +165,7 @@ fun MobileEpgGuideScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = {
                     Column {
                         CinemaText(

@@ -87,6 +87,7 @@ import org.njarasoa.fijerena.feature.provider.components.SourceBadgeSection
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -343,6 +344,7 @@ fun MobileAddProviderScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = {
                     CinemaText(
                         if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title),

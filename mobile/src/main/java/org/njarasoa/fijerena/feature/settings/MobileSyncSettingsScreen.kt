@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -108,6 +109,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = { CinemaText(stringResource(R.string.live_sync_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back)) }

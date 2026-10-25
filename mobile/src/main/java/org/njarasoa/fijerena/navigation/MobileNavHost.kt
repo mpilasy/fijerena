@@ -109,6 +109,9 @@ import org.njarasoa.fijerena.feature.settings.MobileProfileEditScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.feature.wanted.MobileTmdbTitleScreen
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.LocalMobileClock
+import org.njarasoa.fijerena.ui.components.MobileClockOverlay
+import org.njarasoa.fijerena.ui.components.MobileClockState
 import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -119,6 +122,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // The profile in use has Expert mode: only then does it add sources (a tab's Add Source, the gate below).
     val expert by remember { appSettings.observeDevMode().map { it.second } }
         .collectAsStateWithLifecycle(initialValue = appSettings.isDevMode)
+    // The clock over every screen, when this device's Show Clock is on; a child profile's screens
+    // have none, as on TV.
+    val clock = remember { MobileClockState() }
+    val child by remember { appSettings.observeActiveProfileId().map { appSettings.isChildProfile(it) } }
+        .collectAsStateWithLifecycle(initialValue = appSettings.isChildProfile(appSettings.activeProfileId))
+    val showClock by remember { appSettings.observeShowClock() }.collectAsStateWithLifecycle(initialValue = appSettings.showClock)
+    LaunchedEffect(child, showClock) { clock.off = child || !showClock }
     val coroutineScope = rememberCoroutineScope()
 
     // The bottom bar's tabs (docs/plans/20261019_phone-home-tab-plan.md): Home, then the profile's
@@ -582,7 +592,11 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
         if (currentTab != MobileTab.HOME && MobileTab.HOME in tabs) selectTab(MobileTab.HOME)
     }
     Box(modifier = Modifier.fillMaxSize().background(CinemaTheme.colors.surface)) {
-        CompositionLocalProvider(LocalDockInset provides dockInset, LocalOpenWanted provides { navController.navigateOnce(it) }) {
+        CompositionLocalProvider(
+            LocalDockInset provides dockInset,
+            LocalOpenWanted provides { navController.navigateOnce(it) },
+            LocalMobileClock provides clock,
+        ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
@@ -1195,6 +1209,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                 }
             }
         }
+        // After the NavHost, so it draws over the screen.
+        MobileClockOverlay(clock)
         // E1: Add Source over Settings, once (a recreated Activity keeps its back stack).
         var addSourceOpened by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(Unit) {

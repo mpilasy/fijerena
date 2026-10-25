@@ -67,6 +67,7 @@ import org.njarasoa.fijerena.ui.components.PinDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.ProvideLook
 import org.njarasoa.fijerena.ui.theme.ProvideLookAndAccent
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -106,6 +107,7 @@ fun MobileProfileEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = {
                     // Without Expert mode a profile only edits itself: "Your profile", as on TV.
                     val admin = remember { viewModel.viewerIsAdmin }

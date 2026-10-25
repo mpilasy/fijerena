@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.IconAction
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,6 +78,7 @@ fun MobileProviderSelectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
                 title = { CinemaText(stringResource(R.string.provider_selection_title), role = TextRole.Title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -55,8 +55,10 @@ class SettingsPlaybackDisplayFocusTest : SettingsFocusTest() {
             down("Text & Grid Size / Size of text and everything on screen, on every screen"),
             down("Items in Recent / How many films, episodes or channels Recent shows / 25"),
             down("Add a Channel to Recent After / So a channel you only zap past isn't added / 10 s"),
+            down("Show Clock / The time at the top right of every screen"),
             // Down at the end of the pane stays put.
-            down("Add a Channel to Recent After"),
+            down("Show Clock"),
+            up("Add a Channel to Recent After"),
             // OK opens the picker on the current value; Left closes it, focus back on its row.
             center("10 s"),
             down("15 s"),

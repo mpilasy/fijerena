@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 
 /**
  * Shown instead of home when `providers.db` was written by a newer build ([ProvidersDbGuard]).
@@ -45,7 +46,12 @@ fun MobileNewerDataScreen() {
     var confirmingReset by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { CinemaText(stringResource(R.string.newer_data_title), role = TextRole.Title) }) },
+        topBar = {
+            TopAppBar(
+                windowInsets = mobileClockTopBarInsets(),
+                title = { CinemaText(stringResource(R.string.newer_data_title), role = TextRole.Title) },
+            )
+        },
     ) { paddingValues ->
         Column(
             modifier =
