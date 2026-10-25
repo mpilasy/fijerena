@@ -1,6 +1,6 @@
 # Profile rules
 
-**Status:** Planned 2026-10-24. Rules PR-1 to PR-8 decided by the user; PR-D1 and PR-D2 open.
+**Status:** Planned 2026-10-24. Rules PR-1 to PR-9 and decisions PR-D1, PR-D2 taken by the user.
 Not started.
 
 ## Goal
@@ -30,6 +30,9 @@ kid; an **Expert** is a grown-up with Expert mode on.
   profiles.
 - **PR-7 Only an Expert turns Child Profile off.** A kid never turns off its own Child Profile.
   *Holds today* (the switch is Expert-only, and a kid is never Expert: PR-8).
+- **PR-9 Nobody adds a profile from the profile picker.** On the picker no profile is in use yet
+  (anonymous), so there is no Add Profile there; profiles are added in Settings. *Change:* today
+  TV's picker shows Add Profile while the last profile used is an Expert.
 - **PR-8 A kid is never an Expert.** *Holds today* for a change made on the device
   (`ProfileRepository`); *change:* also when live sync or a backup restore brings a profile in.
 
@@ -61,8 +64,7 @@ these rules do not depend on it.
    - TV Settings: a grown-up without Expert mode has its own page as the Profiles pane; Add Profile
      goes at the end of that page (PR-D1).
    - Phone Settings: the Profiles group gets an Add Profile row under the profile's own row.
-   - TV profile picker: Add Profile shows while the profile in use is a grown-up (not only an
-     Expert).
+   - TV profile picker: no Add Profile (PR-9).
    - The Add dialog: name, colour, Child Profile; Expert mode only for an Expert. The PIN asked
      first: PR-D2.
 3. **7 taps (PR-3):** the tap handler and `SettingsViewModel.enableDevMode` do nothing while an
@@ -74,16 +76,17 @@ these rules do not depend on it.
 
 ## Decisions
 
-- **PR-D1 Where Add Profile goes on TV for a grown-up without Expert mode (open):** (a) a row at the
+- **PR-D1 Where Add Profile goes on TV for a grown-up without Expert mode (decided, user
+  2026-10-24: (a), a non-Expert can add a profile):** (a) a row at the
   end of its own page, above Switch and Delete; or (b) a second item in the Settings rail's
   Profiles pane before the page. Recommend (a): the pane stays the page, one more row.
-- **PR-D2 PIN on Add Profile (open):** (a) none: any grown-up may add, so a PIN guards nothing; or
+- **PR-D2 PIN on Add Profile (decided, user 2026-10-24: (a), no PIN):** (a) none: any grown-up may add, so a PIN guards nothing; or
   (b) keep today's rule (an Expert's PIN while one has a PIN). Recommend (a), matching PR-5.
 
 ## Phases
 
 1. **Rules and checks:** `ProfileRules`, applied in `ProfilesViewModel`; tests for PR-1 to PR-7.
-2. **Add Profile for grown-ups:** TV Settings, phone Settings, TV picker, the dialog's fields;
+2. **Add Profile for grown-ups:** TV Settings, phone Settings, none on the TV picker, the dialog's fields;
    focus tests and walks.
 3. **7 taps:** PR-3, the reminder text in en, fr and mg.
 4. **Sync and restore:** PR-8 in `SyncApplier` and the restore; tests.
