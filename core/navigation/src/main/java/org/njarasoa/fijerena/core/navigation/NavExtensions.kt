@@ -60,13 +60,27 @@ fun NavBackStackEntry?.isNewSource(): Boolean =
     this != null && destination.hasRoute<Screen.AddProvider>() && toRoute<Screen.AddProvider>().editId < 0
 
 /**
+ * The profile this page shows: the one the route names for an Expert; for any other profile, the
+ * page of the profile in use ([activeId]). Only an Expert opens another profile's page (the
+ * profile rules plan, Design 5).
+ */
+fun Screen.ProfileEdit.shownProfileId(
+    activeId: String,
+    expert: Boolean,
+): String = if (expert) profileId else activeId
+
+/**
  * The page of the profile in use ([activeId]), opened by a profile without Expert mode. It holds
  * only that profile's look and playback, so it asks no PIN, as on TV (the settings flow review plan).
  */
 fun NavBackStackEntry?.isOwnPageOfNonExpert(
     activeId: String,
     expert: Boolean,
-): Boolean = !expert && this != null && destination.hasRoute<Screen.ProfileEdit>() && toRoute<Screen.ProfileEdit>().profileId == activeId
+): Boolean =
+    !expert &&
+        this != null &&
+        destination.hasRoute<Screen.ProfileEdit>() &&
+        toRoute<Screen.ProfileEdit>().shownProfileId(activeId, expert) == activeId
 
 /**
  * The screens Settings opens that the PIN of the profile in use guards — sources, guide sources,

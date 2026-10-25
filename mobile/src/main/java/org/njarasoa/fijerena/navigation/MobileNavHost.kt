@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.navigation.isPinGuarded
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
 import org.njarasoa.fijerena.core.navigation.opensHomeAfterSave
+import org.njarasoa.fijerena.core.navigation.shownProfileId
 import org.njarasoa.fijerena.core.navigation.startsOnAddSource
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -859,7 +860,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     // runs on in its scope after this page is popped.
                     val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
                     MobileProfileEditScreen(
-                        profileId = route.profileId,
+                        profileId = route.shownProfileId(appSettings.activeProfileId, expert),
                         viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
                         onBack = { navController.navigateUp() },
                         startAt = ProfilePageRow.of(route.at),

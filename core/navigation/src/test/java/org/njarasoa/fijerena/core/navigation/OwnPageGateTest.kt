@@ -5,6 +5,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.createGraph
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.core.app.ApplicationProvider
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,7 +13,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** A profile without Expert mode opens its own page with no PIN; any other page stays guarded. */
+/**
+ * A profile without Expert mode sees only its own page, which opens with no PIN; an Expert opens
+ * any profile's page, guarded.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class OwnPageGateTest {
@@ -36,12 +40,22 @@ class OwnPageGateTest {
     }
 
     @Test
-    fun `an Expert's own page and another profile's page stay guarded`() {
+    fun `a route to another profile shows a non-Expert its own page, freely`() {
         val nav = navController()
         nav.navigate(Screen.ProfileEdit("atr"))
 
+        assertEquals("kid", Screen.ProfileEdit("atr").shownProfileId("kid", expert = false))
+        assertTrue(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = false))
+    }
+
+    @Test
+    fun `an Expert opens the page the route names, guarded`() {
+        val nav = navController()
+        nav.navigate(Screen.ProfileEdit("kid"))
+
+        assertEquals("kid", Screen.ProfileEdit("kid").shownProfileId("atr", expert = true))
         assertFalse(nav.currentBackStackEntry.isOwnPageOfNonExpert("atr", expert = true))
-        assertFalse(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = false))
+        assertFalse(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = true))
         assertFalse(null.isOwnPageOfNonExpert("kid", expert = false))
     }
 }
