@@ -37,6 +37,10 @@ from Settings without switching to the child's profile.
   favourite-category rows. Normal card size and the normal empty text, because the child adds its
   own favourites (the star and the list menus stay). The full version (the TV's closed garden) can
   come later on top: nothing of the light version is undone by it.
+- **K-D9 More Like This back** (user, 2026-10-25): Search (K-D7) already reaches any title the
+  child's filters allow, so More Like This returns on film and show pages, filtered the same way
+  (`RelatedTitles.forChild` in `relatedInSources`): no title no source has, none the parental rules
+  hide; categories were filtered by the catalogue queries. Phone too (it showed it unfiltered).
 
 ## Today, for a child profile
 
@@ -63,7 +67,7 @@ from Settings without switching to the child's profile.
 
 A child profile's:
 - rail: Home and Settings only;
-- film details: no category link, no More like this;
+- film details: no category link; ~~no More like this~~ (K-D9);
 - episode list: no category link;
 - Live TV list: opened on Favourites, no categories pane; Left/Right zaps within favourites;
 - long-press menus: no Remove from favourites, no Hide category;

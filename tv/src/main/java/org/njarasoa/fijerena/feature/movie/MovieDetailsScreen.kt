@@ -157,8 +157,8 @@ fun MovieDetailsScreen(
         viewModel.refreshResumeState()
         onPauseOrDispose {}
     }
-    // A child profile's (docs/plans/20261019_kids-home-plan.md, Phase 2): no way on to other titles
-    // or the category, and no favourite to undo — it reached this film from its Home.
+    // A child profile's (docs/plans/20261019_kids-home-plan.md, Phase 2): no way on to the category,
+    // and no favourite to undo — it reached this film from its Home. More Like This stays, filtered.
     val child = remember { appSettings.isChildProfile(appSettings.activeProfileId) }
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
@@ -202,7 +202,8 @@ fun MovieDetailsScreen(
             MovieDetailsContent(
                 wishlist = wishlist,
                 movieDetail = state.movieDetail,
-                relatedTitles = if (child) RelatedTitles() else relatedTitles,
+                // A child's are filtered like its Search (relatedInSources → forChild).
+                relatedTitles = relatedTitles,
                 tmdbTitle = tmdbTitle,
                 logoUrl = logoUrl,
                 backdropUrl = backdropUrl,
