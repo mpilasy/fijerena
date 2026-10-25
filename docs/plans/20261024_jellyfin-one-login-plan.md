@@ -1,6 +1,6 @@
 # One Jellyfin login per source
 
-**Status:** Planned 2026-10-24. JF-D1 and JF-D2 open. Not started.
+**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Not started.
 
 ## Goal
 
@@ -35,10 +35,10 @@ profile that has the source shares them (user, 2026-10-24).
 
 ## Decisions
 
-- **JF-D1 Which login a source keeps on upgrade (open):** (a) the login of the Expert profile in use
+- **JF-D1 Which login a source keeps on upgrade (decided, user 2026-10-24: the recommendation):** (a) the login of the Expert profile in use
   when it has one, else the oldest Expert's, else the most recently used profile's; or (b) the most
   recently used profile's. Recommend (a).
-- **JF-D2 Older app versions on other devices (open):** a device not yet updated still reads and
+- **JF-D2 Older app versions on other devices (decided, user 2026-10-24: the recommendation):** a device not yet updated still reads and
   writes per-profile logins. (a) Update every device together and accept that a device on an older
   version keeps asking for sign-in; or (b) keep writing the per-profile record too, for one release.
   Recommend (a): the household's devices are updated together.

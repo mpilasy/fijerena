@@ -1,6 +1,6 @@
 # Settings guarded by page
 
-**Status:** Planned 2026-10-24. SG-D1 to SG-D3 open. Not started.
+**Status:** Planned 2026-10-24. All decisions taken (the recommendations, user 2026-10-24). Not started.
 
 ## Goal
 
@@ -40,14 +40,14 @@ Expert group is guarded without a line of its own.
 
 ## Decisions
 
-- **SG-D1 The phone's Expert groups (open):** (a) Settings shows the Expert groups' headers, and
+- **SG-D1 The phone's Expert groups (decided, user 2026-10-24: the recommendation):** (a) Settings shows the Expert groups' headers, and
   tapping one opens it as its own page, after the PIN; or (b) the page stays one list, and an
   "Unlock Expert settings" row asks the PIN once, then shows the Expert groups below. Recommend (a):
   the same shape as TV (a page per group).
-- **SG-D2 Profiles for an Expert (open):** the list of every profile opens a profile's page, which
+- **SG-D2 Profiles for an Expert (decided, user 2026-10-24: the recommendation):** the list of every profile opens a profile's page, which
   changes another profile. (a) An Expert group too, PIN on the way in; or (b) open, PIN only on
   opening another profile's page, as today. Recommend (a).
-- **SG-D3 Share What This Device Plays (open):** today it is in Live sync. (a) Move it to This Device;
+- **SG-D3 Share What This Device Plays (decided, user 2026-10-24: the recommendation):** today it is in Live sync. (a) Move it to This Device;
   or (b) leave it in Live sync. Recommend (b): it only matters with live sync.
 
 ## Phases
