@@ -50,7 +50,6 @@ import org.njarasoa.fijerena.core.ui.components.PinRequest
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
-import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -70,7 +69,6 @@ import org.njarasoa.fijerena.ui.components.TvContentText
 import org.njarasoa.fijerena.ui.components.TvLeaveChildPinDialog
 import org.njarasoa.fijerena.ui.components.TvPinDialog
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
-import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.paneItem
@@ -90,8 +88,8 @@ fun SettingsScreen(
     onUiScaleChanged: (Float?) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onLiveSync: () -> Unit = {},
-    /** A source's guide sources (Sources & guide's Guide sources). */
-    onGuideSources: (providerId: Long) -> Unit = {},
+    /** The one Guide Sources page, for every source (Sources & guide's Guide sources). */
+    onGuideSources: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onDeviceInfo: () -> Unit = {},
     onLicenses: () -> Unit = {},
@@ -312,36 +310,6 @@ fun SettingsScreen(
     // the control that opened it, in its group, at the scroll position the pane had.
     val returnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(returnFocus, listState = listState)
-
-    // Guide sources belong to one source with live channels: with several, which one is asked first.
-    var choosingSourceFor by rememberSaveable { mutableStateOf<String?>(null) }
-    val openForSource: (returnKey: String, open: (Long) -> Unit) -> Unit = { key, open ->
-        when (val choice = SourceChoice.of(uiState.guideSources)) {
-            is SourceChoice.One -> {
-                returnFocus.leaveFrom(key, listState)
-                open(choice.source.first)
-            }
-
-            is SourceChoice.Ask -> {
-                choosingSourceFor = key
-            }
-
-            SourceChoice.None -> {
-                Unit
-            }
-        }
-    }
-    choosingSourceFor?.let { key ->
-        TvSourceChooserDialog(
-            sources = uiState.guideSources,
-            onChosen = { id ->
-                choosingSourceFor = null
-                returnFocus.leaveFrom(key, listState)
-                onGuideSources(id)
-            },
-            onDismiss = { choosingSourceFor = null },
-        )
-    }
 
     // First open: the rail row of the selected group. A pending hand-back (Back from a child
     // screen, the Language recreate) or an open picker has the last word instead.
@@ -765,12 +733,18 @@ fun SettingsScreen(
                                             // The guide: its sources (per source) and its data, side by side.
                                             item {
                                                 SettingsSection(title = stringResource(R.string.provider_section_guide)) {
-                                                    // Only sources with live channels have guide sources.
-                                                    if (uiState.guideSources.isNotEmpty()) {
+                                                    // Only sources with live channels have guide sources: one page for
+                                                    // all of them, shown when the device has one.
+                                                    if (uiState.hasGuideSources) {
                                                         SettingsRow(
                                                             title = stringResource(R.string.epg_management_screen_title),
                                                             description = stringResource(R.string.settings_guide_sources_desc),
-                                                            onClick = { guarded { openForSource(RETURN_GUIDE_SOURCES, onGuideSources) } },
+                                                            onClick = {
+                                                                guarded {
+                                                                    returnFocus.leaveFrom(RETURN_GUIDE_SOURCES, listState)
+                                                                    onGuideSources()
+                                                                }
+                                                            },
                                                             focusRequester = returnFocus.requesterFor(RETURN_GUIDE_SOURCES),
                                                         )
                                                     }

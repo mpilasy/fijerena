@@ -158,8 +158,8 @@ class EpgBrowserViewModel(
 
     /**
      * The profile's sources that can have guide sources (they have live channels), id to name, in
-     * its order: what the Guide sources button opens, picking the source first when there are
-     * several (multi-source plan, O4).
+     * its order: the TV Guide button opens the first; the Guide sources button shows when there is
+     * one and opens the one Guide Sources page.
      */
     private val _guideSourceOwners = MutableStateFlow<List<Pair<Long, String>>>(emptyList())
     val guideSourceOwners: StateFlow<List<Pair<Long, String>>> = _guideSourceOwners.asStateFlow()

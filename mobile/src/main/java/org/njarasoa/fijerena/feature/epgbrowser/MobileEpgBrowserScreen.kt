@@ -90,7 +90,6 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
-import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -105,7 +104,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
-import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
 import org.njarasoa.fijerena.navigation.LocalDockInset
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -120,8 +118,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
  * checkbox — on by default — keeps the results on that guide's channels. One search, programme
  * titles (D7). When the profile has a source with live channels the top bar has TV Guide (the
- * grid for Recent on the first of them, [onTvGuide]) and Guide sources (a source's,
- * [onGuideSources] — which source, asked first when there are several, O4) beside Refresh.
+ * grid for Recent on the first of them, [onTvGuide]) and Guide sources (the one Guide Sources
+ * page, [onGuideSources]) beside Refresh.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +129,7 @@ fun MobileEpgBrowserScreen(
     categoryId: String? = null,
     categoryName: String? = null,
     providerId: Long = 0L,
-    onGuideSources: (providerId: Long) -> Unit = {},
+    onGuideSources: () -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
@@ -142,17 +140,6 @@ fun MobileEpgBrowserScreen(
     val contextName = categoryName?.takeIf { categoryId != null }
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val guideSourceOwners by viewModel.guideSourceOwners.collectAsStateWithLifecycle()
-    var choosingGuideSources by remember { mutableStateOf(false) }
-    if (choosingGuideSources) {
-        MobileSourceChooserDialog(
-            sources = guideSourceOwners,
-            onChosen = { id ->
-                choosingGuideSources = false
-                onGuideSources(id)
-            },
-            onDismiss = { choosingGuideSources = false },
-        )
-    }
     var searchQuery by remember { mutableStateOf("") }
     val recentLabel = stringResource(R.string.category_recent_label)
 
@@ -216,15 +203,7 @@ fun MobileEpgBrowserScreen(
                     }
                     // The guides this search runs over, of a source that can have them.
                     if (guideSourceOwners.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                when (val choice = SourceChoice.of(guideSourceOwners)) {
-                                    is SourceChoice.One -> onGuideSources(choice.source.first)
-                                    is SourceChoice.Ask -> choosingGuideSources = true
-                                    SourceChoice.None -> Unit
-                                }
-                            },
-                        ) {
+                        IconButton(onClick = onGuideSources) {
                             Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
                         }
                     }

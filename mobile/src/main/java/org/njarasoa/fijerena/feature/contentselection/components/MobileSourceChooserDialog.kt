@@ -26,7 +26,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
  * Picks one of [sources] (id to name) before a setting edited per source opens — content filters,
- * guide sources — when there is more than one (`SourceChoice.Ask`, O4 of
+ * the parental check — when there is more than one (`SourceChoice.Ask`, O4 of
  * docs/plans/20261012_multi-source-search-history-plan.md).
  */
 @Composable

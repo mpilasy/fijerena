@@ -63,4 +63,12 @@ class GuideSourcesFocusTest : SettingsFocusTest() {
         // The Add dialog's Use for list is checked on the emulator: its text field's cursor keeps
         // Compose from going idle here.
     }
+
+    @Test
+    fun `opened from Settings, on no source, focus is on the first guide source`() {
+        seed(SettingsFixture.ADMIN)
+        show { TvEpgManagementScreen(providerId = 0L, onBack = {}) }
+        walk.awaitFocused("Use this guide")
+        walk.run(up("Add guide source"))
+    }
 }

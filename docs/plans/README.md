@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-24 | [One Guide Sources page](./20261024_one-guide-sources-page-plan.md) | Guide Sources is one page for every source, grouped by source; Settings opens it with no chooser; Add asks which sources the guide is for | In progress: Phases 1–3 done |
+| 2026-10-24 | [One Guide Sources page](./20261024_one-guide-sources-page-plan.md) | Guide Sources is one page for every source, grouped by source; Settings opens it with no chooser; Add asks which sources the guide is for | In progress: Phases 1–4 done |
 | 2026-10-24 | [Tablet layout](./20261024_tablet-layout-plan.md) | The phone app as a good tablet app: both orientations, a navigation rail, wider grids, and list-and-details panes, without changing the phone | Shelved 2026-10-24; decisions taken, not started |
 | 2026-10-24 | [Text fonts and colours](./20261024_text-roles-audit-plan.md) | Every text takes its font and colour from its role: names in the title font, the accent only on what is current or selected, no text unreadable on a light theme or a fill | Built 2026-10-24 (Phases 1–3) |
 | 2026-10-24 | [Loading indicator](./20261024_loading-indicator-plan.md) | The player's "Buffering…" and "Tuning" text become an iris (films), a reel (episodes) and a ring with the channel logo (Live TV), with the title or channel logo at the top left; the last frame stays during a wait mid-stream; the TV stream info banner waits for play | Built 2026-10-24; checked on the emulators except the TV tuning ring |

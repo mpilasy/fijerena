@@ -22,8 +22,11 @@ data class SettingsUiState(
      * phone's Edit Source row chooses from. There is no source in use (multi-source plan, Phase 6).
      */
     val profileSources: List<Pair<Long, String>> = emptyList(),
-    /** Those of [profileSources] with live channels: the ones that can have guide sources. */
-    val guideSources: List<Pair<Long, String>> = emptyList(),
+    /**
+     * A source on the device has live channels, so it can have guide sources: the Guide Sources
+     * row shows (every source on the device, not only the profile's: the one guide sources page plan).
+     */
+    val hasGuideSources: Boolean = false,
     /** Each of [profileSources] with its URL and subscription, in the same order. */
     val themeId: String = "deep_night",
     val uiStyleId: String = "modern",
@@ -100,15 +103,15 @@ class SettingsViewModel(
     fun refreshProviderInfo() {
         viewModelScope.launchGuarded("SettingsViewModel.refreshProviderInfo") {
             val entities = providerRepo.profileSourcesList()
+            val hasGuideSources =
+                providerRepo.getAllProvidersList().any {
+                    org.njarasoa.fijerena.core.network.MediaProviderFactory
+                        .hasLiveTv(it)
+                }
             _uiState.value =
                 _uiState.value.copy(
                     profileSources = entities.map { it.id to it.name },
-                    guideSources =
-                        entities
-                            .filter {
-                                org.njarasoa.fijerena.core.network.MediaProviderFactory
-                                    .hasLiveTv(it)
-                            }.map { it.id to it.name },
+                    hasGuideSources = hasGuideSources,
                 )
         }
     }

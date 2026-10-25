@@ -46,7 +46,6 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
-import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -61,7 +60,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbKeyViewModel
-import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
@@ -93,7 +91,7 @@ fun MobileSettingsScreen(
     onLicenses: () -> Unit = {},
     onTerms: () -> Unit = {},
     onLiveSync: () -> Unit = {},
-    onGuideSources: (providerId: Long) -> Unit = {},
+    onGuideSources: () -> Unit = {},
     onEditProfile: (profileId: String) -> Unit = {},
     /** The page of the profile in use, at one of its rows (Display's and Playback's rows, G1). */
     onOpenProfileAt: (profileId: String, at: ProfilePageRow) -> Unit = { _, _ -> },
@@ -353,27 +351,6 @@ fun MobileSettingsScreen(
         )
     }
 
-    // Guide sources belong to one source: the profile's source with live channels, picked first
-    // when it has several (O4).
-    var choosingSourceFor by remember { mutableStateOf<((Long) -> Unit)?>(null) }
-    val openForSource: ((Long) -> Unit) -> Unit = { open ->
-        when (val choice = SourceChoice.of(uiState.guideSources)) {
-            is SourceChoice.One -> open(choice.source.first)
-            is SourceChoice.Ask -> choosingSourceFor = open
-            SourceChoice.None -> Unit
-        }
-    }
-    choosingSourceFor?.let { open ->
-        MobileSourceChooserDialog(
-            sources = uiState.guideSources,
-            onChosen = { id ->
-                choosingSourceFor = null
-                open(id)
-            },
-            onDismiss = { choosingSourceFor = null },
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -490,12 +467,13 @@ fun MobileSettingsScreen(
                         summary = manageSourcesSummary(uiState),
                         onClick = { guarded(onManageProviders) },
                     )
-                    // Only sources with live channels have guide sources.
-                    if (uiState.guideSources.isNotEmpty()) {
+                    // Only sources with live channels have guide sources: one page for all of
+                    // them (the one guide sources page plan), shown when the device has one.
+                    if (uiState.hasGuideSources) {
                         SettingsListRow(
                             title = stringResource(R.string.epg_management_screen_title),
                             summary = stringResource(R.string.settings_guide_sources_desc),
-                            onClick = { guarded { openForSource(onGuideSources) } },
+                            onClick = { guarded(onGuideSources) },
                         )
                     }
                     GuideMaintenanceRow(viewModel = epgViewModel, guard = guarded)

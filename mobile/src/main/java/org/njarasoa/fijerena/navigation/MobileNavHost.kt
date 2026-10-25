@@ -631,8 +631,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         categoryName = browserScreen.categoryName,
                         providerId = browserScreen.providerId,
                         onBack = { navController.navigateUp() },
-                        onGuideSources = { id ->
-                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        onGuideSources = {
+                            navController.navigateOnce(Screen.EpgManagement())
                         },
                         // Its TV Guide opens on Recent (D7); Back from the grid returns here.
                         onTvGuide = { categoryId, categoryName, providerId ->
@@ -890,8 +890,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         onLiveSync = {
                             navController.navigateOnce(Screen.SyncSettings)
                         },
-                        onGuideSources = { id ->
-                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        onGuideSources = {
+                            navController.navigateOnce(Screen.EpgManagement())
                         },
                         onEditProfile = { id ->
                             navController.navigateOnce(Screen.ProfileEdit(profileId = id))

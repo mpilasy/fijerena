@@ -1,8 +1,8 @@
 package org.njarasoa.fijerena.core.ui.home
 
 /**
- * What a setting edited per source does when opened (content filters on a profile's page, Search
- * the guide's Guide sources): with no current source any more, the source is picked first, but
+ * What a setting edited per source does when opened (content filters on a profile's page, the
+ * phone's parental check): with no current source any more, the source is picked first, but
  * only when there is a choice (docs/plans/20261012_multi-source-search-history-plan.md → O4).
  */
 sealed interface SourceChoice<out T> {

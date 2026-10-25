@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.settings
 
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.testing.SettingsFixture
@@ -15,8 +16,8 @@ import org.robolectric.RobolectricTestRunner
 /**
  * TV Settings → Sources & Guide (`scripts/focus-walks/settings.txt` and `settings-guide.txt`): its
  * rows, the guide's maintenance sub-pane (never pressed) and the TMDB key's, each closing on its
- * row. Manage Sources and Guide Sources open other screens, tested on their own
- * (`SourcesFocusTest`, `GuideSourcesFocusTest`).
+ * row. Manage Sources and Guide Sources open other screens (Guide Sources with no source
+ * chooser), tested on their own (`SourcesFocusTest`, `GuideSourcesFocusTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
@@ -45,6 +46,24 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             back("Guide Data Maintenance"),
             back("Sources & Guide"),
         )
+    }
+
+    @Test
+    fun `Guide Sources opens the one page, with no source chooser`() {
+        seed(SettingsFixture.ADMIN)
+        var opened = 0
+        show { SettingsScreen(onBack = {}, onProviderChanged = {}, onGuideSources = { opened++ }) }
+        walk.run(
+            down("Parental Controls"),
+            down("Playback"),
+            down("Display"),
+            down("Sources & Guide"),
+            right("Manage Sources"),
+            down("Guide Sources"),
+            // Two sources with live channels, and no chooser: the page opens at once.
+            center("Guide Sources"),
+        )
+        assertEquals(1, opened)
     }
 
     @Test

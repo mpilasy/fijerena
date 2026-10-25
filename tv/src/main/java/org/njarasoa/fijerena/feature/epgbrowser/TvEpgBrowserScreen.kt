@@ -102,7 +102,6 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
-import org.njarasoa.fijerena.core.ui.home.SourceChoice
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -127,7 +126,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
-import org.njarasoa.fijerena.ui.components.TvSourceChooserDialog
 import org.njarasoa.fijerena.ui.components.TvStatusBadge
 import org.njarasoa.fijerena.ui.components.TvStatusBadgeKind
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -161,8 +159,7 @@ private const val RETURN_TV_GUIDE = "header:tvGuide"
  * toggle — on by default — keeps the results on that guide's channels. One search, programme
  * titles (D7: the channel mode is gone). When the profile has a source with live channels the
  * header has TV Guide, opening the grid for Recent on the first of them ([onTvGuide], D7), and
- * Guide sources next to Refresh, opening a source's guide sources ([onGuideSources]) — which
- * source, asked first when there are several (multi-source plan, O4).
+ * Guide sources next to Refresh, opening the one Guide Sources page ([onGuideSources]).
  */
 @Composable
 fun TvEpgBrowserScreen(
@@ -171,7 +168,7 @@ fun TvEpgBrowserScreen(
     categoryId: String? = null,
     categoryName: String? = null,
     providerId: Long = 0L,
-    onGuideSources: (providerId: Long) -> Unit = {},
+    onGuideSources: () -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String, providerId: Long) -> Unit = { _, _, _ -> },
 ) {
     val context = LocalContext.current
@@ -187,11 +184,6 @@ fun TvEpgBrowserScreen(
     // ResultsContent's).
     val headerReturnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(headerReturnFocus)
-    var choosingGuideSources by remember { mutableStateOf(false) }
-    val openGuideSources = { providerId: Long ->
-        headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
-        onGuideSources(providerId)
-    }
     val recentLabel = stringResource(R.string.category_recent_label)
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
@@ -247,27 +239,14 @@ fun TvEpgBrowserScreen(
                 if (guideSourceOwners.isNotEmpty()) {
                     TvIconAction(
                         onClick = {
-                            when (val choice = SourceChoice.of(guideSourceOwners)) {
-                                is SourceChoice.One -> openGuideSources(choice.source.first)
-                                is SourceChoice.Ask -> choosingGuideSources = true
-                                SourceChoice.None -> Unit
-                            }
+                            headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
+                            onGuideSources()
                         },
                         icon = CinemaIcons.Tune,
                         label = stringResource(R.string.epg_sources_header),
                         modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_GUIDE_SOURCES),
                     )
                 }
-            }
-            if (choosingGuideSources) {
-                TvSourceChooserDialog(
-                    sources = guideSourceOwners,
-                    onChosen = { providerId ->
-                        choosingGuideSources = false
-                        openGuideSources(providerId)
-                    },
-                    onDismiss = { choosingGuideSources = false },
-                )
             }
 
             TvGuideSearchPane(
