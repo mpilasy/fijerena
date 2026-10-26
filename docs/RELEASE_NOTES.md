@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.7
 
 - **Faster sync and smoother playback:** a full sync of a large account is many times faster, and a first link marks its records sent in one go instead of one by one. During a connection outage, logging the failed calls no longer slows the player, and the player's guide no longer saves its listings to storage at each channel change. A source with many logins no longer reports a login as not answering when it does. TV and phone.
 
