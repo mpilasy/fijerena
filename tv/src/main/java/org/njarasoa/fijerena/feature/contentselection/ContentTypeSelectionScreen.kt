@@ -47,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -436,43 +437,52 @@ fun ContentTypeSelectionScreen(
     }
     // The first card of the first row that has one: where focus opens and where Down from the header
     // goes. Null with no row at all; the sections are on the navigation rail then.
-    val firstRowFocus =
-        when {
-            // News first: titles that just became available.
-            announced.isNotEmpty() -> wantedBannerFocus
+    // Derived, so the entry focus below reads the rows as they are now. A value read through
+    // rememberUpdatedState catches up only at the next recomposition: a row that had just loaded
+    // (Continue Watching) was not the first yet, focus went to a lower row's card, and the rows
+    // loading above it pushed that card out of view, so nothing had focus (Back from Settings).
+    val firstRowFocusState =
+        remember(announced) {
+            derivedStateOf {
+                when {
+                    // News first: titles that just became available.
+                    announced.isNotEmpty() -> wantedBannerFocus
 
-            continueWatchingItems.isNotEmpty() -> shelfFirstFocus
+                    continueWatchingItems.isNotEmpty() -> shelfFirstFocus
 
-            liveRowEntries.isNotEmpty() -> liveRowFirstFocus
+                    liveRowEntries.isNotEmpty() -> liveRowFirstFocus
 
-            favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
+                    favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
 
-            categoriesOf(
-                HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
-            ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_CHANNEL_CATEGORIES)
+                    categoriesOf(
+                        HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
+                    ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_CHANNEL_CATEGORIES)
 
-            favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
+                    favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
 
-            categoriesOf(
-                HomeShelf.FAVORITE_MOVIE_CATEGORIES,
-            ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_MOVIE_CATEGORIES)
+                    categoriesOf(
+                        HomeShelf.FAVORITE_MOVIE_CATEGORIES,
+                    ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_MOVIE_CATEGORIES)
 
-            favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
+                    favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
 
-            categoriesOf(
-                HomeShelf.FAVORITE_SHOW_CATEGORIES,
-            ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_SHOW_CATEGORIES)
+                    categoriesOf(
+                        HomeShelf.FAVORITE_SHOW_CATEGORIES,
+                    ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_SHOW_CATEGORIES)
 
-            wantedCards.isNotEmpty() -> wantedFirstFocus
+                    wantedCards.isNotEmpty() -> wantedFirstFocus
 
-            else -> null
+                    else -> null
+                }
+            }
         }
+    val firstRowFocus = firstRowFocusState.value
     val rail = LocalTvNavRail.current
     // The first button of the panel shown in place of the rows without merged sections.
     val sourcesPanelFocus = remember { FocusRequester() }
     // Read by the entry focus below after it has waited for the rows: the value from its launch
     // was from before they loaded (null: no focus at all after a profile switch).
-    val currentFirstRowFocus by rememberUpdatedState(firstRowFocus)
+    val currentFirstRowFocusState by rememberUpdatedState(firstRowFocusState)
     LaunchedEffect(Unit) {
         // Back hands focus to the control that was left (NavReturnFocusEffect below).
         if (returnFocus.isReturn) return@LaunchedEffect
@@ -497,8 +507,8 @@ fun ContentTypeSelectionScreen(
         // for one, then the rail (hidden by the profile picker a moment ago, so retried until it
         // is back).
         val target =
-            currentFirstRowFocus
-                ?: withTimeoutOrNull(LATE_ROWS_WAIT_MS) { snapshotFlow { currentFirstRowFocus }.first { it != null } }
+            currentFirstRowFocusState.value
+                ?: withTimeoutOrNull(LATE_ROWS_WAIT_MS) { snapshotFlow { currentFirstRowFocusState.value }.first { it != null } }
         if (target != null) target.requestFocusWithRetry() else rail?.entry?.requestFocusWithRetry()
     }
     NavReturnFocusEffect(returnFocus, fallback = firstRowFocus) { key ->

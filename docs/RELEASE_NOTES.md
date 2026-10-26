@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Back from Settings keeps a focus on Home:** on TV, Back from Settings sometimes left nothing focused on Home. Home now focuses the first card of its first row, as when it opens. TV.
+
 ## Version: 0.8.8
 
 - **New app icon:** the red and cyan 3D glasses over the Earth are new art, drawn for Fijerena. The lenses now tint the Earth behind them, so Madagascar shows through the cyan lens. On the launcher and the app's own logo. TV and phone.
