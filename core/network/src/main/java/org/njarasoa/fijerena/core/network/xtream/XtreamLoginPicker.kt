@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -13,6 +15,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SourceLogins
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.player.api.XtreamStreamUrl
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.source.AlternateLogin
 import java.util.concurrent.ConcurrentHashMap
@@ -63,7 +66,13 @@ object XtreamLoginPicker : AlternateLogin {
     private val busyUntil = ConcurrentHashMap<Pair<Long, String>, Long>()
     private val picks = java.util.Collections.synchronizedMap(LinkedHashMap<String, Pick>())
     private val statusCache = ConcurrentHashMap<Pair<Long, String>, Pair<Long, XtreamLoginCheck.Status>>()
-    private val services = java.util.Collections.synchronizedMap(LinkedHashMap<Triple<String, String, String>, XtreamApiService>())
+
+    // Access-ordered: the service used least recently is the one evicted.
+    private val services =
+        java.util.Collections.synchronizedMap(LinkedHashMap<Triple<String, String, String>, XtreamApiService>(16, 0.75f, true))
+
+    // Closes evicted services once any check still using them has ended.
+    private val closeScope = AppScopes.create("XtreamLoginPicker.close", Dispatchers.IO)
 
     /** Called once at app start: from then on the player can switch logins on a refusal. */
     fun install(context: Context) {
@@ -227,9 +236,21 @@ object XtreamLoginPicker : AlternateLogin {
     ): XtreamApiService =
         synchronized(services) {
             services.getOrPut(Triple(url, login.username, login.password)) { XtreamApiService(url, login.username, login.password) }.also {
-                while (services.size > SERVICES_KEPT) services.remove(services.keys.first())?.close()
+                while (services.size > SERVICES_KEPT) services.remove(services.keys.first())?.let(::closeLater)
             }
         }
+
+    /**
+     * Closes [service] after [CHECK_TIMEOUT_MS]. A check in parallel may still use it: a source
+     * with more logins than [SERVICES_KEPT] evicts a service whose call is in flight, and closing
+     * it at once made that check fail as "no answer". Every check ends within the timeout.
+     */
+    private fun closeLater(service: XtreamApiService) {
+        closeScope.launch {
+            delay(CHECK_TIMEOUT_MS)
+            service.close()
+        }
+    }
 
     /** [url] on [login], remembered as this device's pick for its source. */
     private fun swap(

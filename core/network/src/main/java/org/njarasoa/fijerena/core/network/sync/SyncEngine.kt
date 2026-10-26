@@ -102,9 +102,17 @@ class SyncEngine(
                 store.cursor = 0
                 continue
             }
-            // Records waiting for a provider or profile get another go with each page.
-            val batch = waiting + page.records
-            val result = applier.apply(batch.mapNotNull { SyncCodec.decode(it, crypto) })
+            val decodedPage = page.records.mapNotNull { SyncCodec.decode(it, crypto) }
+            // Records waiting for a provider or profile get another go when a page brings one, and
+            // after the last page. Not with every page: up to MAX_DEFERRED records decrypted and
+            // applied again per page made a full resync of a large account many times slower.
+            val retryWaiting =
+                waiting.isNotEmpty() &&
+                    (!page.more || decodedPage.any { it.key.kind == SyncKind.PROVIDER || it.key.kind == SyncKind.PROFILE })
+            val result =
+                applier.apply(
+                    if (retryWaiting) waiting.mapNotNull { SyncCodec.decode(it, crypto) } + decodedPage else decodedPage,
+                )
             applied += result.applied
             activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
             providerDeleted = providerDeleted || result.providerDeleted
@@ -112,7 +120,8 @@ class SyncEngine(
             if (result.providerChangedIds.isNotEmpty()) listener?.onProvidersChanged(result.providerChangedIds)
             if (result.wantedChanged) listener?.onWantedChanged()
             val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
-            waiting = batch.filter { it.key in deferredKeys }.takeLast(MAX_DEFERRED)
+            val deferredNow = (if (retryWaiting) waiting + page.records else page.records).filter { it.key in deferredKeys }
+            waiting = (if (retryWaiting) deferredNow else waiting + deferredNow).takeLast(MAX_DEFERRED)
             // Together, every page: saving only the cursor here (and the waiting records after
             // the loop) would lose the records this page deferred whenever a later page failed — the
             // cursor would already have moved past them, so nothing would ever fetch them again. See
@@ -155,14 +164,14 @@ class SyncEngine(
                     )
                 Log.e(TAG, e.message, e)
                 CrashLog.record("sync push", e)
-                pending.markSent()
             }
+            local.markAllSent(oversized.map { it.first })
             if (sendable.isNotEmpty()) {
                 val response = api.push(link.serverUrl, link.deviceToken, sendable.map { it.second })
                 response.rejected.filter { it.reason != "stale" }.forEach { Log.w(TAG, "Server rejected a record: ${it.reason}") }
                 // Accepted, rejected as stale (the server has something newer, which the next pull
                 // brings) or rejected as invalid (it would be every time): this version is done.
-                sendable.forEach { it.first.markSent() }
+                local.markAllSent(sendable.map { it.first })
                 pushed += response.accepted
             }
             if (outgoing.size < PUSH_BATCH) break

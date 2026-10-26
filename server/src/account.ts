@@ -153,6 +153,8 @@ export class Account extends DurableObject<Env> {
   private async createPairing(accountId: string): Promise<Response> {
     const secret = randomSecret();
     const expiresAt = Date.now() + PAIRING_TTL_MS;
+    // Codes nobody used: otherwise they only went when some other code was used.
+    this.sql.exec("DELETE FROM pairings WHERE expires_at < ?", Date.now());
     this.sql.exec("INSERT INTO pairings (code_hash, expires_at) VALUES (?, ?)", await sha256(secret), expiresAt);
     return json({ code: `${accountId}.${secret}`, expiresAt }, 201);
   }
@@ -231,6 +233,8 @@ export class Account extends DurableObject<Env> {
     const rejected: { key: string; reason: string }[] = [];
     let accepted = 0;
     this.ctx.storage.transactionSync(() => {
+      // The head is read and written once per batch, not once per record.
+      let head = this.head();
       for (const r of records) {
         const problem = invalid(r);
         if (problem) {
@@ -243,7 +247,7 @@ export class Account extends DurableObject<Env> {
           rejected.push({ key: r.key, reason: "stale" });
           continue;
         }
-        const seq = this.nextSeq();
+        const seq = ++head;
         this.sql.exec(
           "INSERT OR REPLACE INTO records (key, provider_tag, profile_tag, seq, updated_at, deleted, payload, stored_at) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -264,6 +268,7 @@ export class Account extends DurableObject<Env> {
         }
         accepted++;
       }
+      if (accepted > 0) this.setMeta("head", head);
     });
 
     const head = this.head();
@@ -334,12 +339,6 @@ export class Account extends DurableObject<Env> {
   }
 
   // --- Bookkeeping ---
-
-  private nextSeq(): number {
-    const seq = this.head() + 1;
-    this.setMeta("head", seq);
-    return seq;
-  }
 
   private head(): number {
     return this.getMeta("head");

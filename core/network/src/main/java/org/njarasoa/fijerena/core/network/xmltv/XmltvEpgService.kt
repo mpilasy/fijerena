@@ -1,13 +1,10 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
-import androidx.core.content.edit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -17,6 +14,8 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgWindowRow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 class XmltvEpgService(
     private val context: Context,
@@ -26,33 +25,37 @@ class XmltvEpgService(
         private const val TAG = "XmltvEpgService"
         private const val PARSED_CACHE_TTL_MS = 12L * 60 * 60 * 1000
 
-        // v2: entries cached before the per-source dedup fix can hold duplicate
-        // programmes, which crashes the lazy lists keyed on listing id.
-        private const val KEY_CACHED_EPG = "xmltv_epg_data_v2"
-        private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp_v2"
-
-        // The index build the entry was parsed from (EpgIndexState.Indexed.indexedAtMs). A rebuilt
-        // index makes the entry stale however recent it is: the user refreshed the guide precisely
-        // to see the new listings, and the TTL alone kept showing the old ones for up to 12 hours.
-        private const val KEY_CACHE_INDEX_GENERATION = "xmltv_cache_index_generation_v2"
+        // Channels whose parsed listings stay in memory. The player asks for one channel at a
+        // time, so this covers a long zapping session; the index answers anything older quickly.
+        private const val PARSED_CACHE_MAX_CHANNELS = 32
         private const val MISS_CACHE_MS = 60_000L
+
+        // One per provider for the process, not per instance: EpgFileManager clears it after a
+        // sync through an instance of its own, not the one MediaRepository holds.
+        private val parsedCaches = ConcurrentHashMap<Long, LinkedHashMap<String, CachedListings>>()
+
+        // Access-ordered, so the channel used least recently goes first.
+        private fun newParsedCache() =
+            object : LinkedHashMap<String, CachedListings>(16, 0.75f, true) {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CachedListings>?): Boolean =
+                    size > PARSED_CACHE_MAX_CHANNELS
+            }
     }
 
-    private val cache: SharedPreferences =
-        context.getSharedPreferences(
-            "xmltv_cache_$providerId",
-            Context.MODE_PRIVATE,
-        )
+    // The parsed listings used to live in SharedPreferences as one JSON blob of every channel
+    // asked for since the last index build: it grew with each channel change, was rewritten whole
+    // each time, and apply() made the main thread wait for it in onPause/onStop. Memory only now;
+    // the old file is deleted once, off the main thread.
+    private val legacyPrefsDeleted = AtomicBoolean(false)
 
-    private val json =
-        Json {
-            ignoreUnknownKeys = true
-            encodeDefaults = true
-        }
+    private class CachedListings(
+        val epg: EpgResponse,
+        val indexGeneration: Long,
+        val cachedAtMs: Long,
+    )
 
-    // In-memory cache — avoid re-deserializing full EPG JSON from SharedPreferences on every call
-    private var parsedEpgCache: Map<String, EpgResponse>? = null
-    private var parsedEpgTimestamp: Long = 0L
+    // Guarded by itself: several IO threads read and write it at once.
+    private val parsedEpgCache = parsedCaches.computeIfAbsent(providerId) { newParsedCache() }
 
     // Cached channel match maps — avoids full DB scan + 5 map builds on every getNowPlayingForItems call
     private var cachedChannelMaps: ChannelMatchMaps? = null
@@ -180,16 +183,9 @@ class XmltvEpgService(
                 EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed
                     ?: return@withContext emptyMap()
 
-            val cachedResult = getCachedEpg(indexState.indexedAtMs)
-            if (cachedResult != null) {
-                // Only use cache if ALL requested channels are present in it.
-                // The player calls this with a single channel; a stale cache from a
-                // previous single-channel call would otherwise hide the current one.
-                val allPresent = channels.all { cachedResult.containsKey(it.id) }
-                if (allPresent) {
-                    return@withContext cachedResult
-                }
-            }
+            deleteLegacyPrefs()
+
+            getCachedEpg(indexState.indexedAtMs, channels.map { it.id })?.let { return@withContext it }
 
             try {
                 val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
@@ -241,10 +237,8 @@ class XmltvEpgService(
                         )
                 }
 
-                // Merge fresh results into existing cache so previous channels aren't lost
-                val merged = (cachedResult ?: emptyMap()) + result
-                cacheEpg(merged, indexState.indexedAtMs)
-                merged
+                cacheEpg(result, indexState.indexedAtMs)
+                result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -391,35 +385,32 @@ class XmltvEpgService(
         }
 
     fun clearCache() {
-        cache.edit { clear() }
-        parsedEpgCache = null
+        synchronized(parsedEpgCache) { parsedEpgCache.clear() }
         cachedChannelMaps = null
         missCachedUntilMs = 0L
     }
 
-    /** The parsed entry, if it came from the index build [indexGeneration] and is within the TTL. */
-    internal fun getCachedEpg(indexGeneration: Long): Map<String, EpgResponse>? {
-        val timestamp = cache.getLong(KEY_CACHE_TIMESTAMP, 0L)
-        if (cache.getLong(KEY_CACHE_INDEX_GENERATION, -1L) != indexGeneration ||
-            System.currentTimeMillis() - timestamp > PARSED_CACHE_TTL_MS
-        ) {
-            parsedEpgCache = null
-            return null
-        }
-
-        // Return in-memory cache if still valid (avoids JSON deserialization)
-        parsedEpgCache?.let { if (parsedEpgTimestamp == timestamp) return it }
-
-        val cachedJson = cache.getString(KEY_CACHED_EPG, null) ?: return null
-        return try {
-            json.decodeFromString<Map<String, EpgResponse>>(cachedJson).also {
-                parsedEpgCache = it
-                parsedEpgTimestamp = timestamp
+    /**
+     * The parsed listings of every channel in [itemIds], if each came from the index build
+     * [indexGeneration] and is within the TTL; null when any one is missing or stale.
+     */
+    internal fun getCachedEpg(
+        indexGeneration: Long,
+        itemIds: Collection<String>,
+    ): Map<String, EpgResponse>? {
+        if (itemIds.isEmpty()) return null
+        val now = System.currentTimeMillis()
+        synchronized(parsedEpgCache) {
+            val result = HashMap<String, EpgResponse>(itemIds.size)
+            for (id in itemIds) {
+                val entry = parsedEpgCache[id] ?: return null
+                if (entry.indexGeneration != indexGeneration || now - entry.cachedAtMs > PARSED_CACHE_TTL_MS) {
+                    parsedEpgCache.remove(id)
+                    return null
+                }
+                result[id] = entry.epg
             }
-        } catch (e: Exception) {
-            // cancellation-ok: non-suspend
-            Log.w(TAG, "Failed to deserialize cached EPG", e)
-            null
+            return result
         }
     }
 
@@ -427,19 +418,16 @@ class XmltvEpgService(
         data: Map<String, EpgResponse>,
         indexGeneration: Long,
     ) {
-        try {
-            val now = System.currentTimeMillis()
-            val serialized = json.encodeToString(data)
-            cache.edit {
-                putString(KEY_CACHED_EPG, serialized)
-                    .putLong(KEY_CACHE_TIMESTAMP, now)
-                    .putLong(KEY_CACHE_INDEX_GENERATION, indexGeneration)
-            }
-            parsedEpgCache = data
-            parsedEpgTimestamp = now
-        } catch (e: Exception) {
-            // cancellation-ok: non-suspend
-            Log.w(TAG, "Failed to cache XMLTV EPG", e)
+        val now = System.currentTimeMillis()
+        synchronized(parsedEpgCache) {
+            for ((id, epg) in data) parsedEpgCache[id] = CachedListings(epg, indexGeneration, now)
+        }
+    }
+
+    private fun deleteLegacyPrefs() {
+        if (legacyPrefsDeleted.compareAndSet(false, true)) {
+            runCatching { context.deleteSharedPreferences("xmltv_cache_$providerId") }
+                .onFailure { Log.w(TAG, "Couldn't delete the old XMLTV cache file", it) }
         }
     }
 

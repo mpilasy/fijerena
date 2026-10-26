@@ -348,7 +348,9 @@ class EpgIndexer private constructor(
                 lastIngestionStats = stats
                 stats
             } catch (e: OutOfMemoryError) {
-                System.gc()
+                // Kept as a failed source, not a crash: EPG sync runs at every start, so a crash
+                // here would repeat at every start. No System.gc(): the runtime already ran a full
+                // collection before it threw, and the batches above are freed when this returns.
                 val msg = "Out of memory during stream indexing ($channelCount ch, $programmeCount prg ingested before failure)"
                 Log.e(TAG, msg, e)
                 lastIngestionStats = IngestionStats(channelCount, programmeCount)

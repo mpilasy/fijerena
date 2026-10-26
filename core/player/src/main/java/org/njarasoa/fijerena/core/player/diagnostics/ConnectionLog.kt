@@ -37,14 +37,20 @@ object ConnectionLog {
 
     @Volatile private var file: File? = null
 
+    // Entries in the file, counted once and then kept up to date; -1 until counted. Guarded by [lock].
+    private var entryCount = -1
+
     /** Call in `Application.onCreate()`, next to [CrashLog.install]. */
     fun install(context: Context) {
-        file = File(context.filesDir, "crashlog/connections.log")
+        installAt(File(context.filesDir, "crashlog/connections.log"))
     }
 
     /** For tests: where entries go. */
     internal fun installAt(target: File) {
-        file = target
+        synchronized(lock) {
+            file = target
+            entryCount = -1
+        }
     }
 
     /** Adds one entry for a failed call to [url]. Never throws. */
@@ -64,10 +70,15 @@ object ConnectionLog {
                     .take(MAX_TRACE_LINES)
                     .joinToString("\n")
             val entry = Redact.text("$nowMs $what\n$url\n${error::class.simpleName}: ${error.message}$TRACE_SEPARATOR$trace")
+            // Appended, not a read and rewrite of the whole file: during an outage many calls fail
+            // at once, and each one rewrote about 1 MB under this lock on the failing call's
+            // thread. The file is trimmed back to [MAX_ENTRIES] only once it holds twice that.
             synchronized(lock) {
                 target.parentFile?.mkdirs()
-                val kept = readEntries(target).takeLast(MAX_ENTRIES - 1)
-                target.writeText((kept + entry).joinToString(ENTRY_SEPARATOR, postfix = ENTRY_SEPARATOR))
+                if (entryCount < 0) entryCount = readEntries(target).size
+                target.appendText(entry + ENTRY_SEPARATOR)
+                entryCount++
+                if (entryCount > MAX_ENTRIES * 2) trim(target)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't write connection log", e)
@@ -81,7 +92,7 @@ object ConnectionLog {
     fun read(): List<String> {
         val target = file ?: return emptyList()
         return try {
-            synchronized(lock) { readEntries(target) }.reversed()
+            synchronized(lock) { readEntries(target) }.takeLast(MAX_ENTRIES).reversed()
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't read connection log", e)
             emptyList()
@@ -89,7 +100,22 @@ object ConnectionLog {
     }
 
     fun clear() {
-        synchronized(lock) { file?.delete() }
+        synchronized(lock) {
+            file?.delete()
+            entryCount = 0
+        }
+    }
+
+    /** Keeps the newest [MAX_ENTRIES], written to a copy first so a crash mid-write loses nothing. Caller holds [lock]. */
+    private fun trim(target: File) {
+        val kept = readEntries(target).takeLast(MAX_ENTRIES)
+        val copy = File(target.parentFile, target.name + ".tmp")
+        copy.writeText(kept.joinToString(ENTRY_SEPARATOR, postfix = ENTRY_SEPARATOR))
+        if (!copy.renameTo(target)) {
+            copy.delete()
+            Log.w(TAG, "Couldn't trim connection log")
+        }
+        entryCount = kept.size
     }
 
     private fun readEntries(target: File): List<String> =
