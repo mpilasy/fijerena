@@ -20,7 +20,8 @@ data class StreamHealthState(
  */
 class StreamHealthMonitor(
     val config: Config = Config(),
-    private val onStreamRecycleRequired: () -> Unit,
+    /** Called with the reason, for Diagnostics. */
+    private val onStreamRecycleRequired: (reason: String) -> Unit,
     private val onRecoveryExhausted: () -> Unit = {},
 ) {
     private val _state = MutableStateFlow(StreamHealthState())
@@ -88,7 +89,7 @@ class StreamHealthMonitor(
             // Logic blocked to prevent multiple triggers during reset
         } else if (hasReadTimeout) {
             Log.w(TAG, "Read timeout detected. Immediate recycle required.")
-            triggerRecycle()
+            triggerRecycle("the position stopped moving")
         } else if (isHealthy) {
             // Reset the degradation timer if the stream recovers naturally
             firstFailureTimestamp = 0L
@@ -120,7 +121,12 @@ class StreamHealthMonitor(
             val degradationDuration = now - firstFailureTimestamp
             if (degradationDuration >= config.sustainedDegradationWindowMs) {
                 Log.w(TAG, "Sustained degradation detected (${degradationDuration}ms). Triggering recycle.")
-                triggerRecycle()
+                val reason =
+                    listOfNotNull(
+                        "buffer under ${config.minBufferMs} ms".takeIf { isBufferLow },
+                        "over ${config.maxFrameDropRate} dropped frames/s".takeIf { isFrameDropHigh },
+                    ).joinToString(" and ")
+                triggerRecycle("$reason for ${degradationDuration / 1000} s")
             }
         }
         updateStateFlow()
@@ -149,22 +155,22 @@ class StreamHealthMonitor(
         updateStateFlow()
     }
 
-    private fun triggerRecycle() {
+    private fun triggerRecycle(reason: String) {
         // Once degraded, stay degraded — recycleAttempts must not keep incrementing on every
         // re-check while triggerDegradedRecycle() is just waiting for its own interval to
         // elapse (updateMetrics() calls back in on every evaluation tick until it fires).
         if (isDegraded) {
-            triggerDegradedRecycle()
+            triggerDegradedRecycle(reason)
             return
         }
         recycleAttempts++
         if (recycleAttempts > config.maxRecycleAttempts) {
-            triggerDegradedRecycle()
+            triggerDegradedRecycle(reason)
             return
         }
         isRecycleTriggered = true
         updateStateFlow()
-        onStreamRecycleRequired.invoke()
+        onStreamRecycleRequired.invoke("$reason (attempt $recycleAttempts)")
     }
 
     /**
@@ -175,7 +181,7 @@ class StreamHealthMonitor(
      * after every single recycle attempt, so clearing the degraded budget there would mean
      * this cap could never bite.
      */
-    private fun triggerDegradedRecycle() {
+    private fun triggerDegradedRecycle(reason: String) {
         val now = System.currentTimeMillis()
         if (!isDegraded) {
             isDegraded = true
@@ -199,7 +205,7 @@ class StreamHealthMonitor(
         lastDegradedRecycleTimestamp = now
         isRecycleTriggered = true
         updateStateFlow()
-        onStreamRecycleRequired.invoke()
+        onStreamRecycleRequired.invoke("$reason (slow attempt $degradedAttempts)")
     }
 
     companion object {

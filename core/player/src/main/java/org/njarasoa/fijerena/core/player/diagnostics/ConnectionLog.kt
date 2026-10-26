@@ -12,10 +12,11 @@ import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * The last [MAX_ENTRIES] server calls that failed — no connection, a timeout, an error status —
- * with the address asked and the error, logins masked ([Redact]). The app handles these (a
+ * with the address asked and the error, logins masked ([Redact]); and what the player's streams
+ * did ([recordStream]): their errors, reconnects and waits during playback. The app handles these (a
  * message, a saved copy), so they never reach [CrashLog]; this is where an unreachable source
  * shows in Settings → Diagnostics. Kept in `files/crashlog/connections.log`. Fed by
- * [recordFailedCalls] on the Xtream, Jellyfin and TMDB clients.
+ * [recordFailedCalls] on the Xtream, Jellyfin and TMDB clients, and by StreamingPlaybackService.
  */
 object ConnectionLog {
     private const val TAG = "ConnectionLog"
@@ -69,19 +70,43 @@ object ConnectionLog {
                     .lineSequence()
                     .take(MAX_TRACE_LINES)
                     .joinToString("\n")
-            val entry = Redact.text("$nowMs $what\n$url\n${error::class.simpleName}: ${error.message}$TRACE_SEPARATOR$trace")
-            // Appended, not a read and rewrite of the whole file: during an outage many calls fail
-            // at once, and each one rewrote about 1 MB under this lock on the failing call's
-            // thread. The file is trimmed back to [MAX_ENTRIES] only once it holds twice that.
-            synchronized(lock) {
-                target.parentFile?.mkdirs()
-                if (entryCount < 0) entryCount = readEntries(target).size
-                target.appendText(entry + ENTRY_SEPARATOR)
-                entryCount++
-                if (entryCount > MAX_ENTRIES * 2) trim(target)
-            }
+            append(target, Redact.text("$nowMs $what\n$url\n${error::class.simpleName}: ${error.message}$TRACE_SEPARATOR$trace"))
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't write connection log", e)
+        }
+    }
+
+    /**
+     * Adds one entry for what a stream did on [url]: an error, a reconnect, a wait during
+     * playback. [what] is its title, [detail] the lines under it. Never throws.
+     */
+    fun recordStream(
+        what: String,
+        url: String,
+        detail: String,
+        nowMs: Long = System.currentTimeMillis(),
+    ) {
+        val target = file ?: return
+        try {
+            append(target, Redact.text("$nowMs $what\n$url\n$detail"))
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't write connection log", e)
+        }
+    }
+
+    // Appended, not a read and rewrite of the whole file: during an outage many calls fail at
+    // once, and each one rewrote about 1 MB under this lock on the failing call's thread. The
+    // file is trimmed back to [MAX_ENTRIES] only once it holds twice that.
+    private fun append(
+        target: File,
+        entry: String,
+    ) {
+        synchronized(lock) {
+            target.parentFile?.mkdirs()
+            if (entryCount < 0) entryCount = readEntries(target).size
+            target.appendText(entry + ENTRY_SEPARATOR)
+            entryCount++
+            if (entryCount > MAX_ENTRIES * 2) trim(target)
         }
     }
 

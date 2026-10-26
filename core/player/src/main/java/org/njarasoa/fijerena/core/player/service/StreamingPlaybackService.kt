@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.ConnectionLog
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.BufferingInfo
@@ -137,6 +138,10 @@ class StreamingPlaybackService : MediaSessionService() {
     private val stallWatchdog = StallWatchdog()
     private val throughputMeter = ThroughputMeter()
     private val bufferingTracker = BufferingTracker()
+
+    // Why the player is recovering (an error, a reconnect), for the wait's Diagnostics entry;
+    // null once it plays again. Main thread.
+    private var recoveryCause: String? = null
 
     private val _totalRebufferTimeMs = MutableStateFlow(0L)
     val totalRebufferTimeMs: StateFlow<Long> = _totalRebufferTimeMs.asStateFlow()
@@ -337,7 +342,12 @@ class StreamingPlaybackService : MediaSessionService() {
 
         healthMonitor =
             org.njarasoa.fijerena.core.player.network.StreamHealthMonitor(
-                onStreamRecycleRequired = {
+                onStreamRecycleRequired = { reason ->
+                    mainHandler.post {
+                        val position = getPlayer()?.currentPosition ?: 0L
+                        recoveryCause = "Reconnected: $reason"
+                        recordStream("Stream reconnect on ${streamHost()}", "Health check: $reason\nAt ${formatPosition(position)}")
+                    }
                     mainHandler.post(recycleHandler)
                 },
                 onRecoveryExhausted = {
@@ -397,6 +407,7 @@ class StreamingPlaybackService : MediaSessionService() {
         serviceScope = scope
         scope.launch {
             _playbackState.collect { state ->
+                recordWaitIfEnded(state)
                 bufferingTracker.onStateChanged(
                     buffering = state is PlaybackState.Buffering,
                     playing = state is PlaybackState.Playing,
@@ -605,6 +616,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 isCatchup = { _currentMetadata.value.catchupLabel != null },
                 streamStartTimeMs = { _streamStartTimeMs.value },
                 onFirstFrame = ::onFirstFrameRendered,
+                onError = ::recordStreamError,
             )
         player.addListener(playerListener!!)
 
@@ -1195,7 +1207,61 @@ class StreamingPlaybackService : MediaSessionService() {
         )
     }
 
+    /**
+     * A Diagnostics entry for a wait the user saw during playback, when [state] ends it: one that
+     * began while playing (a stall), or while recovering from an error or a reconnect. Not the
+     * wait at a start or after a seek. Read before [BufferingTracker.onStateChanged] clears it.
+     */
+    private fun recordWaitIfEnded(state: PlaybackState) {
+        if (state is PlaybackState.Buffering) return
+        val waitedMs = bufferingTracker.waitingMs(SystemClock.elapsedRealtime())
+        val cause = recoveryCause
+        if (waitedMs >= STREAM_WAIT_LOG_MS && (bufferingTracker.isRebuffering || cause != null)) {
+            val errors = bufferingTracker.errorsThisWait()
+            recordStream(
+                "Stream waited %.1f s on %s".format(java.util.Locale.ROOT, waitedMs / 1000.0, streamHost()),
+                listOfNotNull(
+                    cause ?: "Stall during playback",
+                    "Load errors: $errors" + (bufferingTracker.lastErrorThisWait()?.let { " (last: $it)" } ?: ""),
+                    "Received: ${bufferingTracker.bytesThisWait() / 1024} KB",
+                    if (state is PlaybackState.Playing) "Playing again" else "Then: ${state::class.simpleName}",
+                ).joinToString("\n"),
+            )
+        }
+        if (state is PlaybackState.Playing) recoveryCause = null
+    }
+
+    /** A Diagnostics entry for a player error, with its causes; the wait that follows names it. */
+    private fun recordStreamError(error: PlaybackException) {
+        recoveryCause = "Error: ${error.errorCodeName}"
+        recordStream(
+            "Stream error from ${streamHost()}",
+            generateSequence(error as Throwable) { it.cause }
+                .take(STREAM_ERROR_CAUSES)
+                .joinToString("\n") { "${it::class.simpleName}: ${it.message}" }
+                .let { "${error.errorCodeName}\n$it" },
+        )
+    }
+
+    /** Writes a stream entry to [ConnectionLog] off the main thread; nothing without a stream. */
+    private fun recordStream(
+        what: String,
+        detail: String,
+    ) {
+        val url = _currentMetadata.value.streamUrl
+        if (url.isEmpty()) return
+        val nowMs = System.currentTimeMillis()
+        serviceScope?.launch(Dispatchers.IO) { ConnectionLog.recordStream(what, url, detail, nowMs) }
+    }
+
+    private fun streamHost(): String =
+        _currentMetadata.value.streamUrl.let { url -> runCatching { java.net.URI(url).host }.getOrNull() ?: url }
+
+    private fun formatPosition(positionMs: Long): String =
+        "%d:%02d".format(java.util.Locale.ROOT, positionMs / 60_000, positionMs / 1000 % 60)
+
     private fun resetNetworkWatch() {
+        recoveryCause = null
         bufferingTracker.onNewStream()
         stallWatchdog.reset()
         throughputMeter.reset()
@@ -1662,6 +1728,8 @@ class StreamingPlaybackService : MediaSessionService() {
         // after a new stream can log total prepare-to-ready latency.
         private val streamStartTimeMs: () -> Long = { 0L },
         private val onFirstFrame: () -> Unit = {},
+        /** Every player error, before it is handled: for Diagnostics. */
+        private val onError: (PlaybackException) -> Unit = {},
     ) : Player.Listener {
         private var isInErrorState = false
         private var errorHeldUntilReady = false
@@ -1756,6 +1824,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 ?: codecLabel(format)
 
         override fun onPlayerError(error: PlaybackException) {
+            onError(error)
             isInErrorState = true
             errorHeldUntilReady = false
             val httpStatus =
@@ -2127,6 +2196,12 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val MAX_VOD_RETRIES = 3
         private const val VOD_RETRY_BASE_DELAY_MS = 3000L
         private const val SEEK_HEALTH_GRACE_MS = 6000L
+
+        /** A wait during playback shorter than this is not recorded in Diagnostics. */
+        private const val STREAM_WAIT_LOG_MS = 1000L
+
+        /** How many causes of a stream error its Diagnostics entry lists. */
+        private const val STREAM_ERROR_CAUSES = 4
 
         /** How long a paused film keeps its connection: Xtream counts it as a stream meanwhile. */
         private const val PAUSED_RELEASE_MS = 5 * 60_000L

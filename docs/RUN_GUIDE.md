@@ -333,7 +333,11 @@ the fact without logcat having been attached:
   Keystore reset) appear as `credentials reset: <file>`. Server calls that failed (no answer, a
   timeout, an error status) from the Xtream, Jellyfin and TMDB clients appear as `No answer from
   <host>` or `HTTP <code> from <host>`, with the address asked and the error, logins masked — the
-  last 500 (`ConnectionLog`, `files/crashlog/connections.log`). Failed syncs and index work appear too
+  last 500 (`ConnectionLog`, `files/crashlog/connections.log`). The same file keeps what the
+  player's streams did: `Stream error from <host>` (the error code and its causes), `Stream
+  reconnect on <host>` (the health check's reason) and `Stream waited <n> s on <host>` (a wait of
+  1 s or more during playback, or while it recovered: why, the load errors and data received
+  during it, and what followed). Failed syncs and index work appear too
   (`CrashLog.record` / `CrashLog.note`): `catalogue sync failed: <source>`, `guide source failed:
   <name>` (address and reason), `guide refresh failed` / `guide refresh (background) failed` (no
   network included), `live sync failed` (an exception or the server's HTTP status), `guide search

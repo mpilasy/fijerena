@@ -52,6 +52,22 @@ class ConnectionLogTest {
     }
 
     @Test
+    fun `a stream entry keeps its title and lines, logins masked`() {
+        ConnectionLog.installAt(tmp.newFile("stream.log"))
+        ConnectionLog.recordStream(
+            "Stream waited 2.4 s on panel.example",
+            "http://panel.example/live/user/secret/1.ts",
+            "Stall during playback\nLoad errors: 1",
+            nowMs = 5L,
+        )
+
+        val entry = ConnectionLog.read().single()
+        assertTrue(entry.startsWith("5 Stream waited 2.4 s on panel.example\n"))
+        assertTrue(entry.endsWith("Stall during playback\nLoad errors: 1"))
+        assertFalse(entry.contains("secret"))
+    }
+
+    @Test
     fun `a file past twice the limit is trimmed back to the newest entries`() {
         val file = tmp.newFile("trimmed.log")
         ConnectionLog.installAt(file)
