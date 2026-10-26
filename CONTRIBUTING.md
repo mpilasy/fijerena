@@ -23,11 +23,11 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 
 `gradle/libs.versions.toml` is authoritative; `README.md` has the summary table. What the versions imply:
 
-- Kotlin 2.3.0 compiler/plugin (the stdlib resolves to 2.4.0 through dependencies), AGP 9.4.1, Gradle 9.6.0, Java 21.
-- Compose BOM 2026.03.01 (ui/foundation/runtime/animation 1.10.6). Compose 1.11+ needs `compileSdk` 37.
+- Kotlin 2.4.21, AGP 9.4.1, Gradle 9.8.2, Java 21; `compileSdk` 37 (Android 17).
+- Compose BOM 2026.09.00 (ui/foundation/runtime/animation 1.12.1). Robolectric Compose tests use the v2 `createComposeRule` (`androidx.compose.ui.test.junit4.v2`): with the old rule and a dispatcher of its own, focus retries no longer run.
 - Material 3 is pinned `strictly` 1.4.0 so the compile and runtime classpaths agree.
-- `androidx.tv:tv-material` 1.0.0-alpha10 is used; `tv-foundation` only arrives as its transitive dependency. Its `TvLazyColumn`/`TvLazyRow` crash on Compose 1.9+ (see Focus below).
-- Room 2.8.4 on a bundled requery SQLite 3.49.0 (FTS5 capable; the app's indexes use FTS4). Media3 1.8.0 (with the Jellyfin FFmpeg decoder 1.8.0+1, kept on the same Media3 release), Ktor 3.5.2 (OkHttp engine), Coil 3.5.0, Navigation Compose 2.8.5, smbj 0.15.0, WorkManager 2.11.2, android-youtube-player 13.0.0 (trailers).
+- `androidx.tv:tv-material` 1.1.0 is used; it no longer brings `tv-foundation`. A selectable TV surface is `Surface(selected, onClick)` with `SelectableSurfaceDefaults` (1.1.0 removed the toggleable one).
+- Room 2.8.5 on a bundled requery SQLite 3.49.0 (FTS5 capable; the app's indexes use FTS4). Media3 1.9.0 (with the Jellyfin FFmpeg decoder 1.9.0+1, kept on the same Media3 release: no decoder is published for a later Media3 yet), Ktor 3.6.0 (OkHttp engine), Coil 3.6.3, Navigation Compose 2.10.2, smbj 0.15.0, WorkManager 2.12.0, android-youtube-player 13.0.0 (trailers).
 - Theming: `CinemaThemeHolder` + `CinemaThemePalette` (colour); `UiStyleHolder` + `UiStyle` (look and feel).
 
 ---

@@ -22,7 +22,7 @@ tasks.withType<KotlinCompile>().configureEach {
 
 android {
     namespace = "org.njarasoa.fijerena"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "org.njarasoa.fijerena"

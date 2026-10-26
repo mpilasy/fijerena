@@ -230,8 +230,8 @@ class AdaptiveLoadControl(
         delegate.onReleased(playerId)
     }
 
-    // Allocator (signature varies, implemented both via override where possible)
-    override fun getAllocator(): Allocator = delegate.allocator
+    // The allocator every delegate is built with: one pool for the player across swaps.
+    override fun getAllocator(playerId: PlayerId): Allocator = sharedAllocator
 
     @Suppress("DEPRECATION")
     @Deprecated("Use getBackBufferDurationUs(PlayerId) instead")

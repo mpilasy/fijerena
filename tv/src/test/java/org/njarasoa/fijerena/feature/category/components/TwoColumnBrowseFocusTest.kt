@@ -20,11 +20,10 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -63,9 +62,9 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class TwoColumnBrowseFocusTest {
-    // A standard (queued) dispatcher, as on a device: see SettingsFocusTest.
+    // The v2 rule: a standard (queued) dispatcher, as on a device: see SettingsFocusTest.
     @get:Rule
-    val rule = createComposeRule(StandardTestDispatcher())
+    val rule = createComposeRule()
 
     private val walk = FocusWalk(rule)
 

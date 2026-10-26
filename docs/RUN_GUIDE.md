@@ -8,7 +8,7 @@ Unified guide for building, installing, and deploying Fijerena across both **And
 
 - **JDK:** OpenJDK 21
 - **Android SDK:** Command-line tools or Android Studio
-- **API Targets:** `minSdk = 30` (Android 11+), `targetSdk = 35`, `compileSdk = 36`
+- **API Targets:** `minSdk = 30` (Android 11+), `targetSdk = 35`, `compileSdk = 37`
 - **Gradle:** 9.6.0 via the `./gradlew` wrapper (AGP 9.4.1); sources compile to Java 21
 - **Host tools:** `adb`; `sqlite3` for the backup/restore scripts and `deploy-tv-ip.sh`; `python3` for the focus walks
 - **TMDB key (optional, entered in the app):** release builds carry no key. Debug builds seed it once from `TMDB_API_KEY` in `local.properties` on a device that has never had a key set or removed (not synced; a key entered or removed in Settings wins). Otherwise enter your own in the running app: Settings → Source & guide → Film and series details (TMDB) → paste the key (v3 API key or v4 read access token) → Test → Save. On an emulator, typing it is easiest over adb while the field is open for editing: `adb shell input text <key>`. With a sync group it reaches the group's other devices on its own. Without a key TMDB lookups are skipped. A git worktree has no `local.properties` of its own — copy or symlink the main checkout's (the SDK path).

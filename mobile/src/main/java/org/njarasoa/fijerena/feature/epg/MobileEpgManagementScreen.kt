@@ -452,7 +452,7 @@ private fun EpgSourceCard(
                     val lastIngested =
                         if (source.lastIngestedAtMs > 0) {
                             java.text
-                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                .SimpleDateFormat("MMM dd, HH:mm", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
                                 .format(java.util.Date(source.lastIngestedAtMs))
                         } else {
                             stringResource(R.string.epg_source_never)
@@ -461,7 +461,7 @@ private fun EpgSourceCard(
                     val latestProgStr =
                         if (latestProgrammeTime > 0) {
                             java.text
-                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                .SimpleDateFormat("MMM dd, HH:mm", androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
                                 .format(java.util.Date(latestProgrammeTime * 1000L))
                         } else {
                             stringResource(R.string.epg_source_none)

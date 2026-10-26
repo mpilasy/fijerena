@@ -152,28 +152,28 @@ when `server/` changes).
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Language | Kotlin | 2.3.0 |
-| Build System | Gradle | 9.6.0 |
+| Language | Kotlin | 2.4.21 |
+| Build System | Gradle | 9.8.2 |
 | Build System | Android Gradle Plugin (AGP) | 9.4.1 |
-| UI Framework | Jetpack Compose | 2026.03.01 BOM (ui/foundation/runtime/animation 1.10.6) |
+| UI Framework | Jetpack Compose | 2026.09.00 BOM (ui/foundation/runtime/animation 1.12.1) |
 | Material Design | Material 3 | 1.4.0 (`strictly`) |
-| TV Components | androidx.tv.material3 (lists are plain LazyColumn/LazyRow) | 1.0.0-alpha10 |
-| Video Player | Media3 (ExoPlayer), Jellyfin FFmpeg decoder | 1.8.0 |
+| TV Components | androidx.tv.material3 (lists are plain LazyColumn/LazyRow) | 1.1.0 |
+| Video Player | Media3 (ExoPlayer), Jellyfin FFmpeg decoder | 1.9.0 |
 | Trailer Player | android-youtube-player (YouTube's embedded player in the system WebView, MIT) | 13.0.0 |
-| Networking | Ktor (OkHttp engine) | 3.5.2 |
-| Serialization | kotlinx.serialization | 1.11.0 |
-| Database | Room (FTS4) | 2.8.4 |
+| Networking | Ktor (OkHttp engine) | 3.6.0 |
+| Serialization | kotlinx.serialization | 1.12.0 |
+| Database | Room (FTS4) | 2.8.5 |
 | SQLite | Bundled requery build (FTS5 capable) | 3.49.0 |
-| Background Work | WorkManager | 2.11.2 |
-| Paging | androidx.paging | 3.5.1 |
-| Image Loading | Coil | 3.5.0 |
-| Navigation | Navigation Compose | 2.8.5 |
+| Background Work | WorkManager | 2.12.0 |
+| Paging | androidx.paging | 3.5.3 |
+| Image Loading | Coil | 3.6.3 |
+| Navigation | Navigation Compose | 2.10.2 |
 | Coroutines | kotlinx.coroutines | 1.11.0 |
 | SMB Client | smbj (Hierynomus) | 0.15.0 |
 | Sync server | TypeScript on Cloudflare Workers / workerd | see `server/package.json` |
 
 `gradle/libs.versions.toml` is authoritative. Minimum SDK 30 (Android 11), target SDK 35, compile
-SDK 36; release ABIs arm64-v8a and armeabi-v7a.
+SDK 37; release ABIs arm64-v8a and armeabi-v7a.
 
 Architecture in one line: multi-module MVVM (ViewModel + StateFlow), provider types mapped to shared
 domain models, one `MediaRepository` per source, manual DI through `AppContainer`. See

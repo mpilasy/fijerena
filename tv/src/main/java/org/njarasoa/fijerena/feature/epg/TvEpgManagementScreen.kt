@@ -26,10 +26,10 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.SelectableSurfaceDefaults
 import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
-import androidx.tv.material3.ToggleableSurfaceDefaults
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
@@ -324,8 +324,8 @@ fun TvEpgManagementScreen(
                                         // On/off: for the source's own guide this is "Provides a guide" (Edit Source).
                                         val useLabel = stringResource(R.string.epg_source_use_label)
                                         androidx.tv.material3.Surface(
-                                            checked = source.enabled,
-                                            onCheckedChange = { viewModel.setSourceEnabled(source, it) },
+                                            selected = source.enabled,
+                                            onClick = { viewModel.setSourceEnabled(source, !source.enabled) },
                                             modifier =
                                                 (if (source.id == entrySourceId) Modifier.focusRequester(entryRowFocus) else Modifier)
                                                     .leftToRail()
@@ -333,7 +333,7 @@ fun TvEpgManagementScreen(
                                             // P5: checked keeps the resting container and shows the
                                             // check glyph in the current colour; only focus lifts it.
                                             colors =
-                                                ToggleableSurfaceDefaults.colors(
+                                                SelectableSurfaceDefaults.colors(
                                                     containerColor = TvFocusTokens.restingContainer,
                                                     contentColor = CinemaTheme.colors.textSecondary,
                                                     focusedContainerColor = TvFocusTokens.focusedContainer,
@@ -344,14 +344,14 @@ fun TvEpgManagementScreen(
                                                     focusedSelectedContentColor = TvFocusTokens.currentText,
                                                 ),
                                             scale =
-                                                ToggleableSurfaceDefaults.scale(
+                                                SelectableSurfaceDefaults.scale(
                                                     scale = TvFocusTokens.defaultScale,
                                                     focusedScale = TvFocusTokens.focusedScale,
                                                     selectedScale = TvFocusTokens.defaultScale,
                                                     pressedScale = TvFocusTokens.pressedScale,
                                                 ),
                                             border =
-                                                ToggleableSurfaceDefaults.border(
+                                                SelectableSurfaceDefaults.border(
                                                     border = Border.None,
                                                     focusedBorder =
                                                         Border(
@@ -363,8 +363,8 @@ fun TvEpgManagementScreen(
                                                             shape = CinemaTheme.shapes.control,
                                                         ),
                                                 ),
-                                            glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
-                                            shape = ToggleableSurfaceDefaults.shape(shape = CinemaTheme.shapes.control),
+                                            glow = SelectableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
+                                            shape = SelectableSurfaceDefaults.shape(shape = CinemaTheme.shapes.control),
                                         ) {
                                             Box(
                                                 modifier = Modifier.padding(Spacing.xs.scaled(scale)),
@@ -499,8 +499,10 @@ fun TvEpgManagementScreen(
                                             val lastIngested =
                                                 if (source.lastIngestedAtMs > 0) {
                                                     java.text
-                                                        .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                                                        .format(java.util.Date(source.lastIngestedAtMs))
+                                                        .SimpleDateFormat(
+                                                            "MMM dd, HH:mm",
+                                                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0],
+                                                        ).format(java.util.Date(source.lastIngestedAtMs))
                                                 } else {
                                                     stringResource(R.string.epg_source_never)
                                                 }
@@ -508,8 +510,10 @@ fun TvEpgManagementScreen(
                                             val latestProgStr =
                                                 if (latestTime > 0) {
                                                     java.text
-                                                        .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                                                        .format(java.util.Date(latestTime * 1000L))
+                                                        .SimpleDateFormat(
+                                                            "MMM dd, HH:mm",
+                                                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0],
+                                                        ).format(java.util.Date(latestTime * 1000L))
                                                 } else {
                                                     stringResource(R.string.epg_source_none)
                                                 }

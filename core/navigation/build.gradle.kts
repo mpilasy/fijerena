@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "org.njarasoa.fijerena.core.navigation"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 30

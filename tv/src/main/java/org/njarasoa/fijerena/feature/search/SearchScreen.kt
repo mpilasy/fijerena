@@ -1266,7 +1266,7 @@ private fun SearchResultsList(
                                             ) {
                                                 firstItemFocusRequester
                                             } else {
-                                                focusRequesters.getOrPut(result.listKey) { FocusRequester() }
+                                                focusRequesters.requesterFor(result.listKey)
                                             },
                                     )
                                     if (isFirstItem && index == 0) isFirstItem = false
@@ -1335,7 +1335,7 @@ private fun SearchResultsList(
                                     ) {
                                         firstItemFocusRequester
                                     } else {
-                                        focusRequesters.getOrPut(result.listKey) { FocusRequester() }
+                                        focusRequesters.requesterFor(result.listKey)
                                     },
                             )
                         }
@@ -1580,6 +1580,10 @@ private fun SearchResultItem(
  * TV-specific long press modifier for D-pad Center key.
  * Triggers onKeyUp ONLY if a long-press was detected via onKeyDown repeat counts.
  */
+
+/** The focus requester of the result row [key], made on first use; the map is remembered by the screen. */
+private fun MutableMap<String, FocusRequester>.requesterFor(key: String): FocusRequester = getOrPut(key) { FocusRequester() }
+
 private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
     composed {
         var longPressDetected by remember { mutableStateOf(false) }

@@ -1,17 +1,22 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.os.Handler
+import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.session.MediaSession
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.spyk
+import io.mockk.unmockkStatic
 import io.mockk.verify
+import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -40,6 +45,23 @@ class StreamingPlaybackServiceRecoveryTest {
 
     private val live = PlayerMetadata(title = "News", streamUrl = "http://example.test/live/1.ts", isLive = true)
     private val vod = PlayerMetadata(title = "Film", streamUrl = "http://example.test/movie/1.mkv", isLive = false)
+
+    companion object {
+        // Media3 1.9's ExoPlayer reads Build.DEVICE when its class loads, and the unit tests'
+        // android.jar leaves it null.
+        @JvmStatic
+        @BeforeClass
+        fun stubEmulatorCheck() {
+            mockkStatic(Util::class)
+            every { Util.isRunningOnEmulator() } returns false
+        }
+
+        @JvmStatic
+        @AfterClass
+        fun unstubEmulatorCheck() {
+            unmockkStatic(Util::class)
+        }
+    }
 
     @Before
     fun setup() {

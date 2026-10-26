@@ -1,8 +1,7 @@
 package org.njarasoa.fijerena.feature.settings
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -24,10 +23,9 @@ import org.robolectric.RobolectricTestRunner
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsProfilesFocusTest {
-    // A standard (queued) dispatcher, as on a device: with the default unconfined one a
-    // LaunchedEffect starts before the rows below it have registered, and the first focus misses.
+    // The v2 rule: a standard (queued) dispatcher, as on a device: see SettingsFocusTest.
     @get:Rule
-    val rule = createComposeRule(StandardTestDispatcher())
+    val rule = createComposeRule()
 
     private val walk = FocusWalk(rule)
 

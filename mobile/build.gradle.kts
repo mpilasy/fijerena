@@ -11,7 +11,7 @@ plugins {
 
 android {
     namespace = "org.njarasoa.fijerena"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         // Its own id, so the phone APK never replaces the TV app on a device (public release plan, D2).

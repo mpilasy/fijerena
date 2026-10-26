@@ -15,7 +15,7 @@ ksp {
 
 android {
     namespace = "org.njarasoa.fijerena.core.network"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         minSdk = 30
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -12,9 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Border
+import androidx.tv.material3.SelectableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import androidx.tv.material3.ToggleableSurfaceDefaults
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -55,13 +55,13 @@ fun TvSelectableButton(
     enabled: Boolean = true,
 ) {
     Surface(
-        checked = selected,
-        onCheckedChange = { onSelect() },
+        selected = selected,
+        onClick = onSelect,
         modifier = modifier,
         enabled = enabled,
-        shape = ToggleableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.small)),
+        shape = SelectableSurfaceDefaults.shape(shape = cornerShape(CornerRadius.small)),
         colors =
-            ToggleableSurfaceDefaults.colors(
+            SelectableSurfaceDefaults.colors(
                 containerColor = TvFocusTokens.restingContainer,
                 contentColor = CinemaTheme.colors.textPrimary,
                 focusedContainerColor = TvFocusTokens.focusFill,
@@ -74,18 +74,18 @@ fun TvSelectableButton(
                 disabledContentColor = CinemaTheme.colors.textPrimary.copy(alpha = CinemaAlpha.textFaint),
             ),
         scale =
-            ToggleableSurfaceDefaults.scale(
+            SelectableSurfaceDefaults.scale(
                 scale = TvFocusTokens.defaultScale,
                 focusedScale = TvFocusTokens.focusedScale,
                 selectedScale = TvFocusTokens.defaultScale,
                 pressedScale = TvFocusTokens.pressedScale,
             ),
         border =
-            ToggleableSurfaceDefaults.border(
+            SelectableSurfaceDefaults.border(
                 border = Border.None,
                 focusedBorder = Border.None,
             ),
-        glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
+        glow = SelectableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
     ) {
         // Fills the surface's content box, which the surface clips and scales with focus.
         Box(modifier = Modifier.matchParentSize().currentIndicator(selected))
