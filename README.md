@@ -219,6 +219,8 @@ fijerena/
 5. Test on both TV and phone; include screenshots or recordings for UI changes.
 6. Write commit messages that say why, not only what.
 
+7. Sign off each commit (`git commit -s`) to certify the [Developer Certificate of Origin](DCO).
+
 By contributing you agree that your contribution is licensed under the project's licence (below).
 
 ## License

@@ -15,6 +15,8 @@ Fijerena is a native Android media player built with Kotlin and Jetpack Compose.
 
 **License:** the apps are GPL-3.0-or-later (`LICENSE`), the sync server AGPL-3.0-or-later (`server/LICENSE`). A new dependency must be compatible with GPLv3 and free software (no proprietary SDKs: F-Droid rejects them).
 
+**Sign-off (DCO):** every commit from a contributor carries a `Signed-off-by: Name <email>` line (`git commit -s`), which certifies the [Developer Certificate of Origin 1.1](DCO): the contributor wrote the change, or has the right to submit it under the project's licence. The contribution is licensed under the licence of the part it changes (GPL-3.0-or-later for the apps, AGPL-3.0-or-later for `server/`). The DCO does not give the project the right to relicense contributions; that would need a CLA.
+
 ---
 
 ## Tech Stack
