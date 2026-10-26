@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261026195741
 
 - **Back from Settings keeps a focus on Home:** on TV, Back from Settings sometimes left nothing focused on Home. Home now focuses the first card of its first row, as when it opens. TV.
 
