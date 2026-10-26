@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.wanted
 
 import android.content.Context
 import android.util.Log
+import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -216,7 +217,8 @@ class WantedTitles internal constructor(
     suspend fun markNotified(keys: Collection<Key>) {
         val profileId = AppSettings(context).activeProfileId
         val now = System.currentTimeMillis()
-        keys.forEach { db.wantedTitleDao().markNotified(profileId, it.contentType, it.tmdbId, now) }
+        val dao = db.wantedTitleDao()
+        db.withTransaction { keys.forEach { dao.markNotified(profileId, it.contentType, it.tmdbId, now) } }
         refresh()
     }
 

@@ -1104,10 +1104,13 @@ class XtreamContentManager(
     suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) =
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
-            episodes.values.flatten().forEach { ep ->
-                val plot = ep.metadata.plot
-                if (!plot.isNullOrBlank()) {
-                    episodeDao.updateOverviewIfBlank(providerId, ep.id, plot, now)
+            // One transaction, not one commit per episode: a long series has hundreds.
+            database.runInTransaction {
+                episodes.values.flatten().forEach { ep ->
+                    val plot = ep.metadata.plot
+                    if (!plot.isNullOrBlank()) {
+                        episodeDao.updateOverviewIfBlank(providerId, ep.id, plot, now)
+                    }
                 }
             }
         }

@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Faster sync and smoother playback:** a full sync of a large account is many times faster, and a first link marks its records sent in one go instead of one by one. During a connection outage, logging the failed calls no longer slows the player, and the player's guide no longer saves its listings to storage at each channel change. A source with many logins no longer reports a login as not answering when it does. TV and phone.
+
 ## Version: 0.8.6
 
 - **Kids' history lists:** a child profile's Continue watching, Recent and Favourites could show a title from a category it may not see: a show from a source whose catalogue never loaded, or one stored without its category. Now, on an Xtream source, these lists show a child only titles known to be in its categories; the others stay stored and come back when the catalogue shows they are allowed. TV and phone.

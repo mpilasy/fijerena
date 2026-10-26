@@ -1,9 +1,11 @@
 package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
+import androidx.room.withTransaction
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersSerializer
 import org.njarasoa.fijerena.core.network.provider.CategoryFiltersStore
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.provider.SettingsVersionEntity
@@ -25,11 +27,26 @@ class LocalRecords(
     private val sync = settingsDb.settingsSyncDao()
     private val providers = ProviderRepository(context)
 
-    /** A record ready to send, with what to mark sent once the server has it. */
+    /**
+     * A record ready to send, with what to mark sent once the server has it. [userData]: its
+     * version lives in `xtream_v2.db`, not `providers.db` — see [markAllSent].
+     */
     data class Outgoing(
         val record: SyncRecord,
+        val userData: Boolean = false,
         val markSent: suspend () -> Unit,
     )
+
+    /**
+     * Marks [sent] as sent, one transaction per database instead of one commit per record: a
+     * first link queues every watch row, favourite and Wanted title, and a commit each was slow on
+     * a TV's flash storage.
+     */
+    suspend fun markAllSent(sent: List<Outgoing>) {
+        val (userData, settings) = sent.partition { it.userData }
+        if (settings.isNotEmpty()) settingsDb.withTransaction { settings.forEach { it.markSent() } }
+        if (userData.isNotEmpty()) xtreamDb.withTransaction { userData.forEach { it.markSent() } }
+    }
 
     /**
      * The next batch of pending changes, oldest first, `providers.db` before `xtream_v2.db` so a
@@ -49,13 +66,21 @@ class LocalRecords(
         }
         if (out.size >= limit) return out
         val versions = xtreamDb.syncVersionDao()
+        // One lookup per provider for the batch, not one per record.
+        val providersById = HashMap<Long, ProviderEntity?>()
         for (version in versions.getPending(limit - out.size)) {
-            val record = userDataRecord(version)
+            val provider =
+                if (version.kind == SyncKind.WANTED) {
+                    null
+                } else {
+                    providersById.getOrPut(version.providerId) { sync.providerById(version.providerId) }
+                }
+            val record = userDataRecord(version, provider)
             if (record == null) {
                 versions.deleteVersion(version.providerId, version.profileId, version.kind, version.itemId, version.contentType)
             } else {
                 out +=
-                    Outgoing(record) {
+                    Outgoing(record, userData = true) {
                         versions.markSent(
                             version.providerId,
                             version.profileId,
@@ -188,9 +213,12 @@ class LocalRecords(
             }
         }
 
-    private suspend fun userDataRecord(v: SyncVersionEntity): SyncRecord? {
+    private suspend fun userDataRecord(
+        v: SyncVersionEntity,
+        provider: ProviderEntity?,
+    ): SyncRecord? {
         if (v.kind == SyncKind.WANTED) return wantedRecord(v)
-        val provider = sync.providerById(v.providerId) ?: return null
+        provider ?: return null
         // Jellyfin keeps favourites and history itself; they never go through sync.
         if (provider.type == "JELLYFIN") return null
         val key = SyncKey(v.profileId, provider.providerKey, v.kind, v.itemId, v.contentType)

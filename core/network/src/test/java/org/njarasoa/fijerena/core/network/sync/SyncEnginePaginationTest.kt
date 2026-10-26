@@ -82,6 +82,9 @@ class SyncEnginePaginationTest {
         }
         mockkConstructor(LocalRecords::class)
         coEvery { anyConstructed<LocalRecords>().pending(any()) } returns emptyList()
+        coEvery { anyConstructed<LocalRecords>().markAllSent(any()) } coAnswers {
+            firstArg<List<LocalRecords.Outgoing>>().forEach { it.markSent() }
+        }
     }
 
     @After
@@ -133,6 +136,24 @@ class SyncEnginePaginationTest {
             // The record waiting since page 1 was offered again with page 2.
             assertEquals(listOf("waits", "later", "ok2"), applied[1].map { it.key.itemId })
             assertEquals(4L, cursor)
+            assertEquals(1, deferred.size)
+        }
+
+    @Test
+    fun `waiting records are not offered again with a page that brings no provider or profile`() =
+        runBlocking {
+            coEvery { api.pull(any(), any(), 0L, any()) } returns
+                SyncWire.PullResponse(head = 6, more = true, records = listOf(wire("waits", 1), wire("ok", 2)))
+            coEvery { api.pull(any(), any(), 2L, any()) } returns
+                SyncWire.PullResponse(head = 6, more = true, records = listOf(wire("ok2", 3), wire("ok3", 4)))
+            coEvery { api.pull(any(), any(), 4L, any()) } returns
+                SyncWire.PullResponse(head = 6, more = false, records = listOf(wire("ok4", 5), wire("ok5", 6)))
+
+            engine().syncNow()
+
+            assertEquals(listOf("ok2", "ok3"), applied[1].map { it.key.itemId })
+            // The last page offers it again, once.
+            assertEquals(listOf("waits", "ok4", "ok5"), applied[2].map { it.key.itemId })
             assertEquals(1, deferred.size)
         }
 

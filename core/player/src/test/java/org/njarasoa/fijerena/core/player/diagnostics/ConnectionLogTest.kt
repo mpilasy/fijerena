@@ -52,6 +52,19 @@ class ConnectionLogTest {
     }
 
     @Test
+    fun `a file past twice the limit is trimmed back to the newest entries`() {
+        val file = tmp.newFile("trimmed.log")
+        ConnectionLog.installAt(file)
+        repeat(ConnectionLog.MAX_ENTRIES * 2 + 1) { i ->
+            ConnectionLog.record("http://panel.example/player_api.php", java.io.IOException("try $i"), nowMs = i.toLong())
+        }
+
+        val stored = file.readText().split(ConnectionLog.ENTRY_SEPARATOR).filter { it.isNotBlank() }
+        assertEquals(ConnectionLog.MAX_ENTRIES, stored.size)
+        assertTrue(ConnectionLog.read().first().contains("try ${ConnectionLog.MAX_ENTRIES * 2}"))
+    }
+
+    @Test
     fun `the stack trace follows the short part, capped and masked`() {
         val error = java.io.IOException("refused http://panel.example/live/user/secret/1.ts")
         ConnectionLog.record("http://panel.example/player_api.php?username=u&password=secret", error)

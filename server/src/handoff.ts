@@ -30,6 +30,8 @@ export class Handoff extends DurableObject<Env> {
         if (state) return error(409, "handoff exists");
         const expiresAt = now + HANDOFF_TTL_MS;
         await this.ctx.storage.put("handoff", { expiresAt });
+        // Nobody may ever collect it: without the alarm an abandoned handoff stayed stored for good.
+        await this.ctx.storage.setAlarm(expiresAt);
         return json({ expiresAt }, 201);
       }
       case "POST /internal/fill": {
@@ -46,10 +48,16 @@ export class Handoff extends DurableObject<Env> {
         if (!state) return error(404, "no such handoff");
         if (!state.sealed) return json({ ready: false, expiresAt: state.expiresAt });
         // Collected once: whoever reads it first has it, and nobody can afterwards.
+        await this.ctx.storage.deleteAlarm();
         await this.ctx.storage.deleteAll();
         return json({ ready: true, sealed: state.sealed, senderKey: state.senderKey });
       }
     }
     return error(404, "not found");
+  }
+
+  /** The handoff expired: whatever it holds goes. */
+  async alarm(): Promise<void> {
+    await this.ctx.storage.deleteAll();
   }
 }

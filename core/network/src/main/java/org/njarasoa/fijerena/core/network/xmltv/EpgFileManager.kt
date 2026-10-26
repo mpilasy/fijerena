@@ -1013,7 +1013,7 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Clear the per-provider XMLTV cache (SharedPreferences-backed, 12h TTL) for every
+     * Clear the per-provider parsed XMLTV cache (in memory, 12h TTL) for every
      * provider affected by a just-completed sync, so the player doesn't keep showing a
      * pre-sync EPG snapshot until that TTL expires. Each source belongs to exactly one
      * provider, so only that provider's cache needs clearing.

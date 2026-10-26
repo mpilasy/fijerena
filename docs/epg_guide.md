@@ -328,7 +328,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 |-------|----------|-----|---------|
 | XMLTV temp file | `cacheDir/xmltv_source_<id>_tmp` | Deleted after ingest; leftovers removed at start and by Delete leftover downloads (Guide data maintenance) | Download staging |
 | SQLite index | `databases/epg_index.db` | Until next refresh | Guide data + FTS4 search index |
-| Parsed EPG results | `xmltv_cache_<providerId>` SharedPreferences | 12h, and only for the index build it was parsed from (`indexedAtMs`); cleared after a sync that ingested the provider's sources and by the guide's Refresh | `XmltvEpgService.getEpgForChannels` (player); not the grid since GD4 |
+| Parsed EPG results | In memory, per `XmltvEpgService`, at most 32 channels (least recently used goes first) | 12h, and only for the index build it was parsed from (`indexedAtMs`); cleared after a sync that ingested the provider's sources and by the guide's Refresh | `XmltvEpgService.getEpgForChannels` (player); not the grid since GD4 |
 | Native EPG | `xtream_epg_cache` table in `xtream_v2.db` | 6h | The source's own EPG, the fallback when the index has nothing for a channel |
 | Guide pages | In-memory (`GuidePager` in `EpgViewModel`), per (day, page of 30 rows) | The guide screen's life; Refresh clears it | TV Guide grid listings |
 | Channel matcher | In-memory (`EpgChannelMatcher`), per provider | Until cleared on a provider change | Guide channel → stream matching for "Search the guide"; warmed after each catalogue sync (`ProviderSyncRunner`) |
