@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.player.diagnostics
 import android.content.Context
 import android.util.Log
 import io.ktor.client.HttpClientConfig
-import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.ResponseException
 import java.io.File
@@ -154,7 +153,8 @@ object ConnectionLog {
 fun HttpClientConfig<*>.recordFailedCalls() {
     HttpResponseValidator {
         handleResponseExceptionWithRequest { cause, request ->
-            if (cause !is CancellationException || cause is HttpRequestTimeoutException) {
+            // A request timeout is an IOException in Ktor 3, not a cancellation: it is recorded.
+            if (cause !is CancellationException) {
                 ConnectionLog.record(request.url.toString(), cause)
             }
         }
