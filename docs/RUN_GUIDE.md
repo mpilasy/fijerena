@@ -291,8 +291,11 @@ still builds, unsigned (`*-release-unsigned.apk`).
 
 **A release.**
 
-1. Raise `fijerena.versionCode` (every release, or the APK won't install over the last one) and
-   set `fijerena.versionName` in `gradle.properties`.
+1. Raise `fijerena.versionCode` by one (every release, or the APK won't install over the last one)
+   and set `fijerena.versionName` in `gradle.properties` to `0.<minor>.<UTC time>`: the minor
+   version, then the release's time in UTC as `YYYYMMDDHHMMSS`
+   (`echo 0.8.$(date -u +%Y%m%d%H%M%S)`), for example `0.8.20261026194500`. The time only grows,
+   so each release sorts after the last; raise the minor version for a larger change.
 2. Retitle `docs/RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
 3. Commit, push `main`, then tag and push the tag:
    `git tag v<version> && git push origin v<version>`.
