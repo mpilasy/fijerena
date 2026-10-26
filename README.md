@@ -241,8 +241,8 @@ for details.
 - **App icon and logo** (`mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, the
   `ic_launcher*.webp` mipmaps of both apps, `core/ui/src/main/res/drawable-*/app_logo.png`): the
   Earth is "The Blue Marble", photographed by the crew of Apollo 17 on 7 December 1972 (NASA photo
-  AS17-148-22727), which is in the public domain as a work of NASA. The red/cyan 3D glasses drawn
-  over it were drawn for this project (2026-10-26) and are licensed with the app under
+  AS17-148-22727), which is in the public domain as a work of NASA. The red/cyan 3D glasses over
+  it were drawn for this project (2026-10-26) and are licensed with the app under
   GPL-3.0-or-later.
 - **Manrope** (`tv/` and `mobile/` `res/font/manrope_variable.ttf`): Copyright 2019 The Manrope
   Project Authors, licensed under the SIL Open Font License 1.1
