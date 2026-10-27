@@ -19,12 +19,12 @@ import java.util.Base64
  */
 @Serializable
 internal data class XtreamEpgAnswer(
-    @SerialName("epg_listings") val listings: List<XtreamEpgListing> = emptyList(),
+    @SerialName("epg_listings") val listings: List<XtreamEpgListing?> = emptyList(),
 )
 
 @Serializable
 internal data class XtreamEpgListing(
-    @SerialName("id") val id: String,
+    @SerialName("id") val id: String = "",
     @SerialName("epg_id") val epgId: String? = null,
     @SerialName("title") val title: String = "",
     @SerialName("lang") val language: String? = null,
@@ -40,7 +40,7 @@ internal data class XtreamEpgListing(
 internal fun XtreamEpgAnswer.toEpgResponse(): EpgResponse =
     EpgResponse(
         listings =
-            listings.map {
+            listings.filterNotNull().map {
                 EpgProgram(
                     id = it.id,
                     epgId = it.epgId,

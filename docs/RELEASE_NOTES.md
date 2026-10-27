@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **A series with an empty backdrop opens:** a panel that sends a series' backdrop list as `[null]` made its page fail with "Couldn't load the episodes". The app now reads a null anywhere in a panel's answer as missing: the field is left empty, and only an entry with no id (nothing to play) is left out. TV and phone.
+
 ## Version: 0.8.20261026212617
 
 - **Stream problems in Diagnostics:** Settings → Diagnostics now also lists what the player's streams did: a stream error with its causes, a reconnect by the health check with its reason, and each wait of 1 s or more during playback, with how long it lasted, why, and whether it played again. Logins are masked, as in the rest of Diagnostics. TV and phone.

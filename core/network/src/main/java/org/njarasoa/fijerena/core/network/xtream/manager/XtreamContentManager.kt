@@ -31,6 +31,12 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
+ * A series' backdrops as the comma-separated column stores them. Some panels send `[null]`;
+ * joined as they are, that stored the text "null" as a backdrop URL.
+ */
+internal fun List<String?>.backdropText(): String? = filterNot { it.isNullOrBlank() }.joinToString(",").ifEmpty { null }
+
+/**
  * Data-hygiene guard, demoted from Phase 5 dedup (the watch state durable storage plan) to a
  * standalone one after an on-device check showed episode-`tmdbId`-based dedup couldn't work at all
  * — the real duplication lives across separate `xtream_series` rows (see
@@ -797,7 +803,7 @@ class XtreamContentManager(
                                         youtubeTrailer = it.youtubeTrailer,
                                         episodeRunTime = it.episodeRunTime.asString(),
                                         categoryId = it.categoryId,
-                                        backdropPath = it.backdropPath?.joinToString(","),
+                                        backdropPath = it.backdropPath?.backdropText(),
                                         tmdbId = tmdbId,
                                     )
                                 seenIds.add(it.seriesId)
@@ -823,7 +829,7 @@ class XtreamContentManager(
                                             youtubeTrailer = it.youtubeTrailer,
                                             episodeRunTime = it.episodeRunTime.asString(),
                                             categoryId = it.categoryId,
-                                            backdropPath = it.backdropPath?.joinToString(","),
+                                            backdropPath = it.backdropPath?.backdropText(),
                                             contentHash = contentHash,
                                             tmdbId = tmdbId,
                                         ),
@@ -913,7 +919,7 @@ class XtreamContentManager(
                                     rating5based = info.rating5based,
                                     youtubeTrailer = info.youtubeTrailer,
                                     episodeRunTime = info.episodeRunTime.asString(),
-                                    backdropPath = info.backdropPath?.joinToString(","),
+                                    backdropPath = info.backdropPath?.backdropText(),
                                 ),
                             ),
                         )

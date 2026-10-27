@@ -136,7 +136,9 @@ class XtreamApiService(
                 parameter("username", username)
                 parameter("password", password)
                 parameter("action", "get_live_categories")
-            }.body()
+            }.body<List<XtreamCategory?>>()
+            .filterNotNull()
+            .filter { it.categoryId.isNotBlank() }
 
     suspend fun getVodCategories(): List<XtreamCategory> =
         client
@@ -144,7 +146,9 @@ class XtreamApiService(
                 parameter("username", username)
                 parameter("password", password)
                 parameter("action", "get_vod_categories")
-            }.body()
+            }.body<List<XtreamCategory?>>()
+            .filterNotNull()
+            .filter { it.categoryId.isNotBlank() }
 
     suspend fun getSeriesCategories(): List<XtreamCategory> =
         client
@@ -152,7 +156,9 @@ class XtreamApiService(
                 parameter("username", username)
                 parameter("password", password)
                 parameter("action", "get_series_categories")
-            }.body()
+            }.body<List<XtreamCategory?>>()
+            .filterNotNull()
+            .filter { it.categoryId.isNotBlank() }
 
     /**
      * Fetches all live streams for a specific category.
@@ -169,7 +175,7 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeFromStream<List<XtreamStream>>(stream).mapNotNull { it.withName() }
+                    json.decodeFromStream<List<XtreamStream?>>(stream).mapNotNull { it?.withName() }
                 }
             }
 
@@ -190,8 +196,8 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeToSequence<XtreamStream>(stream).forEach {
-                        it.withName()?.let { item -> onItem(item) }
+                    json.decodeToSequence<XtreamStream?>(stream).forEach {
+                        it?.withName()?.let { item -> onItem(item) }
                     }
                 }
             }
@@ -212,7 +218,7 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeFromStream<List<XtreamStream>>(stream).mapNotNull { it.withName() }
+                    json.decodeFromStream<List<XtreamStream?>>(stream).mapNotNull { it?.withName() }
                 }
             }
 
@@ -230,8 +236,8 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeToSequence<XtreamStream>(stream).forEach {
-                        it.withName()?.let { item -> onItem(item) }
+                    json.decodeToSequence<XtreamStream?>(stream).forEach {
+                        it?.withName()?.let { item -> onItem(item) }
                     }
                 }
             }
@@ -252,7 +258,7 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeFromStream<List<XtreamSeries>>(stream).mapNotNull { it.withName() }
+                    json.decodeFromStream<List<XtreamSeries?>>(stream).mapNotNull { it?.withName() }
                 }
             }
 
@@ -270,8 +276,8 @@ class XtreamApiService(
                 noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
-                    json.decodeToSequence<XtreamSeries>(stream).forEach {
-                        it.withName()?.let { item -> onItem(item) }
+                    json.decodeToSequence<XtreamSeries?>(stream).forEach {
+                        it?.withName()?.let { item -> onItem(item) }
                     }
                 }
             }

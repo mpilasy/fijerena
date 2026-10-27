@@ -85,7 +85,7 @@ object XtreamMapper {
                 ),
             coverUrl = info?.cover,
             backdropUrl = info?.backdropPath?.firstOrNull { !it.isNullOrBlank() },
-            seasons = seasons.map { it.toDomain() },
+            seasons = seasons.filterNotNull().map { it.toDomain() },
             episodes =
                 episodes.mapValues { (_, episodeList) ->
                     episodeList.map { it.toDomain() }

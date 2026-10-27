@@ -19,10 +19,12 @@ import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class XtreamCategory(
+    // Every field of an Xtream answer may come as null: coerceInputValues turns a null into the
+    // default, and an entry it leaves without an id is dropped where the list is read.
     @SerialName("category_id")
-    val categoryId: String,
+    val categoryId: String = "",
     @SerialName("category_name")
-    val categoryName: String,
+    val categoryName: String = "",
     @SerialName("parent_id")
     val parentId: Int = 0,
 )
@@ -42,8 +44,9 @@ data class XtreamStream(
     val title: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("stream_type")
     val streamType: String = "",
+    // 0 when the panel sent none: [withName] drops the entry.
     @SerialName("stream_id")
-    val streamId: Int,
+    val streamId: Int = 0,
     @SerialName("stream_icon")
     val streamIcon: String? = null,
     @SerialName("epg_channel_id")
@@ -95,8 +98,9 @@ data class XtreamSeries(
     // must not start failing the list now. [titleText] reads it.
     @SerialName("title")
     val title: kotlinx.serialization.json.JsonElement? = null,
+    // See XtreamStream.streamId.
     @SerialName("series_id")
-    val seriesId: Int,
+    val seriesId: Int = 0,
     @JsonNames("cover", "movie_image")
     @SerialName("cover")
     val cover: String? = null,
@@ -133,7 +137,7 @@ data class XtreamSeries(
 @Serializable
 data class XtreamAuthResponse(
     @SerialName("user_info")
-    val userInfo: XtreamUserInfo,
+    val userInfo: XtreamUserInfo = XtreamUserInfo(),
     // A refused login is just {"user_info":{"auth":0}}: no server_info and no username, password
     // or status, so these default rather than failing the parse and hiding "wrong login".
     @SerialName("server_info")
@@ -163,19 +167,19 @@ data class XtreamUserInfo(
     @SerialName("max_connections")
     val maxConnections: String? = null,
     @SerialName("allowed_output_formats")
-    val allowedOutputFormats: List<String>? = null,
+    val allowedOutputFormats: List<String?>? = null,
 )
 
 @Serializable
 data class XtreamServerInfo(
     @SerialName("url")
-    val url: String,
+    val url: String = "",
     @SerialName("port")
-    val port: String,
+    val port: String = "",
     @SerialName("https_port")
     val httpsPort: String? = null,
     @SerialName("server_protocol")
-    val serverProtocol: String,
+    val serverProtocol: String = "",
     @SerialName("rtmp_port")
     val rtmpPort: String? = null,
     @SerialName("timezone")
@@ -191,7 +195,7 @@ data class SeriesInfo(
     @SerialName("info")
     val info: SeriesDetails? = null,
     @SerialName("seasons")
-    val seasons: List<Season> = emptyList(),
+    val seasons: List<Season?> = emptyList(),
     @Serializable(with = EpisodesMapSerializer::class)
     @SerialName("episodes")
     val episodes: Map<String, List<Episode>> = emptyMap(),
@@ -228,7 +232,7 @@ data class SeriesDetails(
     @SerialName("episode_run_time")
     val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("backdrop_path")
-    val backdropPath: List<String>? = null,
+    val backdropPath: List<String?>? = null,
     @SerialName("category_id")
     val categoryId: String? = null,
     @SerialName("tmdb")
@@ -238,9 +242,9 @@ data class SeriesDetails(
 @Serializable
 data class Season(
     @SerialName("season_number")
-    val seasonNumber: Int,
+    val seasonNumber: Int = 0,
     @SerialName("name")
-    val name: String,
+    val name: String = "",
     @SerialName("episode_count")
     val episodeCount: Int? = null,
     @SerialName("cover")
@@ -249,14 +253,16 @@ data class Season(
 
 @Serializable
 data class Episode(
+    // Blank when the panel sent none: [EpisodesMapSerializer] drops an episode without an id or a
+    // container extension, since its stream URL is built from both.
     @SerialName("id")
-    val id: String,
+    val id: String = "",
     @SerialName("episode_num")
-    val episodeNum: Int,
+    val episodeNum: Int = 0,
     @SerialName("title")
-    val title: String,
+    val title: String = "",
     @SerialName("container_extension")
-    val containerExtension: String,
+    val containerExtension: String = "",
     @SerialName("info")
     val info: EpisodeInfo? = null,
     @SerialName("season")
@@ -395,7 +401,9 @@ object EpisodesMapSerializer : KSerializer<Map<String, List<Episode>>> {
                 val episodes =
                     rawEpisodes.mapNotNull { raw ->
                         try {
-                            jsonDecoder.json.decodeFromJsonElement(Episode.serializer(), raw)
+                            jsonDecoder.json
+                                .decodeFromJsonElement(Episode.serializer(), raw)
+                                .takeIf { it.id.isNotBlank() && it.containerExtension.isNotBlank() }
                         } catch (_: Exception) {
                             null
                         }
@@ -487,9 +495,10 @@ object AudioInfoSerializer : KSerializer<AudioInfo?> {
 
 /**
  * This entry with a name to show: its own, else its title; null when it has neither (nothing to
- * list it under). A list entry with no name used to fail the whole list.
+ * list it under) or has no id (nothing to play). A list entry with no name used to fail the whole list.
  */
 fun XtreamStream.withName(): XtreamStream? {
+    if (streamId == 0) return null
     if (name.isNotBlank()) return this
     val fromTitle = titleText(title) ?: return null
     return copy(name = fromTitle)
@@ -497,6 +506,7 @@ fun XtreamStream.withName(): XtreamStream? {
 
 /** See [XtreamStream.withName]. */
 fun XtreamSeries.withName(): XtreamSeries? {
+    if (seriesId == 0) return null
     if (name.isNotBlank()) return this
     val fromTitle = titleText(title) ?: return null
     return copy(name = fromTitle)
