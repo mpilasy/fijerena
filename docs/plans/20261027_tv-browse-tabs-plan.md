@@ -1,6 +1,6 @@
 # TV browse: virtual lists as tabs
 
-**Status:** Agreed 2026-10-27 (mocks and the category tab); Phase 1 built (df252349c); Phase 2 (emulator walk, focus walks, docs) next.
+**Status:** Agreed 2026-10-27 (mocks and the category tab); Done 2026-10-27: built (df252349c) and walked on the TV emulator; open on Recent added at the user's request.
 
 ## Goal
 
@@ -72,6 +72,8 @@ Rail│ Live TV                           [Guide] [⟳]
    mark while a virtual tab is open, because it is still the category tab.
 5. **Unchanged:** the header and its actions, the Live TV preview layer and its panel, the phone,
    the view model's lists.
+6. **Open on Recent (user, 2026-10-27):** a section opened again from the rail or Home starts on
+   Recent. Coming back from a title or the player keeps the list.
 
 ## D-pad map
 
@@ -109,7 +111,7 @@ mode, as switching category does today.
 | Phase | Status | Commit |
 |---|---|---|
 | 1. TV | Done | df252349c |
-| 2. Walk and docs | Not started | |
+| 2. Walk and docs | Done | 87702e6a8 |
 
 ## Done notes
 
@@ -117,3 +119,19 @@ mode, as switching category does today.
   selected; `BrowseTabs` sends entry to the selected tab, as the Live TV panel does. An empty
   list's "Browse categories" button took focus from a tab as its list opened; `TvEmptyState`
   takes `takeFocus`, read once, and the list passes its entry-focus rule to it.
+- **Phase 2 walk (2026-10-27, TV emulator, atr on iptv and jellyxtream):** every row of the D-pad
+  map on Browse iptv (Live TV), Movies and TV Shows; edit mode on Recent; Back from the preview,
+  a film's details and a show; a Live TV list with no categories (Left from its button goes to
+  the rail). Re-entry: Movies left on "fr" comes back on Recent from TV Shows and from its own
+  details; left on a film's details it comes back there, and Back lands on the film in its list.
+  Browse iptv opens on Recent each time. The Live TV section was not walked: the profile has no
+  Live TV section without the paid sources; it runs the same code.
+- **Phase 2 fixes:** re-entry first composed on the old list, took focus on its row and lost it
+  when the switch to Recent removed the row; the browse now composes once the view model names
+  Recent. Live TV's saved list (process death) would have undone the switch; it is not put back
+  on such an entry. Recent Categories and Favourite Categories counted "5 channels"; they count
+  categories.
+- **Left as is:** "Recent categories" and "Favourite categories" are sentence case in English
+  (the Title Case rule); the strings are in `core/` and the phone shows them too. The rail opens
+  on the profile avatar when the screen's section is not in it (Browse iptv); that fallback is
+  deliberate (`RailEntryItemTest`).
