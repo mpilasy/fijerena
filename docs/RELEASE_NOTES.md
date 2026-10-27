@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261027220257
 
 - **Browse lists as tabs:** on Live TV, Movies and TV Shows, Recent, Favourites, Wishlist, Favourite Categories and Recent Categories are no longer rows above the categories. They are tabs at the top of the list beside the categories, after a tab for the category you picked last, so the categories column holds only categories. Moving onto a tab opens its list, and focus stays on the tab. Down enters the list, and Left from the first tab goes to the categories. A section you open again from the rail or Home opens on Recent; coming back from a title or the player keeps the list you were on. Recent Categories and Favourite Categories count categories, not channels or films. TV.
 - **Title Case list names:** "Favourite Categories" and "Recent Categories" are now in Title Case in English, like the other list names. TV and phone.
