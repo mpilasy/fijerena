@@ -63,6 +63,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.rememberWishlist
@@ -449,6 +450,10 @@ private fun MovieDetailsContent(
                         }
                     }
 
+                    movieDetail.metadata.facts.tagline?.let {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                        CinemaText(text = it, tone = TextTone.Secondary)
+                    }
                     movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                         ExpandablePlot(plot = plot, modifier = Modifier.fillMaxWidth())
@@ -569,6 +574,9 @@ private fun MovieDetailsTabContent(
                 )
             }
             movieDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+            titleFactRows(movieDetail.metadata.facts, movieDetail.name.ifBlank { movieName }, isShow = false).forEach {
+                MobileDetailRow(label = it.label, value = it.value)
+            }
             // The catalogue's raw name: alternates are listed under it, not under movieDetail.name.
             MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
                 StreamNamePicker(

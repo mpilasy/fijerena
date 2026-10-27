@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import java.util.concurrent.ConcurrentHashMap
@@ -295,6 +296,7 @@ class JellyfinMediaProvider(
                             contentRating = seriesItem.officialRating,
                             tmdbId = seriesItem.tmdbId(),
                             trailerUrl = seriesItem.firstTrailerUrl(),
+                            facts = seriesItem.facts(),
                         ),
                     coverUrl =
                         if (seriesItem.imageTags.containsKey("Primary")) {
@@ -666,6 +668,15 @@ class JellyfinMediaProvider(
         )
     }
 
+    private fun JellyfinItem.facts(): TitleFacts =
+        TitleFacts(
+            countries = productionLocations.filter { it.isNotBlank() },
+            originalTitle = originalTitle?.takeIf { it.isNotBlank() },
+            studios = studios.map { it.name }.filter { it.isNotBlank() },
+            tagline = taglines.firstOrNull { it.isNotBlank() },
+            status = status?.takeIf { it.isNotBlank() },
+        )
+
     private fun itemToMovieDetail(item: JellyfinItem): MovieDetail {
         val director = item.people.firstOrNull { it.type == "Director" }?.name
         val cast =
@@ -694,6 +705,7 @@ class JellyfinMediaProvider(
                     duration = item.runTimeTicks?.let { formatTicks(it) },
                     tmdbId = item.tmdbId(),
                     trailerUrl = item.firstTrailerUrl(),
+                    facts = item.facts(),
                 ),
             coverUrl =
                 if (item.imageTags.containsKey("Primary")) {

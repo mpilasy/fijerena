@@ -28,6 +28,8 @@ data class MediaMetadata(
     val trailerUrl: String? = null,
     /** TMDB's trailer, played when [trailerUrl] (the source's) is no longer on YouTube. */
     val tmdbTrailerUrl: String? = null,
+    /** Country, original title, studios and the rest a details page lists; see [TitleFacts]. */
+    val facts: TitleFacts = TitleFacts(),
 ) {
     /** With TMDB's trailer [url]: the trailer when the source sent none, else its fallback. */
     fun withTmdbTrailer(url: String): MediaMetadata =

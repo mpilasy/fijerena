@@ -1019,6 +1019,7 @@ class XtreamContentManager(
         containerExtension: String?,
         fetchedAt: Long,
         posterPath: String? = null,
+        facts: String? = null,
     ) = withContext(Dispatchers.IO) {
         streamDao.updateDetailCache(
             providerId,
@@ -1029,6 +1030,7 @@ class XtreamContentManager(
             containerExtension,
             fetchedAt,
             posterPath,
+            facts,
         )
     }
 
@@ -1067,8 +1069,9 @@ class XtreamContentManager(
         tmdbId: String?,
         fetchedAt: Long,
         posterPath: String? = null,
+        facts: String? = null,
     ) = withContext(Dispatchers.IO) {
-        seriesDao.updateDetailCache(providerId, seriesId, contentRating, tmdbId, fetchedAt, posterPath)
+        seriesDao.updateDetailCache(providerId, seriesId, contentRating, tmdbId, fetchedAt, posterPath, facts)
     }
 
     /**

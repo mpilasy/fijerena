@@ -44,6 +44,8 @@ data class XtreamSeriesEntity(
     val tmdbId: String? = null,
     val detailFetchedAt: Long? = null,
     val posterPath: String? = null,
+    // TitleFacts as JSON (v28): country, original title, networks… from TMDB or the source.
+    val facts: String? = null,
     // Set every time `get_series_info` successfully persists this series' episode list — the
     // freshness check that lets a detail-screen open skip the network round trip and rebuild
     // straight from `xtream_episodes` (see XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS). A
@@ -110,6 +112,7 @@ data class XtreamSeriesDetailCache(
     val tmdbId: String?,
     val detailFetchedAt: Long?,
     val posterPath: String?,
+    val facts: String?,
 )
 
 /**
@@ -128,5 +131,6 @@ fun XtreamSeriesEntity.withDetailCache(cache: XtreamSeriesDetailCache?): XtreamS
             tmdbId = tmdbId ?: cache.tmdbId,
             detailFetchedAt = cache.detailFetchedAt,
             posterPath = cache.posterPath,
+            facts = cache.facts,
         )
     }

@@ -55,7 +55,7 @@ interface XtreamSeriesDao {
     fun getSeriesIds(providerId: Long): List<Int>
 
     @Query(
-        "SELECT seriesId, contentRating, tmdbId, detailFetchedAt, posterPath FROM xtream_series " +
+        "SELECT seriesId, contentRating, tmdbId, detailFetchedAt, posterPath, facts FROM xtream_series " +
             "WHERE providerId = :providerId AND seriesId IN (:ids)",
     )
     fun getDetailCaches(
@@ -188,7 +188,8 @@ interface XtreamSeriesDao {
         SET contentRating = :contentRating,
             tmdbId = :tmdbId,
             detailFetchedAt = :detailFetchedAt,
-            posterPath = COALESCE(:posterPath, posterPath)
+            posterPath = COALESCE(:posterPath, posterPath),
+            facts = :facts
         WHERE seriesId = :seriesId AND providerId = :providerId
     """,
     )
@@ -199,6 +200,7 @@ interface XtreamSeriesDao {
         tmdbId: String?,
         detailFetchedAt: Long,
         posterPath: String? = null,
+        facts: String? = null,
     )
 
     /** Stamped every time `get_series_info` successfully persists this series' episode list. */

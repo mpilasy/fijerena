@@ -348,7 +348,10 @@ class JellyfinApiService(
             val response =
                 client
                     .get("$serverUrl/Users/$userId/Items/$itemId") {
-                        parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,RemoteTrailers,ProviderIds")
+                        parameter(
+                            "Fields",
+                            "Overview,People,Genres,Studios,MediaSources,UserData,RemoteTrailers,ProviderIds,OriginalTitle,ProductionLocations,Taglines",
+                        )
                     }.body<JellyfinItem>()
             Result.success(response)
         } catch (e: CancellationException) {

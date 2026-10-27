@@ -39,6 +39,7 @@ class CatalogDetailCacheCarryOverTest {
             containerExtension = "mkv",
             detailFetchedAt = 1_000L,
             posterPath = "/poster.jpg",
+            facts = """{"countries":["US"]}""",
         )
 
     private val seriesCache =
@@ -48,6 +49,7 @@ class CatalogDetailCacheCarryOverTest {
             tmdbId = "549",
             detailFetchedAt = 2_000L,
             posterPath = "/series.jpg",
+            facts = """{"countries":["GB"]}""",
         )
 
     @Test
@@ -59,6 +61,7 @@ class CatalogDetailCacheCarryOverTest {
         assertEquals("mkv", merged.containerExtension)
         assertEquals(1_000L, merged.detailFetchedAt)
         assertEquals("/poster.jpg", merged.posterPath)
+        assertEquals("""{"countries":["US"]}""", merged.facts)
     }
 
     @Test
@@ -80,6 +83,7 @@ class CatalogDetailCacheCarryOverTest {
         assertEquals("549", merged.tmdbId)
         assertEquals(2_000L, merged.detailFetchedAt)
         assertEquals("/series.jpg", merged.posterPath)
+        assertEquals("""{"countries":["GB"]}""", merged.facts)
     }
 
     @Test

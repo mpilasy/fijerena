@@ -1227,6 +1227,32 @@
     <string name="details_label_source">Source :</string>
     <string name="details_label_released">Sortie :</string>
     <string name="details_label_director">Réalisateur :</string>
+    <string name="details_label_original_title">Titre original :</string>
+    <string name="details_label_original_language">Langue originale :</string>
+    <plurals name="details_label_countries">
+        <item quantity="one">Pays :</item>
+        <item quantity="other">Pays :</item>
+    </plurals>
+    <plurals name="details_label_languages">
+        <item quantity="one">Langue :</item>
+        <item quantity="other">Langues :</item>
+    </plurals>
+    <plurals name="details_label_studios">
+        <item quantity="one">Studio :</item>
+        <item quantity="other">Studios :</item>
+    </plurals>
+    <plurals name="details_label_networks">
+        <item quantity="one">Chaîne :</item>
+        <item quantity="other">Chaînes :</item>
+    </plurals>
+    <string name="details_label_creators">Créée par :</string>
+    <string name="details_label_status">Statut :</string>
+    <string name="details_status_returning">En cours</string>
+    <string name="details_status_ended">Terminée</string>
+    <string name="details_status_cancelled">Annulée</string>
+    <string name="details_status_in_production">En production</string>
+    <string name="details_status_planned">Prévue</string>
+    <string name="details_status_pilot">Pilote</string>
     <string name="details_label_stream_name">Nom du flux :</string>
     <string name="details_label_tmdb">TMDB :</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>

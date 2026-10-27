@@ -50,6 +50,12 @@ data class JellyfinItem(
     @SerialName("Container") val container: String? = null,
     @SerialName("RemoteTrailers") val remoteTrailers: List<JellyfinTrailer> = emptyList(),
     @SerialName("ProviderIds") val providerIds: Map<String, String> = emptyMap(),
+    // The facts a details page lists (TitleFacts); only when the call asks for them in Fields.
+    @SerialName("OriginalTitle") val originalTitle: String? = null,
+    @SerialName("ProductionLocations") val productionLocations: List<String> = emptyList(),
+    @SerialName("Taglines") val taglines: List<String> = emptyList(),
+    // A series': "Continuing" or "Ended".
+    @SerialName("Status") val status: String? = null,
 )
 
 @Serializable

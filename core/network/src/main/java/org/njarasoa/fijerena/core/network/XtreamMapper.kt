@@ -11,6 +11,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.model.Episode
@@ -42,7 +43,7 @@ object XtreamMapper {
                 MediaMetadata(
                     plot = description.asString(),
                     cast = cast,
-                    director = director,
+                    director = director?.takeIf { it.isNotBlank() },
                     genre = genre,
                     releaseDate = releaseDate,
                     rating = rating.asString(),
@@ -61,12 +62,20 @@ object XtreamMapper {
                 MediaMetadata(
                     plot = plot.asString(),
                     cast = cast,
-                    director = director,
+                    director = director?.takeIf { it.isNotBlank() },
                     genre = genre,
                     releaseDate = releaseDate,
                     rating = rating.asString(),
                 ),
         )
+
+    /** A panel's `country` text ("United States, France") as one name each. */
+    private fun countryNames(text: String?): List<String> =
+        text
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
 
     fun SeriesInfo.toDomain(seriesId: String): SeriesDetail =
         SeriesDetail(
@@ -76,12 +85,13 @@ object XtreamMapper {
                 MediaMetadata(
                     plot = info?.plot.asString(),
                     cast = info?.cast,
-                    director = info?.director,
+                    director = info?.director?.takeIf { it.isNotBlank() },
                     genre = info?.genre,
                     releaseDate = info?.releaseDate,
                     rating = info?.rating.asString(),
                     tmdbId = info?.tmdb.asString().normalizeTmdbId(),
                     trailerUrl = trailerUrl(info?.youtubeTrailer),
+                    facts = TitleFacts(countries = countryNames(info?.country)),
                 ),
             coverUrl = info?.cover,
             backdropUrl = info?.backdropPath?.firstOrNull { !it.isNullOrBlank() },
@@ -129,7 +139,7 @@ object XtreamMapper {
                 MediaMetadata(
                     plot = info?.plot.asString(),
                     cast = info?.cast,
-                    director = info?.director,
+                    director = info?.director?.takeIf { it.isNotBlank() },
                     genre = info?.genre,
                     releaseDate = info?.releaseDate,
                     rating = info?.rating.asString(),
@@ -137,6 +147,7 @@ object XtreamMapper {
                     tmdbId = info?.tmdbId.normalizeTmdbId(),
                     year = info?.releaseDate?.take(4)?.toIntOrNull(),
                     trailerUrl = trailerUrl(info?.youtubeTrailer),
+                    facts = TitleFacts(countries = countryNames(info?.country)),
                 ),
             coverUrl = info?.coverBig ?: info?.movieImage,
             extension = movieData?.containerExtension,
@@ -168,7 +179,7 @@ object XtreamMapper {
                 MediaMetadata(
                     plot = description,
                     cast = cast,
-                    director = director,
+                    director = director?.takeIf { it.isNotBlank() },
                     genre = genre,
                     releaseDate = releaseDate,
                     rating = rating,
@@ -177,6 +188,7 @@ object XtreamMapper {
                     tmdbId = tmdbId,
                     year = releaseDate?.take(4)?.toIntOrNull(),
                     trailerUrl = trailerUrl(youtubeTrailer),
+                    facts = TitleFacts.fromJson(facts),
                 ),
             coverUrl = streamIcon,
             extension = containerExtension,

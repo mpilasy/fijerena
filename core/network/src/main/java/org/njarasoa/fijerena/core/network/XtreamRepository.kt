@@ -239,7 +239,8 @@ class XtreamRepository(
         containerExtension: String?,
         fetchedAt: Long,
         posterPath: String? = null,
-    ) = contentManager.saveMovieDetailCache(vodId, contentRating, tmdbId, containerExtension, fetchedAt, posterPath)
+        facts: String? = null,
+    ) = contentManager.saveMovieDetailCache(vodId, contentRating, tmdbId, containerExtension, fetchedAt, posterPath, facts)
 
     suspend fun getCachedSeriesEntity(seriesId: Int) = contentManager.getCachedSeriesEntity(seriesId)
 
@@ -252,7 +253,8 @@ class XtreamRepository(
         tmdbId: String?,
         fetchedAt: Long,
         posterPath: String? = null,
-    ) = contentManager.saveSeriesDetailCache(seriesId, contentRating, tmdbId, fetchedAt, posterPath)
+        facts: String? = null,
+    ) = contentManager.saveSeriesDetailCache(seriesId, contentRating, tmdbId, fetchedAt, posterPath, facts)
 
     suspend fun resolveSeriesIdByName(name: String): Int? = contentManager.resolveSeriesIdByName(name)
 

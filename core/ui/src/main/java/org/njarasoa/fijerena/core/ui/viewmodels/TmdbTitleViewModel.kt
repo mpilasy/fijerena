@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
@@ -56,6 +57,8 @@ class TmdbTitleViewModel(
         val cast: List<String> = emptyList(),
         /** The trailer on YouTube, which the Trailer button opens as on a film page. */
         val trailerUrl: String? = null,
+        /** Country, original title, studios… as a film page lists them; the makers are in [director]. */
+        val facts: TitleFacts = TitleFacts(),
     )
 
     private val _details = MutableStateFlow(Details(overview = title.overview))
@@ -127,6 +130,7 @@ class TmdbTitleViewModel(
                 runtimeSeconds = info?.runtime?.takeIf { it > 0 }?.let { (it * SECONDS_PER_MINUTE).toString() },
                 releaseDate = (info?.releaseDate ?: info?.firstAirDate)?.takeIf { it.isNotBlank() },
                 director = info?.let(::makers),
+                facts = info?.facts?.copy(creators = emptyList()) ?: TitleFacts(),
                 cast =
                     info
                         ?.credits

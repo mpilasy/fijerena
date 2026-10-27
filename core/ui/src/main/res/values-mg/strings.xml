@@ -1219,6 +1219,32 @@
     <string name="details_label_source">Loharano:</string>
     <string name="details_label_released">Navoaka:</string>
     <string name="details_label_director">Mpanatontosa:</string>
+    <string name="details_label_original_title">Lohateny tany am-boalohany:</string>
+    <string name="details_label_original_language">Fiteny tany am-boalohany:</string>
+    <plurals name="details_label_countries">
+        <item quantity="one">Firenena:</item>
+        <item quantity="other">Firenena:</item>
+    </plurals>
+    <plurals name="details_label_languages">
+        <item quantity="one">Fiteny:</item>
+        <item quantity="other">Fiteny:</item>
+    </plurals>
+    <plurals name="details_label_studios">
+        <item quantity="one">Studio:</item>
+        <item quantity="other">Studio:</item>
+    </plurals>
+    <plurals name="details_label_networks">
+        <item quantity="one">Fahitalavitra:</item>
+        <item quantity="other">Fahitalavitra:</item>
+    </plurals>
+    <string name="details_label_creators">Namorona:</string>
+    <string name="details_label_status">Toe-javatra:</string>
+    <string name="details_status_returning">Mbola mitohy</string>
+    <string name="details_status_ended">Vita</string>
+    <string name="details_status_cancelled">Najanona</string>
+    <string name="details_status_in_production">Eo am-panaovana</string>
+    <string name="details_status_planned">Kasaina</string>
+    <string name="details_status_pilot">Andrana</string>
     <string name="details_label_stream_name">Anaran\'ny fantsakana:</string>
     <string name="details_label_tmdb">TMDB:</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>

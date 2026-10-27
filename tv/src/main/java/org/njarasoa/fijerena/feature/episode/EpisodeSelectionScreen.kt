@@ -156,6 +156,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
@@ -1560,8 +1561,8 @@ private fun SeriesCastTabContent(cast: String) {
 }
 
 /**
- * Details tab: full synopsis, then diagnostics rather than headline facts, one label/value row each — the stream-name
- * picker, TMDB id, director and the source last — then the category button. Cast lives in its own
+ * Details tab: tagline and full synopsis, then one label/value row each — director, the title
+ * facts, the stream-name picker, TMDB id and the source last — then the category button. Cast lives in its own
  * tab ([SeriesCastTabContent]), not repeated here.
  */
 @Composable
@@ -1587,9 +1588,17 @@ private fun SeriesDetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
+        seriesDetail.metadata.facts.tagline
+            ?.let { CinemaText(text = it, tone = TextTone.Secondary) }
         seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
             CinemaText(text = plot)
             Spacer(modifier = Modifier.height(Spacing.sm))
+        }
+        // Above the picker, as on the film page: focusing the picker brings every row into view;
+        // a row below the last focusable one could never be scrolled to.
+        seriesDetail.metadata.director?.let { TvDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+        titleFactRows(seriesDetail.metadata.facts, seriesDetail.name.ifBlank { seriesName }, isShow = true).forEach {
+            TvDetailRow(label = it.label, value = it.value)
         }
         TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
             StreamNamePicker(
@@ -1610,7 +1619,6 @@ private fun SeriesDetailsTabContent(
                 value = seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
             )
         }
-        seriesDetail.metadata.director?.let { TvDetailRow(label = stringResource(R.string.details_label_director), value = it) }
         // Expert mode only, like the source badges.
         if (LocalShowSourceBadges.current) TvDetailRow(label = stringResource(R.string.details_label_source), value = providerName)
 

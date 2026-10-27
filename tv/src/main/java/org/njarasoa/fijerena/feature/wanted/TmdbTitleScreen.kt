@@ -51,10 +51,12 @@ import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.TextRole
+import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.TmdbTitleViewModel
 import org.njarasoa.fijerena.core.ui.wanted.label
 import org.njarasoa.fijerena.feature.movie.CastTabContent
@@ -274,6 +276,7 @@ fun TmdbTitleScreen(
                         when (tabs.getOrNull(safeTabIndex)) {
                             TmdbTitleTab.DETAILS -> {
                                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                    details.facts.tagline?.let { CinemaText(text = it, tone = TextTone.Secondary) }
                                     details.overview?.takeIf { it.isNotBlank() }?.let { plot ->
                                         CinemaText(text = plot)
                                         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -283,6 +286,9 @@ fun TmdbTitleScreen(
                                     }
                                     details.director?.let {
                                         TvDetailRow(label = stringResource(R.string.details_label_director), value = it)
+                                    }
+                                    titleFactRows(details.facts, title.title, isShow = title.contentType != ContentType.MOVIES).forEach {
+                                        TvDetailRow(label = it.label, value = it.value)
                                     }
                                 }
                             }

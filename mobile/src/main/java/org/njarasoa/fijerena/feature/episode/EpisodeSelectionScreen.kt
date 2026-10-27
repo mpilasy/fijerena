@@ -93,6 +93,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.PlayedSeries
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
@@ -853,6 +854,10 @@ private fun EpisodeListContent(
                     }
                 }
 
+                seriesDetail.metadata.facts.tagline?.let {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    CinemaText(text = it, tone = TextTone.Secondary)
+                }
                 seriesDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     ExpandablePlot(plot = plot, modifier = Modifier.fillMaxWidth())
@@ -1004,6 +1009,9 @@ private fun SeriesDetailsTabContent(
         // Label / value rows, every value starting at the same place (phone UI audit, #2).
         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
             seriesDetail.metadata.director?.let { MobileDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+            titleFactRows(seriesDetail.metadata.facts, seriesDetail.name.ifBlank { seriesName }, isShow = true).forEach {
+                MobileDetailRow(label = it.label, value = it.value)
+            }
             MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
                 StreamNamePicker(
                     currentName = seriesName,

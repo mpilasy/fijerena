@@ -51,6 +51,8 @@ data class XtreamStreamEntity(
     val containerExtension: String? = null,
     val detailFetchedAt: Long? = null,
     val posterPath: String? = null,
+    // TitleFacts as JSON (v28): country, original title, studios… from TMDB or the source.
+    val facts: String? = null,
     // A Parental controls exception lets a child see this film in a hidden category (v25). Set
     // by XtreamCategoryExclusionSync for the profile in use; a sync that rewrites the row resets it.
     @ColumnInfo(defaultValue = "0")
@@ -132,6 +134,7 @@ data class XtreamStreamDetailCache(
     val containerExtension: String?,
     val detailFetchedAt: Long?,
     val posterPath: String?,
+    val facts: String?,
 )
 
 /**
@@ -148,5 +151,6 @@ fun XtreamStreamEntity.withDetailCache(cache: XtreamStreamDetailCache?): XtreamS
             containerExtension = cache.containerExtension,
             detailFetchedAt = cache.detailFetchedAt,
             posterPath = cache.posterPath,
+            facts = cache.facts,
         )
     }

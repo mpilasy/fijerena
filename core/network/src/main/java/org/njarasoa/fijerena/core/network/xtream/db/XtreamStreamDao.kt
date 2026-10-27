@@ -183,7 +183,7 @@ interface XtreamStreamDao {
     }
 
     @Query(
-        "SELECT streamId, contentRating, tmdbId, containerExtension, detailFetchedAt, posterPath FROM xtream_streams " +
+        "SELECT streamId, contentRating, tmdbId, containerExtension, detailFetchedAt, posterPath, facts FROM xtream_streams " +
             "WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)",
     )
     fun getDetailCaches(
@@ -374,7 +374,8 @@ interface XtreamStreamDao {
             tmdbId = :tmdbId,
             containerExtension = :containerExtension,
             detailFetchedAt = :detailFetchedAt,
-            posterPath = COALESCE(:posterPath, posterPath)
+            posterPath = COALESCE(:posterPath, posterPath),
+            facts = :facts
         WHERE streamId = :streamId AND providerId = :providerId AND type = :type
     """,
     )
@@ -387,5 +388,6 @@ interface XtreamStreamDao {
         containerExtension: String?,
         detailFetchedAt: Long,
         posterPath: String? = null,
+        facts: String? = null,
     )
 }

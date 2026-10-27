@@ -237,6 +237,9 @@ data class SeriesDetails(
     val categoryId: String? = null,
     @SerialName("tmdb")
     val tmdb: kotlinx.serialization.json.JsonElement? = null,
+    // Some panels send the country of origin as text ("United States, France") in the info.
+    @SerialName("country")
+    val country: String? = null,
 )
 
 @Serializable
@@ -343,6 +346,9 @@ data class MovieInfo(
     val tmdbId: String? = null,
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
+    // See SeriesDetails.country.
+    @SerialName("country")
+    val country: String? = null,
 )
 
 @Serializable

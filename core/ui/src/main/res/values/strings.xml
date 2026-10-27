@@ -1225,6 +1225,32 @@
     <string name="details_label_source">Source:</string>
     <string name="details_label_released">Released:</string>
     <string name="details_label_director">Director:</string>
+    <string name="details_label_original_title">Original Title:</string>
+    <string name="details_label_original_language">Original Language:</string>
+    <plurals name="details_label_countries">
+        <item quantity="one">Country:</item>
+        <item quantity="other">Countries:</item>
+    </plurals>
+    <plurals name="details_label_languages">
+        <item quantity="one">Language:</item>
+        <item quantity="other">Languages:</item>
+    </plurals>
+    <plurals name="details_label_studios">
+        <item quantity="one">Studio:</item>
+        <item quantity="other">Studios:</item>
+    </plurals>
+    <plurals name="details_label_networks">
+        <item quantity="one">Network:</item>
+        <item quantity="other">Networks:</item>
+    </plurals>
+    <string name="details_label_creators">Created By:</string>
+    <string name="details_label_status">Status:</string>
+    <string name="details_status_returning">Returning</string>
+    <string name="details_status_ended">Ended</string>
+    <string name="details_status_cancelled">Cancelled</string>
+    <string name="details_status_in_production">In production</string>
+    <string name="details_status_planned">Planned</string>
+    <string name="details_status_pilot">Pilot</string>
     <string name="details_label_stream_name">Stream name:</string>
     <string name="details_label_tmdb">TMDB:</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>

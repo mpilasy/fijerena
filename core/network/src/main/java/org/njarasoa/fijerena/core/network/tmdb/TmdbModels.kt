@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.tmdb
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 
 /** `/movie/{id}/images` and `/tv/{id}/images`. `logos` is the transparent-PNG wordmark art for
  * the OSD title treatment and the TV detail hero headline; `backdrops` is the hero's full-bleed
@@ -158,6 +159,27 @@ data class TmdbRecommendation(
     // Only with `append_to_response=videos`.
     @SerialName("videos")
     val videos: TmdbVideos? = null,
+    // The facts a details page lists (TitleFacts); only on a details response.
+    @SerialName("original_language")
+    val originalLanguage: String? = null,
+    @SerialName("origin_country")
+    val originCountry: List<String> = emptyList(),
+    // A film's; TMDB's own fallback when `origin_country` is empty.
+    @SerialName("production_countries")
+    val productionCountries: List<TmdbCountry> = emptyList(),
+    @SerialName("spoken_languages")
+    val spokenLanguages: List<TmdbLanguage> = emptyList(),
+    @SerialName("production_companies")
+    val productionCompanies: List<TmdbNamed> = emptyList(),
+    // A show's.
+    @SerialName("networks")
+    val networks: List<TmdbNamed> = emptyList(),
+    @SerialName("tagline")
+    val tagline: String? = null,
+    @SerialName("number_of_seasons")
+    val numberOfSeasons: Int? = null,
+    @SerialName("number_of_episodes")
+    val numberOfEpisodes: Int? = null,
 ) {
     /** `title` for movies, `name` for TV; null when TMDB sent neither. */
     val displayTitle: String?
@@ -169,6 +191,22 @@ data class TmdbRecommendation(
             originalTitle?.takeIf { it.isNotBlank() }
                 ?: originalName?.takeIf { it.isNotBlank() }
                 ?: displayTitle
+
+    /** The facts a details page lists. A film's status ("Released") says nothing, so only a show's is kept. */
+    val facts: TitleFacts
+        get() =
+            TitleFacts(
+                countries = originCountry.ifEmpty { productionCountries.mapNotNull { it.code } }.filter { it.isNotBlank() },
+                originalTitle = (originalTitle ?: originalName)?.takeIf { it.isNotBlank() },
+                originalLanguage = originalLanguage?.takeIf { it.isNotBlank() },
+                spokenLanguages = spokenLanguages.mapNotNull { it.code?.takeIf(String::isNotBlank) },
+                studios = networks.ifEmpty { productionCompanies }.mapNotNull { it.name?.takeIf(String::isNotBlank) },
+                creators = createdBy.mapNotNull { it.name?.takeIf(String::isNotBlank) },
+                tagline = tagline?.takeIf { it.isNotBlank() },
+                status = status?.takeIf { it.isNotBlank() && it != "Released" },
+                seasonCount = numberOfSeasons?.takeIf { it > 0 },
+                episodeCount = numberOfEpisodes?.takeIf { it > 0 },
+            )
 
     /** Release/air year, or null when the date is missing or not a `yyyy-MM-dd` string. */
     val year: Int?
@@ -195,6 +233,18 @@ data class TmdbCollectionResponse(
     // poster_path, release_date, overview, vote_average).
     @SerialName("parts")
     val parts: List<TmdbRecommendation> = emptyList(),
+)
+
+@Serializable
+data class TmdbCountry(
+    @SerialName("iso_3166_1")
+    val code: String? = null,
+)
+
+@Serializable
+data class TmdbLanguage(
+    @SerialName("iso_639_1")
+    val code: String? = null,
 )
 
 /** A genre, or a show's maker: only the name is used. */

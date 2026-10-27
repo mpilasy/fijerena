@@ -448,7 +448,22 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
-        const val DB_VERSION = 27
+        /**
+         * Migration 27→28: the title facts a details page lists (country, original title,
+         * studios…), as JSON. The detail and episode-list stamps are cleared so the next open of
+         * a cached film or show fetches them once.
+         */
+        internal val MIGRATION_27_28 =
+            object : Migration(27, 28) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `facts` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `facts` TEXT")
+                    db.execSQL("UPDATE `xtream_streams` SET `detailFetchedAt` = NULL")
+                    db.execSQL("UPDATE `xtream_series` SET `detailFetchedAt` = NULL, `episodesFetchedAt` = NULL")
+                }
+            }
+
+        const val DB_VERSION = 28
         private const val DB_NAME = "xtream_v2.db"
 
         // Versions before MIGRATION_7_8 held nothing but rebuildable catalogue — the only jump
@@ -524,6 +539,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                 MIGRATION_24_25,
                 MIGRATION_25_26,
                 MIGRATION_26_27,
+                MIGRATION_27_28,
             )
 
         fun getInstance(context: Context): XtreamDatabase =

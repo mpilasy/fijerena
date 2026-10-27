@@ -5,6 +5,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
 
 /**
@@ -30,7 +31,7 @@ internal fun buildCachedSeriesDetail(
             MediaMetadata(
                 plot = series.plot,
                 cast = series.cast,
-                director = series.director,
+                director = series.director?.takeIf { it.isNotBlank() },
                 genre = series.genre,
                 releaseDate = series.releaseDate,
                 rating = series.rating,
@@ -38,6 +39,7 @@ internal fun buildCachedSeriesDetail(
                 duration = series.episodeRunTime,
                 tmdbId = series.tmdbId,
                 trailerUrl = trailerUrl(series.youtubeTrailer),
+                facts = TitleFacts.fromJson(series.facts),
             ),
         coverUrl = series.cover,
         backdropUrl = series.backdropPath?.split(",")?.firstOrNull { it.isNotBlank() },

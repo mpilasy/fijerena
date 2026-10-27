@@ -219,7 +219,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 27
+**Version:** 28
 
 **Never dropped for a missing migration.** `fallbackToDestructiveMigrationFrom(1..6)` only: those
 pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later version holds user data
@@ -249,7 +249,9 @@ the fast profile switch plan; v25 added `allowed` and an index on
 child see a film or series in a hidden category, see `docs/plans/20261020_parental-controls-plan.md`;
 v26 added `wanted_title` (a profile's Wanted list) and `tmdbId` on `favorite_state`, see
 the wanted titles plan; v27 added the ask-once answer and release data to
-`wanted_title`, see the wishlist ux plan.)
+`wanted_title`, see the wishlist ux plan; v28 added `facts` to `xtream_streams` and `xtream_series`
+and cleared their `detailFetchedAt` (and `xtream_series.episodesFetchedAt`), so the next open of
+each film or show fetches its facts once.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -306,6 +308,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
+| `facts` | TEXT? | `TitleFacts` as JSON: countries, original title and language, spoken languages, studios, tagline, from TMDB's details call, else the panel's `country` (added v28). Written with the detail cache, kept by a catalogue rewrite |
 | `allowed` | INTEGER | 1: a Parental controls exception lets a child see this film although its category is excluded (added v25, default 0). Set by `XtreamCategoryExclusionSync` for this device's active profile, a child one only; never on a live channel or in an adult category. A sync that rewrites the row resets it, and the recompute after the sync sets it again |
 
 **Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, tmdbId)` (added v15, for TMDB sibling dedup), `(providerId, allowed)` (added v25). `(providerId, type, categoryId, excluded)` was dropped in v24
@@ -336,6 +339,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
+| `facts` | TEXT? | As `xtream_streams.facts`, for a show: also its networks, creators, status and TMDB's season and episode counts (added v28) |
 | `episodesFetchedAt` | INTEGER | Timestamp episodes were last fetched/persisted for this series; backs the episode-list cache in `XtreamMediaProvider.getSeriesDetail` (30 days; cleared by a catalogue sync when the series changes; added v19) |
 | `allowed` | INTEGER | As `xtream_streams.allowed`, for series (added v25, default 0) |
 

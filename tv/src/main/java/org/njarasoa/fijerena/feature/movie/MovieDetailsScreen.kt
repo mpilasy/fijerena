@@ -99,6 +99,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.trailer.rememberPlayTrailer
 import org.njarasoa.fijerena.core.ui.utils.displayDate
+import org.njarasoa.fijerena.core.ui.utils.titleFactRows
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.core.ui.wanted.WishlistControl
@@ -833,6 +834,8 @@ private fun DetailsTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
+        movieDetail.metadata.facts.tagline
+            ?.let { CinemaText(text = it, tone = TextTone.Secondary) }
         movieDetail.metadata.plot?.takeIf { it.isNotBlank() }?.let { plot ->
             CinemaText(text = plot)
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -842,6 +845,9 @@ private fun DetailsTabContent(
                 ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
         displayRelease?.let { TvDetailRow(label = stringResource(R.string.details_label_released), value = displayDate(it)) }
         movieDetail.metadata.director?.let { TvDetailRow(label = stringResource(R.string.details_label_director), value = it) }
+        titleFactRows(movieDetail.metadata.facts, movieDetail.name.ifBlank { movieName }, isShow = false).forEach {
+            TvDetailRow(label = it.label, value = it.value)
+        }
 
         movieDetail.videoInfo?.let { video ->
             val videoText =

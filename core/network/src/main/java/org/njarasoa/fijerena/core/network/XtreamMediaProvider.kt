@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
@@ -332,6 +333,9 @@ class XtreamMediaProvider(
                             enriched.metadata.plot.isNullOrBlank()
                     val tmdbDetails =
                         if (needsTmdbDetails) suspendRunCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull() else null
+                    // TMDB's facts when asked now, else the ones stored with the rating.
+                    val facts = tmdbDetails?.facts ?: TitleFacts.fromJson(cachedSeries?.facts)
+                    enriched = enriched.copy(metadata = enriched.metadata.copy(facts = facts.withCountriesFrom(detail.metadata.facts)))
                     if (tmdbDetails != null) {
                         val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.firstAirDate
                         val newYear = enriched.metadata.year ?: tmdbDetails.year
@@ -354,6 +358,7 @@ class XtreamMediaProvider(
                             tmdbSeriesId.toString(),
                             System.currentTimeMillis(),
                             tmdbPosterPath,
+                            enriched.metadata.facts.toJson(),
                         )
                     }
                 }
@@ -583,6 +588,7 @@ class XtreamMediaProvider(
                                         releaseDate = newReleaseDate,
                                         year = newYear,
                                         plot = newPlot,
+                                        facts = tmdbDetails.facts.withCountriesFrom(detail.metadata.facts),
                                     ),
                             )
                     }
@@ -602,6 +608,7 @@ class XtreamMediaProvider(
                     containerExtension = enriched.extension,
                     fetchedAt = System.currentTimeMillis(),
                     posterPath = tmdbPosterPath,
+                    facts = enriched.metadata.facts.toJson(),
                 )
                 kotlin.Result.success(enriched)
             }
