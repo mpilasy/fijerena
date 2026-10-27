@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![App Icon](mobile/src/main/res/mipmap-xxxhdpi/ic_launcher.webp)
+<img src="core/ui/src/main/res/drawable-xxxhdpi/app_logo.png" alt="App Icon" width="192">
 
 **A media player for Android TV and Android phones: IPTV (Xtream Codes, M3U) and Jellyfin**
 
