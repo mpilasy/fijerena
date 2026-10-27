@@ -19,6 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
+| 2026-10-27 | [TV browse tabs](./20261027_tv-browse-tabs-plan.md) | On TV Live TV, Movies and TV Shows, Recent, Favourites and the other virtual lists become a fixed tab row at the top of the right pane, after the picked category's tab; every D-pad move kept | Agreed; Phase 1 in progress |
 | 2026-10-25 | [Live TV Recent order](./20261025_live-recent-order-plan.md) | Live TV's Recent on TV: the playing channel first, then newest first, the same in the preview, the slide-in panel and the list; zapping walks a fixed order | Done 2026-10-25, walked on the TV emulator |
 | 2026-10-25 | [TV clock and Recent on full screen](./20261025_tv-clock-and-full-screen-recent-plan.md) | A clock at the top right of every TV screen but full-screen playback; a live channel opened full screen from the preview goes into Recent at once | Done 2026-10-25, walked on both emulators |
 | 2026-10-24 | [Settings guarded by page](./20261024_settings-guard-by-page-plan.md) | The PIN guards whole Settings groups, not rows: your own settings open freely, Expert groups (This Device, Parental Controls, Sources & Guide, Sync & Backup, Advanced) ask the Expert's PIN once on the way in | Done 2026-10-25, walked on both emulators |
