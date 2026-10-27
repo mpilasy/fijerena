@@ -1,6 +1,6 @@
 # TV browse: virtual lists as tabs
 
-**Status:** Agreed 2026-10-27 (mocks and the category tab); Phase 1 in progress.
+**Status:** Agreed 2026-10-27 (mocks and the category tab); Phase 1 built (df252349c); Phase 2 (emulator walk, focus walks, docs) next.
 
 ## Goal
 
@@ -108,5 +108,12 @@ mode, as switching category does today.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. TV | In progress | |
+| 1. TV | Done | df252349c |
 | 2. Walk and docs | Not started | |
+
+## Done notes
+
+- **Phase 1:** entering the tab row landed on the tab nearest by geometry, which focus then
+  selected; `BrowseTabs` sends entry to the selected tab, as the Live TV panel does. An empty
+  list's "Browse categories" button took focus from a tab as its list opened; `TvEmptyState`
+  takes `takeFocus`, read once, and the list passes its entry-focus rule to it.
