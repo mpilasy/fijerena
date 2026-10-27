@@ -13,30 +13,34 @@
 # Recent Categories left the categories pane for a tab row at the top of the item pane, after a tab
 # for the category last picked. Focus selects a tab; Left on the first tab enters the categories
 # pane on the picked category (the first one while none is picked); Down from a tab enters the
-# list. Checked by hand on Browse iptv (the same screen) on 2026-10-27; re-record with -r.
+# list. Recorded 2026-10-27 on Browse iptv → Live TV (the same screen; the profile had no Live TV
+# section without its paid sources), Recent selected, focus on its first row: from Home → Live TV
+# the rail step reads "Live TV" instead.
 # Up from the first stream stops on the selected tab, then reaches the header (TV Guide, shown only
-# with a guide, and Refresh: here Refresh alone). Nothing is above the header.
+# with a guide, and Refresh: iptv has a guide, so TV Guide). Nothing is above the header.
 UP	Recent
-UP	Refresh
-UP	Refresh
+UP	TV Guide
+UP	TV Guide
 # Down from the header lands on the selected tab, then on the list's remembered row.
 DOWN	Recent
-DOWN	Arena Sport 1
+DOWN	24 Horas (Chile), FHD, Hold OK or press Menu for actions
 # Along the tabs: each list opens under its tab, focus stays on the tab.
 UP	Recent
 RIGHT	Favourites
 LEFT	Recent
 # Left on the first tab: the categories pane, on its first category (none picked yet).
-LEFT
-# Right from a category enters the item pane on the remembered row. Text varies, so not asserted.
-RIGHT
+LEFT	Movies / Hold OK or press Menu for actions
+# Right from a category enters the item pane on the remembered row: Recent opened again under its
+# tab, so the row is its current channel (the channel played last), not the row focused before.
+RIGHT	1KZN TV, SD, Hold OK or press Menu for actions
 # Right from a stream goes nowhere (the item pane has no right neighbour); focus stays on the row.
-RIGHT
-DOWN
+RIGHT	1KZN TV, SD, Hold OK or press Menu for actions
+DOWN	Arena Sport 1, Hold OK or press Menu for actions
 # Left from an item lands on the picked category (here the first, none picked).
-LEFT
-# Left from a category goes to the rail, on the current section; Right returns to the category.
-LEFT	Live TV
-RIGHT
+LEFT	Movies / Hold OK or press Menu for actions
+# Left from a category goes to the rail, on the current section: Movies here, as Browse iptv sits
+# over the Movies section ("Live TV" from Home → Live TV). Right returns to the category.
+LEFT	Movies
+RIGHT	Movies / Hold OK or press Menu for actions
 # F-C-2 (Down at the end of the item list stays on the last row) is not walked: the list
 # length varies per source.
