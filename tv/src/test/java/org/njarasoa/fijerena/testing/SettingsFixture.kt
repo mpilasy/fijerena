@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.testing
 
 import android.content.Context
 import androidx.room.Room
-import androidx.room.RoomDatabase
 import kotlinx.coroutines.runBlocking
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
@@ -92,9 +91,11 @@ object SettingsFixture {
         }
 
     /**
-     * Closes and forgets the singletons the screen reaches: Robolectric gives each test a new
-     * application and data folder but keeps the classes, so an instance left from the last test
-     * would read its files and preferences. A renamed field fails here, not as a stray focus miss.
+     * Forgets the singletons the screen reaches: Robolectric gives each test a new application and
+     * data folder but keeps the classes, so an instance left from the last test would read its files
+     * and preferences. A renamed field fails here, not as a stray focus miss. The databases are not
+     * closed: a view model's read still running on a background thread then failed the test with
+     * "connection pool has been closed" (a CI flake); the next test's new folder is enough.
      */
     fun reset() {
         // Locks every profile again: an empty profile id keeps none unlocked.
@@ -111,7 +112,6 @@ object SettingsFixture {
         ).forEach { (className, fieldName) ->
             val field = Class.forName(className).getDeclaredField(fieldName)
             field.isAccessible = true
-            (field.get(null) as? RoomDatabase)?.close()
             field.set(null, null)
         }
     }
