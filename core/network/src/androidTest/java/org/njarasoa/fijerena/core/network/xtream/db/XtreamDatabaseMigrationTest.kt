@@ -105,6 +105,15 @@ class XtreamDatabaseMigrationTest {
         }
 
     /**
+     * Rolls a fresh database back to v27: without the streams' and series' `facts` columns.
+     * `DROP COLUMN` needs SQLite 3.35 (Android 14, the CI emulator), never the app.
+     */
+    private fun dropFactsColumns(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `xtream_streams` DROP COLUMN `facts`")
+        db.execSQL("ALTER TABLE `xtream_series` DROP COLUMN `facts`")
+    }
+
+    /**
      * Rolls a fresh database back to v25: without `wanted_title` and the favourites' `tmdbId`
      * column. `DROP COLUMN` needs SQLite 3.35 (Android 14, the CI emulator), never the app.
      */
@@ -136,6 +145,7 @@ class XtreamDatabaseMigrationTest {
         seedDb.seriesDao().insertAll(listOf(XtreamSeriesEntity(seriesId = 2, providerId = 42L, name = "Show", categoryId = "c2")))
         val rawDb = seedDb.openHelper.writableDatabase
         dropWishlistSchema(rawDb) // v26 and v27, added back by MIGRATION_25_26 and 26_27
+        dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         val expected =
             listOf("index_xtream_streams_providerId_allowed", "index_xtream_series_providerId_allowed").associateWith {
                 indexSql(rawDb, it)
@@ -168,6 +178,7 @@ class XtreamDatabaseMigrationTest {
         val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
         val rawDb = seedDb.openHelper.writableDatabase
         dropWishlistSchema(rawDb) // v26 and v27, added back by MIGRATION_25_26 and 26_27
+        dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         rawDb.execSQL("DROP TABLE `watch_state`")
         rawDb.execSQL("DROP TABLE `favorite_state`")
         rawDb.execSQL("DROP TABLE `sync_tombstone`") // v21, recreated by MIGRATION_20_21
@@ -246,6 +257,7 @@ class XtreamDatabaseMigrationTest {
         )
         val rawDb = seedDb.openHelper.writableDatabase
         dropWishlistSchema(rawDb) // v26 and v27, added back by MIGRATION_25_26 and 26_27
+        dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
@@ -277,6 +289,7 @@ class XtreamDatabaseMigrationTest {
         val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
         val rawDb = seedDb.openHelper.writableDatabase
         dropWishlistSchema(rawDb) // v26 and v27, added back by MIGRATION_25_26 and 26_27
+        dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
         dropAllowedColumns(rawDb) // v25, added back by MIGRATION_24_25
@@ -299,6 +312,7 @@ class XtreamDatabaseMigrationTest {
         val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
         val rawDb = seedDb.openHelper.writableDatabase
         dropWishlistSchema(rawDb) // v26 and v27, added back by MIGRATION_25_26 and 26_27
+        dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL(
             "CREATE TABLE `sync_outbox` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
@@ -334,6 +348,7 @@ class XtreamDatabaseMigrationTest {
         seedDb.streamDao().insertAll(listOf(stream(1, "c1")))
         val rawDb = seedDb.openHelper.writableDatabase
         dropWishlistSchema(rawDb) // v26 and v27, added back by MIGRATION_25_26 and 26_27
+        dropFactsColumns(rawDb) // v28, added back by MIGRATION_27_28
         rawDb.execSQL(
             "CREATE INDEX `index_xtream_streams_providerId_type_categoryId_excluded` " +
                 "ON `xtream_streams` (`providerId`, `type`, `categoryId`, `excluded`)",
