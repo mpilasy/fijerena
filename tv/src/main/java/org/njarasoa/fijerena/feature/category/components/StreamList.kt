@@ -685,7 +685,17 @@ private fun StreamListHeader(
             modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
         )
         if (itemCount != null) {
-            val countLabel = itemCountText(contentType, itemCount)
+            // Recent Categories and Favourite Categories list categories, not channels or films.
+            val countLabel =
+                when (selectedCategoryId) {
+                    CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID, CategoryViewModel.FAVORITE_CATEGORIES_ID -> {
+                        stringResource(R.string.category_count_format, itemCount)
+                    }
+
+                    else -> {
+                        itemCountText(contentType, itemCount)
+                    }
+                }
             val countText =
                 buildString {
                     append(countLabel)

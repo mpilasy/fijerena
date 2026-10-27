@@ -9,28 +9,34 @@
 # Updated 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # Updated 2026-10-08 (TV navigation rail, Phases 3 + 4): the header's Search is gone (the rail has
 # it); Left from a category goes to the rail, and Right comes back to that category.
-# Up from the first stream reaches the header (the browse header keeps TV Guide, shown only with a
-# guide, and Refresh: here Refresh alone). Nothing is above the header.
+# Updated 2026-10-27 (the tv browse tabs plan): Recent, Favourites, Favourite Categories and
+# Recent Categories left the categories pane for a tab row at the top of the item pane, after a tab
+# for the category last picked. Focus selects a tab; Left on the first tab enters the categories
+# pane on the picked category (the first one while none is picked); Down from a tab enters the
+# list. Checked by hand on Browse iptv (the same screen) on 2026-10-27; re-record with -r.
+# Up from the first stream stops on the selected tab, then reaches the header (TV Guide, shown only
+# with a guide, and Refresh: here Refresh alone). Nothing is above the header.
+UP	Recent
 UP	Refresh
 UP	Refresh
-# Down from the header returns to the item pane's first row; Left from there lands on the
-# selected category ("Recent" is selected when the screen opened on it).
+# Down from the header lands on the selected tab, then on the list's remembered row.
+DOWN	Recent
 DOWN	Arena Sport 1
+# Along the tabs: each list opens under its tab, focus stays on the tab.
+UP	Recent
+RIGHT	Favourites
 LEFT	Recent
+# Left on the first tab: the categories pane, on its first category (none picked yet).
+LEFT
 # Right from a category enters the item pane on the remembered row. Text varies, so not asserted.
-# Phase 3: a regular category has no ★ stop any more either; Right goes straight to the items.
-RIGHT	A / Arena Sport 1 / Hold OK or press Menu for actions
-# Changed in Phase 3 (F-C-5, R3): the hidden "Add to Favorites" star is gone. Right from a
-# stream goes nowhere (the item pane has no right neighbour); focus stays on the row.
-RIGHT	A / Arena Sport 1 / Hold OK or press Menu for actions
-# Down goes to the next row.
-DOWN	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
-# Changed (F-C-3, R1/R2): Left from an item lands on the selected category, not the one level
-# with it ("Recent Categories" before).
-LEFT	Recent
-# Changed (rail, Phase 3): Left from a category goes to the rail, on the current section
-# (it went nowhere before, F-C-4); Right returns to the category it came from.
+RIGHT
+# Right from a stream goes nowhere (the item pane has no right neighbour); focus stays on the row.
+RIGHT
+DOWN
+# Left from an item lands on the picked category (here the first, none picked).
+LEFT
+# Left from a category goes to the rail, on the current section; Right returns to the category.
 LEFT	Live TV
-RIGHT	Recent
+RIGHT
 # F-C-2 (Down at the end of the item list stays on the last row) is not walked: the list
 # length varies per source.

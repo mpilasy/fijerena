@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Browse lists as tabs:** on Live TV, Movies and TV Shows, Recent, Favourites, Wishlist, Favourite Categories and Recent Categories are no longer rows above the categories. They are tabs at the top of the list beside the categories, after a tab for the category you picked last, so the categories column holds only categories. Moving onto a tab opens its list, and focus stays on the tab. Down enters the list, and Left from the first tab goes to the categories. A section you open again from the rail or Home opens on Recent; coming back from a title or the player keeps the list you were on. Recent Categories and Favourite Categories count categories, not channels or films. TV.
+
 ## Version: 0.8.20261027035348
 
 - **More about each film and show:** the Details tab now lists the country of origin, the original title (when it is not the title shown), the original language, the spoken languages, and the studios (a show's networks). A show also lists its creators and its status with its season and episode counts, and the tagline shows above the plot. From TMDB's details, which the page already asks for; else from the source (Jellyfin, or the country an Xtream panel sends). On the TMDB page too. A source's empty director no longer shows as an empty Director row. TV and phone.

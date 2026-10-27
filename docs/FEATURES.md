@@ -219,7 +219,7 @@ Playback position and watched status are stored in SQLite (`watch_state`) for go
 
 ## Virtual Categories
 
-Listed before the source's categories:
+Listed before the source's categories (TV: as tabs at the top of the list beside the categories, after a tab for the category picked last; a section opened again from the rail or Home starts on Recent):
 
 | Category | Shown | Contents |
 |----------|-------|----------|

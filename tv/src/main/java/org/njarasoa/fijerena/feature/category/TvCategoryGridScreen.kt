@@ -87,6 +87,11 @@ fun TvCategoryGridScreen(
      * (the tv nav rail plan → Risks).
      */
     closeSavedLivePreview: Boolean = false,
+    /**
+     * A section's browse entered again from the rail or Home: it opens on Recent, not on the list
+     * left there (the tv browse tabs plan). A return from a title or the player keeps the list.
+     */
+    openOnRecent: Boolean = false,
     /** [providerId]: the row's source (a merged Recent / Favourites row), 0 for the list's own. */
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget, providerId: Long) -> Unit,
     /**
@@ -146,6 +151,20 @@ fun TvCategoryGridScreen(
         }
     }
 
+    // Read once, over the kept ViewModel: one still loading opens on Recent anyway. The browse waits
+    // for the switch (the ViewModel names the list at once, before it loads), so it composes on
+    // Recent and takes its entry focus there, not on the old list's row that the switch removes.
+    val recent = CategoryViewModel.RECENT_CATEGORY_ID
+    val reopenOnRecent =
+        remember {
+            val selected = (viewModel.uiState.value as? CategoryViewModel.UiState.Success)?.selectedCategoryId
+            openOnRecent && selected != null && selected != recent
+        }
+    if (reopenOnRecent) LaunchedEffect(Unit) { viewModel.loadStreams(recent) }
+    var waitingForRecent by remember { mutableStateOf(reopenOnRecent) }
+    if (waitingForRecent && (uiState as? CategoryViewModel.UiState.Success)?.selectedCategoryId == recent) waitingForRecent = false
+    if (waitingForRecent) return
+
     val immutableFavoriteIds = remember(favoriteIds) { ImmutableStringSet(favoriteIds) }
     val immutableFavoriteCategoryIds = remember(favoriteCategoryIds) { ImmutableStringSet(favoriteCategoryIds) }
     val immutableWatchProgress = remember(watchProgress) { ImmutableWatchProgress(watchProgress) }
@@ -181,6 +200,7 @@ fun TvCategoryGridScreen(
         initialStreamSource = initialStreamSource,
         showPreviewPane = showPreviewPane,
         closeSavedLivePreview = closeSavedLivePreview,
+        reopenedOnRecent = reopenOnRecent,
     )
 }
 
@@ -206,6 +226,8 @@ private fun CategoryGridContent(
     initialStreamSource: Long = 0L,
     showPreviewPane: Boolean = true,
     closeSavedLivePreview: Boolean = false,
+    /** The list was switched to Recent on this entry (openOnRecent): the saved list is not put back. */
+    reopenedOnRecent: Boolean = false,
 ) {
     val scale = LocalUiScale.current
     val safeMarginModifier =
@@ -300,7 +322,7 @@ private fun CategoryGridContent(
         if (!isLiveTv || selectedCategoryId == null) return@LaunchedEffect
         if (!selectionChecked) {
             selectionChecked = true
-            val saved = savedCategoryId
+            val saved = savedCategoryId.takeUnless { reopenedOnRecent }
             if (saved != null && (saved != selectedCategoryId || savedCategorySource != selectedCategorySource)) {
                 catViewModel.loadStreams(saved, savedCategorySource)
                 return@LaunchedEffect

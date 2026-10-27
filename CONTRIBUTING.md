@@ -89,7 +89,7 @@ Every interactive `@Composable` must be D-pad navigable, and every TV screen fol
 1. **One focus stop per row**; OK does the row's one job. Rows that need several visible actions (Settings' Sources, guide sources) use labelled trailing buttons in fixed-width slots, so Up/Down keep the column.
 2. **No 2-D grids in Settings**; options are vertical lists.
 3. **Up/Down never skip content:** a block that shows information is focusable or sits inside a focusable row.
-4. **Left goes back one level** (pane → rail, picker → row); Right only reaches a row's trailing slots. Exception: a tabbed panel (the Live TV channel panel) uses Left/Right for its tabs, and Back leaves it.
+4. **Left goes back one level** (pane → rail, picker → row); Right only reaches a row's trailing slots. Exception: a tab row (the Live TV channel panel, browse's tabs over the items) uses Left/Right for its tabs; Back leaves the panel, and Left on browse's first tab goes to the categories.
 5. **Entry focus is the useful item:** the current value in a picker, the first row on Sources, the first action (never Cancel) in a menu.
 6. **Back restores the exact control** that opened the screen, at the same scroll position.
 7. **Destructive actions are never the first or default focus**, and always confirm.

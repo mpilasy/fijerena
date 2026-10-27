@@ -1,8 +1,9 @@
 # TV Recent and Favorites, TV emulator, source iptv, profile main, with exactly one favourite
 # channel (9 Plus News). Start: Live TV browse, Favorites selected, focus on that channel's row.
 # Covers: the menu opens on Remove from Favorites; no confirmation; the list empties and its
-# Refresh takes focus; Menu undoes, the row back and focused.
+# "Browse categories" button takes focus (K2); Menu undoes, the row back and focused.
+# Updated 2026-10-27: the empty Favourites has had "Browse categories", not Refresh, since K2.
 @start 9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 MENU	Remove from Favourites
-REMOVE	Refresh
+REMOVE	Browse categories
 MENU	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions

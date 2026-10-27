@@ -215,6 +215,13 @@ fun TvNavHost(
         }
     }
 
+    // A section entered again comes back on Recent (the tv browse tabs plan), when it comes back on
+    // its browse: one that comes back on a title keeps the list under it, so Back lands on the row.
+    fun openBrowseOnRecent(section: TvSection) {
+        val entry = navController.currentBackStackEntry ?: return
+        if (entry.destination.hasRoute(section.route::class)) entry.savedStateHandle[OPEN_ON_RECENT] = true
+    }
+
     // Each section keeps its place: the section's stack above Home is saved under its root, and the
     // section picked comes back where it was left, or opens fresh. Home stays the start and is never
     // popped. What Home opened outside the sections (Search, a title) isn't a place: not saved.
@@ -227,6 +234,7 @@ fun TvNavHost(
             launchSingleTop = true
             restoreState = true
         }
+        openBrowseOnRecent(section)
     }
 
     // Live TV opened fresh is the browse screen with the preview as a layer over it, open on the
@@ -286,10 +294,10 @@ fun TvNavHost(
                 if (navController.currentDestination?.isSettingsTree() == true) popSettingsTree() else navController.popBackStack()
             }
 
-            // The section you are in: back to its start.
+            // The section you are in: back to its start, on Recent. Already there, nothing changes.
             section != null && section == navController.currentSection() -> {
                 closeSavedLivePreview()
-                navController.popBackStack(section.route, inclusive = false)
+                if (navController.popBackStack(section.route, inclusive = false)) openBrowseOnRecent(section)
             }
 
             section != null -> {
@@ -435,6 +443,7 @@ fun TvNavHost(
         initialStreamId: String? = null,
         showPreviewPane: Boolean = true,
         closeSavedLivePreview: Boolean = false,
+        openOnRecent: Boolean = false,
         // The source the list was opened on (0: a section's, every Xtream source merged).
         providerId: Long = 0L,
         // initialStreamId's source when it isn't the list's (0 = the list's).
@@ -447,6 +456,7 @@ fun TvNavHost(
             initialStreamSource = initialStreamSource,
             showPreviewPane = showPreviewPane,
             closeSavedLivePreview = closeSavedLivePreview,
+            openOnRecent = openOnRecent,
             providerId = providerId,
             onStreamSelected = { itemId, streamName, categoryId, target, rowSource ->
                 // A merged Recent / Favourites row opens on its own source (multi-source plan, Phase 4).
@@ -564,6 +574,7 @@ fun TvNavHost(
     ) {
         val openOn = remember { liveTvOpenOn.takeIf { section == TvSection.LIVE_TV }?.also { liveTvOpenOn = null } }
         val closeSavedPreview = remember { entry.savedStateHandle.remove<Boolean>(CLOSE_SAVED_LIVE_PREVIEW) == true }
+        val openOnRecent = remember { entry.savedStateHandle.remove<Boolean>(OPEN_ON_RECENT) == true }
         BackHandler(enabled = rail.visible) {
             if (rail.expanded || !rail.focusRail()) {
                 navController.popBackStack(Screen.ContentTypeSelection, inclusive = false, saveState = true)
@@ -575,6 +586,7 @@ fun TvNavHost(
             initialStreamSource = openOn?.providerId ?: 0L,
             showPreviewPane = false,
             closeSavedLivePreview = closeSavedPreview,
+            openOnRecent = openOnRecent,
         )
     }
 
@@ -1297,3 +1309,6 @@ fun TvNavHost(
 
 /** Set on Live TV's root entry when a rail pick leaves it: see closeSavedLivePreview in [TvNavHost]. */
 private const val CLOSE_SAVED_LIVE_PREVIEW = "closeSavedLivePreview"
+
+/** Set on a section's root entry when it is entered again on its browse: see openBrowseOnRecent in [TvNavHost]. */
+private const val OPEN_ON_RECENT = "openOnRecent"
