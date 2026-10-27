@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +59,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.ui.components.TvScreenHeader
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -125,6 +128,16 @@ internal fun TwoColumnLayout(
     val sourceNames by categoryViewModel.sourceNames.collectAsStateWithLifecycle()
     // The source's own categories: Recent, Favourites and the like are modes, not categories.
     val categoryCount = remember(categories) { categories.count { !it.isVirtual } }
+
+    // The tab row over the items (the tv browse tabs plan): the category last picked, then the
+    // virtual lists. The picked category stays, and stays marked in its pane, while a virtual list
+    // is open, so its tab goes back to it.
+    var lastPickedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val pickedCategory = selectedCategory?.takeUnless { it.isVirtual } ?: lastPickedKey?.let { categoryMap[it] }
+    SideEffect { lastPickedKey = pickedCategory?.key }
+    val tabs = remember(categories, pickedCategory) { listOfNotNull(pickedCategory) + categories.partitionVirtual().first }
+    // While a tab has focus, a list that opens under it does not take focus: focus selects the tabs.
+    var tabsFocused by remember { mutableStateOf(false) }
 
     // Back from the TV Guide lands on the header button that opened it. Runs once the
     // screen is RESUMED, after CategoryList's and StreamList's own focus effects, so it has the
@@ -307,7 +320,7 @@ internal fun TwoColumnLayout(
             ) {
                 CategoryList(
                     categories = categories,
-                    selectedCategoryKey = selectedCategoryKey,
+                    selectedCategoryKey = pickedCategory?.key,
                     contentType = contentType,
                     categoryViewModel = categoryViewModel,
                     favoriteCategoryIds = favoriteCategoryIds,
@@ -354,9 +367,24 @@ internal fun TwoColumnLayout(
                     onRefreshStreams = onRefreshStreams,
                     paneFocus = itemsPane,
                     categoriesPane = categoriesPane,
-                    takeEntryFocus = !playingNotListed,
+                    takeEntryFocus = !playingNotListed && !tabsFocused,
                     undoBar = undoBar,
                     editMode = editMode,
+                    tabRow =
+                        if (tabs.isEmpty()) {
+                            null
+                        } else {
+                            {
+                                BrowseTabs(
+                                    tabs = tabs,
+                                    selectedKey = selectedCategoryKey,
+                                    onTabSelected = { onCategorySelected(it.id, it.providerId) },
+                                    categoriesPane = categoriesPane,
+                                    itemsPane = itemsPane,
+                                    modifier = Modifier.fillMaxWidth().onFocusChanged { tabsFocused = it.hasFocus },
+                                )
+                            }
+                        },
                     modifier =
                         Modifier
                             .weight(0.7f)

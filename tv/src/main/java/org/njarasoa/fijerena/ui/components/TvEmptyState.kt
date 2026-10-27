@@ -40,7 +40,8 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * Nothing went wrong here — the list, guide or section simply has nothing to show — so nothing is
  * red and there is no Retry; real failures keep [TvErrorState].
  *
- * With an action ([actionLabel] and [onAction]) the button takes focus on entry. [onBack] also
+ * With an action ([actionLabel] and [onAction]) the button takes focus on entry, unless
+ * [takeFocus] is false when it first shows (focus is on a tab row over it). [onBack] also
  * takes the Back key, in `onPreviewKeyEvent`: with the button focused a `BackHandler` would miss
  * the first press (docs/NAVIGATION_GUIDE.md → "TV Back on Detail Screens"). Without an action
  * nothing here is focusable, so the screen keeps focus on its own controls.
@@ -64,10 +65,13 @@ fun TvEmptyState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
+    takeFocus: Boolean = true,
 ) {
     val hasAction = actionLabel != null && onAction != null
     val actionFocusRequester = remember { FocusRequester() }
-    if (hasAction) {
+    // Read once: a later true (focus left the tab row for the header) does not pull focus here.
+    val focusOnEntry = remember { takeFocus }
+    if (hasAction && focusOnEntry) {
         LaunchedEffect(Unit) { actionFocusRequester.requestFocusWithRetry() }
     }
 

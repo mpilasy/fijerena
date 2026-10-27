@@ -167,13 +167,16 @@ internal fun StreamList(
     paneFocus: PaneFocusState? = null,
     categoriesPane: PaneFocusState? = null,
     /**
-     * False when focus belongs to the other pane on this open: the list takes neither entry focus
-     * nor the target row's, now or later (Back from the Live TV preview when this list lacks the
-     * channel that was playing, LT6). D-pad entry still lands on the remembered row.
+     * False when focus belongs elsewhere on this open: the list takes neither entry focus nor the
+     * target row's, now or later, and its empty state's button does not either (Back from the Live
+     * TV preview when this list lacks the channel that was playing, LT6; a browse tab focused, the
+     * tv browse tabs plan). D-pad entry still lands on the remembered row.
      */
     takeEntryFocus: Boolean = true,
     /** The title and count above the rows. The Live TV preview panel draws its tab row instead (LT2). */
     showHeader: Boolean = true,
+    /** Browse's tab row (the tv browse tabs plan), under the title and over the rows; it never scrolls. */
+    tabRow: (@Composable () -> Unit)? = null,
     /** False: Hold OK / Menu on a row opens nothing (a child profile's, kids' Home plan Phase 2). */
     rowActions: Boolean = true,
     /**
@@ -450,6 +453,7 @@ internal fun StreamList(
                 isDevMode = isDevMode,
             )
         }
+        tabRow?.invoke()
         if (editMode) {
             // What the mode does, under the list's title (plan → A, "Edit" mode).
             CinemaText(
@@ -519,6 +523,7 @@ internal fun StreamList(
                                 icon = sectionIcon(contentType),
                                 actionLabel = stringResource(R.string.browse_open_categories),
                                 onAction = { scope.launch { categoriesPane?.focusEntry() } },
+                                takeFocus = takeEntryFocus,
                             )
                         } else {
                             TvEmptyState(
@@ -526,6 +531,7 @@ internal fun StreamList(
                                 icon = sectionIcon(contentType),
                                 actionLabel = selectedCategoryId?.let { stringResource(R.string.common_refresh) },
                                 onAction = selectedCategoryId?.let { categoryId -> { onRefreshStreams(categoryId) } },
+                                takeFocus = takeEntryFocus,
                             )
                         }
                     }

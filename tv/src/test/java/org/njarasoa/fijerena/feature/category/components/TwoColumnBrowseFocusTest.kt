@@ -53,6 +53,9 @@ import org.robolectric.RobolectricTestRunner
  * `scripts/focus-walks/live-tv-browse.txt` and `live-tv-back.txt` walk it: which row a list opens
  * on, Left and Right between the panes, OK on a category, and where focus lands on Back from the
  * Live TV preview or a film's details. See docs/plans/20260914_codebase-robustness-plan.md, Phase 5.
+ * The tab row over the items (the picked category, Recent, Favourites) follows the D-pad map of
+ * docs/plans/20261027_tv-browse-tabs-plan.md. A category's tab and its row share its name: a step
+ * after landing on one tells them apart.
  *
  * The test holds the selection and the rows, as `TvCategoryGridScreen` does with its view model's
  * state, and stands a focusable screen in for the preview or the details, under the same saveable
@@ -87,19 +90,83 @@ class TwoColumnBrowseFocusTest {
         open(ContentType.LIVE_TV, CategoryViewModel.RECENT_CATEGORY_ID)
         // The empty state's one action takes focus (household UX plan, K2).
         walk.awaitFocused(BROWSE_CATEGORIES)
-        // OK lands on the category being browsed.
-        walk.run(center(RECENT))
+        walk.run(
+            // Up reaches the tabs: Recent, no category picked yet.
+            up(RECENT),
+            down(BROWSE_CATEGORIES),
+            // OK lands on the first category, as none was picked.
+            center(NEWS_NAME),
+            down(SPORT_NAME),
+        )
     }
 
     @Test
-    fun `Up from the first channel reaches the header, Down comes back`() {
+    fun `Up from the first channel reaches the tabs, then the header, and Down comes back`() {
         open(ContentType.LIVE_TV, NEWS)
         walk.awaitFocused(MORNING_NEWS)
         walk.run(
-            up("Refresh"),
+            // The category's tab, the selected one.
+            up(NEWS_NAME),
+            up(REFRESH),
             // Nothing is above the header.
-            up("Refresh"),
+            up(REFRESH),
+            down(NEWS_NAME),
             down(MORNING_NEWS),
+        )
+    }
+
+    @Test
+    fun `focus on a tab opens its list and stays on the tab`() {
+        open(ContentType.LIVE_TV, NEWS)
+        walk.awaitFocused(MORNING_NEWS)
+        walk.run(
+            up(NEWS_NAME),
+            // An empty Recent: focus stays on its tab, not on the empty state's button.
+            right(RECENT),
+            // Favourites has rows: none of them takes focus.
+            right(FAVOURITES),
+            // The last tab.
+            right(FAVOURITES),
+            down(CARTOON_TIME),
+            up(FAVOURITES),
+            left(RECENT),
+            down(BROWSE_CATEGORIES),
+            up(RECENT),
+            left(NEWS_NAME),
+            // Left on the first tab: the picked category in its pane, whose Right enters the list.
+            left(NEWS_NAME),
+            right(MORNING_NEWS),
+        )
+    }
+
+    @Test
+    fun `Left from a virtual list lands on the picked category`() {
+        open(ContentType.LIVE_TV, NEWS)
+        walk.awaitFocused(MORNING_NEWS)
+        walk.run(
+            up(NEWS_NAME),
+            right(RECENT),
+            right(FAVOURITES),
+            down(CARTOON_TIME),
+            left(NEWS_NAME),
+            // The row, not the tab: Down moves in the categories.
+            down(SPORT_NAME),
+            // Right comes back to the row the list had focus on.
+            right(CARTOON_TIME),
+        )
+    }
+
+    @Test
+    fun `Down from the header enters the tabs, then the row the list remembers`() {
+        open(ContentType.LIVE_TV, NEWS)
+        walk.awaitFocused(MORNING_NEWS)
+        walk.run(
+            down(WORLD_REPORT),
+            left(NEWS_NAME),
+            // News is the first category: Up leaves its pane for the header.
+            up(REFRESH),
+            down(NEWS_NAME),
+            down(WORLD_REPORT),
         )
     }
 
@@ -131,6 +198,11 @@ class TwoColumnBrowseFocusTest {
             center(SPORT_NAME),
             // The row remembered from News is not in Sport: the first row.
             right(MATCH_DAY),
+            // The category's tab takes the name of the one picked.
+            up(SPORT_NAME),
+            right(RECENT),
+            left(SPORT_NAME),
+            down(MATCH_DAY),
             left(SPORT_NAME),
         )
     }
@@ -265,6 +337,9 @@ class TwoColumnBrowseFocusTest {
         const val DRAMA = "drama"
 
         const val RECENT = "Recent"
+        const val FAVOURITES = "Favourites"
+        const val REFRESH = "Refresh"
+        const val CARTOON_TIME = "Cartoon Time"
         const val BROWSE_CATEGORIES = "Browse categories"
         const val NEWS_NAME = "News"
         const val SPORT_NAME = "Sport"
@@ -284,7 +359,7 @@ class TwoColumnBrowseFocusTest {
         val VIRTUAL =
             listOf(
                 MediaCategory(id = CategoryViewModel.RECENT_CATEGORY_ID, name = RECENT, isVirtual = true),
-                MediaCategory(id = CategoryViewModel.FAVORITES_CATEGORY_ID, name = "Favourites", isVirtual = true),
+                MediaCategory(id = CategoryViewModel.FAVORITES_CATEGORY_ID, name = FAVOURITES, isVirtual = true),
             )
         val LIVE =
             listOf(
@@ -303,7 +378,8 @@ class TwoColumnBrowseFocusTest {
                         channel(EVENING_BULLETIN_ID, EVENING_BULLETIN, NEWS),
                     ),
                 SPORT to listOf(channel(MATCH_DAY_ID, MATCH_DAY, SPORT), channel("202", "Racing Live", SPORT)),
-                KIDS to listOf(channel("301", "Cartoon Time", KIDS)),
+                KIDS to listOf(channel("301", CARTOON_TIME, KIDS)),
+                CategoryViewModel.FAVORITES_CATEGORY_ID to listOf(channel("301", CARTOON_TIME, KIDS)),
                 DRAMA to listOf(film("401", AMELIE), film("402", METROPOLIS), film("403", CASABLANCA)),
             )
 
