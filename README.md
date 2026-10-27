@@ -32,7 +32,14 @@ made yourself.
 
 - **Android 11 or later** (API 30), on both TV and phone. Many devices fall short of that: most
   inexpensive Android TV boxes still on Android 9 or 10, and Amazon Fire TV devices on Fire OS 7
-  or older, can't install it.
+  or older, can't install it. Fire TV devices on Vega OS (the Fire TV Stick 4K Select, and the Fire
+  TV Stick HD and 4K of 2026) are not Android and can't install it either.
+- **Memory:** 2 GB at least, 3 GB or more recommended. With 2 GB the app runs, but Android stops it
+  in the background sooner and a large guide syncs more slowly.
+- **Storage:** 1.5 GB free at least, 3 GB or more recommended. The app is about 100 MB; the
+  catalogue and the guide take from a few hundred MB (one small source) to over 1 GB (several large
+  sources with a long guide).
+- **Network:** Wi-Fi 5 for HD. Ethernet or Wi-Fi 6 for 4K.
 - Tested on Android phones, NVIDIA Shield (Shield TV and Shield TV Pro), Chromecast with Google TV,
   and Sony Bravia Android TVs.
 - An ARM device (arm64-v8a or armeabi-v7a), as almost every TV and phone is.
