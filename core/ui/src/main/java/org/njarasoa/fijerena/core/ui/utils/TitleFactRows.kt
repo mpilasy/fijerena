@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.ui.utils
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.domain.TitleFacts
@@ -27,7 +28,7 @@ fun titleFactRows(
     shownName: String,
     isShow: Boolean,
 ): List<FactRow> {
-    val locale = Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0]
     val rows = mutableListOf<FactRow>()
     facts.originalTitle?.takeUnless { it.equals(cleanTitle(shownName).trim(), ignoreCase = true) }?.let {
         rows += FactRow(stringResource(R.string.details_label_original_title), it)

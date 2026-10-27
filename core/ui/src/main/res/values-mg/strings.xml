@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Playback -->
     <string name="slow_connection_banner_format">Miadana loatra ny fifandraisana ho an\'ity sarimihetsika ity (mila ~%1$d Mbps, ~%2$d Mbps no azo)</string>
     <string name="slow_connection_banner">Miadana loatra ny fifandraisana ho an\'ity sarimihetsika ity</string>
@@ -1221,19 +1221,19 @@
     <string name="details_label_director">Mpanatontosa:</string>
     <string name="details_label_original_title">Lohateny tany am-boalohany:</string>
     <string name="details_label_original_language">Fiteny tany am-boalohany:</string>
-    <plurals name="details_label_countries">
+    <plurals name="details_label_countries" tools:ignore="ImpliedQuantity">
         <item quantity="one">Firenena:</item>
         <item quantity="other">Firenena:</item>
     </plurals>
-    <plurals name="details_label_languages">
+    <plurals name="details_label_languages" tools:ignore="ImpliedQuantity">
         <item quantity="one">Fiteny:</item>
         <item quantity="other">Fiteny:</item>
     </plurals>
-    <plurals name="details_label_studios">
+    <plurals name="details_label_studios" tools:ignore="ImpliedQuantity">
         <item quantity="one">Studio:</item>
         <item quantity="other">Studio:</item>
     </plurals>
-    <plurals name="details_label_networks">
+    <plurals name="details_label_networks" tools:ignore="ImpliedQuantity">
         <item quantity="one">Fahitalavitra:</item>
         <item quantity="other">Fahitalavitra:</item>
     </plurals>
