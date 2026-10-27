@@ -131,7 +131,7 @@ mode, as switching category does today.
   Recent. Live TV's saved list (process death) would have undone the switch; it is not put back
   on such an entry. Recent Categories and Favourite Categories counted "5 channels"; they count
   categories.
-- **Left as is:** "Recent categories" and "Favourite categories" are sentence case in English
-  (the Title Case rule); the strings are in `core/` and the phone shows them too. The rail opens
+- **Title Case:** "Recent categories" and "Favourite categories" were sentence case in English;
+  fixed in `core/` at the user's request (the phone shows them too). **Left as is:** the rail opens
   on the profile avatar when the screen's section is not in it (Browse iptv); that fallback is
   deliberate (`RailEntryItemTest`).
