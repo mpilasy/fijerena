@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261027035348
 
 - **More about each film and show:** the Details tab now lists the country of origin, the original title (when it is not the title shown), the original language, the spoken languages, and the studios (a show's networks). A show also lists its creators and its status with its season and episode counts, and the tagline shows above the plot. From TMDB's details, which the page already asks for; else from the source (Jellyfin, or the country an Xtream panel sends). On the TMDB page too. A source's empty director no longer shows as an empty Director row. TV and phone.
 - **A series with an empty backdrop opens:** a panel that sends a series' backdrop list as `[null]` made its page fail with "Couldn't load the episodes". The app now reads a null anywhere in a panel's answer as missing: the field is left empty, and only an entry with no id (nothing to play) is left out. TV and phone.
