@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261028222153
 
 - **Shorter stack traces in Logs:** an entry with a stack trace now shows only its root cause, for example "SocketTimeoutException: timeout". Open it to see the chain of causes, one line each: tap it on the phone, push OK on the TV. Copy and Share still give the full stack trace. TV and phone.
 
