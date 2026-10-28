@@ -1,6 +1,6 @@
 # Admin settings
 
-**Status:** Agreed 2026-10-28 (decisions below); in progress.
+**Status:** Agreed 2026-10-28 (decisions below); Done 2026-10-28: built and walked on both emulators (an admin with and without a PIN, a grown-up, a kid).
 
 ## Goal
 
@@ -96,8 +96,9 @@ so one word has one meaning.
   tests and `ci-settings.txt` read the new text.
 - **Phase 4 (docs):** FEATURES (Settings, Profile PIN, a profile's page, the Expert Mode section
   is now Admin, every "Expert mode" in the UI sense), NAVIGATION_GUIDE, CONTRIBUTING,
-  RELEASE_NOTES (Unreleased), RUN_GUIDE, design.md, DATABASE_SCHEMA and README. Walks on both
-  emulators still to do.
+  RELEASE_NOTES (Unreleased), RUN_GUIDE, design.md, DATABASE_SCHEMA and README. Walked on both
+  emulators: an admin with and without a PIN, a grown-up and a kid. `ProfilePageRow` and the
+  route's `at` were removed (3b02aa02d): nothing opened a page at a row any more.
 
 ## Progress
 
@@ -106,4 +107,4 @@ so one word has one meaning.
 | 1. TV | Done | 98b6ef005 |
 | 2. Phone | Done | 9e509b231 |
 | 3. Rename | Done | 360b5e580 |
-| 4. Docs and walks | In progress | |
+| 4. Docs and walks | Done, walked on both emulators | 96ddb8744 |

@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-28 | [Admin settings](./20261028_admin-settings-plan.md) | One rule: household and device settings are Admin, a profile's own are not; Settings becomes Your Profile, Admin (PIN once on the way in) and About; Expert mode becomes Admin in the UI | Agreed 2026-10-28; in progress |
+| 2026-10-28 | [Admin settings](./20261028_admin-settings-plan.md) | One rule: household and device settings are Admin, a profile's own are not; Settings becomes Your Profile, Admin (PIN once on the way in) and About; Expert mode becomes Admin in the UI | Done 2026-10-28, walked on both emulators |
 | 2026-10-28 | [PIN on the phone](./20261028_pin-on-phone-plan.md) | When the TV asks for a PIN, type it on a linked phone so the room cannot read it from the TV's pad; the phone checks it and sends only "unlocked" | Done 2026-10-28, walked on both emulators |
 | 2026-10-27 | [TV browse tabs](./20261027_tv-browse-tabs-plan.md) | On TV Live TV, Movies and TV Shows, Recent, Favourites and the other virtual lists become a fixed tab row at the top of the right pane, after the picked category's tab; every D-pad move kept | Done 2026-10-27, walked on the TV emulator; a section opened again starts on Recent |
 | 2026-10-25 | [Live TV Recent order](./20261025_live-recent-order-plan.md) | Live TV's Recent on TV: the playing channel first, then newest first, the same in the preview, the slide-in panel and the list; zapping walks a fixed order | Done 2026-10-25, walked on the TV emulator |
