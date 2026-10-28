@@ -80,6 +80,6 @@ so one word has one meaning.
 | Phase | Status | Commit |
 |---|---|---|
 | 1. TV | In progress | |
-| 2. Phone | In progress | |
+| 2. Phone | Done | 9e509b231 |
 | 3. Rename | Done | 360b5e580 |
 | 4. Docs and walks | Not started | |
