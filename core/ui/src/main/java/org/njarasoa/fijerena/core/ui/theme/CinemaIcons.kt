@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Dialpad
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -64,6 +65,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Subtitles
@@ -89,6 +91,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -116,6 +119,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Subtitles
@@ -141,6 +145,7 @@ import androidx.compose.material.icons.sharp.ContentCopy
 import androidx.compose.material.icons.sharp.DateRange
 import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.DeleteForever
+import androidx.compose.material.icons.sharp.Dialpad
 import androidx.compose.material.icons.sharp.Edit
 import androidx.compose.material.icons.sharp.ExpandLess
 import androidx.compose.material.icons.sharp.ExpandMore
@@ -168,6 +173,7 @@ import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material.icons.sharp.SkipNext
 import androidx.compose.material.icons.sharp.SkipPrevious
+import androidx.compose.material.icons.sharp.Smartphone
 import androidx.compose.material.icons.sharp.Star
 import androidx.compose.material.icons.sharp.StarBorder
 import androidx.compose.material.icons.sharp.Subtitles
@@ -233,6 +239,16 @@ object CinemaIcons {
         @Composable @ReadOnlyComposable
         get() =
             pick(Icons.AutoMirrored.Rounded.Backspace, Icons.AutoMirrored.Outlined.Backspace, Icons.AutoMirrored.Sharp.Backspace)
+
+    /** Type the PIN on a linked phone (the PIN on the phone plan). */
+    val Phone: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Smartphone, Icons.Outlined.Smartphone, Icons.Sharp.Smartphone)
+
+    /** Type the PIN on this device's number pad again. */
+    val Dialpad: ImageVector
+        @Composable @ReadOnlyComposable
+        get() = pick(Icons.Rounded.Dialpad, Icons.Outlined.Dialpad, Icons.Sharp.Dialpad)
 
     val Lock: ImageVector
         @Composable @ReadOnlyComposable

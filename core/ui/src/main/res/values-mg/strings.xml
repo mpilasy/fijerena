@@ -1367,6 +1367,13 @@
     <string name="pin_set_done">Voapetraka ny PIN</string>
     <string name="pin_removed">Voaesotra ny PIN</string>
     <string name="pin_enter_admin">Ampidiro ny PIN-n\'ny mombamomba manam-pahaizana</string>
+    <string name="pin_use_phone">Ampiasao ny findaiko</string>
+    <string name="pin_use_tv">Ampiasao ny fahitalavitra</string>
+    <string name="pin_phone_instructions">Sokafy ny Fijerena amin\'ny findainao ary ampidiro ao ny PIN.</string>
+    <string name="pin_phone_waiting">Miandry ny finday</string>
+    <string name="pin_phone_cancelled">Nofoanana tamin\'ny finday.</string>
+    <string name="pin_phone_no_answer">Tsy namaly ny finday.</string>
+    <string name="pin_asked_by">Mangataka i %1$s</string>
     <string name="profile_child_no_pin_warning">Tsy misy PIN voafaritra: afaka mifindra amin\'izay mombamomba tiany ity ankizy ity.</string>
     <string name="profile_child_set_pin">Mametraha PIN</string>
     <string name="settings_group_sync_backup">Fampifanarahana sy tahiry</string>

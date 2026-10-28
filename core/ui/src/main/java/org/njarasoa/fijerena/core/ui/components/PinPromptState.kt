@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.ui.components
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,8 +11,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
+import org.njarasoa.fijerena.core.network.sync.PinRequests
+import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.sync.PinAsker
+import org.njarasoa.fijerena.core.ui.sync.PinOnPhone
 
 /** What a PIN prompt is for (the profile pin plan). */
 sealed interface PinRequest {
@@ -63,6 +71,7 @@ class PinPromptState internal constructor(
     private val context: Context,
     private val pins: ProfilePins,
     val request: PinRequest,
+    private val asker: PinAsker = PinOnPhone,
     private val onDone: () -> Unit,
 ) {
     var typed by mutableStateOf("")
@@ -75,6 +84,50 @@ class PinPromptState internal constructor(
         private set
     private var first: String? by mutableStateOf(null)
 
+    /**
+     * The request another device answers ([PinOnPhone]); null while the PIN is typed here. See
+     * the PIN on the phone plan.
+     */
+    var phoneRequestId: String? by mutableStateOf(null)
+        private set
+
+    /** Only a [PinRequest.Check] can be answered on another device, and only while this one is linked. */
+    val canUsePhone: Boolean by lazy { request is PinRequest.Check && asker.canAsk(context) }
+
+    /** Asks the other devices for the PIN; the pad waits until [onPhoneAnswer], [phoneTimedOut] or [useHere]. */
+    fun usePhone() {
+        if (!canUsePhone || phoneRequestId != null) return
+        typed = ""
+        message = null
+        messageIsError = false
+        phoneRequestId = asker.ask(context, request.profileId)
+    }
+
+    /** Stops waiting for the other device and types the PIN here again; [note] shows under the dots. */
+    fun useHere(note: Int? = null) {
+        val id = phoneRequestId ?: return
+        asker.close(context, id, request.profileId)
+        phoneRequestId = null
+        message = note?.let(context::getString)
+        messageIsError = false
+    }
+
+    /** Another device answered: unlocked does what a right PIN typed here does; cancelled shows the pad again. */
+    fun onPhoneAnswer(answer: SyncPayloads.PinAnswer) {
+        val id = phoneRequestId
+        if (id == null || answer.requestId != id) return
+        if (answer.result == SyncPayloads.PinAnswer.UNLOCKED) {
+            asker.close(context, id, request.profileId)
+            phoneRequestId = null
+            PinSession.unlock(request.profileId)
+            onDone()
+        } else {
+            useHere(R.string.pin_phone_cancelled)
+        }
+    }
+
+    fun phoneTimedOut() = useHere(R.string.pin_phone_no_answer)
+
     val title: String
         get() =
             when (request) {
@@ -86,6 +139,8 @@ class PinPromptState internal constructor(
 
     fun type(digit: Char) {
         if (digit !in '0'..'9' || typed.length >= ProfilePins.LENGTH) return
+        // A digit typed here (a remote's number key) while the phone is asked: the PIN is typed here after all.
+        useHere()
         typed += digit
         if (typed.length == ProfilePins.LENGTH) submit(typed)
     }
@@ -162,9 +217,26 @@ class PinPromptState internal constructor(
 fun rememberPinPromptState(
     pins: ProfilePins,
     request: PinRequest,
+    asker: PinAsker = PinOnPhone,
     onDone: () -> Unit,
 ): PinPromptState {
     val context = LocalContext.current
     val done by rememberUpdatedState(onDone)
-    return remember(request) { PinPromptState(context, pins, request) { done() } }
+    return remember(request) { PinPromptState(context, pins, request, asker) { done() } }
+}
+
+/**
+ * Waits for the other device's answer while [state] has asked for one, up to [PinOnPhone.WAIT_MS],
+ * and stops waiting when the prompt leaves the screen (Cancel, Back, a right PIN). Put it in every
+ * prompt that offers [PinPromptState.usePhone].
+ */
+@Composable
+fun PinOnPhoneEffect(state: PinPromptState) {
+    val requestId = state.phoneRequestId
+    LaunchedEffect(state, requestId) {
+        if (requestId == null) return@LaunchedEffect
+        val answer = withTimeoutOrNull(PinOnPhone.WAIT_MS) { PinRequests.answers.first { it.requestId == requestId } }
+        if (answer == null) state.phoneTimedOut() else state.onPhoneAnswer(answer)
+    }
+    DisposableEffect(state) { onDispose { state.useHere() } }
 }

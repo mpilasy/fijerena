@@ -6,10 +6,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -25,6 +30,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.PinDots
+import org.njarasoa.fijerena.core.ui.components.PinOnPhoneEffect
 import org.njarasoa.fijerena.core.ui.components.PinPromptState
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
@@ -35,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.PinStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -48,6 +55,18 @@ fun TvPinDialog(
     onCancel: () -> Unit,
 ) {
     val firstKey = remember { FocusRequester() }
+    val useTv = remember { FocusRequester() }
+    val waiting = state.phoneRequestId != null
+    PinOnPhoneEffect(state)
+    // The pad goes while the phone is asked, and comes back after: focus follows (not on opening,
+    // where the dialog's initialFocus puts it on 1).
+    var shownWaiting by remember { mutableStateOf(waiting) }
+    LaunchedEffect(waiting) {
+        if (waiting != shownWaiting) {
+            shownWaiting = waiting
+            runCatching { (if (waiting) useTv else firstKey).requestFocus() }
+        }
+    }
     CinemaAlertDialog(
         initialFocus = firstKey,
         onDismissRequest = onCancel,
@@ -94,33 +113,73 @@ fun TvPinDialog(
                         tone = if (state.messageIsError) TextTone.Danger else TextTone.Secondary,
                     )
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(PinStyle.keyGap)) {
-                    listOf("123", "456", "789").forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(PinStyle.keyGap)) {
-                            row.forEach { digit ->
-                                PadKey(
-                                    onClick = { state.type(digit) },
-                                    modifier = if (digit == '1') Modifier.focusRequester(firstKey) else Modifier,
-                                ) { CinemaText(digit.toString(), tone = TextTone.Inherit) }
+                if (waiting) {
+                    PhoneWaiting()
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(PinStyle.keyGap)) {
+                        listOf("123", "456", "789").forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(PinStyle.keyGap)) {
+                                row.forEach { digit ->
+                                    PadKey(
+                                        onClick = { state.type(digit) },
+                                        modifier = if (digit == '1') Modifier.focusRequester(firstKey) else Modifier,
+                                    ) { CinemaText(digit.toString(), tone = TextTone.Inherit) }
+                                }
                             }
                         }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(PinStyle.keyGap)) {
-                        PadKey(onClick = state::erase) {
-                            Icon(CinemaIcons.Backspace, contentDescription = stringResource(R.string.pin_erase))
+                        Row(horizontalArrangement = Arrangement.spacedBy(PinStyle.keyGap)) {
+                            PadKey(onClick = state::erase) {
+                                Icon(CinemaIcons.Backspace, contentDescription = stringResource(R.string.pin_erase))
+                            }
+                            PadKey(onClick = { state.type('0') }) { CinemaText("0", tone = TextTone.Inherit) }
+                            Spacer(Modifier.width(PinStyle.keyWidth))
                         }
-                        PadKey(onClick = { state.type('0') }) { CinemaText("0", tone = TextTone.Inherit) }
-                        Spacer(Modifier.width(PinStyle.keyWidth))
                     }
                 }
             }
         },
+        dismissButton =
+            if (state.canUsePhone) {
+                {
+                    if (waiting) {
+                        TvIconAction(
+                            onClick = { state.useHere() },
+                            icon = CinemaIcons.Dialpad,
+                            label = stringResource(R.string.pin_use_tv),
+                            modifier = Modifier.focusRequester(useTv),
+                        )
+                    } else {
+                        TvIconAction(onClick = state::usePhone, icon = CinemaIcons.Phone, label = stringResource(R.string.pin_use_phone))
+                    }
+                }
+            } else {
+                null
+            },
         confirmButton = {
             CinemaButton(onClick = onCancel, kind = ButtonKind.Other) {
                 CinemaText(stringResource(R.string.common_cancel), tone = TextTone.Inherit)
             }
         },
     )
+}
+
+/** What the TV shows while the phone is asked: no pad, so the room sees nothing of the PIN. */
+@Composable
+private fun PhoneWaiting() {
+    Column(
+        modifier = Modifier.padding(vertical = Spacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Icon(
+            CinemaIcons.Phone,
+            contentDescription = null,
+            tint = CinemaTheme.colors.accent,
+            modifier = Modifier.size(PinStyle.keyWidth),
+        )
+        CinemaText(stringResource(R.string.pin_phone_instructions), role = TextRole.Body, textAlign = TextAlign.Center)
+        CinemaText(stringResource(R.string.pin_phone_waiting), role = TextRole.Body, tone = TextTone.Secondary)
+    }
 }
 
 @Composable
