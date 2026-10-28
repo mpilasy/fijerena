@@ -68,6 +68,33 @@ fun TvPinDialog(
         }
     }
     CinemaAlertDialog(
+        // On the whole dialog, not only the pad: a digit key also types while focus is on a
+        // button, Use the TV included (the PIN is then typed here after all).
+        modifier =
+            Modifier.onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                val code = event.nativeKeyEvent.keyCode
+                when (code) {
+                    in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
+                        state.type('0' + (code - KeyEvent.KEYCODE_0))
+                        true
+                    }
+
+                    in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> {
+                        state.type('0' + (code - KeyEvent.KEYCODE_NUMPAD_0))
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DEL -> {
+                        state.erase()
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            },
         initialFocus = firstKey,
         onDismissRequest = onCancel,
         containerColor = CinemaTheme.colors.background,
@@ -78,30 +105,7 @@ fun TvPinDialog(
         text = {
             Column(
                 modifier =
-                    Modifier.fillMaxWidth().onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                        val code = event.nativeKeyEvent.keyCode
-                        when (code) {
-                            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
-                                state.type('0' + (code - KeyEvent.KEYCODE_0))
-                                true
-                            }
-
-                            in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> {
-                                state.type('0' + (code - KeyEvent.KEYCODE_NUMPAD_0))
-                                true
-                            }
-
-                            KeyEvent.KEYCODE_DEL -> {
-                                state.erase()
-                                true
-                            }
-
-                            else -> {
-                                false
-                            }
-                        }
-                    },
+                    Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {

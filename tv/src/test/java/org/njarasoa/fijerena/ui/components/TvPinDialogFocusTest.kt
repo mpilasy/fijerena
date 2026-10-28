@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.hasContentDescription
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -161,5 +162,18 @@ class TvPinDialogFocusTest {
 
         assertEquals(1, cancelled)
         assertEquals(listOf(requestId), closed)
+    }
+
+    @Test
+    fun `a digit key while the phone is asked types here and brings the pad back`() {
+        setDialog()
+        walk.run(down("4"), down("7"), down("Erase"), down("Use my phone"), center("Use the TV"))
+
+        walk.press(Key.One)
+
+        walk.assertFocused("1")
+        assertEquals(listOf(requestId), closed)
+        val dots = rule.onAllNodes(hasContentDescription("1 / 4"), useUnmergedTree = true).fetchSemanticsNodes()
+        assertEquals(1, dots.size)
     }
 }
