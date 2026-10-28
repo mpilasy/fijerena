@@ -46,10 +46,22 @@ object SyncKind {
     const val REMOTE_COMMAND = "remote_command"
 
     /**
+     * A device asks the other devices for a profile's PIN; keyed by the *asking* device's server
+     * id. Volatile — see [VOLATILE], [PinRequests] and the PIN on the phone plan.
+     */
+    const val PIN_REQUEST = "pin_request"
+
+    /**
+     * The answer to a [PIN_REQUEST]: unlocked or cancelled, never the PIN; keyed by the *asking*
+     * device's server id. Volatile — see [VOLATILE] and [PinRequests].
+     */
+    const val PIN_ANSWER = "pin_answer"
+
+    /**
      * Kinds held only in memory, on both ends: pushed from [VolatileRecords], applied to an
      * in-memory store — never a version row, a tombstone, or a step of the receiver's sync clocks.
      */
-    val VOLATILE = setOf(NOW_PLAYING, REMOTE_COMMAND)
+    val VOLATILE = setOf(NOW_PLAYING, REMOTE_COMMAND, PIN_REQUEST, PIN_ANSWER)
 
     /**
      * A film or show on a profile's Wanted list; keyed by its TMDB id, with the content type.

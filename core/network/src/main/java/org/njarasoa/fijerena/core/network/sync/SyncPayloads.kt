@@ -267,6 +267,38 @@ object SyncPayloads {
         }
     }
 
+    /**
+     * A device asks for [profileId]'s PIN ([SyncKind.PIN_REQUEST], keyed by the asking device's id).
+     * [requestId] is random and used once. [open] false: the asking device stopped waiting (an
+     * answer, Cancel, the pad, or the time limit). [sentAt] is the asking device's clock: a device
+     * ignores a request older than [PinRequests.MAX_AGE_MS] by its own clock. See the PIN on the phone plan.
+     */
+    @Serializable
+    data class PinRequest(
+        val requestId: String,
+        val profileId: String,
+        val profileName: String = "",
+        val fromDeviceName: String = "",
+        val open: Boolean = true,
+        val sentAt: Long,
+    )
+
+    /**
+     * The answer to the [PinRequest] [requestId] ([SyncKind.PIN_ANSWER], keyed by the asking
+     * device's id). The answering device checked the PIN itself: the PIN is never sent.
+     */
+    @Serializable
+    data class PinAnswer(
+        val requestId: String,
+        val result: String,
+        val fromDeviceName: String = "",
+    ) {
+        companion object {
+            const val UNLOCKED = "unlocked"
+            const val CANCELLED = "cancelled"
+        }
+    }
+
     inline fun <reified T> encode(value: T): String = json.encodeToString(value)
 
     inline fun <reified T> decode(payload: String?): T = json.decodeFromString(requireNotNull(payload) { "Record has no payload" })

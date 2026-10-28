@@ -111,6 +111,8 @@ class SyncApplier(
             SyncKind.WATCH,
             SyncKind.NOW_PLAYING,
             SyncKind.REMOTE_COMMAND,
+            SyncKind.PIN_REQUEST,
+            SyncKind.PIN_ANSWER,
         )
 
     suspend fun apply(records: List<SyncRecord>): Result {
@@ -238,6 +240,8 @@ class SyncApplier(
             SyncKind.CATEGORY_FILTERS -> applyProviderScopedSetting(record)
             SyncKind.NOW_PLAYING -> applyNowPlaying(record)
             SyncKind.REMOTE_COMMAND -> applyRemoteCommand(record)
+            SyncKind.PIN_REQUEST -> applyPinRequest(record)
+            SyncKind.PIN_ANSWER -> applyPinAnswer(record)
             else -> Outcome.Skipped
         }
     }
@@ -264,6 +268,37 @@ class SyncApplier(
         val fired =
             try {
                 forThisDevice && RemoteCommands.receive(SyncPayloads.decode(record.payload), playingSessionId())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+        return if (fired) Outcome.Applied else Outcome.Skipped
+    }
+
+    /**
+     * To [PinRequests] only: a request from another device (one keyed to this device is its own,
+     * read back). Like a remote command, a payload this version can't read is skipped, not deferred.
+     */
+    private fun applyPinRequest(record: SyncRecord): Outcome {
+        val fromOther = !record.deleted && record.key.itemId.isNotEmpty() && record.key.itemId != thisDeviceId()
+        val taken =
+            try {
+                fromOther && PinRequests.receiveRequest(record.key.itemId, SyncPayloads.decode(record.payload), record.hlc)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+        return if (taken) Outcome.Applied else Outcome.Skipped
+    }
+
+    /** To [PinRequests] only, and only an answer keyed to this device: see [PinRequests.receiveAnswer]. */
+    private fun applyPinAnswer(record: SyncRecord): Outcome {
+        val forThisDevice = !record.deleted && record.key.itemId.isNotEmpty() && record.key.itemId == thisDeviceId()
+        val fired =
+            try {
+                forThisDevice && PinRequests.receiveAnswer(SyncPayloads.decode(record.payload))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

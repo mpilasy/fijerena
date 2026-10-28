@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.PairingQr
+import org.njarasoa.fijerena.core.network.sync.PinRequests
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
 import org.njarasoa.fijerena.core.network.sync.SyncKey
@@ -324,6 +325,7 @@ class SyncSettingsViewModel(
             manager.flush()
             accounts.leave()
             NowPlayingStore.clear()
+            PinRequests.clear()
             manager.onLinkChanged()
             ui.value = Ui()
         }
