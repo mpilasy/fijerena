@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Playback after the first video on some TVs:** on a Chromecast with Google TV, only the first video played. Every later one showed "Playback error occurred" until the app was force-stopped. Android kept the player service alive after the player closed, and the service had nothing to give the new player. The service now sets the player up again when the app starts it. TV.
+
 ## Version: 0.8.20261027220257
 
 - **Browse lists as tabs:** on Live TV, Movies and TV Shows, Recent, Favourites, Wishlist, Favourite Categories and Recent Categories are no longer rows above the categories. They are tabs at the top of the list beside the categories, after a tab for the category you picked last, so the categories column holds only categories. Moving onto a tab opens its list, and focus stays on the tab. Down enters the list, and Left from the first tab goes to the categories. A section you open again from the rail or Home opens on Recent; coming back from a title or the player keeps the list you were on. Recent Categories and Favourite Categories count categories, not channels or films. TV.

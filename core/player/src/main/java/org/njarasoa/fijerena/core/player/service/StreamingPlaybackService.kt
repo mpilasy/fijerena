@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -355,6 +356,31 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
             )
 
+        setUpPlayer()
+    }
+
+    /**
+     * The app's own start ([PlaybackViewModel][org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel]
+     * sends an intent with no action) after [stopAndRelease]. Android can keep this service alive
+     * after [stopSelf] (seen on a Chromecast with Google TV), so [onCreate] does not run again. Set
+     * the player up again here: without it, [onGetSession] returns null and the session rejects
+     * every later controller until the app is force-stopped. Media button intents do not set it up.
+     */
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
+        if (isReleased && intent?.action == null) {
+            Log.i(TAG, "onStartCommand: service kept alive after release, setting the player up again.")
+            isReleased = false
+            setUpPlayer()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    /** Creates the player and session and publishes this instance. [onCreate], or a start after [stopAndRelease]. */
+    internal fun setUpPlayer() {
         initializePlayer()
         // Only publish the instance after initializePlayer() so getInstance()/awaitInstance()
         // callers (e.g. PlaybackViewModel.playStream(), and TvPlayerScreen's setContentType()

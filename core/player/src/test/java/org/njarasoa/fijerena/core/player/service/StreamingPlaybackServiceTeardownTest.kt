@@ -1,14 +1,19 @@
 package org.njarasoa.fijerena.core.player.service
 
+import android.content.Intent
 import android.os.Handler
 import androidx.media3.common.Player
+import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.MediaSession
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.spyk
+import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
@@ -18,6 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.model.PositionSave
 
@@ -33,6 +39,25 @@ class StreamingPlaybackServiceTeardownTest {
     private val player = mockk<ExoPlayer>(relaxed = true)
     private val session = mockk<MediaSession>()
     private lateinit var service: StreamingPlaybackService
+
+    companion object {
+        // Media3 1.9's ExoPlayer reads Build.DEVICE when its class loads, and the unit tests'
+        // android.jar leaves it null. Load the class once with the check stubbed: without this,
+        // these tests passed only when StreamingPlaybackServiceRecoveryTest loaded it first. The
+        // stub is removed at once, because a static mock of Util breaks other Media3 classes
+        // that call Util while they load.
+        @JvmStatic
+        @BeforeClass
+        fun loadExoPlayer() {
+            mockkStatic(Util::class)
+            every { Util.isRunningOnEmulator() } returns false
+            try {
+                Class.forName(ExoPlayer::class.java.name)
+            } finally {
+                unmockkStatic(Util::class)
+            }
+        }
+    }
 
     @Before
     fun setup() {
@@ -111,6 +136,42 @@ class StreamingPlaybackServiceTeardownTest {
             }
 
         assertEquals(listOf(null, -1, null), saves.map { it.subtitleTrackIndex })
+    }
+
+    @Test
+    fun `the app's start after a release sets the player up again`() {
+        // A Chromecast with Google TV keeps the service alive after stopSelf(), so onCreate() does
+        // not run again. Without this, onGetSession() returned null and every later controller
+        // was rejected until a force-stop.
+        val kept = spyk(service)
+        every { kept.setUpPlayer() } just runs
+        kept.stopAndRelease()
+
+        kept.onStartCommand(mockk<Intent>(relaxed = true) { every { action } returns null }, 0, 2)
+        kept.onStartCommand(mockk<Intent>(relaxed = true) { every { action } returns null }, 0, 3)
+
+        verify(exactly = 1) { kept.setUpPlayer() }
+    }
+
+    @Test
+    fun `a media button after a release does not set the player up again`() {
+        val kept = spyk(service)
+        every { kept.setUpPlayer() } just runs
+        kept.stopAndRelease()
+
+        kept.onStartCommand(mockk<Intent>(relaxed = true) { every { action } returns Intent.ACTION_MEDIA_BUTTON }, 0, 2)
+
+        verify(exactly = 0) { kept.setUpPlayer() }
+    }
+
+    @Test
+    fun `a start before any release does not set the player up again`() {
+        val kept = spyk(service)
+        every { kept.setUpPlayer() } just runs
+
+        kept.onStartCommand(mockk<Intent>(relaxed = true) { every { action } returns null }, 0, 1)
+
+        verify(exactly = 0) { kept.setUpPlayer() }
     }
 
     @Test
