@@ -1,6 +1,6 @@
 # PIN on the phone
 
-**Status:** Proposed 2026-10-28; waiting for the user's agreement on the mocks.
+**Status:** Proposed 2026-10-28; open questions answered, waiting for the go-ahead to build.
 
 ## Goal
 
@@ -117,9 +117,7 @@ Then on the TV:
 | 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | Not started |
 | 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Not started |
 
-## Open Questions
+## Decisions
 
-- Should the phone prompt open by itself over any screen (as in the mock), or show a banner the
-  user taps first?
-- Should the TV send the request at once when the dialog opens (no button press), when a phone is
-  linked?
+- 2026-10-28, the user: the phone prompt opens by itself over any screen (no banner first).
+- 2026-10-28, the user: the TV never sends a request by itself; the user presses Use My Phone.
