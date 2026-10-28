@@ -139,6 +139,11 @@ fun ProfilesSettingsCard(
     var choosingPin by remember { mutableStateOf(false) }
     var pinChosen by remember { mutableStateOf(false) }
     val nudgeFor = profiles.firstOrNull { it.isActive }?.takeIf { pinNudge != null && !pinChosen }
+    // The nudge row goes once its PIN is chosen, and it had the focus: the first profile takes it.
+    val firstProfile = remember { FocusRequester() }
+    LaunchedEffect(pinChosen) {
+        if (pinChosen) runCatching { firstProfile.requestFocus() }
+    }
 
     SettingsSection(
         title = stringResource(R.string.settings_profiles_title),
@@ -167,7 +172,10 @@ fun ProfilesSettingsCard(
                     onDismissMessage()
                     onEdit(profile)
                 },
-                modifier = (if (index == 0 && nudgeFor == null) firstRowModifier else Modifier).then(rowModifier(profile)),
+                modifier =
+                    (if (index == 0 && nudgeFor == null) firstRowModifier else Modifier)
+                        .then(if (index == 0) Modifier.focusRequester(firstProfile) else Modifier)
+                        .then(rowModifier(profile)),
                 leading = {
                     ProfileAvatar(
                         name = profile.name,
