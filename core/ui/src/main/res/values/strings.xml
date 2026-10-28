@@ -1003,6 +1003,7 @@
     <string name="settings_group_source_guide">Sources &amp; Guide</string>
     <string name="settings_group_display">Display</string>
     <string name="settings_group_this_device">This Device</string>
+    <string name="settings_group_admin">Admin</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>

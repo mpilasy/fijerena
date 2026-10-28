@@ -739,6 +739,7 @@
     <string name="settings_group_source_guide">Loharano sy fitarihana</string>
     <string name="settings_group_display">Fisehoana</string>
     <string name="settings_group_this_device">Ity fitaovana ity</string>
+    <string name="settings_group_admin">Fitantanana</string>
     <string name="settings_applies_immediately">Mihatra avy hatrany ny fanovana eto</string>
     <string name="common_custom">Safidy manokana</string>
     <string name="settings_custom_value_format">%1$s (manokana)</string>
