@@ -1,6 +1,6 @@
 # PIN on the phone
 
-**Status:** Proposed 2026-10-28; open questions answered, waiting for the go-ahead to build.
+**Status:** Agreed 2026-10-28 (mocks, decisions below); building.
 
 ## Goal
 
@@ -112,7 +112,7 @@ Then on the TV:
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | Sync: `pin_request` and `pin_answer` kinds, payloads, apply, an in-memory store, tests | Not started |
+| 1 | Sync: `pin_request` and `pin_answer` kinds, payloads, apply, an in-memory store, tests | In progress |
 | 2 | TV: Use My Phone button, waiting state, answer or timeout, request closed at the end; focus tests | Not started |
 | 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | Not started |
 | 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Not started |
