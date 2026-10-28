@@ -92,9 +92,11 @@ Then on the TV:
   type, so the phone app is the one that answers and the TV app never shows a request.
 - **Which prompts:** the Check prompts (Settings groups, guarded screens, the PIN row's "current
   PIN"). Choosing a new PIN stays on the TV pad; a PIN can also be set on the phone, and it syncs.
-  The child lock prompt (off since 2026-10-24) gets it too, as the same Check of the admin PINs.
+  (Done note: only Check prompts offer it. The child lock prompt, off since 2026-10-24, checks
+  any admin PIN and keeps the pad only.)
 - **Button only when it can work:** Use My Phone shows only while this device is linked to a sync
-  group with at least one other device.
+  group. (Done note: the device list comes from the server, so the TV does not check for another
+  device first; with none, the request times out after 2 minutes.)
 - **Old requests:** a resync gives records again, so the request id is used once on both sides.
   The phone ignores a request that is closed, or more than 5 minutes older than its own clock. A TV
   with a wrong clock fails safe: the phone ignores the request and the TV falls back to the pad.
@@ -113,8 +115,8 @@ Then on the TV:
 | Phase | Work | Status |
 |---|---|---|
 | 1 | Sync: `pin_request` and `pin_answer` kinds, payloads, apply, an in-memory store, tests | Done (05be3dfbe) |
-| 2 | TV: Use My Phone button, waiting state, answer or timeout, request closed at the end; focus tests | In progress |
-| 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | Not started |
+| 2 | TV: Use My Phone button, waiting state, answer or timeout, request closed at the end; focus tests | Done (31d626dd4) |
+| 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | In progress |
 | 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Not started |
 
 ## Decisions
