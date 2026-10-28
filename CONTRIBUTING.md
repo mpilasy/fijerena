@@ -9,7 +9,7 @@ together with the in-depth documents in `docs/` listed below.
 
 Fijerena is a native Android media player built with Kotlin and Jetpack Compose. It plays content from several kinds of source (Xtream IPTV, Jellyfin, Remote M3U, and in debug builds SMB and Local files) with one app for TV (10-foot UI, D-pad) and one for mobile (touch, portrait-locked outside the player).
 
-**Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android phones/tablets. `minSdk` 30 (Android 11), `targetSdk` 35, `compileSdk` 36.
+**Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android phones/tablets. `minSdk` 30 (Android 11), `targetSdk` 35, `compileSdk` 37.
 
 **App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps. Where each image and font comes from, and its licence, is in `README.md` → "Artwork and fonts"; a new image or font adds its line there.
 
