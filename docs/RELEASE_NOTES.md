@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261028151425
 
 - **Settings in three parts:** Settings is now Your Profile, Admin and About. A setting of the whole household or the whole device is in Admin; a setting of one profile is on Your Profile. The Playback and Display groups are gone: their rows are on Your Profile. A child sees Your Profile and About; a grown-up who is not an admin sees them too, with Add Profile on Your Profile. TV and phone.
 - **One PIN for Admin:** Admin asks the PIN of the profile in use once, on the way in, then shows one page with a header over each part: Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup and Advanced. On TV it is one rail row, its page in the pane; on the phone one row, its page in place of the list, and Back returns. TV and phone.
