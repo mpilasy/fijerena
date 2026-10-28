@@ -258,7 +258,7 @@ scripts/deploy-mobile-usb.sh [<device-id>]
 Downloadable APKs are published on the repository's GitHub Releases page by
 `.github/workflows/release.yml`, when a tag `v<version>` is pushed. Both apps share one version,
 `fijerena.versionName` / `fijerena.versionCode` in `gradle.properties`; the workflow refuses a tag
-that doesn't match `versionName`. It runs the unit tests, builds `assembleRelease` signed with the
+that doesn't match `versionName`. It builds `assembleRelease` signed with the
 release key (release plan D7: one key for both apps), and publishes `fijerena-tv-<version>.apk`,
 `fijerena-phone-<version>.apk` and `SHA256SUMS`, with `docs/RELEASE_NOTES.md`'s first section as
 the notes. Release builds are not minified yet (release plan R2).
@@ -298,7 +298,8 @@ still builds, unsigned (`*-release-unsigned.apk`).
    so each release sorts after the last; raise the minor version for a larger change.
 2. Retitle `docs/RELEASE_NOTES.md`'s `## Unreleased` heading to `## Version: <version>`.
 3. Commit, push `main`, then tag and push the tag:
-   `git tag v<version> && git push origin v<version>`.
+   `git tag v<version> && git push origin v<version>`. Tag only code that Android Build has passed
+   on: the Release workflow does not run the unit tests again.
 
 ## Logcat & Debugging
 

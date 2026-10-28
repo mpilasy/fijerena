@@ -55,9 +55,8 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "FIJERENA_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest
-
+      # No unit tests here: a tag is pushed only after Android Build has passed on the same code
+      # (docs/RUN_GUIDE.md → Releasing), so running them again only made a release 5 minutes longer.
       - name: Build signed release APKs
         env:
           FIJERENA_KEYSTORE_PASSWORD: ${{ secrets.FIJERENA_KEYSTORE_PASSWORD }}

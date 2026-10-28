@@ -44,15 +44,12 @@ jobs:
       - name: Remove local Java home from gradle.properties
         run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
-      - name: Lint
-        run: ./gradlew ktlintCheck
-
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest
-
-      # Existing warnings live in each module's lint-baseline.xml; only new issues fail the build.
-      - name: Android Lint
-        run: ./gradlew lintDebug
+      # One Gradle run, so its tasks share the runner's cores: ktlint, the unit tests, Android Lint
+      # (existing warnings live in each module's lint-baseline.xml; only new issues fail the build),
+      # the debug APKs and the instrumented tests' build (the tests themselves run nightly,
+      # instrumented-tests.yml).
+      - name: Lint, unit tests, Android Lint and debug APKs
+        run: ./gradlew ktlintCheck testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
 
       - name: Room schemas are committed and current
         run: |
@@ -61,13 +58,6 @@ jobs:
             echo "The build changed a Room schema: bump the database version, add its Migration, and commit core/network/schemas/."
             exit 1
           fi
-
-      - name: Build debug APKs
-        run: ./gradlew assembleDebug
-
-      # The tests themselves run nightly (instrumented-tests.yml); this keeps them compiling.
-      - name: Compile instrumented tests
-        run: ./gradlew assembleDebugAndroidTest
 
       - name: Upload mobile APK
         if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
