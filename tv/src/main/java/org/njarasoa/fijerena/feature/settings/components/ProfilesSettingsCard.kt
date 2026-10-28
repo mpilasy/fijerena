@@ -51,7 +51,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.ProfilePins
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
@@ -109,7 +108,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * Settings → Profiles: the profile rows (OK opens the profile's page, [onEdit]) and Add profile.
+ * Settings → Admin → Profiles: the profile rows (OK opens the profile's page, [onEdit]) and Add profile.
  * See the live sync plan → User profiles.
  */
 @Composable
@@ -145,10 +144,8 @@ fun ProfilesSettingsCard(
         if (pinChosen) runCatching { firstProfile.requestFocus() }
     }
 
-    SettingsSection(
-        title = stringResource(R.string.settings_profiles_title),
-        description = stringResource(R.string.settings_profiles_description),
-    ) {
+    // Admin's Profiles header names the card: no title of its own.
+    SettingsSection(description = stringResource(R.string.settings_profiles_description)) {
         if (nudgeFor != null) {
             SettingsRow(
                 title = stringResource(R.string.settings_pin_nudge_title),
@@ -242,12 +239,10 @@ fun ProfilesSettingsCard(
  * last. Every change applies at once; the name applies when the page is left (Left or Back).
  * Content filters are saved by their own editor's Save.
  *
- * Without Expert mode the Profiles group shows the profile in use's page in place of its rows:
- * [focusOnOpen] false leaves focus on the Settings rail, and [entryModifier] (on the name row)
- * is where entering the pane lands; [title] reads "Your profile" there.
- *
- * [startAt] (Settings' Display and Playback rows) puts focus on that row when the page opens, in
- * place of the first row.
+ * Your Profile shows the profile in use's page: [focusOnOpen] false leaves focus on the Settings
+ * rail, and [entryModifier] (on the name row) is where entering the pane lands; [title] reads
+ * "Your profile" there. [adminRows] (Child, Expert mode, Sources, Content filters, a kid's
+ * Favourites and Parental controls) shows only in Admin → Profiles (the admin settings plan, AS-D1).
  *
  * [canAddProfile] (a grown-up's own page, without Expert mode) adds an Add profile row at the end,
  * above Switch and Delete; the new profile is not opened, since only an Expert edits another one.
@@ -262,12 +257,13 @@ fun ProfileEditPane(
     onDeleted: () -> Unit,
     onBack: () -> Unit,
     scale: Float,
-    /** The profile in use has Expert mode (admin, for now): Sources and Content filters show. */
+    /** The profile in use has Expert mode (admin, for now): the Expert themes show. */
     adminView: Boolean = true,
+    /** The page is Admin's (Admin → Profiles): the Admin rows show. */
+    adminRows: Boolean = adminView,
     focusOnOpen: Boolean = true,
     entryModifier: Modifier = Modifier,
     title: String = stringResource(R.string.profile_dialog_edit_title),
-    startAt: ProfilePageRow? = null,
     /** A child's page, admin view: "Parental controls ›" opens that group (the page is saved first). */
     onParentalControls: () -> Unit = {},
     canAddProfile: Boolean = false,
@@ -321,7 +317,7 @@ fun ProfileEditPane(
     val favoritesFocus = remember { FocusRequester() }
     var favoriteCount by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(profile.id, child, choosingFavorites) {
-        if (child && adminView && !choosingFavorites) favoriteCount = viewModel.favoritesOf(profile.id).size
+        if (child && adminRows && !choosingFavorites) favoriteCount = viewModel.favoritesOf(profile.id).size
     }
     var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
     var choosingFiltersSource by remember { mutableStateOf(false) }
@@ -338,7 +334,6 @@ fun ProfileEditPane(
     val pinFocus = remember { FocusRequester() }
     val childFocus = remember { FocusRequester() }
     val setPinFocus = remember { FocusRequester() }
-    val autoplayFocus = remember { FocusRequester() }
     // "Set a PIN ›" under the Child switch: the PIN of the Expert profile in use.
     var choosingAdminPin by remember { mutableStateOf(false) }
     // The PIN row (the profile pin plan): saved as it is set, like the theme.
@@ -464,8 +459,6 @@ fun ProfileEditPane(
                     returnToLook -> lookFocus
                     returnToSources -> sourcesFocus
                     returnToFavorites -> favoritesFocus
-                    focusOnOpen && startAt == ProfilePageRow.LOOK -> uiThemeFocus
-                    focusOnOpen && startAt == ProfilePageRow.AUTOPLAY -> autoplayFocus
                     focusOnOpen -> if (showsNameAndPin) nameFocus else colourFocus
                     else -> null
                 }
@@ -597,14 +590,13 @@ fun ProfileEditPane(
                     },
                     label = stringResource(R.string.settings_autoplay_next_episode_title),
                     description = stringResource(R.string.settings_autoplay_next_episode_desc),
-                    modifier = Modifier.focusRequester(autoplayFocus),
                 )
                 // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
                 // content filters (the parental control).
-                if (adminView) {
+                if (adminRows) {
                     CinemaText(stringResource(R.string.profile_section_admin), role = TextRole.Heading, tone = TextTone.Primary)
                 }
-                if (adminView) {
+                if (adminRows) {
                     // There is always an Expert: the only one can't turn it off, nor be a child's.
                     val listed by viewModel.profiles.collectAsStateWithLifecycle()
                     val lastExpert = remember(profile.id, listed) { viewModel.isLastExpert(profile.id) }
@@ -661,7 +653,7 @@ fun ProfileEditPane(
                 }
                 // With one source there is nothing to choose: it stays on.
                 // Sources and Content filters (the parental control) are admin-only.
-                if (adminView && sources.size > 1) {
+                if (adminRows && sources.size > 1) {
                     SettingsRow(
                         title = stringResource(R.string.profile_sources_title),
                         description = null,
@@ -670,7 +662,7 @@ fun ProfileEditPane(
                         focusRequester = sourcesFocus,
                     )
                 }
-                if (adminView && filterSources.isNotEmpty()) {
+                if (adminRows && filterSources.isNotEmpty()) {
                     SettingsRow(
                         title = stringResource(R.string.profile_content_filters_title),
                         description = stringResource(R.string.provider_category_filters_desc),
@@ -686,7 +678,7 @@ fun ProfileEditPane(
                     )
                 }
                 // The household's word lists, which decide what every child sees.
-                if (adminView && child) {
+                if (adminRows && child) {
                     SettingsRow(
                         title = stringResource(R.string.parental_controls_title),
                         description = stringResource(R.string.profile_parental_controls_desc),

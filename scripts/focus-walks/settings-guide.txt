@@ -1,5 +1,5 @@
 # T6 — the guide's controls in Settings (SettingsScreen), TV emulator.
-# Start: Settings just opened, focus on the rail row "Profiles".
+# Start: Settings just opened, focus on the rail row "Your Profile".
 # Sources & guide: Manage sources, Guide sources (the one Guide Sources page for every source,
 # opened with no source chooser since 2026-10-24; each guide source's auto-refresh is set on its
 # row there, walk epg-management.txt), Guide data maintenance
@@ -11,4 +11,6 @@
 # controls added to the rail 2026-10-20; its two lines are not yet run.
 # Settings focus tests (2026-10-24, Phase 3): SettingsSourcesGuideFocusTest (tv/src/test,
 # feature/settings) now checks all of this walk's moves. The walk keeps only the start focus.
-@start Profiles
+# Admin settings (2026-10-28): Sources & guide is a part of Admin's one page; the rail starts on
+# Your Profile.
+@start Your Profile

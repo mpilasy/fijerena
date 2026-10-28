@@ -27,6 +27,10 @@
 # Settings guarded by page (2026-10-25): an Expert's rail is Profiles, Parental Controls, Playback,
 # Display, This Device, Sources & Guide, Sync & Backup, Advanced, About; an Expert group asks the
 # PIN on the way in (SettingsExpertGroupPinFocusTest). The start focus is unchanged.
-@start Profiles
+# Admin settings (2026-10-28): the rail is Your Profile, Admin, About for an admin (Your Profile and
+# About otherwise); Admin asks the PIN on the way in and is one page with a header over each part
+# (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup, Advanced). The start
+# focus is now Your Profile. Edited by hand, not re-run.
+@start Your Profile
 # Back on the rail leaves Settings: Home again, focus on its content (recorded 2026-10-24).
 BACK	Breaking Bad

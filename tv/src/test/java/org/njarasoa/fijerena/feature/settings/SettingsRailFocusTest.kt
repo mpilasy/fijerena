@@ -15,39 +15,30 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class SettingsRailFocusTest : SettingsFocusTest() {
     @Test
-    fun `an Expert sees every group`() {
+    fun `an Expert sees Your Profile, Admin and About`() {
         open(SettingsFixture.ADMIN)
-        walk.assertFocused("Profiles")
+        walk.assertFocused("Your Profile")
         walk.run(
-            down("Parental Controls"),
-            down("Playback"),
-            down("Display"),
-            down("This Device"),
-            down("Sources & Guide"),
-            down("Sync & Backup"),
-            down("Advanced"),
+            down("Admin"),
             down("About"),
             // Down at the end of the rail stays put.
             down("About"),
-            up("Advanced"),
+            up("Admin"),
+            up("Your Profile"),
+            // Up at the top of the rail stays put.
+            up("Your Profile"),
         )
     }
 
     @Test
-    fun `a grown-up sees its own page, Playback, Display and About`() {
+    fun `a grown-up sees its own page and About`() {
         open(SettingsFixture.GUEST)
         walk.assertFocused("Your Profile")
         walk.run(
-            // No Expert group: no Parental Controls, This Device, Sources & Guide, Sync & Backup
-            // or Advanced.
-            down("Playback"),
-            down("Display"),
+            // No Admin.
             down("About"),
             down("About"),
-            up("Display"),
-            up("Playback"),
             up("Your Profile"),
-            // Up at the top of the rail stays put.
             up("Your Profile"),
         )
     }

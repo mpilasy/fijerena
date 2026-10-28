@@ -2,7 +2,7 @@
 # emulator, the profiles of settings.txt: atr in use (the only Expert, no PIN), Kid (the child
 # profile) with Xtream sources. The lists hold the app's words (no admin change yet).
 # Recorded on the TV emulator 2026-10-20: the first child profile's first source is "panel-a".
-# Start: Settings just opened, focus on the rail row "Profiles".
+# Start: Settings just opened, focus on the rail row "Your Profile".
 # The group (Expert only): its description, one row per list ("N words"), then Check a source.
 # OK on a list opens its pane in place of the rows, focus on the Add a word field; Down walks the
 # words (each says what it matches, the focused one ends in ✕ "Remove"), then Reset to the app's
@@ -20,9 +20,18 @@
 # the link to Profiles; ParentalListContentTest checks a word removed and put back on the list
 # alone. This walk keeps a word removed and put back in Settings, and Check a source with the
 # emulator's sources and categories.
-@start Profiles
-DOWN	Parental Controls
-RIGHT	Kids' Categories / A category shows to a child when its name has one of these words.
+# Admin settings (2026-10-28): Parental Controls is a part of Admin's one page, after the profiles
+# (atr, Kid, Teen, Leroy: unasserted, their order depends on the device) and Add Profile. Lines
+# edited by hand, not re-run.
+@start Your Profile
+DOWN	Admin
+RIGHT	Set a PIN for Settings
+DOWN	
+DOWN	
+DOWN	
+DOWN	
+DOWN	Add Profile
+DOWN	Kids' Categories / A category shows to a child when its name has one of these words.
 DOWN	Kids' Film Categories / These also show, for film categories only.
 DOWN	Adult Categories / A category with one of these words never shows to a child.
 DOWN	Hidden Titles / A title with one of these words never shows to a child, also in a kids' category.

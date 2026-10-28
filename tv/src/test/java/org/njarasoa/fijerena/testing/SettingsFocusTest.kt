@@ -70,7 +70,47 @@ abstract class SettingsFocusTest {
 
     protected val context: Context get() = ApplicationProvider.getApplicationContext()
 
+    /** Down from Admin's row [from] to its row [to], one step per row, on the fixture's data. */
+    protected fun adminDown(
+        from: String,
+        to: String,
+    ): Array<FocusStep> = ADMIN_ROWS.subList(ADMIN_ROWS.indexOf(from) + 1, ADMIN_ROWS.indexOf(to) + 1).map(::down).toTypedArray()
+
     private companion object {
         const val PROFILES_TIMEOUT_MS = 5_000L
+
+        /**
+         * Admin's one page, as an Expert sees it on the fixture's data (the admin settings plan): the
+         * profiles (after the PIN reminder, when it shows), Parental Controls, This Device, Sources &
+         * Guide, Sync & Backup and Advanced. No backup waits in Downloads: no Restore from Downloads.
+         */
+        val ADMIN_ROWS =
+            listOf(
+                "A / Admin",
+                "G / Guest",
+                "K / Kid",
+                "Add Profile",
+                "Kids' Categories",
+                "Kids' Film Categories",
+                "Adult Categories",
+                "Hidden Titles",
+                "Exceptions",
+                "Check a Source",
+                "Content Filters of Each Profile",
+                "Language",
+                "Text & Grid Size",
+                "Items in Recent",
+                "Add a Channel to Recent After",
+                "Show Clock",
+                "Manage Sources",
+                "Guide Sources",
+                "Guide Data Maintenance",
+                "Film and Series Details (TMDB)",
+                "Live Sync",
+                "Back Up to a File",
+                "Restore from a File",
+                "Diagnostics",
+                "Shrink Database",
+            )
     }
 }

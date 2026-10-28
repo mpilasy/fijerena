@@ -12,9 +12,9 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Advanced and About (`scripts/focus-walks/settings.txt`): Advanced for an Expert
- * (Diagnostics, Shrink Database), About for everyone. The rows open other screens or shrink the
- * database, so nothing here presses OK.
+ * TV Settings → Admin → Advanced, and About (`scripts/focus-walks/settings.txt`): Advanced for an
+ * Expert (Diagnostics, Shrink Database), About for everyone. The rows open other screens or shrink
+ * the database, so nothing here presses OK.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAboutFocusTest : SettingsFocusTest() {
@@ -22,18 +22,16 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
     fun `an Expert walks Advanced and About`() {
         open(SettingsFixture.ADMIN)
         walk.run(
-            down("Parental Controls"),
-            down("Playback"),
-            down("Display"),
-            down("This Device"),
-            down("Sources & Guide"),
-            down("Sync & Backup"),
-            down("Advanced"),
-            right("Diagnostics / Crashes and errors recorded on this device"),
+            down("Admin"),
+            right("Set a PIN for Settings"),
+            down("A / Admin"),
+            *adminDown("A / Admin", "Restore from a File"),
+            down("Diagnostics / Crashes and errors recorded on this device"),
             down("Shrink Database"),
+            // The end of Admin's page: Down stays put.
             down("Shrink Database"),
             up("Diagnostics"),
-            back("Advanced"),
+            back("Admin"),
             down("About"),
             right("Fijerena v"),
             down("Device Info / This app and device"),
@@ -51,8 +49,6 @@ class SettingsAboutFocusTest : SettingsFocusTest() {
     fun `a grown-up walks About`() {
         open(SettingsFixture.GUEST)
         walk.run(
-            down("Playback"),
-            down("Display"),
             down("About"),
             right("Fijerena v"),
             down("Device Info"),

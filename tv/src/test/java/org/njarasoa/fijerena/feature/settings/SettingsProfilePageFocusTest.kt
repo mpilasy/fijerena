@@ -14,8 +14,9 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * TV Settings → a profile's page (`scripts/focus-walks/settings.txt`, the Profiles part), the
- * cases `SettingsProfilesFocusTest` leaves: a grown-up's own page (Add Profile at its end), a grown-up's page in an
- * Expert's view, and a child's page when an Expert has a PIN, with its "Parental Controls ›" link.
+ * cases `SettingsProfilesFocusTest` leaves: a grown-up's own page (Add Profile at its end), an
+ * Expert's own page under Your Profile (no Admin rows), a grown-up's page in Admin → Profiles, and
+ * a child's page when an Expert has a PIN, with its "Parental Controls ›" link.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsProfilePageFocusTest : SettingsFocusTest() {
@@ -66,9 +67,30 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
     }
 
     @Test
+    fun `an Expert's own page under Your Profile has no Admin rows`() {
+        open(SettingsFixture.ADMIN)
+        walk.assertFocused("Your Profile")
+        walk.run(
+            right("Edit Name / Name / Admin"),
+            down("Colour"),
+            down("PIN"),
+            down("UI Theme"),
+            down("Theme"),
+            down("Look and Feel"),
+            down("Poster in the Background"),
+            down("Play Next Episode Automatically"),
+            // No Child profile, Admin switch, Sources or Content filters: those are in Admin →
+            // Profiles. No Add Profile either: an Expert adds one there.
+            down("Play Next Episode Automatically"),
+            left("Your Profile"),
+        )
+    }
+
+    @Test
     fun `an Expert walks a grown-up's page`() {
         open(SettingsFixture.ADMIN)
         walk.run(
+            down("Admin"),
             right("Set a PIN for Settings"),
             down("A / Admin"),
             down("G / Guest"),
@@ -96,6 +118,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
     fun `with an Expert PIN, a child's page has no Set a PIN row and links to Parental Controls`() {
         open(SettingsFixture.ADMIN, pins = setOf(SettingsFixture.ADMIN, SettingsFixture.KID))
         walk.run(
+            down("Admin"),
             // An Expert has a PIN: no reminder, the pane opens on the profiles.
             right("A / Admin / Using on this device"),
             down("G / Guest"),
@@ -113,10 +136,10 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Sources / 1 of 2"),
             down("Content Filters"),
             down("Parental Controls / The household's word lists"),
-            // The link opens the Parental Controls group, focus on its first list; Back goes to
-            // that group's rail row.
+            // The link closes the page on Admin's Parental Controls part, focus on its first list;
+            // Back goes to the rail row.
             center("Kids' Categories"),
-            back("Parental Controls"),
+            back("Admin"),
         )
     }
 }

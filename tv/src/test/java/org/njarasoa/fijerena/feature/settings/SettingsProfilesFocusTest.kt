@@ -13,25 +13,23 @@ import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings → Profiles, the whole screen on the fixture's data (`scripts/focus-walks/settings.txt`,
- * the Profiles part): the rail, the list of profiles, a profile's page and the way back, for an
- * Expert and for a child.
+ * TV Settings → Admin → Profiles, the whole screen on the fixture's data
+ * (`scripts/focus-walks/settings.txt`, the Profiles part): the list of profiles, a profile's page
+ * with its Admin rows and the way back, for an Expert; a child's own page.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsProfilesFocusTest : SettingsFocusTest() {
     @Test
     fun `an Expert walks the profiles and their pages`() {
         open(SettingsFixture.ADMIN)
-        walk.assertFocused("Profiles")
+        walk.assertFocused("Your Profile")
         walk.run(
-            down("Parental Controls"),
-            up("Profiles"),
-            // Up at the top of the rail stays put.
-            up("Profiles"),
+            down("Admin"),
             // A child profile and no Expert PIN: the reminder comes first, then the profiles.
             right("Set a PIN for Settings"),
             down("A / Admin / Using on this device"),
             // OK opens the profile's page in place of the rows, focus on the name's Edit button.
+            // Its own page in Admin has the Admin rows too (the admin settings plan, AS-D1).
             center("Edit Name / Name / Admin"),
             down("Colour"),
             down("PIN"),
@@ -70,9 +68,11 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             // Back leaves the page too, focus back on the row.
             back("K / Kid"),
             down("Add Profile"),
-            down("Add Profile"),
+            // Parental Controls follows on the same page.
+            down("Kids' Categories"),
+            up("Add Profile"),
             // Back in the pane returns to the rail row, not out of Settings.
-            back("Profiles"),
+            back("Admin"),
         )
     }
 

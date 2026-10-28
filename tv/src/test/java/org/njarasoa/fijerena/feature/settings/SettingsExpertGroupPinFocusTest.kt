@@ -7,18 +7,17 @@ import org.njarasoa.fijerena.core.ui.components.PinSession
 import org.njarasoa.fijerena.testing.FocusStep
 import org.njarasoa.fijerena.testing.SettingsFixture
 import org.njarasoa.fijerena.testing.SettingsFocusTest
-import org.njarasoa.fijerena.testing.back
 import org.njarasoa.fijerena.testing.center
 import org.njarasoa.fijerena.testing.down
 import org.njarasoa.fijerena.testing.left
 import org.njarasoa.fijerena.testing.right
+import org.njarasoa.fijerena.testing.up
 import org.robolectric.RobolectricTestRunner
 
 /**
- * TV Settings with an Expert whose PIN was not typed yet in this session: entering an Expert
- * group's pane (Right or OK on its rail row) asks the PIN first, Cancel keeps focus on the
- * rail row, and once typed the PIN holds for every Expert group. Playback, Display and About never
- * ask it.
+ * TV Settings with an Expert whose PIN was not typed yet in this session: entering Admin's pane
+ * (Right or OK on its rail row) asks the PIN first, Cancel keeps focus on the rail row, and once
+ * typed the PIN holds for the session. Your Profile and About never ask it.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
@@ -30,55 +29,54 @@ class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
     }
 
     @Test
-    fun `entering an Expert group asks the PIN, and Cancel stays on the rail`() {
+    fun `entering Admin asks the PIN, and Cancel stays on the rail`() {
         openLocked()
-        walk.assertFocused("Profiles")
+        walk.assertFocused("Your Profile")
         walk.run(
-            // Right on Profiles (the list of every profile, an Expert group): the PIN pad, on 1.
+            // Your Profile is everyone's: no PIN.
+            right("Edit Name / Name / Admin"),
+            left("Your Profile"),
+            // Right on Admin: the PIN pad, on 1.
+            down("Admin"),
             right("1"),
             down("4"),
             down("7"),
             down("Erase"),
             down("Cancel"),
             // Cancel: focus back on the rail row, the pane not entered.
-            center("Profiles"),
-            down("Parental Controls"),
+            center("Admin"),
             // OK asks it too.
             center("1"),
             down("4"),
             down("7"),
             down("Erase"),
             down("Cancel"),
-            center("Parental Controls"),
-            // Playback is everyone's: no PIN.
-            down("Playback"),
-            right("Play Next Episode Automatically"),
-            left("Playback"),
-            down("Display"),
-            down("This Device"),
-            right("1"),
+            center("Admin"),
+            // About is everyone's: no PIN.
+            down("About"),
+            right("Fijerena v"),
         )
     }
 
     @Test
-    fun `the right PIN enters the group and holds for the others`() {
+    fun `the right PIN enters Admin and holds for the session`() {
         openLocked()
         walk.run(
-            down("Parental Controls"),
+            down("Admin"),
             right("1"),
             FocusStep(Key.One, "1"),
             FocusStep(Key.Two, "1"),
             FocusStep(Key.Three, "1"),
-            // The fourth digit checks it: the pane, on the group's first row.
-            FocusStep(Key.Four, "Kids' Categories"),
-            left("Parental Controls"),
-            // The session holds the PIN: no pad again, in this group or another.
-            right("Kids' Categories"),
-            left("Parental Controls"),
-            down("Playback"),
-            down("Display"),
-            down("This Device"),
-            right("Language"),
+            // The fourth digit checks it: the pane, on its first row (an Expert has a PIN: no
+            // reminder).
+            FocusStep(Key.Four, "A / Admin"),
+            left("Admin"),
+            // The session holds the PIN: no pad again.
+            right("A / Admin"),
+            left("Admin"),
+            up("Your Profile"),
+            down("Admin"),
+            right("A / Admin"),
         )
     }
 }

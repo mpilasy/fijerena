@@ -1,9 +1,9 @@
-# CI — the profile picker, the rail to Settings, then Settings' rail and every group for Admin.
+# CI — the profile picker, the rail to Settings, then Settings' rail and every row for Admin.
 # Run by the nightly TV walk (scripts/ci-tv-walk.sh) on a fresh install with the test household
 # (scripts/seed-test-household.sh): the fake Xtream source "Fake Xtream" (tools/fake-xtream) and
 # the profiles Admin (Expert, in use, no PIN), Guest (a grown-up) and Kid (a child profile, no PIN).
 # Start: the app just opened on the profile picker, focus on Admin (the profile in use). Ends on
-# Settings' rail row Profiles.
+# Settings' rail row Admin.
 # Written from the code and settings.txt on 2026-10-24, NOT YET RUN: unverified until the first
 # CI run. Expectations are labels only (no values that depend on the build or the device, such as
 # the theme names or the TMDB key), so most lines are prefixes of what settings.txt records.
@@ -11,6 +11,8 @@
 # Settings guarded by page (2026-10-25): the rail now lists This Device and Advanced, and About
 # last; Playback and Display keep only the rows that open the profile's page. Edited by hand from
 # the focus tests, not yet run.
+# Admin settings (2026-10-28): the rail is Your Profile, Admin, About; Admin is one page with the
+# rows of the old Expert groups. Edited by hand from the focus tests, not yet run.
 @start Admin
 # The picker: the profiles in creation order, and no Add Profile (profiles are added in Settings).
 RIGHT	Guest
@@ -27,17 +29,23 @@ DOWN	Movies
 DOWN	TV Shows
 DOWN	Search
 DOWN	Settings
-# Admin has no PIN: Settings opens with no prompt, focus on its rail's first group, and no Expert
-# group asks the PIN on the way in.
-CENTER	Profiles
+# Admin has no PIN: Settings opens with no prompt, focus on its rail's first group, and Admin does
+# not ask the PIN on the way in.
+CENTER	Your Profile
 WAIT 2
-DOWN	Parental Controls
-DOWN	Playback
-DOWN	Display
-DOWN	This Device
-DOWN	Sources & Guide
-DOWN	Sync & Backup
-DOWN	Advanced
+# Your Profile: Admin's own page with only its own rows (no Child Profile, Admin, Content Filters
+# or Add Profile: those are in Admin → Profiles).
+RIGHT	Edit Name / Name / Admin
+DOWN	Colour
+DOWN	PIN / Asked in Settings before sources, backups and profiles / Off
+DOWN	UI Theme
+DOWN	Theme
+DOWN	Look and Feel
+DOWN	Poster in the Background
+DOWN	Play Next Episode Automatically
+DOWN	Play Next Episode Automatically
+LEFT	Your Profile
+DOWN	Admin
 DOWN	About
 # Down at the end of the rail stays put.
 DOWN	About
@@ -47,58 +55,14 @@ DOWN	Device Info
 DOWN	Terms of Use
 DOWN	Open-Source Licences
 LEFT	About
-# Advanced: Diagnostics, Shrink Database (never pressed).
-UP	Advanced
-RIGHT	Diagnostics
-DOWN	Shrink Database
-LEFT	Advanced
-# Sync & Backup: Live Sync, then the backups.
-UP	Sync & Backup
-RIGHT	Live Sync
-DOWN	Back Up to a File
-DOWN	Restore from a File
-LEFT	Sync & Backup
-# Sources & Guide: Manage Sources, Guide Sources (the fake source has live channels), Guide Data
-# Maintenance, the TMDB key (On or Off by build: not checked).
-UP	Sources & Guide
-RIGHT	Manage Sources
-DOWN	Guide Sources
-DOWN	Guide Data Maintenance
-DOWN	Film and Series Details (TMDB)
-LEFT	Sources & Guide
-# This Device: Language (English on a fresh install), Text & Grid Size, Items in Recent, the watch
-# delay (OK opens its picker on 10 s, the default; Left closes it).
-UP	This Device
-RIGHT	Language / Language for menus and messages / English
-DOWN	Text & Grid Size
-DOWN	Items in Recent
-DOWN	Add a Channel to Recent After
-CENTER	10 s
-LEFT	Add a Channel to Recent After
-LEFT	This Device
-# Display: Theme and Look and Feel only, which opens Admin's page in the pane on UI Theme; Back
-# returns to the row.
-UP	Display
-RIGHT	Theme and Look and Feel
-CENTER	UI Theme
-BACK	Theme and Look and Feel
-LEFT	Display
-# Playback: Play Next Episode Automatically only, which opens Admin's page on its switch; Back
-# returns to the row.
-UP	Playback
-RIGHT	Play Next Episode Automatically / Set on your profile’s page
-CENTER	Play Next Episode Automatically / Near the end of an episode
-BACK	Play Next Episode Automatically / Set on your profile’s page
-LEFT	Playback
-UP	Parental Controls
-UP	Profiles
-# Up at the top of the rail stays put.
-UP	Profiles
-# Profiles: a child profile and no Expert PIN, so "Set a PIN for Settings" first (never pressed),
+UP	Admin
+# Admin: one page, a header over each part: Profiles, Parental Controls, This Device, Sources &
+# Guide, Sync & Backup, Advanced.
+# Profiles: a child profile and no admin PIN, so "Set a PIN for Settings" first (never pressed),
 # then Admin, Guest, Kid and Add Profile.
 RIGHT	Set a PIN for Settings
 DOWN	Admin / Using on this device
-# Admin's page (the only Expert, in use, one source so no Sources row): focus on the name's Edit
+# Admin's page (the only admin, in use, one source so no Sources row): focus on the name's Edit
 # button; Down to the end, Content Filters. Admin can't be deleted or switched to.
 CENTER	Edit Name / Name / Admin
 DOWN	Colour
@@ -114,7 +78,7 @@ DOWN	Content Filters / Hide categories by prefix
 DOWN	Content Filters / Hide categories by prefix
 LEFT	Admin / Using on this device
 DOWN	Guest
-# Kid's page (a child profile, not in use): no Expert Mode row (no Set a PIN while the child lock is off),
+# Kid's page (a child profile, not in use): no Admin row (no Set a PIN while the child lock is off),
 # Favourites, Content Filters, Parental Controls, Switch to this profile, Delete profile (never
 # pressed).
 DOWN	Kid
@@ -134,6 +98,36 @@ DOWN	Switch to this profile
 DOWN	Delete profile
 LEFT	Kid
 DOWN	Add Profile
-DOWN	Add Profile
+# Parental Controls: one row per list, Check a Source, the link to Profiles.
+DOWN	Kids' Categories
+DOWN	Kids' Film Categories
+DOWN	Adult Categories
+DOWN	Hidden Titles
+DOWN	Exceptions
+DOWN	Check a Source
+DOWN	Content Filters of Each Profile
+# This Device: Language (English on a fresh install), Text & Grid Size, Items in Recent, the watch
+# delay (OK opens its picker on 10 s, the default; Left closes it), Show Clock.
+DOWN	Language / Language for menus and messages / English
+DOWN	Text & Grid Size
+DOWN	Items in Recent
+DOWN	Add a Channel to Recent After
+CENTER	10 s
+LEFT	Add a Channel to Recent After
+DOWN	Show Clock
+# Sources & Guide: Manage Sources, Guide Sources (the fake source has live channels), Guide Data
+# Maintenance, the TMDB key (On or Off by build: not checked).
+DOWN	Manage Sources
+DOWN	Guide Sources
+DOWN	Guide Data Maintenance
+DOWN	Film and Series Details (TMDB)
+# Sync & Backup: Live Sync, then the backups.
+DOWN	Live Sync
+DOWN	Back Up to a File
+DOWN	Restore from a File
+# Advanced: Diagnostics, Shrink Database (never pressed); the end of the page.
+DOWN	Diagnostics
+DOWN	Shrink Database
+DOWN	Shrink Database
 # Back in the pane returns to the rail row, not out of Settings.
-BACK	Profiles
+BACK	Admin
