@@ -1050,6 +1050,9 @@
     <string name="live_sync_status_syncing">Mampifanaraka…</string>
     <string name="live_sync_status_last">Nampifanarahana farany %1$s</string>
     <string name="live_sync_just_now">vao izao</string>
+    <string name="time_ago_minutes">%1$d minitra lasa izay</string>
+    <string name="time_ago_hours">%1$d ora lasa izay</string>
+    <string name="time_ago_days">%1$d andro lasa izay</string>
     <string name="live_sync_status_never">Mbola tsy nampifanarahana</string>
     <string name="live_sync_status_failed">Tsy nahomby ny fampifanarahana farany. Haverina ho azy izy.</string>
     <string name="live_sync_server_line">Mpizara: %1$s</string>
@@ -1373,7 +1376,7 @@
     <string name="pin_phone_waiting">Miandry ny finday</string>
     <string name="pin_phone_cancelled">Nofoanana tamin\'ny finday.</string>
     <string name="pin_phone_no_answer">Tsy namaly ny finday.</string>
-    <string name="pin_asked_by">Mangataka i %1$s</string>
+    <string name="pin_asked_by">Mangataka ny %1$s</string>
     <string name="profile_child_no_pin_warning">Tsy misy PIN voafaritra: afaka mifindra amin\'izay mombamomba tiany ity ankizy ity.</string>
     <string name="profile_child_set_pin">Mametraha PIN</string>
     <string name="settings_group_sync_backup">Fampifanarahana sy tahiry</string>

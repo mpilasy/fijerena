@@ -921,6 +921,9 @@
     <string name="live_sync_status_syncing">Syncing…</string>
     <string name="live_sync_status_last">Last synced %1$s</string>
     <string name="live_sync_just_now">just now</string>
+    <string name="time_ago_minutes">%1$d min ago</string>
+    <string name="time_ago_hours">%1$d h ago</string>
+    <string name="time_ago_days">%1$d days ago</string>
     <string name="live_sync_status_never">Not synced yet</string>
     <string name="live_sync_status_failed">The last sync failed. It is retried automatically.</string>
     <string name="live_sync_server_line">Server: %1$s</string>

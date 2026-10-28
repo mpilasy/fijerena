@@ -885,6 +885,9 @@
     <string name="live_sync_status_syncing">Synchronisation…</string>
     <string name="live_sync_status_last">Dernière synchronisation %1$s</string>
     <string name="live_sync_just_now">à l\'instant</string>
+    <string name="time_ago_minutes">il y a %1$d min</string>
+    <string name="time_ago_hours">il y a %1$d h</string>
+    <string name="time_ago_days">il y a %1$d jours</string>
     <string name="live_sync_status_never">Pas encore synchronisé</string>
     <string name="live_sync_status_failed">La dernière synchronisation a échoué. Elle est relancée automatiquement.</string>
     <string name="live_sync_server_line">Serveur : %1$s</string>
