@@ -413,7 +413,7 @@
     <!-- Player UI -->
     <string name="player_playback_ended">Vita ny filalaovana</string>
     <string name="player_playback_error_prefix">⚠️ Nisy fahadisoana ny famakiana</string>
-    <string name="player_technical_details">Antsipiriany ara-teknika (Manam-pahaizana):</string>
+    <string name="player_technical_details">Antsipiriany ara-teknika (Mpitantana):</string>
     <string name="player_error_type_label">Karazany: </string>
     <string name="player_error_message_label">Hafatra: </string>
     <string name="player_error_stack_trace_label">Stack Trace:</string>
@@ -531,9 +531,9 @@
     <string name="terms_s8_title">Fanovana</string>
     <string name="terms_s8_body">Mety hiova ireto fepetra ireto. Ny dika ao amin\'ny rindrankajy ampiasainao no mihatra. Raha misy fahasamihafana amin\'ny lahatsoratra anglisy ny dikanteny, ny lahatsoratra anglisy no manan-kery.</string>
     <string name="provider_add_terms_notice">Ianao irery no tompon\'andraikitra amin\'ny loharano ampidirinao sy ny fomba fampiasanao azy. Jereo Fandrindrana → Momba → Fepetra fampiasana.</string>
-    <string name="settings_developer_mode_title">Manam-pahaizana</string>
+    <string name="settings_developer_mode_title">Mpitantana</string>
     <string name="settings_developer_mode_desc">Mamela ity mombamomba ity hanova ny loharano, ny mombamomba, ny fanaraha-maso ny ray aman-dreny ary ny tahiry</string>
-    <string name="settings_developer_mode_last">Io ihany no manam-pahaizana, ka mitazona izany: omeo mombamomba hafa aloha ny manam-pahaizana.</string>
+    <string name="settings_developer_mode_last">Io ihany no mpitantana, ka mijanona ho mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
     <string name="settings_export_import_section_title">Tahiry</string>
     <string name="settings_export_import_desc">Ny loharano sy ny fidirana, ny ankafizina, ny tantaran\'ny fijerena ary ny fikirana</string>
     <string name="common_export">Alefa</string>
@@ -1014,9 +1014,9 @@
     <string name="profile_switch_to_button">Mifindra amin\'ity mombamomba ity</string>
     <string name="profile_content_filters_title">Sivana votoaty</string>
     <string name="profile_child_title">Mombamomba ankizy</string>
-    <string name="profile_child_desc">Amin\'ny TV, ny Fandraisana dia mampiseho afa-tsy ny ankafizina ampidirin\'olon-dehibe eto, ary sarimihetsika sy andian-tantara ihany no hitan\'ny fitadiavana, tsy misy fizahana. Ny sokajy ho an\'ny ankizy ihany no asehony amin\'ny loharano rehetra, tsy misy ny ho an\'ny olon-dehibe, ary manajanona ny loharano tsy tratran\'ny sivana. Tsy manam-pahaizana mihitsy ny mombamomba ankizy.</string>
+    <string name="profile_child_desc">Amin\'ny TV, ny Fandraisana dia mampiseho afa-tsy ny ankafizina ampidirin\'olon-dehibe eto, ary sarimihetsika sy andian-tantara ihany no hitan\'ny fitadiavana, tsy misy fizahana. Ny sokajy ho an\'ny ankizy ihany no asehony amin\'ny loharano rehetra, tsy misy ny ho an\'ny olon-dehibe, ary manajanona ny loharano tsy tratran\'ny sivana. Tsy mpitantana mihitsy ny mombamomba ankizy.</string>
     <!-- The phone has no Favourites pane: a grown-up fills a child's favourites on TV. -->
-    <string name="profile_child_desc_phone">Amin\'ny TV, ny Fandraisana dia mampiseho afa-tsy ny ankafizina ampidirin\'olon-dehibe amin\'ny TV, ary sarimihetsika sy andian-tantara ihany no hitan\'ny fitadiavana, tsy misy fizahana. Ny sokajy ho an\'ny ankizy ihany no asehony amin\'ny loharano rehetra, tsy misy ny ho an\'ny olon-dehibe, ary manajanona ny loharano tsy tratran\'ny sivana. Tsy manam-pahaizana mihitsy ny mombamomba ankizy.</string>
+    <string name="profile_child_desc_phone">Amin\'ny TV, ny Fandraisana dia mampiseho afa-tsy ny ankafizina ampidirin\'olon-dehibe amin\'ny TV, ary sarimihetsika sy andian-tantara ihany no hitan\'ny fitadiavana, tsy misy fizahana. Ny sokajy ho an\'ny ankizy ihany no asehony amin\'ny loharano rehetra, tsy misy ny ho an\'ny olon-dehibe, ary manajanona ny loharano tsy tratran\'ny sivana. Tsy mpitantana mihitsy ny mombamomba ankizy.</string>
     <string name="profile_favorites_title">Ankafizina</string>
     <string name="profile_favorites_row_desc">Izay hitan\'ity ankizy ity eo amin\'ny Fandraisana</string>
     <string name="profile_parental_controls_desc">Ny lisitry ny teny an\'ny ankohonana, ho an\'ny mombamomba ankizy rehetra</string>
@@ -1024,10 +1024,10 @@
     <string name="profile_favorites_search">Mitady sarimihetsika, fandaharana ary fantsona</string>
     <string name="profile_favorites_none">Mbola tsy misy ankafizina. Mitadiava hanampiana.</string>
     <string name="profile_favorites_no_results">Tsy nisy hita azon\'i %1$s jerena.</string>
-    <string name="profile_child_last_expert">Tsy afaka ho mombamomba ankizy ny hany manam-pahaizana: omeo mombamomba hafa aloha ny manam-pahaizana.</string>
+    <string name="profile_child_last_expert">Tsy afaka ho mombamomba ankizy ny hany mpitantana: ataovy mpitantana aloha ny mombamomba hafa.</string>
     <string name="profile_source_no_filters">Tsy mahatratra ity loharano ity ny sivana votoaty</string>
     <string name="settings_pin_nudge_title">Mametraha PIN ho an\'ny Fandrindrana</string>
-    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy manam-pahaizana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary na iza na iza dia afaka manova ny loharano, ny sivana votoaty sy ny mombamomba.</string>
+    <string name="settings_pin_nudge_desc">Misy mombamomba ankizy nefa tsy misy mpitantana manana PIN: afaka mifindra amin\'ny mombamomba rehetra ny ankizy, ary na iza na iza dia afaka manova ny loharano, ny sivana votoaty sy ny mombamomba.</string>
     <string name="profile_sources_title">Loharano</string>
     <string name="profile_sources_count_format">%1$d amin\'ny %2$d</string>
     <string name="profile_sources_desc">Ireo loharano azon\'ity mombamomba ity ampiasaina. Ho an\'ny mombamomba nanampy azy ihany no mandeha ny loharano vaovao. Mitazona loharano iray farafahakeliny ny mombamomba iray.</string>
@@ -1307,8 +1307,8 @@
     <string name="tmdb_attribution_title">Angona momba ny sarimihetsika sy andian-tantara</string>
     <string name="epg_xmltv_url_hint">Ny adiresin\'ny rakitra fandaharana XMLTV (.xml na .xml.gz), avy amin\'ny mpamatsy anao na tranonkala fandaharana.</string>
     <string name="epg_timezone_hint">Raha diso ora ihany ny fandaharana. Matetika 0.</string>
-    <string name="settings_developer_mode_enabled">Mandeha ho an\'ity mombamomba ity ny Manam-pahaizana</string>
-    <string name="settings_developer_mode_taps_left">Manam-pahaizana: %1$d sisa</string>
+    <string name="settings_developer_mode_enabled">Mpitantana ity mombamomba ity</string>
+    <string name="settings_developer_mode_taps_left">Mpitantana: %1$d sisa</string>
     <string name="ui_style_standard">Mahazatra</string>
     <string name="ui_style_rounded">Boribory</string>
     <string name="ui_style_sharp">Maranitra</string>
@@ -1355,7 +1355,7 @@
     <string name="profile_pin_remove">Esory ny PIN</string>
     <string name="profile_pin_remove_confirm_title">Hesorina ve ny PIN?</string>
     <string name="profile_pin_remove_confirm_text">Tsy hangataka PIN intsony ny Fandrindrana amin\'ity mombamomba ity.</string>
-    <string name="profile_pin_remove_last_expert">Ity no PIN farany an\'ny manam-pahaizana: mijanona ny hidin\'ny ankizy amin\'ny fitaovana rehetra mifandray amin\'ny fampifanarahana.</string>
+    <string name="profile_pin_remove_last_expert">Ity no PIN farany an\'ny mpitantana: mijanona ny hidin\'ny ankizy amin\'ny fitaovana rehetra mifandray amin\'ny fampifanarahana.</string>
     <string name="pin_choose">Mifidiana PIN misy isa 4</string>
     <string name="pin_repeat">Ampidiro indray ilay PIN</string>
     <string name="pin_mismatch">Tsy mitovy ireo PIN roa: mifidiana indray.</string>
@@ -1367,10 +1367,10 @@
     <string name="pin_seconds">%1$d s</string>
     <string name="pin_minutes">%1$d min</string>
     <string name="pin_erase">Fafao</string>
-    <string name="pin_last_expert_warning">Io ihany no manam-pahaizana: raha hadino ny PIN-ny, ny famafana ny angon\'ny fampiharana ihany no mamerina ny fitantanana.</string>
+    <string name="pin_last_expert_warning">Io ihany no mpitantana: raha hadino ny PIN-ny, ny famafana ny angon\'ny fampiharana ihany no mamerina ny fitantanana.</string>
     <string name="pin_set_done">Voapetraka ny PIN</string>
     <string name="pin_removed">Voaesotra ny PIN</string>
-    <string name="pin_enter_admin">Ampidiro ny PIN-n\'ny mombamomba manam-pahaizana</string>
+    <string name="pin_enter_admin">Ampidiro ny PIN-n\'ny mombamomba mpitantana</string>
     <string name="pin_use_phone">Ampiasao ny findaiko</string>
     <string name="pin_use_tv">Ampiasao ny fahitalavitra</string>
     <string name="pin_phone_instructions">Sokafy ny Fijerena amin\'ny findainao ary ampidiro ao ny PIN.</string>

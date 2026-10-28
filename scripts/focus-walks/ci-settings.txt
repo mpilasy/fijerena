@@ -108,8 +108,8 @@ DOWN	Theme
 DOWN	Look and Feel
 DOWN	Poster in the Background
 DOWN	Play Next Episode Automatically
-DOWN	Child Profile / The only profile with Expert mode can't be a child's
-DOWN	Expert Mode / The only profile with Expert mode keeps it
+DOWN	Child Profile / The only admin profile can't be a child's
+DOWN	Admin / The only admin profile stays an admin
 DOWN	Content Filters / Hide categories by prefix
 DOWN	Content Filters / Hide categories by prefix
 LEFT	Admin / Using on this device

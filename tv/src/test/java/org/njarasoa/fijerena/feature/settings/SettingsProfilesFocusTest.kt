@@ -40,8 +40,8 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             down("Look and Feel"),
             down("Poster in the Background"),
             down("Play Next Episode Automatically"),
-            down("Child Profile / The only profile with Expert mode"),
-            down("Expert Mode"),
+            down("Child Profile / The only admin profile"),
+            down("Admin"),
             down("Sources / 2 of 2"),
             down("Content Filters"),
             // Down at the end of the page stays put.

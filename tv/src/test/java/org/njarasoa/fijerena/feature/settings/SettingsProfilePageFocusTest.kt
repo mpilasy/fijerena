@@ -82,7 +82,7 @@ class SettingsProfilePageFocusTest : SettingsFocusTest() {
             down("Play Next Episode Automatically"),
             // Admin: Child profile and Expert mode, both free to change on a grown-up's page.
             down("Child Profile / On TV, Home shows only the favourites"),
-            down("Expert Mode / Lets this profile change sources, profiles, parental controls and backups"),
+            down("Admin / Lets this profile change sources, profiles, parental controls and backups"),
             down("Sources / 2 of 2"),
             down("Content Filters / Hide categories by prefix"),
             down("Switch to this profile"),
