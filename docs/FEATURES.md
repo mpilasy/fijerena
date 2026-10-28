@@ -323,7 +323,7 @@ The connection form (type shown read-only; on TV the left column), then (on TV t
 | Library data | Item counts per content type (a type the source has nothing of left out); Xtream: last catalogue sync — "Last Sync: Finished at … • Took …" and what it changed ("No changes since last sync", or "N added • N updated • N removed"), hidden after a failed sync, which shows "Catalogue sync failed" with the reason; Sync Data Now |
 | Danger zone | One row, "Danger zone ›", opening its own page (phone: full screen; TV: in place of the settings column, Back or Left returns to the row) so no stray tap or OK reaches them: clear all favourites; clear all progress; clear the cached library (all, or only one content type's), each behind its confirm |
 
-A failed catalogue download (network, timeout, refused login) deletes nothing; a network failure is retried, a refused login isn't.
+A failed catalogue download (network, timeout, refused login) deletes nothing; a network failure is retried, a refused login isn't. A failure counts as a network failure when one is among its causes (a list read cut short by a timeout shows as a JSON error), and so does a server's 408, 429 or 5xx answer (Cloudflare's 521: the panel behind it is down); after a server's answer the next try waits what it asks for (Retry-After), else 2 minutes, at most 5. The message names the cause ("The server took too long"), not the wrapper.
 
 ### Export / Import
 

@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Catalogue sync tries again when a panel is down or slow:** a sync stopped by a timeout in the middle of a list, or by a server error such as Cloudflare's 521 (the panel behind it is down), was marked as a lasting failure and never tried again. Now it tries again, after 2 minutes (or the wait the server asks for) when the server answered with an error, and the message says why: for example "The server took too long". TV and phone.
+
 ## Version: 0.8.20261028205954
 
 - **Your settings on the phone's Settings:** Settings now shows your own rows (name, colour, PIN, UI Theme, Theme, Look and Feel, Poster in the Background, Play Next Episode Automatically) under Your Profile, with no page to open. Each change applies at once; the name is saved when you leave Settings. Phone.

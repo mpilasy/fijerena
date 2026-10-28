@@ -124,6 +124,20 @@ class FriendlyErrorTest {
     }
 
     @Test
+    fun aTimeoutInsideAJsonError_isATimeout() {
+        // A list read cut short by a read timeout: Ktor's decoder wraps the timeout.
+        val e = Exception("Deserialization failed", java.net.SocketTimeoutException("timeout"))
+
+        assertEquals("timeout", friendlyErrorMessage(e, context))
+    }
+
+    @Test
+    fun aServerAnswer_mapsByItsStatus() {
+        assertEquals("server", friendlyErrorMessage(serverAnswer(521), context))
+        assertEquals("server", friendlyErrorMessage(Exception("sync failed", serverAnswer(502)), context))
+    }
+
+    @Test
     fun inMemoryPrefs_behaveLikePrefs() {
         val prefs = CredentialStoreHealth.InMemoryPrefs()
         prefs

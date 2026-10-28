@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.ResponseException
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinLoginRejectedException
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import java.io.IOException
@@ -20,8 +21,12 @@ import javax.net.ssl.SSLException
 fun friendlyErrorMessage(
     e: Throwable,
     context: Context,
-): String =
-    when {
+): String {
+    // A network failure inside another exception says what it is: a list read cut short by a
+    // timeout comes up as a JSON error, with the timeout among its causes.
+    val cause = e.networkCause()
+    if (cause != null && cause !== e) return friendlyErrorMessage(cause, context)
+    return when {
         // OkHttp's own message when a client's Dispatcher.executorService has already been
         // shut down (e.g. closed while still in use) and something tries to submit one more
         // call through it. It's an InterruptedIOException, so it would otherwise fall into the
@@ -38,6 +43,10 @@ fun friendlyErrorMessage(
 
         e is HttpStatusException -> {
             httpStatusMessage(e.code, context)
+        }
+
+        e is ResponseException -> {
+            httpStatusMessage(e.response.status.value, context)
         }
 
         e is UnknownHostException -> {
@@ -72,6 +81,18 @@ fun friendlyErrorMessage(
             if (isAuthFailure) authFailureMessage(context) else context.getString(R.string.error_generic)
         }
     }
+}
+
+/**
+ * The first of this exception and its causes that is a network failure (a timeout included) or a
+ * server's non-success answer, or null when there is none.
+ */
+fun Throwable.networkCause(): Throwable? =
+    generateSequence(this) { it.cause }
+        .take(MAX_CAUSE_DEPTH)
+        .firstOrNull { it is IOException || it is ResponseException || it is HttpStatusException }
+
+private const val MAX_CAUSE_DEPTH = 16
 
 /** A server answered with a non-success HTTP [code]. Users see what it means, never the number. */
 class HttpStatusException(

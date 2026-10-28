@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.network.xtream
 
 import android.content.Context
 import android.util.Log
+import io.ktor.client.plugins.ResponseException
+import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,17 +16,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.HttpStatusException
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.networkCause
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xtream.db.CatalogSearchIndex
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 
 /**
  * Single per-provider Xtream sync shared by [ProviderSyncManager] (manual + periodic
@@ -35,6 +36,11 @@ import java.net.UnknownHostException
 object ProviderSyncRunner {
     private const val TAG = "ProviderSyncRunner"
     private const val MAX_ATTEMPTS = 3
+
+    // A server that answers 5xx (Cloudflare's 521: the panel behind it is down) needs minutes, not
+    // seconds: wait what it asks for (Retry-After), else 2 minutes, at most 5.
+    private const val SERVER_DOWN_WAIT_MS = 120_000L
+    private const val MAX_SERVER_WAIT_MS = 300_000L
 
     /** Syncs running in this process per source id; a count, as the worker and a manual sync can overlap. */
     private val runningCounts = MutableStateFlow<Map<Long, Int>>(emptyMap())
@@ -154,7 +160,7 @@ object ProviderSyncRunner {
             } catch (e: Exception) {
                 val transient = isTransient(e)
                 if (transient && attempt < MAX_ATTEMPTS) {
-                    val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
+                    val backoff = backoffMs(e, attempt)
                     Log.w(TAG, "Sync failed for ${provider.name} (attempt $attempt), retrying in ${backoff}ms", e)
                     delay(backoff)
                     attempt++
@@ -183,13 +189,43 @@ object ProviderSyncRunner {
         }
     }
 
-    /** A catalogue run with any transient task failure is transient: a retry can fix that task. */
-    private fun isTransient(e: Throwable): Boolean =
+    /**
+     * A catalogue run with any transient task failure is transient: a retry can fix that task. A
+     * failure is transient when a network failure (a timeout included) is among its causes, or the
+     * server answered 408, 429 or 5xx.
+     */
+    internal fun isTransient(e: Throwable): Boolean =
         when (e) {
-            is CatalogSyncException -> e.failures.any { isTransient(it) }
-            is UnknownHostException, is SocketTimeoutException, is IOException -> true
-            else -> false
+            is CatalogSyncException -> {
+                e.failures.any { isTransient(it) }
+            }
+
+            else -> {
+                when (val cause = e.networkCause()) {
+                    null -> false
+                    is ResponseException -> retryableStatus(cause.response.status.value)
+                    is HttpStatusException -> retryableStatus(cause.code)
+                    else -> true
+                }
+            }
         }
+
+    private fun retryableStatus(code: Int): Boolean = code == 408 || code == 429 || code in 500..599
+
+    /** The wait before the next attempt: 5 s, then 10 s; longer when a server answered (see [SERVER_DOWN_WAIT_MS]). */
+    internal fun backoffMs(
+        e: Throwable,
+        attempt: Int,
+    ): Long {
+        val exponential = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
+        val failures = (e as? CatalogSyncException)?.failures ?: listOf(e)
+        val answer = failures.firstNotNullOfOrNull { it.networkCause() as? ResponseException } ?: return exponential
+        val askedMs =
+            answer.response.headers[HttpHeaders.RetryAfter]
+                ?.toLongOrNull()
+                ?.times(1000)
+        return maxOf(exponential, (askedMs ?: SERVER_DOWN_WAIT_MS).coerceAtMost(MAX_SERVER_WAIT_MS))
+    }
 }
 
 /** The user-facing error to persist, or null on success. */
