@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261028205954
 
 - **Your settings on the phone's Settings:** Settings now shows your own rows (name, colour, PIN, UI Theme, Theme, Look and Feel, Poster in the Background, Play Next Episode Automatically) under Your Profile, with no page to open. Each change applies at once; the name is saved when you leave Settings. Phone.
 - **No Settings for a child:** a child profile has no Settings: no Settings item on the TV rail (it is Profile, Home and Search) and no Settings row in the phone's profile menu. A child can still switch profile. If a child reaches Settings anyway, Home opens. TV and phone.
