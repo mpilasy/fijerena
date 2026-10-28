@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **PIN on the phone:** when the TV asks for a PIN, press **Use my phone** and type it on a phone linked by live sync. The TV hides its number pad, so people in the room cannot read the PIN from the focus. The phone shows the request over any screen, checks the PIN itself and sends back only "unlocked": the PIN never leaves the phone. Cancel on the phone, or 2 minutes with no answer, brings the TV's pad back. TV and phone.
+- **PIN dialogs on the phone block screen capture:** no screenshot, screen recording or Recents thumbnail shows a PIN being typed. Phone.
+- **Times in Malagasy:** "Updated -36 min" now reads "Nohavaozina 36 minitra lasa izay". Android has no Malagasy data for "… ago", so the app now says it itself. Phone and TV.
+- **Focus after Set a PIN for Settings:** on TV, once the PIN is chosen, focus moves to the first profile instead of nowhere. TV.
+
 ## Version: 0.8.20261028025923
 
 - **Playback after the first video on some TVs:** on a Chromecast with Google TV, only the first video played. Every later one showed "Playback error occurred" until the app was force-stopped. Android kept the player service alive after the player closed, and the service had nothing to give the new player. The service now sets the player up again when the app starts it. TV.

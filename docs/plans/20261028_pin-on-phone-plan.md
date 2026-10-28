@@ -1,6 +1,6 @@
 # PIN on the phone
 
-**Status:** Agreed 2026-10-28 (mocks, decisions below); building.
+**Status:** Agreed 2026-10-28 (mocks, decisions below); Done 2026-10-28: built and walked on both emulators (TV and phone linked to the local sync server).
 
 ## Goal
 
@@ -117,9 +117,23 @@ Then on the TV:
 | 1 | Sync: `pin_request` and `pin_answer` kinds, payloads, apply, an in-memory store, tests | Done (05be3dfbe) |
 | 2 | TV: Use My Phone button, waiting state, answer or timeout, request closed at the end; focus tests | Done (31d626dd4) |
 | 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | Done (16959899f) |
-| 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | In progress |
+| 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Done (walk below) |
 
 ## Decisions
 
 - 2026-10-28, the user: the phone prompt opens by itself over any screen (no banner first).
 - 2026-10-28, the user: the TV never sends a request by itself; the user presses Use My Phone.
+
+## Walk (2026-10-28, TV and phone emulators, one sync group)
+
+Every case passed on the emulators, with a test PIN on atr (removed after):
+- Use my phone on the Settings group prompt and on "Enter the current PIN": the phone shows the
+  request in about 5 s; a right PIN closes the TV dialog and the action goes on.
+- Cancel on the phone: the pad comes back, "Cancelled on the phone.", focus on 1.
+- Use the TV, Cancel on the TV, a digit key on the TV: the phone's prompt closes.
+- 2 minutes with no answer: "No answer from the phone.", focus on 1; the phone's prompt closes.
+- Phone app in the background when asked: the prompt shows when the app opens.
+- The phone's screenshot during the prompt is black (`FLAG_SECURE`).
+
+Found and fixed during the walk: a digit key did nothing while the TV waited (5bc0e7b1b); "Updated
+-36 min" in Malagasy (a9842adcf); focus lost after Set a PIN for Settings on TV (17e8d421e).
