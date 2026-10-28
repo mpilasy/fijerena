@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261028220019
 
 - **Catalogue sync tries again when a panel is down or slow:** a sync stopped by a timeout in the middle of a list, or by a server error such as Cloudflare's 521 (the panel behind it is down), was marked as a lasting failure and never tried again. Now it tries again, after 2 minutes (or the wait the server asks for) when the server answered with an error, and the message says why: for example "The server took too long". TV and phone.
 
