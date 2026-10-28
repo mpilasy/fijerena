@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Settings in three parts:** Settings is now Your Profile, Admin and About. A setting of the whole household or the whole device is in Admin; a setting of one profile is on Your Profile. The Playback and Display groups are gone: their rows are on Your Profile. A child sees Your Profile and About; a grown-up who is not an admin sees them too, with Add Profile on Your Profile. TV and phone.
+- **One PIN for Admin:** Admin asks the PIN of the profile in use once, on the way in, then shows one page with a header over each part: Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup and Advanced. On TV it is one rail row, its page in the pane; on the phone one row, its page in place of the list, and Back returns. TV and phone.
+- **Your Profile with no PIN:** Your Profile shows only your own rows (name, colour, PIN, theme, Look and Feel, Play Next Episode Automatically), and an admin opens it with no PIN too. A profile's Admin rows (the Admin switch, sources, content filters, Child Profile, a kid's favourites, Delete) are only in Admin → Profiles → the profile. TV and phone.
+- **Expert mode is now Admin:** the app says "Admin" and "admin" where it said "Expert mode" and "Expert", in English, French and Malagasy. Nothing else changes: seven taps on the version still make a profile an admin while there is none. TV and phone.
+
 ## Version: 0.8.20261028121358
 
 - **PIN on the phone:** when the TV asks for a PIN, press **Use my phone** and type it on a phone linked by live sync. The TV hides its number pad, so people in the room cannot read the PIN from the focus. The phone shows the request over any screen, checks the PIN itself and sends back only "unlocked": the PIN never leaves the phone. Cancel on the phone, or 2 minutes with no answer, brings the TV's pad back. TV and phone.

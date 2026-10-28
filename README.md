@@ -112,7 +112,7 @@ emulators run natively.
 
 Nothing is required to build, and no build carries a TMDB key. For TMDB details, enter your own key
 (v3 API key or v4 read access token, free from themoviedb.org → Settings → API) in the app:
-Settings → Sources & guide → Film and series details (TMDB). Without one, nothing is sent to TMDB.
+Settings → Admin → Sources & Guide → Film and series details (TMDB). Without one, nothing is sent to TMDB.
 
 `./gradlew :tv:assembleRelease` and `:mobile:assembleRelease` build release APKs, signed when the
 `FIJERENA_*` signing variables or a `keystore.properties` provide a key, unsigned otherwise (see

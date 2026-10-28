@@ -75,6 +75,30 @@ so one word has one meaning.
    CONTRIBUTING, RELEASE_NOTES; both emulators, as an Admin with and without a PIN, a grown-up
    and a kid.
 
+## Done notes
+
+- **Phase 1 (TV, 98b6ef005):** `SettingsGroup` is Your Profile (`PROFILES`), Admin (`adminOnly`) and
+  About; Playback and Display are removed. Admin's pane is one list, an `AdminPart` per item under
+  its header; Right or OK on Admin's rail row asks the PIN while the session has not got it, and
+  `openAdminPart` scrolls to a part (Parental Controls and a child's page). Your Profile shows the
+  page of the profile in use for every profile, without the Admin rows (`adminRows`); Add Profile
+  shows there only for a grown-up that is not an admin. Tests: `SettingsGroupTest`, the focus
+  tests (`SettingsThisDeviceFocusTest` new, `SettingsPlaybackDisplayFocusTest` removed). Walks
+  `settings.txt`, `ci-settings.txt`, `parental-controls.txt` and `settings-guide.txt` edited.
+- **Phase 2 (phone, 9e509b231):** Settings is Your Profile, the Admin row (an admin only) and About;
+  Playback and Display are removed. The Admin row asks the PIN, then shows every `ExpertGroup`
+  under its header in place of the list (Back or the back arrow returns; it closes when Admin is
+  turned off or the session locks again). `Screen.ProfileEdit.admin` tells Admin → Profiles from
+  Your Profile: only the first shows the Admin rows, and `isYourProfilePage` lets Your Profile
+  open with no PIN. Tests: `SettingsAdminTest` (new), `OwnPageGateTest`, `SettingsExpertGroupTest`.
+- **Phase 3 (rename, 360b5e580):** the English, French and Malagasy text that named Expert mode or
+  an Expert profile says Admin or admin. String keys and code names stay (AS-D5). The TV focus
+  tests and `ci-settings.txt` read the new text.
+- **Phase 4 (docs):** FEATURES (Settings, Profile PIN, a profile's page, the Expert Mode section
+  is now Admin, every "Expert mode" in the UI sense), NAVIGATION_GUIDE, CONTRIBUTING,
+  RELEASE_NOTES (Unreleased), RUN_GUIDE, design.md, DATABASE_SCHEMA and README. Walks on both
+  emulators still to do.
+
 ## Progress
 
 | Phase | Status | Commit |

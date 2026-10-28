@@ -131,7 +131,7 @@ memory and frames on our own devices; it is never published. A non-debuggable in
 with `run-as`, so: the deploy scripts back up a debug install before replacing it, but they can't
 back up a `localRelease` install (they say so and install anyway, with the same key); database
 pulls, the debug broadcast receivers and the `run-as` checks in this guide don't work on it. Use
-Settings › Sync & backup › Back up to a file first if the data matters, or deploy the debug build
+Settings › Admin › Sync & Backup › Back up to a file first if the data matters, or deploy the debug build
 again (it installs over `localRelease` and keeps the data) before using those tools.
 
 A real-device script doesn't install on a device that has the app but whose backup failed. Other
@@ -323,8 +323,8 @@ adb -s <device-id> logcat -s EventLogger
 Every build records what went wrong on the device itself, so a crash on a TV is still there after
 the fact without logcat having been attached:
 
-- **Diagnostics** (expert mode on for the profile in use, on its page under Settings →
-  Profiles; then Settings → Advanced → Diagnostics; mobile's can also Share as
+- **Diagnostics** (the profile in use an admin, set on its page under Settings → Admin →
+  Profiles; then Settings → Admin → Advanced → Diagnostics; mobile's can also Share as
   text) lists, newest
   first, the app's own crash log — uncaught exceptions, and exceptions absorbed by the app-wide
   coroutine scopes (`AppScopes`), sync records that couldn't be applied, a database set aside on
@@ -501,7 +501,7 @@ server's log as the artifact `tv-walk-output`.
 
 The test household (`scripts/seed-test-household.sh <serial> [server URL]`, debug builds only,
 emulators only): the source "Fake Xtream" (`http://10.0.2.2:8090`, `test` / `test`) and the
-profiles Admin (the first profile renamed, Expert, in use, no PIN), Guest (a grown-up) and Kid (a
+profiles Admin (the first profile renamed, an admin, in use, no PIN), Guest (a grown-up) and Kid (a
 child profile), all with the source. The script sends `TestHouseholdDebugReceiver` its broadcast
 and waits (up to 5 minutes) until the catalogue is loaded. The app refuses when it has a source
 already, so the script never changes a device that has data; it does not open the app either. The
