@@ -686,7 +686,6 @@
     <string name="common_import">Import</string>
     <string name="settings_quick_import_not_found">Settings file not found in Downloads or app folder</string>
     <string name="settings_quick_import_button">Restore from Downloads</string>
-    <string name="settings_shrink_database_title">Database Maintenance</string>
     <string name="settings_shrink_database_desc">Remove leftover data from deleted sources and reclaim disk space</string>
     <string name="settings_shrink_database_button">Shrink Database</string>
     <string name="settings_shrink_database_button_running">Shrinking…</string>

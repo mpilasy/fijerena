@@ -1100,7 +1100,6 @@
     <string name="player_stats_gc">GC</string>
     <string name="player_stats_gc_format">%1$d passages, %2$d ms</string>
     <string name="player_stats_ui_skipped">Images d\'interface sautées</string>
-    <string name="settings_shrink_database_title">Maintenance de la base de données</string>
     <string name="settings_shrink_database_desc">Supprimer les données restantes des sources supprimées et récupérer de l\'espace disque</string>
     <string name="settings_shrink_database_button">Compacter la base de données</string>
     <string name="settings_shrink_database_button_running">Compactage…</string>

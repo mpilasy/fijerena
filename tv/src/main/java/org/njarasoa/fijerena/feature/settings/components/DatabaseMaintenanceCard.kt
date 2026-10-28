@@ -25,18 +25,16 @@ fun DatabaseMaintenanceCard(
     lastShrinkBytesReclaimed: Long = 0L,
     moreRows: @Composable ColumnScope.() -> Unit = {},
 ) {
-    SettingsSection(
-        title = stringResource(R.string.settings_shrink_database_title),
-        description =
-            stringResource(R.string.settings_shrink_database_desc) + "\n" +
-                stringResource(R.string.settings_scope_device_section),
-    ) {
+    // A row at the root of Admin's page, with no title of its own above it (as on the phone).
+    SettingsSection {
         SettingsRow(
             title =
                 stringResource(
                     if (isPruning) R.string.settings_shrink_database_button_running else R.string.settings_shrink_database_button,
                 ),
-            description = null,
+            description =
+                stringResource(R.string.settings_shrink_database_desc) + "\n" +
+                    stringResource(R.string.settings_scope_device_section),
             onClick = onShrinkClick,
             enabled = !isPruning,
             chevron = false,

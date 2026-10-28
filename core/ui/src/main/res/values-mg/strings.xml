@@ -984,7 +984,6 @@
     <string name="device_info_hdr_none">Tsy misy</string>
     <string name="device_info_free_of_format">%1$s malalaka amin\'ny %2$s</string>
     <string name="device_info_used_of_format">%1$s amin\'ny %2$s</string>
-    <string name="settings_shrink_database_title">Fikojakojana ny tahirin-kevitra</string>
     <string name="settings_shrink_database_desc">Esory ny angona sisa tavela avy amin\'ny loharano voafafa ary ampitomboy ny toerana malalaka</string>
     <string name="settings_shrink_database_button">Ahenao ny tahirin-kevitra</string>
     <string name="settings_shrink_database_button_running">Mampihena…</string>
