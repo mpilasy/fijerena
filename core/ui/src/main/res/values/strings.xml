@@ -452,6 +452,8 @@
     <string name="player_seek_hint">Press OK to seek • Back to cancel</string>
     <string name="player_seek_rewind_format">⟲ %1$ds</string>
     <string name="player_seek_forward_format">%1$ds ⟳</string>
+    <!-- The seek pill: where the seek goes, then the length. -->
+    <string name="player_seek_target_format">%1$s / %2$s</string>
     <string name="player_now_playing_format">Now: %1$s (%2$s – %3$s)</string>
     <string name="player_up_next_format">Up next: %1$s (%2$s)</string>
     <string name="player_chapters">Chapters</string>

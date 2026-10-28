@@ -173,7 +173,7 @@ HLS, DASH, MPEG-TS, MP4, MKV, WebM and other containers through Media3/ExoPlayer
 ### Mobile controls
 
 - **Tap** shows/hides the controls (5 s auto-hide): title and resolution/codec at the top; −1 min / play-pause / +5 min (VOD with a known duration); a seek slider (VOD); Audio, Subtitles, Quality, Favourite, Stats, Info and Next episode.
-- **Double-tap** the left or right 40 % of the screen seeks 10 s back or forward (VOD).
+- **Double-tap** the left or right 40 % of the screen seeks 10 s back or forward (VOD). After a double-tap, each tap on a side within 0.7 s seeks 10 s more and does not toggle the controls. Every tap counts, also while the video buffers after a seek. A pill on that side shows the seconds of the burst and, under it, larger, the time the seek goes to and the length ("12:40 / 47:00"). The seek bar and the time show that place at once.
 - **Swipe up/down** zaps (Live TV), with a 3 s channel toast.
 - **Swipe right** opens the category's channels from the left edge, **swipe left** the Recent channels from the right edge (Live TV); picking a channel tunes it and closes the panel.
 - A swipe counts after 56 dp; one that starts in the outer 10 % of the screen (where the system's back, notification-shade and home swipes start) is ignored.

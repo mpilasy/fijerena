@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Phone seek by tapping:** every double-tap seek now counts. Before, a tap while the video buffered after a seek was lost, but the pill still counted it: the pill said 30 s, the video moved 10 s. After a double-tap, tap the same side again to seek 10 s more, as in YouTube. The pill shows the time the seek goes to under the seconds. The seek bar and the time go to the new place at once and no longer jump back to the old place first, also after you drag the bar. Phone.
+
 ## Version: 0.8.20261028151425
 
 - **Settings in three parts:** Settings is now Your Profile, Admin and About. A setting of the whole household or the whole device is in Admin; a setting of one profile is on Your Profile. The Playback and Display groups are gone: their rows are on Your Profile. A child sees Your Profile and About; a grown-up who is not an admin sees them too, with Add Profile on Your Profile. TV and phone.

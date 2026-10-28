@@ -1092,6 +1092,8 @@
     <string name="series_remaining_format">Reste %1$s</string>
     <string name="player_seek_rewind_format">⟲ %1$ds</string>
     <string name="player_seek_forward_format">%1$ds ⟳</string>
+    <!-- The seek pill: where the seek goes, then the length. -->
+    <string name="player_seek_target_format">%1$s / %2$s</string>
     <string name="player_stats_drop_rate_recent">Taux de perte (10s)</string>
     <string name="player_stats_app">APPLI</string>
     <string name="player_stats_heap">Tas</string>

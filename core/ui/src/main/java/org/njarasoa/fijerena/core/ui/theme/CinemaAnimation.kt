@@ -22,8 +22,11 @@ object CinemaAnimation {
     const val loadingDebounceMs = 600L
     const val searchDebounceMs = 300L
 
-    /** How long the double-tap seek ripple pill stays up after the last tap in a burst. */
-    const val seekRippleDismissMs = 600L
+    /**
+     * How long the double-tap seek ripple pill stays up after the last tap in a burst. While it
+     * shows, one tap on a side seeks again.
+     */
+    const val seekRippleDismissMs = 700L
 
     /** One step of a visible seconds countdown. */
     const val countdownTickMs = 1_000L

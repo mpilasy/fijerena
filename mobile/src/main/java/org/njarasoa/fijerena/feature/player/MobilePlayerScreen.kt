@@ -64,6 +64,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
@@ -115,10 +116,6 @@ import org.njarasoa.fijerena.ui.components.HideMobileClock
 import org.njarasoa.fijerena.ui.components.RequestOrientation
 
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
-
-/** Double-tap seek step (2a) — matches the app-wide seek convention documented in CONTRIBUTING.md. */
-private const val SEEK_STEP_MS = 10_000L
-private const val SEEK_STEP_SECONDS = 10
 
 /** Space between the lifted subtitles and the controls' panel, as a share of the screen's height. */
 private const val SUBTITLE_GAP_FRACTION = 0.02f
@@ -407,9 +404,11 @@ fun MobilePlayerContent(
         // Double-tap seek ripple pill (2a) — side is -1 (rewind, left 40%) or +1 (forward, right
         // 40%), 0 means hidden. Accumulates across a burst of rapid taps in the same direction
         // (10s, 20s, 30s...) rather than showing one pill per tap; seekRippleTick, same pattern as
-        // channelToastTick above, restarts the auto-hide delay on every tap in the burst.
+        // channelToastTick above, restarts the auto-hide delay on every tap in the burst. While the
+        // pill shows, one tap on a side seeks again (see the tap gestures below).
         var seekRippleSide by remember { mutableStateOf(0) }
         var seekRippleSeconds by remember { mutableStateOf(0) }
+        var seekRippleTargetMs by remember { mutableLongStateOf(0L) }
         var seekRippleTick by remember { mutableStateOf(0) }
         val haptic = LocalHapticFeedback.current
         var hasStartedPlaying by remember { mutableStateOf(false) }
@@ -430,6 +429,7 @@ fun MobilePlayerContent(
         val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
         val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
         val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
+        val seekTarget by viewModel.seekTarget.collectAsStateWithLifecycle()
 
         // Enable/disable PiP auto-enter — only for live video that's actually playing. Anything else
         // (VOD, paused, idle) just leaves the app normally on Home/app-switch.
@@ -454,11 +454,16 @@ fun MobilePlayerContent(
         val currentPs = playbackState
         val currentMeta = currentMetadata
 
-        LaunchedEffect(currentPs) {
+        // Also while the player buffers after a seek: it then reports the seek target as its
+        // position, so the polled position is there already when the target clears.
+        val seeking = seekTarget != null
+        val polling =
+            currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused || (seeking && currentPs is PlaybackState.Buffering)
+        LaunchedEffect(currentPs, seeking) {
             if (currentPs is PlaybackState.Error) {
                 android.util.Log.e("MobilePlayerScreen", "Playback Error: ${currentPs.message}")
             }
-            if (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) {
+            if (polling) {
                 while (true) {
                     StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
                         livePosition = player.currentPosition
@@ -468,6 +473,9 @@ fun MobilePlayerContent(
                 }
             }
         }
+        // The seek bar and the time show where a seek goes at once, not the old place until the
+        // player gets there.
+        val shownPosition = seekTarget ?: livePosition
 
         // Autoplay next episode. The "Up next" card shows over the playing episode once little enough
         // is left (see showUpNext); its countdown is the playback time left, from the polled position,
@@ -722,6 +730,17 @@ fun MobilePlayerContent(
                                 currentPs is PlaybackState.Paused ||
                                 currentPs is PlaybackState.Buffering
                         )
+                // One 10 s step on side (-1 back, 1 forward). The pill counts only a step the player
+                // took, and shows where the burst goes.
+                val seekBy: (Int) -> Unit = { side ->
+                    viewModel.seekRelative(side * SEEK_STEP_MS)?.let { target ->
+                        seekRippleSeconds = seekBurstSeconds(seekRippleSide, seekRippleSeconds, side)
+                        seekRippleSide = side
+                        seekRippleTargetMs = target
+                        seekRippleTick++
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                }
                 Box(
                     modifier =
                         Modifier
@@ -731,55 +750,39 @@ fun MobilePlayerContent(
                                 if (isInPipMode) {
                                     Modifier
                                 } else {
-                                    Modifier.pointerInput(showStats, isLiveContent) {
-                                        detectTapGestures(
-                                            onTap = {
-                                                if (!showStats) showControls = !showControls
-                                            },
-                                            // Double-tap 10s relative seek (2a), not pause/resume — that
-                                            // would duplicate the single-tap + center button path and break
-                                            // the double-tap-to-seek convention every other mobile video
-                                            // player uses (YouTube, Netflix, Plex, MX Player). Left 40% of
-                                            // the width rewinds, right 40% seeks forward, the center 20% is left alone —
-                                            // single tap already toggles the controls overlay, so a
-                                            // second meaning on center double-tap would be redundant.
-                                            onDoubleTap = { offset ->
-                                                if (!showStats && !isLiveContent) {
-                                                    val width = size.width
-                                                    when {
-                                                        offset.x < width * 0.4f -> {
-                                                            viewModel.seekRelative(-SEEK_STEP_MS)
-                                                            seekRippleSeconds =
-                                                                if (seekRippleSide ==
-                                                                    -1
-                                                                ) {
-                                                                    seekRippleSeconds + SEEK_STEP_SECONDS
-                                                                } else {
-                                                                    SEEK_STEP_SECONDS
-                                                                }
-                                                            seekRippleSide = -1
-                                                            seekRippleTick++
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        }
-
-                                                        offset.x > width * 0.6f -> {
-                                                            viewModel.seekRelative(SEEK_STEP_MS)
-                                                            seekRippleSeconds =
-                                                                if (seekRippleSide ==
-                                                                    1
-                                                                ) {
-                                                                    seekRippleSeconds + SEEK_STEP_SECONDS
-                                                                } else {
-                                                                    SEEK_STEP_SECONDS
-                                                                }
-                                                            seekRippleSide = 1
-                                                            seekRippleTick++
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        }
+                                    // While the seek pill shows, a single tap on a side seeks again at once
+                                    // (YouTube style): no double-tap wait, and it doesn't toggle the controls.
+                                    // The key change restarts the detector when the pill comes and goes.
+                                    Modifier.pointerInput(showStats, isLiveContent, seekRippleSide != 0) {
+                                        if (seekRippleSide != 0) {
+                                            detectTapGestures(
+                                                onTap = { offset ->
+                                                    val side = seekTapSide(offset.x, size.width.toFloat())
+                                                    if (side != 0 && !showStats && !isLiveContent) {
+                                                        seekBy(side)
+                                                    } else if (!showStats) {
+                                                        showControls = !showControls
                                                     }
-                                                }
-                                            },
-                                        )
+                                                },
+                                            )
+                                        } else {
+                                            detectTapGestures(
+                                                onTap = {
+                                                    if (!showStats) showControls = !showControls
+                                                },
+                                                // Double-tap 10s relative seek (2a), not pause/resume — that
+                                                // would duplicate the single-tap + center button path and break
+                                                // the double-tap-to-seek convention every other mobile video
+                                                // player uses (YouTube, Netflix, Plex, MX Player). Left 40% of
+                                                // the width rewinds, right 40% seeks forward, the center 20% is left alone —
+                                                // single tap already toggles the controls overlay, so a
+                                                // second meaning on center double-tap would be redundant.
+                                                onDoubleTap = { offset ->
+                                                    val side = seekTapSide(offset.x, size.width.toFloat())
+                                                    if (side != 0 && !showStats && !isLiveContent) seekBy(side)
+                                                },
+                                            )
+                                        }
                                     }
                                 },
                             ).then(
@@ -966,7 +969,7 @@ fun MobilePlayerContent(
                             isLive = isLiveContent,
                             isDeveloperMode = appSettings.isDevMode,
                             isFavorite = state.isFavorite,
-                            livePosition = livePosition,
+                            livePosition = shownPosition,
                             liveDuration = liveDuration,
                             currentEpgProgram = state.currentEpgProgram,
                             nextEpgProgram = state.nextEpgProgram,
@@ -1122,7 +1125,8 @@ fun MobilePlayerContent(
                     }
 
                     // Double-tap seek ripple pill (2a) — sits on whichever side was tapped, fading
-                    // out CinemaAnimation.seekRippleDismissMs after the last tap in a burst.
+                    // out CinemaAnimation.seekRippleDismissMs after the last tap in a burst. Under
+                    // the burst's seconds, larger, the time it goes to.
                     AnimatedVisibility(
                         visible = !isInPipMode && seekRippleSide != 0,
                         enter = fadeIn(),
@@ -1133,16 +1137,29 @@ fun MobilePlayerContent(
                             modifier = Modifier.padding(horizontal = CinemaSpacing.xl),
                             panelShape = CinemaTheme.shapes.control,
                         ) {
-                            CinemaText(
-                                text =
-                                    stringResource(
-                                        if (seekRippleSide < 0) R.string.player_seek_rewind_format else R.string.player_seek_forward_format,
-                                        seekRippleSeconds,
-                                    ),
+                            Column(
                                 modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.md),
-                                role = TextRole.Display,
-                                tone = TextTone.Primary,
-                            )
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                val countFormat =
+                                    if (seekRippleSide < 0) R.string.player_seek_rewind_format else R.string.player_seek_forward_format
+                                CinemaText(
+                                    text = stringResource(countFormat, seekRippleSeconds),
+                                    role = TextRole.Title,
+                                    tone = TextTone.Primary,
+                                )
+                                CinemaText(
+                                    text =
+                                        stringResource(
+                                            R.string.player_seek_target_format,
+                                            formatTime(seekRippleTargetMs),
+                                            formatTime(liveDuration),
+                                        ),
+                                    role = TextRole.Display,
+                                    tone = TextTone.Primary,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }

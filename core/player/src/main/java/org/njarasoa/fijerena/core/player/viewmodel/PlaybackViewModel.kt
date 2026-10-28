@@ -60,6 +60,11 @@ class PlaybackViewModel(
     private val _tracksVersion = MutableStateFlow(0)
     val tracksVersion: StateFlow<Int> = _tracksVersion.asStateFlow()
 
+    // Where the last seek sent the player, until it is playing or paused there again (null: no
+    // seek pending). The phone shows it at once on the seek bar, and seekRelative counts from it.
+    private val _seekTarget = MutableStateFlow<Long?>(null)
+    val seekTarget: StateFlow<Long?> = _seekTarget.asStateFlow()
+
     private val _isInPictureInPictureMode = MutableStateFlow(false)
     val isInPictureInPictureMode: StateFlow<Boolean> = _isInPictureInPictureMode.asStateFlow()
 
@@ -170,6 +175,9 @@ class PlaybackViewModel(
                 service.playbackState.collect { state ->
                     android.util.Log.d("PlaybackViewModel", "observeServiceState: received state=$state")
                     _playbackState.value = state
+                    // Playing or paused again: the player is at the seek target. Any other state
+                    // than Buffering ends the seek too.
+                    if (state !is PlaybackState.Buffering) _seekTarget.value = null
                 }
             }
 
@@ -206,6 +214,7 @@ class PlaybackViewModel(
     ) {
         isInErrorState = false
         liveStoppedInBackground = false
+        _seekTarget.value = null
         onFocusRegained()
         ensureServiceRunning()
         // DO NOT set _playbackState.value = Buffering here!
@@ -359,14 +368,21 @@ class PlaybackViewModel(
     }
 
     fun seekTo(position: Long) {
+        _seekTarget.value = position
         launchServiceAction { it.seekTo(position) }
     }
 
-    fun seekRelative(offsetMs: Long) {
-        // Only meaningful while actually playing/paused — do nothing on Idle/Buffering/Ended/Error.
+    /**
+     * Seeks [offsetMs] from the pending seek target, or from the player's position when no seek is
+     * pending, so taps sent while the player buffers after a seek add up. Returns the target, or
+     * null when nothing was sought.
+     */
+    fun seekRelative(offsetMs: Long): Long? {
+        // Playing, paused or buffering (most often after an earlier seek) — do nothing on
+        // Idle/Ended/Error.
         val isSeekableState =
             when (_playbackState.value) {
-                is PlaybackState.Playing, is PlaybackState.Paused -> true
+                is PlaybackState.Playing, is PlaybackState.Paused, is PlaybackState.Buffering -> true
                 else -> false
             }
         // Read the live player position/duration rather than the cached PlaybackState: that
@@ -376,9 +392,14 @@ class PlaybackViewModel(
         // spot (the bug behind "fast forward/rewind fucked up").
         val player = if (isSeekableState) StreamingPlaybackService.getInstance()?.getPlayer() else null
         val duration = player?.duration?.coerceAtLeast(0L) ?: 0L
-        if (player != null && duration > 0L) {
-            seekTo((player.currentPosition + offsetMs).coerceIn(0L, duration))
-        }
+        val target =
+            if (player != null && duration > 0L) {
+                relativeSeekTarget(_seekTarget.value, player.currentPosition, offsetMs, duration)
+            } else {
+                null
+            }
+        target?.let { seekTo(it) }
+        return target
     }
 
     fun setPlaybackSpeed(speed: Float) {
@@ -592,3 +613,14 @@ class PlaybackViewModel(
         // legitimately held after this ViewModel is cleared.
     }
 }
+
+/**
+ * Where a relative seek of [offsetMs] goes: from [pendingTargetMs] (a seek the player has not
+ * reached yet) when set, else from [currentMs]; kept inside [0, [durationMs]].
+ */
+internal fun relativeSeekTarget(
+    pendingTargetMs: Long?,
+    currentMs: Long,
+    offsetMs: Long,
+    durationMs: Long,
+): Long = ((pendingTargetMs ?: currentMs) + offsetMs).coerceIn(0L, durationMs)
