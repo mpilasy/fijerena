@@ -848,7 +848,6 @@
     <string name="settings_section_provider_playback">Loharano sy filalaovana</string>
     <string name="settings_section_appearance">Endrika</string>
     <string name="settings_section_data_sync">Angona sy fampifanarahana</string>
-    <string name="settings_section_advanced">Mandroso</string>
     <string name="provider_category_filters_profile">Ireto no sivana an\'i %1$s. Samy manana ny azy ny mombamomba tsirairay.</string>
     <string name="details_watch_trailer">▶ Topi-maso</string>
     <string name="details_watch_trailer_description">Hijery ny topi-maso</string>

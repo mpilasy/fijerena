@@ -28,8 +28,8 @@ class SettingsSyncBackupFocusTest : SettingsFocusTest() {
             down("Live Sync"),
             down("Back Up to a File"),
             down("Restore from a File / From a backup file: you choose what to restore"),
-            // Advanced follows on the same page.
-            down("Diagnostics"),
+            // Shrink Database follows on the same page.
+            down("Shrink Database"),
             up("Restore from a File"),
             up("Back Up to a File"),
             up("Live Sync"),

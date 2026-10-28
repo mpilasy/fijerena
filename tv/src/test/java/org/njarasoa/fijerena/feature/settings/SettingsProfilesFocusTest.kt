@@ -15,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
 /**
  * TV Settings → Admin → Profiles, the whole screen on the fixture's data
  * (`scripts/focus-walks/settings.txt`, the Profiles part): the list of profiles, a profile's page
- * with its Admin rows and the way back, for an Expert; a child's own page.
+ * with its Admin rows and the way back, for an Expert.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsProfilesFocusTest : SettingsFocusTest() {
@@ -73,29 +73,6 @@ class SettingsProfilesFocusTest : SettingsFocusTest() {
             up("Add Profile"),
             // Back in the pane returns to the rail row, not out of Settings.
             back("Admin"),
-        )
-    }
-
-    @Test
-    fun `a child walks its own page`() {
-        open(SettingsFixture.KID)
-        // A child's rail: its own page and About only.
-        walk.assertFocused("Your Profile")
-        walk.run(
-            down("About"),
-            down("About"),
-            up("Your Profile"),
-            // The page shows beside the rail; Right enters it on its first row.
-            right("Colour"),
-            down("UI Theme"),
-            down("Theme"),
-            down("Look and Feel"),
-            down("Poster in the Background"),
-            down("Play Next Episode Automatically"),
-            down("Play Next Episode Automatically"),
-            left("Your Profile"),
-            right("Colour"),
-            back("Your Profile"),
         )
     }
 }

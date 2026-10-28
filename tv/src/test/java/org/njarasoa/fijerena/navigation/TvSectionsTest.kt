@@ -30,9 +30,9 @@ class TvSectionsTest {
     }
 
     @Test
-    fun `a child profile has no sections but has Search`() {
+    fun `a child profile has no sections and no Settings but has Search`() {
         assertEquals(
-            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.SETTINGS),
+            listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH),
             railItems(setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS), child = true),
         )
     }

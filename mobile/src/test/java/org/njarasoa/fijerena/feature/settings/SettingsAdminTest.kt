@@ -177,7 +177,6 @@ class SettingsAdminTest {
             R.string.settings_group_sync_backup,
             R.string.settings_shrink_database_button,
         ).forEach { scrollTo(text(it)) }
-        rule.onNodeWithText(text(R.string.settings_section_advanced)).assertDoesNotExist()
         scrollTo("Guest").performClick()
         assertEquals(GUEST, opened)
     }

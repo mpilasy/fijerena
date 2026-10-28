@@ -236,9 +236,9 @@ fun SettingsScreen(
     // rows on the right. The rail row is saveable so a language change (Activity recreate) and the
     // Back round trip from a child screen come back to the same group.
     var selectedGroup by rememberSaveable { mutableStateOf(SettingsGroup.PROFILES) }
-    // Without Expert mode (admin, for now) Admin is not listed, and a child profile sees only its
-    // page and About; Admin left selected when Expert mode was turned off falls back to Your Profile.
-    val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isDevMode, child = uiState.isChildProfile)
+    // Without Expert mode (admin, for now) Admin is not listed (a child profile has no Settings);
+    // Admin left selected when Expert mode was turned off falls back to Your Profile.
+    val visibleGroups = SettingsGroup.visibleFor(admin = uiState.isDevMode)
     if (selectedGroup !in visibleGroups) selectedGroup = SettingsGroup.PROFILES
     val railPane = rememberPaneFocus()
     val contentPane = rememberPaneFocus()
@@ -758,34 +758,22 @@ fun SettingsScreen(
                                                                         },
                                                                 )
                                                             }
-
-                                                            AdminPart.ADVANCED -> {
-                                                                // Developer mode is switched on each profile's page; Diagnostics
-                                                                // shows here for the profile in use.
-                                                                SettingsRow(
-                                                                    title = stringResource(R.string.settings_diagnostics_title),
-                                                                    description = stringResource(R.string.settings_diagnostics_desc),
-                                                                    onClick = {
-                                                                        returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
-                                                                        onDiagnostics()
-                                                                    },
-                                                                    focusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
-                                                                )
-                                                                // Housekeeping: the catalogue's leftovers.
-                                                                DatabaseMaintenanceCard(
-                                                                    isPruning = uiState.isPruningDatabase,
-                                                                    resultMessage = uiState.databaseMaintenanceMessage,
-                                                                    onShrinkClick = viewModel::pruneDatabase,
-                                                                    isDevMode = uiState.isDevMode,
-                                                                    lastShrinkAtMs = uiState.lastShrinkAtMs,
-                                                                    lastShrinkDurationMs = uiState.lastShrinkDurationMs,
-                                                                    lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
-                                                                    lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
-                                                                )
-                                                            }
                                                         }
                                                     }
                                                 }
+                                            }
+                                            // Housekeeping, the catalogue's leftovers: the page's last row, under no part's header.
+                                            item(key = SHRINK_DATABASE_KEY) {
+                                                DatabaseMaintenanceCard(
+                                                    isPruning = uiState.isPruningDatabase,
+                                                    resultMessage = uiState.databaseMaintenanceMessage,
+                                                    onShrinkClick = viewModel::pruneDatabase,
+                                                    isDevMode = uiState.isDevMode,
+                                                    lastShrinkAtMs = uiState.lastShrinkAtMs,
+                                                    lastShrinkDurationMs = uiState.lastShrinkDurationMs,
+                                                    lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
+                                                    lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
+                                                )
                                             }
                                         }
 
@@ -795,6 +783,10 @@ fun SettingsScreen(
                                                     onDeviceInfo = {
                                                         returnFocus.leaveFrom(RETURN_DEVICE_INFO, listState)
                                                         onDeviceInfo()
+                                                    },
+                                                    onDiagnostics = {
+                                                        returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
+                                                        onDiagnostics()
                                                     },
                                                     onLicenses = {
                                                         returnFocus.leaveFrom(RETURN_LICENSES, listState)
@@ -807,6 +799,7 @@ fun SettingsScreen(
                                                     onVersionClick = onVersionClick,
                                                     rowModifier = entryModifier,
                                                     deviceInfoFocusRequester = returnFocus.requesterFor(RETURN_DEVICE_INFO),
+                                                    diagnosticsFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
                                                     licensesFocusRequester = returnFocus.requesterFor(RETURN_LICENSES),
                                                     termsFocusRequester = returnFocus.requesterFor(RETURN_TERMS),
                                                 )
@@ -873,6 +866,7 @@ fun SettingsScreen(
 private const val RETURN_PROVIDERS = "providers"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
+private const val SHRINK_DATABASE_KEY = "shrinkDatabase"
 private const val RETURN_DEVICE_INFO = "deviceInfo"
 private const val RETURN_LICENSES = "licenses"
 private const val RETURN_TERMS = "terms"
@@ -896,32 +890,25 @@ enum class SettingsGroup(
      * device's settings, the [AdminPart]s.
      */
     val adminOnly: Boolean = false,
-    /** A child profile sees it too (its own page). Admin changes shared or device setup. */
-    val forChild: Boolean = false,
 ) {
-    PROFILES(R.string.profile_own_page_title, forChild = true),
+    PROFILES(R.string.profile_own_page_title),
     ADMIN(R.string.settings_group_admin, adminOnly = true),
-    ABOUT(R.string.settings_about_section_title, forChild = true),
+    ABOUT(R.string.settings_about_section_title),
     ;
 
     /** The pane key of this group's first focusable row — where Right from the rail lands. */
     val entryKey: String get() = "$name:first"
 
     companion object {
-        /**
-         * The groups the rail lists: without Expert mode ([admin] false), not Admin; for a child
-         * profile ([child]), only its own page and About.
-         */
-        fun visibleFor(
-            admin: Boolean,
-            child: Boolean = false,
-        ): List<SettingsGroup> = entries.filter { if (child) it.forChild else admin || !it.adminOnly }
+        /** The groups the rail lists: without Expert mode ([admin] false), not Admin. */
+        fun visibleFor(admin: Boolean): List<SettingsGroup> = entries.filter { admin || !it.adminOnly }
     }
 }
 
 /**
  * The parts of Admin's one page, in order, each under its header: the rows of the groups that each
- * asked the PIN before the admin settings plan. An [ordinal] is the part's item in the page's list.
+ * asked the PIN before the admin settings plan. An [ordinal] is the part's item in the page's list;
+ * Shrink Database follows the last part, under no header.
  */
 enum class AdminPart(
     @StringRes val titleRes: Int,
@@ -931,7 +918,6 @@ enum class AdminPart(
     THIS_DEVICE(R.string.settings_group_this_device),
     SOURCE_GUIDE(R.string.settings_group_source_guide),
     SYNC_BACKUP(R.string.settings_group_sync_backup),
-    ADVANCED(R.string.settings_section_advanced),
 }
 
 /**

@@ -19,17 +19,19 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
  * About: version and build as one focusable row — the group's entry row, so Right from the rail
  * always lands somewhere and Up/Down never skip it (focus contract rule 3); OK counts toward
  * developer mode ([onVersionClick], 7 taps). Then
- * Device info, Terms of use and Open-source licences, each opening its own screen. Last, the
- * copyright and licence notice. Diagnostics is in Advanced, an Expert group.
+ * Device info, Logs (Diagnostics, open to every profile that has Settings), Terms of use and
+ * Open-source licences, each opening its own screen. Last, the copyright and licence notice.
  */
 @Composable
 fun AboutSettingsCard(
     onDeviceInfo: () -> Unit,
+    onDiagnostics: () -> Unit = {},
     onLicenses: () -> Unit = {},
     onTerms: () -> Unit = {},
     onVersionClick: () -> Unit = {},
     rowModifier: Modifier = Modifier,
     deviceInfoFocusRequester: FocusRequester? = null,
+    diagnosticsFocusRequester: FocusRequester? = null,
     licensesFocusRequester: FocusRequester? = null,
     termsFocusRequester: FocusRequester? = null,
 ) {
@@ -65,6 +67,12 @@ fun AboutSettingsCard(
             description = stringResource(R.string.device_info_desc),
             onClick = onDeviceInfo,
             focusRequester = deviceInfoFocusRequester,
+        )
+        SettingsRow(
+            title = stringResource(R.string.settings_diagnostics_title),
+            description = stringResource(R.string.settings_diagnostics_desc),
+            onClick = onDiagnostics,
+            focusRequester = diagnosticsFocusRequester,
         )
         SettingsRow(
             title = stringResource(R.string.terms_title),

@@ -1287,9 +1287,20 @@ fun TvNavHost(
         // the Expert's only, whatever opened it: closed at once.
         val refused = !expert && entry.isExpertOnly()
         LaunchedEffect(entry, refused) { if (refused) navController.popBackStack() }
+        // A child profile has no Settings: a restored back stack, a switch to a child or a stale
+        // route closes it and goes Home. Safe mode's Diagnostics stays.
+        val childInSettings =
+            remember(entry, inUse?.id) {
+                destination?.isSettingsTree() == true && !SafeMode.isActive && appSettings.isChildProfile(appSettings.activeProfileId)
+            }
+        LaunchedEffect(entry, childInSettings) {
+            if (childInSettings && !navController.popBackStack(Screen.ContentTypeSelection, inclusive = false)) {
+                navController.navigate(Screen.ContentTypeSelection) { popUpTo(navController.graph.id) { inclusive = true } }
+            }
+        }
         inUse?.let { profile ->
             LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
-            if (!refused && destination.isPinGuarded() && gateProfiles.needsPin(profile.id)) {
+            if (!refused && !childInSettings && destination.isPinGuarded() && gateProfiles.needsPin(profile.id)) {
                 // Nothing of Settings shows behind the prompt.
                 Box(Modifier.fillMaxSize().background(CinemaTheme.colors.background))
                 TvPinDialog(

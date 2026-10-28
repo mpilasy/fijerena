@@ -5,7 +5,7 @@ import org.junit.Test
 
 /**
  * The rail's groups (the admin settings plan): Your Profile, Admin (only with Expert mode) and
- * About; a child profile sees only its own page and About. Only Admin asks the PIN on the way in,
+ * About (a child profile has no Settings on TV). Only Admin asks the PIN on the way in,
  * and its page holds the parts the Expert groups had, in their rail order.
  */
 class SettingsGroupTest {
@@ -26,14 +26,6 @@ class SettingsGroupTest {
     }
 
     @Test
-    fun `a child profile sees only its own page and About`() {
-        assertEquals(
-            listOf(SettingsGroup.PROFILES, SettingsGroup.ABOUT),
-            SettingsGroup.visibleFor(admin = false, child = true),
-        )
-    }
-
-    @Test
     fun `only Admin asks the PIN`() {
         assertEquals(listOf(SettingsGroup.ADMIN), SettingsGroup.entries.filter { it.adminOnly })
     }
@@ -47,7 +39,6 @@ class SettingsGroupTest {
                 AdminPart.THIS_DEVICE,
                 AdminPart.SOURCE_GUIDE,
                 AdminPart.SYNC_BACKUP,
-                AdminPart.ADVANCED,
             ),
             AdminPart.entries,
         )

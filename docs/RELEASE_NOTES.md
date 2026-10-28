@@ -3,9 +3,9 @@
 ## Unreleased
 
 - **Your settings on the phone's Settings:** Settings now shows your own rows (name, colour, PIN, UI Theme, Theme, Look and Feel, Poster in the Background, Play Next Episode Automatically) under Your Profile, with no page to open. Each change applies at once; the name is saved when you leave Settings. Phone.
-- **No Settings for a child on the phone:** a child profile's profile menu has no Settings row, and it can still switch profile. If a child reaches Settings anyway, Home opens. Phone.
-- **Diagnostics is now Logs, in About:** Logs shows the crash log and the failed server calls. It is in About, for every profile that has Settings, with no PIN. In French it is "Journaux", in Malagasy "Tatitra". Phone.
-- **Shrink Database ends the Admin page:** the Advanced part of Admin is gone. Shrink Database is the last row of the Admin page, with no header. Phone.
+- **No Settings for a child:** a child profile has no Settings: no Settings item on the TV rail (it is Profile, Home and Search) and no Settings row in the phone's profile menu. A child can still switch profile. If a child reaches Settings anyway, Home opens. TV and phone.
+- **Diagnostics is now Logs, in About:** Logs shows the crash log and the failed server calls. It is in About, for every profile that has Settings, with no PIN. In French it is "Journaux", in Malagasy "Tatitra". TV and phone.
+- **Shrink Database ends the Admin page:** the Advanced part of Admin is gone. Shrink Database is the last row of the Admin page, with no header. TV and phone.
 
 ## Version: 0.8.20261028171415
 

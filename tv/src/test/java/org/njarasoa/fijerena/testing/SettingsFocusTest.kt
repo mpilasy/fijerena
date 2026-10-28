@@ -82,7 +82,7 @@ abstract class SettingsFocusTest {
         /**
          * Admin's one page, as an Expert sees it on the fixture's data (the admin settings plan): the
          * profiles (after the PIN reminder, when it shows), Parental Controls, This Device, Sources &
-         * Guide, Sync & Backup and Advanced. No backup waits in Downloads: no Restore from Downloads.
+         * Guide, Sync & Backup, then Shrink Database. No backup waits in Downloads: no Restore from Downloads.
          */
         val ADMIN_ROWS =
             listOf(
@@ -109,7 +109,6 @@ abstract class SettingsFocusTest {
                 "Live Sync",
                 "Back Up to a File",
                 "Restore from a File",
-                "Diagnostics",
                 "Shrink Database",
             )
     }

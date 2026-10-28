@@ -13,8 +13,8 @@
 # Re-recorded 2026-10-17 after the Settings reorganisation. Parental controls added to the rail
 # 2026-10-20 (its own walk: parental-controls.txt); those two lines are not yet run.
 # The PIN reminder's text changed 2026-10-24 (settings flow review, Phase 1): line edited by hand,
-# checked in Malagasy with a dump, not re-run in English. A child profile's rail (Your profile and
-# About only) is not walked here.
+# checked in Malagasy with a dump, not re-run in English. A child profile has no Settings (since
+# 2026-10-28).
 # Phase 2 (2026-10-24): Display's Theme and Look and Feel and Playback's Play next episode
 # automatically rows added, the watch delay renamed, Manage Sources in title case. Lines edited by
 # hand, checked in Malagasy with a dump, not re-run in English.
@@ -30,7 +30,8 @@
 # Admin settings (2026-10-28): the rail is Your Profile, Admin, About for an admin (Your Profile and
 # About otherwise); Admin asks the PIN on the way in and is one page with a header over each part
 # (Profiles, Parental Controls, This Device, Sources & Guide, Sync & Backup, Advanced). The start
-# focus is now Your Profile. Edited by hand, not re-run.
+# focus is now Your Profile. Edited by hand, not re-run. Later the same day Advanced went: Shrink
+# Database is Admin's last row, under no header, and Diagnostics (renamed Logs) is in About.
 @start Your Profile
 # Back on the rail leaves Settings: Home again, focus on its content (recorded 2026-10-24).
 BACK	Breaking Bad

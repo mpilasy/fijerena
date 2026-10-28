@@ -13,6 +13,8 @@
 # the focus tests, not yet run.
 # Admin settings (2026-10-28): the rail is Your Profile, Admin, About; Admin is one page with the
 # rows of the old Expert groups. Edited by hand from the focus tests, not yet run.
+# Logs (2026-10-28): Diagnostics, renamed Logs, moved to About under Device Info; Advanced removed,
+# Shrink Database is the last row of Admin's page, under no header. Edited by hand, not yet run.
 @start Admin
 # The picker: the profiles in creation order, and no Add Profile (profiles are added in Settings).
 RIGHT	Guest
@@ -49,15 +51,16 @@ DOWN	Admin
 DOWN	About
 # Down at the end of the rail stays put.
 DOWN	About
-# About: the About card, Device Info, Terms of Use, Open-Source Licences.
+# About: the About card, Device Info, Logs, Terms of Use, Open-Source Licences.
 RIGHT	Fijerena v
 DOWN	Device Info
+DOWN	Logs
 DOWN	Terms of Use
 DOWN	Open-Source Licences
 LEFT	About
 UP	Admin
 # Admin: one page, a header over each part: Profiles, Parental Controls, This Device, Sources &
-# Guide, Sync & Backup, Advanced.
+# Guide, Sync & Backup; then Shrink Database, under no header.
 # Profiles: a child profile and no admin PIN, so "Set a PIN for Settings" first (never pressed),
 # then Admin, Guest, Kid and Add Profile.
 RIGHT	Set a PIN for Settings
@@ -125,8 +128,7 @@ DOWN	Film and Series Details (TMDB)
 DOWN	Live Sync
 DOWN	Back Up to a File
 DOWN	Restore from a File
-# Advanced: Diagnostics, Shrink Database (never pressed); the end of the page.
-DOWN	Diagnostics
+# Shrink Database (never pressed), the end of the page.
 DOWN	Shrink Database
 DOWN	Shrink Database
 # Back in the pane returns to the rail row, not out of Settings.

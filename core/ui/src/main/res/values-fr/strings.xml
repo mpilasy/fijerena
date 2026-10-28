@@ -1076,7 +1076,6 @@
     <string name="settings_section_provider_playback">Source et lecture</string>
     <string name="settings_section_appearance">Apparence</string>
     <string name="settings_section_data_sync">Données et synchronisation</string>
-    <string name="settings_section_advanced">Avancé</string>
     <string name="details_watch_trailer_description">Regarder la bande-annonce</string>
     <string name="details_community_rating">Note du public</string>
     <string name="details_tab_cast">Distribution</string>

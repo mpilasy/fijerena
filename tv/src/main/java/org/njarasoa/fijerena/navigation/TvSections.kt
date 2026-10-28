@@ -56,15 +56,15 @@ internal enum class TvSection(
  * The rail's items, top to bottom: the avatar, Home, the sections [sections] names (the profile's
  * Xtream sources' content types, merged; none while unknown or when it has no Xtream source),
  * Search, Settings. The Browse entries go between the sections and Search (`TvNavRail`). A [child]
- * profile has only the avatar, Home, Search and Settings: it watches what is on its Home or what it
- * finds, never browses (docs/plans/20261019_kids-home-plan.md, K-D1, K-D7).
+ * profile has only the avatar, Home and Search: it watches what is on its Home or what it finds,
+ * never browses (docs/plans/20261019_kids-home-plan.md, K-D1, K-D7), and has no Settings.
  */
 internal fun railItems(
     sections: Set<String>?,
     child: Boolean = false,
 ): List<RailItem> =
     if (child) {
-        listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH, RailItem.SETTINGS)
+        listOf(RailItem.PROFILE, RailItem.HOME, RailItem.SEARCH)
     } else {
         listOf(RailItem.PROFILE, RailItem.HOME) +
             TvSection.entries.filter { sections != null && it.contentType in sections }.map { it.item } +
