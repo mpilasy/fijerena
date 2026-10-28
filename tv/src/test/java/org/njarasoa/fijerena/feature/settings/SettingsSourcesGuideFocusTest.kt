@@ -53,7 +53,7 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
     fun `Guide Sources opens the one page, with no source chooser`() {
         seed(SettingsFixture.ADMIN)
         var opened = 0
-        show { SettingsScreen(onBack = {}, onProviderChanged = {}, onGuideSources = { opened++ }) }
+        showSettings { SettingsScreen(onBack = {}, onProviderChanged = {}, onGuideSources = { opened++ }) }
         walk.run(
             down("Parental Controls"),
             down("Playback"),

@@ -26,7 +26,7 @@ class SettingsExpertGroupPinFocusTest : SettingsFocusTest() {
     private fun openLocked() {
         seed(SettingsFixture.ADMIN, pins = setOf(SettingsFixture.ADMIN))
         PinSession.onActiveProfile("")
-        show { SettingsScreen(onBack = {}, onProviderChanged = {}) }
+        showSettings()
     }
 
     @Test

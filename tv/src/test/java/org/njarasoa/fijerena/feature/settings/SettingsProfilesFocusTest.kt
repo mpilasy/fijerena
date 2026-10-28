@@ -1,13 +1,9 @@
 package org.njarasoa.fijerena.feature.settings
 
-import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.test.core.app.ApplicationProvider
-import org.junit.After
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.njarasoa.fijerena.testing.FocusWalk
 import org.njarasoa.fijerena.testing.SettingsFixture
+import org.njarasoa.fijerena.testing.SettingsFocusTest
 import org.njarasoa.fijerena.testing.back
 import org.njarasoa.fijerena.testing.center
 import org.njarasoa.fijerena.testing.down
@@ -22,22 +18,7 @@ import org.robolectric.RobolectricTestRunner
  * Expert and for a child.
  */
 @RunWith(RobolectricTestRunner::class)
-class SettingsProfilesFocusTest {
-    // The v2 rule: a standard (queued) dispatcher, as on a device: see SettingsFocusTest.
-    @get:Rule
-    val rule = createComposeRule()
-
-    private val walk = FocusWalk(rule)
-
-    @After
-    fun tearDown() = SettingsFixture.reset()
-
-    private fun open(active: String) {
-        SettingsFixture.seed(ApplicationProvider.getApplicationContext(), active)
-        rule.setContent { SettingsScreen(onBack = {}, onProviderChanged = {}) }
-        rule.waitForIdle()
-    }
-
+class SettingsProfilesFocusTest : SettingsFocusTest() {
     @Test
     fun `an Expert walks the profiles and their pages`() {
         open(SettingsFixture.ADMIN)
