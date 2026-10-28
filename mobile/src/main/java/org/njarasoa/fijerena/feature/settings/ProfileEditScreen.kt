@@ -23,11 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.network.UiThemes
 import org.njarasoa.fijerena.core.network.profile.SwitchLock
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -81,7 +78,8 @@ import java.text.Collator
  * last. Every change applies at once; the name applies when the page is left. Content filters
  * are saved by their own editor's Save. See the sources guide profiles plan → P9.
  *
- * [startAt] (Settings' Display and Playback rows) scrolls the page to that row when it opens.
+ * Your Profile shows only the personal rows; Admin → Profiles ([adminRows]) adds the Admin rows
+ * (the admin settings plan, AS-D1).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +89,8 @@ fun MobileProfileEditScreen(
     viewModel: ProfilesViewModel,
     onBack: () -> Unit,
     onProfileSwitched: () -> Unit,
-    startAt: ProfilePageRow? = null,
+    /** Admin → Profiles: the Admin rows too (Child, Expert mode, sources, content filters, Delete). */
+    adminRows: Boolean = false,
     /** A child's page, admin view: "Parental controls ›" (the page is saved first). */
     onParentalControls: () -> Unit = {},
 ) {
@@ -109,10 +108,9 @@ fun MobileProfileEditScreen(
             TopAppBar(
                 windowInsets = mobileClockTopBarInsets(),
                 title = {
-                    // Without Expert mode a profile only edits itself: "Your profile", as on TV.
-                    val admin = remember { viewModel.viewerIsAdmin }
+                    // Your Profile: the profile in use edits its own page, as on TV.
                     CinemaText(
-                        stringResource(if (admin) R.string.profile_dialog_edit_title else R.string.profile_own_page_title),
+                        stringResource(if (adminRows) R.string.profile_dialog_edit_title else R.string.profile_own_page_title),
                         role = TextRole.Title,
                     )
                 },
@@ -141,7 +139,7 @@ fun MobileProfileEditScreen(
                 viewModel.loadCategoryFilters(source.id, profileId) { editingFilters = source to it }
             }
             var confirmDelete by remember { mutableStateOf(false) }
-            // Sources, Content filters, Expert mode and the expert-only themes are admin-only.
+            // The expert-only themes are the admin's; the Admin rows show only with [adminRows].
             val adminView = remember { viewModel.viewerIsAdmin }
             // A child's own page has no Name and no PIN.
             val showsNameAndPin = stored.showsNameAndPin(adminView)
@@ -295,7 +293,7 @@ fun MobileProfileEditScreen(
             LeaveChildPinDialog(viewModel, onProfileSwitched)
             var editingSources by rememberSaveable { mutableStateOf(false) }
             // The profile in use and the last one left can't be deleted (ProfileRepository refuses both).
-            val canDelete = !profile.isActive && profiles.size > 1
+            val canDelete = adminRows && !profile.isActive && profiles.size > 1
 
             // Every change applies at once, as in the rest of Settings; the name when the page is left
             // (a blank one is dropped, the old name kept).
@@ -314,26 +312,13 @@ fun MobileProfileEditScreen(
             BackHandler(onBack = leave)
             leavePage.action = leave
             val inset = Modifier.padding(horizontal = Spacing.md)
-            // The row the page opens at: once, when its place is known.
-            val scrollState = rememberScrollState()
-            var startAtY by remember { mutableStateOf<Int?>(null) }
-            var scrolledToStart by rememberSaveable { mutableStateOf(startAt == null) }
-            LaunchedEffect(startAtY) {
-                startAtY?.takeIf { !scrolledToStart }?.let {
-                    scrollState.scrollTo(it)
-                    scrolledToStart = true
-                }
-            }
-            val startMarker = { row: ProfilePageRow ->
-                if (row == startAt) Modifier.onPlaced { startAtY = it.positionInParent().y.toInt() } else Modifier
-            }
 
             Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        .verticalScroll(scrollState)
+                        .verticalScroll(rememberScrollState())
                         .padding(vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
@@ -364,7 +349,7 @@ fun MobileProfileEditScreen(
                     )
                 }
 
-                SettingsGroupHeader(stringResource(R.string.profile_section_look), modifier = startMarker(ProfilePageRow.LOOK))
+                SettingsGroupHeader(stringResource(R.string.profile_section_look))
                 SettingsListRow(
                     title = stringResource(R.string.ui_theme_title),
                     summary = stringResource(uiThemeNameRes(uiThemeId)) + " · " + stringResource(R.string.ui_theme_desc),
@@ -393,10 +378,7 @@ fun MobileProfileEditScreen(
                     modifier = inset,
                 )
 
-                SettingsGroupHeader(
-                    stringResource(R.string.settings_playback_section_title),
-                    modifier = startMarker(ProfilePageRow.AUTOPLAY),
-                )
+                SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
                 ProfileSwitchRow(
                     title = stringResource(R.string.settings_autoplay_next_episode_title),
                     checked = autoplayNextEpisode,
@@ -409,7 +391,7 @@ fun MobileProfileEditScreen(
 
                 // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
                 // content filters (the parental control).
-                if (adminView) {
+                if (adminRows) {
                     SettingsGroupHeader(stringResource(R.string.profile_section_admin))
                     // There is always an Expert: the only one can't turn it off, nor be a child's.
                     val listed by viewModel.profiles.collectAsStateWithLifecycle()

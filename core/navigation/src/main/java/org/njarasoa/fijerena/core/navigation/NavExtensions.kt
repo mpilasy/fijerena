@@ -75,6 +75,15 @@ fun NavBackStackEntry?.isOwnPageOfNonExpert(
         toRoute<Screen.ProfileEdit>().shownProfileId(activeId, expert) == activeId
 
 /**
+ * Your Profile: the page of the profile in use with its personal rows only (a route without
+ * [Screen.ProfileEdit.admin]). It asks no PIN, an Expert's too (the admin settings plan, Design 2).
+ */
+fun NavBackStackEntry?.isYourProfilePage(): Boolean =
+    this != null &&
+        destination.hasRoute<Screen.ProfileEdit>() &&
+        !toRoute<Screen.ProfileEdit>().admin
+
+/**
  * The household's shared setup — sources (adding or editing one, Jellyfin's sign-in too), guide
  * sources, live sync, Parental controls: an Expert's only, whatever opened it (the profile rules
  * plan, PR-11, PR-12). For any other profile the screen closes at once; an Expert still types its

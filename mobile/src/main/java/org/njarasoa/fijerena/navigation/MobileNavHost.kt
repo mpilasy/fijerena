@@ -43,12 +43,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.navigation.ProfilePageRow
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.navigation.dropSearches
 import org.njarasoa.fijerena.core.navigation.isExpertOnly
 import org.njarasoa.fijerena.core.navigation.isOwnPageOfNonExpert
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
+import org.njarasoa.fijerena.core.navigation.isYourProfilePage
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
 import org.njarasoa.fijerena.core.navigation.opensHomeAfterSave
@@ -880,10 +880,13 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     // runs on in its scope after this page is popped.
                     val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
                     MobileProfileEditScreen(
-                        profileId = route.shownProfileId(appSettings.activeProfileId, expert),
+                        // Your Profile is always the page of the profile in use; Admin → Profiles
+                        // opens the one the route names, with its Admin rows (an Expert's only).
+                        profileId =
+                            if (route.admin) route.shownProfileId(appSettings.activeProfileId, expert) else appSettings.activeProfileId,
                         viewModel = viewModel(settingsEntry, factory = SettingsViewModelFactory(context)),
                         onBack = { navController.navigateUp() },
-                        startAt = ProfilePageRow.of(route.at),
+                        adminRows = route.admin && expert,
                         onParentalControls = { navController.navigateOnce(Screen.ParentalControls) },
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous
@@ -917,8 +920,8 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         onEditProfile = { id ->
                             navController.navigateOnce(Screen.ProfileEdit(profileId = id))
                         },
-                        onOpenProfileAt = { id, at ->
-                            navController.navigateOnce(Screen.ProfileEdit(profileId = id, at = at.name))
+                        onAdminProfile = { id ->
+                            navController.navigateOnce(Screen.ProfileEdit(profileId = id, admin = true))
                         },
                         onParentalControls = { navController.navigateOnce(Screen.ParentalControls) },
                         onProviderChanged = {
@@ -1242,6 +1245,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
             !showProfileMenu &&
             gateDestination.isPinGuarded() &&
             !gateEntry.isOwnPageOfNonExpert(profile.id, expert) &&
+            !gateEntry.isYourProfilePage() &&
             profilesViewModel.needsPin(profile.id)
         ) {
             // Nothing of Settings shows behind the prompt.

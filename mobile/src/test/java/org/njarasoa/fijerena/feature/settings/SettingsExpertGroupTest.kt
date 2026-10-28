@@ -5,9 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The phone's Expert groups (the settings guarded by page plan, SG-D1): rows at the top of
- * Settings for an Expert, in TV's rail order, each opening its page after the PIN; none for a
- * profile without Expert mode (a grown-up or a child).
+ * The phone's Expert groups: the sections of the Admin page for an Expert, in TV's rail order (the
+ * admin settings plan); none for a profile without Expert mode (a grown-up or a child).
  */
 class SettingsExpertGroupTest {
     @Test
