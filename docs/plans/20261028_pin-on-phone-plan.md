@@ -116,8 +116,8 @@ Then on the TV:
 |---|---|---|
 | 1 | Sync: `pin_request` and `pin_answer` kinds, payloads, apply, an in-memory store, tests | Done (05be3dfbe) |
 | 2 | TV: Use My Phone button, waiting state, answer or timeout, request closed at the end; focus tests | Done (31d626dd4) |
-| 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | In progress |
-| 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Not started |
+| 3 | Phone: prompt over any screen, local check, answer, `FLAG_SECURE` on PIN dialogs; tests | Done (16959899f) |
+| 4 | Both emulators linked to the local sync server: walk every case; docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | In progress |
 
 ## Decisions
 
