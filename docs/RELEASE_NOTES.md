@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261028025923
 
 - **Playback after the first video on some TVs:** on a Chromecast with Google TV, only the first video played. Every later one showed "Playback error occurred" until the app was force-stopped. Android kept the player service alive after the player closed, and the service had nothing to give the new player. The service now sets the player up again when the app starts it. TV.
 
