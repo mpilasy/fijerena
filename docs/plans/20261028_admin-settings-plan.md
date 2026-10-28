@@ -79,7 +79,7 @@ so one word has one meaning.
 
 | Phase | Status | Commit |
 |---|---|---|
-| 1. TV | Not started | |
-| 2. Phone | Not started | |
-| 3. Rename | Not started | |
+| 1. TV | In progress | |
+| 2. Phone | In progress | |
+| 3. Rename | In progress | |
 | 4. Docs and walks | Not started | |
