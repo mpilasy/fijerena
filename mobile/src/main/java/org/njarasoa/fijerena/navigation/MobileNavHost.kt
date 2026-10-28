@@ -48,7 +48,7 @@ import org.njarasoa.fijerena.core.navigation.dropSearches
 import org.njarasoa.fijerena.core.navigation.isExpertOnly
 import org.njarasoa.fijerena.core.navigation.isOwnPageOfNonExpert
 import org.njarasoa.fijerena.core.navigation.isPinGuarded
-import org.njarasoa.fijerena.core.navigation.isYourProfilePage
+import org.njarasoa.fijerena.core.navigation.isSettingsArea
 import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.navigation.navigateToSearch
 import org.njarasoa.fijerena.core.navigation.opensHomeAfterSave
@@ -880,7 +880,7 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                     // runs on in its scope after this page is popped.
                     val settingsEntry = remember(backStackEntry) { navController.getBackStackEntry<Screen.Settings>() }
                     MobileProfileEditScreen(
-                        // Your Profile is always the page of the profile in use; Admin → Profiles
+                        // A route without admin is always the page of the profile in use; Admin → Profiles
                         // opens the one the route names, with its Admin rows (an Expert's only).
                         profileId =
                             if (route.admin) route.shownProfileId(appSettings.activeProfileId, expert) else appSettings.activeProfileId,
@@ -916,9 +916,6 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                         },
                         onGuideSources = {
                             navController.navigateOnce(Screen.EpgManagement())
-                        },
-                        onEditProfile = { id ->
-                            navController.navigateOnce(Screen.ProfileEdit(profileId = id))
                         },
                         onAdminProfile = { id ->
                             navController.navigateOnce(Screen.ProfileEdit(profileId = id, admin = true))
@@ -1239,13 +1236,18 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
     // the Expert's only, whatever opened it: closed at once.
     val refused = !expert && gateEntry.isExpertOnly()
     LaunchedEffect(gateEntry, refused) { if (refused) navController.popBackStack() }
+    // A child profile has no Settings: Settings, or a screen it opens, reached anyway (a restored
+    // back stack, a switch to a child while it is open) gives way to Home. Safe mode keeps its Logs.
+    val childRefused =
+        !SafeMode.isActive && activeProfile?.let { appSettings.isChildProfile(it.id) } == true && gateEntry.isSettingsArea()
+    LaunchedEffect(gateEntry, childRefused) { if (childRefused) restartOn(MobileTab.HOME) }
     activeProfile?.let { profile ->
         LaunchedEffect(profile.id) { PinSession.onActiveProfile(profile.id) }
         if (!refused &&
+            !childRefused &&
             !showProfileMenu &&
             gateDestination.isPinGuarded() &&
             !gateEntry.isOwnPageOfNonExpert(profile.id, expert) &&
-            !gateEntry.isYourProfilePage() &&
             profilesViewModel.needsPin(profile.id)
         ) {
             // Nothing of Settings shows behind the prompt.

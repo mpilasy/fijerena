@@ -2,8 +2,6 @@ package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,7 +10,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Settings → Profiles (FEATURES → Profiles): with Expert mode every profile and Add profile; without
- * it, only the profile in use, whose row opens its own page, and Add profile for a grown-up only.
+ * it, no profile row (Settings shows the profile in use's own rows in place), and Add profile for a
+ * grown-up only.
  */
 @RunWith(RobolectricTestRunner::class)
 class ProfilesSettingsRowsTest {
@@ -28,7 +27,6 @@ class ProfilesSettingsRowsTest {
     private fun show(
         expertMode: Boolean,
         canAddProfile: Boolean = expertMode,
-        onEdit: (String) -> Unit = {},
     ) {
         composeTestRule.setContent {
             ProfilesSettingsRows(
@@ -36,7 +34,7 @@ class ProfilesSettingsRowsTest {
                 message = null,
                 newProfileColorIndex = { 2 },
                 onAdd = { _, _, _ -> },
-                onEdit = onEdit,
+                onEdit = {},
                 onDismissMessage = {},
                 expertMode = expertMode,
                 canAddProfile = canAddProfile,
@@ -54,14 +52,11 @@ class ProfilesSettingsRowsTest {
     }
 
     @Test
-    fun `without Expert mode only the profile in use shows, and it opens its own page`() {
-        var edited: String? = null
-        show(expertMode = false, onEdit = { edited = it })
+    fun `without Expert mode no profile row shows`() {
+        show(expertMode = false)
 
         composeTestRule.onNodeWithText("Kid").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Main").performClick()
-
-        assertEquals("main", edited)
+        composeTestRule.onNodeWithText("Main").assertDoesNotExist()
     }
 
     @Test

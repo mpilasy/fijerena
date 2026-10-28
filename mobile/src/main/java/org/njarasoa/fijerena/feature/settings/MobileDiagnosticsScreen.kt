@@ -53,7 +53,7 @@ import org.njarasoa.fijerena.ui.components.mobileClockTopBarInsets
 import org.njarasoa.fijerena.ui.components.text.CinemaCodeText
 
 /**
- * Settings → Diagnostics on mobile (developer mode): recorded crashes and process exit reasons,
+ * Settings → About → Logs on mobile (everyone with Settings): recorded crashes and process exit reasons,
  * shareable as plain text. See the rock solid stability resilience plan → F-30.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)

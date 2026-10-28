@@ -41,7 +41,7 @@ sealed interface Screen {
      * the sources guide profiles plan → P9.
      *
      * @param admin Admin → Profiles: the page with its Admin rows too (the admin settings plan,
-     *   AS-D1); false for Your Profile, the personal rows of the profile in use.
+     *   AS-D1). The phone's Settings shows the personal rows of the profile in use itself.
      */
     @Serializable
     data class ProfileEdit(
@@ -221,7 +221,7 @@ sealed interface Screen {
     @Serializable
     data object SyncSettings : Screen
 
-    /** Settings → Diagnostics (developer mode only): recorded crashes and process exit reasons. */
+    /** Settings → About → Logs (everyone with Settings; also Safe mode): recorded crashes and process exit reasons. */
     @Serializable
     data object Diagnostics : Screen
 

@@ -58,15 +58,4 @@ class OwnPageGateTest {
         assertFalse(nav.currentBackStackEntry.isOwnPageOfNonExpert("kid", expert = true))
         assertFalse(null.isOwnPageOfNonExpert("kid", expert = false))
     }
-
-    @Test
-    fun `Your Profile opens freely, Admin's page of a profile does not`() {
-        val nav = navController()
-        nav.navigate(Screen.ProfileEdit("atr"))
-        assertTrue(nav.currentBackStackEntry.isYourProfilePage())
-
-        nav.navigate(Screen.ProfileEdit("kid", admin = true))
-        assertFalse(nav.currentBackStackEntry.isYourProfilePage())
-        assertFalse(null.isYourProfilePage())
-    }
 }

@@ -50,8 +50,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Settings → Profiles: the profile rows (a tap opens the profile's page, [onEdit]) and "Add
- * profile". Without Expert mode ([expertMode] false) a profile can only edit itself: one row, the
- * profile in use, opens its own page; Add profile follows it for a grown-up ([canAddProfile]),
+ * profile". Without Expert mode ([expertMode] false) no profile row shows (Settings shows the
+ * personal rows of the profile in use in place); Add profile shows for a grown-up ([canAddProfile]),
  * not for a kid. See the live sync plan → User profiles.
  */
 @Composable
@@ -100,24 +100,26 @@ fun ProfilesSettingsRows(
         PinDialog(state = prompt, onCancel = { choosingPin = false })
     }
 
-    profiles.filter { expertMode || it.isActive }.forEach { profile ->
-        SettingsListRow(
-            title = profile.name,
-            titleRole = TextRole.Heading,
-            summary = if (profile.isActive) stringResource(R.string.settings_profiles_active_marker) else null,
-            leading = {
-                ProfileAvatar(
-                    name = profile.name,
-                    colorIndex = profile.colorIndex,
-                    size = MobileDimensions.iconLarge,
-                    fontSize = textStyleOf(TextRole.Label).fontSize,
-                )
-            },
-            onClick = {
-                onDismissMessage()
-                onEdit(profile.id)
-            },
-        )
+    if (expertMode) {
+        profiles.forEach { profile ->
+            SettingsListRow(
+                title = profile.name,
+                titleRole = TextRole.Heading,
+                summary = if (profile.isActive) stringResource(R.string.settings_profiles_active_marker) else null,
+                leading = {
+                    ProfileAvatar(
+                        name = profile.name,
+                        colorIndex = profile.colorIndex,
+                        size = MobileDimensions.iconLarge,
+                        fontSize = textStyleOf(TextRole.Label).fontSize,
+                    )
+                },
+                onClick = {
+                    onDismissMessage()
+                    onEdit(profile.id)
+                },
+            )
+        }
     }
     if (message != null) {
         CinemaText(message, tone = TextTone.Danger, modifier = Modifier.padding(horizontal = Spacing.md))

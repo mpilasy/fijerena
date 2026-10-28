@@ -725,8 +725,8 @@
     <string name="safe_mode_clear_confirm">Fafao</string>
     <string name="safe_mode_clearing">Mamafa ny cache…</string>
     <string name="safe_mode_cleared">Voafafa ny cache. Safidio Tohizo mba hanombohana ara-dalàna.</string>
-    <string name="safe_mode_clear_failed">Misy cache tsy voafafa. Ao amin\'ny Fitiliana ny antsipiriany.</string>
-    <string name="safe_mode_diagnostics">Asehoy ny Fitiliana</string>
+    <string name="safe_mode_clear_failed">Misy cache tsy voafafa. Ao amin\'ny tatitra ny antsipiriany.</string>
+    <string name="safe_mode_diagnostics">Asehoy ny tatitra</string>
     <string name="newer_data_title">Angona avy amin\'ny dikan-teny vaovao kokoa</string>
     <string name="newer_data_message">Dikan-teny vaovao kokoa an\'i Fijerena no nitahiry ny loharanonao amin\'ity fitaovana ity (dikan\'ny angona %1$d; ity dikan-teny ity dia mamaky hatramin\'ny %2$d). Apetraho ny dikan-teny vaovao kokoa mba hampiasana azy ireo hatrany.</string>
     <string name="newer_data_hint">Na averina amin\'ny voalohany ny loharano mba hampiasana ity dikan-teny ity izao: atokana ho tahiry ny loharano sy ny fikirakirana azy ary manomboka tsy misy ianao. Mijanona eo amin\'ny fitaovana ny ankafizina sy ny tantaran\'ny fijerena.</string>
@@ -925,7 +925,7 @@
     <string name="player_stats_gc">GC</string>
     <string name="player_stats_gc_format">%1$d fandehanana, %2$d ms</string>
     <string name="player_stats_ui_skipped">Sarin\'ny UI tsy naseho</string>
-    <string name="settings_diagnostics_title">Fitiliana</string>
+    <string name="settings_diagnostics_title">Tatitra</string>
     <string name="settings_diagnostics_desc">Ireo fianjerana sy fahadisoana voarakitra tamin\'ity fitaovana ity, sy ny antony nikatonan\'ny rindrankajy farany</string>
     <string name="settings_diagnostics_empty">Tsy misy voarakitra</string>
     <string name="settings_diagnostics_clear">Fafao ny tatitra</string>

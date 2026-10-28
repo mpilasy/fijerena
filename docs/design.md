@@ -356,9 +356,9 @@ Both apps share these. Several have a `…ViewModelFactory` for manual injection
 | Search the guide | `feature/epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
 | Profile picker | `feature/profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live sync | `feature/settings/SyncSettingsScreen.kt` | Sync group setup, pairing, devices |
-| Diagnostics | `feature/settings/DiagnosticsScreen.kt` | Crash log and exit history |
+| Logs | `feature/settings/DiagnosticsScreen.kt` | Crash log and exit history |
 | Device info | `feature/settings/DeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts |
-| Safe mode | `feature/safemode/SafeModeScreen.kt` | Continue, Clear caches, Show diagnostics |
+| Safe mode | `feature/safemode/SafeModeScreen.kt` | Continue, Clear caches, Show logs |
 | Newer data | `feature/safemode/NewerDataScreen.kt` | Close, Reset sources |
 
 Live TV and category parts (`feature/category/components/`): `TwoColumnLayout`, `CategoryList`, `StreamList`, `LiveTvSplitLayout` (preview and full screen), `LiveTvChannelPanel`, `ChannelContext`, `FavoriteMenuDialog` (row actions), `CategoryStates`, `CategoryGridUtils`.
@@ -385,9 +385,9 @@ Player parts (`ui/player/`): `PlayerScreenState`, `PlayerKeyHandler`, `PlayerEff
 | Profile menu | `feature/profile/MobileProfileMenu.kt`, `ProfileSheet.kt` | The profiles, Settings, Browse entries |
 | Profile page | `feature/settings/ProfileEditScreen.kt` | A profile's page |
 | Live sync | `feature/settings/MobileSyncSettingsScreen.kt` (+ `components/QrScanner.kt`) | Sync group setup, pairing, devices, Remote Stop |
-| Diagnostics | `feature/settings/MobileDiagnosticsScreen.kt` | Crash log and exit history, Share |
+| Logs | `feature/settings/MobileDiagnosticsScreen.kt` | Crash log and exit history, Share |
 | Device info | `feature/settings/MobileDeviceInfoScreen.kt` | App, device, memory, storage, display, media, network and power facts, Share |
-| Safe mode | `feature/safemode/MobileSafeModeScreen.kt` | Continue, Clear caches, Show diagnostics |
+| Safe mode | `feature/safemode/MobileSafeModeScreen.kt` | Continue, Clear caches, Show logs |
 | Newer data | `feature/safemode/MobileNewerDataScreen.kt` | Close, Reset sources |
 
 Player parts (`feature/player/components/`): `MobileControlsOverlay`, `MobileChannelListSheet`, `MobileChannelToast`, `MobileStatsOverlay`, `MobileUpNextOverlay`, `MobilePlayerDialogs`, `MobilePlayerStates`.

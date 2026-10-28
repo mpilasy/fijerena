@@ -15,11 +15,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -50,6 +52,8 @@ import org.njarasoa.fijerena.core.ui.theme.palettesFor
 import org.njarasoa.fijerena.core.ui.theme.styleById
 import org.njarasoa.fijerena.core.ui.theme.uiThemeNameRes
 import org.njarasoa.fijerena.core.ui.viewmodels.FilterSource
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSettings
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.contentselection.components.MobileSourceChooserDialog
 import org.njarasoa.fijerena.feature.provider.components.MobileCategoryFilterDialog
@@ -78,8 +82,8 @@ import java.text.Collator
  * last. Every change applies at once; the name applies when the page is left. Content filters
  * are saved by their own editor's Save. See the sources guide profiles plan → P9.
  *
- * Your Profile shows only the personal rows; Admin → Profiles ([adminRows]) adds the Admin rows
- * (the admin settings plan, AS-D1).
+ * The personal rows are [ProfileOwnRows], which Settings also shows for the profile in use; Admin →
+ * Profiles ([adminRows]) adds the Admin rows (the admin settings plan, AS-D1).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,152 +136,12 @@ fun MobileProfileEditScreen(
             var devMode by rememberSaveable(profileId) { mutableStateOf(stored.devMode) }
             var autoplayNextEpisode by rememberSaveable(profileId) { mutableStateOf(stored.autoplayNextEpisode) }
             var child by rememberSaveable(profileId) { mutableStateOf(stored.child) }
-            var showNameError by remember { mutableStateOf(false) }
             var editingFilters by remember { mutableStateOf<Pair<FilterSource, CategoryFilters>?>(null) }
             var choosingFiltersSource by remember { mutableStateOf(false) }
             val editFilters = { source: FilterSource ->
                 viewModel.loadCategoryFilters(source.id, profileId) { editingFilters = source to it }
             }
             var confirmDelete by remember { mutableStateOf(false) }
-            // The expert-only themes are the admin's; the Admin rows show only with [adminRows].
-            val adminView = remember { viewModel.viewerIsAdmin }
-            // A child's own page has no Name and no PIN.
-            val showsNameAndPin = stored.showsNameAndPin(adminView)
-            // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
-            var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
-            var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
-            var posterBackdrop by remember(profileId) { mutableStateOf(viewModel.posterBackdropOf(profileId)) }
-            // A packaged UI theme sets the colour theme and the Look and Feel (docs/plans/20261021_ui-themes-plan.md).
-            var uiThemeId by remember(profileId) { mutableStateOf(viewModel.uiThemeOf(profileId)) }
-            val lookLocked = uiThemeId != UiThemes.CUSTOM
-            var choosingUiTheme by rememberSaveable { mutableStateOf(false) }
-            if (choosingUiTheme) {
-                // Each UI theme's colour theme and Look; Custom is the profile's own (as last saved).
-                val looks =
-                    mapOf(UiThemes.CUSTOM to (themeId to uiStyleId)) +
-                        packagedUiThemesFor(adminView, uiThemeId).associate { it.id to (it.themeId to it.uiStyleId) }
-                SettingsPickerDialog(
-                    title = stringResource(R.string.ui_theme_title),
-                    options = looks.keys.map { stringResource(uiThemeNameRes(it)) to it },
-                    selected = uiThemeId,
-                    // Each row in its theme's font and accent, with its colours beside it.
-                    preview = { id -> looks[id]?.let { PaletteSwatches(paletteById(it.first)) } },
-                    inLook = { id, row -> looks[id]?.let { ProvideLookAndAccent(it.first, it.second, row) } ?: row() },
-                    onSelect = { id ->
-                        uiThemeId = id
-                        viewModel.setUiTheme(profileId, id)
-                        themeId = viewModel.themeOf(profileId)
-                        uiStyleId = viewModel.uiStyleOf(profileId)
-                        choosingUiTheme = false
-                    },
-                    onDismiss = { choosingUiTheme = false },
-                )
-            }
-            var choosingTheme by rememberSaveable { mutableStateOf(false) }
-            var choosingLook by rememberSaveable { mutableStateOf(false) }
-            if (choosingTheme) {
-                SettingsPickerDialog(
-                    title = stringResource(R.string.settings_theme_section_title),
-                    // Alphabetical in the app's language.
-                    options =
-                        palettesFor(adminView, themeId)
-                            .map {
-                                stringResource(it.nameRes) to it.id
-                            }.sortedWith(compareBy(Collator.getInstance()) { it.first }),
-                    selected = themeId,
-                    preview = { id -> PaletteSwatches(paletteById(id)) },
-                    onSelect = { id ->
-                        themeId = id
-                        viewModel.setTheme(profileId, id)
-                        choosingTheme = false
-                    },
-                    onDismiss = { choosingTheme = false },
-                )
-            }
-            if (choosingLook) {
-                SettingsPickerDialog(
-                    title = stringResource(R.string.settings_ui_style_section_title),
-                    options =
-                        AllUiStyles
-                            .map {
-                                stringResource(
-                                    it.nameRes,
-                                ) to it.id
-                            }.sortedWith(compareBy(Collator.getInstance()) { it.first }),
-                    selected = uiStyleId,
-                    // Each row drawn in its own Look: font, corners, focus.
-                    inLook = { id, row -> ProvideLook(styleById(id), row) },
-                    onSelect = { id ->
-                        uiStyleId = id
-                        viewModel.setUiStyle(profileId, id)
-                        choosingLook = false
-                    },
-                    onDismiss = { choosingLook = false },
-                )
-            }
-            // The PIN row (the profile pin plan): saved as it is set, like the theme.
-            val onlyExpert = remember(profileId, profiles) { viewModel.isLastExpert(profileId) }
-            val pinFlow =
-                rememberProfilePinFlow(
-                    pins = viewModel.pins,
-                    profileId = profileId,
-                    own = profile.isActive,
-                    lastExpert = stored.devMode && onlyExpert,
-                )
-            pinFlow.request?.let { request ->
-                PinDialog(
-                    state = rememberPinPromptState(viewModel.pins, request, onDone = pinFlow::promptDone),
-                    onCancel = pinFlow::cancel,
-                )
-            }
-            if (pinFlow.step == ProfilePinFlow.Step.OPTIONS) {
-                CinemaAlertDialog(
-                    onDismissRequest = pinFlow::cancel,
-                    title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title, tone = TextTone.Inherit) },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                            CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main, modifier = Modifier.fillMaxWidth()) {
-                                CinemaText(stringResource(R.string.profile_pin_change), role = TextRole.Label, tone = TextTone.Inherit)
-                            }
-                            CinemaButton(onClick = pinFlow::remove, kind = ButtonKind.Danger, modifier = Modifier.fillMaxWidth()) {
-                                CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
-                            CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                        }
-                    },
-                )
-            }
-            if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
-                // The last Expert PIN with a child profile: the child lock stops too, on every linked device.
-                val lastAdminPin = remember(profileId, profiles) { viewModel.isLastAdminPin(profileId) }
-                CinemaAlertDialog(
-                    onDismissRequest = pinFlow::cancel,
-                    title = { CinemaText(stringResource(R.string.profile_pin_remove_confirm_title), role = TextRole.Title) },
-                    text = {
-                        CinemaText(
-                            listOfNotNull(
-                                stringResource(R.string.profile_pin_remove_confirm_text),
-                                if (SwitchLock.ON && lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
-                            ).joinToString(" "),
-                            tone = TextTone.Secondary,
-                        )
-                    },
-                    confirmButton = {
-                        CinemaDialogActionButton(onClick = pinFlow::confirmRemove, kind = ButtonKind.Danger) {
-                            CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
-                        }
-                    },
-                    dismissButton = {
-                        CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
-                            CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
-                        }
-                    },
-                )
-            }
             // "Set a PIN ›" under the Child switch: the PIN of the Expert profile in use.
             var choosingAdminPin by remember { mutableStateOf(false) }
             if (choosingAdminPin) {
@@ -322,71 +186,23 @@ fun MobileProfileEditScreen(
                         .padding(vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
-                // The profile: name, colour, PIN (a child's own page: colour only).
-                Column(modifier = inset, verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                    if (showsNameAndPin) {
-                        ProfileNameField(
-                            name = name,
-                            onNameChange = {
-                                name = it
-                                showNameError = it.isBlank()
-                            },
-                            showError = showNameError,
-                        )
-                    }
-                    ProfileColourPicker(colorIndex = colorIndex, onPick = {
+                // The personal rows, as Settings shows them for the profile in use.
+                ProfileOwnRows(
+                    profile = profile,
+                    viewModel = viewModel,
+                    stored = stored,
+                    name = name,
+                    onNameChange = { name = it },
+                    colorIndex = colorIndex,
+                    onColorIndexChange = {
                         colorIndex = it
                         apply(name)
-                    })
-                }
-                if (showsNameAndPin) {
-                    SettingsListRow(
-                        title = stringResource(R.string.profile_pin_title),
-                        summary =
-                            stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off) + " · " +
-                                stringResource(R.string.profile_pin_desc),
-                        onClick = pinFlow::start,
-                    )
-                }
-
-                SettingsGroupHeader(stringResource(R.string.profile_section_look))
-                SettingsListRow(
-                    title = stringResource(R.string.ui_theme_title),
-                    summary = stringResource(uiThemeNameRes(uiThemeId)) + " · " + stringResource(R.string.ui_theme_desc),
-                    onClick = { choosingUiTheme = true },
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_theme_section_title),
-                    summary = AllPalettes.firstOrNull { it.id == themeId }?.let { stringResource(it.nameRes) } ?: themeId,
-                    onClick = { choosingTheme = true },
-                    enabled = !lookLocked,
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_ui_style_section_title),
-                    summary = AllUiStyles.firstOrNull { it.id == uiStyleId }?.let { stringResource(it.nameRes) } ?: uiStyleId,
-                    onClick = { choosingLook = true },
-                    enabled = !lookLocked,
-                )
-                ProfileSwitchRow(
-                    title = stringResource(R.string.profile_poster_backdrop_title),
-                    summary = stringResource(R.string.profile_poster_backdrop_desc),
-                    checked = posterBackdrop,
-                    onCheckedChange = {
-                        posterBackdrop = it
-                        viewModel.setPosterBackdrop(profileId, it)
                     },
-                    modifier = inset,
-                )
-
-                SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
-                ProfileSwitchRow(
-                    title = stringResource(R.string.settings_autoplay_next_episode_title),
-                    checked = autoplayNextEpisode,
-                    onCheckedChange = {
+                    autoplayNextEpisode = autoplayNextEpisode,
+                    onAutoplayNextEpisodeChange = {
                         autoplayNextEpisode = it
                         apply(name)
                     },
-                    modifier = inset,
                 )
 
                 // The admin's (Expert mode, for now): Expert mode for this profile, its sources and its
@@ -573,3 +389,266 @@ fun MobileProfileEditScreen(
 private class LeaveAction(
     var action: () -> Unit,
 )
+
+/**
+ * A profile's personal rows: name, colour, PIN (a child's own: colour only), Look and Playback, with
+ * their pickers and the PIN flow. Its page shows them, and Settings shows them for the profile in
+ * use (the admin settings plan). Each change applies at once; the caller saves the name, colour and
+ * Play next episode it holds.
+ */
+@Composable
+internal fun ProfileOwnRows(
+    profile: ProfileUi,
+    viewModel: ProfilesViewModel,
+    stored: ProfileSettings,
+    name: String,
+    onNameChange: (String) -> Unit,
+    colorIndex: Int,
+    onColorIndexChange: (Int) -> Unit,
+    autoplayNextEpisode: Boolean,
+    onAutoplayNextEpisodeChange: (Boolean) -> Unit,
+) {
+    val profileId = profile.id
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val inset = Modifier.padding(horizontal = Spacing.md)
+    // The expert-only themes are the admin's.
+    val adminView = remember { viewModel.viewerIsAdmin }
+    // A child's own page has no Name and no PIN.
+    val showsNameAndPin = stored.showsNameAndPin(adminView)
+    // The profile's colour theme and Look and Feel: saved as they are picked, like its sources.
+    var themeId by remember(profileId) { mutableStateOf(viewModel.themeOf(profileId)) }
+    var uiStyleId by remember(profileId) { mutableStateOf(viewModel.uiStyleOf(profileId)) }
+    var posterBackdrop by remember(profileId) { mutableStateOf(viewModel.posterBackdropOf(profileId)) }
+    // A packaged UI theme sets the colour theme and the Look and Feel (docs/plans/20261021_ui-themes-plan.md).
+    var uiThemeId by remember(profileId) { mutableStateOf(viewModel.uiThemeOf(profileId)) }
+    val lookLocked = uiThemeId != UiThemes.CUSTOM
+    var choosingUiTheme by rememberSaveable { mutableStateOf(false) }
+    if (choosingUiTheme) {
+        // Each UI theme's colour theme and Look; Custom is the profile's own (as last saved).
+        val looks =
+            mapOf(UiThemes.CUSTOM to (themeId to uiStyleId)) +
+                packagedUiThemesFor(adminView, uiThemeId).associate { it.id to (it.themeId to it.uiStyleId) }
+        SettingsPickerDialog(
+            title = stringResource(R.string.ui_theme_title),
+            options = looks.keys.map { stringResource(uiThemeNameRes(it)) to it },
+            selected = uiThemeId,
+            // Each row in its theme's font and accent, with its colours beside it.
+            preview = { id -> looks[id]?.let { PaletteSwatches(paletteById(it.first)) } },
+            inLook = { id, row -> looks[id]?.let { ProvideLookAndAccent(it.first, it.second, row) } ?: row() },
+            onSelect = { id ->
+                uiThemeId = id
+                viewModel.setUiTheme(profileId, id)
+                themeId = viewModel.themeOf(profileId)
+                uiStyleId = viewModel.uiStyleOf(profileId)
+                choosingUiTheme = false
+            },
+            onDismiss = { choosingUiTheme = false },
+        )
+    }
+    var choosingTheme by rememberSaveable { mutableStateOf(false) }
+    var choosingLook by rememberSaveable { mutableStateOf(false) }
+    if (choosingTheme) {
+        SettingsPickerDialog(
+            title = stringResource(R.string.settings_theme_section_title),
+            // Alphabetical in the app's language.
+            options =
+                palettesFor(adminView, themeId)
+                    .map {
+                        stringResource(it.nameRes) to it.id
+                    }.sortedWith(compareBy(Collator.getInstance()) { it.first }),
+            selected = themeId,
+            preview = { id -> PaletteSwatches(paletteById(id)) },
+            onSelect = { id ->
+                themeId = id
+                viewModel.setTheme(profileId, id)
+                choosingTheme = false
+            },
+            onDismiss = { choosingTheme = false },
+        )
+    }
+    if (choosingLook) {
+        SettingsPickerDialog(
+            title = stringResource(R.string.settings_ui_style_section_title),
+            options =
+                AllUiStyles
+                    .map {
+                        stringResource(
+                            it.nameRes,
+                        ) to it.id
+                    }.sortedWith(compareBy(Collator.getInstance()) { it.first }),
+            selected = uiStyleId,
+            // Each row drawn in its own Look: font, corners, focus.
+            inLook = { id, row -> ProvideLook(styleById(id), row) },
+            onSelect = { id ->
+                uiStyleId = id
+                viewModel.setUiStyle(profileId, id)
+                choosingLook = false
+            },
+            onDismiss = { choosingLook = false },
+        )
+    }
+    // The PIN row (the profile pin plan): saved as it is set, like the theme.
+    val onlyExpert = remember(profileId, profiles) { viewModel.isLastExpert(profileId) }
+    val pinFlow =
+        rememberProfilePinFlow(
+            pins = viewModel.pins,
+            profileId = profileId,
+            own = profile.isActive,
+            lastExpert = stored.devMode && onlyExpert,
+        )
+    pinFlow.request?.let { request ->
+        PinDialog(
+            state = rememberPinPromptState(viewModel.pins, request, onDone = pinFlow::promptDone),
+            onCancel = pinFlow::cancel,
+        )
+    }
+    if (pinFlow.step == ProfilePinFlow.Step.OPTIONS) {
+        CinemaAlertDialog(
+            onDismissRequest = pinFlow::cancel,
+            title = { CinemaText(stringResource(R.string.profile_pin_title), role = TextRole.Title, tone = TextTone.Inherit) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                    CinemaButton(onClick = pinFlow::change, kind = ButtonKind.Main, modifier = Modifier.fillMaxWidth()) {
+                        CinemaText(stringResource(R.string.profile_pin_change), role = TextRole.Label, tone = TextTone.Inherit)
+                    }
+                    CinemaButton(onClick = pinFlow::remove, kind = ButtonKind.Danger, modifier = Modifier.fillMaxWidth()) {
+                        CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
+                    }
+                }
+            },
+            confirmButton = {
+                CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                }
+            },
+        )
+    }
+    if (pinFlow.step == ProfilePinFlow.Step.CONFIRM_REMOVE) {
+        // The last Expert PIN with a child profile: the child lock stops too, on every linked device.
+        val lastAdminPin = remember(profileId, profiles) { viewModel.isLastAdminPin(profileId) }
+        CinemaAlertDialog(
+            onDismissRequest = pinFlow::cancel,
+            title = { CinemaText(stringResource(R.string.profile_pin_remove_confirm_title), role = TextRole.Title) },
+            text = {
+                CinemaText(
+                    listOfNotNull(
+                        stringResource(R.string.profile_pin_remove_confirm_text),
+                        if (SwitchLock.ON && lastAdminPin) stringResource(R.string.profile_pin_remove_last_expert) else null,
+                    ).joinToString(" "),
+                    tone = TextTone.Secondary,
+                )
+            },
+            confirmButton = {
+                CinemaDialogActionButton(onClick = pinFlow::confirmRemove, kind = ButtonKind.Danger) {
+                    CinemaText(stringResource(R.string.profile_pin_remove), role = TextRole.Label, tone = TextTone.Inherit)
+                }
+            },
+            dismissButton = {
+                CinemaDialogActionButton(onClick = pinFlow::cancel, kind = ButtonKind.Other) {
+                    CinemaText(stringResource(R.string.common_cancel), role = TextRole.Label, tone = TextTone.Inherit)
+                }
+            },
+        )
+    }
+    // The profile: name, colour, PIN (a child's own page: colour only).
+    Column(modifier = inset, verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+        if (showsNameAndPin) {
+            ProfileNameField(name = name, onNameChange = onNameChange, showError = name.isBlank())
+        }
+        ProfileColourPicker(colorIndex = colorIndex, onPick = onColorIndexChange)
+    }
+    if (showsNameAndPin) {
+        SettingsListRow(
+            title = stringResource(R.string.profile_pin_title),
+            summary =
+                stringResource(if (pinFlow.hasPin) R.string.profile_pin_on else R.string.profile_pin_off) + " · " +
+                    stringResource(R.string.profile_pin_desc),
+            onClick = pinFlow::start,
+        )
+    }
+
+    SettingsGroupHeader(stringResource(R.string.profile_section_look))
+    SettingsListRow(
+        title = stringResource(R.string.ui_theme_title),
+        summary = stringResource(uiThemeNameRes(uiThemeId)) + " · " + stringResource(R.string.ui_theme_desc),
+        onClick = { choosingUiTheme = true },
+    )
+    SettingsListRow(
+        title = stringResource(R.string.settings_theme_section_title),
+        summary = AllPalettes.firstOrNull { it.id == themeId }?.let { stringResource(it.nameRes) } ?: themeId,
+        onClick = { choosingTheme = true },
+        enabled = !lookLocked,
+    )
+    SettingsListRow(
+        title = stringResource(R.string.settings_ui_style_section_title),
+        summary = AllUiStyles.firstOrNull { it.id == uiStyleId }?.let { stringResource(it.nameRes) } ?: uiStyleId,
+        onClick = { choosingLook = true },
+        enabled = !lookLocked,
+    )
+    ProfileSwitchRow(
+        title = stringResource(R.string.profile_poster_backdrop_title),
+        summary = stringResource(R.string.profile_poster_backdrop_desc),
+        checked = posterBackdrop,
+        onCheckedChange = {
+            posterBackdrop = it
+            viewModel.setPosterBackdrop(profileId, it)
+        },
+        modifier = inset,
+    )
+
+    SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
+    ProfileSwitchRow(
+        title = stringResource(R.string.settings_autoplay_next_episode_title),
+        checked = autoplayNextEpisode,
+        onCheckedChange = onAutoplayNextEpisodeChange,
+        modifier = inset,
+    )
+}
+
+/**
+ * Settings' Your Profile: the personal rows of the profile in use, in place of a page of their own.
+ * Each change applies at once; the name when Settings is left (a blank one is dropped, the old name
+ * kept), as on the page. The caller keys it by [profile]'s id.
+ */
+@Composable
+internal fun YourProfileRows(
+    profile: ProfileUi,
+    viewModel: ProfilesViewModel,
+) {
+    val stored = remember { viewModel.settingsOf(profile.id) }
+    // Follow a change made elsewhere (Admin → Profiles → this profile), so leaving Settings does not
+    // write an old name or colour back.
+    var name by remember(profile.name) { mutableStateOf(profile.name) }
+    var colorIndex by remember(profile.colorIndex) { mutableIntStateOf(profile.colorIndex) }
+    var autoplayNextEpisode by remember { mutableStateOf(stored.autoplayNextEpisode) }
+    val apply = {
+        viewModel.updateProfile(
+            profile.id,
+            name.trim().ifEmpty { profile.name },
+            colorIndex,
+            viewModel.settingsOf(profile.id).copy(autoplayNextEpisode = autoplayNextEpisode),
+        )
+    }
+    // The last composition's: the name as typed, against the name as saved.
+    val saveName by rememberUpdatedState { if (name.isNotBlank() && name.trim() != profile.name) apply() }
+    DisposableEffect(Unit) { onDispose { saveName() } }
+    Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+        ProfileOwnRows(
+            profile = profile,
+            viewModel = viewModel,
+            stored = stored,
+            name = name,
+            onNameChange = { name = it },
+            colorIndex = colorIndex,
+            onColorIndexChange = {
+                colorIndex = it
+                apply()
+            },
+            autoplayNextEpisode = autoplayNextEpisode,
+            onAutoplayNextEpisodeChange = {
+                autoplayNextEpisode = it
+                apply()
+            },
+        )
+    }
+}

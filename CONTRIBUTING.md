@@ -93,7 +93,7 @@ Every interactive `@Composable` must be D-pad navigable, and every TV screen fol
 5. **Entry focus is the useful item:** the current value in a picker, the first row on Sources, the first action (never Cancel) in a menu.
 6. **Back restores the exact control** that opened the screen, at the same scroll position.
 7. **Destructive actions are never the first or default focus**, and always confirm.
-8. **The focused control never disappears under focus:** a control that hides on a scroll or state change must stay while it has focus (`EpisodeSelectionScreen`'s compact header keeps itself while its Play is focused), or hand focus on first. When focus is lost anyway, `MainActivity.dispatchKeyEvent` gives it back on the next D-pad press (in that press's direction) and notes "Focus lost, given back" with the screen in Diagnostics — an entry there is a bug to fix on that screen.
+8. **The focused control never disappears under focus:** a control that hides on a scroll or state change must stay while it has focus (`EpisodeSelectionScreen`'s compact header keeps itself while its Play is focused), or hand focus on first. When focus is lost anyway, `MainActivity.dispatchKeyEvent` gives it back on the next D-pad press (in that press's direction) and notes "Focus lost, given back" with the screen in Logs — an entry there is a bug to fix on that screen.
 
 The primitives (all in `tv/.../ui/components/input/`):
 

@@ -12,7 +12,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The household's shared setup closes at once for a profile without Expert mode (the profile rules plan, PR-11). */
+/**
+ * The household's shared setup closes at once for a profile without Expert mode (the profile rules
+ * plan, PR-11); Settings and what only it opens close for a child profile (the admin settings plan).
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ExpertOnlyGateTest {
@@ -28,8 +31,19 @@ class ExpertOnlyGateTest {
                 composable<Screen.ParentalControls> {}
                 composable<Screen.ProfileEdit> {}
                 composable<Screen.AddProvider> {}
+                composable<Screen.Settings> {}
+                composable<Screen.DeviceInfo> {}
+                composable<Screen.Licenses> {}
+                composable<Screen.Terms> {}
+                composable<Screen.Diagnostics> {}
             }
         return nav
+    }
+
+    private fun settingsArea(screen: Screen): Boolean {
+        val nav = navController()
+        nav.navigate(screen)
+        return nav.currentBackStackEntry.isSettingsArea()
     }
 
     private fun expertOnly(screen: Screen): Boolean {
@@ -55,5 +69,17 @@ class ExpertOnlyGateTest {
         assertFalse(expertOnly(Screen.ProfileEdit("kid")))
         assertFalse(expertOnly(Screen.ContentTypeSelection))
         assertFalse(null.isExpertOnly())
+    }
+
+    @Test
+    fun `Settings and the screens only it opens are closed to a child, Home is not`() {
+        assertTrue(settingsArea(Screen.Settings))
+        assertTrue(settingsArea(Screen.ProfileEdit("kid")))
+        assertTrue(settingsArea(Screen.DeviceInfo))
+        assertTrue(settingsArea(Screen.Licenses))
+        assertTrue(settingsArea(Screen.Terms))
+        assertTrue(settingsArea(Screen.Diagnostics))
+        assertFalse(settingsArea(Screen.ContentTypeSelection))
+        assertFalse(null.isSettingsArea())
     }
 }

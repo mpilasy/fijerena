@@ -621,7 +621,7 @@
     <string name="settings_developer_mode_title">Admin</string>
     <string name="settings_developer_mode_desc">Lets this profile change sources, profiles, parental controls and backups</string>
     <string name="settings_developer_mode_last">The only admin profile stays an admin: make another profile an admin first.</string>
-    <string name="settings_diagnostics_title">Diagnostics</string>
+    <string name="settings_diagnostics_title">Logs</string>
     <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
     <string name="settings_diagnostics_empty">Nothing recorded</string>
     <string name="settings_diagnostics_clear">Clear log</string>
@@ -991,8 +991,8 @@
     <string name="safe_mode_clear_confirm">Clear</string>
     <string name="safe_mode_clearing">Clearing caches…</string>
     <string name="safe_mode_cleared">Caches cleared. Choose Continue to start normally.</string>
-    <string name="safe_mode_clear_failed">Some caches couldn\'t be cleared. Diagnostics has the details.</string>
-    <string name="safe_mode_diagnostics">Show diagnostics</string>
+    <string name="safe_mode_clear_failed">Some caches couldn\'t be cleared. The logs have the details.</string>
+    <string name="safe_mode_diagnostics">Show logs</string>
     <string name="newer_data_title">Data from a Newer Version</string>
     <string name="newer_data_message">Your sources on this device were saved by a newer version of Fijerena (data version %1$d; this version reads up to %2$d). Install the newer version to keep using them.</string>
     <string name="newer_data_hint">Or reset sources to use this version now: the sources and their settings are set aside as a backup and you start with none. Favourites and watch history stay on the device.</string>

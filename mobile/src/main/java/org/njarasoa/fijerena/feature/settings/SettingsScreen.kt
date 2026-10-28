@@ -79,9 +79,9 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Settings as one grouped preference list: Your Profile and About, which everyone opens. With Expert
- * mode an Admin row between them opens one page with every Expert group after the PIN (the admin
- * settings plan).
+ * Settings as one grouped preference list: Your Profile (the personal rows of the profile in use,
+ * in place) and About, which everyone opens. With Expert mode an Admin row between them opens one
+ * page with every Expert group after the PIN (the admin settings plan).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,8 +95,6 @@ fun MobileSettingsScreen(
     onTerms: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onGuideSources: () -> Unit = {},
-    /** Your Profile: the page of the profile in use, with its personal rows only. */
-    onEditProfile: (profileId: String) -> Unit = {},
     /** Admin → Profiles: a profile's page with its Admin rows too. */
     onAdminProfile: (profileId: String) -> Unit = {},
     onParentalControls: () -> Unit = {},
@@ -347,10 +345,12 @@ fun MobileSettingsScreen(
         ) {
             if (!adminOpen) {
                 // === Your Profile === first, since it decides whose favourites and history the rest
-                // is about: the page of the profile in use, with its personal rows only, no PIN.
+                // is about: the personal rows of the profile in use, in place, no PIN; Add Profile
+                // for a grown-up that is not an admin.
                 item {
                     SettingsGroupHeader(stringResource(R.string.profile_own_page_title))
-                    ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, admin = false, onEditProfile) {
+                    inUse?.let { profile -> key(profile.id) { YourProfileRows(profile, profilesViewModel) } }
+                    ProfilesRows(profilesViewModel, profiles, profilesMessage, uiState, admin = false, onEditProfile = {}) {
                         openWhenListed = it
                     }
                 }
@@ -398,6 +398,12 @@ fun MobileSettingsScreen(
                         title = stringResource(R.string.device_info_open),
                         summary = stringResource(R.string.device_info_desc),
                         onClick = onDeviceInfo,
+                    )
+                    // Logs (code name Diagnostics): read-only, for everyone who has Settings.
+                    SettingsListRow(
+                        title = stringResource(R.string.settings_diagnostics_title),
+                        summary = stringResource(R.string.settings_diagnostics_desc),
+                        onClick = onDiagnostics,
                     )
                     SettingsListRow(
                         title = stringResource(R.string.terms_title),
@@ -539,54 +545,45 @@ fun MobileSettingsScreen(
                                 uiState.exportImportMessage?.let { SettingsMessage(it) }
                             }
                         }
-
-                        ExpertGroup.ADVANCED -> {
-                            item {
-                                // Developer mode is switched on each profile's page; Diagnostics is here for
-                                // the profile in use.
-                                SettingsListRow(
-                                    title = stringResource(R.string.settings_diagnostics_title),
-                                    summary = stringResource(R.string.settings_diagnostics_desc),
-                                    onClick = onDiagnostics,
-                                )
-                                // Housekeeping: the catalogue's leftovers.
-                                SettingsListRow(
-                                    title =
-                                        stringResource(
-                                            if (uiState.isPruningDatabase) {
-                                                R.string.settings_shrink_database_button_running
-                                            } else {
-                                                R.string.settings_shrink_database_button
-                                            },
-                                        ),
-                                    summary = stringResource(R.string.settings_shrink_database_desc),
-                                    trailing = {
-                                        if (uiState.isPruningDatabase) {
-                                            CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
-                                        }
-                                    },
-                                    onClick = viewModel::pruneDatabase,
-                                    enabled = !uiState.isPruningDatabase,
-                                )
-                                uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
-                                // Only when the last run found something: "0 records deleted" says nothing.
-                                if (uiState.lastShrinkAtMs > 0L &&
-                                    (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)
-                                ) {
-                                    val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
-                                    val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
-                                    SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
-                                    val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
-                                    SettingsMessage(
-                                        stringResource(
-                                            R.string.settings_shrink_database_dev_stats_delta,
-                                            uiState.lastShrinkRowsRemoved,
-                                            bytesStr,
-                                        ),
-                                    )
-                                }
+                    }
+                }
+                // The last row, under no header of its own.
+                item {
+                    // Housekeeping: the catalogue's leftovers. Shrink Database ends the Admin page.
+                    SettingsListRow(
+                        title =
+                            stringResource(
+                                if (uiState.isPruningDatabase) {
+                                    R.string.settings_shrink_database_button_running
+                                } else {
+                                    R.string.settings_shrink_database_button
+                                },
+                            ),
+                        summary = stringResource(R.string.settings_shrink_database_desc),
+                        trailing = {
+                            if (uiState.isPruningDatabase) {
+                                CinemaSpinner(modifier = Modifier.size(MobileDimensions.progressIndicatorSmall))
                             }
-                        }
+                        },
+                        onClick = viewModel::pruneDatabase,
+                        enabled = !uiState.isPruningDatabase,
+                    )
+                    uiState.databaseMaintenanceMessage?.let { SettingsMessage(it) }
+                    // Only when the last run found something: "0 records deleted" says nothing.
+                    if (uiState.lastShrinkAtMs > 0L &&
+                        (uiState.lastShrinkRowsRemoved > 0 || uiState.lastShrinkBytesReclaimed > 0)
+                    ) {
+                        val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
+                        val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
+                        SettingsMessage(stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration))
+                        val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
+                        SettingsMessage(
+                            stringResource(
+                                R.string.settings_shrink_database_dev_stats_delta,
+                                uiState.lastShrinkRowsRemoved,
+                                bytesStr,
+                            ),
+                        )
                     }
                 }
             }
@@ -607,7 +604,6 @@ enum class ExpertGroup(
     THIS_DEVICE(R.string.settings_group_this_device),
     SOURCE_GUIDE(R.string.settings_group_source_guide),
     SYNC_BACKUP(R.string.settings_group_sync_backup),
-    ADVANCED(R.string.settings_section_advanced),
     ;
 
     companion object {
@@ -617,7 +613,8 @@ enum class ExpertGroup(
 }
 
 /**
- * Profiles' rows: on the Admin page ([admin]) every profile, else the viewer's own page. Add Profile
+ * Profiles' rows: on the Admin page ([admin]) every profile, else none (Settings shows the viewer's
+ * own rows in place). Add Profile
  * for any grown-up, with no PIN (the profile rules plan, PR-D2), an Expert's in Admin; only an Expert
  * edits another profile, so only an Expert's new profile opens its page ([onAdded]).
  */

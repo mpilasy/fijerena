@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Your settings on the phone's Settings:** Settings now shows your own rows (name, colour, PIN, UI Theme, Theme, Look and Feel, Poster in the Background, Play Next Episode Automatically) under Your Profile, with no page to open. Each change applies at once; the name is saved when you leave Settings. Phone.
+- **No Settings for a child on the phone:** a child profile's profile menu has no Settings row, and it can still switch profile. If a child reaches Settings anyway, Home opens. Phone.
+- **Diagnostics is now Logs, in About:** Logs shows the crash log and the failed server calls. It is in About, for every profile that has Settings, with no PIN. In French it is "Journaux", in Malagasy "Tatitra". Phone.
+- **Shrink Database ends the Admin page:** the Advanced part of Admin is gone. Shrink Database is the last row of the Admin page, with no header. Phone.
+
 ## Version: 0.8.20261028171415
 
 - **Phone seek by tapping:** every double-tap seek now counts. Before, a tap while the video buffered after a seek was lost, but the pill still counted it: the pill said 30 s, the video moved 10 s. After a double-tap, tap the same side again to seek 10 s more, as in YouTube. The pill shows the time the seek goes to under the seconds. The seek bar and the time go to the new place at once and no longer jump back to the old place first, also after you drag the bar. Phone.

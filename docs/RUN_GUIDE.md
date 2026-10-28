@@ -318,14 +318,13 @@ adb -s <device-id> logcat -c
 adb -s <device-id> logcat -s EventLogger
 ```
 
-### Crash log and Diagnostics
+### Crash log and Logs
 
 Every build records what went wrong on the device itself, so a crash on a TV is still there after
 the fact without logcat having been attached:
 
-- **Diagnostics** (the profile in use an admin, set on its page under Settings → Admin →
-  Profiles; then Settings → Admin → Advanced → Diagnostics; mobile's can also Share as
-  text) lists, newest
+- **Logs** (Settings → About → Logs, any profile that has Settings, no PIN; mobile's can also
+  Share as text) lists, newest
   first, the app's own crash log — uncaught exceptions, and exceptions absorbed by the app-wide
   coroutine scopes (`AppScopes`), sync records that couldn't be applied, a database set aside on
   downgrade — together with Android's record of why recent processes ended (ANR, native crash,

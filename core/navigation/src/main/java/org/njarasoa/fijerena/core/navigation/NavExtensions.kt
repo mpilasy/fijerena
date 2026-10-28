@@ -75,13 +75,19 @@ fun NavBackStackEntry?.isOwnPageOfNonExpert(
         toRoute<Screen.ProfileEdit>().shownProfileId(activeId, expert) == activeId
 
 /**
- * Your Profile: the page of the profile in use with its personal rows only (a route without
- * [Screen.ProfileEdit.admin]). It asks no PIN, an Expert's too (the admin settings plan, Design 2).
+ * Settings and the screens only Settings opens: a child profile's phone has none of them (the
+ * admin settings plan). The Admin screens are [isExpertOnly]'s. Logs ([Screen.Diagnostics]) is one,
+ * except over Safe mode, which the caller checks.
  */
-fun NavBackStackEntry?.isYourProfilePage(): Boolean =
-    this != null &&
-        destination.hasRoute<Screen.ProfileEdit>() &&
-        !toRoute<Screen.ProfileEdit>().admin
+fun NavBackStackEntry?.isSettingsArea(): Boolean =
+    this?.destination?.let {
+        it.hasRoute<Screen.Settings>() ||
+            it.hasRoute<Screen.ProfileEdit>() ||
+            it.hasRoute<Screen.DeviceInfo>() ||
+            it.hasRoute<Screen.Licenses>() ||
+            it.hasRoute<Screen.Terms>() ||
+            it.hasRoute<Screen.Diagnostics>()
+    } == true
 
 /**
  * The household's shared setup — sources (adding or editing one, Jellyfin's sign-in too), guide
@@ -102,7 +108,7 @@ fun NavBackStackEntry?.isExpertOnly(): Boolean =
 
 /**
  * The screens Settings opens that the PIN of the profile in use guards — sources, guide sources,
- * live sync, a profile's page, Parental controls. Settings itself, About's device info and Diagnostics (read-only) open freely;
+ * live sync, a profile's page, Parental controls. Settings itself, About's device info and Logs (read-only) open freely;
  * Settings asks the PIN before what changes shared setup.
  */
 fun NavDestination?.isPinGuarded(): Boolean =

@@ -3,7 +3,11 @@ package org.njarasoa.fijerena.feature.settings
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -11,6 +15,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -20,6 +25,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,13 +38,15 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.PinSession
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.profile.ProfileSheet
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The phone's Settings by role (the admin settings plan): an Expert sees Your Profile, Admin and
- * About; a grown-up and a child Your Profile and About. Admin asks the PIN once on the way in
- * (Cancel stays on the list), then shows every Expert group under its header. Your Profile has only
- * the personal rows; Admin → Profiles → a profile has the Admin rows too.
+ * The phone's Settings by role (the admin settings plan): a grown-up sees its own rows under Your
+ * Profile on Settings itself, never the Admin rows; then an Expert Admin, any other grown-up Add
+ * Profile, and About. A child has no Settings: its profile menu does not offer it. Admin asks the PIN once on the way in (Cancel stays on
+ * the list), then shows every Expert group under its header; Admin → Profiles → a profile has the
+ * Admin rows too.
  */
 @RunWith(RobolectricTestRunner::class)
 class SettingsAdminTest {
@@ -68,62 +76,87 @@ class SettingsAdminTest {
     }
 
     @Test
-    fun `an Expert sees Your Profile, Admin and About, no Playback or Display`() {
+    fun `an Expert sees its own rows on Settings, then Admin and About`() {
         showSettings(active = ADMIN)
 
-        rule.onNodeWithText(text(R.string.profile_own_page_title)).assertExists()
-        rule.onNodeWithText(text(R.string.settings_group_admin)).assertExists()
+        assertOwnRows()
+        scrollTo(text(R.string.settings_group_admin))
         scrollTo(text(R.string.settings_about_section_title))
-        rule.onNodeWithText(text(R.string.settings_playback_section_title)).assertDoesNotExist()
         rule.onNodeWithText(text(R.string.settings_group_display)).assertDoesNotExist()
-        // Your Profile is the Expert's own page; the other profiles are in Admin.
+        // The other profiles are in Admin.
         rule.onNodeWithText("Guest").assertDoesNotExist()
         rule.onNodeWithText(text(R.string.settings_profiles_add)).assertDoesNotExist()
     }
 
     @Test
-    fun `a grown-up sees Your Profile and About, no Admin`() {
+    fun `a grown-up sees its own rows on Settings, Add Profile and About, no Admin`() {
         showSettings(active = GUEST)
 
-        rule.onNodeWithText(text(R.string.profile_own_page_title)).assertExists()
-        rule.onNodeWithText(text(R.string.settings_profiles_add)).assertExists()
-        rule.onNodeWithText(text(R.string.settings_group_admin)).assertDoesNotExist()
+        assertOwnRows()
+        scrollTo(text(R.string.settings_profiles_add))
         scrollTo(text(R.string.settings_about_section_title))
+        // Logs is in About, for everyone with Settings, with no PIN.
+        scrollTo(text(R.string.settings_diagnostics_title))
+        rule.onNodeWithText(text(R.string.settings_group_admin)).assertDoesNotExist()
     }
 
     @Test
-    fun `a child sees Your Profile and About, no Admin`() {
-        showSettings(active = KID)
+    fun `the profile menu offers Settings to a grown-up, not to a child`() {
+        showProfileMenu(active = GUEST)
+        rule.onNodeWithText(text(R.string.settings_title)).assertExists()
+    }
 
-        rule.onNodeWithText(text(R.string.profile_own_page_title)).assertExists()
-        rule.onNodeWithText(text(R.string.settings_profiles_add)).assertDoesNotExist()
-        rule.onNodeWithText(text(R.string.settings_group_admin)).assertDoesNotExist()
-        scrollTo(text(R.string.settings_about_section_title))
+    @Test
+    fun `a child's profile menu has no Settings, only the profiles`() {
+        showProfileMenu(active = KID)
+        rule.onNodeWithText("Guest").assertExists()
+        rule.onNodeWithText(text(R.string.settings_title)).assertDoesNotExist()
     }
 
     @Test
     fun `Admin asks the PIN, and Cancel stays on the list`() {
         showSettings(active = ADMIN, pins = setOf(ADMIN), locked = true)
 
+        scrollTo(text(R.string.settings_group_admin))
         rule.onNodeWithText(text(R.string.settings_group_admin)).performClick()
         rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertExists()
         rule.onNodeWithText(text(R.string.common_cancel)).performClick()
         rule.waitForIdle()
 
         rule.onNodeWithText(context.getString(R.string.pin_enter_for, "Ada")).assertDoesNotExist()
-        rule.onNodeWithText(text(R.string.profile_own_page_title)).assertExists()
+        rule.onNodeWithText(text(R.string.settings_group_admin)).assertExists()
         rule.onNodeWithText(text(R.string.settings_group_this_device)).assertDoesNotExist()
     }
 
     @Test
-    fun `Your Profile opens the Expert's own page`() {
-        var opened: String? = null
-        showSettings(active = ADMIN) {
-            MobileSettingsScreen(onBack = null, onEditProfile = { opened = it }, onProviderChanged = {})
-        }
+    fun `a switch on Settings applies at once, the name when Settings is left`() {
+        var shown by mutableStateOf(true)
+        val profiles =
+            showSettings(active = GUEST) {
+                if (shown) MobileSettingsScreen(onBack = null, onProviderChanged = {})
+            }
 
-        rule.onNodeWithText("Ada").performClick()
-        assertEquals(ADMIN, opened)
+        scrollTo(text(R.string.settings_autoplay_next_episode_title))
+        rule.onNodeWithText(text(R.string.settings_autoplay_next_episode_title)).performClick()
+        rule.waitForIdle()
+        assertTrue(AppSettings(context).autoplayNextEpisode(GUEST))
+
+        rule.onNode(hasSetTextAction()).performTextReplacement("Gwen")
+        rule.waitForIdle()
+        assertEquals(
+            "Guest",
+            profiles.profiles.value
+                .first { it.id == GUEST }
+                .name,
+        )
+        shown = false
+        rule.waitUntil(TIMEOUT_MS) {
+            rule.runOnIdle {
+                profiles.profiles.value
+                    .first { it.id == GUEST }
+                    .name == "Gwen"
+            }
+        }
     }
 
     @Test
@@ -133,6 +166,7 @@ class SettingsAdminTest {
             MobileSettingsScreen(onBack = null, onAdminProfile = { opened = it }, onProviderChanged = {})
         }
 
+        scrollTo(text(R.string.settings_group_admin))
         rule.onNodeWithText(text(R.string.settings_group_admin)).performClick()
         rule.waitForIdle()
         listOf(
@@ -141,19 +175,29 @@ class SettingsAdminTest {
             R.string.settings_group_this_device,
             R.string.settings_group_source_guide,
             R.string.settings_group_sync_backup,
-            R.string.settings_section_advanced,
+            R.string.settings_shrink_database_button,
         ).forEach { scrollTo(text(it)) }
+        rule.onNodeWithText(text(R.string.settings_section_advanced)).assertDoesNotExist()
         scrollTo("Guest").performClick()
         assertEquals(GUEST, opened)
     }
 
-    @Test
-    fun `Your Profile has no Admin rows, an Expert's too`() {
-        seed(active = ADMIN)
-        showProfilePage(ADMIN, adminRows = false)
-
+    /** Settings' Your Profile: the personal rows of the profile in use, no Admin rows. */
+    private fun assertOwnRows() {
         rule.onNodeWithText(text(R.string.profile_own_page_title)).assertExists()
-        rule.onNodeWithText(text(R.string.profile_section_look)).assertExists()
+        rule.onNode(hasSetTextAction()).assertExists()
+        rule.onNodeWithText(text(R.string.profile_pin_title)).assertExists()
+        rule.onNodeWithText(text(R.string.profile_color_label)).assertExists()
+        listOf(
+            R.string.profile_section_look,
+            R.string.ui_theme_title,
+            R.string.settings_theme_section_title,
+            R.string.settings_ui_style_section_title,
+            R.string.profile_poster_backdrop_title,
+            R.string.settings_playback_section_title,
+            R.string.settings_autoplay_next_episode_title,
+        ).forEach { scrollTo(text(it)) }
+        rule.onNodeWithText(text(R.string.profile_section_admin)).assertDoesNotExist()
         rule.onNodeWithText(text(R.string.settings_developer_mode_title)).assertDoesNotExist()
         rule.onNodeWithText(text(R.string.profile_child_title)).assertDoesNotExist()
     }
@@ -181,7 +225,7 @@ class SettingsAdminTest {
         pins: Set<String> = emptySet(),
         locked: Boolean = false,
         screen: @Composable () -> Unit = { MobileSettingsScreen(onBack = null, onProviderChanged = {}) },
-    ) {
+    ): ProfilesViewModel {
         seed(active, pins)
         if (locked) PinSession.onActiveProfile("")
         lateinit var owner: ViewModelStoreOwner
@@ -192,6 +236,18 @@ class SettingsAdminTest {
         // The profiles load off the main thread; until then the profile in use is unknown.
         val profiles = ViewModelProvider(owner, SettingsViewModelFactory(context))[ProfilesViewModel::class.java]
         rule.waitUntil(TIMEOUT_MS) { rule.runOnIdle { profiles.activeProfile.value != null } }
+        rule.waitForIdle()
+        return profiles
+    }
+
+    private fun showProfileMenu(active: String) {
+        seed(active)
+        lateinit var profiles: ProfilesViewModel
+        rule.setContent {
+            profiles = viewModel(factory = SettingsViewModelFactory(context))
+            ProfileSheet(viewModel = profiles, onProfileChosen = {}, onDismiss = {}, onSettings = {})
+        }
+        rule.waitUntil(TIMEOUT_MS) { rule.runOnIdle { profiles.profiles.value.isNotEmpty() } }
         rule.waitForIdle()
     }
 

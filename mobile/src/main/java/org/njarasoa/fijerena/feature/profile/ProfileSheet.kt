@@ -45,7 +45,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 /**
  * The profile menu's sheet (the dock's profile slot): the profiles, the one in use marked — tapping another
  * switches to it and then calls [onProfileChosen], for the caller to start over on its last tab —
- * and Settings, where profiles are added and edited. Under them, a "Browse <source>" row for each
+ * and Settings (not for a child profile, which has none). Under them, a "Browse <source>" row for each
  * of the profile's sources outside the merged tabs ([browse]: Jellyfin, M3U;
  * docs/plans/20261012_multi-source-search-history-plan.md → O1); [onBrowse] opens the one tapped.
  */
@@ -126,16 +126,20 @@ fun ProfileSheet(
                         )
                     }
                     if (mustChoose) return@Column
-                    ListItem(
-                        headlineContent = { CinemaText(stringResource(R.string.settings_title)) },
-                        leadingContent = { Icon(CinemaIcons.Settings, contentDescription = null) },
-                        colors = rowColors,
-                        modifier =
-                            Modifier.clickable {
-                                onDismiss()
-                                onSettings()
-                            },
-                    )
+                    // A child profile has no Settings; it still switches profile above.
+                    val child = profiles.firstOrNull { it.isActive }?.let { viewModel.settingsOf(it.id).child } == true
+                    if (!child) {
+                        ListItem(
+                            headlineContent = { CinemaText(stringResource(R.string.settings_title)) },
+                            leadingContent = { Icon(CinemaIcons.Settings, contentDescription = null) },
+                            colors = rowColors,
+                            modifier =
+                                Modifier.clickable {
+                                    onDismiss()
+                                    onSettings()
+                                },
+                        )
+                    }
                     if (browse.isNotEmpty()) CinemaDivider()
                     browse.forEach { source ->
                         ListItem(

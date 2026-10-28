@@ -23,7 +23,6 @@ class SettingsExpertGroupTest {
                 ExpertGroup.THIS_DEVICE,
                 ExpertGroup.SOURCE_GUIDE,
                 ExpertGroup.SYNC_BACKUP,
-                ExpertGroup.ADVANCED,
             ),
             ExpertGroup.visibleFor(admin = true),
         )
