@@ -40,15 +40,12 @@ sealed interface Screen {
      * content filters (on a source of its own), Switch to this profile, Delete. See
      * the sources guide profiles plan → P9.
      *
-     * @param at The name of a [ProfilePageRow] to show first (Settings' Display and Playback rows
-     *   that open the profile in use's page), or null for the top of the page.
      * @param admin Admin → Profiles: the page with its Admin rows too (the admin settings plan,
      *   AS-D1); false for Your Profile, the personal rows of the profile in use.
      */
     @Serializable
     data class ProfileEdit(
         val profileId: String,
-        val at: String? = null,
         val admin: Boolean = false,
     ) : Screen
 

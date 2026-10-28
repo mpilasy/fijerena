@@ -12,7 +12,7 @@ sealed interface Screen {
     @Serializable data class AddProvider(val editId: Long = -1L) : Screen  // add, or edit when editId > 0
     @Serializable data object Login : Screen  // in neither nav graph
     @Serializable data object ProfilePicker : Screen  // "Who's Watching?"
-    @Serializable data class ProfileEdit(val profileId: String, val at: String? = null) : Screen  // a profile's page (mobile; TV shows it inside Settings); at = a ProfilePageRow to scroll to
+    @Serializable data class ProfileEdit(val profileId: String, val admin: Boolean = false) : Screen  // a profile's page (mobile; TV shows it inside Settings); admin = Admin → Profiles, with the Admin rows
     @Serializable data object ContentTypeSelection : Screen  // Home
     @Serializable data object Settings : Screen  // also the phone's Settings tab
     @Serializable data object LiveTvTab : Screen  // a section's root: phone tab, TV rail section
