@@ -228,7 +228,7 @@ fun MobileProfileEditScreen(
                 )
             pinFlow.request?.let { request ->
                 PinDialog(
-                    state = rememberPinPromptState(viewModel.pins, request, pinFlow::promptDone),
+                    state = rememberPinPromptState(viewModel.pins, request, onDone = pinFlow::promptDone),
                     onCancel = pinFlow::cancel,
                 )
             }

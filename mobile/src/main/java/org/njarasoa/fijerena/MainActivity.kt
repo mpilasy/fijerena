@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalPosterBackdrop
 import org.njarasoa.fijerena.core.ui.trailer.TrailerHost
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.navigation.MobileNavHost
+import org.njarasoa.fijerena.ui.components.PinRequestHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 
 class MainActivity : ComponentActivity() {
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
                         TrailerHost {
                             MobileNavHost()
                         }
+                        PinRequestHost()
                     }
                 }
             }

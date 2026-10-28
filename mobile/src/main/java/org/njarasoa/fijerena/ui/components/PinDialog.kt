@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -36,28 +37,39 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDialogActionButton
 
 /**
  * A PIN prompt on the phone (the profile pin plan): [state]'s title, the dots
- * the number keyboard fills, and its message; the fourth digit submits. Cancel, Back or a tap outside calls [onCancel] — unless [cancellable] is false.
+ * the number keyboard fills, and its message; the fourth digit submits. Cancel, Back or a tap outside calls [onCancel] — unless [cancellable] is false. [note] shows above the title. Screenshots and screen recording are blocked while it is open.
  */
 @Composable
 fun PinDialog(
     state: PinPromptState,
     onCancel: () -> Unit,
     cancellable: Boolean = true,
+    note: String? = null,
 ) {
     val field = remember { FocusRequester() }
     LaunchedEffect(Unit) { field.requestFocus() }
     CinemaAlertDialog(
         onDismissRequest = { if (cancellable) onCancel() },
-        properties = DialogProperties(dismissOnBackPress = cancellable, dismissOnClickOutside = cancellable),
+        // No screenshot, screen recording or Recents thumbnail while a PIN is typed.
+        properties =
+            DialogProperties(
+                dismissOnBackPress = cancellable,
+                dismissOnClickOutside = cancellable,
+                securePolicy = SecureFlagPolicy.SecureOn,
+            ),
         // Centred over the dots.
         title = {
-            CinemaText(
-                state.title,
-                role = TextRole.Title,
-                tone = TextTone.Inherit,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Who asks, for a request from another device ("Living Room asks").
+                note?.let { CinemaText(it, role = TextRole.Body, tone = TextTone.Secondary, textAlign = TextAlign.Center) }
+                CinemaText(
+                    state.title,
+                    role = TextRole.Title,
+                    tone = TextTone.Inherit,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         },
         text = {
             Column(

@@ -24,10 +24,14 @@ import org.njarasoa.fijerena.core.ui.sync.PinOnPhone
 sealed interface PinRequest {
     val profileId: String
 
-    /** [profileId]'s PIN must be typed; [title] says why ("Enter Kid's PIN"). */
+    /**
+     * [profileId]'s PIN must be typed; [title] says why ("Enter Kid's PIN"). [unlockHere] false: a
+     * right PIN unlocks nothing on this device (a phone answering another device's request).
+     */
     data class Check(
         override val profileId: String,
         val title: String,
+        val unlockHere: Boolean = true,
     ) : PinRequest
 
     /**
@@ -92,7 +96,7 @@ class PinPromptState internal constructor(
         private set
 
     /** Only a [PinRequest.Check] can be answered on another device, and only while this one is linked. */
-    val canUsePhone: Boolean by lazy { request is PinRequest.Check && asker.canAsk(context) }
+    val canUsePhone: Boolean by lazy { request is PinRequest.Check && request.unlockHere && asker.canAsk(context) }
 
     /** Asks the other devices for the PIN; the pad waits until [onPhoneAnswer], [phoneTimedOut] or [useHere]. */
     fun usePhone() {
@@ -163,7 +167,7 @@ class PinPromptState internal constructor(
                 message = check.message(context)
                 messageIsError = message != null
                 if (check == ProfilePins.Check.Right) {
-                    PinSession.unlock(request.profileId)
+                    if (request.unlockHere) PinSession.unlock(request.profileId)
                     onDone()
                 }
             }
