@@ -81,5 +81,5 @@ so one word has one meaning.
 |---|---|---|
 | 1. TV | In progress | |
 | 2. Phone | In progress | |
-| 3. Rename | In progress | |
+| 3. Rename | Done | 360b5e580 |
 | 4. Docs and walks | Not started | |
