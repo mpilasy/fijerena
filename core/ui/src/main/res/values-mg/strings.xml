@@ -931,6 +931,8 @@
     <string name="settings_diagnostics_share">Zarao</string>
     <string name="settings_diagnostics_copy_hint">Tsindrio ela ny andalana iray raha hanao kopia azy.</string>
     <string name="settings_diagnostics_copied">Voakopia</string>
+    <string name="settings_diagnostics_show_details">Asehoy ny antsipiriany</string>
+    <string name="settings_diagnostics_hide_details">Afeno ny antsipiriany</string>
     <string name="settings_diagnostics_copy">Kopiao</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Momba ny fitaovana</string>

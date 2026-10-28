@@ -598,6 +598,8 @@
     <string name="settings_diagnostics_share">Partager</string>
     <string name="settings_diagnostics_copy_hint">Maintenez une entrée pour la copier.</string>
     <string name="settings_diagnostics_copied">Copié</string>
+    <string name="settings_diagnostics_show_details">Afficher les détails</string>
+    <string name="settings_diagnostics_hide_details">Masquer les détails</string>
     <string name="settings_diagnostics_copy">Copier</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Infos sur l\'appareil</string>

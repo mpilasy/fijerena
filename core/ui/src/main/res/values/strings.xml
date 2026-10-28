@@ -627,6 +627,8 @@
     <string name="settings_diagnostics_share">Share</string>
     <string name="settings_diagnostics_copy_hint">Hold an entry to copy it.</string>
     <string name="settings_diagnostics_copied">Copied</string>
+    <string name="settings_diagnostics_show_details">Show details</string>
+    <string name="settings_diagnostics_hide_details">Hide details</string>
     <string name="settings_diagnostics_copy">Copy</string>
     <!-- Device info (the device info screen plan) -->
     <string name="device_info_title">Device Info</string>

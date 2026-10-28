@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.player.diagnostics.ConnectionLog
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.ProcessExits
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
+import org.njarasoa.fijerena.core.player.diagnostics.TraceCauses
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
@@ -30,6 +31,8 @@ class DiagnosticsViewModel(
         val detail: String,
         /** Not shown, but part of a copy and of Share: a failed server call's stack trace. */
         val trace: String? = null,
+        /** The exception chain when [detail] is a stack trace: the entry then opens and closes. Null for a plain message. */
+        val causes: TraceCauses? = TraceCauses.parse(detail),
     )
 
     /** Null while loading. */

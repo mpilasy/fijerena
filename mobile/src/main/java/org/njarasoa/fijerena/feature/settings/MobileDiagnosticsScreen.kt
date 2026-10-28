@@ -11,6 +11,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -44,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.DiagnosticsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.navigation.LocalDockInset
@@ -146,13 +149,22 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                 }
             }
             items(loaded.orEmpty()) { entry ->
+                val causes = entry.causes
+                // Tap opens or closes an entry with a stack trace; a plain message does nothing.
+                var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
                 // Hold to copy this one entry, redacted as Share redacts the whole log.
                 GlassPanel(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .combinedClickable(
-                                onClick = {},
+                                onClickLabel =
+                                    when {
+                                        causes == null -> null
+                                        expanded -> stringResource(R.string.settings_diagnostics_hide_details)
+                                        else -> stringResource(R.string.settings_diagnostics_show_details)
+                                    },
+                                onClick = { if (causes != null) expanded = !expanded },
                                 onLongClickLabel = copyLabel,
                                 onLongClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -160,9 +172,23 @@ fun MobileDiagnosticsScreen(onBack: () -> Unit) {
                                 },
                             ),
                 ) {
-                    Column(Modifier.padding(CinemaSpacing.md), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                        CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
-                        CinemaCodeText(entry.detail)
+                    Row(Modifier.padding(CinemaSpacing.md), horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                            CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
+                            when {
+                                causes == null -> CinemaCodeText(entry.detail)
+                                expanded -> CinemaCodeText(causes.chain.joinToString("\n"))
+                                else -> CinemaCodeText(causes.rootCause, maxLines = 1)
+                            }
+                        }
+                        if (causes != null) {
+                            // Decorative: the entry's click label says what a tap does.
+                            Icon(
+                                imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
+                                contentDescription = null,
+                                tint = CinemaTheme.colors.textSecondary,
+                            )
+                        }
                     }
                 }
             }

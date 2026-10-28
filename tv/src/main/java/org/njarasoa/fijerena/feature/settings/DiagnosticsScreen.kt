@@ -7,13 +7,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -25,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -51,6 +56,7 @@ import org.njarasoa.fijerena.ui.components.rail.leftToRail
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -125,10 +131,13 @@ fun DiagnosticsScreen() {
             }
         }
         itemsIndexed(loaded.orEmpty()) { index, entry ->
-            // A no-op clickable Surface only so each entry takes D-pad focus (and the list scrolls
-            // to it) with the standard focus border.
+            val causes = entry.causes
+            // An entry with a stack trace opens and closes on OK; one with a plain message does nothing.
+            var expanded by rememberSaveable(entry.timestampMs, entry.title) { mutableStateOf(false) }
+            // A clickable Surface so each entry takes D-pad focus (and the list scrolls to it) with
+            // the standard focus border.
             Surface(
-                onClick = {},
+                onClick = { if (causes != null) expanded = !expanded },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -147,16 +156,35 @@ fun DiagnosticsScreen() {
                         focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth, TvFocusTokens.focusedRowOutline)),
                     ),
             ) {
-                Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
-                    // look-ok: the detail is raw log text (stack traces), set in monospace; size and colour are the Body role's
-                    Text(
-                        text = entry.detail,
-                        style = textStyleOf(TextRole.Body).copy(fontFamily = FontFamily.Monospace),
-                        color = colorOf(TextTone.Primary),
-                        maxLines = DETAIL_MAX_LINES,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Row(Modifier.padding(Spacing.md.scaled(scale)), horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                        CinemaText(entry.title, role = TextRole.Heading, tone = TextTone.Primary)
+                        // look-ok: the detail is raw log text (stack traces), set in monospace; size and colour are the Body role's
+                        Text(
+                            text =
+                                when {
+                                    causes == null -> entry.detail
+                                    expanded -> causes.chain.joinToString("\n")
+                                    else -> causes.rootCause
+                                },
+                            style = textStyleOf(TextRole.Body).copy(fontFamily = FontFamily.Monospace),
+                            color = colorOf(TextTone.Primary),
+                            maxLines = if (causes != null && !expanded) 1 else DETAIL_MAX_LINES,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (causes != null) {
+                        Icon(
+                            imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
+                            contentDescription =
+                                if (expanded) {
+                                    stringResource(R.string.settings_diagnostics_hide_details)
+                                } else {
+                                    stringResource(R.string.settings_diagnostics_show_details)
+                                },
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        )
+                    }
                 }
             }
         }
