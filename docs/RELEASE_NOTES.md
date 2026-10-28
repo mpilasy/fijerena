@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261028112959
 
 - **PIN on the phone:** when the TV asks for a PIN, press **Use my phone** and type it on a phone linked by live sync. The TV hides its number pad, so people in the room cannot read the PIN from the focus. The phone shows the request over any screen, checks the PIN itself and sends back only "unlocked": the PIN never leaves the phone. Cancel on the phone, or 2 minutes with no answer, brings the TV's pad back. TV and phone.
 - **PIN dialogs on the phone block screen capture:** no screenshot, screen recording or Recents thumbnail shows a PIN being typed. Phone.
