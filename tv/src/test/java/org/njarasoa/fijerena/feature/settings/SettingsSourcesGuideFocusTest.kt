@@ -41,8 +41,10 @@ class SettingsSourcesGuideFocusTest : SettingsFocusTest() {
             down("Guide Sources / The guides for each source’s channels"),
             down("Guide Data Maintenance / The guide's downloads and programmes kept on this device"),
             down("Film and Series Details (TMDB)"),
+            down("TMDB Charts"),
             // Sync & Backup follows on the same page.
             down("Live Sync"),
+            up("TMDB Charts"),
             up("Film and Series Details (TMDB)"),
             up("Guide Data Maintenance"),
             // The sub-pane opens on its first action, the destructive one last.
