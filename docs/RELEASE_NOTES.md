@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261029032633
 
 - **Smooth Live TV preview on weak devices:** the Live TV preview stuttered on a Chromecast with Google TV (HD), and full screen played smoothly. The blurred channel logo behind the preview was the cause: the device redrew the blur under every video frame. The Live TV screen now shows a gradient tinted with the logo's main colour, as the Shields already did. The other screens keep the blur. TV.
 
