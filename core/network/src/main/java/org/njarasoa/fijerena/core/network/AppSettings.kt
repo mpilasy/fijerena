@@ -74,6 +74,7 @@ class AppSettings(
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
+        private const val KEY_CHARTS_SHOW_MISSING = "charts_show_missing"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LAST_TAB = "last_tab"
@@ -888,6 +889,25 @@ class AppSettings(
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(showTmdbCharts) }
             prefs.registerOnSharedPreferenceChangeListener(listener)
             send(showTmdbCharts)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    /**
+     * Whether a profile's Trending rows also show the titles no source has (the TMDB charts plan,
+     * follow-up). Set on the row itself; this device's, per profile, not synced. Off by default.
+     */
+    fun chartsShowMissing(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHARTS_SHOW_MISSING, profileId), false)
+
+    fun setChartsShowMissing(
+        profileId: String,
+        show: Boolean,
+    ) = prefs.edit { putBoolean(profileKey(KEY_CHARTS_SHOW_MISSING, profileId), show) }
+
+    fun observeChartsShowMissing(profileId: String): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(chartsShowMissing(profileId)) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(chartsShowMissing(profileId))
             awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
         }.distinctUntilChanged()
 

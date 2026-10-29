@@ -1,6 +1,6 @@
 # TMDB charts in your library
 
-**Status:** Agreed 2026-10-29 (all decisions below); Done 2026-10-29, walked on both emulators.
+**Status:** Agreed 2026-10-29 (all decisions below); Done 2026-10-29, walked on both emulators. Follow-up F1 to F3 in progress.
 
 ## Goal
 
@@ -78,6 +78,31 @@ pages as it needs to fill a row.
   too (Jellyfin items carry a TMDB id; more work).
 - **CH-D6 Profiles (decided, user 2026-10-29: a):** (a) every profile but a child, whose Home stays the walled garden of the
   kids' Home plan; (b) admins only.
+
+## Follow-up (user, 2026-10-29)
+
+After the release, the user found Top Rated and Popular odd, and asked for the missing titles on
+Trending:
+
+- **F1 Top Rated:** at least 5,000 votes (movies) or 2,000 (shows), and out for a year at least
+  (`primary_release_date.lte` / `first_air_date.lte` a year ago): a new release's first voters are
+  its fans, so even with thousands of votes its average starts above The Shawshank Redemption's.
+- **F2 Popular:** `discover` sorted by popularity, with at least 500 votes (movies) or 200 (shows),
+  not `movie/popular` / `tv/popular`, which mixed long-running daytime shows with spikes of titles
+  nobody knows.
+- **F3 Missing titles on Trending:** a switch on each Trending row (decided: on the row itself)
+  shows the first 20 titles of the chart as TMDB ranks them, the ones no source has as TMDB-only
+  cards marked Not in Your Sources (`TmdbOnlyItem`), which open the title's TMDB page (where Add to
+  Wishlist is). Per profile, on this device, off by default. The Charts list follows the same
+  switch. Only Trending: Popular and Top Rated stay what the sources have. A Trending row with no
+  title of the sources still shows, with its switch.
+
+| Step | Work | Status |
+|---|---|---|
+| F1–F2 | `TmdbChart` parameters; tests | Done 2026-10-29 |
+| F3 core | `AppSettings.chartsShowMissing`, `chartWithMissing`, `ChartRows`, strings | Done 2026-10-29 |
+| F3 TV | The switch on the Trending rows, TMDB-only cards and their TMDB page, Charts list | Not started |
+| F3 phone | The same on the phone | Not started |
 
 ## Phases
 

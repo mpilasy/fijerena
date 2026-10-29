@@ -65,9 +65,20 @@ class TmdbChartTest {
         }
 
     @Test
-    fun `top rated asks for the best average among titles with enough votes`() {
-        assertEquals("discover/movie&sort_by=vote_average.desc&vote_count.gte=1000", TmdbChart.TOP_RATED_MOVIES.request)
-        assertEquals("discover/tv&sort_by=vote_average.desc&vote_count.gte=500", TmdbChart.TOP_RATED_SHOWS.request)
+    fun `top rated asks for the best average among titles with many votes, out a year at least`() {
+        val yearAgo =
+            java.time.LocalDate
+                .now()
+                .minusYears(1)
+                .toString()
+        assertEquals(
+            "discover/movie&primary_release_date.lte=$yearAgo&sort_by=vote_average.desc&vote_count.gte=5000",
+            TmdbChart.TOP_RATED_MOVIES.request,
+        )
+        assertEquals(
+            "discover/tv&first_air_date.lte=$yearAgo&sort_by=vote_average.desc&vote_count.gte=2000",
+            TmdbChart.TOP_RATED_SHOWS.request,
+        )
     }
 
     @Test
@@ -123,6 +134,28 @@ class TmdbChartTest {
             failing = true
             assertEquals(emptyList<MediaItem>(), matchChart(TmdbChart.TRENDING_SHOWS, pages(), listOf(source { true })))
         }
+
+    @Test
+    fun `with the missing titles, the first 20 of the chart in order, one page read`() =
+        runTest {
+            val row =
+                chartWithMissing(
+                    TmdbChart.TRENDING_MOVIES,
+                    pages(),
+                    listOf(source { it == "Title 1-2" }),
+                    missing = { item("missing ${it.title}") },
+                )
+            assertEquals(20, row.size)
+            assertEquals(listOf("missing Title 1-1", "Title 1-2", "missing Title 1-3"), row.take(3).map { it.name })
+            assertEquals(listOf(TmdbChart.TRENDING_MOVIES to 1), calls)
+        }
+
+    @Test
+    fun `only Trending can show the missing titles, and Popular counts votes`() {
+        assertEquals(listOf(TmdbChart.TRENDING_MOVIES, TmdbChart.TRENDING_SHOWS), TmdbChart.entries.filter { it.canShowMissing })
+        assertEquals("discover/movie&sort_by=popularity.desc&vote_count.gte=500", TmdbChart.POPULAR_MOVIES.request)
+        assertEquals("discover/tv&sort_by=popularity.desc&vote_count.gte=200", TmdbChart.POPULAR_SHOWS.request)
+    }
 
     private companion object {
         const val TOTAL_PAGES = 30

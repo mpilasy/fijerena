@@ -1495,4 +1495,6 @@
     <string name="category_charts">Classements</string>
     <string name="tmdb_charts_title">Classements TMDB</string>
     <string name="tmdb_charts_desc">Des rangées de titres tendance de la semaine, populaires et les mieux notés sur l\'accueil, et une liste Classements dans Films et Séries. Seuls les titres de vos sources s\'affichent. Une clé TMDB est nécessaire. Cet appareil seulement.</string>
+    <string name="chart_show_missing">Afficher les titres absents de vos sources</string>
+    <string name="chart_hide_missing">Afficher seulement les titres de vos sources</string>
 </resources>

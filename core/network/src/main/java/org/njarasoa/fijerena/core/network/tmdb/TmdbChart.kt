@@ -12,24 +12,35 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import java.io.File
+import java.time.LocalDate
 
 /** The TMDB charts Home shows, cut down to the catalogue (docs/plans/20261029_tmdb-charts-plan.md). */
 enum class TmdbChart(
     val path: String,
     val contentType: String,
-    val parameters: Map<String, String> = emptyMap(),
+    private val parametersOf: () -> Map<String, String> = { emptyMap() },
 ) {
     TRENDING_MOVIES("trending/movie/week", ContentType.MOVIES),
     TRENDING_SHOWS("trending/tv/week", ContentType.TV_SHOWS),
-    POPULAR_MOVIES("movie/popular", ContentType.MOVIES),
-    POPULAR_SHOWS("tv/popular", ContentType.TV_SHOWS),
+
+    // Not `movie/popular` / `tv/popular`: those mix long-running daytime shows and short spikes of
+    // titles nobody knows. TMDB's popularity among titles with enough votes (user, 2026-10-29).
+    POPULAR_MOVIES("discover/movie", ContentType.MOVIES, { popular(minVotes = 500) }),
+    POPULAR_SHOWS("discover/tv", ContentType.TV_SHOWS, { popular(minVotes = 200) }),
 
     // Not `movie/top_rated` / `tv/top_rated`: those rank by average alone, so a new title with a
     // few perfect votes comes before The Shawshank Redemption. The best average among titles with
-    // enough votes instead.
-    TOP_RATED_MOVIES("discover/movie", ContentType.MOVIES, topRated(minVotes = 1000)),
-    TOP_RATED_SHOWS("discover/tv", ContentType.TV_SHOWS, topRated(minVotes = 500)),
+    // many votes, out for a year at least: a new release's first voters are its fans, and even with
+    // thousands of votes its average starts high (user, 2026-10-29).
+    TOP_RATED_MOVIES("discover/movie", ContentType.MOVIES, { topRated(minVotes = 5000, releasedBefore = "primary_release_date.lte") }),
+    TOP_RATED_SHOWS("discover/tv", ContentType.TV_SHOWS, { topRated(minVotes = 2000, releasedBefore = "first_air_date.lte") }),
     ;
+
+    /** Whether its row can also show the titles no source has (user, 2026-10-29): Trending only. */
+    val canShowMissing: Boolean get() = this == TRENDING_MOVIES || this == TRENDING_SHOWS
+
+    /** The call's parameters, page aside (a Top Rated chart's date limit moves with the day). */
+    val parameters: Map<String, String> get() = parametersOf()
 
     /** What the call asks, page aside: a stored page asked otherwise is of no use. */
     val request: String get() = path + parameters.toSortedMap().entries.joinToString("") { "&${it.key}=${it.value}" }
@@ -40,7 +51,16 @@ enum class TmdbChart(
     }
 }
 
-private fun topRated(minVotes: Int) = mapOf("sort_by" to "vote_average.desc", "vote_count.gte" to minVotes.toString())
+private fun popular(minVotes: Int) = mapOf("sort_by" to "popularity.desc", "vote_count.gte" to minVotes.toString())
+
+private fun topRated(
+    minVotes: Int,
+    releasedBefore: String,
+) = mapOf(
+    "sort_by" to "vote_average.desc",
+    "vote_count.gte" to minVotes.toString(),
+    releasedBefore to LocalDate.now().minusYears(1).toString(),
+)
 
 /** One page of a chart: its titles in TMDB's order, and how many pages the chart has. */
 @Serializable
@@ -194,6 +214,39 @@ suspend fun matchChart(
         }
     }
     return matches
+}
+
+/**
+ * The first [limit] titles of [chart] as TMDB ranks them, each from the first of [sources] that has
+ * it, else as a TMDB-only card ([missing]) that opens the title's TMDB page. For a row that also
+ * shows what no source has. Empty when the first page can't be read.
+ */
+suspend fun chartWithMissing(
+    chart: TmdbChart,
+    pages: TmdbChartPages,
+    sources: List<suspend (List<TmdbRecommendation>) -> List<MediaItem?>>,
+    missing: (TmdbRecommendation) -> MediaItem,
+    limit: Int = CHART_ROW_SIZE,
+): List<MediaItem> {
+    val page =
+        try {
+            pages.page(chart, 1)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("TmdbChart", "Chart ${chart.name} page 1: ${e.message}")
+            null
+        } ?: return emptyList()
+    val found = sources.map { source -> source(page.titles) }
+    val taken = mutableSetOf<String>()
+    val row = mutableListOf<MediaItem>()
+    for ((index, result) in page.titles.withIndex()) {
+        val key = result.displayTitle?.let { TitleMatcher.normalize(it).text }
+        if (key.isNullOrBlank() || !taken.add(key)) continue
+        row += found.firstNotNullOfOrNull { it.getOrNull(index) } ?: missing(result)
+        if (row.size == limit) break
+    }
+    return row
 }
 
 /** CH-D3: the top 500 of a chart at most. */
