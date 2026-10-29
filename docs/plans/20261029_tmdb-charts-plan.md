@@ -28,8 +28,11 @@ pages as it needs to fill a row.
 
 ## Design
 
-1. **Charts:** TMDB `trending/movie/week`, `trending/tv/week`, `movie/popular`, `tv/popular`,
-   `movie/top_rated`, `tv/top_rated`, 20 titles a page (`page` parameter). Titles in English (`Language.ENGLISH`), as More Like This asks, because
+1. **Charts:** TMDB `trending/movie/week`, `trending/tv/week`, `movie/popular`, `tv/popular`, and
+   for Top Rated `discover/movie` and `discover/tv` sorted by average with at least 1,000 (movies) or
+   500 (shows) votes, 20 titles a page (`page` parameter). Not `movie/top_rated` / `tv/top_rated`:
+   found in the walk (2026-10-29), they rank by average alone, so new titles with a few perfect
+   votes came first. Titles in English (`Language.ENGLISH`), as More Like This asks, because
    catalogue names are mostly English.
 2. **Read only what is needed (user, 2026-10-29):** for each chart, read page 1, match it, and
    read the next page only while the row has fewer than 20 titles. Stop at 20 titles, at the last

@@ -17,20 +17,30 @@ import java.io.File
 enum class TmdbChart(
     val path: String,
     val contentType: String,
+    val parameters: Map<String, String> = emptyMap(),
 ) {
     TRENDING_MOVIES("trending/movie/week", ContentType.MOVIES),
     TRENDING_SHOWS("trending/tv/week", ContentType.TV_SHOWS),
     POPULAR_MOVIES("movie/popular", ContentType.MOVIES),
     POPULAR_SHOWS("tv/popular", ContentType.TV_SHOWS),
-    TOP_RATED_MOVIES("movie/top_rated", ContentType.MOVIES),
-    TOP_RATED_SHOWS("tv/top_rated", ContentType.TV_SHOWS),
+
+    // Not `movie/top_rated` / `tv/top_rated`: those rank by average alone, so a new title with a
+    // few perfect votes comes before The Shawshank Redemption. The best average among titles with
+    // enough votes instead.
+    TOP_RATED_MOVIES("discover/movie", ContentType.MOVIES, topRated(minVotes = 1000)),
+    TOP_RATED_SHOWS("discover/tv", ContentType.TV_SHOWS, topRated(minVotes = 500)),
     ;
+
+    /** What the call asks, page aside: a stored page asked otherwise is of no use. */
+    val request: String get() = path + parameters.toSortedMap().entries.joinToString("") { "&${it.key}=${it.value}" }
 
     companion object {
         /** [contentType]'s charts, in the order their rows show. */
         fun of(contentType: String): List<TmdbChart> = entries.filter { it.contentType == contentType }
     }
 }
+
+private fun topRated(minVotes: Int) = mapOf("sort_by" to "vote_average.desc", "vote_count.gte" to minVotes.toString())
 
 /** One page of a chart: its titles in TMDB's order, and how many pages the chart has. */
 @Serializable
@@ -53,6 +63,8 @@ class TmdbChartPages(
     private data class Stored(
         val fetchedAtMs: Long,
         val pages: Map<Int, TmdbChartPage> = emptyMap(),
+        // [TmdbChart.request] when the pages were read.
+        val request: String = "",
     )
 
     private val json =
@@ -88,11 +100,11 @@ class TmdbChartPages(
             fetched
         }
 
-    /** [chart]'s stored pages, read from the file once; none when they are a day old. */
+    /** [chart]'s stored pages, read from the file once; none when they are a day old or asked otherwise. */
     private suspend fun current(chart: TmdbChart): Stored {
         val stored = memory[chart] ?: read(chart)?.also { memory[chart] = it }
-        if (stored != null && now() - stored.fetchedAtMs in 0 until MAX_AGE_MS) return stored
-        return Stored(fetchedAtMs = now()).also { memory[chart] = it }
+        if (stored != null && stored.request == chart.request && now() - stored.fetchedAtMs in 0 until MAX_AGE_MS) return stored
+        return Stored(fetchedAtMs = now(), request = chart.request).also { memory[chart] = it }
     }
 
     private fun file(chart: TmdbChart) = File(dir, "${chart.name.lowercase()}.json")

@@ -205,7 +205,7 @@ class TmdbApiService(
     suspend fun getChartPage(
         chart: TmdbChart,
         page: Int,
-    ): TmdbRecommendationsResponse = fetch(chart.path, Language.ENGLISH, mapOf("page" to page.toString())).body()
+    ): TmdbRecommendationsResponse = fetch(chart.path, Language.ENGLISH, chart.parameters + ("page" to page.toString())).body()
 
     /**
      * Films and shows whose title matches [query], ranked by TMDB (`search/multi`, in the app

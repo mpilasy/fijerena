@@ -54,6 +54,23 @@ class TmdbChartTest {
         }
 
     @Test
+    fun `pages stored for another request are read again`() =
+        runTest {
+            File(dir, "top_rated_movies.json").writeText(
+                """{"fetchedAtMs":$now,"request":"movie/top_rated","pages":{"1":{"titles":[],"totalPages":1}}}""",
+            )
+            val page = pages().page(TmdbChart.TOP_RATED_MOVIES, 1)
+            assertEquals(20, page?.titles?.size)
+            assertEquals(listOf(TmdbChart.TOP_RATED_MOVIES to 1), calls)
+        }
+
+    @Test
+    fun `top rated asks for the best average among titles with enough votes`() {
+        assertEquals("discover/movie&sort_by=vote_average.desc&vote_count.gte=1000", TmdbChart.TOP_RATED_MOVIES.request)
+        assertEquals("discover/tv&sort_by=vote_average.desc&vote_count.gte=500", TmdbChart.TOP_RATED_SHOWS.request)
+    }
+
+    @Test
     fun `past the last page there is no page and no call`() =
         runTest {
             val pages = pages()
