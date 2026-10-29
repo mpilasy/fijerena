@@ -721,6 +721,12 @@ fun SettingsScreen(
                                                                             SettingPicker.TMDB_KEY.returnKey,
                                                                         ),
                                                                 )
+                                                                TvSwitchRow(
+                                                                    checked = uiState.showTmdbCharts,
+                                                                    onCheckedChange = viewModel::updateShowTmdbCharts,
+                                                                    label = stringResource(R.string.tmdb_charts_title),
+                                                                    description = stringResource(R.string.tmdb_charts_desc),
+                                                                )
                                                             }
 
                                                             AdminPart.SYNC_BACKUP -> {

@@ -494,6 +494,17 @@ fun MobileSettingsScreen(
                                 }
                                 GuideMaintenanceRow(viewModel = epgViewModel)
                                 TmdbKeySettingsRow(viewModel = tmdbKeyViewModel, onOpen = { showTmdbKeyDialog = true })
+                                SettingsListRow(
+                                    title = stringResource(R.string.tmdb_charts_title),
+                                    summary = stringResource(R.string.tmdb_charts_desc),
+                                    trailing = {
+                                        CinemaSwitch(
+                                            checked = uiState.showTmdbCharts,
+                                            onCheckedChange = viewModel::updateShowTmdbCharts,
+                                        )
+                                    },
+                                    onClick = { viewModel.updateShowTmdbCharts(!uiState.showTmdbCharts) },
+                                )
                             }
                         }
 

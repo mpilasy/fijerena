@@ -1486,4 +1486,13 @@
     <string name="common_on">Activé</string>
     <string name="settings_theme_and_look_title">Thème et apparence</string>
     <string name="settings_profile_row_desc">Se règle sur la page de votre profil</string>
+    <string name="chart_trending_movies">Films tendance</string>
+    <string name="chart_trending_shows">Séries tendance</string>
+    <string name="chart_popular_movies">Films populaires</string>
+    <string name="chart_popular_shows">Séries populaires</string>
+    <string name="chart_top_rated_movies">Films les mieux notés</string>
+    <string name="chart_top_rated_shows">Séries les mieux notées</string>
+    <string name="category_charts">Classements</string>
+    <string name="tmdb_charts_title">Classements TMDB</string>
+    <string name="tmdb_charts_desc">Des rangées de titres tendance de la semaine, populaires et les mieux notés sur l\'accueil, et une liste Classements dans Films et Séries. Seuls les titres de vos sources s\'affichent. Une clé TMDB est nécessaire. Cet appareil seulement.</string>
 </resources>

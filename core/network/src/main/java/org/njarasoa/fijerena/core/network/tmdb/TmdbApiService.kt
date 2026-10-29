@@ -201,6 +201,12 @@ class TmdbApiService(
 
     fun hasApiKey(): Boolean = activeKey() != null
 
+    /** Page [page] (from 1) of [chart], titles in English as the catalogue's mostly are. */
+    suspend fun getChartPage(
+        chart: TmdbChart,
+        page: Int,
+    ): TmdbRecommendationsResponse = fetch(chart.path, Language.ENGLISH, mapOf("page" to page.toString())).body()
+
     /**
      * Films and shows whose title matches [query], ranked by TMDB (`search/multi`, in the app
      * language, no adult titles). People come back too: callers keep `mediaType` `movie` and `tv`.

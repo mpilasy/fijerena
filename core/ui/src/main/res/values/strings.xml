@@ -1484,4 +1484,13 @@
     <string name="common_on">On</string>
     <string name="settings_theme_and_look_title">Theme and Look and Feel</string>
     <string name="settings_profile_row_desc">Set on your profile’s page</string>
+    <string name="chart_trending_movies">Trending Movies</string>
+    <string name="chart_trending_shows">Trending Shows</string>
+    <string name="chart_popular_movies">Popular Movies</string>
+    <string name="chart_popular_shows">Popular Shows</string>
+    <string name="chart_top_rated_movies">Top Rated Movies</string>
+    <string name="chart_top_rated_shows">Top Rated Shows</string>
+    <string name="category_charts">Charts</string>
+    <string name="tmdb_charts_title">TMDB Charts</string>
+    <string name="tmdb_charts_desc">Rows of this week\'s trending, popular and top rated titles on Home, and a Charts list in Movies and TV Shows. Only titles your sources have show. Needs a TMDB key. This device only.</string>
 </resources>

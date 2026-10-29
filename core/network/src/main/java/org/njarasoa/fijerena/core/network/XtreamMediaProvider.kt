@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.player.model.XtreamStream
 import java.util.concurrent.ConcurrentHashMap
 
 class XtreamMediaProvider(
@@ -1013,43 +1014,7 @@ class XtreamMediaProvider(
         taken: MutableSet<String>,
         minCount: Int = MIN_RELATED_TITLES,
     ): List<MediaItem> {
-        // The lookup per title is independent and read-only — dispatched concurrently
-        // (index-aligned with `results`) so up to ~40 TMDB titles cost one round trip's worth of
-        // wall-clock time instead of N sequential ones. Only the accept/reject decision below
-        // depends on `taken`, which is built up as matches are accepted — fetching ahead of that
-        // can waste a query on a title that turns out to already be claimed (by an earlier entry
-        // in this same list, or an earlier matchToCatalogue call), never on correctness.
-        // By TMDB id first; by title only among rows without one, so a row with another id (a
-        // remake with the same name) never matches.
-        val candidatesByIndex =
-            coroutineScope {
-                results
-                    .map { result ->
-                        async {
-                            try {
-                                val byId = repository.getAlternateStreams(contentType, result.id.toString(), excludeId = -1)
-                                if (byId.isNotEmpty()) return@async byId
-                                val title = result.displayTitle ?: return@async null
-                                val ftsQuery = buildFtsQuery(title) ?: return@async null
-                                repository
-                                    .searchByFts(contentType, ftsQuery, includeExcluded = false)
-                                    .filter { it.tmdb.asString().normalizeTmdbId() == null }
-                                    .filter { candidate ->
-                                        TitleMatcher.matches(
-                                            catalogueTitle = candidate.name,
-                                            catalogueYear = candidate.releaseDate?.take(4)?.toIntOrNull(),
-                                            tmdbTitle = title,
-                                            tmdbYear = result.year,
-                                        )
-                                    }
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-                    }.awaitAll()
-            }
+        val candidatesByIndex = lookUpCandidates(results, contentType)
 
         val matches = mutableListOf<MediaItem>()
         for ((index, result) in results.withIndex()) {
@@ -1065,6 +1030,67 @@ class XtreamMediaProvider(
             matches += hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
         }
         return if (matches.size < minCount) emptyList() else matches
+    }
+
+    /**
+     * The catalogue titles that may be each TMDB title, index-aligned with [results]; null where the
+     * lookup failed.
+     *
+     * The lookup per title is independent and read-only, so the titles are looked up at once: up
+     * to ~40 TMDB titles cost one round trip's worth of wall-clock time instead of N sequential
+     * ones. Only [matchToCatalogue]'s accept/reject decision depends on its `taken`, which is built
+     * up as matches are accepted — looking ahead of that can waste a query on a title already
+     * claimed, never correctness. By TMDB id first; by title only among rows without one, so a row
+     * with another id (a remake with the same name) never matches.
+     */
+    private suspend fun lookUpCandidates(
+        results: List<TmdbRecommendation>,
+        contentType: String,
+    ): List<List<XtreamStream>?> =
+        coroutineScope {
+            results
+                .map { result ->
+                    async {
+                        try {
+                            val byId = repository.getAlternateStreams(contentType, result.id.toString(), excludeId = -1)
+                            if (byId.isNotEmpty()) return@async byId
+                            val title = result.displayTitle ?: return@async null
+                            val ftsQuery = buildFtsQuery(title) ?: return@async null
+                            repository
+                                .searchByFts(contentType, ftsQuery, includeExcluded = false)
+                                .filter { it.tmdb.asString().normalizeTmdbId() == null }
+                                .filter { candidate ->
+                                    TitleMatcher.matches(
+                                        catalogueTitle = candidate.name,
+                                        catalogueYear = candidate.releaseDate?.take(4)?.toIntOrNull(),
+                                        tmdbTitle = title,
+                                        tmdbYear = result.year,
+                                    )
+                                }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }.awaitAll()
+        }
+
+    /**
+     * The catalogue title for each TMDB title, index-aligned with [results]: the first match, its
+     * provider tags off; null where this source has none. For the chart rows
+     * (docs/plans/20261029_tmdb-charts-plan.md), which pick across sources and drop repeats
+     * themselves. Same matching as More Like This, outside the excluded categories.
+     */
+    suspend fun findTmdbTitles(
+        results: List<TmdbRecommendation>,
+        contentType: String,
+    ): List<MediaItem?> {
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return results.map { null }
+        val mediaType = getMediaType(contentType)
+        return lookUpCandidates(results, contentType).map { candidates ->
+            candidates?.firstOrNull()?.toDomain(mediaType)?.let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
+        }
     }
 
     override suspend fun countExcludedSearchMatches(

@@ -109,6 +109,9 @@ data class TmdbContentRatingCountry(
 data class TmdbRecommendationsResponse(
     @SerialName("results")
     val results: List<TmdbRecommendation> = emptyList(),
+    // A chart's: how many pages it has (TMDB stops at 500).
+    @SerialName("total_pages")
+    val totalPages: Int = 1,
 )
 
 /** Movies and TV share this shape apart from the title and date fields, which are named differently. */

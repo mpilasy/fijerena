@@ -1478,4 +1478,13 @@
     <string name="common_on">Mandeha</string>
     <string name="settings_theme_and_look_title">Loko sy endrika</string>
     <string name="settings_profile_row_desc">Amin’ny pejin’ny mombamomba anao</string>
+    <string name="chart_trending_movies">Sarimihetsika miely</string>
+    <string name="chart_trending_shows">Andian-tantara miely</string>
+    <string name="chart_popular_movies">Sarimihetsika malaza</string>
+    <string name="chart_popular_shows">Andian-tantara malaza</string>
+    <string name="chart_top_rated_movies">Sarimihetsika tsara naoty indrindra</string>
+    <string name="chart_top_rated_shows">Andian-tantara tsara naoty indrindra</string>
+    <string name="category_charts">Laharana</string>
+    <string name="tmdb_charts_title">Laharana TMDB</string>
+    <string name="tmdb_charts_desc">Andalana misy ny miely amin\'ity herinandro ity, ny malaza ary ny tsara naoty indrindra eo amin\'ny fandraisana, ary lisitra Laharana ao amin\'ny Sarimihetsika sy Andian-tantara. Ny an\'ny loharanonao ihany no aseho. Mila fanalahidy TMDB. Ity fitaovana ity ihany.</string>
 </resources>

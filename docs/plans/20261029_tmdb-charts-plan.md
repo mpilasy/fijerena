@@ -4,8 +4,9 @@
 
 ## Goal
 
-Home shows today's TMDB charts, cut down to what the profile's sources have: "Trending Films",
-"Trending Shows", "Popular Films", "Popular Shows", "Top Rated Films" and "Top Rated Shows". Only titles that can be played show. A
+Home shows today's TMDB charts, cut down to what the profile's sources have: "Trending Movies",
+"Trending Shows", "Popular Movies", "Popular Shows", "Top Rated Movies" and "Top Rated Shows" (the
+app's word for films in English UI). Only titles that can be played show. A
 chart title that no source has (most new releases) is skipped. The app reads only as many chart
 pages as it needs to fill a row.
 
@@ -79,8 +80,8 @@ pages as it needs to fill a row.
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | The TMDB Charts switch (`AppSettings`, TV and phone Admin rows). `TmdbApiService`: the six chart calls with `page`. A chart page cache (24 hours, cache directory). Unit tests: cache age, page reuse, last page. | Not started |
-| 2 | Chart matching: page by page across the profile's sources, stop at 20, page limit, one `taken` set, smallest row. Unit tests with fake pages and catalogue: early stop after one page, a title on two sources once, no key gives no row. | Not started |
+| 1 | The TMDB Charts switch (`AppSettings`, TV and phone Admin rows). `TmdbApiService`: the six chart calls with `page`. A chart page cache (24 hours, cache directory). Unit tests: cache age, page reuse, last page. | Done 2026-10-29 (with Phase 2) |
+| 2 | Chart matching: page by page across the profile's sources, stop at 20, page limit, one `taken` set, smallest row. Unit tests with fake pages and catalogue: early stop after one page, a title on two sources once, no key gives no row. | Done 2026-10-29: `matchChart` (core/network `tmdb/TmdbChart.kt`), `ChartRows` (core/ui `home/`) |
 | 3 | TV Home: the rows (cards, focus, OK opens the details page on the card's source, Back returns to the card). Strings en, fr, mg. | Not started |
 | 4 | Phone Home: the same rows. | Not started |
 | 4a | The Charts list in Movies and TV Shows, TV and phone. | Not started |

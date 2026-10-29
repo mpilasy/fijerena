@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ParentalRules
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -721,6 +722,15 @@ class MediaRepository(
         tmdbId: String?,
         contentType: String,
     ): RelatedTitles = provider?.getRelatedTitles(itemId, tmdbId, contentType) ?: RelatedTitles()
+
+    /**
+     * See [XtreamMediaProvider.findTmdbTitles]: this source's title for each TMDB title, or null.
+     * All null for a source that is not Xtream (the chart rows are Xtream only, CH-D5).
+     */
+    suspend fun findTmdbTitles(
+        results: List<TmdbRecommendation>,
+        contentType: String,
+    ): List<MediaItem?> = (provider as? XtreamMediaProvider)?.findTmdbTitles(results, contentType) ?: results.map { null }
 
     /** See [MediaProvider.getTmdbTitle]. */
     suspend fun getTmdbTitle(

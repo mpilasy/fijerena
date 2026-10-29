@@ -73,6 +73,7 @@ class AppSettings(
         private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
+        private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LAST_TAB = "last_tab"
@@ -870,6 +871,23 @@ class AppSettings(
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(showClock) }
             prefs.registerOnSharedPreferenceChangeListener(listener)
             send(showClock)
+            awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }.distinctUntilChanged()
+
+    /**
+     * The TMDB chart rows on Home and the Charts lists (docs/plans/20261029_tmdb-charts-plan.md).
+     * This device's, set in Admin: not per profile, not synced, not exported. On by default; they
+     * show only with a TMDB key anyway. Off, no chart page is read.
+     */
+    var showTmdbCharts: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_TMDB_CHARTS, true)
+        set(value) = prefs.edit { putBoolean(KEY_SHOW_TMDB_CHARTS, value) }
+
+    fun observeShowTmdbCharts(): Flow<Boolean> =
+        callbackFlow {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(showTmdbCharts) }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            send(showTmdbCharts)
             awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
         }.distinctUntilChanged()
 
