@@ -1,6 +1,6 @@
 # TMDB charts in your library
 
-**Status:** Proposed 2026-10-29; CH-D1, D2, D4, D5, D6 decided (user, 2026-10-29), CH-D3 open. Not started.
+**Status:** Agreed 2026-10-29 (all decisions below); In progress.
 
 ## Goal
 
@@ -52,7 +52,10 @@ pages as it needs to fill a row.
    catalogue's excluded flags follow the profile in use. So the profile's content filters, the
    kids' and adult rules, Hidden Titles and the Parental Controls exceptions apply as on every
    other row, a teenager's filters too.
-7. **Failure:** no key, no network or a TMDB error means the row does not show. It never shows an
+7. **Admin switch (user, 2026-10-29):** **TMDB Charts** in Admin → Sources & Guide, under the
+   TMDB row, on by default. Off, no chart row or Charts list shows on this device, and no chart page
+   is read. A device setting (`AppSettings`), as Show Clock: not synced, not exported.
+8. **Failure:** no key, no network or a TMDB error means the row does not show. It never shows an
    error.
 
 ## Decisions
@@ -61,7 +64,7 @@ pages as it needs to fill a row.
   (4 rows); (b) also Trending this week (6 rows); (c) only Popular (2 rows).
 - **CH-D2 Where (decided, user 2026-10-29: b):** (a) TV Home and phone Home, under the favourite
   rows; (b) a Charts list in Movies and TV Shows too; (c) TV Home only.
-- **CH-D3 Page limit (open):** the most pages read for one chart when the catalogue has fewer
+- **CH-D3 Page limit (decided, user 2026-10-29: a):** the most pages read for one chart when the catalogue has fewer
   than 20 of its titles. TMDB goes to page 500, so without a limit a small library could cost
   hundreds of calls for one row. (a) 25 pages (the top 500), recommended; (b) 10 pages (the top 200);
   (c) 50 pages.
@@ -76,7 +79,7 @@ pages as it needs to fill a row.
 
 | Phase | Work | Status |
 |---|---|---|
-| 1 | `TmdbApiService`: the six chart calls with `page`. A chart page cache (24 hours, cache directory). Unit tests: cache age, page reuse, last page. | Not started |
+| 1 | The TMDB Charts switch (`AppSettings`, TV and phone Admin rows). `TmdbApiService`: the six chart calls with `page`. A chart page cache (24 hours, cache directory). Unit tests: cache age, page reuse, last page. | Not started |
 | 2 | Chart matching: page by page across the profile's sources, stop at 20, page limit, one `taken` set, smallest row. Unit tests with fake pages and catalogue: early stop after one page, a title on two sources once, no key gives no row. | Not started |
 | 3 | TV Home: the rows (cards, focus, OK opens the details page on the card's source, Back returns to the card). Strings en, fr, mg. | Not started |
 | 4 | Phone Home: the same rows. | Not started |
