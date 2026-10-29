@@ -547,12 +547,6 @@ private fun HomeRowsColumn(
             ) { onContinueWatching(item) }
         }
         HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
-        HomeRow(stringResource(R.string.home_favorite_channels), rows.favoriteChannels, { it.item.sourceKey }, content = channelCard)
-        categoriesRow(ContentType.LIVE_TV, R.string.home_favorite_channel_categories)
-        favoritesRow(rows.favoriteMovies, ContentType.MOVIES, R.string.home_favorite_movies)
-        categoriesRow(ContentType.MOVIES, R.string.home_favorite_movie_categories)
-        favoritesRow(rows.favoriteShows, ContentType.TV_SHOWS, R.string.home_favorite_shows)
-        categoriesRow(ContentType.TV_SHOWS, R.string.home_favorite_show_categories)
         val newCount = wanted.cards.count { it.isNew }
         val wantedTitle = stringResource(R.string.wanted_title)
         HomeRow(
@@ -560,9 +554,15 @@ private fun HomeRowsColumn(
             wanted.cards,
             { it.key },
         ) { card -> WantedTitleCard(card, onLongClick = { onMenu(HomeMenu.Wishlist(card)) }) { wanted.onOpen(card) } }
-        // The charts last, as on TV: the rows above are the profile's own.
         chartRows(ContentType.MOVIES, rows.favoriteMovies)
         chartRows(ContentType.TV_SHOWS, rows.favoriteShows)
+        // The favourites last, as on TV (user, 2026-10-29).
+        HomeRow(stringResource(R.string.home_favorite_channels), rows.favoriteChannels, { it.item.sourceKey }, content = channelCard)
+        categoriesRow(ContentType.LIVE_TV, R.string.home_favorite_channel_categories)
+        favoritesRow(rows.favoriteMovies, ContentType.MOVIES, R.string.home_favorite_movies)
+        categoriesRow(ContentType.MOVIES, R.string.home_favorite_movie_categories)
+        favoritesRow(rows.favoriteShows, ContentType.TV_SHOWS, R.string.home_favorite_shows)
+        categoriesRow(ContentType.TV_SHOWS, R.string.home_favorite_show_categories)
     }
 }
 

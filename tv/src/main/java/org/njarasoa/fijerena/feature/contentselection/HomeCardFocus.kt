@@ -8,23 +8,25 @@ import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 internal enum class HomeShelf {
     CONTINUE_WATCHING,
     CHANNELS,
-    FAVORITE_CHANNELS,
-    FAVORITE_CHANNEL_CATEGORIES,
-    FAVORITE_MOVIES,
-    FAVORITE_MOVIE_CATEGORIES,
-    FAVORITE_SHOWS,
-    FAVORITE_SHOW_CATEGORIES,
 
-    /** The Wanted list (wanted titles plan, Phase 5): under the profile's own rows. */
+    /** The Wanted list (wanted titles plan, Phase 5). */
     WANTED,
 
-    /** The TMDB chart rows (TMDB charts plan, Phase 3): last, the films' charts, then the shows'. */
+    /** The TMDB chart rows (TMDB charts plan, Phase 3): the films' charts, then the shows'. */
     CHART_TRENDING_MOVIES,
     CHART_POPULAR_MOVIES,
     CHART_TOP_RATED_MOVIES,
     CHART_TRENDING_SHOWS,
     CHART_POPULAR_SHOWS,
     CHART_TOP_RATED_SHOWS,
+
+    /** The favourites last (user, 2026-10-29), each section's categories under its favourites. */
+    FAVORITE_CHANNELS,
+    FAVORITE_CHANNEL_CATEGORIES,
+    FAVORITE_MOVIES,
+    FAVORITE_MOVIE_CATEGORIES,
+    FAVORITE_SHOWS,
+    FAVORITE_SHOW_CATEGORIES,
 }
 
 /** The chart of a chart row; null for the other rows. */
