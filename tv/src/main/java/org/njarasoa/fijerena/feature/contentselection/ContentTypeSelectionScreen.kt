@@ -370,20 +370,18 @@ fun ContentTypeSelectionScreen(
         favoriteCategories = if (child) emptyList() else loadFavoriteCategories(merged, supportedContentTypes)
         liveRowLoaded = true
     }
-    // The chart rows after the other rows, so their TMDB calls never hold those up; the films'
-    // charts show as soon as they are ready, then the shows'. Again when the Admin switch changes.
+    // The chart rows after the other rows, so their TMDB calls never hold those up. Again when the
+    // Admin switch changes. All six at once: a later second update recomposed the rows under a
+    // card focus had just come back to (Back from a chart card), and focus jumped to a first card.
     LaunchedEffect(mergedLists, supportedContentTypes, showCharts) {
         val merged = mergedLists ?: return@LaunchedEffect
         snapshotFlow { liveRowLoaded }.first { it }
-        for (type in listOf(ContentType.MOVIES, ContentType.TV_SHOWS)) {
-            val rows =
-                if (!showCharts || child || type !in supportedContentTypes) {
-                    emptyList()
-                } else {
-                    withContext(Dispatchers.IO) { ChartRows.load(context.applicationContext, merged, type) }
-                }
-            chartItems = chartItems.filterKeys { it.contentType != type } + rows.associate { it.chart to it.items }
-        }
+        val loaded =
+            listOf(ContentType.MOVIES, ContentType.TV_SHOWS)
+                .filter { showCharts && !child && it in supportedContentTypes }
+                .flatMap { type -> withContext(Dispatchers.IO) { ChartRows.load(context.applicationContext, merged, type) } }
+                .associate { it.chart to it.items }
+        if (loaded != chartItems) chartItems = loaded
     }
     LaunchedEffect(mergedLists, liveRowEntries, favoriteChannelEntries) {
         val merged = mergedLists ?: return@LaunchedEffect
@@ -581,7 +579,7 @@ fun ContentTypeSelectionScreen(
             if (!key.startsWith(prefix)) continue
             val itemId = key.removePrefix(prefix)
             val items =
-                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                withTimeoutOrNull(RETURN_CHART_WAIT_MS) {
                     snapshotFlow { chartOf(shelf) }.first { items -> items.any { it.sourceKey == itemId } }
                 }
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
@@ -1087,6 +1085,7 @@ fun ContentTypeSelectionScreen(
                 },
                 onOpenActions = { category -> categoryMenu = category },
                 firstItemFocus = categoriesFirstFocus.getValue(shelf),
+                restoreFocus = returnFocus.requesterWhere { key -> categories.any { key == RETURN_FAVORITE_CATEGORIES_PREFIX + it.key } },
                 listState = categoriesListState.getValue(shelf),
                 itemModifier = { category ->
                     Modifier
@@ -1303,6 +1302,7 @@ fun ContentTypeSelectionScreen(
                                 TvContinueWatchingShelf(
                                     items = continueWatchingItems,
                                     firstItemFocus = shelfFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_CONTINUE_WATCHING_PREFIX) },
                                     onItemSelected = { item ->
                                         leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.sourceKey) { onContinueWatchingSelected(item) }
                                     },
@@ -1334,6 +1334,7 @@ fun ContentTypeSelectionScreen(
                                         }
                                     },
                                     firstItemFocus = liveRowFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_LIVE_ROW_PREFIX) },
                                     onOpenActions =
                                         if (child) {
                                             null
@@ -1372,6 +1373,7 @@ fun ContentTypeSelectionScreen(
                                         }
                                     },
                                     firstItemFocus = favoriteChannelsFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_CHANNELS_PREFIX) },
                                     onOpenActions =
                                         if (child) {
                                             null
@@ -1417,6 +1419,7 @@ fun ContentTypeSelectionScreen(
                                     },
                                     statusOf = { item -> goneStatus(item, ContentType.MOVIES) },
                                     firstItemFocus = favoriteMoviesFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_MOVIES_PREFIX) },
                                     onOpenActions =
                                         if (child) {
                                             null
@@ -1464,6 +1467,7 @@ fun ContentTypeSelectionScreen(
                                     },
                                     statusOf = { item -> goneStatus(item, ContentType.TV_SHOWS) },
                                     firstItemFocus = favoriteShowsFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_SHOWS_PREFIX) },
                                     onOpenActions =
                                         if (child) {
                                             null
@@ -1519,6 +1523,7 @@ fun ContentTypeSelectionScreen(
                                     },
                                     onOpenActions = { card -> wantedMenu = card },
                                     firstItemFocus = wantedFirstFocus,
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_WANTED_PREFIX) },
                                     listState = wantedListState,
                                     itemModifier = { card ->
                                         Modifier
@@ -1549,6 +1554,7 @@ fun ContentTypeSelectionScreen(
                                         leaveTo(prefix + item.sourceKey) { onFavoriteSelected(item, chart.contentType) }
                                     },
                                     firstItemFocus = chartFirstFocus.getValue(shelf),
+                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(prefix) },
                                     onOpenActions =
                                         if (child) {
                                             null
@@ -1689,6 +1695,9 @@ private suspend fun loadFavoriteChannels(merged: MergedLists): List<LiveRowEntry
 
 /** How long Back waits for the Continue Watching shelf to reload before giving up on its card. */
 private const val RETURN_SHELF_WAIT_MS = 2_000L
+
+// The chart rows come after every other row is loaded: longer to wait for on a big catalogue.
+private const val RETURN_CHART_WAIT_MS = 10_000L
 
 /** How long a fresh open waits for the rows before focusing anyway. */
 private const val ENTRY_FOCUS_WAIT_MS = 2_000L

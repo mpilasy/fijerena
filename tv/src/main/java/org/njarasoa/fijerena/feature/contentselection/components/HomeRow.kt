@@ -35,6 +35,10 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * below lands on the card this row had last ([focusRestorer]), else on its first card
  * ([firstItemFocus]); Left on the first card goes to the navigation rail and Right on the last
  * stays put, so the search never falls out of the row onto the header or another row.
+ *
+ * [restoreFocus]: the card Back returns to, while that hand-back is pending and the card is in this
+ * row (`NavReturnFocus.requesterWhere`). Back rebuilds Home, so the restorer remembers no card, and
+ * its fallback took the hand-back from the card to the row's first card.
  */
 @Composable
 fun <T> HomeRow(
@@ -44,6 +48,7 @@ fun <T> HomeRow(
     listState: LazyListState,
     firstItemFocus: FocusRequester,
     modifier: Modifier = Modifier,
+    restoreFocus: FocusRequester? = null,
     itemContent: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
     if (items.isEmpty()) return
@@ -59,7 +64,7 @@ fun <T> HomeRow(
             state = listState,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             contentPadding = PaddingValues(horizontal = Spacing.xxs),
-            modifier = Modifier.focusRestorer(firstItemFocus),
+            modifier = Modifier.focusRestorer(restoreFocus ?: firstItemFocus),
         ) {
             itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
                 itemContent(

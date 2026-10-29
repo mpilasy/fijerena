@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Back on TV Home returns to the card you left:** after opening a card on a Home row (Continue Watching, Channels, favourites, Wishlist, the charts) and pressing Back, focus went to the first card of that row instead. Now it returns to the card you opened. TV.
 - **TMDB charts from your library:** Home shows Trending, Popular and Top Rated rows for movies and for shows, with only the titles your sources have, in TMDB's order. Movies and TV Shows get a Charts list with the same titles. The app reads a chart one page (20 titles) at a time, and stops when 20 of your titles match or after the top 500. It keeps the pages a day. Needs a TMDB key; not on a child profile. Admin → Sources & Guide → TMDB Charts turns them off on the device. TV and phone.
 
 ## Version: 0.8.20261029032633

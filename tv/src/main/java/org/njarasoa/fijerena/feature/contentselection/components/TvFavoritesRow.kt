@@ -64,6 +64,8 @@ fun TvFavoritesRow(
     /** Null: the cards have no actions (a child profile's Home). */
     onOpenActions: ((MediaItem) -> Unit)?,
     firstItemFocus: FocusRequester,
+    /** See [HomeRow]: the card Back returns to, while it is pending. */
+    restoreFocus: FocusRequester? = null,
     listState: LazyListState,
     modifier: Modifier = Modifier,
     itemModifier: (MediaItem) -> Modifier = { Modifier },
@@ -78,6 +80,7 @@ fun TvFavoritesRow(
         key = { it.sourceKey },
         listState = listState,
         firstItemFocus = firstItemFocus,
+        restoreFocus = restoreFocus,
         modifier = modifier,
     ) { item, rowModifier ->
         TvFavoriteCard(

@@ -45,6 +45,8 @@ fun TvFavoriteCategoriesRow(
     /** Long-press OK or the Menu key on a card: its actions menu. */
     onOpenActions: (SourcedFavoriteCategory) -> Unit,
     firstItemFocus: FocusRequester,
+    /** See [HomeRow]: the card Back returns to, while it is pending. */
+    restoreFocus: FocusRequester? = null,
     listState: LazyListState,
     modifier: Modifier = Modifier,
     itemModifier: (SourcedFavoriteCategory) -> Modifier = { Modifier },
@@ -57,6 +59,7 @@ fun TvFavoriteCategoriesRow(
         key = { it.key },
         listState = listState,
         firstItemFocus = firstItemFocus,
+        restoreFocus = restoreFocus,
         modifier = modifier,
     ) { category, rowModifier ->
         TvFavoriteCategoryCard(

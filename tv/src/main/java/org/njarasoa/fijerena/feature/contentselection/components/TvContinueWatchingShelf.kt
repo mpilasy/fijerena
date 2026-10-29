@@ -81,6 +81,8 @@ fun TvContinueWatchingShelf(
     /** Null: the cards have no actions (a child profile's Home). */
     onOpenActions: ((ContinueWatchingItem) -> Unit)?,
     firstItemFocus: FocusRequester,
+    /** See [HomeRow]: the card Back returns to, while it is pending. */
+    restoreFocus: FocusRequester? = null,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
     itemModifier: (ContinueWatchingItem) -> Modifier = { Modifier },
@@ -93,6 +95,7 @@ fun TvContinueWatchingShelf(
         key = { it.sourceKey },
         listState = listState,
         firstItemFocus = firstItemFocus,
+        restoreFocus = restoreFocus,
         modifier = modifier,
     ) { item, rowModifier ->
         TvContinueWatchingCard(

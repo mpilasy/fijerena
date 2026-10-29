@@ -75,6 +75,8 @@ fun TvLiveRow(
     /** Null: the cards have no actions (a child profile's Home). */
     onOpenActions: ((LiveRowEntry) -> Unit)?,
     firstItemFocus: FocusRequester,
+    /** See [HomeRow]: the card Back returns to, while it is pending. */
+    restoreFocus: FocusRequester? = null,
     listState: LazyListState,
     modifier: Modifier = Modifier,
     itemModifier: (LiveRowEntry) -> Modifier = { Modifier },
@@ -89,6 +91,7 @@ fun TvLiveRow(
         key = { it.item.sourceKey },
         listState = listState,
         firstItemFocus = firstItemFocus,
+        restoreFocus = restoreFocus,
         modifier = modifier,
     ) { entry, rowModifier ->
         TvLiveChannelCard(

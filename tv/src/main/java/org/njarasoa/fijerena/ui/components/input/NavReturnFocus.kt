@@ -82,6 +82,12 @@ class NavReturnFocus internal constructor(
      */
     fun requesterFor(key: String): FocusRequester? = if (this.key == key) requester else null
 
+    /**
+     * The requester while Back is returning to a control whose key [matches], else null: for a
+     * row's focus restorer, whose own fallback would otherwise take the hand-back.
+     */
+    fun requesterWhere(matches: (String) -> Boolean): FocusRequester? = key?.takeIf(matches)?.let { requester }
+
     internal suspend fun restoreScroll(listState: LazyListState) {
         if (scrollIndex >= 0) listState.scrollToItem(scrollIndex, scrollOffset)
     }
