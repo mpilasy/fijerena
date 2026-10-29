@@ -477,6 +477,9 @@ private fun HomeRowsColumn(
                             onClick = { onShowMissing(!chart.showsMissing) },
                             icon = if (chart.showsMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
                             label = stringResource(if (chart.showsMissing) R.string.chart_hide_missing else R.string.chart_show_missing),
+                            // Not the default content colour: Home has no surface under it, so the
+                            // icon was drawn black on the dark ground. The accent while it is on.
+                            tint = if (chart.showsMissing) CinemaTheme.colors.accent else CinemaTheme.colors.textPrimary,
                         )
                     }
                 } else {
