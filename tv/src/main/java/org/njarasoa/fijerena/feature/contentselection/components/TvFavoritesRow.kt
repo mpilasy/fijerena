@@ -4,6 +4,7 @@ package org.njarasoa.fijerena.feature.contentselection.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,6 +29,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
@@ -43,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
+import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.components.cards.TvCard
 import org.njarasoa.fijerena.ui.components.cards.TvCardLook
@@ -53,7 +56,11 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
-/** Favourite movies or favourite shows on Home (TV home overhaul plan, Phase 5). */
+/**
+ * Favourite movies or favourite shows on Home (TV home overhaul plan, Phase 5), and the chart rows.
+ * A TMDB-only card (`TmdbOnlyItem`, a Trending row with its switch on) is marked Not available and
+ * has no actions.
+ */
 @Composable
 fun TvFavoritesRow(
     title: String,
@@ -73,6 +80,8 @@ fun TvFavoritesRow(
     sourceNames: Map<Long, String> = emptyMap(),
     /** A card's short state, first on its second line: Gone from source (wanted titles plan). */
     statusOf: (MediaItem) -> String? = { null },
+    /** See [HomeRow]: one more item before the cards, the row's first. */
+    leading: (@Composable (modifier: Modifier) -> Unit)? = null,
 ) {
     HomeRow(
         title = title,
@@ -82,14 +91,17 @@ fun TvFavoritesRow(
         firstItemFocus = firstItemFocus,
         restoreFocus = restoreFocus,
         modifier = modifier,
+        leading = leading,
     ) { item, rowModifier ->
+        val tmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
         TvFavoriteCard(
             item = item,
             sourceName = sourceNames[item.providerId],
             status = statusOf(item),
             thumbnailType = thumbnailType,
             onClick = { onItemSelected(item) },
-            onOpenActions = onOpenActions?.let { open -> { open(item) } },
+            onOpenActions = onOpenActions?.takeUnless { tmdbOnly }?.let { open -> { open(item) } },
+            notAvailable = tmdbOnly,
             modifier = itemModifier(item).then(rowModifier),
         )
     }
@@ -103,6 +115,7 @@ private fun TvFavoriteCard(
     thumbnailType: ThumbnailContentType,
     onClick: () -> Unit,
     onOpenActions: (() -> Unit)?,
+    notAvailable: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -117,15 +130,20 @@ private fun TvFavoriteCard(
         look = TvCardLooks.shelf(),
     ) {
         Column {
-            CinemaThumbnail(
-                url = item.thumbnailUrl,
-                fallbackLetter = item.name.firstOrNull(),
-                contentType = thumbnailType,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f),
-            )
+            Box {
+                CinemaThumbnail(
+                    url = item.thumbnailUrl,
+                    fallbackLetter = item.name.firstOrNull(),
+                    contentType = thumbnailType,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f),
+                )
+                if (notAvailable) {
+                    NotAvailableMark(iconSize = TvDimensions.iconSmall, modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs))
+                }
+            }
             Column(modifier = Modifier.padding(Spacing.sm)) {
                 // The provider's "EN - " tag as a badge on the second line, as in the lists.
                 val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }

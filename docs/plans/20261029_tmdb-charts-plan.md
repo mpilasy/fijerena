@@ -101,7 +101,7 @@ Trending:
 |---|---|---|
 | F1–F2 | `TmdbChart` parameters; tests | Done 2026-10-29 |
 | F3 core | `AppSettings.chartsShowMissing`, `chartWithMissing`, `ChartRows`, strings | Done 2026-10-29 |
-| F3 TV | The switch on the Trending rows, TMDB-only cards and their TMDB page, Charts list | Not started |
+| F3 TV | The switch on the Trending rows, TMDB-only cards and their TMDB page, Charts list | Done 2026-10-29: the switch is an eye icon before the row's first title (`HomeRow(leading)`); Down/Up into the row land on the first title, Left from it on the switch, Left from the switch on the rail. TMDB-only cards marked (`NotAvailableMark`), OK opens `TmdbTitle`, no menu; same in the Charts list (`StreamList`) |
 | F3 phone | The same on the phone | Not started |
 
 ## Phases

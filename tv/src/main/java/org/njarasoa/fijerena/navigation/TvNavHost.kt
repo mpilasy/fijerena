@@ -662,8 +662,12 @@ fun TvNavHost(
                                     )
                                 },
                                 // Same routes as the lists' onStreamSelected (item.id is the movie or series id).
+                                // A chart's TMDB-only card (no source has it) opens its TMDB page.
                                 onFavoriteSelected = { item, favoriteType ->
-                                    if (favoriteType == ContentType.TV_SHOWS) {
+                                    val tmdbOnly = TmdbOnlyItem.titleOf(item, favoriteType)
+                                    if (tmdbOnly != null) {
+                                        navController.navigateOnce(tmdbOnly.route())
+                                    } else if (favoriteType == ContentType.TV_SHOWS) {
                                         navController.navigateOnce(
                                             Screen.EpisodeSelection(
                                                 seriesId = item.id,

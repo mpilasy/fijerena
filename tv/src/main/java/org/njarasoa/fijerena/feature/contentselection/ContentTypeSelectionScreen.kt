@@ -189,6 +189,7 @@ import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.TvUndoBar
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.TvIconAction
 import org.njarasoa.fijerena.ui.components.clearOfTvClock
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
@@ -295,6 +296,12 @@ fun ContentTypeSelectionScreen(
     var chartItems by remember { mutableStateOf<Map<TmdbChart, List<MediaItem>>>(emptyMap()) }
     val showCharts by remember { appSettings.observeShowTmdbCharts() }
         .collectAsStateWithLifecycle(initialValue = appSettings.showTmdbCharts)
+    // The Trending rows' switch (the charts plan, follow-up F3): also the titles no source has, as
+    // TMDB-only cards. The profile's own, on this device.
+    val chartsShowMissing by remember { appSettings.observeChartsShowMissing(appSettings.activeProfileId) }
+        .collectAsStateWithLifecycle(initialValue = appSettings.chartsShowMissing(appSettings.activeProfileId))
+    // The row whose switch was just flipped: focus goes back to that switch once the rows reload.
+    var chartSwitchFlipped by remember { mutableStateOf<HomeShelf?>(null) }
 
     // The Undo of a card's removal (Hold OK / Menu on a card, below).
     val undoBar = rememberUndoBarState()
@@ -373,7 +380,8 @@ fun ContentTypeSelectionScreen(
     // The chart rows after the other rows, so their TMDB calls never hold those up. Again when the
     // Admin switch changes. All six at once: a later second update recomposed the rows under a
     // card focus had just come back to (Back from a chart card), and focus jumped to a first card.
-    LaunchedEffect(mergedLists, supportedContentTypes, showCharts) {
+    // Again when a Trending row's switch flips.
+    LaunchedEffect(mergedLists, supportedContentTypes, showCharts, chartsShowMissing) {
         val merged = mergedLists ?: return@LaunchedEffect
         snapshotFlow { liveRowLoaded }.first { it }
         val loaded =
@@ -381,7 +389,8 @@ fun ContentTypeSelectionScreen(
                 .filter { showCharts && !child && it in supportedContentTypes }
                 .flatMap { type -> withContext(Dispatchers.IO) { ChartRows.load(context.applicationContext, merged, type) } }
                 .associate { it.chart to it.items }
-        if (loaded != chartItems) chartItems = loaded
+        // Rows the same after a flip (no title more): focus never left the switch.
+        if (loaded != chartItems) chartItems = loaded else chartSwitchFlipped = null
     }
     LaunchedEffect(mergedLists, liveRowEntries, favoriteChannelEntries) {
         val merged = mergedLists ?: return@LaunchedEffect
@@ -459,6 +468,20 @@ fun ContentTypeSelectionScreen(
     val chartFirstFocus = remember { chartShelves.associateWith { FocusRequester() } }
     val chartListState = chartShelves.associateWith { rememberLazyListState() }
     val chartOf: (HomeShelf) -> List<MediaItem> = { shelf -> shelf.chart?.let { chartItems[it] }.orEmpty() }
+    // A chart row shows when loaded: a Trending row with no title still has its switch.
+    val chartShows: (HomeShelf) -> Boolean = { shelf -> shelf.chart in chartItems }
+    val chartSwitchFocus = remember { chartShelves.associateWith { FocusRequester() } }
+    // The row's items before its first card: a Trending row's switch.
+    val itemsBeforeCards: (HomeShelf) -> Int = { shelf -> if (shelf.chart?.canShowMissing == true) 1 else 0 }
+    // After a flip the row's cards change behind its switch: the switch keeps focus, in view.
+    LaunchedEffect(chartItems) {
+        val shelf = chartSwitchFlipped ?: return@LaunchedEffect
+        chartSwitchFlipped = null
+        withFrameNanos { }
+        val listState = chartListState.getValue(shelf)
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == 0 }) listState.scrollToItem(0)
+        chartSwitchFocus.getValue(shelf).requestFocusWithRetry()
+    }
     // The first card of the first row that has one: where focus opens and where Down from the header
     // goes. Null with no row at all; the sections are on the navigation rail then.
     // Derived, so the entry focus below reads the rows as they are now. A value read through
@@ -497,7 +520,7 @@ fun ContentTypeSelectionScreen(
                     wantedCards.isNotEmpty() -> wantedFirstFocus
 
                     // A chart row only on a Home with no other row.
-                    else -> chartShelves.firstOrNull { chartOf(it).isNotEmpty() }?.let { chartFirstFocus.getValue(it) }
+                    else -> chartShelves.firstOrNull(chartShows)?.let { chartFirstFocus.getValue(it) }
                 }
             }
         }
@@ -583,7 +606,7 @@ fun ContentTypeSelectionScreen(
                     snapshotFlow { chartOf(shelf) }.first { items -> items.any { it.sourceKey == itemId } }
                 }
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
-            if (index >= 0) chartListState.getValue(shelf).scrollToItem(index)
+            if (index >= 0) chartListState.getValue(shelf).scrollToItem(index + itemsBeforeCards(shelf))
         }
         if (key.startsWith(RETURN_WANTED_PREFIX)) {
             val cardKey = key.removePrefix(RETURN_WANTED_PREFIX)
@@ -720,7 +743,7 @@ fun ContentTypeSelectionScreen(
             rail?.entry?.requestFocusWithRetry()
         } else {
             val listState = listStateOf(card.shelf)
-            val index = shelfKeys(card.shelf).indexOf(card.key)
+            val index = shelfKeys(card.shelf).indexOf(card.key).let { if (it >= 0) it + itemsBeforeCards(card.shelf) else it }
             if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem(index)
             val requester = cardFocus.getOrPut(card) { FocusRequester() }
             requester.requestFocusWithRetry(fallback = rail?.entry)
@@ -1540,10 +1563,12 @@ fun ContentTypeSelectionScreen(
 
                             // The TMDB chart rows, last: the films' charts, then the shows'. Cards as on
                             // the favourite rows; their menu has the favourite toggle and no removal.
+                            // A Trending row starts with its switch: OK also shows the titles no source
+                            // has (TMDB-only cards, which open their TMDB page), or hides them again.
                             for (shelf in chartShelves) {
                                 val chart = shelf.chart ?: continue
+                                if (!chartShows(shelf)) continue
                                 val items = chartOf(shelf)
-                                if (items.isEmpty()) continue
                                 val isShows = chart.contentType == ContentType.TV_SHOWS
                                 val prefix = chartReturnPrefix(shelf)
                                 TvFavoritesRow(
@@ -1576,6 +1601,27 @@ fun ContentTypeSelectionScreen(
                                             .then(artOnFocus(item.thumbnailUrl, true))
                                     },
                                     sourceNames = sourceNames,
+                                    leading =
+                                        if (chart.canShowMissing) {
+                                            { switchModifier ->
+                                                TvIconAction(
+                                                    onClick = {
+                                                        chartSwitchFlipped = shelf
+                                                        ChartRows.setShowMissing(context, !chartsShowMissing)
+                                                    },
+                                                    icon = if (chartsShowMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                                    label =
+                                                        if (chartsShowMissing) {
+                                                            stringResource(R.string.chart_hide_missing)
+                                                        } else {
+                                                            stringResource(R.string.chart_show_missing)
+                                                        },
+                                                    modifier = switchModifier.focusRequester(chartSwitchFocus.getValue(shelf)),
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        },
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
