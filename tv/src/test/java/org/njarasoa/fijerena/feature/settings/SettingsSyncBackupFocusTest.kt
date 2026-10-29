@@ -23,7 +23,7 @@ class SettingsSyncBackupFocusTest : SettingsFocusTest() {
             down("Admin"),
             right("Set a PIN for Settings"),
             down("A / Admin"),
-            *adminDown("A / Admin", "TMDB Charts"),
+            *adminDown("A / Admin", "Refresh Charts"),
             // No backup waits in Downloads, so no Restore from Downloads row.
             down("Live Sync"),
             down("Back Up to a File"),

@@ -1495,4 +1495,7 @@
     <string name="tmdb_charts_desc">Rows of this week\'s trending, popular and top rated titles on Home, and a Charts list in Movies and TV Shows. Only titles your sources have show. Needs a TMDB key. This device only.</string>
     <string name="chart_show_missing">Show titles your sources don\'t have</string>
     <string name="chart_hide_missing">Show only titles your sources have</string>
+    <string name="tmdb_charts_refresh_title">Refresh Charts</string>
+    <string name="tmdb_charts_refresh_desc">Reads the charts from TMDB again now, not after a day.</string>
+    <string name="tmdb_charts_refresh_done">Charts cleared. Home reads them again.</string>
 </resources>

@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.liveSyncStatusLine
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
+import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -505,6 +506,27 @@ fun MobileSettingsScreen(
                                     },
                                     onClick = { viewModel.updateShowTmdbCharts(!uiState.showTmdbCharts) },
                                 )
+                                if (uiState.showTmdbCharts) {
+                                    var chartsRefreshed by remember { mutableStateOf(false) }
+                                    val chartsContext = LocalContext.current
+                                    SettingsListRow(
+                                        title = stringResource(R.string.tmdb_charts_refresh_title),
+                                        summary =
+                                            stringResource(
+                                                if (chartsRefreshed) {
+                                                    R.string.tmdb_charts_refresh_done
+                                                } else {
+                                                    R.string.tmdb_charts_refresh_desc
+                                                },
+                                            ),
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                ChartRows.refresh(chartsContext.applicationContext)
+                                                chartsRefreshed = true
+                                            }
+                                        },
+                                    )
+                                }
                             }
                         }
 

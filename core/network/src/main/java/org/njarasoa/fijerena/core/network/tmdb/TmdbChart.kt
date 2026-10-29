@@ -137,6 +137,16 @@ class TmdbChartPages(
             fetched
         }
 
+    /** Forgets every chart page read (Admin → Refresh Charts): the next rows read TMDB again. */
+    suspend fun clear() {
+        for (chart in TmdbChart.entries) {
+            locks.getValue(chart).withLock {
+                memory.remove(chart)
+                withContext(Dispatchers.IO) { file(chart).delete() }
+            }
+        }
+    }
+
     /** [chart]'s stored pages, read from the file once; none when they are a day old or asked otherwise. */
     private suspend fun current(chart: TmdbChart): Stored {
         val stored = memory[chart] ?: read(chart)?.also { memory[chart] = it }

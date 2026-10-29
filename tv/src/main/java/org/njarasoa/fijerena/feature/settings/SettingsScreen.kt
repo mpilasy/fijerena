@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.rememberPinPromptState
+import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -727,6 +728,29 @@ fun SettingsScreen(
                                                                     label = stringResource(R.string.tmdb_charts_title),
                                                                     description = stringResource(R.string.tmdb_charts_desc),
                                                                 )
+                                                                if (uiState.showTmdbCharts) {
+                                                                    var chartsRefreshed by remember { mutableStateOf(false) }
+                                                                    val chartsContext = LocalContext.current
+                                                                    SettingsRow(
+                                                                        title = stringResource(R.string.tmdb_charts_refresh_title),
+                                                                        description =
+                                                                            stringResource(
+                                                                                if (chartsRefreshed) {
+                                                                                    R.string.tmdb_charts_refresh_done
+                                                                                } else {
+                                                                                    R.string.tmdb_charts_refresh_desc
+                                                                                },
+                                                                            ),
+                                                                        // An action, not a page.
+                                                                        chevron = false,
+                                                                        onClick = {
+                                                                            coroutineScope.launch {
+                                                                                ChartRows.refresh(chartsContext.applicationContext)
+                                                                                chartsRefreshed = true
+                                                                            }
+                                                                        },
+                                                                    )
+                                                                }
                                                             }
 
                                                             AdminPart.SYNC_BACKUP -> {

@@ -230,7 +230,9 @@ fun MobileHomeScreen(
         AppSettings(context.applicationContext).let { it.observeChartsShowMissing(it.activeProfileId) }
     }.collectAsStateWithLifecycle(initialValue = false)
     var charts by remember { mutableStateOf<List<ChartRows.Row>>(emptyList()) }
-    LaunchedEffect(merged, supportedTypes, showCharts, chartsShowMissing) {
+    // Admin → Refresh Charts: read again.
+    val chartRefreshes by ChartRows.refreshes.collectAsStateWithLifecycle()
+    LaunchedEffect(merged, supportedTypes, showCharts, chartsShowMissing, chartRefreshes) {
         val lists = merged ?: return@LaunchedEffect
         if (!showCharts) {
             charts = emptyList()

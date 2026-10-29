@@ -2,6 +2,9 @@ package org.njarasoa.fijerena.core.ui.home
 
 import android.content.Context
 import androidx.annotation.StringRes
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
@@ -46,6 +49,18 @@ object ChartRows {
     )
 
     private val kept = mutableMapOf<Key, List<MediaItem>>()
+
+    private val refreshCount = MutableStateFlow(0)
+
+    /** Goes up on each [refresh]: the screens showing chart rows load them again. */
+    val refreshes: StateFlow<Int> = refreshCount.asStateFlow()
+
+    /** Admin → Refresh Charts: forgets the chart pages and rows, so they are read from TMDB again. */
+    suspend fun refresh(context: Context) {
+        TmdbChartPages.getInstance(context).clear()
+        synchronized(kept) { kept.clear() }
+        refreshCount.value++
+    }
 
     /** Whether chart rows may show at all on this device for the profile in use. */
     fun enabled(context: Context): Boolean {

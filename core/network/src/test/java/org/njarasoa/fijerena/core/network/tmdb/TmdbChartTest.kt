@@ -82,6 +82,19 @@ class TmdbChartTest {
     }
 
     @Test
+    fun `after clear, every chart is read again, also by a new instance`() =
+        runTest {
+            val pages = pages()
+            pages.page(TmdbChart.POPULAR_MOVIES, 1)
+            pages.clear()
+            pages.page(TmdbChart.POPULAR_MOVIES, 1)
+            assertEquals(2, calls.size)
+            pages.clear()
+            pages().page(TmdbChart.POPULAR_MOVIES, 1)
+            assertEquals(3, calls.size)
+        }
+
+    @Test
     fun `past the last page there is no page and no call`() =
         runTest {
             val pages = pages()

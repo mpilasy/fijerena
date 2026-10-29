@@ -92,6 +92,8 @@ Trending:
   nobody knows. Shows also need to be first out in the last five years with an episode in the last one, and no
   talk, news, soap or reality genre: with the vote floor alone, or with only the last-year episode
   rule, Grey's Anatomy, The Simpsons and the late-night shows still led Popular Shows.
+- **F4 Refresh Charts (user, 2026-10-29):** a row under the TMDB Charts switch forgets the chart
+  pages and rows, so they are read again at once.
 - **F3 Missing titles on Trending:** a switch on each Trending row (decided: on the row itself)
   shows the first 20 titles of the chart as TMDB ranks them, the ones no source has as TMDB-only
   cards marked Not in Your Sources (`TmdbOnlyItem`), which open the title's TMDB page (where Add to
@@ -104,6 +106,7 @@ Trending:
 | F1–F2 | `TmdbChart` parameters; tests | Done 2026-10-29 |
 | F3 core | `AppSettings.chartsShowMissing`, `chartWithMissing`, `ChartRows`, strings | Done 2026-10-29 |
 | F3 TV | The switch on the Trending rows, TMDB-only cards and their TMDB page, Charts list | Done 2026-10-29: the switch is an eye icon before the row's first title (`HomeRow(leading)`); Down/Up into the row land on the first title, Left from it on the switch, Left from the switch on the rail. TMDB-only cards marked (`NotAvailableMark`), OK opens `TmdbTitle`, no menu; same in the Charts list (`StreamList`) |
+| F4 | Refresh Charts row (TV and phone), `TmdbChartPages.clear`, `ChartRows.refresh` | Done 2026-10-29 |
 | F3 phone | The same on the phone | Done 2026-10-29: the eye icon at the end of the Trending row titles (`MobileHomeScreen`), TMDB-only cards marked and opening the TMDB page, no menu; Charts list rows the same, with no swipe |
 
 ## Phases

@@ -381,7 +381,9 @@ fun ContentTypeSelectionScreen(
     // Admin switch changes. All six at once: a later second update recomposed the rows under a
     // card focus had just come back to (Back from a chart card), and focus jumped to a first card.
     // Again when a Trending row's switch flips.
-    LaunchedEffect(mergedLists, supportedContentTypes, showCharts, chartsShowMissing) {
+    // Admin → Refresh Charts: read again.
+    val chartRefreshes by ChartRows.refreshes.collectAsStateWithLifecycle()
+    LaunchedEffect(mergedLists, supportedContentTypes, showCharts, chartsShowMissing, chartRefreshes) {
         val merged = mergedLists ?: return@LaunchedEffect
         snapshotFlow { liveRowLoaded }.first { it }
         val loaded =
