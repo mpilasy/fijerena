@@ -89,7 +89,9 @@ Trending:
   its fans, so even with thousands of votes its average starts above The Shawshank Redemption's.
 - **F2 Popular:** `discover` sorted by popularity, with at least 500 votes (movies) or 200 (shows),
   not `movie/popular` / `tv/popular`, which mixed long-running daytime shows with spikes of titles
-  nobody knows.
+  nobody knows. Shows also need to be first out in the last five years with an episode in the last one, and no
+  talk, news, soap or reality genre: with the vote floor alone, or with only the last-year episode
+  rule, Grey's Anatomy, The Simpsons and the late-night shows still led Popular Shows.
 - **F3 Missing titles on Trending:** a switch on each Trending row (decided: on the row itself)
   shows the first 20 titles of the chart as TMDB ranks them, the ones no source has as TMDB-only
   cards marked Not in Your Sources (`TmdbOnlyItem`), which open the title's TMDB page (where Add to

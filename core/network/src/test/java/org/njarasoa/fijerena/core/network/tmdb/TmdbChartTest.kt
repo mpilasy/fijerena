@@ -154,7 +154,21 @@ class TmdbChartTest {
     fun `only Trending can show the missing titles, and Popular counts votes`() {
         assertEquals(listOf(TmdbChart.TRENDING_MOVIES, TmdbChart.TRENDING_SHOWS), TmdbChart.entries.filter { it.canShowMissing })
         assertEquals("discover/movie&sort_by=popularity.desc&vote_count.gte=500", TmdbChart.POPULAR_MOVIES.request)
-        assertEquals("discover/tv&sort_by=popularity.desc&vote_count.gte=200", TmdbChart.POPULAR_SHOWS.request)
+        val yearAgo =
+            java.time.LocalDate
+                .now()
+                .minusYears(1)
+                .toString()
+        val fiveYearsAgo =
+            java.time.LocalDate
+                .now()
+                .minusYears(5)
+                .toString()
+        assertEquals(
+            "discover/tv&air_date.gte=$yearAgo&first_air_date.gte=$fiveYearsAgo&sort_by=popularity.desc" +
+                "&vote_count.gte=200&without_genres=10763|10764|10766|10767",
+            TmdbChart.POPULAR_SHOWS.request,
+        )
     }
 
     private companion object {

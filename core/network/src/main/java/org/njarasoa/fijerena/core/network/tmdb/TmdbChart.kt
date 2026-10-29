@@ -24,9 +24,24 @@ enum class TmdbChart(
     TRENDING_SHOWS("trending/tv/week", ContentType.TV_SHOWS),
 
     // Not `movie/popular` / `tv/popular`: those mix long-running daytime shows and short spikes of
-    // titles nobody knows. TMDB's popularity among titles with enough votes (user, 2026-10-29).
+    // titles nobody knows. TMDB's popularity among titles with enough votes (user, 2026-10-29). For
+    // shows, only those first out in the last five years with an episode in the last one, and no
+    // talk, news, soap or reality shows: decades-old shows still on air (Grey's Anatomy, The
+    // Simpsons) and the late-night shows led the list otherwise.
     POPULAR_MOVIES("discover/movie", ContentType.MOVIES, { popular(minVotes = 500) }),
-    POPULAR_SHOWS("discover/tv", ContentType.TV_SHOWS, { popular(minVotes = 200) }),
+    POPULAR_SHOWS(
+        "discover/tv",
+        ContentType.TV_SHOWS,
+        {
+            popular(minVotes = 200) +
+                mapOf(
+                    "air_date.gte" to yearAgo(),
+                    "first_air_date.gte" to LocalDate.now().minusYears(5).toString(),
+                    // News, Reality, Soap, Talk.
+                    "without_genres" to "10763|10764|10766|10767",
+                )
+        },
+    ),
 
     // Not `movie/top_rated` / `tv/top_rated`: those rank by average alone, so a new title with a
     // few perfect votes comes before The Shawshank Redemption. The best average among titles with
@@ -59,8 +74,10 @@ private fun topRated(
 ) = mapOf(
     "sort_by" to "vote_average.desc",
     "vote_count.gte" to minVotes.toString(),
-    releasedBefore to LocalDate.now().minusYears(1).toString(),
+    releasedBefore to yearAgo(),
 )
+
+private fun yearAgo() = LocalDate.now().minusYears(1).toString()
 
 /** One page of a chart: its titles in TMDB's order, and how many pages the chart has. */
 @Serializable
