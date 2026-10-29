@@ -19,7 +19,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-29 | [TMDB charts](./20261029_tmdb-charts-plan.md) | Home rows of today's TMDB charts (Popular, Top Rated; films and shows) cut down to what the profile's sources have; chart pages read only until a row has 20 titles | Proposed; decisions CH-D1 to CH-D6 open |
+| 2026-10-29 | [TMDB charts](./20261029_tmdb-charts-plan.md) | Home rows and a Charts list of today's TMDB charts (Trending, Popular, Top Rated; films and shows) cut down to what the profile's sources have; chart pages read only until a row has 20 titles | Proposed; CH-D3 (page limit) open |
 | 2026-10-28 | [Admin settings](./20261028_admin-settings-plan.md) | One rule: household and device settings are Admin, a profile's own are not; Settings becomes Your Profile, Admin (PIN once on the way in) and About; Expert mode becomes Admin in the UI | Done 2026-10-28, walked on both emulators |
 | 2026-10-28 | [PIN on the phone](./20261028_pin-on-phone-plan.md) | When the TV asks for a PIN, type it on a linked phone so the room cannot read it from the TV's pad; the phone checks it and sends only "unlocked" | Done 2026-10-28, walked on both emulators |
 | 2026-10-27 | [TV browse tabs](./20261027_tv-browse-tabs-plan.md) | On TV Live TV, Movies and TV Shows, Recent, Favourites and the other virtual lists become a fixed tab row at the top of the right pane, after the picked category's tab; every D-pad move kept | Done 2026-10-27, walked on the TV emulator; a section opened again starts on Recent |
