@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **TMDB charts from your library:** Home shows Trending, Popular and Top Rated rows for movies and for shows, with only the titles your sources have, in TMDB's order. Movies and TV Shows get a Charts list with the same titles. The app reads a chart one page (20 titles) at a time, and stops when 20 of your titles match or after the top 500. It keeps the pages a day. Needs a TMDB key; not on a child profile. Admin → Sources & Guide → TMDB Charts turns them off on the device. TV and phone.
+
 ## Version: 0.8.20261029032633
 
 - **Smooth Live TV preview on weak devices:** the Live TV preview stuttered on a Chromecast with Google TV (HD), and full screen played smoothly. The blurred channel logo behind the preview was the cause: the device redrew the blur under every video frame. The Live TV screen now shows a gradient tinted with the logo's main colour, as the Shields already did. The other screens keep the blur. TV.

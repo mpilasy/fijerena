@@ -35,11 +35,14 @@ says what the app stores, what it sends and to whom.
   sources give. Jellyfin servers receive a device name and a device id (Android's `ANDROID_ID`
   for this app), as every Jellyfin client sends.
 - **TMDB, only with your own key.** No TMDB key is built into the app, and without one nothing is
-  sent to TMDB. If you enter one (Settings → Sources & guide → Film and series details), the app
+  sent to TMDB. If you enter one (Settings → Admin → Sources & Guide → Film and Series Details), the app
   asks [The Movie Database](https://www.themoviedb.org) for artwork and details of films and
   shows, sending your key and the TMDB id of the title you open. Search also sends TMDB the text
   you type (three characters or more), to find films and shows your sources don't have; a child
-  profile never does. If TMDB refuses the key, the app
+  profile never does. With TMDB Charts on (Settings → Admin → Sources & Guide, on by default), the
+  app also asks TMDB for its public chart pages (trending, popular, top rated), sending only your
+  key; which of those titles your sources have is worked out on the device. If TMDB refuses the
+  key, the app
   stops asking until you enter another. The key is never put in an export; with live sync it goes
   to your other devices inside the encrypted records. TMDB's own privacy policy applies to those
   requests.
