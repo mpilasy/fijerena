@@ -61,6 +61,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
+import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -108,6 +109,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.wanted.LocalOpenWanted
+import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
+import org.njarasoa.fijerena.core.ui.wanted.route
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.TvEmptyState
 import org.njarasoa.fijerena.ui.components.UndoBarState
@@ -576,6 +579,8 @@ internal fun StreamList(
                                         editMode = editMode,
                                         onClick = {
                                             val gone = if (editMode) null else categoryViewModel.goneOf(item)
+                                            // The Charts list's TMDB-only rows (Trending, its switch on): no source has the title.
+                                            val tmdbOnly = if (editMode) null else TmdbOnlyItem.titleOf(item, contentType)
                                             when {
                                                 editMode && isWantedList -> {
                                                     removeWanted(item)
@@ -588,6 +593,12 @@ internal fun StreamList(
                                                         categoryViewModel.openingWanted(card)
                                                         openWanted(card.route)
                                                     }
+                                                }
+
+                                                tmdbOnly != null -> {
+                                                    lastFocusedItemId = item.sourceKey
+                                                    openedItemId = item.sourceKey
+                                                    openWanted(tmdbOnly.route())
                                                 }
 
                                                 editMode && isRecentList -> {
@@ -631,8 +642,11 @@ internal fun StreamList(
                                         },
                                         onOpenActions = {
                                             when {
-                                                !rowActions -> Unit
+                                                // A TMDB-only row has no action: no source has the title.
+                                                !rowActions || item.isTmdbOnly -> Unit
+
                                                 isWantedList -> wantedMenuItem = item
+
                                                 else -> actionsItem = item
                                             }
                                         },
@@ -779,6 +793,8 @@ internal fun StreamItem(
     // competing with the scroll itself. At rest the two look identical: fraction is 0, so the
     // node draws the same clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
+    // A TMDB title no source has (the Charts list's Trending): marked, and no ⋮, as it has no action.
+    val tmdbOnly = item.isTmdbOnly
 
     TvCard(
         onClick = onClick,
@@ -844,6 +860,7 @@ internal fun StreamItem(
             listOfNotNull(
                 "★".takeIf { isFavorite },
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
+                stringResource(R.string.wanted_not_available).takeIf { tmdbOnly },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
                 displayTitle,
                 sourceLine?.let { stringResource(R.string.source_badge_description, it) },
@@ -852,7 +869,7 @@ internal fun StreamItem(
                 nowLine.takeIf { sourceLine == null },
                 when {
                     isFocused && editMode -> stringResource(R.string.edit_remove_row)
-                    isFocused -> stringResource(R.string.row_actions_hint)
+                    isFocused && !tmdbOnly -> stringResource(R.string.row_actions_hint)
                     else -> null
                 },
             ).joinToString(", ")
@@ -902,6 +919,9 @@ internal fun StreamItem(
                         drawStopIndicator = {},
                         gapSize = Spacing.none,
                     )
+                }
+                if (tmdbOnly) {
+                    NotAvailableMark(iconSize = TvDimensions.iconSmall, modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs))
                 }
             }
 
@@ -973,7 +993,7 @@ internal fun StreamItem(
             // focused row only (plan Decisions 1).
             when {
                 isFocused && editMode -> RowRemoveHint()
-                isFocused -> RowActionsHint()
+                isFocused && !tmdbOnly -> RowActionsHint()
             }
         }
     }
@@ -1000,3 +1020,7 @@ private fun RowRemoveHint() {
         modifier = Modifier.size(TvDimensions.iconSmall),
     )
 }
+
+/** A TMDB title no source has (`TmdbOnlyItem`): opens its TMDB page and has no row action. */
+private val MediaItem.isTmdbOnly: Boolean
+    get() = id.startsWith(TmdbOnlyItem.PREFIX)
