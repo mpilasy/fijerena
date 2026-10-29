@@ -106,6 +106,7 @@ abstract class SettingsFocusTest {
                 "Guide Sources",
                 "Guide Data Maintenance",
                 "Film and Series Details (TMDB)",
+                "TMDB Charts",
                 "Live Sync",
                 "Back Up to a File",
                 "Restore from a File",

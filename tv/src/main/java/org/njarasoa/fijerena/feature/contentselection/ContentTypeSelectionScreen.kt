@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncRunner
@@ -140,6 +141,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.history.SourcedFavoriteCategory
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
+import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.ProfileSections
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
@@ -289,6 +291,10 @@ fun ContentTypeSelectionScreen(
     var favoriteShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     // Every section's favourite categories, after them.
     var favoriteCategories by remember { mutableStateOf<List<SourcedFavoriteCategory>>(emptyList()) }
+    // The TMDB chart rows (TMDB charts plan, Phase 3): each chart's titles the sources have, last on Home.
+    var chartItems by remember { mutableStateOf<Map<TmdbChart, List<MediaItem>>>(emptyMap()) }
+    val showCharts by remember { appSettings.observeShowTmdbCharts() }
+        .collectAsStateWithLifecycle(initialValue = appSettings.showTmdbCharts)
 
     // The Undo of a card's removal (Hold OK / Menu on a card, below).
     val undoBar = rememberUndoBarState()
@@ -364,6 +370,21 @@ fun ContentTypeSelectionScreen(
         favoriteCategories = if (child) emptyList() else loadFavoriteCategories(merged, supportedContentTypes)
         liveRowLoaded = true
     }
+    // The chart rows after the other rows, so their TMDB calls never hold those up; the films'
+    // charts show as soon as they are ready, then the shows'. Again when the Admin switch changes.
+    LaunchedEffect(mergedLists, supportedContentTypes, showCharts) {
+        val merged = mergedLists ?: return@LaunchedEffect
+        snapshotFlow { liveRowLoaded }.first { it }
+        for (type in listOf(ContentType.MOVIES, ContentType.TV_SHOWS)) {
+            val rows =
+                if (!showCharts || child || type !in supportedContentTypes) {
+                    emptyList()
+                } else {
+                    withContext(Dispatchers.IO) { ChartRows.load(context.applicationContext, merged, type) }
+                }
+            chartItems = chartItems.filterKeys { it.contentType != type } + rows.associate { it.chart to it.items }
+        }
+    }
     LaunchedEffect(mergedLists, liveRowEntries, favoriteChannelEntries) {
         val merged = mergedLists ?: return@LaunchedEffect
         val items = (liveRowEntries + favoriteChannelEntries).map { it.item }.distinctBy { it.sourceKey }
@@ -435,6 +456,11 @@ fun ContentTypeSelectionScreen(
     val categoriesOf: (HomeShelf) -> List<SourcedFavoriteCategory> = { shelf ->
         favoriteCategories.filter { it.category.contentType == shelf.categoriesContentType }
     }
+    // A row per TMDB chart, last.
+    val chartShelves = HomeShelf.entries.filter { it.chart != null }
+    val chartFirstFocus = remember { chartShelves.associateWith { FocusRequester() } }
+    val chartListState = chartShelves.associateWith { rememberLazyListState() }
+    val chartOf: (HomeShelf) -> List<MediaItem> = { shelf -> shelf.chart?.let { chartItems[it] }.orEmpty() }
     // The first card of the first row that has one: where focus opens and where Down from the header
     // goes. Null with no row at all; the sections are on the navigation rail then.
     // Derived, so the entry focus below reads the rows as they are now. A value read through
@@ -472,7 +498,8 @@ fun ContentTypeSelectionScreen(
 
                     wantedCards.isNotEmpty() -> wantedFirstFocus
 
-                    else -> null
+                    // A chart row only on a Home with no other row.
+                    else -> chartShelves.firstOrNull { chartOf(it).isNotEmpty() }?.let { chartFirstFocus.getValue(it) }
                 }
             }
         }
@@ -548,6 +575,17 @@ fun ContentTypeSelectionScreen(
                 }
             val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
             if (index >= 0) row.scrollToItem(index)
+        }
+        for (shelf in chartShelves) {
+            val prefix = chartReturnPrefix(shelf)
+            if (!key.startsWith(prefix)) continue
+            val itemId = key.removePrefix(prefix)
+            val items =
+                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                    snapshotFlow { chartOf(shelf) }.first { items -> items.any { it.sourceKey == itemId } }
+                }
+            val index = items?.indexOfFirst { it.sourceKey == itemId } ?: -1
+            if (index >= 0) chartListState.getValue(shelf).scrollToItem(index)
         }
         if (key.startsWith(RETURN_WANTED_PREFIX)) {
             val cardKey = key.removePrefix(RETURN_WANTED_PREFIX)
@@ -630,6 +668,14 @@ fun ContentTypeSelectionScreen(
             -> categoriesOf(shelf).map { it.key }
 
             HomeShelf.WANTED -> wantedCards.map { it.key }
+
+            HomeShelf.CHART_TRENDING_MOVIES,
+            HomeShelf.CHART_POPULAR_MOVIES,
+            HomeShelf.CHART_TOP_RATED_MOVIES,
+            HomeShelf.CHART_TRENDING_SHOWS,
+            HomeShelf.CHART_POPULAR_SHOWS,
+            HomeShelf.CHART_TOP_RATED_SHOWS,
+            -> chartOf(shelf).map { it.sourceKey }
         }
     }
     val listStateOf: (HomeShelf) -> LazyListState = { shelf ->
@@ -650,6 +696,14 @@ fun ContentTypeSelectionScreen(
             -> categoriesListState.getValue(shelf)
 
             HomeShelf.WANTED -> wantedListState
+
+            HomeShelf.CHART_TRENDING_MOVIES,
+            HomeShelf.CHART_POPULAR_MOVIES,
+            HomeShelf.CHART_TOP_RATED_MOVIES,
+            HomeShelf.CHART_TRENDING_SHOWS,
+            HomeShelf.CHART_POPULAR_SHOWS,
+            HomeShelf.CHART_TOP_RATED_SHOWS,
+            -> chartListState.getValue(shelf)
         }
     }
     val focusAfterChange: (HomeShelf, List<String>, String) -> Unit = { shelf, oldKeys, key ->
@@ -737,6 +791,17 @@ fun ContentTypeSelectionScreen(
             HomeShelf.WANTED -> {
                 takeOut(wantedCards, key, { it.key }, { wantedCards }) { wantedCards = it }
             }
+
+            // A chart card is never removed.
+            HomeShelf.CHART_TRENDING_MOVIES,
+            HomeShelf.CHART_POPULAR_MOVIES,
+            HomeShelf.CHART_TOP_RATED_MOVIES,
+            HomeShelf.CHART_TRENDING_SHOWS,
+            HomeShelf.CHART_POPULAR_SHOWS,
+            HomeShelf.CHART_TOP_RATED_SHOWS,
+            -> {
+                {}
+            }
         }
 
     // A card leaving its row: out at once, focus on its neighbour, then [remove] (which returns
@@ -806,7 +871,9 @@ fun ContentTypeSelectionScreen(
                 // (the season show watched plan Phase 3): null hides it, as on a
                 // source that keeps watched state on its server.
                 val isShowWatched =
-                    if (shelf == HomeShelf.FAVORITE_SHOWS && repo.supportsMarkWatched) {
+                    if ((shelf == HomeShelf.FAVORITE_SHOWS || shelf.chart?.contentType == ContentType.TV_SHOWS) &&
+                        repo.supportsMarkWatched
+                    ) {
                         repo.episodesWatchState(ref.id, null) == true
                     } else {
                         null
@@ -823,8 +890,9 @@ fun ContentTypeSelectionScreen(
                                 contentType = ref.contentType,
                                 isFavorite = isFavorite,
                                 isWatched = isWatched,
-                                // A source that keeps its own history (Jellyfin) has no Remove from Recent.
-                                isInRecent = !shelf.isFavorites && repo.supportsRemoveFromRecent,
+                                // A source that keeps its own history (Jellyfin) has no Remove from Recent;
+                                // a chart card has no removal at all.
+                                isInRecent = !shelf.isFavorites && shelf.chart == null && repo.supportsRemoveFromRecent,
                                 isShowWatched = isShowWatched,
                             ),
                     )
@@ -973,7 +1041,12 @@ fun ContentTypeSelectionScreen(
                 } else {
                     null
                 },
-            list = if (menu.shelf.isFavorites) RowMenuList.FAVORITES else RowMenuList.RECENT,
+            list =
+                when {
+                    menu.shelf.isFavorites -> RowMenuList.FAVORITES
+                    menu.shelf.chart != null -> RowMenuList.OTHER
+                    else -> RowMenuList.RECENT
+                },
             onToggleShowWatched =
                 menu.target.isShowWatched?.let { isShowWatched ->
                     {
@@ -1459,6 +1532,50 @@ fun ContentTypeSelectionScreen(
                                             .padding(top = Spacing.xl.scaled(scale)),
                                 )
                             }
+
+                            // The TMDB chart rows, last: the films' charts, then the shows'. Cards as on
+                            // the favourite rows; their menu has the favourite toggle and no removal.
+                            for (shelf in chartShelves) {
+                                val chart = shelf.chart ?: continue
+                                val items = chartOf(shelf)
+                                if (items.isEmpty()) continue
+                                val isShows = chart.contentType == ContentType.TV_SHOWS
+                                val prefix = chartReturnPrefix(shelf)
+                                TvFavoritesRow(
+                                    title = stringResource(ChartRows.titleRes(chart)),
+                                    items = items,
+                                    thumbnailType = if (isShows) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
+                                    onItemSelected = { item ->
+                                        leaveTo(prefix + item.sourceKey) { onFavoriteSelected(item, chart.contentType) }
+                                    },
+                                    firstItemFocus = chartFirstFocus.getValue(shelf),
+                                    onOpenActions =
+                                        if (child) {
+                                            null
+                                        } else {
+                                            (
+                                                { item ->
+                                                    openCardMenu(
+                                                        shelf,
+                                                        item.toCardItem(chart.contentType, watchedItemId = item.id.takeUnless { isShows }),
+                                                    )
+                                                }
+                                            )
+                                        },
+                                    listState = chartListState.getValue(shelf),
+                                    itemModifier = { item ->
+                                        Modifier
+                                            .navReturnFocusTarget(returnFocus, prefix + item.sourceKey)
+                                            .then(cardFocusTarget(shelf, item.sourceKey))
+                                            .then(artOnFocus(item.thumbnailUrl, true))
+                                    },
+                                    sourceNames = sourceNames,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                )
+                            }
                         }
                     }
                 }
@@ -1482,6 +1599,9 @@ private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
 private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
 private const val RETURN_FAVORITE_CATEGORIES_PREFIX = "favCat:"
 private const val RETURN_WANTED_PREFIX = "wanted:"
+
+/** A chart card's key prefix: the chart in it, as a title can be on two charts. */
+private fun chartReturnPrefix(shelf: HomeShelf): String = "chart:${shelf.name}:"
 
 /** What a card's menu acts on. */
 private class HomeCardItem(

@@ -119,11 +119,12 @@ CENTER	10 s
 LEFT	Add a Channel to Recent After
 DOWN	Show Clock
 # Sources & Guide: Manage Sources, Guide Sources (the fake source has live channels), Guide Data
-# Maintenance, the TMDB key (On or Off by build: not checked).
+# Maintenance, the TMDB key (On or Off by build: not checked), the TMDB Charts switch.
 DOWN	Manage Sources
 DOWN	Guide Sources
 DOWN	Guide Data Maintenance
 DOWN	Film and Series Details (TMDB)
+DOWN	TMDB Charts
 # Sync & Backup: Live Sync, then the backups.
 DOWN	Live Sync
 DOWN	Back Up to a File

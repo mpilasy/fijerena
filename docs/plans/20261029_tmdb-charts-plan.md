@@ -82,7 +82,7 @@ pages as it needs to fill a row.
 |---|---|---|
 | 1 | The TMDB Charts switch (`AppSettings`, TV and phone Admin rows). `TmdbApiService`: the six chart calls with `page`. A chart page cache (24 hours, cache directory). Unit tests: cache age, page reuse, last page. | Done 2026-10-29 (with Phase 2) |
 | 2 | Chart matching: page by page across the profile's sources, stop at 20, page limit, one `taken` set, smallest row. Unit tests with fake pages and catalogue: early stop after one page, a title on two sources once, no key gives no row. | Done 2026-10-29: `matchChart` (core/network `tmdb/TmdbChart.kt`), `ChartRows` (core/ui `home/`) |
-| 3 | TV Home: the rows (cards, focus, OK opens the details page on the card's source, Back returns to the card). Strings en, fr, mg. | Not started |
-| 4 | Phone Home: the same rows. | Done 2026-10-29: `MobileHomeScreen` (movie charts after Favourite Movie Categories, show charts after Favourite Show Categories; long-press: favourite toggle only) |
+| 3 | TV Home: the rows (cards, focus, OK opens the details page on the card's source, Back returns to the card). Strings en, fr, mg. | Done 2026-10-29: six `HomeShelf` chart rows, last on Home under the Wishlist row (`ContentTypeSelectionScreen.kt`) |
+| 4 | Phone Home: the same rows. | Done 2026-10-29: `MobileHomeScreen`, last on Home after the Wanted row as on TV; long-press: favourite toggle only |
 | 4a | The Charts list in Movies and TV Shows, TV and phone. | Not started |
 | 5 | Docs: FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES, `PRIVACY.md` (the app asks TMDB for public chart pages, nothing of the user). Walk on both emulators with a TMDB key. | Not started |

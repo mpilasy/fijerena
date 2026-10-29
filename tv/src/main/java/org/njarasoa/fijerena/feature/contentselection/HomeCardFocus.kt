@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.contentselection
 
+import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 
@@ -14,9 +15,30 @@ internal enum class HomeShelf {
     FAVORITE_SHOWS,
     FAVORITE_SHOW_CATEGORIES,
 
-    /** The Wanted list (wanted titles plan, Phase 5): last, under everything. */
+    /** The Wanted list (wanted titles plan, Phase 5): under the profile's own rows. */
     WANTED,
+
+    /** The TMDB chart rows (TMDB charts plan, Phase 3): last, the films' charts, then the shows'. */
+    CHART_TRENDING_MOVIES,
+    CHART_POPULAR_MOVIES,
+    CHART_TOP_RATED_MOVIES,
+    CHART_TRENDING_SHOWS,
+    CHART_POPULAR_SHOWS,
+    CHART_TOP_RATED_SHOWS,
 }
+
+/** The chart of a chart row; null for the other rows. */
+internal val HomeShelf.chart: TmdbChart?
+    get() =
+        when (this) {
+            HomeShelf.CHART_TRENDING_MOVIES -> TmdbChart.TRENDING_MOVIES
+            HomeShelf.CHART_POPULAR_MOVIES -> TmdbChart.POPULAR_MOVIES
+            HomeShelf.CHART_TOP_RATED_MOVIES -> TmdbChart.TOP_RATED_MOVIES
+            HomeShelf.CHART_TRENDING_SHOWS -> TmdbChart.TRENDING_SHOWS
+            HomeShelf.CHART_POPULAR_SHOWS -> TmdbChart.POPULAR_SHOWS
+            HomeShelf.CHART_TOP_RATED_SHOWS -> TmdbChart.TOP_RATED_SHOWS
+            else -> null
+        }
 
 /** The section of a favourite categories row, each right under that section's favourites; null for the other rows. */
 internal val HomeShelf.categoriesContentType: String?
