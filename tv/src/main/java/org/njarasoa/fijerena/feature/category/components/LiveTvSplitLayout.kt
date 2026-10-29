@@ -723,7 +723,8 @@ internal fun LiveTvSplitLayout(
             )
         }
     } else {
-        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target.thumbnailUrl)
+        // No blur: the preview's video is drawn over it, and a weak GPU stutters the video.
+        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target.thumbnailUrl, blur = false)
         Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Column(
                 modifier = Modifier.weight(0.66f).fillMaxHeight(),

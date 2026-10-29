@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Smooth Live TV preview on weak devices:** the Live TV preview stuttered on a Chromecast with Google TV (HD), and full screen played smoothly. The blurred channel logo behind the preview was the cause: the device redrew the blur under every video frame. The Live TV screen now shows a gradient tinted with the logo's main colour, as the Shields already did. The other screens keep the blur. TV.
+
 ## Version: 0.8.20261028222153
 
 - **Shorter stack traces in Logs:** an entry with a stack trace now shows only its root cause, for example "SocketTimeoutException: timeout". Open it to see the chain of causes, one line each: tap it on the phone, push OK on the TV. Copy and Share still give the full stack trace. TV and phone.

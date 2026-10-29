@@ -46,6 +46,9 @@ import org.njarasoa.fijerena.core.ui.theme.cinemaGround
  *   (e.g. Shield TVs stuck on Android 11), so instead the gradient is tinted with the image's
  *   dominant color (via [Palette], decoded at 64px so it's cheap on old hardware).
  * - No image (either API level): gradient wash only.
+ * - [blur] false: the API < 31 tint on every device. For screens with live video in front: the GPU
+ *   of a weak device (Chromecast HD) can't redraw the blur under every video frame, and the video
+ *   stutters.
  */
 @Composable
 fun AmbientBackdrop(
@@ -53,11 +56,12 @@ fun AmbientBackdrop(
     imageUrl: String? = null,
     blurRadius: Float = 140f,
     imageAlpha: Float = CinemaAlpha.imageOverlay,
+    blur: Boolean = true,
 ) {
     // Off (the profile's poster background setting): the theme's background alone, nothing decoded.
     val shownUrl = imageUrl.takeIf { LocalPosterBackdrop.current }
     val palette = CinemaTheme.colors
-    val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val supportsBlur = blur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val context = LocalContext.current
 
     val extractedTint by
@@ -91,7 +95,7 @@ fun AmbientBackdrop(
 
     // Hoisted so the blur/saturation RenderEffect isn't rebuilt on every redraw of the layer
     // (recomposition, Crossfade animation ticks) — only when blurRadius actually changes.
-    // supportsBlur never changes for the life of the process (it's Build.VERSION.SDK_INT), so
+    // supportsBlur never changes for a call site (Build.VERSION.SDK_INT and a fixed [blur]), so
     // gating the remember() call on it is stable across this composable instance's recompositions.
     // Must stay gated: RenderEffect is API 31+, so calling it below that level would crash exactly
     // the older devices (e.g. Shield TVs on Android 11) this branch exists to avoid.
