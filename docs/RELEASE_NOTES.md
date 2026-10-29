@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261029231113
 
 - **Favourites at the bottom of Home:** the favourites rows (channels, movies, shows and their categories) are now last on Home, under Continue Watching, Channels, the Wishlist and the TMDB chart rows. Focus still starts on the first Continue Watching card. TV and phone.
 
