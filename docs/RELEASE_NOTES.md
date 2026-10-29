@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Better Top Rated and Popular charts:** Top Rated now counts only titles with at least 5,000 votes (movies) or 2,000 (shows) that came out a year ago or more, so The Shawshank Redemption and The Godfather lead, not this year's releases. Popular counts only titles with at least 500 votes (movies) or 200 (shows), without TMDB's odd spikes. TV and phone.
+- **Trending can show what your sources don't have:** an eye switch on each Trending row (TV: before the first title; phone: in the row's title line) also shows the chart's titles that no source has, marked Not available like More Like This. Open one for its TMDB page, where Add to Wishlist is. The switch is per profile and follows the profile to your other devices. The Charts list follows it. TV and phone.
+
 ## Version: 0.8.20261029205147
 
 - **Back on TV Home returns to the card you left:** after opening a card on a Home row (Continue Watching, Channels, favourites, Wishlist, the charts) and pressing Back, focus went to the first card of that row instead. Now it returns to the card you opened. TV.
