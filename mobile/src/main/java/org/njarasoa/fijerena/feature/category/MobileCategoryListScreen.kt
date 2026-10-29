@@ -128,6 +128,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
+import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -206,6 +207,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.wanted.LocalOpenWanted
+import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
+import org.njarasoa.fijerena.core.ui.wanted.route
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.navigation.LocalDockInset
@@ -1016,7 +1019,13 @@ fun MobileCategoryListScreen(
                                                         val selected = item.browseTarget(contentType)
                                                         val wantedCard = viewModel.wantedCardOf(item)
                                                         val gone = viewModel.goneOf(item)
+                                                        val tmdbOnly = TmdbOnlyItem.titleOf(item, contentType)
                                                         when {
+                                                            // A Charts row no source has (TMDB charts plan, F3): its TMDB page.
+                                                            tmdbOnly != null -> {
+                                                                openWanted(tmdbOnly.route())
+                                                            }
+
                                                             gone?.copy != null -> {
                                                                 goneMenu = item to gone
                                                             }
@@ -1912,6 +1921,7 @@ private fun StreamsList(
                                 Modifier
                             }
 
+                        val isTmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
                         val streamCard = @Composable { modifier: Modifier ->
                             StreamCard(
                                 item = item,
@@ -1935,10 +1945,16 @@ private fun StreamsList(
                                 onClick = {
                                     onItemSelected(item)
                                 },
-                                onLongClick = { openRowMenu(item) },
-                                onLongClickLabel = stringResource(R.string.row_more_actions),
+                                onLongClick = { if (!isTmdbOnly) openRowMenu(item) },
+                                onLongClickLabel = stringResource(R.string.row_more_actions).takeUnless { isTmdbOnly },
                                 modifier = modifier,
                             )
+                        }
+                        // A TMDB title no source has (TMDB charts plan, F3): no swipe and no menu,
+                        // as nothing can be favourited or marked watched.
+                        if (isTmdbOnly) {
+                            Box(modifier = cardModifier) { streamCard(Modifier) }
+                            return@itemsIndexed
                         }
 
                         val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRemoveFavorite != null)
@@ -2358,8 +2374,10 @@ internal fun StreamCard(
         // made that the biggest cost of a frame on the TV
         // (docs/plans/20260914_codebase-robustness-plan.md, Phase 4). The card keeps its click
         // and long-click actions.
+        val isTmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
         val description =
             listOfNotNull(
+                stringResource(R.string.wanted_not_available).takeIf { isTmdbOnly },
                 stringResource(R.string.content_watched_badge).takeIf { isWatched },
                 if (catchupDays > 0) pluralStringResource(R.plurals.catchup_badge_description, catchupDays, catchupDays) else null,
                 displayTitle,
@@ -2406,6 +2424,12 @@ internal fun StreamCard(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(MobileDimensions.resumeBarHeight),
+                    )
+                }
+                if (isTmdbOnly) {
+                    NotAvailableMark(
+                        iconSize = MobileDimensions.iconSmall,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xxs),
                     )
                 }
             }

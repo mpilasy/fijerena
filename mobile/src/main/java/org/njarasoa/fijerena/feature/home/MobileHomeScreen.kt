@@ -52,6 +52,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
+import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
@@ -81,9 +82,11 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
 import org.njarasoa.fijerena.core.ui.wanted.cards
 import org.njarasoa.fijerena.core.ui.wanted.gone
+import org.njarasoa.fijerena.core.ui.wanted.route
 import org.njarasoa.fijerena.core.ui.wanted.statusLabel
 import org.njarasoa.fijerena.core.ui.wanted.toAnnounce
 import org.njarasoa.fijerena.navigation.LocalDockInset
@@ -92,6 +95,7 @@ import org.njarasoa.fijerena.ui.components.ItemActionsDialog
 import org.njarasoa.fijerena.ui.components.ItemMenuAction
 import org.njarasoa.fijerena.ui.components.MobileEmptyState
 import org.njarasoa.fijerena.ui.components.UndoSnackbarHost
+import org.njarasoa.fijerena.ui.components.buttons.IconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.rememberUndoSnackbar
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -218,11 +222,15 @@ fun MobileHomeScreen(
         rows = loadRows(lists, supportedTypes, child = settings.isChildProfile(settings.activeProfileId))
     }
     // The TMDB chart rows (docs/plans/20261029_tmdb-charts-plan.md, Phase 4): read apart from the
-    // other rows, as they may ask TMDB, and again when the Admin switch changes. None for a child.
+    // other rows, as they may ask TMDB, and again when the Admin switch or the Trending rows' switch
+    // (follow-up F3: the titles no source has) changes. None for a child.
     val showCharts by remember { AppSettings(context.applicationContext).observeShowTmdbCharts() }
         .collectAsStateWithLifecycle(initialValue = false)
+    val chartsShowMissing by remember {
+        AppSettings(context.applicationContext).let { it.observeChartsShowMissing(it.activeProfileId) }
+    }.collectAsStateWithLifecycle(initialValue = false)
     var charts by remember { mutableStateOf<List<ChartRows.Row>>(emptyList()) }
-    LaunchedEffect(merged, supportedTypes, showCharts) {
+    LaunchedEffect(merged, supportedTypes, showCharts, chartsShowMissing) {
         val lists = merged ?: return@LaunchedEffect
         if (!showCharts) {
             charts = emptyList()
@@ -377,7 +385,9 @@ fun MobileHomeScreen(
                     }
                 },
                 onFavorite = { item, type -> openFavorite(item, type) { onFavorite(item, type) } },
-                onChart = onFavorite,
+                // A TMDB-only card (follow-up F3) opens the title's TMDB page.
+                onChart = { item, type -> TmdbOnlyItem.titleOf(item, type)?.let { onWanted(it.route()) } ?: onFavorite(item, type) },
+                onShowMissing = { show -> ChartRows.setShowMissing(context.applicationContext, show) },
                 onCategory,
                 goneStatus = { item, type -> goneLabel.takeIf { gone(item, type) != null } },
                 wanted =
@@ -403,6 +413,8 @@ private fun HomeRowsColumn(
     onFavorite: (item: MediaItem, contentType: String) -> Unit,
     // A chart card: opened as a favourite is, without the Gone from source check.
     onChart: (item: MediaItem, contentType: String) -> Unit,
+    // A Trending row's switch: also the titles no source has, or not.
+    onShowMissing: (Boolean) -> Unit,
     onCategory: (categoryId: String, contentType: String, providerId: Long) -> Unit,
     wanted: WantedRow,
     onBannerSeen: () -> Unit,
@@ -451,10 +463,31 @@ private fun HomeRowsColumn(
         }
     }
     // A section's chart rows: the same cards as its favourites; the long-press menu has the
-    // favourite switch only. A tap opens the title on the card's own source.
+    // favourite switch only. A tap opens the title on the card's own source. A Trending row has its
+    // switch at the end of its title, and shows with no card so the switch stays (follow-up F3); its
+    // TMDB-only cards are marked Not available, open the TMDB page and have no menu.
     val chartRows: @Composable (String, List<MediaItem>) -> Unit = { contentType, favorites ->
         for (chart in charts.filter { it.chart.contentType == contentType }) {
-            HomeRow(stringResource(ChartRows.titleRes(chart.chart)), chart.items, { it.sourceKey }) { item ->
+            val action: (@Composable () -> Unit)? =
+                if (chart.chart.canShowMissing) {
+                    {
+                        IconAction(
+                            onClick = { onShowMissing(!chart.showsMissing) },
+                            icon = if (chart.showsMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                            label = stringResource(if (chart.showsMissing) R.string.chart_hide_missing else R.string.chart_show_missing),
+                        )
+                    }
+                } else {
+                    null
+                }
+            HomeRow(
+                stringResource(ChartRows.titleRes(chart.chart)),
+                chart.items,
+                { it.sourceKey },
+                action = action,
+                showEmpty = chart.chart.canShowMissing,
+            ) { item ->
+                val tmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
                 TitleCard(
                     title = item.name,
                     subtitle = null,
@@ -463,10 +496,16 @@ private fun HomeRowsColumn(
                     progress = null,
                     sourceName = rows.sourceNames[item.providerId],
                     providerId = item.providerId,
-                    onLongClick = {
-                        val isFavorite = favorites.any { it.sourceKey == item.sourceKey }
-                        onMenu(HomeMenu.Favorite(item, contentType, isFavorite))
-                    },
+                    onLongClick =
+                        if (tmdbOnly) {
+                            null
+                        } else {
+                            {
+                                val isFavorite = favorites.any { it.sourceKey == item.sourceKey }
+                                onMenu(HomeMenu.Favorite(item, contentType, isFavorite))
+                            }
+                        },
+                    notAvailable = tmdbOnly,
                 ) { onChart(item, contentType) }
             }
         }
@@ -599,22 +638,38 @@ private fun WantedBanner(
     }
 }
 
-/** One titled row of cards; nothing at all when [items] is empty. */
+/**
+ * One titled row of cards; nothing at all when [items] is empty, unless [showEmpty] (then its title
+ * alone). [action]: an icon button at the end of the title line.
+ */
 @Composable
 private fun <T> HomeRow(
     title: String,
     items: List<T>,
     key: (T) -> String,
+    action: (@Composable () -> Unit)? = null,
+    showEmpty: Boolean = false,
     content: @Composable (T) -> Unit,
 ) {
-    if (items.isEmpty()) return
+    if (items.isEmpty() && !showEmpty) return
     // A card put back at the start (an Undo) would sit off screen to the left: the row keeps its
     // first visible card. While the row is at its start, it shows the new first card.
     val listState = rememberLazyListState()
-    val firstKey = key(items.first())
+    val firstKey = items.firstOrNull()?.let(key)
     LaunchedEffect(firstKey) { if (listState.firstVisibleItemIndex <= 1) listState.scrollToItem(0) }
     Column {
-        CinemaText(text = title, role = TextRole.Heading, modifier = Modifier.padding(horizontal = Spacing.md))
+        if (action == null) {
+            CinemaText(text = title, role = TextRole.Heading, modifier = Modifier.padding(horizontal = Spacing.md))
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, end = Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CinemaText(text = title, role = TextRole.Heading, modifier = Modifier.weight(1f))
+                action()
+            }
+        }
+        if (items.isEmpty()) return@Column
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyRow(
             state = listState,
@@ -639,18 +694,29 @@ private fun TitleCard(
     progress: Float?,
     sourceName: String?,
     providerId: Long,
-    onLongClick: () -> Unit,
+    // Null: no long-press menu (a TMDB-only card).
+    onLongClick: (() -> Unit)?,
+    // A TMDB title no source has: the Not available mark on its art.
+    notAvailable: Boolean = false,
     onClick: () -> Unit,
 ) {
     val width = MobileDimensions.homeCardWidth
     CinemaCard(modifier = Modifier.width(width).homeCardClicks(onClick, onLongClick)) {
-        CinemaThumbnail(
-            url = thumbnailUrl,
-            fallbackLetter = title.firstOrNull(),
-            contentType = thumbnailType,
-            overlayGradient = true,
-            modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
-        )
+        Box {
+            CinemaThumbnail(
+                url = thumbnailUrl,
+                fallbackLetter = title.firstOrNull(),
+                contentType = thumbnailType,
+                overlayGradient = true,
+                modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
+            )
+            if (notAvailable) {
+                NotAvailableMark(
+                    iconSize = MobileDimensions.iconSmall,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.xxs),
+                )
+            }
+        }
         if (progress != null) {
             CinemaProgressBar(
                 progress = { progress.coerceIn(0f, 1f) },
@@ -803,10 +869,15 @@ private suspend fun loadRows(
 private const val CARD_ASPECT = 16f / 9f
 private val EPISODE_NUMBER = Regex("""S\d{1,3}\s?E\d{1,4}""", RegexOption.IGNORE_CASE)
 
-/** A Home card's tap and long-press (its menu), with the long-press named for accessibility. */
+/** A Home card's tap and long-press (its menu, none when null), with the long-press named for accessibility. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Modifier.homeCardClicks(
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
-): Modifier = combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = stringResource(R.string.row_more_actions))
+    onLongClick: (() -> Unit)?,
+): Modifier =
+    combinedClickable(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = onLongClick?.let { stringResource(R.string.row_more_actions) },
+    )

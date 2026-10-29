@@ -102,7 +102,7 @@ Trending:
 | F1–F2 | `TmdbChart` parameters; tests | Done 2026-10-29 |
 | F3 core | `AppSettings.chartsShowMissing`, `chartWithMissing`, `ChartRows`, strings | Done 2026-10-29 |
 | F3 TV | The switch on the Trending rows, TMDB-only cards and their TMDB page, Charts list | Not started |
-| F3 phone | The same on the phone | Not started |
+| F3 phone | The same on the phone | Done 2026-10-29: the eye icon at the end of the Trending row titles (`MobileHomeScreen`), TMDB-only cards marked and opening the TMDB page, no menu; Charts list rows the same, with no swipe |
 
 ## Phases
 
