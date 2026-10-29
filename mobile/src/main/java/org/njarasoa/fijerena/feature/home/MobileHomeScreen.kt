@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.history.MergedLists
 import org.njarasoa.fijerena.core.ui.history.SourcedFavoriteCategory
+import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
 import org.njarasoa.fijerena.core.ui.home.mergeLiveRow
@@ -116,7 +117,8 @@ private data class HomeRows(
 /**
  * The phone's Home tab: TV Home's rows for the profile's merged sources, phone-sized — Continue
  * watching, Channels, Favourite channels, then each section's favourites and favourite categories
- * — each hidden when empty, read again on every return. [supportedTypes]: the profile's merged
+ * — each hidden when empty, read again on every return. Each section's TMDB chart rows follow its
+ * favourite rows, loaded on their own so they never hold Home up. [supportedTypes]: the profile's merged
  * sections; a row of a section they don't have stays empty. A card opens through its callback:
  * [onChannel] with the list it zaps through (Recent or Favourites).
  */
@@ -215,6 +217,24 @@ fun MobileHomeScreen(
         val settings = AppSettings(context.applicationContext)
         rows = loadRows(lists, supportedTypes, child = settings.isChildProfile(settings.activeProfileId))
     }
+    // The TMDB chart rows (docs/plans/20261029_tmdb-charts-plan.md, Phase 4): read apart from the
+    // other rows, as they may ask TMDB, and again when the Admin switch changes. None for a child.
+    val showCharts by remember { AppSettings(context.applicationContext).observeShowTmdbCharts() }
+        .collectAsStateWithLifecycle(initialValue = false)
+    var charts by remember { mutableStateOf<List<ChartRows.Row>>(emptyList()) }
+    LaunchedEffect(merged, supportedTypes, showCharts) {
+        val lists = merged ?: return@LaunchedEffect
+        if (!showCharts) {
+            charts = emptyList()
+            return@LaunchedEffect
+        }
+        charts =
+            withContext(Dispatchers.IO) {
+                listOf(ContentType.MOVIES, ContentType.TV_SHOWS)
+                    .filter { it in supportedTypes }
+                    .flatMap { ChartRows.load(context.applicationContext, lists, it) }
+            }
+    }
     // The channels' Now lines, each from its own source's guide, again at each minute.
     LaunchedEffect(merged, rows) {
         val lists = merged ?: return@LaunchedEffect
@@ -269,17 +289,25 @@ fun MobileHomeScreen(
                 val item = menu.item
                 ItemActionsDialog(
                     title = parseDisplayTitle(item.name).title.ifBlank { item.name },
-                    isFavorite = true,
+                    isFavorite = menu.isFavorite,
                     onToggleFavorite = {
                         if (lists != null) {
                             val repo = lists.repoFor(item.providerId)
-                            wantedScope.launchGuarded("Home.removeFavorite") {
-                                repo.removeFavoriteSuspend(item.id, menu.contentType)
-                                done()
-                                undo.show(item.name) {
-                                    wantedScope.launchGuarded("Home.undoRemoveFavorite") {
-                                        repo.addFavoriteSuspend(item.id, item.name, item.categoryId, menu.contentType)
-                                        done()
+                            if (!menu.isFavorite) {
+                                // A chart card that is not a favourite yet.
+                                wantedScope.launchGuarded("Home.addFavorite") {
+                                    repo.addFavoriteSuspend(item.id, item.name, item.categoryId, menu.contentType)
+                                    done()
+                                }
+                            } else {
+                                wantedScope.launchGuarded("Home.removeFavorite") {
+                                    repo.removeFavoriteSuspend(item.id, menu.contentType)
+                                    done()
+                                    undo.show(item.name) {
+                                        wantedScope.launchGuarded("Home.undoRemoveFavorite") {
+                                            repo.addFavoriteSuspend(item.id, item.name, item.categoryId, menu.contentType)
+                                            done()
+                                        }
                                     }
                                 }
                             }
@@ -320,7 +348,7 @@ fun MobileHomeScreen(
             topBar = { sourceTopBar(onSearch) },
         ) { padding ->
             val loaded = rows ?: return@Scaffold
-            if (loaded.isEmpty && wantedCards.isEmpty()) {
+            if (loaded.isEmpty && wantedCards.isEmpty() && charts.isEmpty()) {
                 MobileEmptyState(
                     message = stringResource(R.string.home_empty),
                     icon = CinemaIcons.Home,
@@ -330,6 +358,7 @@ fun MobileHomeScreen(
             }
             HomeRowsColumn(
                 loaded,
+                charts,
                 nowPlaying,
                 padding,
                 onContinueWatching,
@@ -348,6 +377,7 @@ fun MobileHomeScreen(
                     }
                 },
                 onFavorite = { item, type -> openFavorite(item, type) { onFavorite(item, type) } },
+                onChart = onFavorite,
                 onCategory,
                 goneStatus = { item, type -> goneLabel.takeIf { gone(item, type) != null } },
                 wanted =
@@ -365,11 +395,14 @@ fun MobileHomeScreen(
 @Composable
 private fun HomeRowsColumn(
     rows: HomeRows,
+    charts: List<ChartRows.Row>,
     nowPlaying: Map<String, EpgProgram>,
     padding: PaddingValues,
     onContinueWatching: (ContinueWatchingItem) -> Unit,
     onChannel: (streamId: String, listId: String, providerId: Long) -> Unit,
     onFavorite: (item: MediaItem, contentType: String) -> Unit,
+    // A chart card: opened as a favourite is, without the Gone from source check.
+    onChart: (item: MediaItem, contentType: String) -> Unit,
     onCategory: (categoryId: String, contentType: String, providerId: Long) -> Unit,
     wanted: WantedRow,
     onBannerSeen: () -> Unit,
@@ -417,6 +450,27 @@ private fun HomeRowsColumn(
             ) { onFavorite(item, contentType) }
         }
     }
+    // A section's chart rows: the same cards as its favourites; the long-press menu has the
+    // favourite switch only. A tap opens the title on the card's own source.
+    val chartRows: @Composable (String, List<MediaItem>) -> Unit = { contentType, favorites ->
+        for (chart in charts.filter { it.chart.contentType == contentType }) {
+            HomeRow(stringResource(ChartRows.titleRes(chart.chart)), chart.items, { it.sourceKey }) { item ->
+                TitleCard(
+                    title = item.name,
+                    subtitle = null,
+                    thumbnailUrl = item.thumbnailUrl,
+                    thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
+                    progress = null,
+                    sourceName = rows.sourceNames[item.providerId],
+                    providerId = item.providerId,
+                    onLongClick = {
+                        val isFavorite = favorites.any { it.sourceKey == item.sourceKey }
+                        onMenu(HomeMenu.Favorite(item, contentType, isFavorite))
+                    },
+                ) { onChart(item, contentType) }
+            }
+        }
+    }
     val scrollState = rememberScrollState()
     val scrollScope = rememberCoroutineScope()
     Column(
@@ -453,8 +507,10 @@ private fun HomeRowsColumn(
         categoriesRow(ContentType.LIVE_TV, R.string.home_favorite_channel_categories)
         favoritesRow(rows.favoriteMovies, ContentType.MOVIES, R.string.home_favorite_movies)
         categoriesRow(ContentType.MOVIES, R.string.home_favorite_movie_categories)
+        chartRows(ContentType.MOVIES, rows.favoriteMovies)
         favoritesRow(rows.favoriteShows, ContentType.TV_SHOWS, R.string.home_favorite_shows)
         categoriesRow(ContentType.TV_SHOWS, R.string.home_favorite_show_categories)
+        chartRows(ContentType.TV_SHOWS, rows.favoriteShows)
         val newCount = wanted.cards.count { it.isNew }
         val wantedTitle = stringResource(R.string.wanted_title)
         HomeRow(
@@ -465,7 +521,10 @@ private fun HomeRowsColumn(
     }
 }
 
-/** A Home card's long-press menu: Remove from Recent, from Favourites, or from the Wishlist. */
+/**
+ * A Home card's long-press menu: Remove from Recent, from Favourites, or from the Wishlist. A chart
+ * card has the Favourite menu, with [Favorite.isFavorite] false when it is not a favourite yet.
+ */
 private sealed interface HomeMenu {
     class Recent(
         val providerId: Long,
@@ -477,6 +536,7 @@ private sealed interface HomeMenu {
     class Favorite(
         val item: MediaItem,
         val contentType: String,
+        val isFavorite: Boolean = true,
     ) : HomeMenu
 
     class Wishlist(
