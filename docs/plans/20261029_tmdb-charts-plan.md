@@ -1,6 +1,6 @@
 # TMDB charts in your library
 
-**Status:** Agreed 2026-10-29 (all decisions below); In progress.
+**Status:** Agreed 2026-10-29 (all decisions below); Done 2026-10-29, walked on both emulators.
 
 ## Goal
 
@@ -88,4 +88,4 @@ pages as it needs to fill a row.
 | 3 | TV Home: the rows (cards, focus, OK opens the details page on the card's source, Back returns to the card). Strings en, fr, mg. | Done 2026-10-29: six `HomeShelf` chart rows, last on Home under the Wishlist row (`ContentTypeSelectionScreen.kt`) |
 | 4 | Phone Home: the same rows. | Done 2026-10-29: `MobileHomeScreen`, last on Home after the Wanted row as on TV; long-press: favourite toggle only |
 | 4a | The Charts list in Movies and TV Shows, TV and phone. | Done 2026-10-29: `CategoryViewModel.CHARTS_CATEGORY_ID`, last virtual list; the charts one after the other, each under a heading row (the list's separator row), a title of an earlier chart not repeated (list rows need one key each) |
-| 5 | Docs: FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES, `PRIVACY.md` (the app asks TMDB for public chart pages, nothing of the user). Walk on both emulators with a TMDB key. | Not started |
+| 5 | Docs: FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES, `PRIVACY.md` (the app asks TMDB for public chart pages, nothing of the user). Walk on both emulators with a TMDB key. | Done 2026-10-29: walked on both emulators; the walk found Back on TV Home going to a row's first card (all rows, older than the charts), fixed |
