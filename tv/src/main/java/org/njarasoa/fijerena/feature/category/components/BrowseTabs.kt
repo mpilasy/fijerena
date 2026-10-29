@@ -67,5 +67,6 @@ private fun virtualCategoryIcon(categoryId: String): ImageVector =
         CategoryViewModel.FAVORITES_CATEGORY_ID -> CinemaIcons.Star
         CategoryViewModel.FAVORITE_CATEGORIES_ID -> CinemaIcons.StarBorder
         CategoryViewModel.WANTED_CATEGORY_ID -> CinemaIcons.Bookmark
+        CategoryViewModel.CHARTS_CATEGORY_ID -> CinemaIcons.TrendingUp
         else -> CinemaIcons.Folder
     }

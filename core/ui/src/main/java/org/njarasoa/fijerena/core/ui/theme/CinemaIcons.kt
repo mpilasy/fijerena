@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Backspace
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.automirrored.sharp.Backspace
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.automirrored.sharp.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.sharp.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.sharp.List
 import androidx.compose.material.icons.automirrored.sharp.MenuBook
+import androidx.compose.material.icons.automirrored.sharp.TrendingUp
 import androidx.compose.material.icons.automirrored.sharp.VolumeUp
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
@@ -334,6 +337,12 @@ object CinemaIcons {
     val BarChart: ImageVector
         @Composable @ReadOnlyComposable
         get() = pick(Icons.Rounded.BarChart, Icons.Outlined.BarChart, Icons.Sharp.BarChart)
+
+    /** The Charts list of Movies and TV Shows (the TMDB charts). */
+    val TrendingUp: ImageVector
+        @Composable @ReadOnlyComposable
+        get() =
+            pick(Icons.AutoMirrored.Rounded.TrendingUp, Icons.AutoMirrored.Outlined.TrendingUp, Icons.AutoMirrored.Sharp.TrendingUp)
 
     val Add: ImageVector
         @Composable @ReadOnlyComposable

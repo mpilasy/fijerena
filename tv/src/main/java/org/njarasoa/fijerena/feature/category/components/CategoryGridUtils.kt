@@ -17,6 +17,7 @@ import androidx.compose.ui.input.key.type
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 
 /**
  * Modifier that detects long-press of the D-pad center / Enter key on TV.
@@ -85,6 +86,7 @@ internal val MinimalBringIntoView =
 /**
  * A provider's separator row in a channel list ("####### ETHIOPIA VIP #######"): a heading, never
  * focused, played or zapped to (TV UI audit #24). The same `#…#` rule the TV Guide drops them by.
+ * A chart's heading in the Charts list is one too.
  */
 internal val MediaItem.isSeparatorRow: Boolean
-    get() = mediaType == MediaType.LIVE_CHANNEL && isCategoryMarker
+    get() = (mediaType == MediaType.LIVE_CHANNEL && isCategoryMarker) || CategoryViewModel.isChartHeader(this)

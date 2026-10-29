@@ -1627,6 +1627,8 @@ private fun virtualCategoryName(category: MediaCategory): String =
         // A tab: its plain name; the rows carry the Available / Gone marks.
         CategoryViewModel.WANTED_CATEGORY_ID -> stringResource(R.string.wanted_title)
 
+        CategoryViewModel.CHARTS_CATEGORY_ID -> stringResource(R.string.category_charts)
+
         else -> category.name
     }
 
@@ -1638,6 +1640,7 @@ private fun virtualCategoryIcon(categoryId: String): ImageVector =
         CategoryViewModel.FAVORITES_CATEGORY_ID -> CinemaIcons.Star
         CategoryViewModel.FAVORITE_CATEGORIES_ID -> CinemaIcons.StarBorder
         CategoryViewModel.WANTED_CATEGORY_ID -> CinemaIcons.Bookmark
+        CategoryViewModel.CHARTS_CATEGORY_ID -> CinemaIcons.TrendingUp
         else -> CinemaIcons.Folder
     }
 
@@ -2191,11 +2194,12 @@ private val StreamThumbnailHeight = MobileDimensions.streamThumbnailHeight
 private val StreamCardMinHeight = StreamThumbnailHeight + CinemaSpacing.xs * 2
 
 /**
- * A provider's separator row in a channel list ("####### ETHIOPIA VIP #######"): a heading, never
- * played, swiped or counted. The TV's rule (its `isSeparatorRow`, which lives in the tv module).
+ * A provider's separator row in a channel list ("####### ETHIOPIA VIP #######"), or a chart's
+ * heading in the Charts list: a heading, never played, swiped or counted. The TV's rule (its
+ * `isSeparatorRow`, which lives in the tv module).
  */
 private val MediaItem.isSeparatorRow: Boolean
-    get() = mediaType == MediaType.LIVE_CHANNEL && isCategoryMarker
+    get() = (mediaType == MediaType.LIVE_CHANNEL && isCategoryMarker) || CategoryViewModel.isChartHeader(this)
 
 /** A separator row as what it is: a heading over the channels that follow, text only, not tappable. */
 @Composable

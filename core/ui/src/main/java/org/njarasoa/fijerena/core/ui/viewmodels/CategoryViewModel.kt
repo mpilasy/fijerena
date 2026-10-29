@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.network.RecentRemoval
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.network.suspendRunCatching
+import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.WantedTitles
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -46,6 +47,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
+import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import org.njarasoa.fijerena.core.ui.wanted.WantedCard
 import org.njarasoa.fijerena.core.ui.wanted.cards
@@ -81,6 +83,12 @@ class CategoryViewModel(
 
         /** Id prefix of the Wanted list's rows, each a [WantedCard] by its key: no source item. */
         private const val WANTED_ROW_PREFIX = "wanted_row_"
+
+        /** The section's Charts list (tmdb charts plan, CH-D2): the TMDB charts of Movies or TV Shows. */
+        const val CHARTS_CATEGORY_ID = "charts"
+
+        /** Id prefix of the Charts list's headings, one over each chart's titles: no source item. */
+        private const val CHART_HEADER_PREFIX = "chart_header_"
         private const val TAG = "CategoryViewModel"
 
         // How long one source may take to list its categories before the list goes on without it.
@@ -93,7 +101,38 @@ class CategoryViewModel(
                 RECENT_CATEGORY_ID,
                 RECENTLY_VIEWED_CATEGORIES_ID,
                 WANTED_CATEGORY_ID,
+                CHARTS_CATEGORY_ID,
             )
+
+        /** Whether [item] is a heading of the Charts list: drawn as a list heading, never opened. */
+        fun isChartHeader(item: MediaItem): Boolean = item.categoryId == CHARTS_CATEGORY_ID && item.id.startsWith(CHART_HEADER_PREFIX)
+
+        /**
+         * The Charts list's rows: each chart's heading, then its titles, the charts in order. A title
+         * already listed under an earlier chart is not listed again (each row has its own key), and
+         * a chart left with no title has no heading.
+         */
+        internal fun chartListRows(
+            rows: List<ChartRows.Row>,
+            title: (TmdbChart) -> String,
+        ): List<MediaItem> {
+            val listed = HashSet<String>()
+            return rows.flatMap { row ->
+                val items = row.items.filter { listed.add(it.sourceKey) }
+                if (items.isEmpty()) {
+                    emptyList()
+                } else {
+                    val header =
+                        MediaItem(
+                            id = CHART_HEADER_PREFIX + row.chart.name,
+                            name = title(row.chart),
+                            mediaType = MediaType.VIDEO_FILE,
+                            categoryId = CHARTS_CATEGORY_ID,
+                        )
+                    listOf(header) + items
+                }
+            }
+        }
 
         /**
          * Maps the ids of the two rows Recent replaced onto it. Nothing persists a virtual
@@ -127,10 +166,11 @@ class CategoryViewModel(
 
         /**
          * Whether [categoryId]'s rows come from every source of the profile, so each carries its
-         * source's badge: Recent, Favourites, Favourite Categories and Recent Categories.
+         * source's badge: Recent, Favourites, Favourite Categories, Recent Categories and Charts.
          */
         fun mixesSources(categoryId: String?): Boolean =
-            isMergedList(categoryId) || categoryId == FAVORITE_CATEGORIES_ID || categoryId == RECENTLY_VIEWED_CATEGORIES_ID
+            isMergedList(categoryId) || categoryId == FAVORITE_CATEGORIES_ID || categoryId == RECENTLY_VIEWED_CATEGORIES_ID ||
+                categoryId == CHARTS_CATEGORY_ID
 
         /**
          * The lists a TV Guide of [categoryId] reads around [repo], the route's source: for Recent
@@ -274,6 +314,11 @@ class CategoryViewModel(
     // on a child's profile, whose state is empty).
     private val wanted = WantedTitles.getInstance(context)
     private val wantedKind = contentType.takeIf { it == ContentType.MOVIES || it == ContentType.TV_SHOWS }
+
+    // The section's chart rows (tmdb charts plan, CH-D2), Movies and TV Shows only: empty until
+    // read, when charts are off ([ChartRows.enabled]) or when no chart has a title.
+    @Volatile
+    private var chartRows: List<ChartRows.Row> = emptyList()
 
     /**
      * A short state per row (by [sourceKey]), shown first on its second line: Available or Not
@@ -520,11 +565,39 @@ class CategoryViewModel(
             val ownSource = repo.getProviderId()
             launch { merged.recentItems(contentType).collect { _recentItems.value = it?.onSources(ownSource) } }
             loadCategoriesInternal()
+            if (wantedKind != null) launch { loadCharts(merged, wantedKind) }
             // Entering on a real category (from the EPG, search, or a saved selection) never
             // loads the Recent row, but the Live TV preview panel shows that list regardless of
             // what was browsed into — without this warm-up it would sit on its spinner forever.
             merged.loadRecentItems(contentType)
         }
+
+    /**
+     * Reads the section's charts (TMDB calls, so after the categories show), then adds the Charts
+     * list when one has a title. A failure only leaves the list out (tmdb charts plan, design 8).
+     */
+    private suspend fun loadCharts(
+        merged: MergedLists,
+        kind: String,
+    ) {
+        val rows = suspendRunCatching { ChartRows.load(context, merged, kind) }.getOrDefault(emptyList())
+        if (rows.isEmpty() && chartRows.isEmpty()) return
+        chartRows = rows
+        // Not shown yet (an error, a reload): the next build of the categories adds it.
+        val state = _uiState.value as? UiState.Success ?: return
+        val repo = repositoryOrNull ?: return
+        categories = rebuildVirtualCategories(repo, categories.filter { !it.isVirtual })
+        // Only the categories change, and the open Charts list's rows: a list loading meanwhile
+        // keeps its loading state.
+        if (currentCategoryId == CHARTS_CATEGORY_ID && !state.streamsLoading) {
+            currentStreams = chartListRows()
+            _uiState.value = state.copy(categories = categories, streams = currentStreams)
+        } else {
+            _uiState.value = state.copy(categories = categories)
+        }
+    }
+
+    private fun chartListRows(): List<MediaItem> = chartListRows(chartRows) { context.getString(ChartRows.titleRes(it)) }
 
     /**
      * The profile's sources as they change (one turned on or off in its Sources, added or deleted):
@@ -809,6 +882,11 @@ class CategoryViewModel(
 
                 WANTED_CATEGORY_ID -> {
                     emitStreams(wantedRows())
+                    true
+                }
+
+                CHARTS_CATEGORY_ID -> {
+                    emitStreams(chartListRows())
                     true
                 }
 
@@ -1399,6 +1477,16 @@ class CategoryViewModel(
                 MediaCategory(
                     id = RECENTLY_VIEWED_CATEGORIES_ID,
                     name = context.getString(R.string.category_recent_categories_label),
+                    isVirtual = true,
+                ),
+            )
+        }
+        // Last, so its late arrival (TMDB calls) moves no other tab; kept while it is the open list.
+        if (wantedKind != null && (chartRows.isNotEmpty() || currentCategoryId == CHARTS_CATEGORY_ID)) {
+            virtualCats.add(
+                MediaCategory(
+                    id = CHARTS_CATEGORY_ID,
+                    name = context.getString(R.string.category_charts),
                     isVirtual = true,
                 ),
             )
