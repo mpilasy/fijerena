@@ -74,7 +74,7 @@ class AppSettings(
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SHOW_CLOCK = "show_clock"
         private const val KEY_SHOW_TMDB_CHARTS = "show_tmdb_charts"
-        private const val KEY_CHARTS_SHOW_MISSING = "charts_show_missing"
+        const val KEY_CHARTS_SHOW_MISSING = "charts_show_missing"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LAST_TAB = "last_tab"
@@ -118,6 +118,7 @@ class AppSettings(
                 KEY_TMDB_API_KEY,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
+                KEY_CHARTS_SHOW_MISSING,
             ) + ParentalList.entries.map { it.key }
         val PER_PROFILE_SETTING_KEYS =
             setOf(
@@ -129,6 +130,7 @@ class AppSettings(
                 KEY_AUTOPLAY_NEXT_EPISODE,
                 KEY_PIN_HASH,
                 KEY_CHILD_PROFILE,
+                KEY_CHARTS_SHOW_MISSING,
             )
 
         /**
@@ -446,7 +448,7 @@ class AppSettings(
                     value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
                 }
 
-                KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP -> {
+                KEY_AUTOPLAY_NEXT_EPISODE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
                     if (profileId != SyncKind.SHARED) value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 }
 
@@ -492,7 +494,7 @@ class AppSettings(
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
-            KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_POSTER_BACKDROP -> {
+            KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE, KEY_CHILD_PROFILE, KEY_POSTER_BACKDROP, KEY_CHARTS_SHOW_MISSING -> {
                 kotlinx.serialization.json.JsonPrimitive(
                     prefs.getBoolean(stored, false),
                 )
@@ -569,6 +571,8 @@ class AppSettings(
 
     /** Drops a deleted profile's autoplay-next-episode choice. */
     fun removeAutoplayNextEpisode(profileId: String) = prefs.edit { remove(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId)) }
+
+    fun removeChartsShowMissing(profileId: String) = prefs.edit { remove(profileKey(KEY_CHARTS_SHOW_MISSING, profileId)) }
 
     private fun devModeKey(profileId: String) = profileKey(KEY_DEV_MODE, profileId)
 
@@ -894,14 +898,18 @@ class AppSettings(
 
     /**
      * Whether a profile's Trending rows also show the titles no source has (the TMDB charts plan,
-     * follow-up). Set on the row itself; this device's, per profile, not synced. Off by default.
+     * follow-up). Set on the row itself; per profile, synced to the profile on every device. Off by
+     * default.
      */
     fun chartsShowMissing(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_CHARTS_SHOW_MISSING, profileId), false)
 
     fun setChartsShowMissing(
         profileId: String,
         show: Boolean,
-    ) = prefs.edit { putBoolean(profileKey(KEY_CHARTS_SHOW_MISSING, profileId), show) }
+    ) {
+        prefs.edit { putBoolean(profileKey(KEY_CHARTS_SHOW_MISSING, profileId), show) }
+        SettingsSyncQueue.setting(context, KEY_CHARTS_SHOW_MISSING, profileId)
+    }
 
     fun observeChartsShowMissing(profileId: String): Flow<Boolean> =
         callbackFlow {
