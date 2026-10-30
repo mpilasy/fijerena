@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261030204404
 
 - **The full cast:** the Cast tab shows the first 10 actors, then a "+N more" card that shows the rest of the cast in billing order. Before, an actor past the 10th was never listed, even though their own page listed the title. TV and phone.
 - **Roles on an actor's page:** each card says the part played in that title ("2014 • as Paul"); a director's or writer's page says the job (Director, Writer, Creator). TV and phone.
