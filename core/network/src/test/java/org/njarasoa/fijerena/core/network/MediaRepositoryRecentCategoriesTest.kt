@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
  */
 class MediaRepositoryRecentCategoriesTest {
     private lateinit var repository: MediaRepository
+    private lateinit var prefs: SharedPreferences
 
     @Before
     fun setup() {
@@ -29,7 +30,7 @@ class MediaRepositoryRecentCategoriesTest {
         every { Looper.getMainLooper() } returns mockk(relaxed = true)
         val context = mockk<Context>(relaxed = true)
         // The prefs never show a commit: as if each commit had not run yet.
-        val prefs = mockk<SharedPreferences>(relaxed = true)
+        prefs = mockk(relaxed = true)
         every { context.getSharedPreferences(any(), any()) } returns prefs
         every { prefs.getString(any(), any()) } returns null
         repository =
@@ -68,5 +69,15 @@ class MediaRepositoryRecentCategoriesTest {
             (1..5).map { "cat$it" }.toSet(),
             repository.getRecentlyViewedCategories(ContentType.MOVIES).map { it.categoryId }.toSet(),
         )
+    }
+
+    @Test
+    fun `a cleared list does not come back from prefs that the clear has not reached yet`() {
+        // The prefs still hold a list: the clear's commit has not run yet.
+        every { prefs.getString(any(), any()) } returns
+            "[{\"categoryId\":\"old\",\"categoryName\":\"Old\",\"contentType\":\"live\",\"timestamp\":1}]"
+        repository.clearCache()
+
+        assertEquals(emptyList<String>(), repository.getRecentlyViewedCategories(ContentType.LIVE_TV).map { it.categoryId })
     }
 }

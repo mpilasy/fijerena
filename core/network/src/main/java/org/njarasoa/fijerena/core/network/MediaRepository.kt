@@ -1065,6 +1065,10 @@ class MediaRepository(
     private val cachedRecentCategories: MutableMap<String, List<RecentCategory>> = ConcurrentHashMap()
     private val recentCategoriesLock = Any()
 
+    // Set by clearCache(): its prefs clear also runs later, so a reader must not load the old lists.
+    @Volatile
+    private var recentCategoriesCleared = false
+
     fun addToCategoryHistory(
         categoryId: String,
         categoryName: String,
@@ -1090,6 +1094,7 @@ class MediaRepository(
     }
 
     private fun getRecentCategoryList(key: String): List<RecentCategory> {
+        if (recentCategoriesCleared) return emptyList()
         val raw = profileCache.getString(key, null) ?: return emptyList()
         return try {
             json.decodeFromString(raw)
@@ -2493,7 +2498,10 @@ class MediaRepository(
         fetchTimes.clear()
         cachedFavorites = null
         cachedFavoriteCategories = null
-        synchronized(recentCategoriesLock) { cachedRecentCategories.clear() }
+        synchronized(recentCategoriesLock) {
+            recentCategoriesCleared = true
+            cachedRecentCategories.clear()
+        }
         synchronized(watchHistoryLock) {
             cachedWatchHistory = null
         }
