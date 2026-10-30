@@ -1,6 +1,6 @@
 # UX audit fixes
 
-**Status:** Planned 2026-10-30.
+**Status:** In progress 2026-10-30.
 
 ## Goal
 
@@ -79,10 +79,10 @@ commit.
 
 | Phase | Work | Status |
 |-------|------|--------|
-| A | TV Home focus (1) and card menus (2), TV and phone | Not started |
-| B | Live TV loading, shared and TV: 3 (loader, M3U, TV message), 4, 7 | Not started |
-| C | Phone Live TV dock: 3 (dock error and message), 5, 6 | Not started |
-| D | Details text and child gate (8), TV and phone | Not started |
+| A | TV Home focus (1) and card menus (2), TV and phone | In progress |
+| B | Live TV loading, shared and TV: 3 (loader, M3U, TV message), 4, 7 | In progress |
+| C | Phone Live TV dock: 3 (dock error and message), 5, 6 | In progress |
+| D | Details text and child gate (8), TV and phone | In progress |
 | E | Toggle (9) and long lists (10), after A–D | Not started |
 | F | Full checks, emulator walks of every fix, docs (FEATURES, NAVIGATION_GUIDE, RELEASE_NOTES) | Not started |
 
