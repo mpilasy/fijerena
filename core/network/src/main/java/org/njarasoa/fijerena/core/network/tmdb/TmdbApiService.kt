@@ -46,11 +46,15 @@ class TmdbKeyMissingException : IOException("No usable TMDB key")
  * Ktor-internal `Dispatcher`/coroutine that comes with it, see
  * the xtream concurrency fixes plan, Finding 2) to leak if it's ever
  * discarded without being closed, which nothing here does.
+ *
+ * Every call goes through [limiter] (the cast tab plan, CT-D0). The single instance makes the limit
+ * process-wide.
  */
 class TmdbApiService(
     private val activeKey: () -> String?,
     private val onRejected: (String) -> Unit = {},
     private val appLanguage: () -> String = { Locale.getDefault().language },
+    private val limiter: TmdbRateLimiter = TmdbRateLimiter(),
 ) {
     private val json =
         Json {
@@ -188,7 +192,7 @@ class TmdbApiService(
                 TmdbKeyCheck.REJECTED
             } else {
                 try {
-                    keyCheckResult(client.get("authentication") { authenticate(key) }.status)
+                    keyCheckResult(limitedGet("authentication") { authenticate(key) }.status)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -220,7 +224,8 @@ class TmdbApiService(
     /**
      * One call with the active key. No key: throws before any request. Any non-2xx answer throws
      * too (callers already treat a failure as "no TMDB data"); a 401 first reports the key as
-     * rejected, which turns TMDB off until another key is entered.
+     * rejected, which turns TMDB off until another key is entered. A 429 waits and tries once more
+     * ([TmdbRateLimiter]); a second 429 throws.
      */
     private suspend fun fetch(
         path: String,
@@ -229,7 +234,7 @@ class TmdbApiService(
     ): HttpResponse {
         val key = activeKey() ?: throw TmdbKeyMissingException()
         val response =
-            client.get(path) {
+            limitedGet(path) {
                 authenticate(key)
                 parameters.forEach { (name, value) -> parameter(name, value) }
                 when (language) {
@@ -245,6 +250,21 @@ class TmdbApiService(
         if (!response.status.isSuccess()) throw IOException("TMDB $path: HTTP ${response.status.value}")
         return response
     }
+
+    /** A GET to [path] in the [limiter], tried once more after a 429. */
+    private suspend fun limitedGet(
+        path: String,
+        block: io.ktor.client.request.HttpRequestBuilder.() -> Unit,
+    ): HttpResponse =
+        limiter.execute(
+            retryAfter = { response ->
+                if (response.status == HttpStatusCode.TooManyRequests) {
+                    TmdbRateLimiter.RetryAfter(response.headers[HttpHeaders.RetryAfter])
+                } else {
+                    null
+                }
+            },
+        ) { client.get(path, block) }
 
     private fun io.ktor.client.request.HttpRequestBuilder.authenticate(key: String) {
         if (isV4Token(key)) {
