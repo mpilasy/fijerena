@@ -443,7 +443,11 @@ fun ContentTypeSelectionScreen(
     // reload and is scrolled into view first; a card that left the shelf (finished) falls back to
     // the first hero card.
     val returnFocus = rememberNavReturnFocus()
-    remember { if (openOnFirstCard) returnFocus.discard() }
+    // Once, in composition, so the entry focus below already sees no return key.
+    remember {
+        if (openOnFirstCard) returnFocus.discard()
+        openOnFirstCard
+    }
     val shelfListState = rememberLazyListState()
 
     // The first card of each row: where focus enters a row it has not been in yet (HomeRow).

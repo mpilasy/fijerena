@@ -53,6 +53,7 @@ import java.net.SocketTimeoutException
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.abs
 
+@OptIn(UnstableApi::class)
 class StreamLoaderViewModel(
     private val context: Context,
     private val initialStreamId: String,
