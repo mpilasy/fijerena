@@ -37,12 +37,15 @@ fun Modifier.pageKeys(
     val running = remember { JobHolder() }
     return onPreviewKeyEvent { event ->
         val direction = pageDirection(event.key) ?: return@onPreviewKeyEvent false
+        // A page still landing takes the key: its row may not hold focus yet, and a key let
+        // through then went to the list's own scrolling, which left focus behind (a fast burst).
+        if (running.job?.isActive == true) return@onPreviewKeyEvent true
         val layout = listState.layoutInfo
         val focused = layout.visibleItemsInfo.firstOrNull { it.key == pane.rememberedKey }
         // Focus is not on a row of this list (an empty state's button): the key is not ours.
         if (focused == null) return@onPreviewKeyEvent false
         // A held key pages again on each repeat, once the last page has landed.
-        if (event.type == KeyEventType.KeyDown && running.job?.isActive != true) {
+        if (event.type == KeyEventType.KeyDown) {
             val visible = layout.visibleItemsInfo.map { it.offset to it.size }
             val page = wholeRowsInView(visible, layout.viewportStartOffset, layout.viewportEndOffset)
             val target = pageTarget(focused.index, direction, page, layout.totalItemsCount) { currentKeyAt(it) != null }
@@ -55,6 +58,11 @@ fun Modifier.pageKeys(
                         listState.scrollToItem(first.coerceIn(0, layout.totalItemsCount - 1))
                         withFrameNanos { }
                         pane.focusKey(key)
+                        // The page has landed when its row holds focus (a few frames at most).
+                        repeat(LANDING_FRAMES) {
+                            if (pane.rememberedKey == key) return@launch
+                            withFrameNanos { }
+                        }
                     }
             }
         }
@@ -62,6 +70,9 @@ fun Modifier.pageKeys(
         true
     }
 }
+
+// How many frames a page waits for its row to take focus before the next key may page again.
+private const val LANDING_FRAMES = 30
 
 /** The page move under way, if any. */
 private class JobHolder {
