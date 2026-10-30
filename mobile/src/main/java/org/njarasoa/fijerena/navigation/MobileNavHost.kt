@@ -98,6 +98,7 @@ import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.home.MobileHomeScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
+import org.njarasoa.fijerena.feature.person.MobilePersonScreen
 import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
 import org.njarasoa.fijerena.feature.profile.MobileProfileMenu
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
@@ -1048,6 +1049,47 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                                 }
                             }
                         },
+                    )
+                }
+
+                composable<Screen.Person> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.Person>()
+                    MobilePersonScreen(
+                        tmdbId = route.tmdbId,
+                        name = route.name,
+                        crew = route.crew,
+                        // As Home's chart cards: a TMDB-only card opens its TMDB page, else the title's source page.
+                        onTitleSelected = { item, contentType ->
+                            val tmdbOnly = TmdbOnlyItem.titleOf(item, contentType)
+                            when {
+                                tmdbOnly != null -> {
+                                    navController.navigateOnce(tmdbOnly.route())
+                                }
+
+                                contentType == ContentType.TV_SHOWS -> {
+                                    navController.navigateOnce(
+                                        Screen.EpisodeSelection(
+                                            seriesId = item.id,
+                                            seriesName = item.name,
+                                            categoryId = item.categoryId,
+                                            providerId = item.providerId,
+                                        ),
+                                    )
+                                }
+
+                                else -> {
+                                    navController.navigateOnce(
+                                        Screen.MovieDetails(
+                                            movieId = item.id,
+                                            movieName = item.name,
+                                            categoryId = item.categoryId,
+                                            providerId = item.providerId,
+                                        ),
+                                    )
+                                }
+                            }
+                        },
+                        onBack = { navController.navigateUp() },
                     )
                 }
 

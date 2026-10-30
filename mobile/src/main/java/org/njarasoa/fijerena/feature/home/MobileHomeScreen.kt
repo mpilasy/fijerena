@@ -683,7 +683,7 @@ private fun WantedBanner(
  * alone). [action]: an icon button at the end of the title line.
  */
 @Composable
-private fun <T> HomeRow(
+internal fun <T> HomeRow(
     title: String,
     items: List<T>,
     key: (T) -> String,
@@ -726,7 +726,7 @@ private fun <T> HomeRow(
  * it when given, its name and [subtitle].
  */
 @Composable
-private fun TitleCard(
+internal fun TitleCard(
     title: String,
     subtitle: String?,
     thumbnailUrl: String?,

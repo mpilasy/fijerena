@@ -1486,6 +1486,10 @@
     <string name="tmdb_charts_desc">Andalana misy ny miely amin\'ity herinandro ity, ny malaza ary ny tsara naoty indrindra eo amin\'ny fandraisana, ary lisitra Laharana ao amin\'ny Sarimihetsika sy Andian-tantara. Ny an\'ny loharanonao ihany no aseho. Mila fanalahidy TMDB. Ity fitaovana ity ihany.</string>
     <string name="chart_show_missing">Asehoy ny lohateny tsy ananan\'ny loharanonao</string>
     <string name="chart_hide_missing">Ny lohateny ananan\'ny loharanonao ihany no aseho</string>
+    <string name="person_born">Teraka ny %1$s</string>
+    <string name="person_died">Maty ny %1$s</string>
+    <string name="person_none_in_library">Tsy misy ao amin\'ny tahirinao ny lohateniny.</string>
+    <string name="person_load_error">Tsy azo nalaina ny pejin\'ity olona ity.</string>
     <string name="tmdb_charts_refresh_title">Havaozina ny laharana</string>
     <string name="tmdb_charts_refresh_desc">Vakiana indray avy amin\'ny TMDB izao ny laharana, tsy miandry iray andro.</string>
     <string name="tmdb_charts_refresh_done">Voafafa ny laharana. Hovakian\'ny fandraisana indray.</string>

@@ -364,6 +364,9 @@ class TmdbApiService(
         const val BACKDROP_SIZE_W1280 = "w1280"
         const val PROFILE_SIZE_W185 = "w185"
 
+        // The large photo of a person's page; TMDB has no width step between w185 and h632.
+        const val PROFILE_SIZE_H632 = "h632"
+
         fun posterUrl(
             path: String?,
             size: String = POSTER_SIZE_W185,
