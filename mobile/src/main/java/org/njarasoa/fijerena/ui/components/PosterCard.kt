@@ -95,6 +95,8 @@ internal fun CardLines(
             text = if (tags) parsed.title.ifBlank { title } else title,
             role = TextRole.Heading,
             maxLines = titleLines,
+            // Room for every line, so the cards of a row are one height.
+            minLines = titleLines,
             overflow = TextOverflow.Ellipsis,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
