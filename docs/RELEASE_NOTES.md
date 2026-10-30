@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261030025701
 
 - **Original names on the TMDB lists:** the cards of More Like This, the TMDB charts (Home and the Charts lists), an actor's page and the Wishlist now show each title's original name, whatever name your source gives it: "The Godfather Part II", "Le Fabuleux Destin d'Amélie Poulain", "La casa de papel". A title in another script (Korean, Japanese, Russian…) shows its English name. These cards no longer show the source's tags (language code, 4K). The page the card opens keeps the source's name. TV and phone.
 
