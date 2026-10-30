@@ -35,7 +35,7 @@ one commit.
 
 | Phase | Work | Status |
 |-------|------|--------|
-| A | Player: 1, 2, with unit tests | In progress |
+| A | Player: 1, 2, with unit tests | Done |
 | B | Stream loader and details pages: 3, 4, 5, 6 | In progress |
 | C | Data layer: 7, 8, 12, 13, 14 | In progress |
 | D | Sync and person page: 9, 10, 11 | In progress |

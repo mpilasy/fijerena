@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Fewer playback errors after a network change, and buffer size limits that work:** a switch between Wi-Fi and mobile data, or from a channel to a film, during playback could stop the stream with a playback error. The player's memory limit for buffered video now applies, so a high-bitrate film no longer fills memory past it. TV and phone.
+
 ## Version: 0.8.20261030025701
 
 - **Fixed a rare crash when a stream starts:** starting or switching a stream could close the app on a slower device (seen on a Chromecast with Google TV), when Android freed memory at the wrong moment. TV and phone.

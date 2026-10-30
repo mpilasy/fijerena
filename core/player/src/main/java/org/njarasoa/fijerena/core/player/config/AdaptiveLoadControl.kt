@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.player.config
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.analytics.PlayerId
@@ -11,11 +12,13 @@ import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.upstream.Allocator
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.max
+import kotlin.math.min
 
 /**
- * A delegating [LoadControl] that swaps the inner [DefaultLoadControl] atomically
- * when the network type changes, sharing a single [DefaultAllocator] across swaps
- * to avoid memory churn.
+ * A delegating [LoadControl] that swaps the inner [DefaultLoadControl] when the network type or
+ * the content type changes, sharing a single [DefaultAllocator] across swaps to avoid memory churn.
  */
 @OptIn(UnstableApi::class)
 class AdaptiveLoadControl(
@@ -27,67 +30,66 @@ class AdaptiveLoadControl(
 ) : LoadControl {
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
+    // Written on Main only.
     private var networkType: NetworkType = NetworkMonitor.currentNetworkType
 
-    // DefaultLoadControl is stateful across its lifecycle: shouldContinueLoading()/
-    // shouldStartPlayback() rely on internal state that onTracksSelected() sets up. A freshly
-    // built delegate hasn't seen that call, so swapping mid-playback used to crash the very
-    // next shouldContinueLoading() with a NullPointerException. Caching the most recent
-    // onPrepared/onTracksSelected calls lets a new delegate be brought up to the same state
-    // immediately after a swap.
+    // DefaultLoadControl keeps per-player state that onPrepared() sets up and that
+    // shouldContinueLoading()/shouldStartPlayback()/onTracksSelected() read (checkNotNull). A
+    // freshly built delegate has no such state, so its first use before onPrepared() throws a
+    // NullPointerException. The cached calls below bring a new delegate up to the same state.
+    // Read and written on the playback thread only.
     private var lastPreparedPlayerId: PlayerId? = null
     private var lastTracksSelected: TracksSelectedCall? = null
 
-    // When true, the delegate was swapped and needs lifecycle state replayed on the
-    // playback thread. Cleared either by replayIfPending() (mid-playback swap) or by
-    // a natural onPrepared() call from ExoPlayer (retry / new prepare).
-    @Volatile
-    private var pendingReplay = false
+    // A swap has two threads: Main builds the new delegate and puts it here; the playback thread
+    // takes it in install(), replays the cached calls on it, and only then uses it. So the
+    // playback thread never uses a delegate that has not had onPrepared().
+    private val pending = AtomicReference<Delegate?>(null)
 
-    // Swapped on network/content-type changes; LoadControl methods below always read through
-    // this reference, so a swap takes effect on the very next call. Rebuilding just constructs
-    // a fresh value object — it doesn't touch the player, the allocator, or buffered data — so
-    // this is safe to do immediately rather than deferring to the next prepare()/recycle.
-    // The current delegate's durations, set by buildDelegate — declared first so the delegate's
-    // initialiser below can set it.
+    // The delegate in use. Written on the playback thread only (after construction); volatile for
+    // the reads on Main in startThresholdMs().
     @Volatile
-    private var durations: BufferDurations? = null
+    private var current: Delegate = buildDelegate(networkType, contentType)
 
-    @Volatile
-    private var delegate: DefaultLoadControl = buildDelegate(networkType, contentType)
+    // True when the byte cap stopped loading. Loading starts again below the minimum buffer, as in
+    // DefaultLoadControl. Playback thread only.
+    private var stoppedBySize = false
 
     /**
      * Video, ms, the player holds before it plays: at a start or after a seek, or after a stall
      * ([rebuffering]). For the Expert-mode buffering line; the size cap can start playback sooner.
+     * Uses the newest delegate, also when the playback thread has not installed it yet.
      */
-    fun startThresholdMs(rebuffering: Boolean): Int? = durations?.let { if (rebuffering) it.rebufferMs else it.playbackMs }
+    fun startThresholdMs(rebuffering: Boolean): Int {
+        val durations = (pending.get() ?: current).durations
+        return if (rebuffering) durations.rebufferMs else durations.playbackMs
+    }
 
     fun updateForNetwork(networkType: NetworkType) {
         this.networkType = networkType
-        delegate = buildDelegate(networkType, contentType)
-        pendingReplay = true
+        pending.set(buildDelegate(networkType, contentType))
     }
 
     fun updateContentType(contentType: PlayerConfigFactory.ContentType) {
         this.contentType = contentType
-        delegate = buildDelegate(networkType, contentType)
-        pendingReplay = true
+        pending.set(buildDelegate(networkType, contentType))
     }
 
     /**
-     * Replays cached [onPrepared]/[onTracksSelected] state on the current delegate.
-     * Called from [shouldContinueLoading]/[shouldStartPlayback] which ExoPlayer always
-     * invokes on the playback looper thread, satisfying Media3 1.7.1's thread assertion
-     * in [DefaultLoadControl.onPrepared].
+     * Installs a pending delegate. Call it on the playback thread before each use of the delegate's
+     * per-player state. With [replay], it first gives the new delegate the cached onPrepared and
+     * onTracksSelected calls (Media3 asserts that onPrepared runs on the playback thread).
      */
-    private fun replayIfPending() {
-        if (pendingReplay) {
-            pendingReplay = false
-            lastPreparedPlayerId?.let { delegate.onPrepared(it) }
+    private fun install(replay: Boolean = true) {
+        val next = pending.getAndSet(null) ?: return
+        if (replay) {
+            lastPreparedPlayerId?.let { next.control.onPrepared(it) }
             lastTracksSelected?.let { (parameters, trackGroups, trackSelections) ->
-                delegate.onTracksSelected(parameters, trackGroups, trackSelections)
+                next.control.onTracksSelected(parameters, trackGroups, trackSelections)
             }
         }
+        stoppedBySize = false
+        current = next
     }
 
     private data class TracksSelectedCall(
@@ -96,10 +98,17 @@ class AdaptiveLoadControl(
         val trackSelections: Array<out ExoTrackSelection?>,
     )
 
+    private class Delegate(
+        val control: DefaultLoadControl,
+        val durations: BufferDurations,
+        val targetBufferBytes: Int,
+        val prioritizeTimeOverSize: Boolean,
+    )
+
     private fun buildDelegate(
         networkType: NetworkType,
         contentType: PlayerConfigFactory.ContentType,
-    ): DefaultLoadControl {
+    ): Delegate {
         // WIFI and UNKNOWN both use the WiFi profile, matching NetworkMonitor's own default
         // (currentNetworkType starts as WIFI; UNKNOWN only follows an explicit network loss,
         // not a degraded-but-present connection) — written explicitly per branch rather than
@@ -154,7 +163,6 @@ class AdaptiveLoadControl(
                     }
                 }
             }
-        this.durations = durations
 
         val targetBufferBytes =
             when (contentType) {
@@ -172,14 +180,16 @@ class AdaptiveLoadControl(
         // only, plus the larger cap below, fixes that without reopening the VOD memory risk.
         val prioritizeTimeOverSize = contentType == PlayerConfigFactory.ContentType.LIVE_TV
 
-        return DefaultLoadControl
-            .Builder()
-            .setAllocator(sharedAllocator)
-            .setBufferDurationsMs(durations.minBufferMs, durations.maxBufferMs, durations.playbackMs, durations.rebufferMs)
-            .setTargetBufferBytes(targetBufferBytes)
-            .setBackBuffer(durations.backBufferMs, true)
-            .setPrioritizeTimeOverSizeThresholds(prioritizeTimeOverSize)
-            .build()
+        val control =
+            DefaultLoadControl
+                .Builder()
+                .setAllocator(sharedAllocator)
+                .setBufferDurationsMs(durations.minBufferMs, durations.maxBufferMs, durations.playbackMs, durations.rebufferMs)
+                .setTargetBufferBytes(targetBufferBytes)
+                .setBackBuffer(durations.backBufferMs, true)
+                .setPrioritizeTimeOverSizeThresholds(prioritizeTimeOverSize)
+                .build()
+        return Delegate(control, durations, targetBufferBytes, prioritizeTimeOverSize)
     }
 
     private data class BufferDurations(
@@ -190,78 +200,119 @@ class AdaptiveLoadControl(
         val backBufferMs: Int,
     )
 
-    // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──
+    // ── LoadControl implementation ──
 
-    // Basic lifecycle methods (required by 1.5.1 interface)
+    // Media3 never calls the deprecated methods; they forward to the delegate in use.
     @Suppress("DEPRECATION")
     @Deprecated("Use onPrepared(PlayerId) instead")
     override fun onPrepared() {
-        delegate.onPrepared()
+        current.control.onPrepared()
     }
 
     @Suppress("DEPRECATION")
     @Deprecated("Use onStopped(PlayerId) instead")
     override fun onStopped() {
-        delegate.onStopped()
+        current.control.onStopped()
     }
 
     @Suppress("DEPRECATION")
     @Deprecated("Use onReleased(PlayerId) instead")
     override fun onReleased() {
-        delegate.onReleased()
+        current.control.onReleased()
     }
 
-    // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
     override fun onPrepared(playerId: PlayerId) {
-        pendingReplay = false // Natural lifecycle call from ExoPlayer supersedes deferred replay
+        // No replay: this call prepares the new delegate, and Media3 calls onTracksSelected next.
+        install(replay = false)
+        stoppedBySize = false
         lastPreparedPlayerId = playerId
-        delegate.onPrepared(playerId)
+        current.control.onPrepared(playerId)
     }
 
     override fun onStopped(playerId: PlayerId) {
-        delegate.onStopped(playerId)
+        // Install first, so that the delegate in use holds the player and resets the allocator.
+        install()
+        // A stopped player has no state in the delegate, so a later swap must not replay it.
+        lastPreparedPlayerId = null
+        lastTracksSelected = null
+        current.control.onStopped(playerId)
     }
 
     override fun onReleased(playerId: PlayerId) {
-        // Otherwise these keep pinning the released player's TrackGroupArray/ExoTrackSelection
-        // object graph until this AdaptiveLoadControl itself is discarded.
+        install()
+        // This also stops pinning the released player's TrackGroupArray/ExoTrackSelection objects.
         lastPreparedPlayerId = null
         lastTracksSelected = null
-        delegate.onReleased(playerId)
+        current.control.onReleased(playerId)
     }
 
-    // The allocator every delegate is built with: one pool for the player across swaps.
+    // The allocator every delegate is built with: one pool for the player across swaps. Media3
+    // calls this once, on the app thread, when it builds the player.
     override fun getAllocator(playerId: PlayerId): Allocator = sharedAllocator
 
+    // The back buffer calls read only the delegate's settings, not its per-player state, and
+    // Media3 makes one of them on the app thread, so they do not install.
     @Suppress("DEPRECATION")
     @Deprecated("Use getBackBufferDurationUs(PlayerId) instead")
-    override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
+    override fun getBackBufferDurationUs(): Long = current.control.backBufferDurationUs
 
-    override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
+    override fun getBackBufferDurationUs(playerId: PlayerId): Long = current.control.getBackBufferDurationUs(playerId)
 
     @Suppress("DEPRECATION")
     @Deprecated("Use retainBackBufferFromKeyframe(PlayerId) instead")
-    override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
+    override fun retainBackBufferFromKeyframe(): Boolean = current.control.retainBackBufferFromKeyframe()
 
-    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
+    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = current.control.retainBackBufferFromKeyframe(playerId)
 
+    // The byte cap. DefaultLoadControl counts a player's bytes only through the allocator that its
+    // own getAllocator(playerId) gives. We give the shared allocator instead (Media3 takes the
+    // allocator once, so a delegate's own allocator would stay with the first delegate after a
+    // swap), so the delegate's count stays 0 and its cap never trips. We apply the cap here with
+    // the shared allocator's total: for our one player it is the same number, and it survives a
+    // swap. These are DefaultLoadControl's size rules; the delegate applies the time rules.
     override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
-        replayIfPending()
-        return delegate.shouldContinueLoading(parameters)
+        install()
+        val delegate = current
+        val loading = delegate.control.shouldContinueLoading(parameters)
+        val sizeReached = sizeReached(delegate)
+        var minBufferUs = Util.msToUs(delegate.durations.minBufferMs.toLong())
+        if (parameters.playbackSpeed > 1) {
+            minBufferUs =
+                min(
+                    Util.getMediaDurationForPlayoutDuration(minBufferUs, parameters.playbackSpeed),
+                    Util.msToUs(delegate.durations.maxBufferMs.toLong()),
+                )
+        }
+        minBufferUs = max(minBufferUs, MIN_BUFFER_FLOOR_US)
+        if (parameters.bufferedDurationUs < minBufferUs) {
+            stoppedBySize = sizeReached && !delegate.prioritizeTimeOverSize
+        } else if (sizeReached) {
+            stoppedBySize = true
+        }
+        return loading && !stoppedBySize
     }
 
     override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
-        replayIfPending()
-        return delegate.shouldStartPlayback(parameters)
+        install()
+        val delegate = current
+        return delegate.control.shouldStartPlayback(parameters) ||
+            (!delegate.prioritizeTimeOverSize && sizeReached(delegate))
     }
+
+    private fun sizeReached(delegate: Delegate): Boolean = sharedAllocator.totalBytesAllocated >= delegate.targetBufferBytes
 
     override fun onTracksSelected(
         parameters: LoadControl.Parameters,
         trackGroups: TrackGroupArray,
         trackSelections: Array<out ExoTrackSelection?>,
     ) {
-        replayIfPending()
+        install()
         lastTracksSelected = TracksSelectedCall(parameters, trackGroups, trackSelections)
-        delegate.onTracksSelected(parameters, trackGroups, trackSelections)
+        current.control.onTracksSelected(parameters, trackGroups, trackSelections)
+    }
+
+    private companion object {
+        // DefaultLoadControl's floor, so that playback cannot get stuck on a tiny minimum buffer.
+        const val MIN_BUFFER_FLOOR_US = 500_000L
     }
 }
