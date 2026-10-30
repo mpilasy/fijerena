@@ -69,7 +69,8 @@ fun PosterCard(
                 )
             }
         }
-        CardLines(title, subtitle, sourceName, providerId, width, tags)
+        // Two lines for the title, as on a store's poster rows: a narrow card cuts long names early.
+        CardLines(title, subtitle, sourceName, providerId, width, tags, titleLines = 2)
     }
 }
 
@@ -86,13 +87,14 @@ internal fun CardLines(
     providerId: Long,
     width: Dp,
     tags: Boolean = true,
+    titleLines: Int = 1,
 ) {
     val parsed = remember(title) { parseDisplayTitle(title) }
     Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
         CinemaText(
             text = if (tags) parsed.title.ifBlank { title } else title,
             role = TextRole.Heading,
-            maxLines = 1,
+            maxLines = titleLines,
             overflow = TextOverflow.Ellipsis,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
