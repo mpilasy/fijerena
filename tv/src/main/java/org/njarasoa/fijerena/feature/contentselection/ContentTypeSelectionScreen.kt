@@ -19,6 +19,7 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -131,6 +132,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.components.SectionPanel
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -139,7 +141,6 @@ import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.history.MergedLists
-import org.njarasoa.fijerena.core.ui.history.SourcedFavoriteCategory
 import org.njarasoa.fijerena.core.ui.home.BrowseSource
 import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
@@ -178,7 +179,6 @@ import org.njarasoa.fijerena.feature.category.components.RowMenuList
 import org.njarasoa.fijerena.feature.contentselection.components.SourcesStatusSheet
 import org.njarasoa.fijerena.feature.contentselection.components.SyncSummaryLine
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
-import org.njarasoa.fijerena.feature.contentselection.components.TvFavoriteCategoriesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvLiveRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvWantedBanner
@@ -219,8 +219,6 @@ fun ContentTypeSelectionScreen(
     onLiveChannelSelected: (streamId: String, contextCategoryId: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A favourite movie (ContentType.MOVIES) or show (ContentType.TV_SHOWS) from its Home row.
     onFavoriteSelected: (item: MediaItem, contentType: String) -> Unit = { _, _ -> },
-    /** A Favourite categories card: its section's list, on that category of its source. */
-    onFavoriteCategorySelected: (categoryId: String, contentType: String, providerId: Long) -> Unit = { _, _, _ -> },
     // A "Browse <source>" entry of a profile with no Xtream source (O1): that source's sections.
     onBrowse: (BrowseSource) -> Unit = {},
     // A profile with no source: Add Source. Null for a profile without Expert mode: it asks a grown-up.
@@ -290,12 +288,10 @@ fun ContentTypeSelectionScreen(
     // Favourite movies and shows rows (Phase 5), loaded with the Live row.
     var favoriteMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    // Every section's favourite categories, after them.
-    var favoriteCategories by remember { mutableStateOf<List<SourcedFavoriteCategory>>(emptyList()) }
-    // The TMDB chart rows (TMDB charts plan, Phase 3): each chart's titles the sources have, last on Home.
+    // The TMDB chart rows (TMDB charts plan, Phase 3): each chart's titles the sources have, last in its section's group.
     var chartItems by remember { mutableStateOf<Map<TmdbChart, List<MediaItem>>>(emptyMap()) }
-    // True once the chart rows were loaded (or are off): they are above the favourites, so the entry
-    // focus waits for them rather than land on a favourite and be pushed down by them.
+    // True once the chart rows were loaded (or are off): the shows' charts are above the favourite
+    // movies, so the entry focus waits for them rather than land on a lower row and be pushed down.
     var chartsLoaded by remember { mutableStateOf(false) }
     val showCharts by remember { appSettings.observeShowTmdbCharts() }
         .collectAsStateWithLifecycle(initialValue = appSettings.showTmdbCharts)
@@ -309,8 +305,8 @@ fun ContentTypeSelectionScreen(
     // The Undo of a card's removal (Hold OK / Menu on a card, below).
     val undoBar = rememberUndoBarState()
 
-    // The Wanted list (wanted titles plan, Phase 5): its own row, last, never empty and never on a
-    // child's Home (its state is empty there).
+    // The Wanted list (wanted titles plan, Phase 5): a row per section, in that section's group,
+    // never empty and never on a child's Home (its state is empty there).
     val wantedTitles = remember { WantedTitles.getInstance(context.applicationContext) }
     val wantedState by wantedTitles.state.collectAsStateWithLifecycle()
     var wantedCards by remember { mutableStateOf<List<WantedCard>>(emptyList()) }
@@ -372,12 +368,11 @@ fun ContentTypeSelectionScreen(
     }
     LaunchedEffect(mergedLists, supportedContentTypes) {
         val merged = mergedLists ?: return@LaunchedEffect
-        // A child's Home has no recent Channels row and no favourite categories: those open lists.
+        // A child's Home has no recent Channels row: it opens a list.
         liveRowEntries = if (!child && ContentType.LIVE_TV in supportedContentTypes) loadLiveRow(merged) else emptyList()
         favoriteChannelEntries = if (ContentType.LIVE_TV in supportedContentTypes) loadFavoriteChannels(merged) else emptyList()
         favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
-        favoriteCategories = if (child) emptyList() else loadFavoriteCategories(merged, supportedContentTypes)
         liveRowLoaded = true
     }
     // The chart rows after the other rows, so their TMDB calls never hold those up. Again when the
@@ -434,7 +429,6 @@ fun ContentTypeSelectionScreen(
                     coroutineScope.launch {
                         favoriteMovies = loadFavorites(merged, ContentType.MOVIES, supportedContentTypes)
                         favoriteShows = loadFavorites(merged, ContentType.TV_SHOWS, supportedContentTypes)
-                        if (!child) favoriteCategories = loadFavoriteCategories(merged, supportedContentTypes)
                     }
                 }
             }
@@ -459,17 +453,13 @@ fun ContentTypeSelectionScreen(
     val favoriteMoviesListState = rememberLazyListState()
     val favoriteShowsFirstFocus = remember { FocusRequester() }
     val favoriteShowsListState = rememberLazyListState()
-    val wantedFirstFocus = remember { FocusRequester() }
-    val wantedListState = rememberLazyListState()
+    // A Wishlist row per section, in that section's group.
+    val wantedShelves = HomeShelf.entries.filter { it.wantedContentType != null }
+    val wantedFirstFocus = remember { wantedShelves.associateWith { FocusRequester() } }
+    val wantedListState = wantedShelves.associateWith { rememberLazyListState() }
+    val wantedOf: (HomeShelf) -> List<WantedCard> = { shelf -> wantedCards.filter { it.entity.contentType == shelf.wantedContentType } }
     val wantedBannerFocus = remember { FocusRequester() }
-    // A favourite categories row per section, each under that section's favourites.
-    val categoryShelves = HomeShelf.entries.filter { it.categoriesContentType != null }
-    val categoriesFirstFocus = remember { categoryShelves.associateWith { FocusRequester() } }
-    val categoriesListState = categoryShelves.associateWith { rememberLazyListState() }
-    val categoriesOf: (HomeShelf) -> List<SourcedFavoriteCategory> = { shelf ->
-        favoriteCategories.filter { it.category.contentType == shelf.categoriesContentType }
-    }
-    // A row per TMDB chart, last.
+    // A row per TMDB chart, in its section's group.
     val chartShelves = HomeShelf.entries.filter { it.chart != null }
     val chartFirstFocus = remember { chartShelves.associateWith { FocusRequester() } }
     val chartListState = chartShelves.associateWith { rememberLazyListState() }
@@ -488,6 +478,16 @@ fun ContentTypeSelectionScreen(
         if (listState.layoutInfo.visibleItemsInfo.none { it.index == 0 }) listState.scrollToItem(0)
         chartSwitchFocus.getValue(shelf).requestFocusWithRetry()
     }
+    // The first row of a section's group (TV Shows or Movies) that has a card.
+    val sectionFirstFocus: (String) -> FocusRequester? = { type ->
+        val wanted = wantedShelves.first { it.wantedContentType == type }
+        when {
+            type == ContentType.TV_SHOWS && favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
+            type == ContentType.MOVIES && favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
+            wantedOf(wanted).isNotEmpty() -> wantedFirstFocus.getValue(wanted)
+            else -> chartShelves.firstOrNull { it.chart?.contentType == type && chartShows(it) }?.let { chartFirstFocus.getValue(it) }
+        }
+    }
     // The first card of the first row that has one: where focus opens and where Down from the header
     // goes. Null with no row at all; the sections are on the navigation rail then.
     // Derived, so the entry focus below reads the rows as they are now. A value read through
@@ -503,31 +503,11 @@ fun ContentTypeSelectionScreen(
 
                     continueWatchingItems.isNotEmpty() -> shelfFirstFocus
 
-                    liveRowEntries.isNotEmpty() -> liveRowFirstFocus
-
-                    wantedCards.isNotEmpty() -> wantedFirstFocus
-
-                    chartShelves.any(chartShows) -> chartShelves.first(chartShows).let { chartFirstFocus.getValue(it) }
-
                     favoriteChannelEntries.isNotEmpty() -> favoriteChannelsFirstFocus
 
-                    categoriesOf(
-                        HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
-                    ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_CHANNEL_CATEGORIES)
+                    liveRowEntries.isNotEmpty() -> liveRowFirstFocus
 
-                    favoriteMovies.isNotEmpty() -> favoriteMoviesFirstFocus
-
-                    categoriesOf(
-                        HomeShelf.FAVORITE_MOVIE_CATEGORIES,
-                    ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_MOVIE_CATEGORIES)
-
-                    favoriteShows.isNotEmpty() -> favoriteShowsFirstFocus
-
-                    categoriesOf(
-                        HomeShelf.FAVORITE_SHOW_CATEGORIES,
-                    ).isNotEmpty() -> categoriesFirstFocus.getValue(HomeShelf.FAVORITE_SHOW_CATEGORIES)
-
-                    else -> null
+                    else -> sectionFirstFocus(ContentType.TV_SHOWS) ?: sectionFirstFocus(ContentType.MOVIES)
                 }
             }
         }
@@ -619,17 +599,13 @@ fun ContentTypeSelectionScreen(
         }
         if (key.startsWith(RETURN_WANTED_PREFIX)) {
             val cardKey = key.removePrefix(RETURN_WANTED_PREFIX)
+            val shelf = wantedShelves.first { cardKey.startsWith("${it.wantedContentType}:") }
             val cards =
                 withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
-                    snapshotFlow { wantedCards }.first { cards ->
-                        cards.any {
-                            it.key ==
-                                cardKey
-                        }
-                    }
+                    snapshotFlow { wantedOf(shelf) }.first { cards -> cards.any { it.key == cardKey } }
                 }
             val index = cards?.indexOfFirst { it.key == cardKey } ?: -1
-            if (index >= 0) wantedListState.scrollToItem(index)
+            if (index >= 0) wantedListState.getValue(shelf).scrollToItem(index)
         }
     }
     val leaveTo: (String, () -> Unit) -> Unit = { key, navigate ->
@@ -673,8 +649,6 @@ fun ContentTypeSelectionScreen(
     // to the card that took its place (cardAfterChange), with the Undo bar; Menu while it shows
     // puts the card back, focus on it.
     var cardMenu by remember { mutableStateOf<HomeCardMenu?>(null) }
-    // A Favourite categories card's menu: Remove from favourite categories, with its Undo.
-    var categoryMenu by remember { mutableStateOf<SourcedFavoriteCategory?>(null) }
     // One requester per card, attached for good: attaching one only while a request was pending,
     // then taking it off, changed the focused card's modifiers and focus fell back to the row's
     // first card (the removal's neighbour got focus, then lost it).
@@ -692,12 +666,7 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.FAVORITE_SHOWS -> favoriteShows.map { it.sourceKey }
 
-            HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
-            HomeShelf.FAVORITE_MOVIE_CATEGORIES,
-            HomeShelf.FAVORITE_SHOW_CATEGORIES,
-            -> categoriesOf(shelf).map { it.key }
-
-            HomeShelf.WANTED -> wantedCards.map { it.key }
+            HomeShelf.WANTED_SHOWS, HomeShelf.WANTED_MOVIES -> wantedOf(shelf).map { it.key }
 
             HomeShelf.CHART_TRENDING_MOVIES,
             HomeShelf.CHART_POPULAR_MOVIES,
@@ -720,12 +689,7 @@ fun ContentTypeSelectionScreen(
 
             HomeShelf.FAVORITE_SHOWS -> favoriteShowsListState
 
-            HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
-            HomeShelf.FAVORITE_MOVIE_CATEGORIES,
-            HomeShelf.FAVORITE_SHOW_CATEGORIES,
-            -> categoriesListState.getValue(shelf)
-
-            HomeShelf.WANTED -> wantedListState
+            HomeShelf.WANTED_SHOWS, HomeShelf.WANTED_MOVIES -> wantedListState.getValue(shelf)
 
             HomeShelf.CHART_TRENDING_MOVIES,
             HomeShelf.CHART_POPULAR_MOVIES,
@@ -745,7 +709,7 @@ fun ContentTypeSelectionScreen(
         val request = cardFocusRequest ?: return@LaunchedEffect
         // After the card menu has closed: its window hands focus back to Home as it goes, and a
         // request made while it was still up landed, then fell back to the row's first card.
-        snapshotFlow { cardMenu == null && categoryMenu == null && wantedMenu == null }.first { it }
+        snapshotFlow { cardMenu == null && wantedMenu == null }.first { it }
         repeat(2) { withFrameNanos { } }
         val card = request.card
         if (card == null) {
@@ -811,14 +775,7 @@ fun ContentTypeSelectionScreen(
                 takeOut(favoriteShows, key, { it.sourceKey }, { favoriteShows }) { favoriteShows = it }
             }
 
-            HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
-            HomeShelf.FAVORITE_MOVIE_CATEGORIES,
-            HomeShelf.FAVORITE_SHOW_CATEGORIES,
-            -> {
-                takeOut(favoriteCategories, key, { it.key }, { favoriteCategories }) { favoriteCategories = it }
-            }
-
-            HomeShelf.WANTED -> {
+            HomeShelf.WANTED_SHOWS, HomeShelf.WANTED_MOVIES -> {
                 takeOut(wantedCards, key, { it.key }, { wantedCards }) { wantedCards = it }
             }
 
@@ -929,36 +886,6 @@ fun ContentTypeSelectionScreen(
             }
         }
     }
-    categoryMenu?.let { favorite ->
-        val repo = mergedLists?.repoFor(favorite.providerId)
-        val category = favorite.category
-        FavoriteContextMenuDialog(
-            target =
-                FavoriteMenuTarget.Category(
-                    categoryId = category.categoryId,
-                    categoryName = category.categoryName,
-                    contentType = category.contentType,
-                    isFavorite = true,
-                ),
-            onConfirm = {
-                if (repo != null) {
-                    removeCard(
-                        categoryShelves.first { it.categoriesContentType == category.contentType },
-                        favorite.key,
-                        category.categoryName,
-                    ) {
-                        withContext(Dispatchers.IO) { repo.removeFavoriteCategory(category.categoryId, category.contentType) }
-                        suspend {
-                            withContext(Dispatchers.IO) {
-                                repo.addFavoriteCategory(category.categoryId, category.categoryName, category.contentType)
-                            }
-                        }
-                    }
-                }
-            },
-            onDismiss = { categoryMenu = null },
-        )
-    }
     goneMenu?.let { (item, type, gone) ->
         val copy = gone.copy
         DetailsMoreMenu(
@@ -987,7 +914,7 @@ fun ContentTypeSelectionScreen(
             refreshLabel = stringResource(R.string.wanted_remove),
             icon = CinemaIcons.Delete,
             onRefresh = {
-                removeCard(HomeShelf.WANTED, card.key, card.entity.title) {
+                removeCard(wantedShelves.first { it.wantedContentType == card.entity.contentType }, card.key, card.entity.title) {
                     wantedTitles.remove(card.wantedKey)
                     suspend { wantedTitles.add(card.entity) }
                 }
@@ -1099,32 +1026,110 @@ fun ContentTypeSelectionScreen(
     }
 
     val scale = LocalUiScale.current
-    // A section's favourite categories, under its favourites; nothing when it has none.
-    val favoriteCategoriesRow: @Composable (HomeShelf, String) -> Unit = { shelf, title ->
-        val categories = categoriesOf(shelf)
-        if (categories.isNotEmpty()) {
-            TvFavoriteCategoriesRow(
-                title = title,
-                categories = categories,
-                onCategorySelected = { category ->
-                    leaveTo(RETURN_FAVORITE_CATEGORIES_PREFIX + category.key) {
-                        onFavoriteCategorySelected(
-                            category.category.categoryId,
-                            category.category.contentType,
-                            category.providerId,
-                        )
+    // A section's Wishlist row: the titles a source has (user, 2026-10-22).
+    val wantedRow: @Composable (HomeShelf) -> Unit = { shelf ->
+        val cards = wantedOf(shelf)
+        if (cards.isNotEmpty()) {
+            val newCount = cards.count { it.isNew }
+            val wantedTitle = stringResource(R.string.wanted_title)
+            TvWantedRow(
+                title =
+                    if (newCount >
+                        0
+                    ) {
+                        stringResource(R.string.wanted_title_new_format, wantedTitle, newCount)
+                    } else {
+                        wantedTitle
+                    },
+                cards = cards,
+                onCardSelected = { card ->
+                    leaveTo(RETURN_WANTED_PREFIX + card.key) {
+                        if (card.isNew) {
+                            coroutineScope.launchGuarded(
+                                "Home.wantedSeen",
+                            ) { wantedTitles.markSeen(card.wantedKey) }
+                        }
+                        onWantedSelected(card.route)
                     }
                 },
-                onOpenActions = { category -> categoryMenu = category },
-                firstItemFocus = categoriesFirstFocus.getValue(shelf),
-                restoreFocus = returnFocus.requesterWhere { key -> categories.any { key == RETURN_FAVORITE_CATEGORIES_PREFIX + it.key } },
-                listState = categoriesListState.getValue(shelf),
-                itemModifier = { category ->
+                onOpenActions = { card -> wantedMenu = card },
+                firstItemFocus = wantedFirstFocus.getValue(shelf),
+                restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_WANTED_PREFIX) },
+                listState = wantedListState.getValue(shelf),
+                itemModifier = { card ->
                     Modifier
-                        .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CATEGORIES_PREFIX + category.key)
-                        .then(cardFocusTarget(shelf, category.key))
+                        .navReturnFocusTarget(returnFocus, RETURN_WANTED_PREFIX + card.key)
+                        .then(cardFocusTarget(shelf, card.key))
+                        .then(artOnFocus(card.posterUrl, true))
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xl.scaled(scale)),
+            )
+        }
+    }
+    // A TMDB chart row, in its section's group. Cards as on
+    // the favourite rows; their menu has the favourite toggle and no removal.
+    // A Trending row starts with its switch: OK also shows the titles no source
+    // has (TMDB-only cards, which open their TMDB page), or hides them again.
+    val chartRow: @Composable (HomeShelf) -> Unit = { shelf ->
+        val chart = shelf.chart
+        if (chart != null && chartShows(shelf)) {
+            val items = chartOf(shelf)
+            val isShows = chart.contentType == ContentType.TV_SHOWS
+            val prefix = chartReturnPrefix(shelf)
+            TvFavoritesRow(
+                title = stringResource(ChartRows.titleRes(chart)),
+                items = items,
+                thumbnailType = if (isShows) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
+                onItemSelected = { item ->
+                    leaveTo(prefix + item.sourceKey) { onFavoriteSelected(item, chart.contentType) }
+                },
+                firstItemFocus = chartFirstFocus.getValue(shelf),
+                restoreFocus = returnFocus.requesterWhere { it.startsWith(prefix) },
+                onOpenActions =
+                    if (child) {
+                        null
+                    } else {
+                        (
+                            { item ->
+                                openCardMenu(
+                                    shelf,
+                                    item.toCardItem(chart.contentType, watchedItemId = item.id.takeUnless { isShows }),
+                                )
+                            }
+                        )
+                    },
+                listState = chartListState.getValue(shelf),
+                itemModifier = { item ->
+                    Modifier
+                        .navReturnFocusTarget(returnFocus, prefix + item.sourceKey)
+                        .then(cardFocusTarget(shelf, item.sourceKey))
+                        .then(artOnFocus(item.thumbnailUrl, true))
                 },
                 sourceNames = sourceNames,
+                leading =
+                    if (chart.canShowMissing) {
+                        { switchModifier ->
+                            TvIconAction(
+                                onClick = {
+                                    chartSwitchFlipped = shelf
+                                    ChartRows.setShowMissing(context, !chartsShowMissing)
+                                },
+                                icon = if (chartsShowMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                label =
+                                    if (chartsShowMissing) {
+                                        stringResource(R.string.chart_hide_missing)
+                                    } else {
+                                        stringResource(R.string.chart_show_missing)
+                                    },
+                                modifier = switchModifier.focusRequester(chartSwitchFocus.getValue(shelf)),
+                            )
+                        }
+                    } else {
+                        null
+                    },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -1322,7 +1327,14 @@ fun ContentTypeSelectionScreen(
                                     onClick = {
                                         // To the row first, then the banner goes: it has told its news.
                                         coroutineScope.launch {
-                                            wantedFirstFocus.requestFocusWithRetry()
+                                            // The Wishlist row of the first title it tells about.
+                                            val type = announced.first().wantedKey.contentType
+                                            val shelf =
+                                                wantedShelves.firstOrNull {
+                                                    it.wantedContentType == type &&
+                                                        wantedOf(it).isNotEmpty()
+                                                }
+                                            shelf?.let { wantedFirstFocus.getValue(it).requestFocusWithRetry() }
                                             wantedTitles.markNotifiedLater(announced.map { it.wantedKey })
                                         }
                                     },
@@ -1355,289 +1367,237 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
 
-                            if (liveRowEntries.isNotEmpty()) {
-                                TvLiveRow(
-                                    title = stringResource(R.string.home_live_row_title),
-                                    entries = liveRowEntries,
-                                    nowPlaying = liveNowPlaying,
-                                    onEntrySelected = { entry ->
-                                        leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey) {
-                                            onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
-                                        }
-                                    },
-                                    firstItemFocus = liveRowFirstFocus,
-                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_LIVE_ROW_PREFIX) },
-                                    onOpenActions =
-                                        if (child) {
-                                            null
-                                        } else {
-                                            (
-                                                { entry ->
-                                                    openCardMenu(HomeShelf.CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
+                            // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on
+                            // its section's tint, its favourites first.
+                            if (favoriteChannelEntries.isNotEmpty() || liveRowEntries.isNotEmpty()) {
+                                SectionPanel(
+                                    section = ThumbnailContentType.LIVE_TV,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
+                                    // Each row brings its own gap above it; the cards keep off the tint's sides.
+                                    contentPadding =
+                                        PaddingValues(
+                                            start = Spacing.lg.scaled(scale),
+                                            end = Spacing.lg.scaled(scale),
+                                            bottom = Spacing.xl.scaled(scale),
+                                        ),
+                                ) {
+                                    if (favoriteChannelEntries.isNotEmpty()) {
+                                        TvLiveRow(
+                                            title = stringResource(R.string.home_favorite_channels),
+                                            entries = favoriteChannelEntries,
+                                            nowPlaying = liveNowPlaying,
+                                            onEntrySelected = { entry ->
+                                                openFavorite(entry.item, ContentType.LIVE_TV) {
+                                                    leaveTo(RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey) {
+                                                        onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
+                                                    }
                                                 }
-                                            )
-                                        },
-                                    listState = liveRowListState,
-                                    itemModifier = { entry ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey)
-                                            .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.sourceKey))
-                                            .then(artOnFocus(entry.item.thumbnailUrl, false))
-                                    },
-                                    sourceNames = sourceNames,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            if (wantedCards.isNotEmpty()) {
-                                val newCount = wantedCards.count { it.isNew }
-                                val wantedTitle = stringResource(R.string.wanted_title)
-                                TvWantedRow(
-                                    title =
-                                        if (newCount >
-                                            0
-                                        ) {
-                                            stringResource(R.string.wanted_title_new_format, wantedTitle, newCount)
-                                        } else {
-                                            wantedTitle
-                                        },
-                                    cards = wantedCards,
-                                    onCardSelected = { card ->
-                                        leaveTo(RETURN_WANTED_PREFIX + card.key) {
-                                            if (card.isNew) {
-                                                coroutineScope.launchGuarded(
-                                                    "Home.wantedSeen",
-                                                ) { wantedTitles.markSeen(card.wantedKey) }
-                                            }
-                                            onWantedSelected(card.route)
-                                        }
-                                    },
-                                    onOpenActions = { card -> wantedMenu = card },
-                                    firstItemFocus = wantedFirstFocus,
-                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_WANTED_PREFIX) },
-                                    listState = wantedListState,
-                                    itemModifier = { card ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_WANTED_PREFIX + card.key)
-                                            .then(cardFocusTarget(HomeShelf.WANTED, card.key))
-                                            .then(artOnFocus(card.posterUrl, true))
-                                    },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            // The TMDB chart rows, above the favourites: the films' charts, then the shows'. Cards as on
-                            // the favourite rows; their menu has the favourite toggle and no removal.
-                            // A Trending row starts with its switch: OK also shows the titles no source
-                            // has (TMDB-only cards, which open their TMDB page), or hides them again.
-                            for (shelf in chartShelves) {
-                                val chart = shelf.chart ?: continue
-                                if (!chartShows(shelf)) continue
-                                val items = chartOf(shelf)
-                                val isShows = chart.contentType == ContentType.TV_SHOWS
-                                val prefix = chartReturnPrefix(shelf)
-                                TvFavoritesRow(
-                                    title = stringResource(ChartRows.titleRes(chart)),
-                                    items = items,
-                                    thumbnailType = if (isShows) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
-                                    onItemSelected = { item ->
-                                        leaveTo(prefix + item.sourceKey) { onFavoriteSelected(item, chart.contentType) }
-                                    },
-                                    firstItemFocus = chartFirstFocus.getValue(shelf),
-                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(prefix) },
-                                    onOpenActions =
-                                        if (child) {
-                                            null
-                                        } else {
-                                            (
-                                                { item ->
-                                                    openCardMenu(
-                                                        shelf,
-                                                        item.toCardItem(chart.contentType, watchedItemId = item.id.takeUnless { isShows }),
+                                            },
+                                            firstItemFocus = favoriteChannelsFirstFocus,
+                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_CHANNELS_PREFIX) },
+                                            onOpenActions =
+                                                if (child) {
+                                                    null
+                                                } else {
+                                                    (
+                                                        { entry ->
+                                                            openCardMenu(
+                                                                HomeShelf.FAVORITE_CHANNELS,
+                                                                entry.item.toCardItem(ContentType.LIVE_TV),
+                                                            )
+                                                        }
                                                     )
+                                                },
+                                            listState = favoriteChannelsListState,
+                                            statusOf = { entry -> goneStatus(entry.item, ContentType.LIVE_TV) },
+                                            itemModifier = { entry ->
+                                                Modifier
+                                                    .navReturnFocusTarget(
+                                                        returnFocus,
+                                                        RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey,
+                                                    ).then(cardFocusTarget(HomeShelf.FAVORITE_CHANNELS, entry.item.sourceKey))
+                                                    .then(artOnFocus(entry.item.thumbnailUrl, false))
+                                            },
+                                            sourceNames = sourceNames,
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = Spacing.xl.scaled(scale)),
+                                        )
+                                    }
+
+                                    if (liveRowEntries.isNotEmpty()) {
+                                        TvLiveRow(
+                                            title = stringResource(R.string.home_live_row_title),
+                                            entries = liveRowEntries,
+                                            nowPlaying = liveNowPlaying,
+                                            onEntrySelected = { entry ->
+                                                leaveTo(RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey) {
+                                                    onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
                                                 }
-                                            )
-                                        },
-                                    listState = chartListState.getValue(shelf),
-                                    itemModifier = { item ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, prefix + item.sourceKey)
-                                            .then(cardFocusTarget(shelf, item.sourceKey))
-                                            .then(artOnFocus(item.thumbnailUrl, true))
-                                    },
-                                    sourceNames = sourceNames,
-                                    leading =
-                                        if (chart.canShowMissing) {
-                                            { switchModifier ->
-                                                TvIconAction(
-                                                    onClick = {
-                                                        chartSwitchFlipped = shelf
-                                                        ChartRows.setShowMissing(context, !chartsShowMissing)
-                                                    },
-                                                    icon = if (chartsShowMissing) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-                                                    label =
-                                                        if (chartsShowMissing) {
-                                                            stringResource(R.string.chart_hide_missing)
-                                                        } else {
-                                                            stringResource(R.string.chart_show_missing)
-                                                        },
-                                                    modifier = switchModifier.focusRequester(chartSwitchFocus.getValue(shelf)),
-                                                )
-                                            }
-                                        } else {
-                                            null
-                                        },
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            // The favourites last (user, 2026-10-29): channels, films, shows, each with its categories.
-                            if (favoriteChannelEntries.isNotEmpty()) {
-                                TvLiveRow(
-                                    title = stringResource(R.string.home_favorite_channels),
-                                    entries = favoriteChannelEntries,
-                                    nowPlaying = liveNowPlaying,
-                                    onEntrySelected = { entry ->
-                                        openFavorite(entry.item, ContentType.LIVE_TV) {
-                                            leaveTo(RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey) {
-                                                onLiveChannelSelected(entry.item.id, zapListId(entry), entry.item.providerId)
-                                            }
-                                        }
-                                    },
-                                    firstItemFocus = favoriteChannelsFirstFocus,
-                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_CHANNELS_PREFIX) },
-                                    onOpenActions =
-                                        if (child) {
-                                            null
-                                        } else {
-                                            (
-                                                { entry ->
-                                                    openCardMenu(HomeShelf.FAVORITE_CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
-                                                }
-                                            )
-                                        },
-                                    listState = favoriteChannelsListState,
-                                    statusOf = { entry -> goneStatus(entry.item, ContentType.LIVE_TV) },
-                                    itemModifier = { entry ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_CHANNELS_PREFIX + entry.item.sourceKey)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_CHANNELS, entry.item.sourceKey))
-                                            .then(artOnFocus(entry.item.thumbnailUrl, false))
-                                    },
-                                    sourceNames = sourceNames,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
-
-                            favoriteCategoriesRow(
-                                HomeShelf.FAVORITE_CHANNEL_CATEGORIES,
-                                stringResource(R.string.home_favorite_channel_categories),
-                            )
-
-                            if (favoriteMovies.isNotEmpty()) {
-                                TvFavoritesRow(
-                                    title = stringResource(R.string.home_favorite_movies),
-                                    items = favoriteMovies,
-                                    thumbnailType = ThumbnailContentType.MOVIE,
-                                    onItemSelected = { item ->
-                                        openFavorite(item, ContentType.MOVIES) {
-                                            leaveTo(
-                                                RETURN_FAVORITE_MOVIES_PREFIX + item.sourceKey,
-                                            ) { onFavoriteSelected(item, ContentType.MOVIES) }
-                                        }
-                                    },
-                                    statusOf = { item -> goneStatus(item, ContentType.MOVIES) },
-                                    firstItemFocus = favoriteMoviesFirstFocus,
-                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_MOVIES_PREFIX) },
-                                    onOpenActions =
-                                        if (child) {
-                                            null
-                                        } else {
-                                            (
-                                                { item ->
-                                                    openCardMenu(
-                                                        HomeShelf.FAVORITE_MOVIES,
-                                                        item.toCardItem(ContentType.MOVIES, watchedItemId = item.id),
+                                            },
+                                            firstItemFocus = liveRowFirstFocus,
+                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_LIVE_ROW_PREFIX) },
+                                            onOpenActions =
+                                                if (child) {
+                                                    null
+                                                } else {
+                                                    (
+                                                        { entry ->
+                                                            openCardMenu(HomeShelf.CHANNELS, entry.item.toCardItem(ContentType.LIVE_TV))
+                                                        }
                                                     )
-                                                }
-                                            )
-                                        },
-                                    listState = favoriteMoviesListState,
-                                    itemModifier = { item ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.sourceKey)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_MOVIES, item.sourceKey))
-                                            .then(artOnFocus(item.thumbnailUrl, true))
-                                    },
-                                    sourceNames = sourceNames,
+                                                },
+                                            listState = liveRowListState,
+                                            itemModifier = { entry ->
+                                                Modifier
+                                                    .navReturnFocusTarget(returnFocus, RETURN_LIVE_ROW_PREFIX + entry.item.sourceKey)
+                                                    .then(cardFocusTarget(HomeShelf.CHANNELS, entry.item.sourceKey))
+                                                    .then(artOnFocus(entry.item.thumbnailUrl, false))
+                                            },
+                                            sourceNames = sourceNames,
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = Spacing.xl.scaled(scale)),
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (favoriteShows.isNotEmpty() || wantedOf(HomeShelf.WANTED_SHOWS).isNotEmpty() ||
+                                chartShelves.any { it.chart?.contentType == ContentType.TV_SHOWS && chartShows(it) }
+                            ) {
+                                SectionPanel(
+                                    section = ThumbnailContentType.TV_SHOW,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
                                             .padding(top = Spacing.xl.scaled(scale)),
-                                )
+                                    // Each row brings its own gap above it; the cards keep off the tint's sides.
+                                    contentPadding =
+                                        PaddingValues(
+                                            start = Spacing.lg.scaled(scale),
+                                            end = Spacing.lg.scaled(scale),
+                                            bottom = Spacing.xl.scaled(scale),
+                                        ),
+                                ) {
+                                    if (favoriteShows.isNotEmpty()) {
+                                        TvFavoritesRow(
+                                            title = stringResource(R.string.home_favorite_shows),
+                                            items = favoriteShows,
+                                            thumbnailType = ThumbnailContentType.TV_SHOW,
+                                            onItemSelected = { item ->
+                                                openFavorite(item, ContentType.TV_SHOWS) {
+                                                    leaveTo(
+                                                        RETURN_FAVORITE_SHOWS_PREFIX + item.sourceKey,
+                                                    ) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
+                                                }
+                                            },
+                                            statusOf = { item -> goneStatus(item, ContentType.TV_SHOWS) },
+                                            firstItemFocus = favoriteShowsFirstFocus,
+                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_SHOWS_PREFIX) },
+                                            onOpenActions =
+                                                if (child) {
+                                                    null
+                                                } else {
+                                                    (
+                                                        { item ->
+                                                            openCardMenu(HomeShelf.FAVORITE_SHOWS, item.toCardItem(ContentType.TV_SHOWS))
+                                                        }
+                                                    )
+                                                },
+                                            listState = favoriteShowsListState,
+                                            itemModifier = { item ->
+                                                Modifier
+                                                    .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.sourceKey)
+                                                    .then(cardFocusTarget(HomeShelf.FAVORITE_SHOWS, item.sourceKey))
+                                                    .then(artOnFocus(item.thumbnailUrl, true))
+                                            },
+                                            sourceNames = sourceNames,
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = Spacing.xl.scaled(scale)),
+                                        )
+                                    }
+
+                                    wantedRow(HomeShelf.WANTED_SHOWS)
+                                    for (shelf in chartShelves) {
+                                        if (shelf.chart?.contentType == ContentType.TV_SHOWS) chartRow(shelf)
+                                    }
+                                }
                             }
 
-                            favoriteCategoriesRow(
-                                HomeShelf.FAVORITE_MOVIE_CATEGORIES,
-                                stringResource(R.string.home_favorite_movie_categories),
-                            )
-
-                            if (favoriteShows.isNotEmpty()) {
-                                TvFavoritesRow(
-                                    title = stringResource(R.string.home_favorite_shows),
-                                    items = favoriteShows,
-                                    thumbnailType = ThumbnailContentType.TV_SHOW,
-                                    onItemSelected = { item ->
-                                        openFavorite(item, ContentType.TV_SHOWS) {
-                                            leaveTo(
-                                                RETURN_FAVORITE_SHOWS_PREFIX + item.sourceKey,
-                                            ) { onFavoriteSelected(item, ContentType.TV_SHOWS) }
-                                        }
-                                    },
-                                    statusOf = { item -> goneStatus(item, ContentType.TV_SHOWS) },
-                                    firstItemFocus = favoriteShowsFirstFocus,
-                                    restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_SHOWS_PREFIX) },
-                                    onOpenActions =
-                                        if (child) {
-                                            null
-                                        } else {
-                                            (
-                                                { item ->
-                                                    openCardMenu(HomeShelf.FAVORITE_SHOWS, item.toCardItem(ContentType.TV_SHOWS))
-                                                }
-                                            )
-                                        },
-                                    listState = favoriteShowsListState,
-                                    itemModifier = { item ->
-                                        Modifier
-                                            .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_SHOWS_PREFIX + item.sourceKey)
-                                            .then(cardFocusTarget(HomeShelf.FAVORITE_SHOWS, item.sourceKey))
-                                            .then(artOnFocus(item.thumbnailUrl, true))
-                                    },
-                                    sourceNames = sourceNames,
+                            if (favoriteMovies.isNotEmpty() || wantedOf(HomeShelf.WANTED_MOVIES).isNotEmpty() ||
+                                chartShelves.any { it.chart?.contentType == ContentType.MOVIES && chartShows(it) }
+                            ) {
+                                SectionPanel(
+                                    section = ThumbnailContentType.MOVIE,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
                                             .padding(top = Spacing.xl.scaled(scale)),
-                                )
-                            }
+                                    // Each row brings its own gap above it; the cards keep off the tint's sides.
+                                    contentPadding =
+                                        PaddingValues(
+                                            start = Spacing.lg.scaled(scale),
+                                            end = Spacing.lg.scaled(scale),
+                                            bottom = Spacing.xl.scaled(scale),
+                                        ),
+                                ) {
+                                    if (favoriteMovies.isNotEmpty()) {
+                                        TvFavoritesRow(
+                                            title = stringResource(R.string.home_favorite_movies),
+                                            items = favoriteMovies,
+                                            thumbnailType = ThumbnailContentType.MOVIE,
+                                            onItemSelected = { item ->
+                                                openFavorite(item, ContentType.MOVIES) {
+                                                    leaveTo(
+                                                        RETURN_FAVORITE_MOVIES_PREFIX + item.sourceKey,
+                                                    ) { onFavoriteSelected(item, ContentType.MOVIES) }
+                                                }
+                                            },
+                                            statusOf = { item -> goneStatus(item, ContentType.MOVIES) },
+                                            firstItemFocus = favoriteMoviesFirstFocus,
+                                            restoreFocus = returnFocus.requesterWhere { it.startsWith(RETURN_FAVORITE_MOVIES_PREFIX) },
+                                            onOpenActions =
+                                                if (child) {
+                                                    null
+                                                } else {
+                                                    (
+                                                        { item ->
+                                                            openCardMenu(
+                                                                HomeShelf.FAVORITE_MOVIES,
+                                                                item.toCardItem(ContentType.MOVIES, watchedItemId = item.id),
+                                                            )
+                                                        }
+                                                    )
+                                                },
+                                            listState = favoriteMoviesListState,
+                                            itemModifier = { item ->
+                                                Modifier
+                                                    .navReturnFocusTarget(returnFocus, RETURN_FAVORITE_MOVIES_PREFIX + item.sourceKey)
+                                                    .then(cardFocusTarget(HomeShelf.FAVORITE_MOVIES, item.sourceKey))
+                                                    .then(artOnFocus(item.thumbnailUrl, true))
+                                            },
+                                            sourceNames = sourceNames,
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = Spacing.xl.scaled(scale)),
+                                        )
+                                    }
 
-                            favoriteCategoriesRow(
-                                HomeShelf.FAVORITE_SHOW_CATEGORIES,
-                                stringResource(R.string.home_favorite_show_categories),
-                            )
+                                    wantedRow(HomeShelf.WANTED_MOVIES)
+                                    for (shelf in chartShelves) {
+                                        if (shelf.chart?.contentType == ContentType.MOVIES) chartRow(shelf)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1659,7 +1619,6 @@ private const val RETURN_LIVE_ROW_PREFIX = "live:"
 private const val RETURN_FAVORITE_CHANNELS_PREFIX = "favLive:"
 private const val RETURN_FAVORITE_MOVIES_PREFIX = "favMovie:"
 private const val RETURN_FAVORITE_SHOWS_PREFIX = "favShow:"
-private const val RETURN_FAVORITE_CATEGORIES_PREFIX = "favCat:"
 private const val RETURN_WANTED_PREFIX = "wanted:"
 
 /** A chart card's key prefix: the chart in it, as a title can be on two charts. */
@@ -1721,17 +1680,6 @@ private suspend fun loadFavorites(
     supportedContentTypes: Set<String>,
 ): List<MediaItem> = if (contentType in supportedContentTypes) merged.favorites(contentType) else emptyList()
 
-/** The favourite categories rows: every section the profile's sources have, Live TV, Movies, TV Shows in that order. */
-private suspend fun loadFavoriteCategories(
-    merged: MergedLists,
-    supportedContentTypes: Set<String>,
-): List<SourcedFavoriteCategory> =
-    withContext(Dispatchers.IO) {
-        merged.favoriteCategories(
-            listOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS).filter { it in supportedContentTypes },
-        )
-    }
-
 /**
  * The Channels row for the active profile: last watched — the newest of its sources' last channels
  * (multi-source plan, Phase 5) — then Recent.
@@ -1758,7 +1706,7 @@ private const val RETURN_CHART_WAIT_MS = 10_000L
 /** How long a fresh open waits for the rows before focusing anyway. */
 private const val ENTRY_FOCUS_WAIT_MS = 2_000L
 
-// How much longer the entry focus waits for the chart rows, above the favourites.
+// How much longer the entry focus waits for the chart rows, above the lower groups' rows.
 private const val CHART_ENTRY_WAIT_MS = 3_000L
 
 /** How much longer focus waits for a row that comes late (a source switch) before going to the rail. */

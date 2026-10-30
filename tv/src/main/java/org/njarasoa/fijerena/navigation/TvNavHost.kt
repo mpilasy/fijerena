@@ -656,11 +656,6 @@ fun TvNavHost(
                                         ),
                                     )
                                 },
-                                onFavoriteCategorySelected = { categoryId, contentType, source ->
-                                    navController.navigateOnce(
-                                        Screen.CategoryList(contentType = contentType, initialCategoryId = categoryId, providerId = source),
-                                    )
-                                },
                                 // Same routes as the lists' onStreamSelected (item.id is the movie or series id).
                                 // A chart's TMDB-only card (no source has it) opens its TMDB page.
                                 onFavoriteSelected = { item, favoriteType ->

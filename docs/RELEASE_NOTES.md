@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Home grouped by section:** after Continue Watching, Home now shows three groups, each on a faint tint of its section's colour: Channels (Favourite Channels, Channels), TV Shows (Favourite Shows, your Wishlist's shows, then the show charts) and Movies (the same for movies). The Wishlist row is split in two, one in each group. TV and phone.
+- **No favourite categories on Home:** the Favourite Channel Categories, Favourite Movie Categories and Favourite Show Categories rows are gone from Home. Your favourite categories stay in the Favourite Categories list of Live TV, Movies and TV Shows. TV and phone.
+
 ## Version: 0.8.20261029231113
 
 - **Favourites at the bottom of Home:** the favourites rows (channels, movies, shows and their categories) are now last on Home, under Continue Watching, Channels, the Wishlist and the TMDB chart rows. Focus still starts on the first Continue Watching card. TV and phone.

@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import org.njarasoa.fijerena.core.network.FavoriteCategoryItem
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentCategory
 import org.njarasoa.fijerena.core.network.RecentRemoval
@@ -88,13 +87,6 @@ class MergedLists(
     /** The Continue Watching shelf: every source's, newest first, at most [limit]. */
     suspend fun continueWatching(limit: Int = CONTINUE_WATCHING_LIMIT): List<ContinueWatchingItem> =
         mergeContinueWatching(each { it.getContinueWatchingItems(limit) }, limit)
-
-    /**
-     * Every source's favourite categories of [contentTypes] for TV Home's row: by section in
-     * [contentTypes]' order, then by name, each with its source.
-     */
-    fun favoriteCategories(contentTypes: List<String>): List<SourcedFavoriteCategory> =
-        mergeFavoriteCategories(contentTypes, sources.map { it.providerId to it.repo.getFavoriteCategoryItems() })
 
     /** Recent Categories of [contentType], newest first, each with its source. */
     fun recentCategories(contentType: String): List<SourcedRecentCategory> =
@@ -294,19 +286,6 @@ class MergedLists(
                 lists.flatten().sortedByDescending { it.lastPlayedAt }.take(limit)
             }
 
-        /** Favourite categories across sources: by section in [contentTypes]' order, then by name. */
-        internal fun mergeFavoriteCategories(
-            contentTypes: List<String>,
-            lists: List<Pair<Long, List<FavoriteCategoryItem>>>,
-        ): List<SourcedFavoriteCategory> =
-            lists
-                .flatMap { (providerId, categories) ->
-                    categories.filter { it.contentType in contentTypes }.map { SourcedFavoriteCategory(providerId, it) }
-                }.sortedWith(
-                    compareBy<SourcedFavoriteCategory> { contentTypes.indexOf(it.category.contentType) }
-                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.category.categoryName },
-                )
-
         /** Recent Categories across sources: newest first. */
         internal fun mergeRecentCategories(lists: List<Pair<Long, List<RecentCategory>>>): List<SourcedRecentCategory> =
             lists
@@ -322,15 +301,6 @@ class MergedLists(
                 .mapNotNull { (lastId, recent) -> recent.firstOrNull { it.id == lastId && !it.isCategoryMarker } }
                 .maxByOrNull { it.lastPlayedAt }
     }
-}
-
-/** A favourite category and the source whose category it is. */
-data class SourcedFavoriteCategory(
-    val providerId: Long,
-    val category: FavoriteCategoryItem,
-) {
-    /** Its key in a row of several sources' categories. */
-    val key: String get() = "$providerId:${category.contentType}:${category.categoryId}"
 }
 
 /** A Recent Categories entry and the source whose category it is. */

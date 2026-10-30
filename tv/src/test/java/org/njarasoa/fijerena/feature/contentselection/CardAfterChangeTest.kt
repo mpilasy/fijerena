@@ -49,21 +49,6 @@ class CardAfterChangeTest {
     }
 
     @Test
-    fun anEmptiedCategoriesRowHandsFocusToTheNextSectionsFavourites() {
-        val rows =
-            mapOf(
-                HomeShelf.FAVORITE_CHANNELS to listOf("c1"),
-                HomeShelf.FAVORITE_CHANNEL_CATEGORIES to emptyList(),
-                HomeShelf.FAVORITE_MOVIES to listOf("f1"),
-                HomeShelf.FAVORITE_MOVIE_CATEGORIES to listOf("mc1"),
-            )
-        assertEquals(
-            HomeCard(HomeShelf.FAVORITE_MOVIES, "f1"),
-            cardAfterChange(HomeShelf.FAVORITE_CHANNEL_CATEGORIES, listOf("cc1"), "cc1", rows),
-        )
-    }
-
-    @Test
     fun nothingWhenHomeHasNoCardLeft() {
         val rows = mapOf(HomeShelf.CONTINUE_WATCHING to emptyList<String>())
         assertNull(cardAfterChange(HomeShelf.CONTINUE_WATCHING, listOf("m1"), "m1", rows))

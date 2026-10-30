@@ -7,6 +7,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -66,13 +69,13 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaProgressBar
 import org.njarasoa.fijerena.core.ui.components.CinemaText
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SectionPanel
 import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
 import org.njarasoa.fijerena.core.ui.history.MergedLists
-import org.njarasoa.fijerena.core.ui.history.SourcedFavoriteCategory
 import org.njarasoa.fijerena.core.ui.home.ChartRows
 import org.njarasoa.fijerena.core.ui.home.LiveRowEntry
 import org.njarasoa.fijerena.core.ui.home.favoriteChannelsRow
@@ -108,21 +111,20 @@ private data class HomeRows(
     val favoriteChannels: List<LiveRowEntry>,
     val favoriteMovies: List<MediaItem>,
     val favoriteShows: List<MediaItem>,
-    val favoriteCategories: List<SourcedFavoriteCategory>,
     /** Each source's name by id when the rows mix more than one, else empty. */
     val sourceNames: Map<Long, String>,
 ) {
     val isEmpty: Boolean
         get() =
             continueWatching.isEmpty() && channels.isEmpty() && favoriteChannels.isEmpty() &&
-                favoriteMovies.isEmpty() && favoriteShows.isEmpty() && favoriteCategories.isEmpty()
+                favoriteMovies.isEmpty() && favoriteShows.isEmpty()
 }
 
 /**
  * The phone's Home tab: TV Home's rows for the profile's merged sources, phone-sized — Continue
- * watching, Channels, Favourite channels, then each section's favourites and favourite categories
- * — each hidden when empty, read again on every return. Each section's TMDB chart rows follow its
- * favourite rows, loaded on their own so they never hold Home up. [supportedTypes]: the profile's merged
+ * watching, Channels, the Wanted list, each section's TMDB chart rows, then the favourites — each
+ * hidden when empty, read again on every return. The chart rows load on their own so they never
+ * hold Home up. [supportedTypes]: the profile's merged
  * sections; a row of a section they don't have stays empty. A card opens through its callback:
  * [onChannel] with the list it zaps through (Recent or Favourites).
  */
@@ -134,7 +136,6 @@ fun MobileHomeScreen(
     onContinueWatching: (ContinueWatchingItem) -> Unit,
     onChannel: (streamId: String, listId: String, providerId: Long) -> Unit,
     onFavorite: (item: MediaItem, contentType: String) -> Unit,
-    onCategory: (categoryId: String, contentType: String, providerId: Long) -> Unit,
     // A Wanted card: its source copy's page when a source has it, else its TMDB page.
     onWanted: (Screen) -> Unit = {},
 ) {
@@ -390,7 +391,6 @@ fun MobileHomeScreen(
                 // A TMDB-only card (follow-up F3) opens the title's TMDB page.
                 onChart = { item, type -> TmdbOnlyItem.titleOf(item, type)?.let { onWanted(it.route()) } ?: onFavorite(item, type) },
                 onShowMissing = { show -> ChartRows.setShowMissing(context.applicationContext, show) },
-                onCategory,
                 goneStatus = { item, type -> goneLabel.takeIf { gone(item, type) != null } },
                 wanted =
                     WantedRow(wantedCards, announced) { card ->
@@ -417,7 +417,6 @@ private fun HomeRowsColumn(
     onChart: (item: MediaItem, contentType: String) -> Unit,
     // A Trending row's switch: also the titles no source has, or not.
     onShowMissing: (Boolean) -> Unit,
-    onCategory: (categoryId: String, contentType: String, providerId: Long) -> Unit,
     wanted: WantedRow,
     onBannerSeen: () -> Unit,
     // A favourite card's short state: Gone from source when its source no longer lists it.
@@ -443,11 +442,6 @@ private fun HomeRowsColumn(
             },
         ) {
             onChannel(entry.item.id, listId, entry.item.providerId)
-        }
-    }
-    val categoriesRow: @Composable (String, Int) -> Unit = { contentType, title ->
-        HomeRow(stringResource(title), rows.favoriteCategories.filter { it.category.contentType == contentType }, { it.key }) {
-            CategoryCard(it, rows.sourceNames[it.providerId]) { onCategory(it.category.categoryId, contentType, it.providerId) }
         }
     }
     val favoritesRow: @Composable (List<MediaItem>, String, Int) -> Unit = { items, contentType, title ->
@@ -515,6 +509,31 @@ private fun HomeRowsColumn(
             }
         }
     }
+    // The Wishlist rows: one per section, each brought into view by the banner.
+    val wantedInView = remember { mapOf(ContentType.TV_SHOWS to BringIntoViewRequester(), ContentType.MOVIES to BringIntoViewRequester()) }
+    val wantedTitle = stringResource(R.string.wanted_title)
+    // A section's group: its favourites, its Wishlist titles, then its charts; none when all are empty.
+    val sectionRows: @Composable (String, List<MediaItem>, Int) -> Unit = { contentType, favorites, title ->
+        val wantedCards = wanted.cards.filter { it.entity.contentType == contentType }
+        val sectionCharts = charts.filter { it.chart.contentType == contentType }
+        if (favorites.isNotEmpty() || wantedCards.isNotEmpty() || sectionCharts.any { it.items.isNotEmpty() || it.chart.canShowMissing }) {
+            HomeSection(if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE) {
+                favoritesRow(favorites, contentType, title)
+                // Only with cards: an empty box would still take a gap.
+                if (wantedCards.isNotEmpty()) {
+                    Box(Modifier.bringIntoViewRequester(wantedInView.getValue(contentType))) {
+                        val sectionNew = wantedCards.count { it.isNew }
+                        HomeRow(
+                            if (sectionNew > 0) stringResource(R.string.wanted_title_new_format, wantedTitle, sectionNew) else wantedTitle,
+                            wantedCards,
+                            { it.key },
+                        ) { card -> WantedTitleCard(card, onLongClick = { onMenu(HomeMenu.Wishlist(card)) }) { wanted.onOpen(card) } }
+                    }
+                }
+                chartRows(contentType, favorites)
+            }
+        }
+    }
     val scrollState = rememberScrollState()
     val scrollScope = rememberCoroutineScope()
     Column(
@@ -528,10 +547,14 @@ private fun HomeRowsColumn(
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
         if (wanted.announced.isNotEmpty()) {
-            // The news: tapping it scrolls to the Wanted row, last on the page.
+            // The news: tapping it brings the Wishlist row of the first title it tells about into view.
             WantedBanner(pluralStringResource(R.plurals.wanted_banner, wanted.announced.size, wanted.announced.size)) {
                 onBannerSeen()
-                scrollScope.launch { scrollState.animateScrollTo(scrollState.maxValue) }
+                val type =
+                    wanted.announced
+                        .first()
+                        .entity.contentType
+                scrollScope.launch { wantedInView[type]?.bringIntoView() }
             }
         }
         HomeRow(stringResource(R.string.series_continue_watching_badge), rows.continueWatching, { it.sourceKey }) { item ->
@@ -546,24 +569,36 @@ private fun HomeRowsColumn(
                 onLongClick = { onMenu(HomeMenu.Recent(item.providerId, item.id, item.contentType, item.name)) },
             ) { onContinueWatching(item) }
         }
-        HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
-        val newCount = wanted.cards.count { it.isNew }
-        val wantedTitle = stringResource(R.string.wanted_title)
-        HomeRow(
-            if (newCount > 0) stringResource(R.string.wanted_title_new_format, wantedTitle, newCount) else wantedTitle,
-            wanted.cards,
-            { it.key },
-        ) { card -> WantedTitleCard(card, onLongClick = { onMenu(HomeMenu.Wishlist(card)) }) { wanted.onOpen(card) } }
-        chartRows(ContentType.MOVIES, rows.favoriteMovies)
-        chartRows(ContentType.TV_SHOWS, rows.favoriteShows)
-        // The favourites last, as on TV (user, 2026-10-29).
-        HomeRow(stringResource(R.string.home_favorite_channels), rows.favoriteChannels, { it.item.sourceKey }, content = channelCard)
-        categoriesRow(ContentType.LIVE_TV, R.string.home_favorite_channel_categories)
-        favoritesRow(rows.favoriteMovies, ContentType.MOVIES, R.string.home_favorite_movies)
-        categoriesRow(ContentType.MOVIES, R.string.home_favorite_movie_categories)
-        favoritesRow(rows.favoriteShows, ContentType.TV_SHOWS, R.string.home_favorite_shows)
-        categoriesRow(ContentType.TV_SHOWS, R.string.home_favorite_show_categories)
+        // A group per section (user, 2026-10-29): Channels, TV Shows, Movies, each on its
+        // section's tint, its favourites first.
+        if (rows.favoriteChannels.isNotEmpty() || rows.channels.isNotEmpty()) {
+            HomeSection(ThumbnailContentType.LIVE_TV) {
+                HomeRow(
+                    stringResource(R.string.home_favorite_channels),
+                    rows.favoriteChannels,
+                    { it.item.sourceKey },
+                    content = channelCard,
+                )
+                HomeRow(stringResource(R.string.home_live_row_title), rows.channels, { it.item.sourceKey }, content = channelCard)
+            }
+        }
+        sectionRows(ContentType.TV_SHOWS, rows.favoriteShows, R.string.home_favorite_shows)
+        sectionRows(ContentType.MOVIES, rows.favoriteMovies, R.string.home_favorite_movies)
     }
+}
+
+/** A section's group of rows on Home: its tint behind them, the rows' own gap between them. */
+@Composable
+private fun HomeSection(
+    section: ThumbnailContentType,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    SectionPanel(
+        section = section,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        content = content,
+    )
 }
 
 /**
@@ -764,30 +799,6 @@ private fun ChannelCard(
     }
 }
 
-/** A favourite category: its name, which opens its section's list on it. */
-@Composable
-private fun CategoryCard(
-    category: SourcedFavoriteCategory,
-    sourceName: String?,
-    onClick: () -> Unit,
-) {
-    CinemaCard(onClick = onClick, modifier = Modifier.width(MobileDimensions.homeCardWidth)) {
-        Box(
-            modifier = Modifier.fillMaxWidth().aspectRatio(CARD_ASPECT).padding(Spacing.sm),
-            contentAlignment = Alignment.Center,
-        ) {
-            CinemaText(
-                text = category.category.categoryName,
-                role = TextRole.Label,
-                keepCase = true,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        sourceName?.let { SourceBadge(it, providerId = category.providerId, modifier = Modifier.padding(Spacing.xs)) }
-    }
-}
-
 /**
  * A card's clean name ("From (2022)", not "ES - From (2022)"), then its source (Expert mode), the
  * name's tags as badges and [subtitle] on one line — as TV Home's cards and the lists show it.
@@ -837,8 +848,8 @@ private fun continueWatchingLine(item: ContinueWatchingItem): String {
 
 /**
  * Every row from stored data: an offline source holds nothing up. A [child] profile's Home has
- * only Continue watching and its favourite channels, films and shows: no Channels (recent) row and
- * no favourite categories (docs/plans/20261019_kids-home-plan.md, K-D8, the phone's light version).
+ * only Continue watching and its favourite channels, films and shows: no Channels (recent) row
+ * (docs/plans/20261019_kids-home-plan.md, K-D8, the phone's light version).
  */
 private suspend fun loadRows(
     merged: MergedLists,
@@ -859,14 +870,6 @@ private suspend fun loadRows(
             favoriteChannels = if (hasLive) favoriteChannelsRow(merged.favorites(ContentType.LIVE_TV)) else emptyList(),
             favoriteMovies = if (ContentType.MOVIES in supportedTypes) merged.favorites(ContentType.MOVIES) else emptyList(),
             favoriteShows = if (ContentType.TV_SHOWS in supportedTypes) merged.favorites(ContentType.TV_SHOWS) else emptyList(),
-            favoriteCategories =
-                if (child) {
-                    emptyList()
-                } else {
-                    merged.favoriteCategories(
-                        listOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS).filter { it in supportedTypes },
-                    )
-                },
             sourceNames = merged.sourceNames,
         )
     }

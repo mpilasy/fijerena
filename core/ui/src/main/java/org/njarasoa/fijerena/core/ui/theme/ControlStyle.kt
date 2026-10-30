@@ -31,6 +31,12 @@ object ControlStyle {
     val logoPlatePaddingHorizontal: Dp = CinemaSpacing.sm
     val logoPlatePaddingVertical: Dp = CinemaSpacing.xs
     val logoPlateCorner: Dp = CinemaSpacing.xs
+
+    /** A section panel's tint: its section's colour, faint ([org.njarasoa.fijerena.core.ui.components.SectionPanel]). */
+    const val SECTION_TINT_ALPHA = 0.10f
+
+    /** A section panel's inner padding, top and bottom. */
+    val sectionPanelPadding: Dp = CinemaSpacing.md
     const val PROGRESS_TRACK_ALPHA = 0.25f
     const val PROGRESS_TRACK_ALPHA_HIGHLIGHTED = 0.4f
 }

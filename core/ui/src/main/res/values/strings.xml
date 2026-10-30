@@ -726,9 +726,6 @@
     <string name="home_live_last_watched">Last watched</string>
     <string name="home_favorite_movies">Favourite Movies</string>
     <string name="home_favorite_shows">Favourite Shows</string>
-    <string name="home_favorite_channel_categories">Favourite Channel Categories</string>
-    <string name="home_favorite_movie_categories">Favourite Movie Categories</string>
-    <string name="home_favorite_show_categories">Favourite Show Categories</string>
 
     <!-- Category -->
 

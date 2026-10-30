@@ -4,29 +4,31 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbChart
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.feature.category.components.rowAfterChange
 
-/** Home's rows, top to bottom. */
+/**
+ * Home's rows, top to bottom (user, 2026-10-29): Continue Watching alone, then a group per section,
+ * Channels, TV Shows, Movies, each with its favourites first.
+ */
 internal enum class HomeShelf {
     CONTINUE_WATCHING,
+
+    FAVORITE_CHANNELS,
     CHANNELS,
 
-    /** The Wanted list (wanted titles plan, Phase 5). */
-    WANTED,
+    FAVORITE_SHOWS,
 
-    /** The TMDB chart rows (TMDB charts plan, Phase 3): the films' charts, then the shows'. */
-    CHART_TRENDING_MOVIES,
-    CHART_POPULAR_MOVIES,
-    CHART_TOP_RATED_MOVIES,
+    /** The Wishlist's shows (wanted titles plan, Phase 5). */
+    WANTED_SHOWS,
+
+    /** The TMDB chart rows (TMDB charts plan, Phase 3). */
     CHART_TRENDING_SHOWS,
     CHART_POPULAR_SHOWS,
     CHART_TOP_RATED_SHOWS,
 
-    /** The favourites last (user, 2026-10-29), each section's categories under its favourites. */
-    FAVORITE_CHANNELS,
-    FAVORITE_CHANNEL_CATEGORIES,
     FAVORITE_MOVIES,
-    FAVORITE_MOVIE_CATEGORIES,
-    FAVORITE_SHOWS,
-    FAVORITE_SHOW_CATEGORIES,
+    WANTED_MOVIES,
+    CHART_TRENDING_MOVIES,
+    CHART_POPULAR_MOVIES,
+    CHART_TOP_RATED_MOVIES,
 }
 
 /** The chart of a chart row; null for the other rows. */
@@ -42,13 +44,12 @@ internal val HomeShelf.chart: TmdbChart?
             else -> null
         }
 
-/** The section of a favourite categories row, each right under that section's favourites; null for the other rows. */
-internal val HomeShelf.categoriesContentType: String?
+/** The section of a Wishlist row; null for the other rows. */
+internal val HomeShelf.wantedContentType: String?
     get() =
         when (this) {
-            HomeShelf.FAVORITE_CHANNEL_CATEGORIES -> ContentType.LIVE_TV
-            HomeShelf.FAVORITE_MOVIE_CATEGORIES -> ContentType.MOVIES
-            HomeShelf.FAVORITE_SHOW_CATEGORIES -> ContentType.TV_SHOWS
+            HomeShelf.WANTED_SHOWS -> ContentType.TV_SHOWS
+            HomeShelf.WANTED_MOVIES -> ContentType.MOVIES
             else -> null
         }
 

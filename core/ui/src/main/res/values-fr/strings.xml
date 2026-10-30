@@ -690,9 +690,6 @@
     <string name="home_live_last_watched">Dernière regardée</string>
     <string name="home_favorite_movies">Films favoris</string>
     <string name="home_favorite_shows">Séries favorites</string>
-    <string name="home_favorite_channel_categories">Catégories de chaînes favorites</string>
-    <string name="home_favorite_movie_categories">Catégories de films favorites</string>
-    <string name="home_favorite_show_categories">Catégories de séries favorites</string>
 
     <!-- Category -->
 

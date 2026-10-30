@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
@@ -39,6 +40,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaColorRoles
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
@@ -55,6 +57,15 @@ enum class ThumbnailContentType {
     TV_SHOW,
     DEFAULT,
 }
+
+/** A section's own colour: the middle of its placeholder's fill. Null for [ThumbnailContentType.DEFAULT]. */
+fun CinemaColorRoles.sectionColor(section: ThumbnailContentType): Color? =
+    when (section) {
+        ThumbnailContentType.LIVE_TV -> highlight
+        ThumbnailContentType.MOVIE -> lerp(accent, accentStrong, 0.5f)
+        ThumbnailContentType.TV_SHOW -> lerp(accentSoft, accent, 0.5f)
+        ThumbnailContentType.DEFAULT -> null
+    }
 
 /**
  * Image loading composable with gradient fallback and shimmer placeholder.
@@ -192,13 +203,7 @@ fun TypographyFallback(
                 remember(palette, uiStyle, contentType, display) {
                     // The Look's title font, in a colour that reads on the letter's own fill (the
                     // middle of the gradient): cream text on an amber fill could not be read.
-                    val fill =
-                        when (contentType) {
-                            ThumbnailContentType.LIVE_TV -> palette.highlight
-                            ThumbnailContentType.MOVIE -> lerp(palette.accent, palette.accentStrong, 0.5f)
-                            ThumbnailContentType.TV_SHOW -> lerp(palette.accentSoft, palette.accent, 0.5f)
-                            ThumbnailContentType.DEFAULT -> null
-                        }
+                    val fill = palette.sectionColor(contentType)
                     display.copy(
                         color = fill?.let { contentOn(it) } ?: palette.textPrimary,
                         fontSize = 28.sp, // look-ok: the placeholder letter is sized to the poster

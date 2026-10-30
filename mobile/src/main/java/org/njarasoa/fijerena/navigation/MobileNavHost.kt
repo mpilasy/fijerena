@@ -720,11 +720,6 @@ fun MobileNavHost(navController: NavHostController = rememberNavController()) {
                                     browseTargetRoute(target, item.name, item.categoryId, item.providerId, contentType),
                                 )
                             },
-                            onCategory = { categoryId, contentType, source ->
-                                navController.navigateOnce(
-                                    Screen.CategoryList(contentType = contentType, initialCategoryId = categoryId, providerId = source),
-                                )
-                            },
                         )
                     }
                 }

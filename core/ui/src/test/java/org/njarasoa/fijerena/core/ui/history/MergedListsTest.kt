@@ -12,7 +12,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.njarasoa.fijerena.core.network.FavoriteCategoryItem
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.RecentCategory
 import org.njarasoa.fijerena.core.network.RecentRemoval
@@ -189,30 +188,6 @@ class MergedListsTest {
             )
 
         assertEquals(listOf("b1", "a1", "b2"), merged.map { it.id })
-    }
-
-    @Test
-    fun `favourite categories go by section, then by name, each with its source`() {
-        val merged =
-            MergedLists.mergeFavoriteCategories(
-                listOf(ContentType.LIVE_TV, ContentType.MOVIES),
-                listOf(
-                    A to
-                        listOf(
-                            FavoriteCategoryItem("1", "horror", ContentType.MOVIES),
-                            FavoriteCategoryItem("2", "Sport", ContentType.LIVE_TV),
-                            FavoriteCategoryItem("3", "Drama", ContentType.TV_SHOWS),
-                        ),
-                    B to
-                        listOf(
-                            FavoriteCategoryItem("1", "Action", ContentType.MOVIES),
-                            FavoriteCategoryItem("4", "News", ContentType.LIVE_TV),
-                        ),
-                ),
-            )
-
-        assertEquals(listOf("News", "Sport", "Action", "horror"), merged.map { it.category.categoryName })
-        assertEquals(listOf(B, A, B, A), merged.map { it.providerId })
     }
 
     @Test
