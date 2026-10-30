@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **The full cast:** the Cast tab shows the first 10 actors, then a "+N more" card that shows the rest of the cast in billing order. Before, an actor past the 10th was never listed, even though their own page listed the title. TV and phone.
+- **Roles on an actor's page:** each card says the part played in that title ("2014 • as Paul"); a director's or writer's page says the job (Director, Writer, Creator). TV and phone.
+
 ## Version: 0.8.20261030192729
 
 - **Recent Channels second on Home:** the channels you watched last now come right after Continue Watching, by themselves, under the name Recent Channels. Favourite Channels stay on the Channels panel. TV and phone.
