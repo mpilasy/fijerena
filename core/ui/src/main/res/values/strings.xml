@@ -1265,7 +1265,7 @@
     <string name="details_status_in_production">In production</string>
     <string name="details_status_planned">Planned</string>
     <string name="details_status_pilot">Pilot</string>
-    <string name="details_label_stream_name">Stream name:</string>
+    <string name="details_label_stream_name">Stream Name:</string>
     <string name="details_label_tmdb">TMDB:</string>
     <string name="details_rating_out_of_ten">%1$s/10</string>
     <!-- TV polish: search, guide, home, profiles -->
