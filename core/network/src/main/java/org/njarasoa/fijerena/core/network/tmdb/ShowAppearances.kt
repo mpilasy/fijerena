@@ -27,10 +27,13 @@ data class ShowTarget(
 )
 
 /**
- * The lines of [credit], a person's credit in a show: every episode of a guest or recurring role in
- * air order; else, for a regular role (TMDB names no episode there), every season, the specials
- * (season 0) last. [sourceEpisodes] is the source's episode id by season and episode number:
- * each line is matched to it, and [sourceSeasons] (the seasons the source has) marks the seasons.
+ * The lines of [credit], a person's credit in a show, in season order with the specials (season 0)
+ * last: each episode TMDB names (a guest or recurring role), and each season TMDB lists with no
+ * episode named in it (a regular role: TMDB names no episode there). So a regular of seasons 1–5
+ * with three specials gets the five seasons, then the three specials; a role that is recurring in
+ * one season and regular in the next gets the episodes, then the season. [sourceEpisodes] is the
+ * source's episode id by season and episode number: each line is matched to it, and
+ * [sourceSeasons] (the seasons the source has) marks the seasons.
  */
 fun showAppearances(
     credit: TmdbCredit,
@@ -45,14 +48,14 @@ fun showAppearances(
                 val id = sourceEpisodes[season to number]
                 ShowAppearance(season, number, episode.name?.takeIf { it.isNotBlank() }, id, inSource = id != null)
             }.distinctBy { it.season to it.episode }
-            .sortedWith(compareBy({ it.season }, { it.episode }))
-    return episodes.ifEmpty {
+    val episodeSeasons = episodes.mapTo(mutableSetOf()) { it.season }
+    val seasons =
         credit.media.seasons
             .mapNotNull { it.seasonNumber }
+            .filter { it !in episodeSeasons }
             .distinct()
-            .sortedWith(compareBy({ it == SPECIALS }, { it }))
             .map { season -> ShowAppearance(season, inSource = season in sourceSeasons) }
-    }
+    return (episodes + seasons).sortedWith(compareBy({ it.season == SPECIALS }, { it.season }, { it.episode ?: 0 }))
 }
 
 /**

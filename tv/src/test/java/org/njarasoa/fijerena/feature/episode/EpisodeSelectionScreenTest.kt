@@ -294,17 +294,36 @@ class EpisodeSelectionScreenTest {
     /**
      * Back from deep in the episode list goes to the section tabs, then out — it used to be
      * swallowed for good: the tab row had scrolled out of composition, so focusing it did
-     * nothing while the key still counted as handled.
+     * nothing while the key still counted as handled. (Down first: before any other key, Back
+     * leaves at once — see the next test.)
      */
     @Test
     fun backFromDeepInTheListIsNeverSwallowed() {
         var backs = 0
         setLongSeries(initialEpisodeId = "s3e10", onBack = { backs++ })
+        composeTestRule.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        composeTestRule.waitForIdle()
 
         repeat(2) {
             composeTestRule.onRoot().performKeyInput { pressKey(Key.Back) }
             composeTestRule.waitForIdle()
         }
+        assertEquals(1, backs)
+    }
+
+    /**
+     * Opened on an episode (an actor's line, Continue Watching), one Back returns to the control
+     * that opened the screen (focus contract, rule 6) while no other key has been pressed; it took
+     * two, the first only moving focus to the tab row.
+     */
+    @Test
+    fun openedOnAnEpisodeOneBackLeaves() {
+        var backs = 0
+        setLongSeries(initialEpisodeId = "s3e10", onBack = { backs++ })
+        composeTestRule.onNodeWithTag("episode_s3e10").assertIsFocused()
+
+        composeTestRule.onRoot().performKeyInput { pressKey(Key.Back) }
+        composeTestRule.waitForIdle()
         assertEquals(1, backs)
     }
 

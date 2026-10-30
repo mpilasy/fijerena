@@ -416,6 +416,12 @@ internal fun EpisodeListContent(
     // observation isn't trusted here.
     var focusInSection by remember { mutableStateOf(false) }
 
+    // Opened on an episode or a season (an actor's line, Continue Watching), the screen puts focus on
+    // that episode, inside the Episodes section. Until another key is pressed, Back leaves the
+    // screen at once, back to the control that opened it (focus contract, rule 6), not first to the
+    // tab row (seen in the walk, 2026-10-30: two Backs to get back to an actor's list).
+    var backLeavesAtOnce by rememberSaveable { mutableStateOf(initialEpisodeId != null || initialSeason != null) }
+
     // Back from inside a section: to the tab row. The row lives in the LazyColumn, so deep in the
     // episode list it isn't composed and focusing it does nothing — Back was then swallowed for
     // good (seen on a Shield, Law & Order season 3). Scroll it back in first, then focus it.
@@ -451,7 +457,7 @@ internal fun EpisodeListContent(
     // yet — same focusInSection branch as that handler, and the same "an unconditional onBack()
     // here overrides it" finding from MovieDetailsScreen's identical fallback.
     BackHandler(enabled = selectedEpisode == null) {
-        if (focusInSection) {
+        if (focusInSection && !backLeavesAtOnce) {
             focusTabRow()
         } else {
             onBack()
@@ -665,6 +671,14 @@ internal fun EpisodeListContent(
     // episode's bar is current.
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
     var episodePlaybackPositions by remember(seriesDetail) { mutableStateOf<Map<String, Long>>(emptyMap()) }
+
+    // The route's episode is the resume episode only once it has been played: an actor's episode
+    // opens the screen on it, but it is not where the viewer stopped, so it gets no "Continue
+    // watching" (the episode cast plan). Read again on each entry, a return from the player too.
+    var routeEpisodePlayed by remember { mutableStateOf(false) }
+    LaunchedEffect(initialEpisodeId) {
+        routeEpisodePlayed = initialEpisodeId != null && wasPlayed(mediaRepository, initialEpisodeId)
+    }
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
     // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1): any watched episode
     // counts as watching the show. None for a child.
@@ -1080,11 +1094,12 @@ internal fun EpisodeListContent(
                     // this always wins the race. Matches the same pattern TvDpadEscape.kt uses.
                     modifier =
                         Modifier.fillMaxSize().testTag("episode_list").onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key != Key.Back) backLeavesAtOnce = false
                             if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
                                 // Phase 5: Back out of an open tab section goes to the tab row, not
                                 // out of the screen — same interception point as the screen-exit
                                 // case, since this handler already runs before any descendant.
-                                if (focusInSection) {
+                                if (focusInSection && !backLeavesAtOnce) {
                                     focusTabRow()
                                 } else {
                                     onBack()
@@ -1409,14 +1424,14 @@ internal fun EpisodeListContent(
                                 ->
                                 episode.id
                             }, contentType = { _, _ -> "episode" }) { index, episode ->
-                                val isContinueWatching = episode.id == resumeState.resumeEpisodeId
+                                val isResumeAnchor = episode.id == resumeState.resumeEpisodeId
                                 EpisodeCard(
                                     episode = episode,
                                     cardStyle = episodeCardStyle,
-                                    isContinueWatching = isContinueWatching,
+                                    isContinueWatching = isResumeAnchor && (episode.id != initialEpisodeId || routeEpisodePlayed),
                                     watchProgress = episodeProgress[episode.id] ?: 0f,
                                     isWatched = episode.id in watchedEpisodeIds,
-                                    focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
+                                    focusRequester = if (isResumeAnchor) resumeCardFocusRequester else null,
                                     modifier =
                                         Modifier
                                             .onPreviewKeyEvent { event ->

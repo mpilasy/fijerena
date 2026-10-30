@@ -7,6 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
  * Which episode/season this episode-selection screen is anchored on, and whether that's because
@@ -102,3 +104,16 @@ fun rememberEpisodeResumeState(
         EpisodeResumeState(initialEpisodeId, initialSeason, initialManualSeason)
     }
 }
+
+/**
+ * Whether [episodeId] has been played: a resume position or a play time, not only a watched mark.
+ * The route's episode is the resume episode ("Continue watching") only then; an actor's episode
+ * opens the screen on it without being one (docs/plans/20261030_episode-cast-plan.md).
+ */
+internal suspend fun wasPlayed(
+    mediaRepository: MediaRepository,
+    episodeId: String,
+): Boolean =
+    mediaRepository
+        .getPlaybackPositionSuspend(episodeId, ContentType.TV_SHOWS)
+        ?.let { it.timestamp > 0L || it.playbackPosition > 0L } == true

@@ -25,8 +25,13 @@ import org.njarasoa.fijerena.core.network.tmdb.PersonRows
 import org.njarasoa.fijerena.core.network.tmdb.ShowAppearance
 import org.njarasoa.fijerena.core.network.tmdb.ShowTarget
 import org.njarasoa.fijerena.core.network.tmdb.TmdbCombinedCredits
+import org.njarasoa.fijerena.core.network.tmdb.TmdbCredit
+import org.njarasoa.fijerena.core.network.tmdb.TmdbCreditEpisode
+import org.njarasoa.fijerena.core.network.tmdb.TmdbCreditMedia
+import org.njarasoa.fijerena.core.network.tmdb.TmdbCreditSeason
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPerson
 import org.njarasoa.fijerena.core.network.tmdb.TmdbPersonCredit
+import org.njarasoa.fijerena.core.network.tmdb.showAppearances
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import java.util.Collections
@@ -349,6 +354,26 @@ class PersonViewModelTest {
         assertEquals(PersonViewModel.ShowOpening.Open(SHOW, ShowTarget(season = 3, missing = lacking)), of(lacking))
         // Several: the list.
         assertTrue(of(ShowAppearance(3), ShowAppearance(4, inSource = false)) is PersonViewModel.ShowOpening.Lines)
+    }
+
+    @Test
+    fun `a regular of one season with a special gets the list, not the special at once`() {
+        // A regular of season 3 whom TMDB names in one special only: the lines are the season, then
+        // the special, so the card opens the list (it opened the special, the walk of 2026-10-30).
+        val credit =
+            TmdbCredit(
+                media =
+                    TmdbCreditMedia(
+                        episodes = listOf(TmdbCreditEpisode(0, 2, "Wedding Day")),
+                        seasons = listOf(TmdbCreditSeason(3, 13)),
+                    ),
+            )
+        val lines = showAppearances(credit, mapOf((3 to 1) to "e31"))
+
+        val opening = PersonViewModel.showOpeningOf(SHOW, PersonViewModel.ShowLines(lines, setOf(3)))
+
+        assertEquals(PersonViewModel.ShowOpening.Lines(SHOW, lines, setOf(3)), opening)
+        assertEquals(listOf(ShowAppearance(3), ShowAppearance(0, 2, "Wedding Day", null, inSource = false)), lines)
     }
 
     private companion object {

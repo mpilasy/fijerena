@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.WatchedItem
@@ -356,6 +357,7 @@ fun MobileEpisodeSelectionScreen(
                             seriesName = lastSuccess?.streamName ?: seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeState = resumeState,
+                            initialEpisodeId = initialEpisodeId,
                             categoryName = lastSuccess?.categoryName,
                             logoUrl = logoUrl,
                             backdropUrl = backdropUrl,
@@ -406,6 +408,8 @@ private fun EpisodeListContent(
     seriesName: String,
     mediaRepository: MediaRepository,
     resumeState: EpisodeResumeState,
+    // The episode the route opened the screen on (Continue Watching, an actor's episode).
+    initialEpisodeId: String?,
     categoryName: String?,
     logoUrl: String?,
     backdropUrl: String?,
@@ -467,6 +471,14 @@ private fun EpisodeListContent(
 
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
     var episodePlaybackPositions by remember(seriesDetail) { mutableStateOf<Map<String, Long>>(emptyMap()) }
+
+    // The route's episode is the resume episode only once it has been played: an actor's episode
+    // opens the screen on it, but it is not where the viewer stopped, so it gets no "Continue
+    // watching" (the episode cast plan). Read again on each entry, a return from the player too.
+    var routeEpisodePlayed by remember { mutableStateOf(false) }
+    LaunchedEffect(initialEpisodeId) {
+        routeEpisodePlayed = initialEpisodeId != null && wasPlayed(mediaRepository, initialEpisodeId)
+    }
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
     // The Wishlist icon and its ask-once prompt (wishlist UX plan, Phase 1): any watched episode
     // counts as watching the show. None for a child.
@@ -990,7 +1002,8 @@ private fun EpisodeListContent(
             items(currentSeasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
                 EpisodeCard(
                     episode = episode,
-                    isContinueWatching = episode.id == resumeState.resumeEpisodeId,
+                    isContinueWatching =
+                        episode.id == resumeState.resumeEpisodeId && (episode.id != initialEpisodeId || routeEpisodePlayed),
                     watchProgress = episodeProgress[episode.id] ?: 0f,
                     isWatched = episode.id in watchedEpisodeIds,
                     onClick = {
@@ -1211,6 +1224,19 @@ private fun EpisodeDetailContent(
 ) {
     val extension = episode.extension ?: "mp4"
     val episodeCredits = rememberEpisodeCredits(mediaRepository, seriesDetail.metadata.tmdbId, episode, showCredits)
+    val scrollState = rememberScrollState()
+
+    // Back from a person page opened from this cast: the page is new and its cast comes late, so the
+    // restored scroll was cut to the short page first and it opened at its top (seen in the walk,
+    // 2026-10-30). The place left is kept here, and the page goes back to it once it is that long:
+    // again when TMDB's cards come.
+    var personScroll by rememberSaveable(episode.id) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(personScroll != null, episodeCredits != null) {
+        val target = personScroll ?: return@LaunchedEffect
+        withFrameNanos { }
+        withTimeoutOrNull(PERSON_RETURN_WAIT_MS) { snapshotFlow { scrollState.maxValue }.first { it >= target } }
+        scrollState.scrollTo(target)
+    }
 
     // Load resume position. Keyed on the episode so stepping to another one clears the previous
     // episode's value immediately rather than showing its resume time until the lookup lands —
@@ -1243,7 +1269,7 @@ private fun EpisodeDetailContent(
                             change.consume()
                         },
                     )
-                }.verticalScroll(rememberScrollState())
+                }.verticalScroll(scrollState)
                 // Ends with the bar's height so the last lines scroll clear of it.
                 .padding(
                     start = CinemaSpacing.md,
@@ -1406,7 +1432,10 @@ private fun EpisodeDetailContent(
                     MobileCreditsTabContent(
                         credits = episodeCredits,
                         section = ThumbnailContentType.TV_SHOW,
-                        onPersonSelected = onPersonSelected,
+                        onPersonSelected = { personId, name, crew ->
+                            personScroll = scrollState.value
+                            onPersonSelected(personId, name, crew)
+                        },
                     )
                 } else {
                     CastChipsTabContent(cast = sourceCast.orEmpty())
@@ -1746,3 +1775,6 @@ private fun ErrorScreen(
 }
 
 private const val EPISODE_SWIPE_THRESHOLD_PX = 80f
+
+/** How long the episode's page waits for its cast before it goes back to the place left for a person. */
+private const val PERSON_RETURN_WAIT_MS = 2_000L

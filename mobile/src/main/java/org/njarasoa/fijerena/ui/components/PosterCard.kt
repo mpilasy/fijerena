@@ -34,6 +34,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * A film or show in a row of titles (Home's favourite, Wishlist and chart rows, an actor's page,
  * More Like This): its poster as 2:3 art, [MobileDimensions.posterCardWidth] wide (about three a
  * screen), the letter when there is no poster, then its name and [subtitle] (CardLines).
+ * [subtitleLines]: the lines of [subtitle], all kept, so a row's cards are one height (two on an
+ * actor's page, where the year and the role do not fit on one line of a narrow card).
  */
 @Composable
 fun PosterCard(
@@ -50,6 +52,7 @@ fun PosterCard(
     notAvailable: Boolean = false,
     // False: [title] shows as it is, without tags (a TMDB list's title, MediaItem.listTitle).
     tags: Boolean = true,
+    subtitleLines: Int = 1,
     onClick: () -> Unit,
 ) {
     val width = MobileDimensions.posterCardWidth
@@ -70,13 +73,13 @@ fun PosterCard(
             }
         }
         // Two lines for the title, as on a store's poster rows: a narrow card cuts long names early.
-        CardLines(title, subtitle, sourceName, providerId, width, tags, titleLines = 2)
+        CardLines(title, subtitle, sourceName, providerId, width, tags, titleLines = 2, subtitleLines = subtitleLines)
     }
 }
 
 /**
  * A card's clean name ("From (2022)", not "ES - From (2022)"), then its source (Expert mode), the
- * name's tags as badges and [subtitle] on one line — as TV Home's cards and the lists show it.
+ * name's tags as badges and [subtitle] on [subtitleLines] lines — as TV Home's cards and the lists show it.
  * Without [tags], [title] shows as it is and has no badges: a TMDB list's title.
  */
 @Composable
@@ -88,6 +91,7 @@ internal fun CardLines(
     width: Dp,
     tags: Boolean = true,
     titleLines: Int = 1,
+    subtitleLines: Int = 1,
 ) {
     val parsed = remember(title) { parseDisplayTitle(title) }
     Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
@@ -106,7 +110,8 @@ internal fun CardLines(
                 text = subtitle.orEmpty(),
                 role = TextRole.Caption,
                 tone = TextTone.Secondary,
-                maxLines = 1,
+                maxLines = subtitleLines,
+                minLines = subtitleLines,
                 overflow = TextOverflow.Ellipsis,
             )
         }

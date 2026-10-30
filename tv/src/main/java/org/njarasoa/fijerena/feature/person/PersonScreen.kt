@@ -212,6 +212,15 @@ private fun PersonContent(
         prepare = { snapshotFlow { rows != null }.first { it } },
     )
 
+    // Closing the list gives focus back to the show card that opened it. The row's restorer is told
+    // too: after Back from a show a line opened, the page is new, its restorer knows no card, and
+    // its fallback took the request to the row's first card (seen in the walk, 2026-10-30).
+    var closedShowKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(closedShowKey) {
+        closedShowKey?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = showFocus) }
+        closedShowKey = null
+    }
+
     val noneInSources = stringResource(R.string.person_none_in_sources)
     // The person's role in each title, after the year: "2014 • as Paul".
     val roleTexts = rows?.roles.orEmpty().mapValues { (_, role) -> personRoleText(role) }
@@ -234,7 +243,9 @@ private fun PersonContent(
                 },
                 onOpenActions = null,
                 firstItemFocus = focus,
-                restoreFocus = returnFocus.requesterWhere { it.startsWith(prefix) },
+                restoreFocus =
+                    returnFocus.requesterWhere { it.startsWith(prefix) }
+                        ?: closedShowKey?.takeIf { it.startsWith(prefix) }?.let(returnFocus::requesterOf),
                 listState = rowListState,
                 itemModifier = { item -> Modifier.navReturnFocusTarget(returnFocus, prefix + item.sourceKey) },
                 // CT-D5: the release year on each card; a TMDB-only card has only its year.
@@ -259,12 +270,6 @@ private fun PersonContent(
         }
 
     val lines = showOpening as? PersonViewModel.ShowOpening.Lines
-    // Closing the list gives focus back to the show card that opened it.
-    var closedShowKey by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(closedShowKey) {
-        closedShowKey?.let { returnFocus.requesterOf(it).requestFocusWithRetry(fallback = showFocus) }
-        closedShowKey = null
-    }
     LazyColumn(
         state = listState,
         // Back on the root, before the focused control: see NAVIGATION_GUIDE → TV Back on Detail Screens.

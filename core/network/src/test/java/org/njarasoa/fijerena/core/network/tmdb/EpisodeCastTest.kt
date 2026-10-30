@@ -145,6 +145,51 @@ class EpisodeCastTest {
     }
 
     @Test
+    fun `a regular with specials lists the seasons, then the specials as episodes`() {
+        val credit = json.decodeFromString<TmdbCredit>(REGULAR_WITH_SPECIALS_CREDIT)
+
+        val lines = showAppearances(credit, mapOf((1 to 1) to "e11", (0 to 5) to "e05"))
+
+        assertEquals(
+            listOf(
+                ShowAppearance(1, inSource = true),
+                ShowAppearance(2, inSource = false),
+                ShowAppearance(3, inSource = false),
+                ShowAppearance(4, inSource = false),
+                ShowAppearance(5, inSource = false),
+                ShowAppearance(0, 2, "Wedding Day", null, inSource = false),
+                ShowAppearance(0, 5, "The Break-In", "e05", inSource = true),
+                ShowAppearance(0, 7, "Walt's Confession", null, inSource = false),
+            ),
+            lines,
+        )
+    }
+
+    @Test
+    fun `a role recurring in one season and regular in the next lists the episodes, then the season`() {
+        val credit =
+            TmdbCredit(
+                media =
+                    TmdbCreditMedia(
+                        episodes = listOf(TmdbCreditEpisode(2, 13, "ABQ"), TmdbCreditEpisode(2, 11, "Mandala")),
+                        seasons = listOf(TmdbCreditSeason(3, 13), TmdbCreditSeason(4, 13), TmdbCreditSeason(2, 13)),
+                    ),
+            )
+
+        val lines = showAppearances(credit, emptyMap())
+
+        assertEquals(
+            listOf(
+                ShowAppearance(2, 11, "Mandala", null, inSource = false),
+                ShowAppearance(2, 13, "ABQ", null, inSource = false),
+                ShowAppearance(3, inSource = false),
+                ShowAppearance(4, inSource = false),
+            ),
+            lines,
+        )
+    }
+
+    @Test
     fun `each line opens the episode, else its season, else the show, with the note for what the source lacks`() {
         val seasons = setOf(9)
         val have = ShowAppearance(9, 17, "Authority", "e917")
@@ -209,6 +254,20 @@ class EpisodeCastTest {
                "seasons":[{"season_number":0,"name":"Specials","episode_count":6},
                  {"season_number":13,"episode_count":23},{"season_number":2,"episode_count":21},
                  {"season_number":1,"episode_count":22}]}}
+            """
+
+        // Bryan Cranston in Breaking Bad (credit 52542282760ee313280017f9): a regular of seasons
+        // 1-5; TMDB names only his three specials.
+        const val REGULAR_WITH_SPECIALS_CREDIT =
+            """
+            {"credit_type":"cast","id":"52542282760ee313280017f9",
+             "media":{"id":1396,"character":"Walter White",
+               "episodes":[{"season_number":0,"episode_number":2,"name":"Wedding Day"},
+                 {"season_number":0,"episode_number":5,"name":"The Break-In"},
+                 {"season_number":0,"episode_number":7,"name":"Walt's Confession"}],
+               "seasons":[{"season_number":1,"episode_count":7},{"season_number":5,"episode_count":16},
+                 {"season_number":2,"episode_count":13},{"season_number":3,"episode_count":13},
+                 {"season_number":4,"episode_count":13}]}}
             """
     }
 }

@@ -216,6 +216,8 @@ private fun PersonContent(
                     onLongClick = null,
                     notAvailable = item.id.startsWith(TmdbOnlyItem.PREFIX),
                     tags = item.listTitle == null,
+                    // The year and the role ("2008 • 62 episodes · as Walter White") need two lines.
+                    subtitleLines = 2,
                 ) { onTitleSelected(item, contentType) }
             }
         }
