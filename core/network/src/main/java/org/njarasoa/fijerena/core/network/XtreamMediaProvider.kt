@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.tmdb.listTitle
 import org.njarasoa.fijerena.core.network.tmdb.titleCredits
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.network.xtream.CatalogSyncException
@@ -1041,7 +1042,9 @@ class XtreamMediaProvider(
             taken += key
             // The card shows this name and the screen it opens is titled with it, so the provider's
             // "NF - " / "4K-AMZ - " tags come off here rather than at either call site.
-            matches += hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
+            // The card shows the TMDB title instead ([MediaItem.listTitle]).
+            matches +=
+                hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name), listTitle = result.listTitle) }
         }
         return if (matches.size < minCount) emptyList() else matches
     }
@@ -1092,9 +1095,9 @@ class XtreamMediaProvider(
 
     /**
      * The catalogue title for each TMDB title, index-aligned with [results]: the first match, its
-     * provider tags off; null where this source has none. For the chart rows
-     * (docs/plans/20261029_tmdb-charts-plan.md), which pick across sources and drop repeats
-     * themselves. Same matching as More Like This, outside the excluded categories.
+     * provider tags off and the TMDB title as its [MediaItem.listTitle]; null where this source has
+     * none. For the chart rows and the actor pages (docs/plans/20261029_tmdb-charts-plan.md), which
+     * pick across sources and drop repeats themselves. Same matching as More Like This, outside the excluded categories.
      */
     suspend fun findTmdbTitles(
         results: List<TmdbRecommendation>,
@@ -1102,8 +1105,10 @@ class XtreamMediaProvider(
     ): List<MediaItem?> {
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return results.map { null }
         val mediaType = getMediaType(contentType)
-        return lookUpCandidates(results, contentType).map { candidates ->
-            candidates?.firstOrNull()?.toDomain(mediaType)?.let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
+        return lookUpCandidates(results, contentType).mapIndexed { index, candidates ->
+            candidates?.firstOrNull()?.toDomain(mediaType)?.let {
+                it.copy(name = TitleMatcher.stripProviderPrefix(it.name), listTitle = results[index].listTitle)
+            }
         }
     }
 

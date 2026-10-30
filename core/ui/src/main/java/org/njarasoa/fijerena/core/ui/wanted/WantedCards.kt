@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.wanted
 import android.content.res.Resources
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.tmdbListTitle
 import org.njarasoa.fijerena.core.network.wanted.CatalogueHit
 import org.njarasoa.fijerena.core.network.wanted.GoneFavorite
 import org.njarasoa.fijerena.core.network.wanted.ReleaseInfo
@@ -38,6 +39,12 @@ data class WantedCard(
 
     /** Available and not opened since: what the badge counts. */
     val isNew: Boolean get() = copy != null && entity.seenAt == null
+
+    /**
+     * The name the card shows ([tmdbListTitle]): the original title in Latin letters, else the
+     * stored title. That one is in the app language, so it is English only in an English app.
+     */
+    val listTitle: String get() = tmdbListTitle(entity.originalTitle, entity.title) ?: entity.title
 
     val posterUrl: String? get() = TmdbApiService.posterUrl(entity.posterPath, TmdbApiService.POSTER_SIZE_W342)
 

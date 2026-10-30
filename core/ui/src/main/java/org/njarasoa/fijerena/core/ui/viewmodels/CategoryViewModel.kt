@@ -419,6 +419,7 @@ class CategoryViewModel(
                 thumbnailUrl = card.posterUrl,
                 // A title not out yet already shows its date ("Coming 17 Feb 2028"): no year after it.
                 metadata = MediaMetadata(year = card.entity.year.takeIf { card.isAvailable || card.release().date == null }),
+                listTitle = card.listTitle,
             )
         }
 

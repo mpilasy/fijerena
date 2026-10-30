@@ -137,6 +137,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.ParsedTitle
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.categoryKey
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
@@ -2319,8 +2320,13 @@ internal fun StreamCard(
                 cinemaCardHairlineBorder()
             },
     ) {
-        // Its code is left out when the category already opens with it.
-        val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
+        // Its code is left out when the category already opens with it. A Charts or Wishlist row
+        // shows its TMDB title as it is, without the name's tags (MediaItem.listTitle).
+        val parsedTitle =
+            remember(item.name, item.listTitle, categoryName) {
+                val parsed = parseDisplayTitle(item.name).withoutCodeOf(categoryName)
+                item.listTitle?.let { ParsedTitle(it, badge = null, year = parsed.year) } ?: parsed
+            }
         // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with nothing
         // between the dashes) — an empty row reads as broken, not a catalogue gap.
         // The year goes to the line under it, with the length and rating.

@@ -66,6 +66,7 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.ParsedTitle
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.categoryKey
 import org.njarasoa.fijerena.core.player.domain.isLastPlayed
@@ -812,8 +813,13 @@ internal fun StreamItem(
                 },
         look = cardStyle,
     ) {
-        // Its code is left out when the category already opens with it.
-        val parsedTitle = remember(item.name, categoryName) { parseDisplayTitle(item.name).withoutCodeOf(categoryName) }
+        // Its code is left out when the category already opens with it. A Charts or Wishlist row
+        // shows its TMDB title as it is, without the name's tags (MediaItem.listTitle).
+        val parsedTitle =
+            remember(item.name, item.listTitle, categoryName) {
+                val parsed = parseDisplayTitle(item.name).withoutCodeOf(categoryName)
+                item.listTitle?.let { ParsedTitle(it, badge = null, year = parsed.year) } ?: parsed
+            }
         // The year goes to the line under it, with the length and rating.
         val displayTitle = parsedTitle.titleWithoutYear.ifBlank { stringResource(R.string.content_untitled) }
         // Films and shows: what the row already carries — year · length · rating (TV UI

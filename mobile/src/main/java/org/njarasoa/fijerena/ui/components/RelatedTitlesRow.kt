@@ -72,7 +72,7 @@ private fun RelatedTitleCard(
         Box(modifier = Modifier.size(width = CARD_WIDTH, height = POSTER_HEIGHT)) {
             CinemaThumbnail(
                 url = item.thumbnailUrl,
-                fallbackLetter = item.name.firstOrNull(),
+                fallbackLetter = (item.listTitle ?: item.name).firstOrNull(),
                 contentType =
                     if (item.mediaType == MediaType.SERIES) {
                         ThumbnailContentType.TV_SHOW
@@ -86,7 +86,8 @@ private fun RelatedTitleCard(
                 modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xxs),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
-                TitleBadges(parsedTitle)
+                // A TMDB list's card: its TMDB title only, without the source's tags (MediaItem.listTitle).
+                if (item.listTitle == null) TitleBadges(parsedTitle)
             }
             // A TMDB title no source has: opens its TMDB page (wishlist UX plan, Phase 4).
             if (item.id.startsWith(TmdbOnlyItem.PREFIX)) {
@@ -94,7 +95,7 @@ private fun RelatedTitleCard(
             }
         }
         CinemaText(
-            text = parsedTitle.title,
+            text = item.listTitle ?: parsedTitle.title,
             role = TextRole.Heading,
             maxLines = 2,
             minLines = 2,

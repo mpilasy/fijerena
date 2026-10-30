@@ -152,7 +152,7 @@ private fun PersonContent(
     val titleRow: @Composable (String, List<MediaItem>, String, Boolean) -> Unit = { title, items, contentType, hasSwitch ->
         HomeRow(title, items, { it.sourceKey }, action = if (hasSwitch) switch else null, showEmpty = hasSwitch) { item ->
             TitleCard(
-                title = item.name,
+                title = item.listTitle ?: item.name,
                 // CT-D5: the release year on each card. Some sources send no date, only the year
                 // in the name ("Lupin (2021)"), which the card's one line cuts off.
                 subtitle =
@@ -167,6 +167,7 @@ private fun PersonContent(
                 providerId = item.providerId,
                 onLongClick = null,
                 notAvailable = item.id.startsWith(TmdbOnlyItem.PREFIX),
+                tags = item.listTitle == null,
             ) { onTitleSelected(item, contentType) }
         }
     }

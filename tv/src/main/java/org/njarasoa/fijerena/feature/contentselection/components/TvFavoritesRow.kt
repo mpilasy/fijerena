@@ -133,7 +133,7 @@ private fun TvFavoriteCard(
             Box {
                 CinemaThumbnail(
                     url = item.thumbnailUrl,
-                    fallbackLetter = item.name.firstOrNull(),
+                    fallbackLetter = (item.listTitle ?: item.name).firstOrNull(),
                     contentType = thumbnailType,
                     modifier =
                         Modifier
@@ -145,15 +145,17 @@ private fun TvFavoriteCard(
                 }
             }
             Column(modifier = Modifier.padding(Spacing.sm)) {
-                // The provider's "EN - " tag as a badge on the second line, as in the lists.
+                // The provider's "EN - " tag as a badge on the second line, as in the lists. A TMDB
+                // list's card shows its TMDB title, without the tags (MediaItem.listTitle).
                 val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+                val listTitle = item.listTitle
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CinemaText(
                         text =
-                            parsedTitle.title.ifBlank {
+                            listTitle ?: parsedTitle.title.ifBlank {
                                 item.name
                             },
                         role = TextRole.Heading,
@@ -171,7 +173,7 @@ private fun TvFavoriteCard(
                 ) {
                     sourceName?.let { SourceBadge(it, providerId = item.providerId) }
                     // A card is narrow: the language only, not the formats.
-                    parsedTitle.badge?.let { LanguageBadge(it) }
+                    if (listTitle == null) parsedTitle.badge?.let { LanguageBadge(it) }
                     CinemaText(
                         // A line even when empty, so cards in the row line up.
                         text = listOfNotNull(status, item.metadata.releaseDate?.take(4), item.metadata.genre).joinToString(" • "),

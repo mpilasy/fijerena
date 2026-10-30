@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.wanted
 
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.tmdb.listTitle
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 import org.njarasoa.fijerena.core.player.domain.MediaType
@@ -29,6 +30,7 @@ object TmdbOnlyItem {
             categoryId = "",
             thumbnailUrl = TmdbApiService.posterUrl(result.posterPath, TmdbApiService.POSTER_SIZE_W342),
             metadata = MediaMetadata(year = result.year, plot = result.overview),
+            listTitle = result.listTitle,
             providerData =
                 listOfNotNull(
                     TMDB_ID to result.id.toString(),

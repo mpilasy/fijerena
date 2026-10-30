@@ -92,6 +92,13 @@ data class MediaItem(
      * first (docs/plans/20261012_multi-source-search-history-plan.md → Phase 4).
      */
     val lastPlayedAt: Long = 0L,
+    /**
+     * The name a TMDB-based list (More Like This, the charts, an actor page's rows, the Wishlist)
+     * shows on this card, without the tags of [name]: the title's original name, or its English
+     * name when the original is not in Latin letters (`tmdbListTitle`). Null elsewhere. [name]
+     * stays the source's: the page the card opens, a favourite and a route use it.
+     */
+    val listTitle: String? = null,
 ) {
     /** The series ID associated with this media item if it represents a series or episode. */
     val seriesId: String?

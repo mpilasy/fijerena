@@ -488,7 +488,7 @@ private fun HomeRowsColumn(
             ) { item ->
                 val tmdbOnly = item.id.startsWith(TmdbOnlyItem.PREFIX)
                 TitleCard(
-                    title = item.name,
+                    title = item.listTitle ?: item.name,
                     subtitle = null,
                     thumbnailUrl = item.thumbnailUrl,
                     thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
@@ -505,6 +505,7 @@ private fun HomeRowsColumn(
                             }
                         },
                     notAvailable = tmdbOnly,
+                    tags = item.listTitle == null,
                 ) { onChart(item, contentType) }
             }
         }
@@ -648,14 +649,14 @@ private fun WantedTitleCard(
     ) {
         CinemaThumbnail(
             url = card.posterUrl,
-            fallbackLetter = card.entity.title.firstOrNull(),
+            fallbackLetter = card.listTitle.firstOrNull(),
             contentType = ThumbnailContentType.MOVIE,
             overlayGradient = true,
             modifier = Modifier.width(width).aspectRatio(CARD_ASPECT),
         )
         // "Available · panel-a · FR" (wishlist UX plan, Phase 5).
         val status = card.statusLabel(LocalResources.current)
-        CardLines(card.entity.title, listOfNotNull(status, card.entity.year?.toString()).joinToString(" • "), null, 0L, width)
+        CardLines(card.listTitle, listOfNotNull(status, card.entity.year?.toString()).joinToString(" • "), null, 0L, width, tags = false)
     }
 }
 
@@ -738,6 +739,8 @@ internal fun TitleCard(
     onLongClick: (() -> Unit)?,
     // A TMDB title no source has: the Not available mark on its art.
     notAvailable: Boolean = false,
+    // False: [title] is a TMDB list's title (MediaItem.listTitle), shown as it is, without tags.
+    tags: Boolean = true,
     onClick: () -> Unit,
 ) {
     val width = MobileDimensions.homeCardWidth
@@ -766,7 +769,7 @@ internal fun TitleCard(
             // No bar, but its height, so the cards in a row line up.
             Spacer(modifier = Modifier.height(MobileDimensions.resumeBarHeight))
         }
-        CardLines(title, subtitle, sourceName, providerId, width)
+        CardLines(title, subtitle, sourceName, providerId, width, tags)
     }
 }
 
@@ -802,6 +805,7 @@ private fun ChannelCard(
 /**
  * A card's clean name ("From (2022)", not "ES - From (2022)"), then its source (Expert mode), the
  * name's tags as badges and [subtitle] on one line — as TV Home's cards and the lists show it.
+ * Without [tags], [title] shows as it is and has no badges: a TMDB list's title.
  */
 @Composable
 private fun CardLines(
@@ -810,13 +814,19 @@ private fun CardLines(
     sourceName: String?,
     providerId: Long,
     width: Dp,
+    tags: Boolean = true,
 ) {
     val parsed = remember(title) { parseDisplayTitle(title) }
     Column(modifier = Modifier.width(width).padding(Spacing.xs)) {
-        CinemaText(text = parsed.title.ifBlank { title }, role = TextRole.Heading, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        CinemaText(
+            text = if (tags) parsed.title.ifBlank { title } else title,
+            role = TextRole.Heading,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
             sourceName?.let { SourceBadge(it, providerId = providerId) }
-            TitleBadges(parsed)
+            if (tags) TitleBadges(parsed)
             CinemaText(
                 text = subtitle.orEmpty(),
                 role = TextRole.Caption,

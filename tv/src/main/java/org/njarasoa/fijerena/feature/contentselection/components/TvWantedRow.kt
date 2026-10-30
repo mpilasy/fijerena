@@ -98,14 +98,14 @@ private fun TvWantedCard(
         Column(modifier = Modifier.alpha(if (card.isAvailable || isFocused) 1f else CinemaAlpha.textDisabled)) {
             CinemaThumbnail(
                 url = card.posterUrl,
-                fallbackLetter = card.entity.title.firstOrNull(),
+                fallbackLetter = card.listTitle.firstOrNull(),
                 contentType = ThumbnailContentType.MOVIE,
                 modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
             )
             Column(modifier = Modifier.padding(Spacing.sm)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                     CinemaText(
-                        text = card.entity.title,
+                        text = card.listTitle,
                         role = TextRole.Heading,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
