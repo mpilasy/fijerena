@@ -53,6 +53,15 @@ class TmdbPeopleTest {
         }
 
     @Test
+    fun `a person stored by an older version is read again`() =
+        runTest {
+            // Written before the stored form had a number: no episode counts or credit ids.
+            File(dir, "7.json").writeText("""{"fetchedAtMs":$now,"person":{"id":7,"name":"Old 7"},"language":"$language"}""")
+            assertEquals("Person 7", people().person(7).name)
+            assertEquals(listOf(7), calls)
+        }
+
+    @Test
     fun `after clear, every person is read again, also by a new instance`() =
         runTest {
             val people = people()

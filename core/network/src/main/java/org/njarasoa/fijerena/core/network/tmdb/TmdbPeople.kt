@@ -39,6 +39,9 @@ class TmdbPeople(
         val language: String = "",
         // The person's credits read so far, by credit id.
         val credits: Map<String, TmdbCredit> = emptyMap(),
+        // The stored form: an older one lacks fields a page needs now (a show credit's episode count
+        // and credit id), so it is read again (0 for a file written before this field).
+        val format: Int = 0,
     )
 
     private val json =
@@ -72,11 +75,15 @@ class TmdbPeople(
     /** Under [lock]: the person stored and still fresh, else read again from TMDB and stored. */
     private suspend fun storedPerson(personId: Int): Stored {
         val stored = memory[personId] ?: read(personId)?.also { memory[personId] = it }
-        val fresh = stored != null && stored.language == language() && now() - stored.fetchedAtMs in 0 until MAX_AGE_MS
+        val fresh =
+            stored != null &&
+                stored.format == FORMAT &&
+                stored.language == language() &&
+                now() - stored.fetchedAtMs in 0 until MAX_AGE_MS
         return if (fresh && stored != null) {
             stored
         } else {
-            Stored(now(), fetchPerson(personId), language()).also { fetched ->
+            Stored(now(), fetchPerson(personId), language(), format = FORMAT).also { fetched ->
                 memory[personId] = fetched
                 write(personId, fetched)
             }
@@ -123,6 +130,9 @@ class TmdbPeople(
     companion object {
         private const val TAG = "TmdbPeople"
         private const val MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000L
+
+        // Raise it when TmdbPerson gains a field that pages need (1: episode count and credit id).
+        private const val FORMAT = 1
 
         @Volatile
         private var instance: TmdbPeople? = null
