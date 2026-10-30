@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.domain.sourceKey
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaSpinner
@@ -152,8 +153,13 @@ private fun PersonContent(
         HomeRow(title, items, { it.sourceKey }, action = if (hasSwitch) switch else null, showEmpty = hasSwitch) { item ->
             TitleCard(
                 title = item.name,
-                // CT-D5: the release year on each card.
-                subtitle = item.metadata.releaseDate?.take(YEAR_LENGTH) ?: item.metadata.year?.toString(),
+                // CT-D5: the release year on each card. Some sources send no date, only the year
+                // in the name ("Lupin (2021)"), which the card's one line cuts off.
+                subtitle =
+                    item.metadata.releaseDate
+                        ?.takeIf { it.isNotBlank() }
+                        ?.take(YEAR_LENGTH)
+                        ?: (item.metadata.year ?: parseDisplayTitle(item.name).year)?.toString(),
                 thumbnailUrl = item.thumbnailUrl,
                 thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
                 progress = null,

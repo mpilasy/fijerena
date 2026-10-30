@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.tmdb
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
@@ -126,6 +127,16 @@ class TmdbPeopleTest {
             assertEquals(listOf("Title 10"), rows.movies.map { it.name })
             assertEquals(listOf("Title 11"), rows.shows.map { it.name })
         }
+
+    @Test
+    fun `talk, news and reality shows and Self roles are not roles`() {
+        assertTrue(isAppearance(credit(1, "tv", 1.0).copy(genreIds = listOf(35, 10767))))
+        assertTrue(isAppearance(credit(2, "tv", 1.0).copy(character = "Self - Guest")))
+        assertTrue(isAppearance(credit(3, "movie", 1.0).copy(character = "Himself")))
+        assertTrue(isAppearance(credit(4, "tv", 1.0).copy(character = "Self (archive footage)")))
+        assertFalse(isAppearance(credit(5, "tv", 1.0).copy(genreIds = listOf(18), character = "Clint Barton")))
+        assertFalse(isAppearance(credit(6, "movie", 1.0).copy(character = "Selfridge")))
+    }
 
     @Test
     fun `only the 50 most popular credits are matched`() {

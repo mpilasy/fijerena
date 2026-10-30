@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -167,6 +168,10 @@ private fun PersonContent(
             movieSwitch -> movieFocus.requestFocusWithRetry()
             showSwitch -> showFocus.requestFocusWithRetry()
         }
+        // The focused card scrolled the page to it and cut off the name (found in the walk,
+        // 2026-10-30): the page opens at its top, the card still in view below the header.
+        withFrameNanos { }
+        listState.scrollToItem(0)
     }
     NavReturnFocusEffect(
         returnFocus,

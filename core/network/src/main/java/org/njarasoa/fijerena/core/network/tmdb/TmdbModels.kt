@@ -407,6 +407,8 @@ data class TmdbPersonCredit(
     val popularity: Double = 0.0,
     @SerialName("vote_count")
     val voteCount: Int = 0,
+    @SerialName("genre_ids")
+    val genreIds: List<Int> = emptyList(),
     // Cast only.
     @SerialName("character")
     val character: String? = null,

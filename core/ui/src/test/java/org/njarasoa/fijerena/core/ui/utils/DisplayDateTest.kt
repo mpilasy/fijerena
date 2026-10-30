@@ -20,4 +20,10 @@ class DisplayDateTest {
         assertEquals("1999", displayDate("1999", Locale.UK))
         assertEquals("Feb 2028", displayDate("Feb 2028", Locale.UK))
     }
+
+    @Test
+    fun `Malagasy writes its own month names`() {
+        assertEquals("20 Janoary 1978", displayDate("1978-01-20", Locale.forLanguageTag("mg")))
+        assertEquals("3 Desambra 2026", displayDate("2026-12-03", Locale.forLanguageTag("mg")))
+    }
 }

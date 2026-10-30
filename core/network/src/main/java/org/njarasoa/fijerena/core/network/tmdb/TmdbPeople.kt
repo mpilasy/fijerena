@@ -147,10 +147,29 @@ fun personCredits(
     val chosen = if (crew) credits.crew.filter { it.department in CREW_DEPARTMENTS } else credits.cast
     return chosen
         .filter { it.mediaType == MOVIE || it.mediaType == TV }
+        .filterNot(::isAppearance)
         .distinctBy { it.mediaType to it.id }
         .sortedByDescending { it.popularity }
         .take(PERSON_MAX_CREDITS)
 }
+
+/**
+ * A credit that is not a role in a story: a talk, news or reality show, or the person as
+ * themselves ("Self", "Himself", "Herself"). Found in the walk (2026-10-30): an actor's TV
+ * Shows row was full of the talk shows they visited.
+ */
+internal fun isAppearance(credit: TmdbPersonCredit): Boolean =
+    credit.genreIds.any { it in APPEARANCE_GENRES } ||
+        credit.character
+            ?.split(ROLE_PARTS)
+            ?.any { it.trim().lowercase() in SELF_ROLES } == true
+
+// TMDB TV genres: News, Reality, Talk. The charts leave out the same (TmdbChart.POPULAR_SHOWS).
+private val APPEARANCE_GENRES = setOf(10763, 10764, 10767)
+private val SELF_ROLES = setOf("self", "himself", "herself", "themselves")
+
+// "Self - Guest", "Himself (archive footage)", "Narrator / Self": each part on its own.
+private val ROLE_PARTS = Regex("[/,()-]")
 
 /**
  * The rows of an actor page (Design 3–4): [person]'s titles ([personCredits]) cut down to the
