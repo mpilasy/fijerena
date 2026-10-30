@@ -1,6 +1,6 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Unreleased
+## Version: 0.8.20261030231741
 
 - **Who is in an episode:** an episode's details show its cast: the episode's guest stars first, then the show's regular cast, with photos. A card opens the actor's page. TV and phone.
 - **An actor's episodes:** on an actor's page, a show card says how many episodes they were in ("1 episode · as Merritt Rook"). A one-episode role opens that episode. Otherwise the card opens a list of their episodes by name (a guest or recurring role) or of their seasons (a regular role); each opens the show there. TV and phone.
