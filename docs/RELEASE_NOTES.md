@@ -1,5 +1,9 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Unreleased
+
+- **Very long casts open safely:** the Cast tab's More card now adds 30 actors per press ("+30 more"), instead of the whole cast at once. A long show's cast runs to thousands (Law & Order: over 7,600), which could stall or crash the phone. TV and phone.
+
 ## Version: 0.8.20261030204404
 
 - **The full cast:** the Cast tab shows the first 10 actors, then a "+N more" card that shows the rest of the cast in billing order. Before, an actor past the 10th was never listed, even though their own page listed the title. TV and phone.
