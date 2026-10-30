@@ -189,7 +189,7 @@ object XtreamMapper {
                     year = releaseDate?.take(4)?.toIntOrNull(),
                     trailerUrl = trailerUrl(youtubeTrailer),
                     facts = TitleFacts.fromJson(facts),
-                ),
+                ).preferTmdbText(),
             coverUrl = streamIcon,
             extension = containerExtension,
         )

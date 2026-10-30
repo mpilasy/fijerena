@@ -143,6 +143,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
+import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -1622,16 +1623,19 @@ private fun SeriesDetailsTabContent(
         titleFactRows(seriesDetail.metadata.facts, seriesDetail.name.ifBlank { seriesName }, isShow = true).forEach {
             TvDetailRow(label = it.label, value = it.value)
         }
-        TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
-            StreamNamePicker(
-                currentName = seriesName,
-                alternates = alternateStreams,
-                sourceNames = sourceNames,
-                onSelect = onStreamSelected,
-                focusRequester = streamNameFocusRequester,
-                onFocusedChanged = onStreamFocusedChanged,
-                modifier = topFocusModifier.leftToRail(),
-            )
+        // A child's page has no technical rows (UX-D5).
+        if (!rememberChildProfile()) {
+            TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
+                StreamNamePicker(
+                    currentName = seriesName,
+                    alternates = alternateStreams,
+                    sourceNames = sourceNames,
+                    onSelect = onStreamSelected,
+                    focusRequester = streamNameFocusRequester,
+                    onFocusedChanged = onStreamFocusedChanged,
+                    modifier = topFocusModifier.leftToRail(),
+                )
+            }
         }
         val context = LocalContext.current
         val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
@@ -2057,14 +2061,18 @@ private fun EpisodeDetailPanel(
                         .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                         .padding(top = Spacing.xl.scaled(scale), bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
             ) {
-                CinemaText(
-                    text =
-                        stringResource(
-                            R.string.details_tmdb_format,
-                            episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
-                        ),
-                    tone = TextTone.Secondary,
-                )
+                // A child's page has no technical rows: TMDB id, container, bitrate (UX-D5).
+                val child = rememberChildProfile()
+                if (!child) {
+                    CinemaText(
+                        text =
+                            stringResource(
+                                R.string.details_tmdb_format,
+                                episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                            ),
+                        tone = TextTone.Secondary,
+                    )
+                }
 
                 val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
                 cast?.let {
@@ -2086,7 +2094,7 @@ private fun EpisodeDetailPanel(
                     )
                 }
 
-                episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
+                episode.extension?.takeIf { it.isNotBlank() && !child }?.let { ext ->
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaText(
                         text = "${stringResource(R.string.tech_container_label)} ${ext.uppercase()}",
@@ -2102,7 +2110,7 @@ private fun EpisodeDetailPanel(
                     )
                 }
 
-                episode.metadata.bitrate?.takeIf { it > 0 }?.let {
+                episode.metadata.bitrate?.takeIf { it > 0 && !child }?.let {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaText(
                         text = stringResource(R.string.series_bitrate_format, it),

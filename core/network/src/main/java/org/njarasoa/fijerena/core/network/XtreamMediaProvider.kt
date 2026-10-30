@@ -295,8 +295,10 @@ class XtreamMediaProvider(
         if (episodesFresh) {
             // The in-memory copy is only trusted while the stored list is: the sync that clears
             // the stamp runs on another provider instance and can't reach this cache.
-            seriesDetailCache.get(rawSeriesId)?.let { return kotlin.Result.success(it) }
-            val cached = repository.getCachedSeriesDetail(id)
+            seriesDetailCache.get(rawSeriesId)?.takeUnless { tmdbTextStale(it.metadata.facts, it.metadata.tmdbId) }?.let {
+                return kotlin.Result.success(it)
+            }
+            val cached = repository.getCachedSeriesDetail(id)?.let { withFreshTmdbText(id, it) }
             if (cached != null) {
                 seriesDetailCache.put(rawSeriesId, cached)
                 return kotlin.Result.success(cached)
@@ -339,30 +341,34 @@ class XtreamMediaProvider(
                     // while the stored TMDB details are fresh and Xtream sent a date and a plot.
                     // Year alone doesn't count: Xtream never sends one, and a series rebuilt from
                     // disk (buildCachedSeriesDetail) goes without it too.
+                    // Also when the stored TMDB plot and genres are missing or in another language (UX-D4).
+                    val storedFacts = TitleFacts.fromJson(cachedSeries?.facts)
                     val needsTmdbDetails =
                         !cachedRatingFresh ||
                             enriched.metadata.releaseDate == null ||
-                            enriched.metadata.plot.isNullOrBlank()
+                            enriched.metadata.plot.isNullOrBlank() ||
+                            storedFacts.textLanguage != tmdb.textLanguage()
                     val tmdbDetails =
                         if (needsTmdbDetails) suspendRunCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull() else null
                     // TMDB's facts when asked now, else the ones stored with the rating.
-                    val facts = tmdbDetails?.facts ?: TitleFacts.fromJson(cachedSeries?.facts)
-                    enriched = enriched.copy(metadata = enriched.metadata.copy(facts = facts.withCountriesFrom(detail.metadata.facts)))
+                    val facts = tmdbDetails?.let { it.facts.withTmdbText(it, tmdb.textLanguage()) } ?: storedFacts
+                    enriched =
+                        enriched.copy(
+                            metadata = enriched.metadata.copy(facts = facts.withCountriesFrom(detail.metadata.facts)).preferTmdbText(),
+                        )
                     if (tmdbDetails != null) {
                         val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.firstAirDate
                         val newYear = enriched.metadata.year ?: tmdbDetails.year
-                        val newPlot = enriched.metadata.plot?.takeIf { it.isNotBlank() } ?: tmdbDetails.overview
                         enriched =
                             enriched.copy(
                                 metadata =
                                     enriched.metadata.copy(
                                         releaseDate = newReleaseDate,
                                         year = newYear,
-                                        plot = newPlot,
                                     ),
                             )
                     }
-                    if (!cachedRatingFresh) {
+                    if (!cachedRatingFresh || tmdbDetails != null) {
                         val tmdbPosterPath = tmdbDetails?.posterPath
                         repository.saveSeriesDetailCache(
                             id,
@@ -429,6 +435,34 @@ class XtreamMediaProvider(
             seriesDetailCache.remove(seriesId.raw)
         }
         return overview
+    }
+
+    /**
+     * Whether a detail with these [facts] needs TMDB's plot and genres again (UX-D4): it has a TMDB
+     * match, and its stored text is missing or in another language than the app asks TMDB for now.
+     */
+    private fun tmdbTextStale(
+        facts: TitleFacts,
+        tmdbId: String?,
+    ): Boolean = tmdb.hasApiKey() && tmdbId?.toIntOrNull() != null && facts.textLanguage != tmdb.textLanguage()
+
+    /**
+     * [cached], a show rebuilt from disk, with TMDB's plot and genres in the app language (UX-D4).
+     * Only the TMDB details call: the stored episode list is still fresh, so the source is not
+     * asked. The new text is stored with the facts; the rating and its stamp stay as they are.
+     */
+    private suspend fun withFreshTmdbText(
+        id: Int,
+        cached: SeriesDetail,
+    ): SeriesDetail {
+        val tmdbId = cached.metadata.tmdbId
+        if (!tmdbTextStale(cached.metadata.facts, tmdbId)) return cached
+        val details = tmdbId?.toIntOrNull()?.let { suspendRunCatching { tmdb.getTvDetails(it) }.getOrNull() } ?: return cached
+        val entity = repository.getCachedSeriesEntity(id) ?: return cached
+        val facts = cached.metadata.facts.withTmdbText(details, tmdb.textLanguage())
+        repository.saveSeriesDetailCache(id, entity.contentRating, tmdbId, entity.detailFetchedAt ?: 0L, facts = facts.toJson())
+        // The rebuilt detail took the old stored text: start again from the source's own.
+        return cached.copy(metadata = cached.metadata.copy(plot = entity.plot, genre = entity.genre, facts = facts).preferTmdbText())
     }
 
     private suspend fun fetchTvCertification(tmdbSeriesId: Int): String? =
@@ -551,7 +585,9 @@ class XtreamMediaProvider(
         }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
-        movieDetailCache.get(movieId)?.let { return kotlin.Result.success(it) }
+        movieDetailCache.get(movieId)?.takeUnless { tmdbTextStale(it.metadata.facts, it.metadata.tmdbId) }?.let {
+            return kotlin.Result.success(it)
+        }
         val id =
             movieId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid movie ID: $movieId"),
@@ -559,8 +595,12 @@ class XtreamMediaProvider(
 
         // A movie's own metadata never changes after release (unlike a series' episode list), so a
         // fresh persisted cache row is served with no Xtream or TMDB call at all, surviving restarts.
+        // Not when its TMDB plot and genres are missing or in another language (UX-D4).
         repository.getCachedMovieDetail(id)?.let { cached ->
-            if (cached.detailFetchedAt != null && System.currentTimeMillis() - cached.detailFetchedAt < DETAIL_CACHE_TTL_MS) {
+            if (cached.detailFetchedAt != null &&
+                System.currentTimeMillis() - cached.detailFetchedAt < DETAIL_CACHE_TTL_MS &&
+                !tmdbTextStale(TitleFacts.fromJson(cached.facts), cached.tmdbId)
+            ) {
                 val detail = cached.toMovieDetail(movieId)
                 movieDetailCache.put(movieId, detail)
                 return kotlin.Result.success(detail)
@@ -592,16 +632,18 @@ class XtreamMediaProvider(
                     if (tmdbDetails != null) {
                         val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.releaseDate
                         val newYear = enriched.metadata.year ?: tmdbDetails.year
-                        val newPlot = enriched.metadata.plot?.takeIf { it.isNotBlank() } ?: tmdbDetails.overview
                         enriched =
                             enriched.copy(
                                 metadata =
-                                    enriched.metadata.copy(
-                                        releaseDate = newReleaseDate,
-                                        year = newYear,
-                                        plot = newPlot,
-                                        facts = tmdbDetails.facts.withCountriesFrom(detail.metadata.facts),
-                                    ),
+                                    enriched.metadata
+                                        .copy(
+                                            releaseDate = newReleaseDate,
+                                            year = newYear,
+                                            facts =
+                                                tmdbDetails.facts
+                                                    .withCountriesFrom(detail.metadata.facts)
+                                                    .withTmdbText(tmdbDetails, tmdb.textLanguage()),
+                                        ).preferTmdbText(),
                             )
                     }
                 }

@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.history.rememberSourceName
 import org.njarasoa.fijerena.core.ui.theme.ButtonKind
@@ -596,17 +597,21 @@ private fun MovieDetailsTabContent(
             titleFactRows(movieDetail.metadata.facts, movieDetail.name.ifBlank { movieName }, isShow = false).forEach {
                 MobileDetailRow(label = it.label, value = it.value)
             }
+            // A child's page has no technical rows (UX-D5).
+            val child = rememberChildProfile()
             // The catalogue's raw name: alternates are listed under it, not under movieDetail.name.
-            MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
-                StreamNamePicker(
-                    currentName = movieName,
-                    alternates = alternateStreams,
-                    sourceNames = sourceNames,
-                    onSelect = onAlternateStreamSelected,
-                )
+            if (!child) {
+                MobileDetailRow(label = stringResource(R.string.details_label_stream_name)) {
+                    StreamNamePicker(
+                        currentName = movieName,
+                        alternates = alternateStreams,
+                        sourceNames = sourceNames,
+                        onSelect = onAlternateStreamSelected,
+                    )
+                }
             }
 
-            movieDetail.videoInfo?.let { video ->
+            movieDetail.videoInfo?.takeUnless { child }?.let { video ->
                 val videoText =
                     video.displayTitle ?: run {
                         val parts = mutableListOf<String>()
@@ -628,7 +633,7 @@ private fun MovieDetailsTabContent(
                     MobileDetailRow(label = stringResource(R.string.tech_video_label), value = videoText)
                 }
             }
-            if (movieDetail.audioTracks.isNotEmpty()) {
+            if (movieDetail.audioTracks.isNotEmpty() && !child) {
                 val audioTexts =
                     movieDetail.audioTracks.mapNotNull { audio ->
                         val text =
@@ -646,7 +651,7 @@ private fun MovieDetailsTabContent(
                     MobileDetailRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
                 }
             }
-            if (movieDetail.subtitleTracks.isNotEmpty()) {
+            if (movieDetail.subtitleTracks.isNotEmpty() && !child) {
                 val subTexts =
                     movieDetail.subtitleTracks.mapNotNull { sub ->
                         val text =
@@ -663,7 +668,7 @@ private fun MovieDetailsTabContent(
                     MobileDetailRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
                 }
             }
-            movieDetail.extension?.let { ext ->
+            movieDetail.extension?.takeUnless { child }?.let { ext ->
                 MobileDetailRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
             // The TMDB id is for developers only (phone UI audit, #2).

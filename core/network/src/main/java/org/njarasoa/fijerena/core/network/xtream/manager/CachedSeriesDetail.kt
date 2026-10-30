@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 
+import org.njarasoa.fijerena.core.network.preferTmdbText
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -40,7 +41,7 @@ internal fun buildCachedSeriesDetail(
                 tmdbId = series.tmdbId,
                 trailerUrl = trailerUrl(series.youtubeTrailer),
                 facts = TitleFacts.fromJson(series.facts),
-            ),
+            ).preferTmdbText(),
         coverUrl = series.cover,
         backdropUrl = series.backdropPath?.split(",")?.firstOrNull { it.isNotBlank() },
         episodes =

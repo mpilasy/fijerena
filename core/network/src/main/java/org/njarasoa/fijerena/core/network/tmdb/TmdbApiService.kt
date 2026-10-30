@@ -133,10 +133,14 @@ class TmdbApiService(
     /** As [getMovieSimilar], for a TV series. */
     suspend fun getTvSimilar(tvId: Int): TmdbRecommendationsResponse = fetch("tv/$tvId/similar", Language.ENGLISH).body()
 
+    /** The TMDB `language` that [getMovieDetails] and [getTvDetails] ask for now ([tmdbLanguage]). */
+    fun textLanguage(): String = tmdbLanguage(appLanguage())
+
     /**
      * The movie's own TMDB record. Reuses [TmdbRecommendation]'s shape — `id`, `title`,
-     * `release_date` and the rest line up with `/movie/{id}` too. In the app language, since its
-     * plot fills a missing one; the original title and the collection id don't depend on it.
+     * `release_date` and the rest line up with `/movie/{id}` too. In the app language
+     * ([textLanguage]), since its plot and genres replace the source's; the original title and the
+     * collection id don't depend on it.
      */
     suspend fun getMovieDetails(movieId: Int): TmdbRecommendation = fetch("movie/$movieId", Language.APP).body()
 

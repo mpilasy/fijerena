@@ -90,6 +90,7 @@ import org.njarasoa.fijerena.core.ui.components.SourceBadge
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.history.LocalShowSourceBadges
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -872,7 +873,9 @@ private fun DetailsTabContent(
             TvDetailRow(label = it.label, value = it.value)
         }
 
-        movieDetail.videoInfo?.let { video ->
+        // A child's page has no technical rows (UX-D5).
+        val child = rememberChildProfile()
+        movieDetail.videoInfo?.takeUnless { child }?.let { video ->
             val videoText =
                 video.displayTitle ?: run {
                     val parts = mutableListOf<String>()
@@ -894,7 +897,7 @@ private fun DetailsTabContent(
                 TvDetailRow(label = stringResource(R.string.tech_video_label), value = videoText)
             }
         }
-        if (movieDetail.audioTracks.isNotEmpty()) {
+        if (movieDetail.audioTracks.isNotEmpty() && !child) {
             val audioTexts =
                 movieDetail.audioTracks.mapNotNull { audio ->
                     val text =
@@ -923,7 +926,7 @@ private fun DetailsTabContent(
                 TvDetailRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
             }
         }
-        if (movieDetail.subtitleTracks.isNotEmpty()) {
+        if (movieDetail.subtitleTracks.isNotEmpty() && !child) {
             val subTexts =
                 movieDetail.subtitleTracks.mapNotNull { sub ->
                     val text =
@@ -940,24 +943,26 @@ private fun DetailsTabContent(
                 TvDetailRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
             }
         }
-        movieDetail.extension?.let { ext ->
+        movieDetail.extension?.takeUnless { child }?.let { ext ->
             TvDetailRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
         }
 
         // The provider's own (often raw) stream name, now that the headline is TMDB's title. A
         // dropdown when the local catalogue holds other instances of the same TMDB title.
-        TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
-            StreamNamePicker(
-                // The catalogue's raw name, not movieDetail.name — some providers' detail API
-                // returns a cleaned-up name inconsistent with the raw name alternates are listed
-                // under, so use the same source as alternates.
-                currentName = movieName,
-                alternates = alternateStreams,
-                sourceNames = sourceNames,
-                onSelect = onStreamSelected,
-                focusRequester = streamNameFocusRequester,
-                onFocusedChanged = onStreamFocusedChanged,
-            )
+        if (!child) {
+            TvDetailRow(label = stringResource(R.string.details_label_stream_name)) {
+                StreamNamePicker(
+                    // The catalogue's raw name, not movieDetail.name — some providers' detail API
+                    // returns a cleaned-up name inconsistent with the raw name alternates are listed
+                    // under, so use the same source as alternates.
+                    currentName = movieName,
+                    alternates = alternateStreams,
+                    sourceNames = sourceNames,
+                    onSelect = onStreamSelected,
+                    focusRequester = streamNameFocusRequester,
+                    onFocusedChanged = onStreamFocusedChanged,
+                )
+            }
         }
         val context = LocalContext.current
         val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }

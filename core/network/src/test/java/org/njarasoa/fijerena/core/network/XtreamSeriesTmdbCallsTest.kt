@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbSeasonResponse
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.domain.SeriesId
+import org.njarasoa.fijerena.core.player.domain.TitleFacts
 import org.njarasoa.fijerena.core.player.model.Episode
 import org.njarasoa.fijerena.core.player.model.EpisodeInfo
 import org.njarasoa.fijerena.core.player.model.SeriesDetails
@@ -39,6 +40,8 @@ class XtreamSeriesTmdbCallsTest {
             contentRating = "TV-14",
             tmdbId = "549",
             detailFetchedAt = detailFetchedAt,
+            // TMDB's text already stored in the app language (UX-D4).
+            facts = TitleFacts(textLanguage = "en-US").toJson(),
         )
 
     // Season 1 has a synopsis stored from an earlier visit, season 2 has none anywhere.
@@ -74,6 +77,7 @@ class XtreamSeriesTmdbCallsTest {
 
     init {
         every { tmdb.hasApiKey() } returns true
+        every { tmdb.textLanguage() } returns "en-US"
         coEvery { tmdb.getSeason(any(), any()) } returns TmdbSeasonResponse()
         coEvery { repository.getSeriesInfo(30874) } returns XtreamResponse.Ok(fromXtream)
         coEvery { repository.getPersistedEpisodePlots(30874) } returns mapOf("101" to "A doctor is suspected…")

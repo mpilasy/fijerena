@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.wanted.NotAvailableMark
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -46,6 +47,8 @@ fun RelatedTitlesRow(
     onItemClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // No language tags on a child's cards (UX-D5).
+    val showTags = !rememberChildProfile()
     if (items.isEmpty()) return
 
     Column(modifier = modifier) {
@@ -53,7 +56,7 @@ fun RelatedTitlesRow(
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             items(items, key = { it.id }) { item ->
-                RelatedTitleCard(item = item, onClick = { onItemClick(item) })
+                RelatedTitleCard(item = item, showTags = showTags, onClick = { onItemClick(item) })
             }
         }
     }
@@ -62,6 +65,7 @@ fun RelatedTitlesRow(
 @Composable
 private fun RelatedTitleCard(
     item: MediaItem,
+    showTags: Boolean,
     onClick: () -> Unit,
 ) {
     val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
@@ -87,7 +91,7 @@ private fun RelatedTitleCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 // A TMDB list's card: its TMDB title only, without the source's tags (MediaItem.listTitle).
-                if (item.listTitle == null) TitleBadges(parsedTitle)
+                if (item.listTitle == null && showTags) TitleBadges(parsedTitle)
             }
             // A TMDB title no source has: opens its TMDB page (wishlist UX plan, Phase 4).
             if (item.id.startsWith(TmdbOnlyItem.PREFIX)) {

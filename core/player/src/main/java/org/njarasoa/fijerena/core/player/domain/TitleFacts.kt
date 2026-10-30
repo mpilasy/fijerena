@@ -28,6 +28,15 @@ data class TitleFacts(
     val status: String? = null,
     val seasonCount: Int? = null,
     val episodeCount: Int? = null,
+    /**
+     * TMDB's plot in [textLanguage]. Kept here so a cached page shows it too: it wins over the
+     * source's plot, which is often in another language (UX-D4).
+     */
+    val overview: String? = null,
+    /** TMDB's genre names in [textLanguage]; they win over the source's genre, as [overview]. */
+    val genres: List<String> = emptyList(),
+    /** The TMDB `language` ("fr-FR", "en-US") of [overview] and [genres]; null when TMDB gave no text. */
+    val textLanguage: String? = null,
 ) {
     /** These facts (TMDB's), with [source]'s countries when these have none. */
     fun withCountriesFrom(source: TitleFacts): TitleFacts = if (countries.isEmpty()) copy(countries = source.countries) else this

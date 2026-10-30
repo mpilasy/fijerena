@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.components.TextRole
 import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleBadges
+import org.njarasoa.fijerena.core.ui.components.rememberChildProfile
 import org.njarasoa.fijerena.core.ui.components.textStyleOf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -84,6 +85,8 @@ fun RelatedTitlesRow(
     }
 
     val cardStyle = relatedTitleCardStyle()
+    // No language tags on a child's cards (UX-D5).
+    val showTags = !rememberChildProfile()
 
     Column(modifier = modifier) {
         if (title != null) {
@@ -103,6 +106,7 @@ fun RelatedTitlesRow(
                 RelatedTitleCard(
                     item = item,
                     cardStyle = cardStyle,
+                    showTags = showTags,
                     onClick = { onItemClick(item) },
                     // The first card is at the screen's left edge: Left from it opens the TV
                     // navigation rail.
@@ -160,6 +164,7 @@ private fun relatedTitleCardStyle(): RelatedCardStyle {
 private fun RelatedTitleCard(
     item: MediaItem,
     cardStyle: RelatedCardStyle,
+    showTags: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -202,7 +207,7 @@ private fun RelatedTitleCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 // A TMDB list's card: its TMDB title only, without the source's tags (MediaItem.listTitle).
-                if (item.listTitle == null) TitleBadges(parsedTitle)
+                if (item.listTitle == null && showTags) TitleBadges(parsedTitle)
             }
             // A TMDB title no source has: opens its TMDB page (wishlist UX plan, Phase 4).
             if (item.id.startsWith(TmdbOnlyItem.PREFIX)) {
