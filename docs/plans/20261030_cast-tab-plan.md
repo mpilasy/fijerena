@@ -1,6 +1,6 @@
 # Cast tab: TMDB cast cards and actor pages
 
-**Status:** Agreed 2026-10-30 (all decisions below). Nothing built.
+**Status:** Agreed 2026-10-30 (all decisions below). Phase 1 in progress.
 
 ## Goal
 
@@ -96,7 +96,7 @@ profile's sources have. The titles that no source has can show too, behind a swi
 
 | Phase | Work | Status |
 |-------|------|--------|
-| 1 | Data: the TMDB rate limiter (CT-D0), the credits model (id, character, photo; `aggregate_credits` for shows), the person call, the 7-day cache, the matching from a list. Unit tests. | Not started |
+| 1 | Data: the TMDB rate limiter (CT-D0), the credits model (id, character, photo; `aggregate_credits` for shows), the person call, the 7-day cache, the matching from a list. Unit tests. | In progress |
 | 2 | Cast tab: crew lines and cast cards on TV and phone, film and show pages and the TMDB title pages; chips as the fallback. | Not started |
 | 3 | Actor page on TV and phone: header, Movies and TV Shows rows, the missing-titles switch, navigation and Back focus. | Not started |
 | 4 | Docs (FEATURES, NAVIGATION_GUIDE, PRIVACY: person ids sent to TMDB, RELEASE_NOTES), focus walks, emulator walk. | Not started |
