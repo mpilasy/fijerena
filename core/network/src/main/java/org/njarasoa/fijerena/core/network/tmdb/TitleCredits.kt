@@ -2,7 +2,8 @@ package org.njarasoa.fijerena.core.network.tmdb
 
 /**
  * The people of a film or show that the Cast tab shows (docs/plans/20261030_cast-tab-plan.md):
- * the crew lines at the top, then the cast cards. Made by [titleCredits].
+ * the crew lines at the top, then the cast cards. Made by [titleCredits]. [cast] is TMDB's full
+ * cast in billing order; the tab shows the first [MAX_CAST_CARDS] until the user asks for more.
  */
 data class TitleCredits(
     val cast: List<CastMember>,
@@ -33,7 +34,7 @@ data class CrewPerson(
 /** The crew lines (CT-D4): Director for a film, Created by for a show, and Writers for both. */
 enum class CrewRole { DIRECTOR, CREATOR, WRITER }
 
-/** CT-D2: the first 10 actors in billing order. */
+/** CT-D2: the cast cards the Cast tab shows before its More card. */
 const val MAX_CAST_CARDS = 10
 
 /** The most people on the Writers line. */
@@ -68,7 +69,6 @@ fun titleCredits(
                     }
                 CastMember(id.toString(), name, character?.takeIf { it.isNotBlank() }, TmdbApiService.profileUrl(member.profilePath))
             }.distinctBy { it.personId }
-            .take(MAX_CAST_CARDS)
     val crew =
         if (movie) {
             listOf(

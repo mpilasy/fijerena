@@ -1260,6 +1260,14 @@
         <item quantity="other">Scénaristes :</item>
     </plurals>
     <string name="cast_as_character">dans le rôle de %1$s</string>
+    <plurals name="cast_more_count" tools:ignore="ImpliedQuantity">
+        <item quantity="one">+%1$d de plus</item>
+        <item quantity="many">+%1$d de plus</item>
+        <item quantity="other">+%1$d de plus</item>
+    </plurals>
+    <string name="person_job_director">Réalisateur</string>
+    <string name="person_job_creator">Créateur</string>
+    <string name="person_job_writer">Scénariste</string>
     <string name="details_label_status">Statut :</string>
     <string name="details_status_returning">En cours</string>
     <string name="details_status_ended">Terminée</string>

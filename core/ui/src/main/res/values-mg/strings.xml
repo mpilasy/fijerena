@@ -1252,6 +1252,13 @@
         <item quantity="other">Mpanoratra:</item>
     </plurals>
     <string name="cast_as_character">amin\'ny anjaran\'i %1$s</string>
+    <plurals name="cast_more_count" tools:ignore="ImpliedQuantity">
+        <item quantity="one">+%1$d hafa</item>
+        <item quantity="other">+%1$d hafa</item>
+    </plurals>
+    <string name="person_job_director">Mpanatontosa</string>
+    <string name="person_job_creator">Mpamorona</string>
+    <string name="person_job_writer">Mpanoratra</string>
     <string name="details_label_status">Toe-javatra:</string>
     <string name="details_status_returning">Mbola mitohy</string>
     <string name="details_status_ended">Vita</string>

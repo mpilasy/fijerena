@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import java.io.File
 import java.util.Locale
 
@@ -114,10 +115,23 @@ class TmdbPeople(
     }
 }
 
-/** An actor page's rows: the person's films and shows, most popular first. */
+/**
+ * An actor page's rows: the person's films and shows, most popular first. [roles]: the person's
+ * part in each card's title, by the card's `MediaItem.sourceKey`; a title without one is not in it.
+ */
 data class PersonRows(
     val movies: List<MediaItem>,
     val shows: List<MediaItem>,
+    val roles: Map<String, PersonRole> = emptyMap(),
+)
+
+/**
+ * A person's part in one title: the role played ([character]), or on a crew page the jobs
+ * ([jobs], in [CrewRole] order).
+ */
+data class PersonRole(
+    val character: String? = null,
+    val jobs: List<CrewRole> = emptyList(),
 )
 
 /**
@@ -134,6 +148,48 @@ private const val TV = "tv"
 
 /** The crew departments of the people on the crew lines (CT-D4): directors, creators and writers. */
 private val CREW_DEPARTMENTS = setOf("Directing", "Writing")
+
+private const val DIRECTOR_JOB = "Director"
+private const val CREATOR_JOB = "Creator"
+private const val WRITING = "Writing"
+
+/**
+ * [person]'s part in each title, by the title's media type and TMDB id: the role played, for a
+ * show the role in the most episodes (CT-D3); or with [crew] the jobs on the crew lines (CT-D4).
+ * A title without a role or a job is not in it.
+ */
+internal fun personRoles(
+    person: TmdbPerson,
+    crew: Boolean,
+): Map<Pair<String?, Int>, PersonRole> {
+    val credits = person.combinedCredits ?: return emptyMap()
+    val chosen = if (crew) credits.crew else credits.cast
+    return chosen
+        .groupBy { it.mediaType to it.id }
+        .mapValues { (_, entries) ->
+            if (crew) {
+                val jobs =
+                    entries
+                        .mapNotNull { entry ->
+                            when {
+                                entry.job == DIRECTOR_JOB -> CrewRole.DIRECTOR
+                                entry.job == CREATOR_JOB -> CrewRole.CREATOR
+                                entry.department == WRITING -> CrewRole.WRITER
+                                else -> null
+                            }
+                        }.distinct()
+                        .sorted()
+                PersonRole(jobs = jobs).takeIf { jobs.isNotEmpty() }
+            } else {
+                // maxByOrNull keeps the first of equal counts: a film's first role.
+                entries
+                    .filter { !it.character.isNullOrBlank() }
+                    .maxByOrNull { it.episodeCount }
+                    ?.let { PersonRole(character = it.character?.trim()) }
+            }
+        }.mapNotNull { (key, role) -> role?.let { key to it } }
+        .toMap()
+}
 
 /**
  * The [PERSON_MAX_CREDITS] most popular titles of [person], each once, most popular first: the
@@ -186,6 +242,8 @@ suspend fun personRows(
     missingShows: Boolean = false,
 ): PersonRows {
     val credits = personCredits(person, crew)
+    val roleOf = personRoles(person, crew)
+    val roles = mutableMapOf<String, PersonRole>()
 
     suspend fun row(
         mediaType: String,
@@ -194,15 +252,31 @@ suspend fun personRows(
         withMissing: Boolean,
     ): List<MediaItem> {
         val titles = credits.filter { it.mediaType == mediaType }.map { it.toRecommendation() }
-        val typed = sources.map { source -> suspend { list: List<TmdbRecommendation> -> source(list, contentType) } }
+
+        // Each card found for a title takes the person's part in that title.
+        fun noteRole(
+            title: TmdbRecommendation,
+            item: MediaItem,
+        ) {
+            roleOf[mediaType to title.id]?.let { roles[item.sourceKey] = it }
+        }
+        val typed =
+            sources.map { source ->
+                suspend { list: List<TmdbRecommendation> ->
+                    source(list, contentType).also { found ->
+                        found.forEachIndexed { index, item -> if (item != null) noteRole(list[index], item) }
+                    }
+                }
+            }
         return if (withMissing) {
-            titlesWithMissing(titles, typed, missing = { TmdbOnlyItem.of(it, itemType) })
+            titlesWithMissing(titles, typed, missing = { title -> TmdbOnlyItem.of(title, itemType).also { noteRole(title, it) } })
         } else {
             matchTitles(titles, typed)
         }
     }
-    return PersonRows(
-        movies = row(MOVIE, ContentType.MOVIES, MediaType.MOVIE, missingMovies),
-        shows = row(TV, ContentType.TV_SHOWS, MediaType.SERIES, missingShows),
-    )
+    val movies = row(MOVIE, ContentType.MOVIES, MediaType.MOVIE, missingMovies)
+    val shows = row(TV, ContentType.TV_SHOWS, MediaType.SERIES, missingShows)
+    // Only the cards on the rows: a source's card that another source's took the place of is left out.
+    val shown = (movies + shows).mapTo(mutableSetOf()) { it.sourceKey }
+    return PersonRows(movies = movies, shows = shows, roles = roles.filterKeys { it in shown })
 }

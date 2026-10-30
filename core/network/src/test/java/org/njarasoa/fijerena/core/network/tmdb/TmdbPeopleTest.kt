@@ -9,6 +9,7 @@ import org.njarasoa.fijerena.core.network.wanted.TmdbOnlyItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.sourceKey
 import java.io.File
 import java.nio.file.Files
 
@@ -177,6 +178,60 @@ class TmdbPeopleTest {
                     .single()
                     .id
                     .startsWith(TmdbOnlyItem.PREFIX),
+            )
+        }
+
+    @Test
+    fun `each card carries the role played, a show's role in the most episodes`() =
+        runTest {
+            val actor =
+                TmdbPerson(
+                    combinedCredits =
+                        TmdbCombinedCredits(
+                            cast =
+                                listOf(
+                                    credit(1, "movie", 5.0).copy(character = "Paul"),
+                                    credit(2, "tv", 4.0).copy(character = "Young Paul", episodeCount = 2),
+                                    credit(2, "tv", 4.0).copy(character = "Paul", episodeCount = 30),
+                                    // No role on TMDB: no role text.
+                                    credit(3, "movie", 3.0),
+                                ),
+                        ),
+                )
+            val rows = personRows(actor, crew = false, sources = listOf(source { it != "Title 3" }), missingMovies = true)
+            assertEquals(PersonRole(character = "Paul"), rows.roles[rows.movies[0].sourceKey])
+            assertEquals(PersonRole(character = "Paul"), rows.roles[rows.shows.single().sourceKey])
+            // A TMDB-only card has no role here: TMDB gave none.
+            assertTrue(rows.movies[1].id.startsWith(TmdbOnlyItem.PREFIX))
+            assertEquals(null, rows.roles[rows.movies[1].sourceKey])
+            assertEquals(2, rows.roles.size)
+        }
+
+    @Test
+    fun `a crew page's cards carry the jobs on the crew lines`() =
+        runTest {
+            val maker =
+                TmdbPerson(
+                    combinedCredits =
+                        TmdbCombinedCredits(
+                            crew =
+                                listOf(
+                                    credit(1, "movie", 5.0, department = "Writing").copy(job = "Screenplay"),
+                                    credit(1, "movie", 5.0, department = "Directing").copy(job = "Director"),
+                                    credit(2, "tv", 4.0, department = "Writing").copy(job = "Creator"),
+                                    credit(3, "movie", 3.0, department = "Directing").copy(job = "Assistant Director"),
+                                ),
+                        ),
+                )
+            val rows = personRows(maker, crew = true, sources = listOf(source { true }))
+            val roles = (rows.movies + rows.shows).associate { it.name to rows.roles[it.sourceKey] }
+            assertEquals(
+                mapOf(
+                    "Title 1" to PersonRole(jobs = listOf(CrewRole.DIRECTOR, CrewRole.WRITER)),
+                    "Title 3" to null,
+                    "Title 2" to PersonRole(jobs = listOf(CrewRole.CREATOR)),
+                ),
+                roles,
             )
         }
 }

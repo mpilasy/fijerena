@@ -80,6 +80,8 @@ fun TvFavoritesRow(
     sourceNames: Map<Long, String> = emptyMap(),
     /** A card's short state, first on its second line: Gone from source (wanted titles plan). */
     statusOf: (MediaItem) -> String? = { null },
+    /** A card's note after its year: the person's role on an actor page ("as Paul"). */
+    noteOf: (MediaItem) -> String? = { null },
     /** See [HomeRow]: one more item before the cards, the row's first. */
     leading: (@Composable (modifier: Modifier) -> Unit)? = null,
     /** See [HomeRow]: said beside [leading] while the row has no card. */
@@ -101,6 +103,7 @@ fun TvFavoritesRow(
             item = item,
             sourceName = sourceNames[item.providerId],
             status = statusOf(item),
+            note = noteOf(item),
             thumbnailType = thumbnailType,
             onClick = { onItemSelected(item) },
             onOpenActions = onOpenActions?.takeUnless { tmdbOnly }?.let { open -> { open(item) } },
@@ -115,6 +118,7 @@ private fun TvFavoriteCard(
     item: MediaItem,
     sourceName: String?,
     status: String?,
+    note: String?,
     thumbnailType: ThumbnailContentType,
     onClick: () -> Unit,
     onOpenActions: (() -> Unit)?,
@@ -179,7 +183,7 @@ private fun TvFavoriteCard(
                     if (listTitle == null) parsedTitle.badge?.let { LanguageBadge(it) }
                     CinemaText(
                         // A line even when empty, so cards in the row line up.
-                        text = listOfNotNull(status, item.metadata.releaseDate?.take(4), item.metadata.genre).joinToString(" • "),
+                        text = listOfNotNull(status, item.metadata.releaseDate?.take(4), note, item.metadata.genre).joinToString(" • "),
                         role = TextRole.BodySmall,
                         tone = TextTone.Secondary,
                         maxLines = 1,

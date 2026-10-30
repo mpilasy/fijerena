@@ -14,7 +14,7 @@ class TitleCreditsTest {
         }
 
     @Test
-    fun `a film gives its first 10 actors with their roles and photos, its directors and its writers`() {
+    fun `a film gives its full cast in billing order with their roles and photos, its directors and its writers`() {
         val cast = (1..12).joinToString(",") { """{"id":$it,"name":"Actor $it","character":"Role $it","profile_path":"/p$it.jpg"}""" }
         val film =
             json.decodeFromString<TmdbRecommendation>(
@@ -31,7 +31,8 @@ class TitleCreditsTest {
 
         val credits = titleCredits(film, movie = true)
 
-        assertEquals(10, credits.cast.size)
+        // The full cast: the Cast tab shows the first MAX_CAST_CARDS, the rest behind its More card.
+        assertEquals((1..12).map { "Actor $it" }, credits.cast.map { it.name })
         assertEquals(CastMember("1", "Actor 1", "Role 1", "https://image.tmdb.org/t/p/w185/p1.jpg"), credits.cast.first())
         assertEquals(
             listOf(

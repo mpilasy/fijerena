@@ -412,6 +412,9 @@ data class TmdbPersonCredit(
     // Cast only.
     @SerialName("character")
     val character: String? = null,
+    // A show's cast only: the episodes the person plays [character] in.
+    @SerialName("episode_count")
+    val episodeCount: Int = 0,
     // Crew only.
     @SerialName("job")
     val job: String? = null,

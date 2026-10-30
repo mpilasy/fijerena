@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -13,6 +14,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.pluralStringResource
@@ -21,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.tmdb.CastMember
 import org.njarasoa.fijerena.core.network.tmdb.CrewLine
 import org.njarasoa.fijerena.core.network.tmdb.CrewRole
+import org.njarasoa.fijerena.core.network.tmdb.MAX_CAST_CARDS
 import org.njarasoa.fijerena.core.network.tmdb.TitleCredits
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaText
@@ -39,7 +46,8 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * The Cast tab from TMDB's credits (cast tab plan, Design 2): the crew lines (a button for each
- * person), then a row of cast cards with the photo, the name and the role. OK on a person calls
+ * person), then a row of cast cards with the photo, the name and the role: the first
+ * [MAX_CAST_CARDS], then a More card that shows the rest of the cast. OK on a person calls
  * [onPersonSelected] (crew is true for a crew line). Each control records itself in [returnFocus],
  * so Back from the person page lands on it again. [section] gives the colour of the letter that
  * shows when TMDB has no photo. [topFocusModifier] goes on the topmost controls.
@@ -100,10 +108,17 @@ private fun CastCardRow(
     topFocusModifier: Modifier,
 ) {
     val rowState = rememberLazyListState()
+    // The whole cast once the More card is pressed, kept while the page is open (also over a
+    // person page and Back), not stored.
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val collapsed = !expanded && cast.size > MAX_CAST_CARDS
+    // Collapsed, the card after the first MAX_CAST_CARDS is the More card. It is the same card as
+    // the actor that takes its place, so OK on it keeps the focus there: on the 11th actor.
+    val shown = if (collapsed) cast.take(MAX_CAST_CARDS + 1) else cast
     // Back from a person page: the card that opened it is scrolled in, so its requester attaches.
     val returnId = returnFocus.key?.takeIf { it.startsWith(RETURN_CAST_PREFIX) }?.removePrefix(RETURN_CAST_PREFIX)
     LaunchedEffect(returnId) {
-        val index = cast.indexOfFirst { it.personId == returnId }
+        val index = shown.indexOfFirst { it.personId == returnId }
         if (index >= 0) rowState.scrollToItem(index)
     }
     val look = TvCardLooks.shelf()
@@ -115,12 +130,17 @@ private fun CastCardRow(
         contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        itemsIndexed(cast, key = { _, member -> member.personId }) { index, member ->
+        itemsIndexed(shown, key = { _, member -> member.personId }) { index, member ->
             val key = RETURN_CAST_PREFIX + member.personId
+            val more = collapsed && index == MAX_CAST_CARDS
             TvCard(
                 onClick = {
-                    returnFocus.leaveFrom(key)
-                    onPersonSelected(member.personId, member.name, false)
+                    if (more) {
+                        expanded = true
+                    } else {
+                        returnFocus.leaveFrom(key)
+                        onPersonSelected(member.personId, member.name, false)
+                    }
                 },
                 look = look,
                 modifier =
@@ -130,32 +150,60 @@ private fun CastCardRow(
                         .then(if (index == 0) Modifier.leftToRail() else Modifier)
                         .then(topFocusModifier),
             ) {
-                CinemaThumbnail(
-                    url = member.photoUrl,
-                    fallbackLetter = member.name.firstOrNull(),
-                    contentType = section,
-                    contentDescription = member.name,
-                    modifier = Modifier.size(width = TvDimensions.posterWidth, height = TvDimensions.posterHeightLarge),
-                )
-                Column(modifier = Modifier.padding(Spacing.xs)) {
-                    CinemaText(
-                        text = member.name,
-                        role = TextRole.Heading,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    // Two lines kept for every card, so the cards stay the same height.
-                    CinemaText(
-                        text = member.character?.let { stringResource(R.string.cast_as_character, it) }.orEmpty(),
-                        role = TextRole.BodySmall,
-                        tone = TextTone.Secondary,
-                        maxLines = 2,
-                        minLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                if (more) {
+                    MoreCardContent(count = cast.size - MAX_CAST_CARDS)
+                } else {
+                    CastCardContent(member, section)
                 }
             }
         }
+    }
+}
+
+/** An actor's card: the photo, the name and the role. */
+@Composable
+private fun CastCardContent(
+    member: CastMember,
+    section: ThumbnailContentType,
+) {
+    CinemaThumbnail(
+        url = member.photoUrl,
+        fallbackLetter = member.name.firstOrNull(),
+        contentType = section,
+        contentDescription = member.name,
+        modifier = Modifier.size(width = TvDimensions.posterWidth, height = TvDimensions.posterHeightLarge),
+    )
+    Column(modifier = Modifier.padding(Spacing.xs)) {
+        CinemaText(
+            text = member.name,
+            role = TextRole.Heading,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        // Two lines kept for every card, so the cards stay the same height.
+        CinemaText(
+            text = member.character?.let { stringResource(R.string.cast_as_character, it) }.orEmpty(),
+            role = TextRole.BodySmall,
+            tone = TextTone.Secondary,
+            maxLines = 2,
+            minLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** The More card: "+35 more" where the photo is, and the name lines kept empty for the row's height. */
+@Composable
+private fun MoreCardContent(count: Int) {
+    Box(
+        modifier = Modifier.size(width = TvDimensions.posterWidth, height = TvDimensions.posterHeightLarge),
+        contentAlignment = Alignment.Center,
+    ) {
+        CinemaText(text = pluralStringResource(R.plurals.cast_more_count, count, count), role = TextRole.Heading)
+    }
+    Column(modifier = Modifier.padding(Spacing.xs)) {
+        CinemaText(text = "", role = TextRole.Heading, maxLines = 1)
+        CinemaText(text = "", role = TextRole.BodySmall, maxLines = 2, minLines = 2)
     }
 }
 

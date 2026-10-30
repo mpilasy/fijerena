@@ -1258,6 +1258,13 @@
         <item quantity="other">Writers:</item>
     </plurals>
     <string name="cast_as_character">as %1$s</string>
+    <plurals name="cast_more_count">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="person_job_director">Director</string>
+    <string name="person_job_creator">Creator</string>
+    <string name="person_job_writer">Writer</string>
     <string name="details_label_status">Status:</string>
     <string name="details_status_returning">Returning</string>
     <string name="details_status_ended">Ended</string>

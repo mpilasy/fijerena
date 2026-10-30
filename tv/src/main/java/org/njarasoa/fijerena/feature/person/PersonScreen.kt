@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
+import org.njarasoa.fijerena.core.ui.person.personRoleText
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.contentselection.components.TvFavoritesRow
 import org.njarasoa.fijerena.feature.contentselection.components.TvMissingTitlesSwitch
@@ -182,6 +183,8 @@ private fun PersonContent(
     )
 
     val noneInSources = stringResource(R.string.person_none_in_sources)
+    // The person's role in each title, after the year: "2014 • as Paul".
+    val roleTexts = rows?.roles.orEmpty().mapValues { (_, role) -> personRoleText(role) }
     val titleRow: @Composable (String, List<MediaItem>, String, PersonViewModel.Row, Boolean, FocusRequester, LazyListState) -> Unit =
         { title, items, contentType, row, hasSwitch, focus, rowListState ->
             val prefix = "person:$contentType:"
@@ -205,6 +208,7 @@ private fun PersonContent(
                         ?.toString()
                         ?.takeIf { item.metadata.releaseDate.isNullOrBlank() }
                 },
+                noteOf = { item -> roleTexts[item.sourceKey] },
                 // This row's own switch (UX-D7).
                 leading =
                     if (hasSwitch) {

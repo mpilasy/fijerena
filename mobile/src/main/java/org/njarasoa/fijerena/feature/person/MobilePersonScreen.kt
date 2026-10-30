@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.components.TextTone
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.person.PersonViewModel
 import org.njarasoa.fijerena.core.ui.person.personFactsLine
+import org.njarasoa.fijerena.core.ui.person.personRoleText
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTheme
 import org.njarasoa.fijerena.feature.home.HomeRow
@@ -144,6 +145,8 @@ private fun PersonContent(
     val movieSwitch = canShowMissing && state.hasMovies
     val showSwitch = canShowMissing && state.hasShows
     val noneInSources = stringResource(R.string.person_none_in_sources)
+    // The person's role in each title, after the year: "2014 • as Paul".
+    val roleTexts = rows?.roles.orEmpty().mapValues { (_, role) -> personRoleText(role) }
     val titleRow: @Composable (String, List<MediaItem>, String, PersonViewModel.Row, Boolean) -> Unit =
         { title, items, contentType, row, hasSwitch ->
             val on = showMissing[row]
@@ -159,13 +162,16 @@ private fun PersonContent(
             ) { item ->
                 TitleCard(
                     title = item.listTitle ?: item.name,
-                    // CT-D5: the release year on each card. Some sources send no date, only the year
-                    // in the name ("Lupin (2021)"), which the card's one line cuts off.
+                    // CT-D5: the release year on each card, then the person's role. Some sources send
+                    // no date, only the year in the name ("Lupin (2021)"), which the card's one line cuts off.
                     subtitle =
-                        item.metadata.releaseDate
-                            ?.takeIf { it.isNotBlank() }
-                            ?.take(YEAR_LENGTH)
-                            ?: (item.metadata.year ?: parseDisplayTitle(item.name).year)?.toString(),
+                        listOfNotNull(
+                            item.metadata.releaseDate
+                                ?.takeIf { it.isNotBlank() }
+                                ?.take(YEAR_LENGTH)
+                                ?: (item.metadata.year ?: parseDisplayTitle(item.name).year)?.toString(),
+                            roleTexts[item.sourceKey],
+                        ).joinToString(" • ").ifEmpty { null },
                     thumbnailUrl = item.thumbnailUrl,
                     thumbnailType = if (contentType == ContentType.TV_SHOWS) ThumbnailContentType.TV_SHOW else ThumbnailContentType.MOVIE,
                     progress = null,
