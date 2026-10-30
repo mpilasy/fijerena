@@ -1,6 +1,6 @@
 # Episode cast
 
-**Status:** Planned 2026-10-30.
+**Status:** In progress 2026-10-30.
 
 ## Goal
 

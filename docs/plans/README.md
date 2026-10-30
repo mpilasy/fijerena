@@ -19,7 +19,8 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-30 | [Episode cast](./20261030_episode-cast-plan.md) | An episode's details show its guest stars, then the regular cast; an actor's page names and opens the episode of a guest role | Planned |
+| 2026-10-30 | [Phone poster cards](./20261030_phone-poster-cards-plan.md) | Film and show rows on the phone (Home favourites, Wishlist, charts; actor pages; More Like This) as 2:3 posters, about 3.3 per screen | In progress |
+| 2026-10-30 | [Episode cast](./20261030_episode-cast-plan.md) | An episode's details show its guest stars, then the regular cast; an actor's page names and opens the episode of a guest role | In progress |
 | 2026-10-30 | [UX audit fixes](./20261030_ux-audit-fixes-plan.md) | Fix the major problems of the 2026-10-30 UX audit: TV Home focus, destructive menu items first, channels that never start, Recent of unplayed channels, the phone dock, TV tuning keys, text not in the app language, and technical rows for a child, the show-missing toggle, long lists | Done 2026-10-30, walked on both emulators |
 | 2026-10-30 | [Thread races](./20261030_thread-races-plan.md) | Remove the races between threads found after the Chromecast crash: a playback error on a buffer swap, the byte caps that never trip, and stale data on details pages, Live TV, Recent, settings and sync | Done 2026-10-30, walked on both emulators |
 | 2026-10-30 | [Cast tab](./20261030_cast-tab-plan.md) | The Cast tab shows TMDB cast cards (photo, name, role) and crew lines; opening a person shows their films and shows that the profile's sources have, with a switch for the missing ones | Done 2026-10-30, walked on both emulators |
