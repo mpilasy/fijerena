@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.tmdb.PersonRows
 import org.njarasoa.fijerena.core.network.tmdb.PersonTitleSource
@@ -134,12 +135,16 @@ class PersonViewModel(
                             hasMovies = credits.any { it.mediaType == MOVIE },
                             hasShows = credits.any { it.mediaType == TV },
                         )
-                    // Matched now, and again after each catalogue sync.
-                    data.catalogueUpdates.distinctUntilChanged().collect { loadRows(person) }
+                    // Matched now, and again after each catalogue sync. On Main, as setShowMissing:
+                    // rowsJob is only cancelled and replaced from one thread, so no load is lost.
+                    withContext(Dispatchers.Main) {
+                        data.catalogueUpdates.distinctUntilChanged().collect { loadRows(person) }
+                    }
                 }
             }
     }
 
+    /** On Main only: [rowsJob] is read and replaced without a lock. The work itself runs on IO. */
     private fun loadRows(person: TmdbPerson) {
         rowsJob?.cancel()
         val withMissing = _showMissing.value

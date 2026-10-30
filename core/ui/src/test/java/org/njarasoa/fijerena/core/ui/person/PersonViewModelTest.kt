@@ -3,9 +3,11 @@ package org.njarasoa.fijerena.core.ui.person
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -25,6 +27,8 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbPersonCredit
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import java.util.Collections
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * A person's page (cast tab plan, Phase 3): the switch for missing titles starts off and is not for
@@ -44,7 +48,11 @@ class PersonViewModelTest {
         override val devMode: Boolean = false,
         val failure: Exception? = null,
     ) : PersonViewModel.Data {
-        override val catalogueUpdates = MutableStateFlow(0L)
+        val updates = MutableStateFlow(0L)
+
+        /** The thread of each catalogue update that reaches the page. */
+        val updateThreads: MutableList<String> = Collections.synchronizedList(mutableListOf())
+        override val catalogueUpdates = updates.onEach { updateThreads += Thread.currentThread().name }
         val calls: MutableList<RowsCall> = Collections.synchronizedList(mutableListOf())
 
         override suspend fun person(personId: Int): TmdbPerson {
@@ -63,6 +71,7 @@ class PersonViewModelTest {
     }
 
     private val created = mutableListOf<PersonViewModel>()
+    private var mainThread: ExecutorService? = null
 
     @Before
     fun setup() {
@@ -73,6 +82,7 @@ class PersonViewModelTest {
     fun tearDown() {
         created.forEach { it.viewModelScope.cancel() }
         Dispatchers.resetMain()
+        mainThread?.shutdown()
     }
 
     private fun page(
@@ -169,7 +179,7 @@ class PersonViewModelTest {
         val vm = page(data)
         vm.loaded()
 
-        data.catalogueUpdates.value = 1
+        data.updates.value = 1
         vm.loaded {
             it.rows
                 ?.movies
@@ -178,6 +188,26 @@ class PersonViewModelTest {
         }
 
         assertEquals(2, data.calls.size)
+    }
+
+    @Test
+    fun `a catalogue sync makes the rows on Main, as the switch does`() {
+        val main = Executors.newSingleThreadExecutor { Thread(it, "test-main") }.also { mainThread = it }
+        Dispatchers.setMain(main.asCoroutineDispatcher())
+        val data = FakeData()
+        val vm = page(data)
+        vm.loaded()
+
+        data.updates.value = 1
+        vm.loaded {
+            it.rows
+                ?.movies
+                ?.first()
+                ?.id == "m2"
+        }
+
+        // One thread only replaces the rows job, so a quick switch and sync cannot lose one load.
+        assertEquals(listOf("test-main", "test-main"), data.updateThreads.map { it.substringBefore(" @") })
     }
 
     private companion object {

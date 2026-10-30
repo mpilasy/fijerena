@@ -260,18 +260,19 @@ class SyncManager internal constructor(
         }
     }
 
+    /**
+     * The request flag is read again after the running flag is cleared: a request that comes
+     * between the last pass and the clear, and finds a pass still running, is not lost.
+     */
     private suspend fun runPasses() {
-        if (!passRunning.compareAndSet(false, true)) {
-            passAgain = true
-            return
-        }
-        try {
-            do {
+        passAgain = true
+        while (passAgain && passRunning.compareAndSet(false, true)) {
+            try {
                 passAgain = false
                 runSync()
-            } while (passAgain)
-        } finally {
-            passRunning.set(false)
+            } finally {
+                passRunning.set(false)
+            }
         }
     }
 
@@ -378,7 +379,9 @@ class SyncManager internal constructor(
     private fun openSocket() {
         val link = store.link ?: return
         synchronized(socketLock) {
-            if (socket == null) {
+            // Read in the lock: onBackground clears it before closeSocket takes the lock, so a
+            // late reconnect cannot leave a socket open in the background.
+            if (foreground && socket == null) {
                 socket = api.openSocket(link.serverUrl, link.deviceToken, socketListener)
             }
         }

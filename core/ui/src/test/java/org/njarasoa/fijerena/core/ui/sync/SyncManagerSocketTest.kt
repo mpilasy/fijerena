@@ -165,6 +165,27 @@ class SyncManagerSocketTest {
     }
 
     @Test
+    fun `a reconnect that the app leaves for the background as it starts opens no socket`() {
+        manager.onForeground()
+        scheduler.runCurrent()
+        val link = store.link
+        // The reconnect has seen the foreground; the app goes to the background before the socket opens.
+        var leave = true
+        // Once only: the sync pass that onBackground asks for reads the link too.
+        every { store.link } answers {
+            if (leave) {
+                leave = false
+                manager.onBackground()
+            }
+            link
+        }
+        failLatest()
+        advance(5_000)
+
+        assertEquals(1, sockets.size)
+    }
+
+    @Test
     fun `two foreground signals never open two sockets`() {
         manager.onForeground()
         manager.onForeground()
